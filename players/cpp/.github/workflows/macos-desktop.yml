@@ -1,0 +1,76 @@
+name: macOS desktop build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lib/**'
+      - 'apps/viewer/**'
+      - 'tools/**'
+      - 'samples/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/macos-desktop.yml'
+  pull_request:
+    paths:
+      - 'lib/**'
+      - 'apps/viewer/**'
+      - 'tools/**'
+      - 'samples/**'
+      - 'CMakeLists.txt'
+      - '.github/workflows/macos-desktop.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build + smoke-test
+    runs-on: macos-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: CMake version
+        run: cmake --version
+
+      # Cache the Skia + GLFW + miniz fetch so subsequent runs don't pay the
+      # ~150 MB download. The cache is keyed on the CMakeLists.txt hash so it
+      # invalidates whenever Skia or GLFW versions change.
+      - name: Cache CMake _deps
+        uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: ${{ runner.os }}-cmake-deps-${{ hashFiles('CMakeLists.txt') }}
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build -j --config Release
+
+      - name: List artifacts
+        run: |
+          echo "::group::Built executables"
+          ls -lh build/tools/rc2json/rc2json
+          ls -lh build/tools/rc2image/rc2image
+          ls -lh build/apps/viewer/rcviewer
+          echo "::endgroup::"
+
+      - name: Smoke-test rc2image on every sample
+        run: |
+          mkdir -p smoke-out
+          for sample in samples/*.rc; do
+              name=$(basename "$sample" .rc)
+              ./build/tools/rc2image/rc2image "$sample" "smoke-out/${name}.png"
+              if [ ! -s "smoke-out/${name}.png" ]; then
+                  echo "::error::Empty PNG produced for $sample"
+                  exit 1
+              fi
+              echo "✓ $sample → smoke-out/${name}.png ($(du -h "smoke-out/${name}.png" | cut -f1))"
+          done
+
+      - name: Upload PNGs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rc2image-smoke-${{ github.sha }}
+          path: smoke-out/
+          retention-days: 14

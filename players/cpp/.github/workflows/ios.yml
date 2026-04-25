@@ -1,0 +1,49 @@
+name: iOS build
+
+on:
+  workflow_dispatch:
+
+# This workflow builds the iOS static libs and then the iosViewer app with
+# code signing disabled. We don't auto-trigger on every push because:
+#  1. The static libs are slow to build (~5 min cold) and rarely change.
+#  2. Building the app target without a signing identity is informative but
+#     doesn't catch nearly as many regressions as the macOS desktop CI does.
+
+jobs:
+  build:
+    name: Build iOS libs + app
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Tool versions
+        run: |
+          xcodebuild -version
+          cmake --version
+
+      - name: Cache iOS Skia download
+        uses: actions/cache@v4
+        with:
+          path: ios/build/_deps
+          key: ${{ runner.os }}-ios-cmake-deps-${{ hashFiles('ios/CMakeLists.txt') }}
+
+      - name: Build iOS static libs
+        run: (cd ios && ./build.sh)
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: (cd apps/iosViewer && xcodegen generate)
+
+      - name: Build iosViewer (no signing)
+        run: |
+          xcodebuild \
+            -project apps/iosViewer/iosViewer.xcodeproj \
+            -scheme iosViewer \
+            -configuration Debug \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            build
