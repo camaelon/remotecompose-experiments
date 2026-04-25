@@ -14,9 +14,13 @@ superseded. Production code for Android lives in the [AndroidX repository](https
 ```
 remotecompose-experiments/
 ├── players/
-│   └── cpp/          rcX — C++ engine + Skia bridge, macOS GLFW viewer,
-│                     iOS SwiftUI viewer, headless rc→PNG renderer, and
-│                     an rc→JSON dumper. See players/cpp/README.md.
+│   ├── cpp/          rcX — C++ engine + Skia bridge, macOS GLFW viewer,
+│   │                 iOS SwiftUI viewer, headless rc→PNG renderer, and
+│   │                 an rc→JSON dumper. See players/cpp/README.md.
+│   └── compose/      Kotlin Multiplatform / Compose Multiplatform player
+│                     targeting Desktop (JVM), with `remote-core` and
+│                     `remote-player` modules and a `composeApp` host.
+│                     See players/compose/README.md.
 └── samples/          Hand-picked .rc documents used for smoke testing
                       and demos (canvas, pie chart, ball animation, …).
 ```
@@ -42,6 +46,15 @@ cmake -B build && cmake --build build -j
 See [players/cpp/README.md](players/cpp/README.md) and
 [players/cpp/BUILDING.md](players/cpp/BUILDING.md) for full build
 instructions on macOS and iOS.
+
+The Compose Multiplatform player can be run on Desktop (JVM) with:
+
+```sh
+cd players/compose
+./gradlew :composeApp:run
+```
+
+See [players/compose/README.md](players/compose/README.md) for details.
 
 ## License
 
