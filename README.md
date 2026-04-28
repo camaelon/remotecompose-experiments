@@ -17,10 +17,15 @@ remotecompose-experiments/
 │   ├── cpp/          rcX — C++ engine + Skia bridge, macOS GLFW viewer,
 │   │                 iOS SwiftUI viewer, headless rc→PNG renderer, and
 │   │                 an rc→JSON dumper. See players/cpp/README.md.
-│   └── compose/      Kotlin Multiplatform / Compose Multiplatform player
-│                     targeting Desktop (JVM), with `remote-core` and
-│                     `remote-player` modules and a `composeApp` host.
-│                     See players/compose/README.md.
+│   ├── compose/      Kotlin Multiplatform / Compose Multiplatform player
+│   │                 targeting Desktop (JVM), with `remote-core` and
+│   │                 `remote-player` modules and a `composeApp` host.
+│   │                 See players/compose/README.md.
+│   └── typescript/   TypeScript player + four deliverables:
+│                     web bundle, interactive HTML viewer, single-file
+│                     standalone HTML builder, static-deck-site builder,
+│                     and a VS Code custom-editor extension.
+│                     See players/typescript/README.md.
 └── samples/          Hand-picked .rc documents used for smoke testing
                       and demos (canvas, pie chart, ball animation, …).
 ```
@@ -55,6 +60,19 @@ cd players/compose
 ```
 
 See [players/compose/README.md](players/compose/README.md) for details.
+
+The TypeScript player runs in the browser, in Node, and inside VS Code.
+Bundle and serve in one command:
+
+```sh
+cd players/typescript
+npm install && npm run bundle
+(cd web-player && python3 -m http.server 8000)
+```
+
+It also produces three other deliverables — a single-file standalone
+HTML, a static deck site, and a VS Code `.vsix`. See
+[players/typescript/README.md](players/typescript/README.md).
 
 ## License
 

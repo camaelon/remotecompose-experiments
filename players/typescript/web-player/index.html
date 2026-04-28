@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RemoteCompose Web Player</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #e0e0e0; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+header {
+  padding: 10px 16px; background: #d0d0d0; border-bottom: 1px solid #bbb;
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+header h1 { font-size: 16px; font-weight: 600; color: #444; white-space: nowrap; }
+.controls label {
+  padding: 6px 14px; background: #bbb; border-radius: 5px;
+  cursor: pointer; font-size: 13px; color: #333; transition: background 0.2s; white-space: nowrap;
+}
+.controls label:hover { background: #999; color: #fff; }
+.controls input[type="file"] { display: none; }
+#info { font-size: 12px; color: #666; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.content { display: flex; flex: 1; overflow: hidden; }
+
+/* Sidebar file list */
+.sidebar {
+  width: 220px; flex-shrink: 0; background: #d5d5d5; border-right: 1px solid #bbb;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.sidebar-header {
+  padding: 8px 12px; font-size: 12px; font-weight: 600; color: #666;
+  text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #bbb;
+  flex-shrink: 0;
+}
+.sidebar-filter {
+  padding: 6px 8px; border-bottom: 1px solid #bbb; flex-shrink: 0;
+}
+.sidebar-filter input {
+  width: 100%; padding: 5px 8px; background: #fff; border: 1px solid #ccc;
+  border-radius: 4px; color: #333; font-size: 12px; outline: none;
+}
+.sidebar-filter input::placeholder { color: #999; }
+.sidebar-filter input:focus { border-color: #888; }
+.file-list {
+  flex: 1; overflow-y: auto; padding: 4px 0;
+}
+.file-list::-webkit-scrollbar { width: 6px; }
+.file-list::-webkit-scrollbar-track { background: transparent; }
+.file-list::-webkit-scrollbar-thumb { background: #aaa; border-radius: 3px; }
+.file-item {
+  padding: 5px 12px; font-size: 12px; cursor: pointer;
+  color: #555; transition: background 0.15s; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.file-item:hover { background: #c0c0c0; color: #222; }
+.file-item.active { background: #888; color: #fff; }
+.file-group {
+  padding: 6px 12px 3px; font-size: 10px; font-weight: 600;
+  color: #777; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Canvas area */
+.canvas-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 20px; overflow: auto; gap: 16px;
+}
+.compare-view {
+  display: flex; gap: 24px; align-items: flex-start; justify-content: center; flex-wrap: wrap;
+}
+.render-panel {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.render-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #777;
+}
+.render-frame {
+  background: #e0e0e0; border-radius: 6px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.15); overflow: hidden;
+  display: inline-block; position: relative;
+}
+.resize-handle {
+  position: absolute; width: 14px; height: 14px; z-index: 10;
+  background: #888; border: 2px solid #fff; border-radius: 3px;
+  opacity: 0.7; transition: opacity 0.15s;
+}
+.resize-handle:hover, .resize-handle.active { opacity: 1; }
+.resize-handle.nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.resize-handle.ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.resize-handle.sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.resize-handle.se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.resize-info {
+  position: absolute; top: -28px; left: 50%; transform: translateX(-50%);
+  background: #888; color: #fff; padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; white-space: nowrap; pointer-events: none; display: none;
+}
+canvas, #ref-img { display: block; image-rendering: auto; }
+#ref-img { border-radius: 6px; box-shadow: 0 2px 12px rgba(0,0,0,0.15); }
+#ref-panel { display: none; }
+
+/* Operations panel */
+.ops-panel {
+  flex-shrink: 0; max-height: 160px; overflow-y: auto;
+  background: #ccc; border-top: 1px solid #bbb;
+  padding: 8px 12px; font-size: 11px; font-family: 'SF Mono', Monaco, Consolas, monospace;
+  color: #444; white-space: pre-wrap; line-height: 1.5;
+}
+.ops-panel:empty { display: none; }
+
+/* Drop zone overlay */
+#drop-zone {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.08);
+  border: 3px dashed #999; display: none;
+  justify-content: center; align-items: center; font-size: 22px; color: #555; z-index: 100;
+}
+#drop-zone.active { display: flex; }
+
+@media (max-width: 700px) {
+  .sidebar { width: 160px; }
+  .compare-view { gap: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RemoteCompose Player</h1>
+  <div class="controls">
+    <label><input type="file" id="file-input" accept=".rcd,.rc"> Open .rcd/.rc</label>
+  </div>
+  <span id="info">Select a test file or drop an .rcd file</span>
+</header>
+
+<div class="content">
+  <div class="sidebar">
+    <div class="sidebar-header">Test Files</div>
+    <div class="sidebar-filter">
+      <input type="text" id="filter" placeholder="Filter...">
+    </div>
+    <div class="file-list" id="file-list"></div>
+  </div>
+
+  <div style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
+    <div class="canvas-area">
+      <div class="compare-view">
+        <div class="render-panel">
+          <div class="render-label">Web Canvas</div>
+          <div class="render-frame" id="render-frame">
+            <canvas id="canvas" width="256" height="256"></canvas>
+            <div class="resize-handle nw" data-corner="nw"></div>
+            <div class="resize-handle ne" data-corner="ne"></div>
+            <div class="resize-handle sw" data-corner="sw"></div>
+            <div class="resize-handle se" data-corner="se"></div>
+            <div class="resize-info" id="resize-info"></div>
+          </div>
+        </div>
+        <div class="render-panel" id="ref-panel">
+          <div class="render-label">Android Reference</div>
+          <img id="ref-img" width="256" height="256" alt="Reference">
+        </div>
+      </div>
+    </div>
+    <div class="ops-panel" id="ops-panel"></div>
+  </div>
+</div>
+
+<div id="drop-zone">Drop .rcd file here</div>
+
+<script src="./bundle.js"></script>
+<script>
+  const canvas = document.getElementById('canvas');
+  const info = document.getElementById('info');
+  const opsPanel = document.getElementById('ops-panel');
+  const dropZone = document.getElementById('drop-zone');
+  const fileList = document.getElementById('file-list');
+  const filterInput = document.getElementById('filter');
+  const refPanel = document.getElementById('ref-panel');
+  const refImg = document.getElementById('ref-img');
+
+  let player = null;
+  let allFiles = [];
+
+  function getPlayer() {
+    if (!player) {
+      if (!window.RC || !window.RC.RcdPlayer) {
+        info.textContent = 'Error: bundle not loaded';
+        return null;
+      }
+      player = new window.RC.RcdPlayer(canvas);
+    }
+    return player;
+  }
+
+  // --- File list ---
+
+  async function loadFileList() {
+    try {
+      const res = await fetch('/rcd-list');
+      allFiles = await res.json();
+      renderFileList(allFiles);
+    } catch (e) {
+      fileList.innerHTML = '<div style="padding:12px;color:#555;font-size:11px;">Use the file picker or drag &amp; drop to load .rcd/.rc files</div>';
+    }
+  }
+
+  function renderFileList(files) {
+    fileList.innerHTML = '';
+    for (const f of files) {
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.textContent = f.replace(/\.(rcd|rc)$/, '');
+      div.dataset.file = f;
+      div.addEventListener('click', () => loadTestFile(f, div));
+      fileList.appendChild(div);
+    }
+  }
+
+  filterInput.addEventListener('input', () => {
+    const q = filterInput.value.toLowerCase();
+    renderFileList(q ? allFiles.filter(f => f.toLowerCase().includes(q)) : allFiles);
+  });
+
+  async function loadTestFile(name, el) {
+    document.querySelectorAll('.file-item.active').forEach(e => e.classList.remove('active'));
+    if (el) el.classList.add('active');
+    info.textContent = `Loading ${name}...`;
+
+    // Show reference PNG
+    const pngName = name.replace(/\.(rcd|rc)$/, '.png');
+    refImg.src = `/rcd/${pngName}`;
+    refImg.onerror = () => { refPanel.style.display = 'none'; };
+    refImg.onload = () => {
+      refImg.width = canvas.width;
+      refImg.height = canvas.height;
+      refPanel.style.display = '';
+    };
+
+    try {
+      const res = await fetch(`/rcd/${name}`);
+      const data = await res.arrayBuffer();
+      await renderRcd(data, name);
+    } catch (e) {
+      info.textContent = `Error: ${e.message}`;
+      console.error(e);
+    }
+  }
+
+  async function renderRcd(data, name) {
+    const p = getPlayer();
+    if (!p) return;
+    try {
+      const doc = await p.loadFromArrayBuffer(data);
+      const w = doc.getWidth();
+      const h = doc.getHeight();
+      const v = doc.mVersion;
+      info.textContent = `${name} | ${w}x${h} | ${doc.getNumberOfOps()} ops | v${v?.mMajorVersion??'?'}.${v?.mMinorVersion??'?'}.${v?.mPatchVersion??'?'}`;
+      opsPanel.textContent = doc.toNestedString();
+      // Update reference image size to match canvas display size
+      if (refPanel.style.display !== 'none') {
+        refImg.width = canvas.width;
+        refImg.height = canvas.height;
+      }
+    } catch (e) {
+      info.textContent = `Error loading ${name}: ${e.message}`;
+      opsPanel.textContent = e.stack || e.message;
+      console.error(e);
+    }
+  }
+
+  // --- File picker ---
+
+  document.getElementById('file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    refPanel.style.display = 'none';
+    const data = await file.arrayBuffer();
+    await renderRcd(data, file.name);
+  });
+
+  // --- Drag & drop ---
+
+  document.addEventListener('dragenter', (e) => { e.preventDefault(); dropZone.classList.add('active'); });
+  document.addEventListener('dragover', (e) => { e.preventDefault(); });
+  document.addEventListener('dragleave', (e) => { if (e.target === dropZone) dropZone.classList.remove('active'); });
+  document.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('active');
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    refPanel.style.display = 'none';
+    const data = await file.arrayBuffer();
+    await renderRcd(data, file.name);
+  });
+
+  // --- Keyboard nav ---
+  document.addEventListener('keydown', (e) => {
+    if (e.target === filterInput) return;
+    const items = [...document.querySelectorAll('.file-item')];
+    const activeIdx = items.findIndex(el => el.classList.contains('active'));
+    if (e.key === 'ArrowDown' && activeIdx < items.length - 1) {
+      e.preventDefault();
+      items[activeIdx + 1].click();
+      items[activeIdx + 1].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp' && activeIdx > 0) {
+      e.preventDefault();
+      items[activeIdx - 1].click();
+      items[activeIdx - 1].scrollIntoView({ block: 'nearest' });
+    }
+  });
+
+  // --- Resize handles ---
+  (function() {
+    const frame = document.getElementById('render-frame');
+    const resizeInfo = document.getElementById('resize-info');
+    let dragging = null; // { corner, startX, startY, startW, startH, startLeft, startTop }
+
+    frame.addEventListener('pointerdown', (e) => {
+      const handle = e.target.closest('.resize-handle');
+      if (!handle || !player) return;
+      e.preventDefault();
+      e.stopPropagation();
+      handle.classList.add('active');
+      handle.setPointerCapture(e.pointerId);
+
+      dragging = {
+        corner: handle.dataset.corner,
+        pointerId: e.pointerId,
+        handle: handle,
+        startX: e.clientX,
+        startY: e.clientY,
+        startW: canvas.width,
+        startH: canvas.height,
+      };
+      resizeInfo.style.display = 'block';
+      resizeInfo.textContent = `${canvas.width} × ${canvas.height}`;
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      e.preventDefault();
+
+      const dx = e.clientX - dragging.startX;
+      const dy = e.clientY - dragging.startY;
+      let newW = dragging.startW;
+      let newH = dragging.startH;
+
+      switch (dragging.corner) {
+        case 'se': newW += dx; newH += dy; break;
+        case 'sw': newW -= dx; newH += dy; break;
+        case 'ne': newW += dx; newH -= dy; break;
+        case 'nw': newW -= dx; newH -= dy; break;
+      }
+
+      newW = Math.max(64, Math.round(newW));
+      newH = Math.max(64, Math.round(newH));
+
+      player.resize(newW, newH);
+      resizeInfo.textContent = `${newW} × ${newH}`;
+    });
+
+    document.addEventListener('pointerup', (e) => {
+      if (!dragging) return;
+      dragging.handle.classList.remove('active');
+      dragging = null;
+      resizeInfo.style.display = 'none';
+    });
+  })();
+
+  // --- Init ---
+  loadFileList();
+</script>
+</body>
+</html>

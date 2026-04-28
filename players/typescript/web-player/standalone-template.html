@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RemoteCompose Player</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #e0e0e0; color: #333; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+header {
+  padding: 10px 16px; background: #d0d0d0; border-bottom: 1px solid #bbb;
+  display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+}
+header h1 { font-size: 16px; font-weight: 600; color: #444; white-space: nowrap; }
+.controls label {
+  padding: 6px 14px; background: #bbb; border-radius: 5px;
+  cursor: pointer; font-size: 13px; color: #333; transition: background 0.2s; white-space: nowrap;
+}
+.controls label:hover { background: #999; color: #fff; }
+.controls input[type="file"] { display: none; }
+#info { font-size: 12px; color: #666; margin-left: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.main-area {
+  flex: 1; display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* Canvas area */
+.canvas-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 20px; overflow: auto; gap: 16px;
+}
+#player-container { width: 90%; height: 90%; }
+#player-container canvas { display: block; image-rendering: auto; background: #e0e0e0; width: 100%; height: 100%; }
+
+/* Drop zone */
+#drop-zone {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.08);
+  border: 3px dashed #999; display: none;
+  justify-content: center; align-items: center; font-size: 22px; color: #555; z-index: 100;
+}
+#drop-zone.active { display: flex; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RemoteCompose Player</h1>
+  <div class="controls">
+    <label><input type="file" id="file-input" accept=".rcd,.rc"> Open file</label>
+  </div>
+  <span id="info"></span>
+</header>
+
+<div class="main-area">
+  <div class="canvas-area">
+    <div id="player-container"></div>
+  </div>
+</div>
+
+<div id="drop-zone">Drop .rc file here</div>
+
+<script>
+%%BUNDLE_JS%%
+</script>
+<script>
+  var DEFAULT_DATA = '%%RC_DATA_BASE64%%';
+
+  var info = document.getElementById('info');
+  var dropZone = document.getElementById('drop-zone');
+  var container = document.getElementById('player-container');
+
+  function containerSize() {
+    var w = container.clientWidth;
+    var h = container.clientHeight;
+    return { w: Math.max(w, 64), h: Math.max(h, 64) };
+  }
+
+  var sz = containerSize();
+  var handle = RC.createPlayer(container, {
+    data: DEFAULT_DATA,
+    width: sz.w,
+    height: sz.h,
+    theme: 'light',
+    background: '#e0e0e0',
+    onLoad: function(doc) { showInfo(doc, 'experimental_gmt.rc'); }
+  });
+
+  window.addEventListener('resize', function() {
+    var s = containerSize();
+    handle.resize(s.w, s.h);
+  });
+
+  function showInfo(doc, name) {
+    var w = doc.getWidth();
+    var h = doc.getHeight();
+    var v = doc.mVersion;
+    info.textContent = name + ' | ' + w + 'x' + h + ' | ' + doc.getNumberOfOps() + ' ops | v' + (v && v.mMajorVersion != null ? v.mMajorVersion : '?') + '.' + (v && v.mMinorVersion != null ? v.mMinorVersion : '?') + '.' + (v && v.mPatchVersion != null ? v.mPatchVersion : '?');
+  }
+
+  async function loadFile(buffer, name) {
+    try {
+      var doc = await handle.loadFromArrayBuffer(buffer);
+      showInfo(doc, name);
+    } catch (e) {
+      info.textContent = 'Error loading ' + name + ': ' + e.message;
+      console.error(e);
+    }
+  }
+
+  // --- File picker ---
+  document.getElementById('file-input').addEventListener('change', async function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var data = await file.arrayBuffer();
+    await loadFile(data, file.name);
+  });
+
+  // --- Drag & drop ---
+  document.addEventListener('dragenter', function(e) { e.preventDefault(); dropZone.classList.add('active'); });
+  document.addEventListener('dragover', function(e) { e.preventDefault(); });
+  document.addEventListener('dragleave', function(e) { if (e.target === dropZone) dropZone.classList.remove('active'); });
+  document.addEventListener('drop', async function(e) {
+    e.preventDefault();
+    dropZone.classList.remove('active');
+    var file = e.dataTransfer.files[0];
+    if (!file) return;
+    var data = await file.arrayBuffer();
+    await loadFile(data, file.name);
+  });
+</script>
+</body>
+</html>
