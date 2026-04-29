@@ -193,26 +193,17 @@ export class RcdPlayer {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Fit the document's native size into the canvas with a centered
-        // uniform scale. Slides without an explicit RootContentBehavior would
-        // otherwise always draw at header-native size in the top-left.
-        const docW = this.document.mWidth;
-        const docH = this.document.mHeight;
-        const cw = this.canvas.width;
-        const ch = this.canvas.height;
-        if (docW > 0 && docH > 0 && (cw !== docW || ch !== docH)) {
-            const s = Math.min(cw / docW, ch / docH);
-            const tx = (cw - docW * s) / 2;
-            const ty = (ch - docH * s) / 2;
-            this.ctx.setTransform(s, 0, 0, s, tx, ty);
-            this.mContentScale = s;
-            this.mContentOffsetX = tx;
-            this.mContentOffsetY = ty;
-        } else {
-            this.mContentScale = 1;
-            this.mContentOffsetX = 0;
-            this.mContentOffsetY = 0;
-        }
+        // The engine already sizes the document to `context.mWidth` /
+        // `context.mHeight` (which we keep in sync with the canvas in
+        // `loadFromArrayBuffer` and `resize`).  For SIZING_SCALE
+        // documents `paint()` applies its own translate+scale transform
+        // internally; for everything else `paint()` does
+        // `setWidth(context.mWidth)` so the content fills the context
+        // space natively.  Either way, no outer ctx transform is needed
+        // — applying one here would double-scale.
+        this.mContentScale = 1;
+        this.mContentOffsetX = 0;
+        this.mContentOffsetY = 0;
 
         // Reset paint state
         this.paintContext.reset();
@@ -266,9 +257,20 @@ export class RcdPlayer {
         this.canvas.height = newHeight;
         this.canvas.style.width = newWidth + 'px';
         this.canvas.style.height = newHeight + 'px';
-        // The renderFrame fit transform does the heavy lifting. The document
-        // keeps its native dims (from the Header op, which Header.apply resets
-        // every paint) — we just draw through a scale transform.
+        // Keep the engine's RemoteContext in sync with the new canvas
+        // size so non-SIZING_SCALE documents re-flow into it on next
+        // paint.  Without this the content would keep drawing at the
+        // original load-time size.
+        if (this.remoteContext) {
+            const density = this.remoteContext.getDensity() || 1;
+            const docW = newWidth  / density;
+            const docH = newHeight / density;
+            this.remoteContext.mWidth  = docW;
+            this.remoteContext.mHeight = docH;
+            // The DATA pass in CoreDocument.paint reloads
+            // ID_WINDOW_WIDTH / ID_WINDOW_HEIGHT from these, so
+            // expressions track the new size automatically.
+        }
         this.scheduleRepaint();
     }
 
