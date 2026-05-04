@@ -9,7 +9,7 @@ bitmaps) to remote players.
 This repository is not endorsed or supported by Google, and is a sandbox: things here may be incomplete, in flux, or
 superseded.
 
-Production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
+Official RemoteCompose production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
 
 ## Contents
 
