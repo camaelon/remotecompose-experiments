@@ -6,8 +6,10 @@ a compact binary UI / canvas format for streaming interactive scenes
 (layout, drawing, expressions, animations, particles, paths, shaders,
 bitmaps) to remote players.
 
-This repo is a sandbox: things here may be incomplete, in flux, or
-superseded. Production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
+This repository is not endorsed or supported by Google, and is a sandbox: things here may be incomplete, in flux, or
+superseded.
+
+Production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
 
 ## Contents
 
