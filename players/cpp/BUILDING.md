@@ -170,12 +170,10 @@ signing team, ⌘R.
 
 GitHub Actions workflows live under `.github/workflows/`:
 
-- **`macos-desktop.yml`** — runs `cmake -B build && cmake --build build`
-  on `macos-latest` for every push and PR. Smoke-tests `rc2image` against
-  `samples/`.
-- **`ios.yml`** — builds the iOS static libs and the iosViewer app on
-  `macos-latest`. Triggered manually (`workflow_dispatch`) since signing
-  isn't required but it's slower and the libs alone don't change often.
+- **`cpp.yml`** — builds the desktop C++ project on separate Linux and macOS
+  runners for every relevant push and PR. It builds all desktop C++ targets
+  and smoke-tests `rc2json`, `rc2image`, and `rcviewer` headless commands
+  against `samples/`.
 
 ---
 

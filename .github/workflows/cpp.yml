@@ -1,0 +1,152 @@
+name: C++ Desktop
+
+on:
+  push:
+    paths:
+      - ".github/workflows/cpp.yml"
+      - "players/cpp/**"
+      - "samples/**"
+  pull_request:
+    paths:
+      - ".github/workflows/cpp.yml"
+      - "players/cpp/**"
+      - "samples/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux-desktop:
+    name: Linux desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      BUILD_DIR: build/cpp
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            pkg-config \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libgl1-mesa-dev \
+            libglfw3-dev \
+            libx11-dev \
+            libxext-dev \
+            libxrender-dev
+
+      - name: Configure
+        run: cmake -S players/cpp -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build all C++ targets
+        run: cmake --build "$BUILD_DIR" --config Release
+
+      - name: Verify command binaries
+        run: |
+          test -x "$BUILD_DIR/tools/rc2json/rc2json"
+          test -x "$BUILD_DIR/tools/rc2image/rc2image"
+          test -x "$BUILD_DIR/apps/viewer/rcviewer"
+
+      - name: Smoke-test C++ commands
+        run: |
+          mkdir -p "$RUNNER_TEMP/rcx/screens"
+
+          "$BUILD_DIR/tools/rc2json/rc2json" report
+          "$BUILD_DIR/tools/rc2json/rc2json" rc2json \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/canvas.json"
+
+          "$BUILD_DIR/tools/rc2image/rc2image" \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/rc2image-canvas.png" \
+            400 400
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --screenshot \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/viewer-canvas.png" \
+            400 400 0.2
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --screenshot-dir \
+            samples \
+            "$RUNNER_TEMP/rcx/screens" \
+            400 400 0.2
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --pdf \
+            samples \
+            "$RUNNER_TEMP/rcx/samples.pdf" \
+            400 400 0.2
+
+          test -s "$RUNNER_TEMP/rcx/canvas.json"
+          test -s "$RUNNER_TEMP/rcx/rc2image-canvas.png"
+          test -s "$RUNNER_TEMP/rcx/viewer-canvas.png"
+          test -s "$RUNNER_TEMP/rcx/samples.pdf"
+          find "$RUNNER_TEMP/rcx/screens" -name '*.png' -print -quit | grep -q .
+
+  macos-desktop:
+    name: macOS desktop
+    runs-on: macos-latest
+    timeout-minutes: 45
+
+    env:
+      BUILD_DIR: build/cpp
+      CMAKE_BUILD_PARALLEL_LEVEL: 3
+
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S players/cpp -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build all C++ targets
+        run: cmake --build "$BUILD_DIR" --config Release
+
+      - name: Verify command binaries
+        run: |
+          test -x "$BUILD_DIR/tools/rc2json/rc2json"
+          test -x "$BUILD_DIR/tools/rc2image/rc2image"
+          test -x "$BUILD_DIR/apps/viewer/rcviewer"
+
+      - name: Smoke-test C++ commands
+        run: |
+          mkdir -p "$RUNNER_TEMP/rcx/screens"
+
+          "$BUILD_DIR/tools/rc2json/rc2json" report
+          "$BUILD_DIR/tools/rc2json/rc2json" rc2json \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/canvas.json"
+
+          "$BUILD_DIR/tools/rc2image/rc2image" \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/rc2image-canvas.png" \
+            400 400
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --screenshot \
+            samples/canvas.rc \
+            "$RUNNER_TEMP/rcx/viewer-canvas.png" \
+            400 400 0.2
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --screenshot-dir \
+            samples \
+            "$RUNNER_TEMP/rcx/screens" \
+            400 400 0.2
+
+          "$BUILD_DIR/apps/viewer/rcviewer" --pdf \
+            samples \
+            "$RUNNER_TEMP/rcx/samples.pdf" \
+            400 400 0.2
+
+          test -s "$RUNNER_TEMP/rcx/canvas.json"
+          test -s "$RUNNER_TEMP/rcx/rc2image-canvas.png"
+          test -s "$RUNNER_TEMP/rcx/viewer-canvas.png"
+          test -s "$RUNNER_TEMP/rcx/samples.pdf"
+          find "$RUNNER_TEMP/rcx/screens" -name '*.png' -print -quit | grep -q .
