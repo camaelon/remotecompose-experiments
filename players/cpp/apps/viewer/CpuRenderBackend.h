@@ -1,7 +1,11 @@
 #pragma once
 
 #define GL_SILENCE_DEPRECATION
+#if defined(__APPLE__)
 #include <OpenGL/gl.h>
+#else
+#include <GL/gl.h>
+#endif
 
 #include "RenderBackend.h"
 #include "include/core/SkSurface.h"

@@ -15,13 +15,12 @@ desktop, on iOS, headlessly to PNG, or be inspected as JSON.
 ## Status
 
 Pre-1.0. The macOS desktop pipeline (engine + Skia bridge + GLFW viewer +
-headless tools) is solid. The iOS pipeline (static libs + SwiftUI app with a
-Metal-backed Skia view) is solid for arm64 device builds. See
+headless tools) is solid. Linux builds the same desktop tools and a CPU/OpenGL
+viewer. The iOS pipeline (static libs + SwiftUI app with a Metal-backed Skia
+view) is solid for arm64 device builds. See
 [docs/PROGRESS.md](docs/PROGRESS.md) for milestone-by-milestone status.
 
-Linux and Windows ports are not in this tree yet; the engine itself is
-portable C++17, but `rcskia` and the apps still assume Apple frameworks for
-font discovery and platform glue.
+Windows is not in this tree yet; the engine itself is portable C++17.
 
 ## What's in here
 
@@ -48,10 +47,10 @@ rcX/
 └── docs/            Architecture, protocol notes, milestone progress.
 ```
 
-## Quick start (macOS)
+## Quick start (macOS / Linux)
 
 ```sh
-# Configure + build (Skia, GLFW, miniz are auto-fetched by CMake).
+# Configure + build. Skia and miniz are auto-fetched by CMake.
 cmake -B build
 cmake --build build -j
 
@@ -64,6 +63,10 @@ cmake --build build -j
 
 The first `cmake -B build` takes a couple of minutes — Skia (~150 MB pre-built)
 is downloaded once into `build/_deps/skia-src/` and reused thereafter.
+
+On Linux, install CMake, git, pkg-config, GLFW, OpenGL, FontConfig, FreeType,
+and X11 development packages first. The Linux viewer uses the CPU backend;
+`--metal` and AVFoundation video formats remain macOS-only.
 
 ## iOS build
 
