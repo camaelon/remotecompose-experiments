@@ -149,6 +149,7 @@ public:
     static constexpr int SKIP = 241;
     static constexpr int TEXT_STYLE = 242;
     static constexpr int MODIFIER_DIMENSION_CONSTRAINTS = 243;
+    static constexpr int ACCESSIBILITY_SEMANTICS = 250;
 
     static void init();
     static ReaderFn getReader(int opcode);
