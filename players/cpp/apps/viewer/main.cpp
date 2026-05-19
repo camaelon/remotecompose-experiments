@@ -720,6 +720,7 @@ static void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, 
                     dy = static_cast<float>((g.mouseY - g.lastMouseY) / dt);
                 }
                 g.doc->touchUp(*g.context, touchX(g.mouseX), touchY(g.mouseY), dx, dy);
+                g.doc->onClick(*g.context, g.mouseX, g.mouseY);
             }
         }
         g.needsRedraw = true;
@@ -1337,20 +1338,6 @@ int main(int argc, char* argv[]) {
 
             renderFrame(dt);
             g.backend->present();
-
-            // Title bar info (skip in widget mode — no title bar)
-            if (!g.widgetMode) {
-                std::string name = g.files.empty() ? "---"
-                    : (g.zip ? baseName(g.files[g.currentIndex])
-                             : fs::path(g.files[g.currentIndex]).filename().string());
-                char title[256];
-                snprintf(title, sizeof(title), "RC Viewer [%d/%d] %s  t=%.1fs%s  [%s]",
-                         g.currentIndex + 1, (int)g.files.size(),
-                         name.c_str(), g.animTime,
-                         g.paused ? " PAUSED" : "",
-                         g.backend->name());
-                glfwSetWindowTitle(window, title);
-            }
 
             glfwSwapBuffers(window);
 

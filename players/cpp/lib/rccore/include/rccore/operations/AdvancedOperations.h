@@ -875,7 +875,9 @@ public:
     std::string name() const override { return "ValueFloatExpressionChangeActionOperation"; }
     int opcode() const override { return 222; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        context.overrideFloat(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueFloatChangeOp>();
         op->targetId = buf.readInt();
@@ -890,7 +892,9 @@ public:
     std::string name() const override { return "VALUE_INTEGER_CHANGE_ACTION"; }
     int opcode() const override { return 212; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        context.overrideInteger(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueIntChangeOp>();
         op->targetId = buf.readInt(); op->value = buf.readInt();
@@ -905,7 +909,9 @@ public:
     std::string name() const override { return "VALUE_STRING_CHANGE_ACTION"; }
     int opcode() const override { return 213; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        context.loadText(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueStringChangeOp>();
         op->targetId = buf.readInt(); op->value = buf.readUTF8();
@@ -967,7 +973,9 @@ public:
     std::string name() const override { return "ValueFloatExpressionChangeActionOperation"; }
     int opcode() const override { return 227; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        context.overrideBoolean(targetId, value != 0);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueBooleanChangeOp>();
         op->targetId = buf.readInt();
@@ -983,7 +991,13 @@ public:
     std::string name() const override { return "ValueIntegerExpressionChangeAction"; }
     int opcode() const override { return 218; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        int targetVarId = static_cast<int>(targetId & 0xFFFFFFFF);
+        int expressionVarId = static_cast<int>(value & 0xFFFFFFFF);
+        int resolvedValue = context.getInteger(expressionVarId);
+
+        context.overrideInteger(targetVarId, resolvedValue);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueLongChangeOp>();
         op->targetId = buf.readLong();
@@ -1907,6 +1921,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CollapsibleRowLayout"; }
     int opcode() const override { return 230; }
@@ -1932,6 +1947,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CollapsibleColumnLayout"; }
     int opcode() const override { return 233; }
@@ -1956,6 +1972,7 @@ class FitBoxLayout : public Operation {
 public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "FitBoxLayout"; }
     int opcode() const override { return 176; }
@@ -2024,6 +2041,7 @@ public:
     int componentId = 0, animationId = 0;
     int imageId = 0, contentScale = 0;
     float aspectRatio = 1.0f;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_IMAGE"; }
     int opcode() const override { return 234; }
@@ -2288,6 +2306,34 @@ public:
         for (int i = 0; i < len; i++) {
             op->args.push_back(buf.readInt());
         }
+        ops.push_back(std::move(op));
+    }
+};
+
+class AccessibilitySemantics : public Operation {
+public:
+    int contentDescriptionId = 0;
+    int role = 0;
+    int textId = 0;
+    int stateDescriptionId = 0;
+    int mode = 0;
+    bool enabled = false;
+    bool clickable = false;
+
+    std::string name() const override { return "AccessibilitySemantics"; }
+    int opcode() const override { return 250; }
+    std::vector<Field> fields() const override { return {}; }
+    void apply(RemoteContext& context) override {}
+
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<AccessibilitySemantics>();
+        op->contentDescriptionId = buf.readInt();
+        op->role = buf.readByte();
+        op->textId = buf.readInt();
+        op->stateDescriptionId = buf.readInt();
+        op->mode = buf.readByte();
+        op->enabled = buf.readBoolean();
+        op->clickable = buf.readBoolean();
         ops.push_back(std::move(op));
     }
 };
