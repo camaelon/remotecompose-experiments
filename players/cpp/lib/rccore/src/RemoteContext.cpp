@@ -1,6 +1,7 @@
 #include "rccore/RemoteContext.h"
 #include "rccore/PaintContext.h"
 #include "rccore/Operation.h"
+#include "rccore/CoreDocument.h"
 
 #include <algorithm>
 #include <chrono>
@@ -44,6 +45,12 @@ void RemoteContext::appendPathData(int instanceId,
                                     const std::vector<float>& path) {
     if (mPaintContext) {
         mPaintContext->appendPathData(instanceId, path);
+    }
+}
+
+void RemoteContext::addClickArea(int id, int contentDescriptionId, float left, float top, float right, float bottom, int metadataId) {
+    if (mDocument) {
+        mDocument->addClickArea(id, getText(contentDescriptionId), left, top, right, bottom, getText(metadataId));
     }
 }
 

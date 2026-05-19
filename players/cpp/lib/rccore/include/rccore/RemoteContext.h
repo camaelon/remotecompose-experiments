@@ -86,8 +86,15 @@ public:
     // ── Variable stores (with listener notification) ─────────────────
 
     void loadFloat(int id, float value) {
+        if (mFloatOverrides.count(id)) return;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
+        notifyListeners(id);
+    }
+    void overrideFloat(int id, float value) {
+        mFloats[id] = value;
+        mIntegers[id] = static_cast<int>(value);
+        mFloatOverrides.insert(id);
         notifyListeners(id);
     }
     float getFloat(int id) const {
@@ -96,8 +103,15 @@ public:
     }
 
     void loadInteger(int id, int value) {
+        if (mIntegerOverrides.count(id)) return;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
+        notifyListeners(id);
+    }
+    void overrideInteger(int id, int value) {
+        mIntegers[id] = value;
+        mFloats[id] = static_cast<float>(value);
+        mIntegerOverrides.insert(id);
         notifyListeners(id);
     }
     int getInteger(int id) const {
@@ -115,7 +129,13 @@ public:
     }
 
     void loadBoolean(int id, bool value) {
+        if (mBooleanOverrides.count(id)) return;
         mBooleans[id] = value;
+        notifyListeners(id);
+    }
+    void overrideBoolean(int id, bool value) {
+        mBooleans[id] = value;
+        mBooleanOverrides.insert(id);
         notifyListeners(id);
     }
     bool getBoolean(int id) const {
@@ -189,6 +209,9 @@ public:
     void loadPathData(int instanceId, int winding, const std::vector<float>& path);
     void appendPathData(int instanceId, const std::vector<float>& path);
 
+    // Click area registration
+    void addClickArea(int id, int contentDescriptionId, float left, float top, float right, float bottom, int metadataId);
+
     // Shader store
     void loadShader(int id, ShaderData* shader) { mShaders[id] = shader; }
     ShaderData* getShader(int id) const {
@@ -261,6 +284,9 @@ private:
     std::unordered_map<int, bool> mBooleans;
     std::unordered_map<int, int> mColors;
     std::unordered_set<int> mColorOverrides;  // IDs overridden by system theme defaults
+    std::unordered_set<int> mIntegerOverrides;
+    std::unordered_set<int> mFloatOverrides;
+    std::unordered_set<int> mBooleanOverrides;
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, std::vector<float>> mFloatLists;
     std::unordered_map<int, std::vector<float>> mObjectMatrices;
