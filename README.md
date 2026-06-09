@@ -76,6 +76,8 @@ It also produces three other deliverables — a single-file standalone
 HTML, a static deck site, and a VS Code `.vsix`. See
 [players/typescript/README.md](players/typescript/README.md).
 
+Demo page is here: https://camaelon.github.io/remotecompose-experiments/RemoteComposeIntroduction/
+
 ## License
 
 Apache 2.0. See [LICENSE](LICENSE).
