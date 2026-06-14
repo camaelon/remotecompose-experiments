@@ -105,25 +105,41 @@ export class ValueFloatExpressionChangeAction extends Operation {
 }
 
 // ── TextLayout (208) ─────────────────────────────────────────────────
+// In Java, TEXT_LAYOUT is a Container (TextLayout extends LayoutManager -> Component).
+// This parse-only stub mirrors that: it exposes getList() so the player nests its
+// (empty) child list and emits a ContainerEnd, matching the wire layout. IDs are
+// read via declareId/readId/readNanId so macro expansion can uniqueify them.
 export class TextLayout extends Operation {
     static readonly OP_CODE = 208;
-    constructor() { super(); }
+    private mComponentId: number;
+    private mTextId: number;
+    private mList: Operation[] = [];
+    constructor(componentId = -1, textId = -1) {
+        super();
+        this.mComponentId = componentId;
+        this.mTextId = textId;
+    }
+    getComponentId(): number { return this.mComponentId; }
+    getId(): number { return this.mComponentId; }
+    getList(): Operation[] { return this.mList; }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}TextLayout`; }
+    deepToString(indent: string): string {
+        return `${indent}TEXT_LAYOUT [${this.mComponentId}] textId=${this.mTextId}`;
+    }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt(); // componentId
-        buffer.readInt(); // animationId
-        buffer.readInt(); // textId
+        const componentId = buffer.declareId();
+        buffer.declareId(); // animationId
+        const textId = buffer.readId();
         buffer.readInt(); // color
-        buffer.readFloat(); // fontSize
+        buffer.readNanId(); // fontSize
         buffer.readInt(); // fontStyle
-        buffer.readFloat(); // fontWeight
-        buffer.readInt(); // fontFamilyId
+        buffer.readNanId(); // fontWeight
+        buffer.readId(); // fontFamilyId
         buffer.readInt(); // textAlign
         buffer.readInt(); // overflow
         buffer.readInt(); // maxLines
-        operations.push(new TextLayout());
+        operations.push(new TextLayout(componentId, textId));
     }
 }
 

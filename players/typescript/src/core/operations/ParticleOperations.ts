@@ -8,7 +8,7 @@ import type { RemoteContext } from '../RemoteContext';
 import { ContextMode } from '../RemoteContext';
 import type { PaintContext } from '../PaintContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
 import { FloatExpression } from './FloatExpression';
 
 // Constants matching FloatExpression
@@ -16,46 +16,50 @@ const OFFSET = 0x310000;
 const ID_REGION_MASK = 0x700000;
 const ID_REGION_ARRAY = 0x200000;
 
-/** Check if a NaN-encoded value is a math operator */
-function isMathOperator(v: number): boolean {
-    if (!Number.isNaN(v)) return false;
-    const id = idFromNan(v);
+// Equations are kept as raw float32 int bits (operators/array ids are NaN-with-
+// payload). Bits survive engines that canonicalize NaN payloads (Safari/Firefox)
+// and are fed directly to FloatExpression.evalRPN (which accepts Int32Array).
+
+/** Check if raw float32 int bits encode a math operator token. */
+function isMathOperatorBits(b: number): boolean {
+    if (!isNaNBits(b)) return false;
+    const id = idFromBits(b);
     return id > OFFSET && id <= OFFSET + 79;
 }
 
-/** Check if a NaN-encoded value is a data variable (array/collection) */
-function isDataVariable(v: number): boolean {
-    if (!Number.isNaN(v)) return false;
-    const id = idFromNan(v);
+/** Check if raw float32 int bits encode a data variable (array/collection). */
+function isDataVariableBits(b: number): boolean {
+    if (!isNaNBits(b)) return false;
+    const id = idFromBits(b);
     return (id & ID_REGION_MASK) === ID_REGION_ARRAY;
 }
 
 /**
- * Resolve variable references in an equation array.
- * Copies tokens, replacing variable NaN refs with their current float values from context.
- * Math operators and data variables are preserved as-is.
+ * Resolve variable references in an equation (raw bits in/out).
+ * Variable NaN refs become the literal float's bits; operators and data
+ * variables are preserved as their NaN bits.
  */
-function resolveEquation(src: Float32Array, context: RemoteContext): Float32Array {
-    const out = new Float32Array(src.length);
+function resolveEquation(src: Int32Array, context: RemoteContext): Int32Array {
+    const out = new Int32Array(src.length);
     for (let i = 0; i < src.length; i++) {
-        const v = src[i];
-        if (Number.isNaN(v) && !isMathOperator(v) && !isDataVariable(v)) {
-            out[i] = context.getFloat(idFromNan(v));
+        const b = src[i];
+        if (isNaNBits(b) && !isMathOperatorBits(b) && !isDataVariableBits(b)) {
+            out[i] = floatToRawIntBits(context.getFloat(idFromBits(b)));
         } else {
-            out[i] = v;
+            out[i] = b;
         }
     }
     return out;
 }
 
 /**
- * Register variable dependencies from an equation array.
+ * Register variable dependencies from an equation (raw bits).
  */
-function registerEquationListening(eq: Float32Array, context: RemoteContext, op: VariableSupport): void {
+function registerEquationListening(eq: Int32Array, context: RemoteContext, op: VariableSupport): void {
     for (let i = 0; i < eq.length; i++) {
-        const v = eq[i];
-        if (Number.isNaN(v) && !isMathOperator(v) && !isDataVariable(v)) {
-            context.listensTo(idFromNan(v), op);
+        const b = eq[i];
+        if (isNaNBits(b) && !isMathOperatorBits(b) && !isDataVariableBits(b)) {
+            context.listensTo(idFromBits(b), op);
         }
     }
 }
@@ -67,19 +71,19 @@ export class ParticlesCreateOp extends Operation implements VariableSupport {
     mId: number;
     private mParticleCount: number;
     private mVarId: number[];
-    private mEquations: Float32Array[];
-    private mOutEquations: Float32Array[];
+    private mEquations: Int32Array[];
+    private mOutEquations: Int32Array[];
     private mParticles: number[][];
     private mInitialized = false;
     private mContext: RemoteContext | null = null;
 
-    constructor(id: number, particleCount: number, varId: number[], equations: Float32Array[]) {
+    constructor(id: number, particleCount: number, varId: number[], equations: Int32Array[]) {
         super();
         this.mId = id;
         this.mParticleCount = particleCount;
         this.mVarId = varId;
         this.mEquations = equations;
-        this.mOutEquations = equations.map(eq => new Float32Array(eq));
+        this.mOutEquations = equations.map(eq => new Int32Array(eq));
         this.mParticles = [];
         for (let i = 0; i < particleCount; i++) {
             this.mParticles.push(new Array(varId.length).fill(0));
@@ -133,12 +137,12 @@ export class ParticlesCreateOp extends Operation implements VariableSupport {
         const particleCount = buffer.readInt();
         const varLen = buffer.readInt();
         const varIds: number[] = [];
-        const equations: Float32Array[] = [];
+        const equations: Int32Array[] = [];
         for (let i = 0; i < varLen; i++) {
             varIds.push(buffer.readInt());
             const equLen = buffer.readInt();
-            const eq = new Float32Array(equLen);
-            for (let j = 0; j < equLen; j++) eq[j] = buffer.readFloat();
+            const eq = new Int32Array(equLen);
+            for (let j = 0; j < equLen; j++) eq[j] = buffer.readInt();
             equations.push(eq);
         }
         operations.push(new ParticlesCreateOp(id, particleCount, varIds, equations));
@@ -150,20 +154,20 @@ export class ParticlesLoopOp extends PaintOperation implements VariableSupport {
     static readonly OP_CODE = 163;
 
     private mId: number;
-    private mRestart: Float32Array;
-    private mOutRestart: Float32Array;
-    private mEquations: Float32Array[];
-    private mOutEquations: Float32Array[];
+    private mRestart: Int32Array;
+    private mOutRestart: Int32Array;
+    private mEquations: Int32Array[];
+    private mOutEquations: Int32Array[];
     mList: Operation[] = [];
     private mSource: ParticlesCreateOp | null = null;
 
-    constructor(id: number, restart: Float32Array, equations: Float32Array[]) {
+    constructor(id: number, restart: Int32Array, equations: Int32Array[]) {
         super();
         this.mId = id;
         this.mRestart = restart;
-        this.mOutRestart = new Float32Array(restart);
+        this.mOutRestart = new Int32Array(restart);
         this.mEquations = equations;
-        this.mOutEquations = equations.map(eq => new Float32Array(eq));
+        this.mOutEquations = equations.map(eq => new Int32Array(eq));
     }
 
     getList(): Operation[] { return this.mList; }
@@ -256,14 +260,14 @@ export class ParticlesLoopOp extends PaintOperation implements VariableSupport {
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
         const restartLen = buffer.readInt();
-        const restart = new Float32Array(restartLen);
-        for (let i = 0; i < restartLen; i++) restart[i] = buffer.readFloat();
+        const restart = new Int32Array(restartLen);
+        for (let i = 0; i < restartLen; i++) restart[i] = buffer.readInt();
         const varLen = buffer.readInt();
-        const equations: Float32Array[] = [];
+        const equations: Int32Array[] = [];
         for (let i = 0; i < varLen; i++) {
             const equLen = buffer.readInt();
-            const eq = new Float32Array(equLen);
-            for (let j = 0; j < equLen; j++) eq[j] = buffer.readFloat();
+            const eq = new Int32Array(equLen);
+            for (let j = 0; j < equLen; j++) eq[j] = buffer.readInt();
             equations.push(eq);
         }
         operations.push(new ParticlesLoopOp(id, restart, equations));
@@ -278,17 +282,17 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
     private mFlags: number;
     private mMin: number;
     private mMax: number;
-    private mCondition: Float32Array;
-    private mOutCondition: Float32Array;
-    private mEquations1: Float32Array[];
-    private mOutEquations1: Float32Array[];
-    private mEquations2: Float32Array[];
+    private mCondition: Int32Array;
+    private mOutCondition: Int32Array;
+    private mEquations1: Int32Array[];
+    private mOutEquations1: Int32Array[];
+    private mEquations2: Int32Array[];
     mList: Operation[] = [];
     private mSource: ParticlesCreateOp | null = null;
 
     constructor(
         id: number, flags: number, min: number, max: number,
-        condition: Float32Array, equations1: Float32Array[], equations2: Float32Array[]
+        condition: Int32Array, equations1: Int32Array[], equations2: Int32Array[]
     ) {
         super();
         this.mId = id;
@@ -296,9 +300,9 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
         this.mMin = min;
         this.mMax = max;
         this.mCondition = condition;
-        this.mOutCondition = new Float32Array(condition);
+        this.mOutCondition = new Int32Array(condition);
         this.mEquations1 = equations1;
-        this.mOutEquations1 = equations1.map(eq => new Float32Array(eq));
+        this.mOutEquations1 = equations1.map(eq => new Int32Array(eq));
         this.mEquations2 = equations2;
     }
 
@@ -382,10 +386,11 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
         return `${indent}ParticlesCompareOp(id=${this.mId}, flags=${this.mFlags})`;
     }
 
-    private static readFloats(buffer: WireBuffer): Float32Array {
+    // Read an equation as raw int32 token bits (NaN operator/array ids survive).
+    private static readEquationBits(buffer: WireBuffer): Int32Array {
         const len = buffer.readInt();
-        const arr = new Float32Array(len);
-        for (let i = 0; i < len; i++) arr[i] = buffer.readFloat();
+        const arr = new Int32Array(len);
+        for (let i = 0; i < len; i++) arr[i] = buffer.readInt();
         return arr;
     }
 
@@ -394,16 +399,16 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
         const flags = buffer.readShort();
         const min = buffer.readFloat();
         const max = buffer.readFloat();
-        const condition = ParticlesCompareOp.readFloats(buffer);
+        const condition = ParticlesCompareOp.readEquationBits(buffer);
         const result1Len = buffer.readInt();
-        const equations1: Float32Array[] = [];
+        const equations1: Int32Array[] = [];
         for (let i = 0; i < result1Len; i++) {
-            equations1.push(ParticlesCompareOp.readFloats(buffer));
+            equations1.push(ParticlesCompareOp.readEquationBits(buffer));
         }
         const result2Len = buffer.readInt();
-        const equations2: Float32Array[] = [];
+        const equations2: Int32Array[] = [];
         for (let i = 0; i < result2Len; i++) {
-            equations2.push(ParticlesCompareOp.readFloats(buffer));
+            equations2.push(ParticlesCompareOp.readEquationBits(buffer));
         }
         operations.push(new ParticlesCompareOp(id, flags, min, max, condition, equations1, equations2));
     }

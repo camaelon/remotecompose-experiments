@@ -26,13 +26,13 @@ export class WebRemoteContext extends RemoteContext {
 
     // --- Path data ---
 
-    loadPathData(instanceId: number, winding: number, floatPath: Float32Array): void {
-        this.mRemoteComposeState.putPathData(instanceId, floatPath);
+    loadPathData(instanceId: number, winding: number, path: Int32Array): void {
+        this.mRemoteComposeState.putPathData(instanceId, path);
         this.mRemoteComposeState.putPathWinding(instanceId, winding);
-        this.canvasPaintContext.loadPathData(instanceId, winding, floatPath);
+        this.canvasPaintContext.loadPathData(instanceId, winding, path);
     }
 
-    getPathData(instanceId: number): Float32Array | null {
+    getPathData(instanceId: number): Int32Array | null {
         return this.mRemoteComposeState.getPathData(instanceId);
     }
 
@@ -219,6 +219,86 @@ export class WebRemoteContext extends RemoteContext {
 
     getShader(id: number): any {
         return this.mRemoteComposeState.getObject(id);
+    }
+
+    // --- Sound (Web Audio) ---
+
+    private audioContext: AudioContext | null = null;
+    private soundBytes = new Map<number, Uint8Array>();
+    private soundBuffers = new Map<number, AudioBuffer>();
+
+    private getAudioContext(): AudioContext | null {
+        try {
+            if (!this.audioContext) {
+                const Ctor =
+                    (typeof window !== 'undefined' &&
+                        ((window as any).AudioContext || (window as any).webkitAudioContext)) ||
+                    (typeof AudioContext !== 'undefined' ? AudioContext : undefined);
+                if (!Ctor) return null;
+                this.audioContext = new Ctor();
+            }
+            return this.audioContext;
+        } catch (e) {
+            console.warn('RemoteCompose: failed to create AudioContext', e);
+            return null;
+        }
+    }
+
+    loadSound(id: number, data: Uint8Array): void {
+        try {
+            // Store the raw bytes; decode lazily on play. Keep a copy so the
+            // backing buffer is stable for an eventual decodeAudioData call.
+            this.soundBytes.set(id, data.slice());
+            this.soundBuffers.delete(id);
+        } catch (e) {
+            console.warn(`RemoteCompose: loadSound(${id}) failed`, e);
+        }
+    }
+
+    playSound(id: number): void {
+        try {
+            const ctx = this.getAudioContext();
+            if (!ctx) return;
+
+            // Browsers require a user gesture; resume() may reject until then.
+            ctx.resume?.().catch(() => { /* not yet allowed */ });
+
+            const cached = this.soundBuffers.get(id);
+            if (cached) {
+                this.startBuffer(ctx, cached);
+                return;
+            }
+
+            const bytes = this.soundBytes.get(id);
+            if (!bytes) return;
+
+            // decodeAudioData needs an ArrayBuffer copy of the bytes.
+            const arrayBuf = bytes.slice().buffer;
+            const decoded = ctx.decodeAudioData(arrayBuf as ArrayBuffer);
+            if (decoded && typeof (decoded as Promise<AudioBuffer>).then === 'function') {
+                (decoded as Promise<AudioBuffer>)
+                    .then((buffer) => {
+                        this.soundBuffers.set(id, buffer);
+                        this.startBuffer(ctx, buffer);
+                    })
+                    .catch((e) => console.warn(`RemoteCompose: decode sound(${id}) failed`, e));
+            }
+        } catch (e) {
+            console.warn(`RemoteCompose: playSound(${id}) failed`, e);
+        }
+    }
+
+    private startBuffer(ctx: AudioContext, buffer: AudioBuffer): void {
+        try {
+            const source = ctx.createBufferSource();
+            source.buffer = buffer;
+            const gain = ctx.createGain();
+            gain.gain.value = 1;
+            source.connect(gain).connect(ctx.destination);
+            source.start(0);
+        } catch (e) {
+            console.warn('RemoteCompose: startBuffer failed', e);
+        }
     }
 
     // --- Listeners ---

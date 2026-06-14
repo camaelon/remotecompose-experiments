@@ -18,6 +18,6 @@ export class DrawCircle extends DrawBase3 {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new DrawCircle(buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+        operations.push(new DrawCircle(buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }

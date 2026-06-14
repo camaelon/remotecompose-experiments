@@ -18,17 +18,24 @@ function floatToRawIntBits(v: number): number {
     return _f32dv.getInt32(0);
 }
 
-function idFromNanLocal(v: number): number {
-    _f32dv.setFloat32(0, v);
-    return _f32dv.getInt32(0) & 0x3FFFFF;
+/**
+ * True if raw float32 int bits encode a NaN-with-payload (a variable ref token).
+ * Classifies directly from the bits — never round-trips through a float value —
+ * so the encoded id survives engines that canonicalize NaN payloads (Safari/Firefox).
+ */
+function isNaNBitsLocal(bits: number): boolean {
+    return (bits & 0x7F800000) === 0x7F800000 && (bits & 0x007FFFFF) !== 0;
 }
 
-/** Resolve a NaN-encoded float variable ID to its current value, returning int bits. */
+/** Decode the variable id from raw float32 int bits. */
+function idFromBitsLocal(bits: number): number {
+    return bits & 0x3FFFFF;
+}
+
+/** Resolve a NaN-encoded float variable ID (raw bits) to its current value, returning int bits. */
 function fixFloatVar(val: number, context: RemoteContext): number {
-    const v = intBitsToFloat(val);
-    if (Number.isNaN(v)) {
-        const id = idFromNanLocal(v);
-        return floatToRawIntBits(context.getFloat(id));
+    if (isNaNBitsLocal(val)) {
+        return floatToRawIntBits(context.getFloat(idFromBitsLocal(val)));
     }
     return val;
 }
@@ -39,9 +46,8 @@ function fixColor(val: number, context: RemoteContext): number {
 }
 
 function listenFloatVar(val: number, context: any, op: any): void {
-    const v = intBitsToFloat(val);
-    if (Number.isNaN(v)) {
-        context.listensTo(idFromNanLocal(v), op);
+    if (isNaNBitsLocal(val)) {
+        context.listensTo(idFromBitsLocal(val), op);
     }
 }
 

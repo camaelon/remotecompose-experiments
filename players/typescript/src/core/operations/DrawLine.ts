@@ -19,7 +19,7 @@ export class DrawLine extends DrawBase4 {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawLine(
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat()
+            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()
         ));
     }
 }

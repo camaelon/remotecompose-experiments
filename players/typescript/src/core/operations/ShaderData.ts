@@ -5,20 +5,22 @@ import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class ShaderData extends Operation implements VariableSupport {
     static readonly OP_CODE = 45;
     private mShaderId: number;
     private mShaderTextId: number;
-    private mUniformRawFloatMap: Map<string, Float32Array> | null;
+    // Raw uniform float bits (entries may be NaN-encoded variable refs); bits
+    // survive engines that canonicalize NaN payloads (Safari/Firefox).
+    private mUniformRawFloatMap: Map<string, Int32Array> | null;
     private mUniformFloatMap: Map<string, Float32Array> | null;
     private mIntMap: Map<string, Int32Array> | null;
     private mBitmapMap: Map<string, number> | null;
     private mShaderValid = false;
 
     constructor(shaderId: number, shaderTextId: number,
-                floatMap: Map<string, Float32Array> | null,
+                floatMap: Map<string, Int32Array> | null,
                 intMap: Map<string, Int32Array> | null,
                 bitmapMap: Map<string, number> | null) {
         super();
@@ -29,9 +31,11 @@ export class ShaderData extends Operation implements VariableSupport {
         if (floatMap) {
             this.mUniformRawFloatMap = new Map();
             this.mUniformFloatMap = new Map();
-            for (const [name, values] of floatMap) {
-                this.mUniformRawFloatMap.set(name, new Float32Array(values));
-                this.mUniformFloatMap.set(name, new Float32Array(values));
+            for (const [name, bits] of floatMap) {
+                this.mUniformRawFloatMap.set(name, new Int32Array(bits));
+                const f = new Float32Array(bits.length);
+                for (let i = 0; i < bits.length; i++) f[i] = intBitsToFloat(bits[i]);
+                this.mUniformFloatMap.set(name, f);
             }
         } else {
             this.mUniformRawFloatMap = null;
@@ -69,10 +73,10 @@ export class ShaderData extends Operation implements VariableSupport {
 
     registerListening(context: RemoteContext): void {
         if (!this.mUniformRawFloatMap) return;
-        for (const values of this.mUniformRawFloatMap.values()) {
-            for (let i = 0; i < values.length; i++) {
-                if (Number.isNaN(values[i])) {
-                    context.listensTo(idFromNan(values[i]), this);
+        for (const bits of this.mUniformRawFloatMap.values()) {
+            for (let i = 0; i < bits.length; i++) {
+                if (isNaNBits(bits[i])) {
+                    context.listensTo(idFromBits(bits[i]), this);
                 }
             }
         }
@@ -80,26 +84,22 @@ export class ShaderData extends Operation implements VariableSupport {
 
     updateVariables(context: RemoteContext): void {
         if (!this.mUniformRawFloatMap || !this.mUniformFloatMap) return;
-        for (const [name, rawValues] of this.mUniformRawFloatMap) {
-            let out: Float32Array | null = null;
-            for (let i = 0; i < rawValues.length; i++) {
-                if (Number.isNaN(rawValues[i])) {
+        for (const [name, rawBits] of this.mUniformRawFloatMap) {
+            // Build the resolved float array: literals decoded, variable refs
+            // resolved (a ref backed by a dynamic-float collection keeps its NaN).
+            const out = new Float32Array(rawBits.length);
+            for (let i = 0; i < rawBits.length; i++) {
+                const b = rawBits[i];
+                if (isNaNBits(b)) {
                     const collectionsAccess = context.getCollectionsAccess();
-                    let dynamicValues: Float32Array | null = null;
-                    if (collectionsAccess) {
-                        dynamicValues = collectionsAccess.getDynamicFloats(idFromNan(rawValues[i]));
-                    }
-                    if (!out) {
-                        out = new Float32Array(rawValues);
-                    }
-                    if (!dynamicValues) {
-                        out[i] = context.getFloat(idFromNan(rawValues[i]));
-                    } else {
-                        out[i] = rawValues[i];
-                    }
+                    const dynamicValues = collectionsAccess
+                        ? collectionsAccess.getDynamicFloats(idFromBits(b)) : null;
+                    out[i] = dynamicValues ? intBitsToFloat(b) : context.getFloat(idFromBits(b));
+                } else {
+                    out[i] = intBitsToFloat(b);
                 }
             }
-            this.mUniformFloatMap.set(name, out ?? rawValues);
+            this.mUniformFloatMap.set(name, out);
         }
     }
 
@@ -125,15 +125,15 @@ export class ShaderData extends Operation implements VariableSupport {
         const intMapSize = (sizes >> 8) & 0xFF;
         const bitmapMapSize = (sizes >> 16) & 0xFF;
 
-        let floatMap: Map<string, Float32Array> | null = null;
+        let floatMap: Map<string, Int32Array> | null = null;
         if (floatMapSize > 0) {
             floatMap = new Map();
             for (let i = 0; i < floatMapSize; i++) {
                 const name = buffer.readUTF8();
                 const len = buffer.readInt();
-                const val = new Float32Array(len);
+                const val = new Int32Array(len);
                 for (let j = 0; j < len; j++) {
-                    val[j] = buffer.readFloat();
+                    val[j] = buffer.readInt();
                 }
                 floatMap.set(name, val);
             }

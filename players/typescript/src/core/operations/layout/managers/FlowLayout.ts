@@ -14,6 +14,9 @@ import { Size } from '../measure/Size';
 export class FlowLayout extends RowLayout {
     static override readonly OP_CODE = 240;
 
+    mMaxItemsInEachRow = 0;
+    mMaxLines = 0;
+
     constructor(componentId: number, animationId: number,
                 horizontalPositioning: number, verticalPositioning: number,
                 spacedBy: number) {
@@ -149,6 +152,8 @@ export class FlowLayout extends RowLayout {
         buffer.writeInt(this.mHorizontalPositioning);
         buffer.writeInt(this.mVerticalPositioning);
         buffer.writeFloat(this.mSpacedBy);
+        buffer.writeInt(this.mMaxItemsInEachRow);
+        buffer.writeInt(this.mMaxLines);
     }
 
     override apply(context: RemoteContext): void { super.apply(context); }
@@ -158,12 +163,17 @@ export class FlowLayout extends RowLayout {
     }
 
     static override read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
         const horizontalPositioning = buffer.readInt();
         const verticalPositioning = buffer.readInt();
         const spacedBy = buffer.readFloat();
-        operations.push(new FlowLayout(componentId, animationId,
-            horizontalPositioning, verticalPositioning, spacedBy));
+        const maxItemsInEachRow = buffer.readInt();
+        const maxLines = buffer.readInt();
+        const op = new FlowLayout(componentId, animationId,
+            horizontalPositioning, verticalPositioning, spacedBy);
+        op.mMaxItemsInEachRow = maxItemsInEachRow;
+        op.mMaxLines = maxLines;
+        operations.push(op);
     }
 }

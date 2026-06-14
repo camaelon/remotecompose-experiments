@@ -5,25 +5,26 @@ import { Operation } from '../Operation';
 import type { RemoteContext } from '../RemoteContext';
 import type { WireBuffer } from '../WireBuffer';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class TextSubtext extends Operation implements VariableSupport {
     static readonly OP_CODE = 182;
     private mTextId: number;
     private mSrcId: number;
-    private mStart: number;
-    private mLen: number;
+    // start/len as raw float32 int bits (may be NaN-encoded variable refs).
+    private mStartBits: number;
+    private mLenBits: number;
     private mOutStart: number;
     private mOutLen: number;
 
-    constructor(textId: number, srcId: number, start: number, len: number) {
+    constructor(textId: number, srcId: number, startBits: number, lenBits: number) {
         super();
         this.mTextId = textId;
         this.mSrcId = srcId;
-        this.mStart = start;
-        this.mLen = len;
-        this.mOutStart = start;
-        this.mOutLen = len;
+        this.mStartBits = startBits;
+        this.mLenBits = lenBits;
+        this.mOutStart = isNaNBits(startBits) ? 0 : intBitsToFloat(startBits);
+        this.mOutLen = isNaNBits(lenBits) ? 0 : intBitsToFloat(lenBits);
     }
 
     write(_buffer: WireBuffer): void { /* not needed */ }
@@ -46,33 +47,33 @@ export class TextSubtext extends Operation implements VariableSupport {
     }
 
     deepToString(indent: string): string {
-        return `${indent}TextSubtext(${this.mTextId}, ${this.mSrcId}, ${this.mStart}, ${this.mLen})`;
+        return `${indent}TextSubtext(${this.mTextId}, ${this.mSrcId}, ${this.mOutStart}, ${this.mOutLen})`;
     }
 
     registerListening(context: RemoteContext): void {
         context.listensTo(this.mSrcId, this);
-        if (Number.isNaN(this.mStart)) {
-            context.listensTo(idFromNan(this.mStart), this);
+        if (isNaNBits(this.mStartBits)) {
+            context.listensTo(idFromBits(this.mStartBits), this);
         }
-        if (Number.isNaN(this.mLen)) {
-            context.listensTo(idFromNan(this.mLen), this);
+        if (isNaNBits(this.mLenBits)) {
+            context.listensTo(idFromBits(this.mLenBits), this);
         }
     }
 
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mStart)) {
-            this.mOutStart = context.getFloat(idFromNan(this.mStart));
+        if (isNaNBits(this.mStartBits)) {
+            this.mOutStart = context.getFloat(idFromBits(this.mStartBits));
         }
-        if (Number.isNaN(this.mLen)) {
-            this.mOutLen = context.getFloat(idFromNan(this.mLen));
+        if (isNaNBits(this.mLenBits)) {
+            this.mOutLen = context.getFloat(idFromBits(this.mLenBits));
         }
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
         const srcId = buffer.readInt();
-        const start = buffer.readFloat();
-        const len = buffer.readFloat();
+        const start = buffer.readInt();
+        const len = buffer.readInt();
         operations.push(new TextSubtext(textId, srcId, start, len));
     }
 }

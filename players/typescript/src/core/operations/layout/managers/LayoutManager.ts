@@ -7,7 +7,7 @@ import type { RemoteContext } from '../../../RemoteContext';
 import type { MeasurePass } from '../measure/MeasurePass';
 import { Size } from '../measure/Size';
 import { WidthModifier, HeightModifier, ScrollModifier } from '../modifiers/ModifierOperations';
-import { idFromNan } from '../../Utils';
+import { isNaNBits, idFromBits } from '../../Utils';
 
 export abstract class LayoutManager extends LayoutComponent {
     protected mCachedWrapSize = new Size();
@@ -142,11 +142,11 @@ export abstract class LayoutManager extends LayoutComponent {
             const maxScroll = Math.max(0, this.mScrollContentDimension - this.mScrollHostDimension);
             const maxNan = scrollMod.getMaxNan();
             const notchNan = scrollMod.getNotchMaxNan();
-            if (Number.isNaN(maxNan)) {
-                context.loadFloat(idFromNan(maxNan), maxScroll);
+            if (isNaNBits(maxNan)) {
+                context.loadFloat(idFromBits(maxNan), maxScroll);
             }
-            if (Number.isNaN(notchNan)) {
-                context.loadFloat(idFromNan(notchNan), this.mScrollContentDimension);
+            if (isNaNBits(notchNan)) {
+                context.loadFloat(idFromBits(notchNan), this.mScrollContentDimension);
             }
         }
     }

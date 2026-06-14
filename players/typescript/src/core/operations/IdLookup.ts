@@ -5,32 +5,34 @@ import { Operation } from '../Operation';
 import type { VariableSupport } from '../VariableSupport';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class IdLookup extends Operation implements VariableSupport {
     static readonly OP_CODE = 192;
 
     private mTextId: number;
     private mDataSetId: number;
-    private mIndex: number;
+    // index as raw float32 int bits (may be a NaN-encoded variable ref).
+    private mIndexBits: number;
     private mOutIndex: number;
 
-    constructor(textId: number, dataSetId: number, index: number) {
+    constructor(textId: number, dataSetId: number, indexBits: number) {
         super();
         this.mTextId = textId;
         this.mDataSetId = dataSetId;
-        this.mOutIndex = this.mIndex = index;
+        this.mIndexBits = indexBits;
+        this.mOutIndex = isNaNBits(indexBits) ? 0 : intBitsToFloat(indexBits);
     }
 
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mIndex)) {
-            this.mOutIndex = context.getFloat(idFromNan(this.mIndex));
+        if (isNaNBits(this.mIndexBits)) {
+            this.mOutIndex = context.getFloat(idFromBits(this.mIndexBits));
         }
     }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mIndex)) {
-            context.listensTo(idFromNan(this.mIndex), this);
+        if (isNaNBits(this.mIndexBits)) {
+            context.listensTo(idFromBits(this.mIndexBits), this);
         }
     }
 
@@ -43,17 +45,17 @@ export class IdLookup extends Operation implements VariableSupport {
         buffer.start(IdLookup.OP_CODE);
         buffer.writeInt(this.mTextId);
         buffer.writeInt(this.mDataSetId);
-        buffer.writeFloat(this.mIndex);
+        buffer.writeInt(this.mIndexBits);
     }
 
     deepToString(indent: string): string {
-        return `${indent}IdLookup(textId=${this.mTextId}, dataSetId=${this.mDataSetId}, index=${this.mIndex})`;
+        return `${indent}IdLookup(textId=${this.mTextId}, dataSetId=${this.mDataSetId}, index=${this.mOutIndex})`;
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
         const dataSetId = buffer.readInt();
-        const index = buffer.readFloat();
+        const index = buffer.readInt();
         operations.push(new IdLookup(textId, dataSetId, index));
     }
 }

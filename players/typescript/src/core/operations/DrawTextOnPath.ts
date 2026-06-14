@@ -7,42 +7,42 @@ import type { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class DrawTextOnPath extends PaintOperation implements VariableSupport {
     static readonly OP_CODE = 53;
     mTextId: number;
     mPathId: number;
 
-    // Wire values (may be NaN-encoded variable references)
-    private mHOffsetValue: number;
-    private mVOffsetValue: number;
+    // Wire values as raw float32 int bits (may be NaN-encoded variable refs).
+    private mHOffsetBits: number;
+    private mVOffsetBits: number;
 
     // Resolved output values
     private mOutHOffset: number;
     private mOutVOffset: number;
 
-    constructor(textId: number, pathId: number, hOffset: number, vOffset: number) {
+    constructor(textId: number, pathId: number, hOffsetBits: number, vOffsetBits: number) {
         super();
         this.mTextId = textId;
         this.mPathId = pathId;
-        this.mHOffsetValue = hOffset;
-        this.mVOffsetValue = vOffset;
-        this.mOutHOffset = hOffset;
-        this.mOutVOffset = vOffset;
+        this.mHOffsetBits = hOffsetBits;
+        this.mVOffsetBits = vOffsetBits;
+        this.mOutHOffset = isNaNBits(hOffsetBits) ? 0 : intBitsToFloat(hOffsetBits);
+        this.mOutVOffset = isNaNBits(vOffsetBits) ? 0 : intBitsToFloat(vOffsetBits);
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
         context.listensTo(this.mTextId, this);
-        if (Number.isNaN(this.mHOffsetValue)) context.listensTo(idFromNan(this.mHOffsetValue), this);
-        if (Number.isNaN(this.mVOffsetValue)) context.listensTo(idFromNan(this.mVOffsetValue), this);
+        if (isNaNBits(this.mHOffsetBits)) context.listensTo(idFromBits(this.mHOffsetBits), this);
+        if (isNaNBits(this.mVOffsetBits)) context.listensTo(idFromBits(this.mVOffsetBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutHOffset = Number.isNaN(this.mHOffsetValue) ? context.getFloat(idFromNan(this.mHOffsetValue)) : this.mHOffsetValue;
-        this.mOutVOffset = Number.isNaN(this.mVOffsetValue) ? context.getFloat(idFromNan(this.mVOffsetValue)) : this.mVOffsetValue;
+        this.mOutHOffset = isNaNBits(this.mHOffsetBits) ? context.getFloat(idFromBits(this.mHOffsetBits)) : intBitsToFloat(this.mHOffsetBits);
+        this.mOutVOffset = isNaNBits(this.mVOffsetBits) ? context.getFloat(idFromBits(this.mVOffsetBits)) : intBitsToFloat(this.mVOffsetBits);
     }
 
     paint(context: PaintContext): void {
@@ -54,8 +54,8 @@ export class DrawTextOnPath extends PaintOperation implements VariableSupport {
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
         const pathId = buffer.readInt();
-        const vOffset = buffer.readFloat();
-        const hOffset = buffer.readFloat();
-        operations.push(new DrawTextOnPath(textId, pathId, hOffset, vOffset));
+        const vOffsetBits = buffer.readInt();
+        const hOffsetBits = buffer.readInt();
+        operations.push(new DrawTextOnPath(textId, pathId, hOffsetBits, vOffsetBits));
     }
 }

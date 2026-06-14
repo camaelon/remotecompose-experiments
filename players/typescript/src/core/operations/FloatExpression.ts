@@ -5,18 +5,26 @@ import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan, floatToRawIntBits } from './Utils';
+import { idFromNan, floatToRawIntBits, intBitsToFloat, isNaNBits, idFromBits } from './Utils';
 import { FloatAnimation } from './utilities/easing/FloatAnimation';
 import { SpringStopEngine } from './utilities/easing/SpringStopEngine';
+
+// Finite sentinel for array/collection ids carried on the RPN eval stack. 2^42
+// is exact in float64 and far above any real RC value; array ids are <= 0x3FFFFF.
+const ARR_SENTINEL = 2 ** 42;
+/** Decode an array/collection id popped from the eval stack (sentinel or legacy NaN). */
+function arrIdFromStack(x: number): number {
+    return x >= ARR_SENTINEL ? ((x - ARR_SENTINEL) | 0) : idFromNan(x);
+}
 
 export class FloatExpression extends Operation implements VariableSupport {
     static readonly OP_CODE = 81;
     mId: number;
-    mValues: Float32Array;
+    // Raw float32 bit pattern of each RPN token (operators/vars are NaN-with-
+    // payload; literals are real floats). Kept as int bits so the encoded ids
+    // survive JS engines that canonicalize NaN payloads (Safari/Firefox).
+    mBits: Int32Array;
     private mAnimation: Float32Array | null;
-
-    // Pre-calculated values (variable refs resolved)
-    private mPreCalcValue: Float32Array | null = null;
 
     // Animation support
     private mFloatAnimation: FloatAnimation | null = null;
@@ -33,9 +41,9 @@ export class FloatExpression extends Operation implements VariableSupport {
     // Variables for animation callbacks
     private mVar: number[] = [0, 0, 0];
 
-    constructor(id: number, values: Float32Array, animation: Float32Array | null) {
+    constructor(id: number, bits: Int32Array, animation: Float32Array | null) {
         super();
-        this.mId = id; this.mValues = values; this.mAnimation = animation;
+        this.mId = id; this.mBits = bits; this.mAnimation = animation;
         if (animation) {
             if (animation.length > 4 && animation[0] === 0) {
                 this.mSpring = new SpringStopEngine(animation);
@@ -48,45 +56,24 @@ export class FloatExpression extends Operation implements VariableSupport {
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        for (let i = 0; i < this.mValues.length; i++) {
-            const v = this.mValues[i];
-            if (Number.isNaN(v)
-                && !FloatExpression.isMathOperator(v)
-                && !FloatExpression.isDataVariable(v)) {
-                context.listensTo(idFromNan(v), this);
+        for (let i = 0; i < this.mBits.length; i++) {
+            const b = this.mBits[i];
+            if (isNaNBits(b)
+                && !FloatExpression.isMathOperatorBits(b)
+                && !FloatExpression.isDataVariableBits(b)) {
+                context.listensTo(idFromBits(b), this);
             }
         }
     }
 
 
     updateVariables(context: RemoteContext): void {
-        if (!this.mPreCalcValue || this.mPreCalcValue.length !== this.mValues.length) {
-            this.mPreCalcValue = new Float32Array(this.mValues.length);
-        }
-        let valueChanged = false;
-        for (let i = 0; i < this.mValues.length; i++) {
-            const v = this.mValues[i];
-            if (Number.isNaN(v) && !FloatExpression.isMathOperator(v)
-                && !FloatExpression.isDataVariable(v)) {
-                const id = idFromNan(v);
-                let newValue = context.getFloat(id);
-                // If density is 0, default to 1
-                if (id === 27 && newValue === 0) newValue = 1;
-                if (this.mFloatAnimation || this.mSpring) {
-                    if (this.mPreCalcValue[i] !== newValue) {
-                        valueChanged = true;
-                        this.mPreCalcValue[i] = newValue;
-                    }
-                } else {
-                    this.mPreCalcValue[i] = newValue;
-                }
-            } else {
-                this.mPreCalcValue[i] = this.mValues[i];
-            }
-        }
-        let v = this.mLastCalculatedValue;
+        // Evaluate live from the raw token bits (variable refs resolved inside
+        // evalRPN). No pre-resolved Float32Array — that would canonicalize the
+        // NaN operator tokens on engines like Safari/Firefox.
+        let v = FloatExpression.evalRPN(context, this.mBits, this.mVar);
+        let valueChanged = (v !== this.mLastCalculatedValue);
         if (valueChanged) {
-            v = this.evaluate(context, this.mPreCalcValue);
             if (v !== this.mLastCalculatedValue) {
                 this.mLastChange = context.getAnimationTime();
                 this.mLastCalculatedValue = v;
@@ -106,15 +93,15 @@ export class FloatExpression extends Operation implements VariableSupport {
         }
     }
 
-    private static isMathOperator(v: number): boolean {
-        if (!Number.isNaN(v)) return false;
-        const id = idFromNan(v);
+    private static isMathOperatorBits(b: number): boolean {
+        if (!isNaNBits(b)) return false;
+        const id = idFromBits(b);
         return id > FloatExpression.OFFSET && id <= FloatExpression.OFFSET + 79;
     }
 
-    private static isDataVariable(v: number): boolean {
-        if (!Number.isNaN(v)) return false;
-        const id = idFromNan(v);
+    private static isDataVariableBits(b: number): boolean {
+        if (!isNaNBits(b)) return false;
+        const id = idFromBits(b);
         return (id & FloatExpression.ID_REGION_MASK) === FloatExpression.ID_REGION_ARRAY;
     }
 
@@ -127,8 +114,7 @@ export class FloatExpression extends Operation implements VariableSupport {
         if (this.mFloatAnimation) {
             // Animated expression
             if (Number.isNaN(this.mLastCalculatedValue)) {
-                const vals = this.mPreCalcValue || this.mValues;
-                this.mLastCalculatedValue = this.evaluate(context, vals);
+                this.mLastCalculatedValue = this.evaluate(context);
                 this.mFloatAnimation.setTargetValue(this.mLastCalculatedValue);
                 if (Number.isNaN(this.mFloatAnimation.getInitialValue())) {
                     this.mFloatAnimation.setInitialValue(this.mLastCalculatedValue);
@@ -152,8 +138,7 @@ export class FloatExpression extends Operation implements VariableSupport {
             }
         } else {
             // No animation - evaluate directly
-            const vals = this.mPreCalcValue || this.mValues;
-            const result = this.evaluate(context, vals);
+            const result = this.evaluate(context);
             context.loadFloat(this.mId, result);
         }
     }
@@ -164,8 +149,8 @@ export class FloatExpression extends Operation implements VariableSupport {
     private static readonly ID_REGION_MASK = 0x700000;
     private static readonly ID_REGION_ARRAY = 0x200000;
 
-    private evaluate(context: RemoteContext, valuesOverride?: Float32Array): number {
-        return FloatExpression.evalRPN(context, valuesOverride || this.mValues, this.mVar);
+    private evaluate(context: RemoteContext): number {
+        return FloatExpression.evalRPN(context, this.mBits, this.mVar);
     }
 
     /**
@@ -175,19 +160,27 @@ export class FloatExpression extends Operation implements VariableSupport {
      * @param vars - VAR1/VAR2/VAR3 values, defaults to [0, 0, 0]
      * @returns the evaluated result
      */
-    static evalRPN(context: RemoteContext, values: Float32Array | number[], vars: number[] = [0, 0, 0]): number {
+    static evalRPN(context: RemoteContext, values: Float32Array | number[] | Int32Array, vars: number[] = [0, 0, 0]): number {
         const stack: number[] = [];
         const OFFSET = FloatExpression.OFFSET;
         const collectionsAccess = context.getCollectionsAccess();
+        // When given raw int32 token bits (the robust path), decode ids directly
+        // from bits; otherwise treat entries as floats (legacy V8 callers).
+        const useBits = values instanceof Int32Array;
         // Registers are local to each evaluation
         let r0 = 0, r1 = 0, r2 = 0, r3 = 0;
         for (let i = 0; i < values.length; i++) {
-            const v = values[i];
-            if (Number.isNaN(v)) {
-                const id = idFromNan(v);
+            const raw = values[i];
+            const bits = useBits ? (raw | 0) : floatToRawIntBits(raw);
+            // The float value for literals / array tokens pushed onto the stack.
+            const v = useBits ? intBitsToFloat(bits) : raw;
+            if (isNaNBits(bits)) {
+                const id = idFromBits(bits);
                 if ((id & FloatExpression.ID_REGION_MASK) === FloatExpression.ID_REGION_ARRAY) {
-                    // Data variable (array/collection ID) — push NaN as-is
-                    stack.push(v);
+                    // Data variable (array/collection ID). Push the id as a
+                    // finite sentinel (survives engines that canonicalize NaN);
+                    // array ops below decode it via arrIdFromStack().
+                    stack.push(ARR_SENTINEL + id);
                 } else if (id > OFFSET && id <= OFFSET + 79) {
                     // RPN math operator
                     const op = id - OFFSET;
@@ -314,12 +307,12 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         case 32: { // A_DEREF: array[index]
                             const index = stack.pop()!;
-                            const arrayId = idFromNan(stack.pop()!);
+                            const arrayId = arrIdFromStack(stack.pop()!);
                             stack.push(collectionsAccess.getFloatValue(arrayId, Math.trunc(index)));
                             break;
                         }
                         case 33: { // A_MAX: max of array
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             const floats = collectionsAccess.getFloats(aId);
                             if (floats && floats.length > 0) {
                                 let mx = floats[0];
@@ -329,7 +322,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 34: { // A_MIN: min of array
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             const floats = collectionsAccess.getFloats(aId);
                             if (floats && floats.length > 0) {
                                 let mn = floats[0];
@@ -339,7 +332,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 35: { // A_SUM: sum of array
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             const floats = collectionsAccess.getFloats(aId);
                             let sum = 0;
                             if (floats) { for (let j = 0; j < floats.length; j++) sum += floats[j]; }
@@ -347,7 +340,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 36: { // A_AVG: average of array
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             const floats = collectionsAccess.getFloats(aId);
                             let sum = 0;
                             if (floats && floats.length > 0) {
@@ -357,13 +350,13 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 37: { // A_LEN: length of array
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             stack.push(collectionsAccess.getListLength(aId));
                             break;
                         }
                         case 38: { // A_SPLINE: monotonic spline interpolation
                             const pos = stack.pop()!;
-                            const aId = idFromNan(stack.pop()!);
+                            const aId = arrIdFromStack(stack.pop()!);
                             const floats = collectionsAccess.getFloats(aId);
                             stack.push(floats ? FloatExpression.splineInterp(floats, pos) : 0);
                             break;
@@ -499,7 +492,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                         }
                         case 75: { // A_SPLINE_LOOP
                             const sli = stack.pop()!;
-                            const slId = idFromNan(stack.pop()!);
+                            const slId = arrIdFromStack(stack.pop()!);
                             const slr = sli - Math.floor(sli);
                             const slFloats = collectionsAccess.getFloats(slId);
                             stack.push(slFloats ? FloatExpression.splineInterp(slFloats, slr < 0 ? slr + 1 : slr) : 0);
@@ -507,7 +500,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                         }
                         case 76: { // A_SUM_TILL (partial sum up to index)
                             const stLast = Math.trunc(stack.pop()!);
-                            const stId = idFromNan(stack.pop()!);
+                            const stId = arrIdFromStack(stack.pop()!);
                             let stSum = 0;
                             for (let j = 0; j <= stLast; j++) {
                                 stSum += collectionsAccess.getFloatValue(stId, j);
@@ -516,8 +509,8 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 77: { // A_SUM_XY (sum of products of two arrays)
-                            const syIdY = idFromNan(stack.pop()!);
-                            const syIdX = idFromNan(stack.pop()!);
+                            const syIdY = arrIdFromStack(stack.pop()!);
+                            const syIdX = arrIdFromStack(stack.pop()!);
                             const syArrX = collectionsAccess.getFloats(syIdX);
                             const syArrY = collectionsAccess.getFloats(syIdY);
                             let sxySum = 0;
@@ -530,7 +523,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 78: { // A_SUM_SQR (sum of squares)
-                            const ssId = idFromNan(stack.pop()!);
+                            const ssId = arrIdFromStack(stack.pop()!);
                             const ssArr = collectionsAccess.getFloats(ssId);
                             let ssSum = 0;
                             if (ssArr) {
@@ -543,7 +536,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                         }
                         case 79: { // A_LERP (linear interpolation in array)
                             const alPos = stack.pop()!;
-                            const alId = idFromNan(stack.pop()!);
+                            const alId = arrIdFromStack(stack.pop()!);
                             const alArr = collectionsAccess.getFloats(alId);
                             if (alArr && alArr.length > 0) {
                                 const alP = alPos * (alArr.length - 1);
@@ -685,9 +678,11 @@ export class FloatExpression extends Operation implements VariableSupport {
         const len = buffer.readInt();
         const valueLen = len & 0xFFFF;
         const animLen = (len >> 16) & 0xFFFF;
-        const values = new Float32Array(valueLen);
+        // Read each token as its exact int32 bit pattern (readInt = getInt32,
+        // never canonicalizes), so NaN-encoded operator/variable ids survive.
+        const bits = new Int32Array(valueLen);
         for (let i = 0; i < valueLen; i++) {
-            values[i] = buffer.readFloat();
+            bits[i] = buffer.readInt();
         }
         let animation: Float32Array | null = null;
         if (animLen > 0) {
@@ -696,6 +691,6 @@ export class FloatExpression extends Operation implements VariableSupport {
                 animation[i] = buffer.readFloat();
             }
         }
-        operations.push(new FloatExpression(id, values, animation));
+        operations.push(new FloatExpression(id, bits, animation));
     }
 }

@@ -108,6 +108,13 @@ import {
     ValueIntegerChangeAction, ValueStringChangeAction,
     ValueIntegerExpressionChangeAction, ValueFloatChangeAction
 } from './operations/layout/modifiers/ActionOperations';
+import { SoundData, SoundExpression, PlaySound } from './operations/SoundOperations';
+import {
+    ReferencedOperations, IncludeReferencedOperations,
+    PatternInflation, PatternBlock, PatternForEach,
+    PatternArgument, PatternDefine
+} from './operations/loom/PatternOperations';
+import { Custom } from './operations/layout/managers/Custom';
 
 export class Operations {
     private static readonly sMap = new Map<number, CompanionOperationFn>();
@@ -290,6 +297,23 @@ export class Operations {
         // New baseline ops since 2026-03-16
         m.set(Skip.OP_CODE, Skip.read);
         m.set(TextStyle.OP_CODE, TextStyle.read);
+
+        // Sound operations (parse-only)
+        m.set(SoundData.OP_CODE, SoundData.read);
+        m.set(SoundExpression.OP_CODE, SoundExpression.read);
+        m.set(PlaySound.OP_CODE, PlaySound.read);
+
+        // Pattern (macro) & referenced operations (parse-only)
+        m.set(ReferencedOperations.OP_CODE, ReferencedOperations.read);
+        m.set(IncludeReferencedOperations.OP_CODE, IncludeReferencedOperations.read);
+        m.set(PatternInflation.OP_CODE, PatternInflation.read);
+        m.set(PatternBlock.OP_CODE, PatternBlock.read);
+        m.set(PatternForEach.OP_CODE, PatternForEach.read);
+        m.set(PatternArgument.OP_CODE, PatternArgument.read);
+        m.set(PatternDefine.OP_CODE, PatternDefine.read);
+
+        // Custom layout component (parse-only)
+        m.set(Custom.OP_CODE, Custom.read);
     }
 
     static getOperations(): Map<number, CompanionOperationFn> {

@@ -23,6 +23,21 @@ export function idFromNan(value: number): number {
     return floatToRawIntBits(value) & 0x3FFFFF;
 }
 
+/**
+ * True if these raw IEEE-754 float32 *integer bits* encode a NaN (exponent all
+ * ones, mantissa non-zero). Detects variable/operator/array reference tokens
+ * directly from the wire bits — robust across JS engines that canonicalize NaN
+ * payloads (Safari/Firefox) when a NaN passes through a float value.
+ */
+export function isNaNBits(bits: number): boolean {
+    return (bits & 0x7F800000) === 0x7F800000 && (bits & 0x007FFFFF) !== 0;
+}
+
+/** Decode the RemoteCompose variable/operator id from raw float32 int bits. */
+export function idFromBits(bits: number): number {
+    return bits & 0x3FFFFF;
+}
+
 /** Convert a NaN-encoded float to a long id */
 export function longIdFromNan(value: number): number {
     return idFromNan(value) + 0x100000000;
@@ -44,10 +59,34 @@ export function idString(b: number): string {
     return (b > 0xFFFFF) ? `A_${b & 0xFFFFF}` : `${b}`;
 }
 
+/** Returns true if the id is a system global id (Tier 1) — never remapped. */
+export function isSystemGlobal(id: number): boolean {
+    return id >= 0 && id <= 41;
+}
+
+/** Returns true if the id is a macro-local id (Tier 2) — always uniqueified. */
+export function isMacroLocal(id: number): boolean {
+    return id >= 0x4000 && id <= 0x4FFF;
+}
+
 /** Check if a float is a variable (NaN-encoded ID that's not a system constant) */
 export function isVariable(v: number): boolean {
     if (Number.isNaN(v)) {
         const id = idFromNan(v);
+        if (id === 0) return false;
+        return id > 40 || id < 10;
+    }
+    return false;
+}
+
+/**
+ * Bit-aware variant of isVariable: true if the raw float32 int bits encode a
+ * variable reference (NaN with a non-system, non-zero id). Robust on engines
+ * that canonicalize NaN payloads.
+ */
+export function isVariableBits(bits: number): boolean {
+    if (isNaNBits(bits)) {
+        const id = idFromBits(bits);
         if (id === 0) return false;
         return id > 40 || id < 10;
     }

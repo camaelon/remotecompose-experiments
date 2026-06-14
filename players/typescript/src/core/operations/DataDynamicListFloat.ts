@@ -5,7 +5,7 @@ import { Operation } from '../Operation';
 import type { VariableSupport } from '../VariableSupport';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class DataDynamicListFloat extends Operation implements VariableSupport {
     static readonly OP_CODE = 197;
@@ -13,33 +13,36 @@ export class DataDynamicListFloat extends Operation implements VariableSupport {
 
     readonly mId: number;
     readonly isDynamic = true;
-    private mArrayLength: number;
+    // Raw float32 int bits of the array length (may be a NaN-encoded variable ref).
+    private mArrayLengthBits: number;
     private mArrayLengthOut: number;
     private mValues: Float32Array;
 
-    constructor(id: number, nbValues: number) {
+    constructor(id: number, nbValuesBits: number) {
         super();
         this.mId = id;
+        const nbValues = isNaNBits(nbValuesBits) ? NaN : intBitsToFloat(nbValuesBits);
         if (nbValues > DataDynamicListFloat.MAX_FLOAT_ARRAY) {
             throw new Error('Array too large');
         }
-        this.mValues = new Float32Array(Math.floor(nbValues));
-        this.mArrayLength = this.mArrayLengthOut = nbValues;
+        this.mValues = new Float32Array(Math.floor(nbValues) || 0);
+        this.mArrayLengthBits = nbValuesBits;
+        this.mArrayLengthOut = nbValues;
     }
 
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mArrayLength)) {
-            this.mArrayLengthOut = context.getFloat(idFromNan(this.mArrayLength));
+        if (isNaNBits(this.mArrayLengthBits)) {
+            this.mArrayLengthOut = context.getFloat(idFromBits(this.mArrayLengthBits));
         }
         if (Math.floor(this.mArrayLengthOut) !== this.mValues.length) {
-            this.mValues = new Float32Array(Math.floor(this.mArrayLengthOut));
+            this.mValues = new Float32Array(Math.floor(this.mArrayLengthOut) || 0);
         }
     }
 
     registerListening(context: RemoteContext): void {
         context.addCollection(this.mId, this);
-        if (Number.isNaN(this.mArrayLength)) {
-            context.listensTo(idFromNan(this.mArrayLength), this);
+        if (isNaNBits(this.mArrayLengthBits)) {
+            context.listensTo(idFromBits(this.mArrayLengthBits), this);
         }
     }
 
@@ -78,10 +81,11 @@ export class DataDynamicListFloat extends Operation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
-        const len = buffer.readFloat();
+        const lenBits = buffer.readInt();
+        const len = isNaNBits(lenBits) ? NaN : intBitsToFloat(lenBits);
         if (len > DataDynamicListFloat.MAX_FLOAT_ARRAY) {
             throw new Error(`${len} entries exceeds max = ${DataDynamicListFloat.MAX_FLOAT_ARRAY}`);
         }
-        operations.push(new DataDynamicListFloat(id, len));
+        operations.push(new DataDynamicListFloat(id, lenBits));
     }
 }

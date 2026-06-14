@@ -5,7 +5,7 @@ import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 import { floatToStringLegacy, floatToStringFull } from './utilities/StringUtils';
 
 // Flag constants (matching Java TextFromFloat)
@@ -31,7 +31,8 @@ export class TextFromFloat extends Operation implements VariableSupport {
     static readonly OP_CODE = 135;
 
     private mTextId: number;
-    private mValue: number;
+    // Raw float32 int bits of the value (NaN-with-payload => variable ref).
+    private mValueBits: number;
     private mOutValue: number;
     private mDigitsBefore: number;
     private mDigitsAfter: number;
@@ -43,11 +44,11 @@ export class TextFromFloat extends Operation implements VariableSupport {
     private mSeparator: number;
     private mOptions: number;
 
-    constructor(textId: number, value: number, digitsBefore: number, digitsAfter: number, flags: number) {
+    constructor(textId: number, valueBits: number, digitsBefore: number, digitsAfter: number, flags: number) {
         super();
         this.mTextId = textId;
-        this.mValue = value;
-        this.mOutValue = value;
+        this.mValueBits = valueBits;
+        this.mOutValue = isNaNBits(valueBits) ? 0 : intBitsToFloat(valueBits);
         this.mDigitsBefore = digitsBefore;
         this.mDigitsAfter = digitsAfter;
         this.mFlags = flags;
@@ -95,12 +96,12 @@ export class TextFromFloat extends Operation implements VariableSupport {
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mValue)) context.listensTo(idFromNan(this.mValue), this);
+        if (isNaNBits(this.mValueBits)) context.listensTo(idFromBits(this.mValueBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mValue)) {
-            this.mOutValue = context.getFloat(idFromNan(this.mValue));
+        if (isNaNBits(this.mValueBits)) {
+            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
         }
     }
 
@@ -120,16 +121,16 @@ export class TextFromFloat extends Operation implements VariableSupport {
     }
 
     deepToString(indent: string): string {
-        return `${indent}TextFromFloat[${this.mTextId}] = ${Number.isNaN(this.mValue) ? 'NaN(' + idFromNan(this.mValue) + ')' : this.mValue} ${this.mDigitsBefore}.${this.mDigitsAfter} ${this.mFlags}`;
+        return `${indent}TextFromFloat[${this.mTextId}] = ${isNaNBits(this.mValueBits) ? 'ref(' + idFromBits(this.mValueBits) + ')' : intBitsToFloat(this.mValueBits)} ${this.mDigitsBefore}.${this.mDigitsAfter} ${this.mFlags}`;
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
-        const value = buffer.readFloat();
+        const valueBits = buffer.readInt();  // raw bits; NaN-with-payload => variable ref
         const tmp = buffer.readInt();
         const digitsAfter = tmp & 0xFFFF;
         const digitsBefore = (tmp >> 16) & 0xFFFF;
         const flags = buffer.readInt();
-        operations.push(new TextFromFloat(textId, value, digitsBefore, digitsAfter, flags));
+        operations.push(new TextFromFloat(textId, valueBits, digitsBefore, digitsAfter, flags));
     }
 }

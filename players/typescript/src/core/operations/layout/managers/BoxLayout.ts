@@ -113,8 +113,8 @@ export class BoxLayout extends LayoutManager {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
         const horizontalPositioning = buffer.readInt();
         const verticalPositioning = buffer.readInt();
         operations.push(new BoxLayout(componentId, animationId,

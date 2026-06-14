@@ -6,7 +6,16 @@ import type { RemoteContext } from '../RemoteContext';
 import { ContextMode } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
 import { PaintBundle } from './paint/PaintBundle';
-import { idFromNan, isVariable } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat, floatToRawIntBits } from './Utils';
+
+// NanMap path-command marker range (MOVE..DONE = base..base+6). A NaN path
+// token in this id range is a path COMMAND, not a variable reference.
+const NANMAP_PATH_BASE = 0x300000;
+function isPathMarkerBits(b: number): boolean {
+    if (!isNaNBits(b)) return false;
+    const id = idFromBits(b);
+    return id >= NANMAP_PATH_BASE && id <= NANMAP_PATH_BASE + 6;
+}
 
 export class TextData extends Operation {
     static readonly OP_CODE = 102;
@@ -28,7 +37,7 @@ export class TextData extends Operation {
     deepToString(indent: string): string { return `${indent}TextData(${this.mTextId}, "${this.mText}")`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const text = buffer.readUTF8();
         operations.push(new TextData(id, text));
     }
@@ -122,35 +131,45 @@ export class PathData extends Operation implements VariableSupport {
     static readonly OP_CODE = 123;
     private mPathId: number;
     private mWinding: number;
-    private mPathData: Float32Array;
-    private mOutputPath: Float32Array;
+    // Raw float32 int bits of each path token (command markers / variable refs
+    // are NaN-with-payload). Bits survive NaN-payload canonicalizing engines.
+    private mPathBits: Int32Array;
+    // Resolved path tokens as raw float32 int bits: command markers kept as-is,
+    // variable refs resolved to the bits of their current float, literals as-is.
+    private mOutputPath: Int32Array;
     private mPathChanged = false;
 
-    constructor(pathId: number, winding: number, pathData: Float32Array) {
+    constructor(pathId: number, winding: number, pathBits: Int32Array) {
         super(); this.mPathId = pathId; this.mWinding = winding;
-        this.mPathData = pathData;
-        this.mOutputPath = new Float32Array(pathData);
+        this.mPathBits = pathBits;
+        // Copy bits directly — markers/literals are already correct; variable
+        // refs will be resolved in updateVariables before first paint.
+        this.mOutputPath = Int32Array.from(pathBits);
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        for (const v of this.mPathData) {
-            if (Number.isNaN(v)) {
-                context.listensTo(idFromNan(v), this);
+        // Listen only to variable references — NOT path-command markers (whose
+        // ids fall in the NANMAP_PATH_BASE range and are not real variables).
+        for (const b of this.mPathBits) {
+            if (isNaNBits(b) && !isPathMarkerBits(b)) {
+                context.listensTo(idFromBits(b), this);
             }
         }
     }
 
     updateVariables(context: RemoteContext): void {
-        for (let i = 0; i < this.mPathData.length; i++) {
-            const v = this.mPathData[i];
-            if (isVariable(v)) {
+        for (let i = 0; i < this.mPathBits.length; i++) {
+            const b = this.mPathBits[i];
+            if (isPathMarkerBits(b)) {
+                this.mOutputPath[i] = b;
+            } else if (isNaNBits(b)) {
                 const prev = this.mOutputPath[i];
-                this.mOutputPath[i] = Number.isNaN(v) ? context.getFloat(idFromNan(v)) : v;
+                this.mOutputPath[i] = floatToRawIntBits(context.getFloat(idFromBits(b)));
                 if (prev !== this.mOutputPath[i]) this.mPathChanged = true;
             } else {
-                this.mOutputPath[i] = v;
+                this.mOutputPath[i] = b;
             }
         }
     }
@@ -169,9 +188,9 @@ export class PathData extends Operation implements VariableSupport {
         if (count < 0 || count > 20000) {
             throw new Error(`PathData: invalid path length ${count}`);
         }
-        const data = new Float32Array(count);
+        const data = new Int32Array(count);
         for (let i = 0; i < count; i++) {
-            data[i] = buffer.readFloat();
+            data[i] = buffer.readInt();
         }
         operations.push(new PathData(id, winding, data));
     }
@@ -184,11 +203,11 @@ export class FloatConstant extends Operation {
     mId: number;
     mValue: number;
 
-    constructor(id: number, value: number) {
+    constructor(id: number, valueBits: number) {
         super(); this.mId = id;
-        // If the value encodes RAND, generate a random number
-        this.mValue = (Number.isNaN(value) && idFromNan(value) === FloatConstant.RAND_ID)
-            ? Math.random() : value;
+        // If the value encodes RAND, generate a random number; else decode the literal.
+        this.mValue = (isNaNBits(valueBits) && idFromBits(valueBits) === FloatConstant.RAND_ID)
+            ? Math.random() : intBitsToFloat(valueBits);
     }
 
     update(other: FloatConstant): void { this.mValue = other.mValue; }
@@ -203,7 +222,7 @@ export class FloatConstant extends Operation {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
-        const value = buffer.readFloat();
+        const value = buffer.readInt();
         operations.push(new FloatConstant(id, value));
     }
 }
@@ -257,6 +276,7 @@ export class Theme extends Operation {
 export class ClickArea extends Operation implements VariableSupport {
     static readonly OP_CODE = 64;
     private mId: number; private mContentDescriptionId: number;
+    // Bounds as raw float32 int bits (may be NaN-encoded variable refs).
     private mLeft: number; private mTop: number; private mRight: number; private mBottom: number;
     private mOutLeft: number; private mOutTop: number; private mOutRight: number; private mOutBottom: number;
     private mMetadataId: number;
@@ -265,24 +285,27 @@ export class ClickArea extends Operation implements VariableSupport {
         super();
         this.mId = id; this.mContentDescriptionId = cdId;
         this.mLeft = left; this.mTop = top; this.mRight = right; this.mBottom = bottom;
-        this.mOutLeft = left; this.mOutTop = top; this.mOutRight = right; this.mOutBottom = bottom;
+        this.mOutLeft = isNaNBits(left) ? 0 : intBitsToFloat(left);
+        this.mOutTop = isNaNBits(top) ? 0 : intBitsToFloat(top);
+        this.mOutRight = isNaNBits(right) ? 0 : intBitsToFloat(right);
+        this.mOutBottom = isNaNBits(bottom) ? 0 : intBitsToFloat(bottom);
         this.mMetadataId = metaId;
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mLeft)) context.listensTo(idFromNan(this.mLeft), this);
-        if (Number.isNaN(this.mTop)) context.listensTo(idFromNan(this.mTop), this);
-        if (Number.isNaN(this.mRight)) context.listensTo(idFromNan(this.mRight), this);
-        if (Number.isNaN(this.mBottom)) context.listensTo(idFromNan(this.mBottom), this);
+        if (isNaNBits(this.mLeft)) context.listensTo(idFromBits(this.mLeft), this);
+        if (isNaNBits(this.mTop)) context.listensTo(idFromBits(this.mTop), this);
+        if (isNaNBits(this.mRight)) context.listensTo(idFromBits(this.mRight), this);
+        if (isNaNBits(this.mBottom)) context.listensTo(idFromBits(this.mBottom), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutLeft = Number.isNaN(this.mLeft) ? context.getFloat(idFromNan(this.mLeft)) : this.mLeft;
-        this.mOutTop = Number.isNaN(this.mTop) ? context.getFloat(idFromNan(this.mTop)) : this.mTop;
-        this.mOutRight = Number.isNaN(this.mRight) ? context.getFloat(idFromNan(this.mRight)) : this.mRight;
-        this.mOutBottom = Number.isNaN(this.mBottom) ? context.getFloat(idFromNan(this.mBottom)) : this.mBottom;
+        this.mOutLeft = isNaNBits(this.mLeft) ? context.getFloat(idFromBits(this.mLeft)) : intBitsToFloat(this.mLeft);
+        this.mOutTop = isNaNBits(this.mTop) ? context.getFloat(idFromBits(this.mTop)) : intBitsToFloat(this.mTop);
+        this.mOutRight = isNaNBits(this.mRight) ? context.getFloat(idFromBits(this.mRight)) : intBitsToFloat(this.mRight);
+        this.mOutBottom = isNaNBits(this.mBottom) ? context.getFloat(idFromBits(this.mBottom)) : intBitsToFloat(this.mBottom);
     }
 
     apply(context: RemoteContext): void {
@@ -296,7 +319,7 @@ export class ClickArea extends Operation implements VariableSupport {
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new ClickArea(
             buffer.readInt(), buffer.readInt(),
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat(),
+            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt(),
             buffer.readInt()
         ));
     }

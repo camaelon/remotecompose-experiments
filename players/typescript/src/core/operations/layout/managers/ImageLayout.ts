@@ -11,7 +11,7 @@ import type { Size } from '../measure/Size';
 import type { VariableSupport } from '../../../VariableSupport';
 import { ImageScaling } from '../../utilities/ImageScaling';
 import { PaintBundle } from '../../paint/PaintBundle';
-import { idFromNan } from '../../Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from '../../Utils';
 import { BitmapData } from '../../DataOperations';
 
 export class ImageLayout extends LayoutManager implements VariableSupport {
@@ -19,33 +19,33 @@ export class ImageLayout extends LayoutManager implements VariableSupport {
 
     private mBitmapId: number;
     private mScaleType: number;
-    private mAlpha: number;
+    private mAlphaBits: number;
     private mOutAlpha: number;
     private mScaling = new ImageScaling();
     private mPaint = new PaintBundle();
 
     constructor(componentId: number, animationId: number,
-                bitmapId: number, scaleType: number, alpha: number) {
+                bitmapId: number, scaleType: number, alphaBits: number) {
         super(componentId, animationId);
         this.mBitmapId = bitmapId;
         this.mScaleType = scaleType & 0xFF;
-        this.mAlpha = alpha;
-        this.mOutAlpha = Number.isNaN(alpha) ? 1 : alpha;
+        this.mAlphaBits = alphaBits;
+        this.mOutAlpha = isNaNBits(alphaBits) ? 1 : intBitsToFloat(alphaBits);
     }
 
     registerListening(context: RemoteContext): void {
         if (this.mBitmapId !== -1) {
             context.listensTo(this.mBitmapId, this);
         }
-        if (Number.isNaN(this.mAlpha)) {
-            context.listensTo(idFromNan(this.mAlpha), this);
+        if (isNaNBits(this.mAlphaBits)) {
+            context.listensTo(idFromBits(this.mAlphaBits), this);
         }
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutAlpha = Number.isNaN(this.mAlpha)
-            ? context.getFloat(idFromNan(this.mAlpha))
-            : this.mAlpha;
+        this.mOutAlpha = isNaNBits(this.mAlphaBits)
+            ? context.getFloat(idFromBits(this.mAlphaBits))
+            : intBitsToFloat(this.mAlphaBits);
     }
 
     computeWrapSize(context: PaintContext, _minWidth: number, _maxWidth: number,
@@ -119,7 +119,7 @@ export class ImageLayout extends LayoutManager implements VariableSupport {
         buffer.writeInt(0); // animationId
         buffer.writeInt(this.mBitmapId);
         buffer.writeInt(this.mScaleType);
-        buffer.writeFloat(this.mAlpha);
+        buffer.writeInt(this.mAlphaBits);
     }
 
     apply(context: RemoteContext): void { super.apply(context); }
@@ -133,7 +133,7 @@ export class ImageLayout extends LayoutManager implements VariableSupport {
         const animationId = buffer.readInt();
         const bitmapId = buffer.readInt();
         const scaleType = buffer.readInt();
-        const alpha = buffer.readFloat();
+        const alpha = buffer.readInt();
         operations.push(new ImageLayout(componentId, animationId, bitmapId, scaleType, alpha));
     }
 }

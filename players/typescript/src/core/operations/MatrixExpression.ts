@@ -1,7 +1,7 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
 import { MatrixOperations } from './utilities/MatrixOperations';
 
 export class MatrixExpression extends Operation {
@@ -9,43 +9,47 @@ export class MatrixExpression extends Operation {
     private mMatrixId: number;
     private mType: number;
     private mValues = new Float32Array(16);
-    private mExpression: Float32Array;
-    private mOutExpression: Float32Array | null = null;
+    // Raw float32 bit pattern of each token (operators are NaN-with-payload).
+    // Kept as int bits so encoded operator/variable ids survive engines that
+    // canonicalize NaN payloads (Safari/Firefox).
+    private mBits: Int32Array;
+    private mOutBits: Int32Array | null = null;
     private mMatrixOperations = new MatrixOperations();
 
-    constructor(matrixId: number, type: number, expression: Float32Array) {
+    constructor(matrixId: number, type: number, bits: Int32Array) {
         super();
         this.mMatrixId = matrixId;
         this.mType = type;
-        this.mExpression = expression;
+        this.mBits = bits;
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        for (const v of this.mExpression) {
-            if (Number.isNaN(v) && !MatrixOperations.isOperator(v)) {
-                context.listensTo(idFromNan(v), this);
+        for (const b of this.mBits) {
+            if (isNaNBits(b) && !MatrixOperations.isOperatorBits(b)) {
+                context.listensTo(idFromBits(b), this);
             }
         }
     }
 
     updateVariables(context: RemoteContext): void {
-        if (this.mOutExpression === null || this.mOutExpression.length !== this.mExpression.length) {
-            this.mOutExpression = new Float32Array(this.mExpression.length);
+        if (this.mOutBits === null || this.mOutBits.length !== this.mBits.length) {
+            this.mOutBits = new Int32Array(this.mBits.length);
         }
-        for (let i = 0; i < this.mExpression.length; i++) {
-            const v = this.mExpression[i];
-            if (Number.isNaN(v) && !MatrixOperations.isOperator(v)) {
-                this.mOutExpression[i] = context.getFloat(idFromNan(v));
+        for (let i = 0; i < this.mBits.length; i++) {
+            const b = this.mBits[i];
+            if (isNaNBits(b) && !MatrixOperations.isOperatorBits(b)) {
+                // Resolve the variable to a literal float and store its bits.
+                this.mOutBits[i] = floatToRawIntBits(context.getFloat(idFromBits(b)));
             } else {
-                this.mOutExpression[i] = v;
+                this.mOutBits[i] = b;
             }
         }
     }
 
     apply(context: RemoteContext): void {
-        const m = this.mMatrixOperations.eval(this.mOutExpression);
+        const m = this.mMatrixOperations.evalBits(this.mOutBits);
         m.putValues(this.mValues);
         context.putObject(this.mMatrixId, this);
         context.loadFloat(this.mMatrixId, performance.now() * 1e6);
@@ -60,8 +64,8 @@ export class MatrixExpression extends Operation {
         const type = buffer.readInt();
         const len = buffer.readInt();
         if (len > 32 || len < 0) throw new Error(`Invalid matrix expression length ${len}`);
-        const exp = new Float32Array(len);
-        for (let i = 0; i < len; i++) exp[i] = buffer.readFloat();
-        operations.push(new MatrixExpression(id, type, exp));
+        const bits = new Int32Array(len);
+        for (let i = 0; i < len; i++) bits[i] = buffer.readInt();
+        operations.push(new MatrixExpression(id, type, bits));
     }
 }

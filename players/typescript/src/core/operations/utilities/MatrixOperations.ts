@@ -1,7 +1,7 @@
 // MatrixOperations: RPN matrix expression evaluator, matching Java MatrixOperations.java
 
 import { Matrix } from './Matrix';
-import { floatToRawIntBits, intBitsToFloat } from '../Utils';
+import { floatToRawIntBits, intBitsToFloat, isNaNBits, idFromBits } from '../Utils';
 
 const OFFSET = 0x320000;
 
@@ -18,6 +18,10 @@ const ID_REGION_ARRAY = 0x200000;
 function isDataVariable(v: number): boolean {
     const id = fromNaN(v);
     return (id & 0x700000) === ID_REGION_ARRAY;
+}
+
+function isDataVariableBits(b: number): boolean {
+    return (idFromBits(b) & 0x700000) === ID_REGION_ARRAY;
 }
 
 export class MatrixOperations {
@@ -84,6 +88,16 @@ export class MatrixOperations {
         return false;
     }
 
+    /** Bit-aware operator test: true if raw float32 int bits encode an operator token. */
+    static isOperatorBits(b: number): boolean {
+        if (isNaNBits(b)) {
+            if (isDataVariableBits(b)) return false;
+            const pos = idFromBits(b);
+            return pos > OFFSET && pos <= MatrixOperations.LAST_OP;
+        }
+        return false;
+    }
+
     eval(exp: number[] | Float32Array | null): Matrix {
         if (!exp) {
             this.mMatrices[0].setIdentity();
@@ -96,6 +110,32 @@ export class MatrixOperations {
             const v = exp[i];
             if (Number.isNaN(v)) {
                 this.opEval(i, fromNaN(v));
+            }
+        }
+        return this.mMatrices[0];
+    }
+
+    /**
+     * Evaluate from raw float32 int bits. Operator tokens are detected directly
+     * from the bits (robust against engines that canonicalize NaN payloads); the
+     * stack holds decoded literal floats so opEval reads ordinary numbers.
+     */
+    evalBits(bits: Int32Array | null): Matrix {
+        if (!bits) {
+            this.mMatrices[0].setIdentity();
+            return this.mMatrices[0];
+        }
+        // Decode token bits into a float stack once; operator positions still
+        // carry their NaN value but opEval only reads operand slots (never the
+        // operator slot itself), so the decoded NaN there is harmless.
+        const stack = new Float32Array(bits.length);
+        for (let i = 0; i < bits.length; i++) stack[i] = intBitsToFloat(bits[i]);
+        this.mStack = stack;
+        this.mMatrixIndex = 0;
+        this.mMatrices[0].setIdentity();
+        for (let i = 0; i < bits.length; i++) {
+            if (isNaNBits(bits[i])) {
+                this.opEval(i, idFromBits(bits[i]));
             }
         }
         return this.mMatrices[0];

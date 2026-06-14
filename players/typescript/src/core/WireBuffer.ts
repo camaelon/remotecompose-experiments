@@ -104,6 +104,14 @@ export class WireBuffer {
         return this.mDataView.getInt32(this.mIndex, false);
     }
 
+    // ---- ID-typed reads ----
+    // Identity defaults: a plain WireBuffer treats these as ordinary reads.
+    // LoomWireBuffer overrides them to apply RemapContext during macro expansion.
+    declareId(): number { return this.readInt(); }
+    readId(): number { return this.readInt(); }
+    readNanId(): number { return this.readFloat(); }
+    readLongNanId(): number { return this.readLong(); }
+
     readInt(): number {
         const v = this.mDataView.getInt32(this.mIndex, false);
         this.mIndex += 4;

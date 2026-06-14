@@ -1,6 +1,7 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
+import { isNaNBits, intBitsToFloat } from './Utils';
 
 export class TextTransform extends Operation {
     static readonly OP_CODE = 199;
@@ -12,22 +13,23 @@ export class TextTransform extends Operation {
 
     private mTextId: number;
     private mSrcId: number;
-    private mStart: number;
-    private mLen: number;
+    // start/len as raw float32 int bits; a NaN sentinel means "use default".
+    private mStartBits: number;
+    private mLenBits: number;
     private mOperation: number;
 
-    constructor(textId: number, srcId: number, start: number, len: number, operation: number) {
+    constructor(textId: number, srcId: number, startBits: number, lenBits: number, operation: number) {
         super();
         this.mTextId = textId; this.mSrcId = srcId;
-        this.mStart = start; this.mLen = len; this.mOperation = operation;
+        this.mStartBits = startBits; this.mLenBits = lenBits; this.mOperation = operation;
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     apply(context: RemoteContext): void {
         let text = context.getText(this.mSrcId) || '';
-        const start = Number.isNaN(this.mStart) ? 0 : Math.trunc(this.mStart);
-        const len = Number.isNaN(this.mLen) ? text.length : Math.trunc(this.mLen);
+        const start = isNaNBits(this.mStartBits) ? 0 : Math.trunc(intBitsToFloat(this.mStartBits));
+        const len = isNaNBits(this.mLenBits) ? text.length : Math.trunc(intBitsToFloat(this.mLenBits));
         if (start > 0 || len < text.length) {
             text = text.substring(start, start + len);
         }
@@ -47,8 +49,8 @@ export class TextTransform extends Operation {
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
         const srcId = buffer.readInt();
-        const start = buffer.readFloat();
-        const len = buffer.readFloat();
+        const start = buffer.readInt();
+        const len = buffer.readInt();
         const operation = buffer.readInt();
         operations.push(new TextTransform(textId, srcId, start, len, operation));
     }

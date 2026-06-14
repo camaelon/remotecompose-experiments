@@ -4,10 +4,16 @@ import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import { ContextMode } from '../RemoteContext';
-import { resolveFloat, idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
-function listenFloat(v: number, context: RemoteContext, op: any): void {
-    if (Number.isNaN(v)) context.listensTo(idFromNan(v), op);
+// All matrix value fields are stored as raw float32 int bits (a coordinate is
+// either a NaN-encoded variable reference or a literal float). This keeps the
+// encoded ids alive on engines that canonicalize NaN payloads (Safari/Firefox).
+function listenFloat(bits: number, context: RemoteContext, op: any): void {
+    if (isNaNBits(bits)) context.listensTo(idFromBits(bits), op);
+}
+function resolveFloat(bits: number, context: RemoteContext): number {
+    return isNaNBits(bits) ? context.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
 }
 
 export class MatrixSave extends Operation {
@@ -56,7 +62,7 @@ export class MatrixTranslate extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixTranslate(${this.mTranslateX}, ${this.mTranslateY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixTranslate(buffer.readFloat(), buffer.readFloat()));
+        operations.push(new MatrixTranslate(buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -84,7 +90,7 @@ export class MatrixScale extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixScale(${this.mScaleX}, ${this.mScaleY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixScale(buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+        operations.push(new MatrixScale(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -110,7 +116,7 @@ export class MatrixRotate extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixRotate(${this.mAngle})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixRotate(buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+        operations.push(new MatrixRotate(buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -132,7 +138,7 @@ export class MatrixSkew extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixSkew`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixSkew(buffer.readFloat(), buffer.readFloat()));
+        operations.push(new MatrixSkew(buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -158,7 +164,7 @@ export class MatrixFromPath extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixFromPath`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixFromPath(buffer.readInt(), buffer.readFloat(), buffer.readFloat(), buffer.readInt()));
+        operations.push(new MatrixFromPath(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -186,7 +192,7 @@ export class ClipRect extends Operation {
     }
     deepToString(indent: string): string { return `${indent}ClipRect`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ClipRect(buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+        operations.push(new ClipRect(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 

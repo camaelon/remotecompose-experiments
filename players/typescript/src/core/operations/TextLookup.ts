@@ -1,38 +1,39 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan, listenFloat } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class TextLookup extends Operation {
     static readonly OP_CODE = 151;
     private mTextId: number;
     private mDataSetId: number;
-    private mIndex: number;
+    // index as raw float32 int bits (may be a NaN-encoded variable ref).
+    private mIndexBits: number;
     private mOutIndex: number;
 
-    constructor(textId: number, dataSetId: number, index: number) {
+    constructor(textId: number, dataSetId: number, indexBits: number) {
         super();
         this.mTextId = textId;
         this.mDataSetId = dataSetId;
-        this.mIndex = index;
-        this.mOutIndex = Number.isNaN(index) ? 0 : index;
+        this.mIndexBits = indexBits;
+        this.mOutIndex = isNaNBits(indexBits) ? 0 : intBitsToFloat(indexBits);
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        listenFloat(this.mIndex, context, this);
+        if (isNaNBits(this.mIndexBits)) context.listensTo(idFromBits(this.mIndexBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mIndex)) {
-            this.mOutIndex = context.getFloat(idFromNan(this.mIndex));
+        if (isNaNBits(this.mIndexBits)) {
+            this.mOutIndex = context.getFloat(idFromBits(this.mIndexBits));
         }
     }
 
     apply(context: RemoteContext): void {
-        if (Number.isNaN(this.mIndex)) {
-            this.mOutIndex = context.getFloat(idFromNan(this.mIndex));
+        if (isNaNBits(this.mIndexBits)) {
+            this.mOutIndex = context.getFloat(idFromBits(this.mIndexBits));
         }
         const id = context.getCollectionsAccess().getId(this.mDataSetId, Math.trunc(this.mOutIndex));
         if (id >= 0) {
@@ -44,13 +45,13 @@ export class TextLookup extends Operation {
     }
 
     deepToString(indent: string): string {
-        return `${indent}TextLookup(textId=${this.mTextId}, dataSet=${this.mDataSetId}, index=${this.mIndex})`;
+        return `${indent}TextLookup(textId=${this.mTextId}, dataSet=${this.mDataSetId}, index=${this.mOutIndex})`;
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const textId = buffer.readInt();
         const dataSetId = buffer.readInt();
-        const index = buffer.readFloat();
+        const index = buffer.readInt();
         operations.push(new TextLookup(textId, dataSetId, index));
     }
 }

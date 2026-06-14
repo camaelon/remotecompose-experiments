@@ -149,8 +149,8 @@ export abstract class RemoteContext {
     getCollectionsAccess(): RemoteComposeState { return this.mRemoteComposeState; }
 
     // --- Abstract methods ---
-    abstract loadPathData(instanceId: number, winding: number, floatPath: Float32Array): void;
-    abstract getPathData(instanceId: number): Float32Array | null;
+    abstract loadPathData(instanceId: number, winding: number, path: Int32Array): void;
+    abstract getPathData(instanceId: number): Int32Array | null;
     abstract loadVariableName(varName: string, varId: number, varType: number): void;
     abstract loadColor(id: number, color: number): void;
     abstract setNamedColorOverride(colorName: string, color: number): void;
@@ -183,6 +183,8 @@ export abstract class RemoteContext {
     abstract overrideText(id: number, valueId: number): void;
     abstract loadAnimatedFloat(id: number, animatedFloat: any): void;
     abstract loadShader(id: number, value: any): void;
+    abstract loadSound(id: number, data: Uint8Array): void;
+    abstract playSound(id: number): void;
     abstract getFloat(id: number): number;
     abstract getInteger(id: number): number;
     abstract getLong(id: number): number;

@@ -5,37 +5,38 @@ import { Operation } from '../Operation';
 import type { VariableSupport } from '../VariableSupport';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class UpdateDynamicFloatList extends Operation implements VariableSupport {
     static readonly OP_CODE = 198;
 
     private mArrayId: number;
-    private mIndex: number;
+    // index / value as raw float32 int bits (may be NaN-encoded variable refs).
+    private mIndexBits: number;
     private mIndexOut: number;
-    private mValue: number;
+    private mValueBits: number;
     private mValueOut: number;
 
-    constructor(arrayId: number, index: number, value: number) {
+    constructor(arrayId: number, indexBits: number, valueBits: number) {
         super();
         this.mArrayId = arrayId;
-        this.mIndex = index;
-        this.mIndexOut = index;
-        this.mValue = value;
-        this.mValueOut = value;
+        this.mIndexBits = indexBits;
+        this.mIndexOut = isNaNBits(indexBits) ? 0 : intBitsToFloat(indexBits);
+        this.mValueBits = valueBits;
+        this.mValueOut = isNaNBits(valueBits) ? 0 : intBitsToFloat(valueBits);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mIndexOut = Number.isNaN(this.mIndex) ? context.getFloat(idFromNan(this.mIndex)) : this.mIndex;
-        this.mValueOut = Number.isNaN(this.mValue) ? context.getFloat(idFromNan(this.mValue)) : this.mValue;
+        this.mIndexOut = isNaNBits(this.mIndexBits) ? context.getFloat(idFromBits(this.mIndexBits)) : intBitsToFloat(this.mIndexBits);
+        this.mValueOut = isNaNBits(this.mValueBits) ? context.getFloat(idFromBits(this.mValueBits)) : intBitsToFloat(this.mValueBits);
     }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mIndex)) {
-            context.listensTo(idFromNan(this.mIndex), this);
+        if (isNaNBits(this.mIndexBits)) {
+            context.listensTo(idFromBits(this.mIndexBits), this);
         }
-        if (Number.isNaN(this.mValue)) {
-            context.listensTo(idFromNan(this.mValue), this);
+        if (isNaNBits(this.mValueBits)) {
+            context.listensTo(idFromBits(this.mValueBits), this);
         }
     }
 
@@ -64,8 +65,8 @@ export class UpdateDynamicFloatList extends Operation implements VariableSupport
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
-        const index = buffer.readFloat();
-        const value = buffer.readFloat();
+        const index = buffer.readInt();
+        const value = buffer.readInt();
         operations.push(new UpdateDynamicFloatList(id, index, value));
     }
 }

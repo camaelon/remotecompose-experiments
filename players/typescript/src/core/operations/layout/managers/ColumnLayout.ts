@@ -279,8 +279,8 @@ export class ColumnLayout extends LayoutManager {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
         const horizontalPositioning = buffer.readInt();
         const verticalPositioning = buffer.readInt();
         const spacedBy = buffer.readFloat();

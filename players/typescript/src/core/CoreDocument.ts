@@ -17,6 +17,13 @@ import { TimeVariables } from './TimeVariables';
 import { BackgroundModifier } from './operations/layout/modifiers/ModifierOperations';
 import { LoopOperation } from './operations/layout/LoopOperation';
 import { Theme, TextData, BitmapData, FloatConstant, RootContentBehavior } from './operations/DataOperations';
+import { LoomManager } from './operations/loom/LoomManager';
+import { RemapContext } from './operations/loom/RemapContext';
+import { ExpansionContext, type ExpansionDocument, type ArrayAccess } from './operations/loom/ExpansionContext';
+import { nestContainers, captureLoomBodies as captureLoomBodiesShared } from './operations/loom/nestContainers';
+import { DataListIds } from './operations/DataListIds';
+import { PatternDefine, PatternForEach, ReferencedOperations } from './operations/loom/PatternOperations';
+import type { ByteSpan } from './RemoteComposeBuffer';
 import { ColorTheme } from './operations/ColorTheme';
 import { IntegerConstant } from './operations/IntegerConstant';
 import { LongConstant } from './operations/LongConstant';
@@ -59,7 +66,7 @@ export interface ActionCallback {
     onAction(name: string, value: any): void;
 }
 
-export class CoreDocument {
+export class CoreDocument implements ExpansionDocument {
     static readonly MAJOR_VERSION = 1;
     static readonly MINOR_VERSION = 1;
     static readonly PATCH_VERSION = 0;
@@ -95,6 +102,14 @@ export class CoreDocument {
     private mNeedsRepaintFlag = -1;
     private mLastOpCount = 0;
     private mIsUpdateDoc = false;
+
+    // --- Loom / macro expansion state ---
+    private mLoomManager = new LoomManager();
+    private mCurrentId = 0;
+    private mProfileMask = 0;
+    private mTextData = new Map<number, string>();
+    private mReferencedOperations = new Map<number, ReferencedOperations>();
+    private mArrays = new Map<number, ArrayAccess>();
 
     constructor(clock: RemoteClock = SYSTEM_CLOCK) {
         this.mClock = clock;
@@ -200,11 +215,107 @@ export class CoreDocument {
 
     // --- Loading ---
 
+    // --- ExpansionDocument surface (used by the loom expansion engine) ---
+
+    getNextId(): number { return ++this.mCurrentId; }
+    getProfileMask(): number { return this.mProfileMask; }
+
+    getText(id: number): string | null {
+        const t = this.mTextData.get(id);
+        return t === undefined ? null : t;
+    }
+
+    getArray(id: number): ArrayAccess | null {
+        const collected = this.mArrays.get(id);
+        if (collected) return collected;
+        const arr = (this.mRemoteComposeState as unknown as { getArray?: (id: number) => any }).getArray?.(id);
+        if (arr && typeof arr.getLength === 'function' && typeof arr.getId === 'function') {
+            return arr as ArrayAccess;
+        }
+        return null;
+    }
+
+    getReferencedOperationsObject(id: number): Operation | null {
+        return this.mReferencedOperations.get(id) ?? null;
+    }
+
     initFromBuffer(buffer: RemoteComposeBuffer): void {
         this.mBuffer = buffer;
         this.mOperations = [];
+        // Inflate into a flat list (ops tagged with byte spans for body capture).
         buffer.inflateFromBuffer(this.mOperations);
+
+        // Compute the starting id counter above the max existing variable id,
+        // mirroring Java initFromBuffer's maxId computation (START_VARIABLE_ID-ish).
+        let maxId = 42; // above the system-global tier
+        this.mTextData.clear();
+        this.mReferencedOperations.clear();
+        this.mProfileMask = 0;
+        for (const op of this.mOperations) {
+            const vid = (op as unknown as { getId?: () => number }).getId;
+            if (typeof vid === 'function') {
+                const id = vid.call(op);
+                // ID_REGION_ARRAY (Java) ~ 0x40000000; ignore array-region ids
+                if (typeof id === 'number' && id < 0x40000000 && id > maxId) {
+                    maxId = id;
+                }
+            }
+            if (op instanceof Header) {
+                this.mHeader = op;
+                op.setVersion(this);
+                this.mProfileMask = (op as unknown as { getProfiles?: () => number }).getProfiles?.() ?? 0;
+            }
+            if (op instanceof TextData) {
+                this.mTextData.set(op.mTextId, op.mText);
+            }
+            if (op instanceof ReferencedOperations) {
+                this.mReferencedOperations.set(op.getId(), op);
+            }
+            if (op instanceof DataListIds) {
+                this.mArrays.set(op.getCollectionId(), op);
+            }
+        }
+        maxId += 10;
+        this.mCurrentId = maxId;
+
+        // Capture macro/loom body bytes from the original buffer (flat list).
+        this.captureLoomBodies(this.mOperations, buffer);
+
+        // Nest the flat list into a component tree.
         this.inflateComponents(this.mOperations);
+
+        // Expand macros: flatten -> expand -> re-nest, then replace.
+        this.expandMacros();
+    }
+
+    /**
+     * Capture the raw body bytes for body-bearing loom containers from the
+     * original source buffer. For each PatternDefine (container form),
+     * PatternForEach, and ReferencedOperations in the FLAT list, the body bytes
+     * are the concatenated bytes of all child ops: from the container's _byteEnd
+     * up to the matching ContainerEnd's _byteStart, located via depth counting.
+     */
+    private captureLoomBodies(flat: Operation[], buffer: RemoteComposeBuffer): void {
+        captureLoomBodiesShared(flat, buffer.getBuffer().getBuffer());
+    }
+
+    private expandMacros(): void {
+        const remap = new RemapContext(this);
+        const expansionContext = new ExpansionContext(
+            this.mLoomManager, this, remap, new Map(), false, 0);
+        const expanded = expansionContext.expandRecursiveTop(this.mOperations, this.mLoomManager);
+        const nested = nestContainers(expanded);
+        this.mOperations.length = 0;
+        for (const op of nested) this.mOperations.push(op);
+
+        // Re-resolve the root after expansion.
+        this.mRootLayoutComponent = null;
+        for (const op of this.mOperations) {
+            if (op instanceof RootLayoutComponent) {
+                this.mRootLayoutComponent = op;
+                break;
+            }
+        }
     }
 
     private inflateComponents(operations: Operation[]): void {

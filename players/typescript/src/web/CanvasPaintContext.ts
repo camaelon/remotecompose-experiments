@@ -2,7 +2,7 @@
 
 import { PaintContext } from '../core/PaintContext';
 import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundle';
-import { idFromNan } from '../core/operations/Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
 import { WebGLShaderRenderer } from './shader/WebGLShaderRenderer';
 import type { ShaderData } from '../core/operations/ShaderData';
@@ -56,8 +56,10 @@ export class CanvasPaintContext extends PaintContext {
         activeShaderData: ShaderData | null;
     }> = [];
 
-    // Path cache: id -> Float32Array
-    private pathDataCache = new Map<number, Float32Array>();
+    // Path cache: id -> Int32Array (raw float32 int bits; markers/variable refs
+    // are NaN-with-payload — decoded from bits, never via Number.isNaN, so the
+    // ids survive on engines that canonicalize NaN payloads (Safari/Firefox)).
+    private pathDataCache = new Map<number, Int32Array>();
     private pathWindingCache = new Map<number, number>();
 
     // Bitmap cache: id -> ImageBitmap or HTMLImageElement
@@ -133,7 +135,7 @@ export class CanvasPaintContext extends PaintContext {
 
     // --- Path cache ---
 
-    loadPathData(id: number, winding: number, data: Float32Array): void {
+    loadPathData(id: number, winding: number, data: Int32Array): void {
         this.pathDataCache.set(id, data);
         this.pathWindingCache.set(id, winding);
     }
@@ -150,13 +152,15 @@ export class CanvasPaintContext extends PaintContext {
     // NanMap path command base (Java convention used in binary PathData)
     private static readonly NANMAP_PATH_BASE = 0x300000;
 
-    private buildPath2D(data: Float32Array, start = 0, end = 1): Path2D {
+    private buildPath2D(data: Int32Array, start = 0, end = 1): Path2D {
         const path = new Path2D();
         let i = 0;
         while (i < data.length) {
-            const raw = data[i];
-            // Command codes are NaN-encoded IDs
-            let cmd = Number.isNaN(raw) ? idFromNan(raw) : raw;
+            const bits = data[i];
+            // Command codes are NaN-encoded IDs; decode from raw bits so the
+            // payload survives Safari/Firefox NaN canonicalization. Real coords
+            // (non-NaN bits) are reinterpreted as floats.
+            let cmd = isNaNBits(bits) ? idFromBits(bits) : intBitsToFloat(bits);
             // Normalize NanMap IDs (0x300000+) to short IDs (10+)
             if (cmd >= CanvasPaintContext.NANMAP_PATH_BASE && cmd <= CanvasPaintContext.NANMAP_PATH_BASE + 6) {
                 cmd = CanvasPaintContext.PATH_MOVE + (cmd - CanvasPaintContext.NANMAP_PATH_BASE);
@@ -165,33 +169,33 @@ export class CanvasPaintContext extends PaintContext {
                 case CanvasPaintContext.PATH_MOVE:
                     // Format: [MOVE, x, y] = 3 positions
                     i++;
-                    path.moveTo(data[i], data[i + 1]);
+                    path.moveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
                     i += 2;
                     break;
                 case CanvasPaintContext.PATH_LINE:
                     // Format: [LINE, startX, startY, endX, endY] = 5 positions
                     // startX,startY are redundant (previous endpoint), skip them
                     i += 3;
-                    path.lineTo(data[i], data[i + 1]);
+                    path.lineTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
                     i += 2;
                     break;
                 case CanvasPaintContext.PATH_QUADRATIC:
                     // Format: [QUAD, startX, startY, cpX, cpY, endX, endY] = 7 positions
                     i += 3;
-                    path.quadraticCurveTo(data[i], data[i + 1], data[i + 2], data[i + 3]);
+                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
                     i += 4;
                     break;
                 case CanvasPaintContext.PATH_CONIC:
                     // Format: [CONIC, startX, startY, cpX, cpY, endX, endY, weight] = 8 positions
                     // Approximate conic as quadratic (ignore weight)
                     i += 3;
-                    path.quadraticCurveTo(data[i], data[i + 1], data[i + 2], data[i + 3]);
+                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
                     i += 5;
                     break;
                 case CanvasPaintContext.PATH_CUBIC:
                     // Format: [CUBIC, startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY] = 9 positions
                     i += 3;
-                    path.bezierCurveTo(data[i], data[i + 1], data[i + 2], data[i + 3], data[i + 4], data[i + 5]);
+                    path.bezierCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]), intBitsToFloat(data[i + 4]), intBitsToFloat(data[i + 5]));
                     i += 6;
                     break;
                 case CanvasPaintContext.PATH_CLOSE:
@@ -1065,18 +1069,20 @@ export class CanvasPaintContext extends PaintContext {
             if (data1) this.drawPath(path1Id, start, end);
             return;
         }
-        // Interpolate path data: commands stay the same, coordinates are lerped
+        // Interpolate path data: commands stay the same, coordinates are lerped.
+        // Operate on raw bits; decode coords via intBitsToFloat, re-encode result.
         const len = Math.min(data1.length, data2.length);
-        const tweened = new Float32Array(len);
+        const tweened = new Int32Array(len);
         for (let i = 0; i < len; i++) {
-            const v1 = data1[i];
-            const v2 = data2[i];
-            if (Number.isNaN(v1)) {
-                // Command code - keep from path1
-                tweened[i] = v1;
+            const b1 = data1[i];
+            if (isNaNBits(b1)) {
+                // Command code / marker - keep bits from path1
+                tweened[i] = b1;
             } else {
-                // Coordinate value - interpolate
-                tweened[i] = v1 + (v2 - v1) * tween;
+                // Coordinate value - interpolate in float space, re-encode to bits
+                const f1 = intBitsToFloat(b1);
+                const f2 = intBitsToFloat(data2[i]);
+                tweened[i] = floatToRawIntBits(f1 + (f2 - f1) * tween);
             }
         }
         const path = this.buildPath2D(tweened, start, end);
@@ -1089,24 +1095,26 @@ export class CanvasPaintContext extends PaintContext {
     tweenPath(out: number, path1: number, path2: number, tween: number): void {
         if (tween === 0) {
             const data = this.pathDataCache.get(path1);
-            if (data) this.pathDataCache.set(out, new Float32Array(data));
+            if (data) this.pathDataCache.set(out, Int32Array.from(data));
             return;
         }
         if (tween === 1) {
             const data = this.pathDataCache.get(path2);
-            if (data) this.pathDataCache.set(out, new Float32Array(data));
+            if (data) this.pathDataCache.set(out, Int32Array.from(data));
             return;
         }
         const data1 = this.pathDataCache.get(path1);
         const data2 = this.pathDataCache.get(path2);
         if (!data1 || !data2) return;
         const len = Math.min(data1.length, data2.length);
-        const result = new Float32Array(len);
+        const result = new Int32Array(len);
         for (let i = 0; i < len; i++) {
-            if (Number.isNaN(data1[i]) || Number.isNaN(data2[i])) {
-                result[i] = data1[i]; // command code - keep from path1
+            if (isNaNBits(data1[i]) || isNaNBits(data2[i])) {
+                result[i] = data1[i]; // command code / marker - keep bits from path1
             } else {
-                result[i] = (data2[i] - data1[i]) * tween + data1[i];
+                const f1 = intBitsToFloat(data1[i]);
+                const f2 = intBitsToFloat(data2[i]);
+                result[i] = floatToRawIntBits((f2 - f1) * tween + f1);
             }
         }
         this.pathDataCache.set(out, result);
@@ -1174,7 +1182,7 @@ export class CanvasPaintContext extends PaintContext {
     // --- Path measurement helpers ---
 
     /** Flatten path data into line segments (curves are subdivided). */
-    private collectPathSegments(data: Float32Array): {
+    private collectPathSegments(data: Int32Array): {
         segments: { x1: number; y1: number; x2: number; y2: number; len: number }[];
         totalLen: number;
     } {
@@ -1190,39 +1198,40 @@ export class CanvasPaintContext extends PaintContext {
         };
 
         while (i < data.length) {
-            let cmd = Number.isNaN(data[i]) ? idFromNan(data[i]) : data[i];
+            const bits = data[i];
+            let cmd = isNaNBits(bits) ? idFromBits(bits) : intBitsToFloat(bits);
             if (cmd >= CanvasPaintContext.NANMAP_PATH_BASE && cmd <= CanvasPaintContext.NANMAP_PATH_BASE + 6) {
                 cmd = CanvasPaintContext.PATH_MOVE + (cmd - CanvasPaintContext.NANMAP_PATH_BASE);
             }
             switch (cmd) {
                 case CanvasPaintContext.PATH_MOVE:
-                    i++; curX = startX = data[i]; curY = startY = data[i + 1]; i += 2; break;
+                    i++; curX = startX = intBitsToFloat(data[i]); curY = startY = intBitsToFloat(data[i + 1]); i += 2; break;
                 case CanvasPaintContext.PATH_LINE: {
                     i += 3;
-                    const ex = data[i], ey = data[i + 1]; i += 2;
+                    const ex = intBitsToFloat(data[i]), ey = intBitsToFloat(data[i + 1]); i += 2;
                     addLine(curX, curY, ex, ey);
                     curX = ex; curY = ey; break;
                 }
                 case CanvasPaintContext.PATH_QUADRATIC: {
                     i += 3;
-                    const cpx = data[i], cpy = data[i + 1];
-                    const ex = data[i + 2], ey = data[i + 3]; i += 4;
+                    const cpx = intBitsToFloat(data[i]), cpy = intBitsToFloat(data[i + 1]);
+                    const ex = intBitsToFloat(data[i + 2]), ey = intBitsToFloat(data[i + 3]); i += 4;
                     this.flattenQuadratic(curX, curY, cpx, cpy, ex, ey, addLine);
                     curX = ex; curY = ey; break;
                 }
                 case CanvasPaintContext.PATH_CONIC: {
                     i += 3;
-                    const cpx = data[i], cpy = data[i + 1];
-                    const ex = data[i + 2], ey = data[i + 3];
+                    const cpx = intBitsToFloat(data[i]), cpy = intBitsToFloat(data[i + 1]);
+                    const ex = intBitsToFloat(data[i + 2]), ey = intBitsToFloat(data[i + 3]);
                     i += 5; // skip weight
                     this.flattenQuadratic(curX, curY, cpx, cpy, ex, ey, addLine);
                     curX = ex; curY = ey; break;
                 }
                 case CanvasPaintContext.PATH_CUBIC: {
                     i += 3;
-                    const cp1x = data[i], cp1y = data[i + 1];
-                    const cp2x = data[i + 2], cp2y = data[i + 3];
-                    const ex = data[i + 4], ey = data[i + 5]; i += 6;
+                    const cp1x = intBitsToFloat(data[i]), cp1y = intBitsToFloat(data[i + 1]);
+                    const cp2x = intBitsToFloat(data[i + 2]), cp2y = intBitsToFloat(data[i + 3]);
+                    const ex = intBitsToFloat(data[i + 4]), ey = intBitsToFloat(data[i + 5]); i += 6;
                     this.flattenCubic(curX, curY, cp1x, cp1y, cp2x, cp2y, ex, ey, addLine);
                     curX = ex; curY = ey; break;
                 }

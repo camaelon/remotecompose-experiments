@@ -21,7 +21,7 @@ export class RemoteComposeState {
     private mDataMapMap = new IntMap<any>();
     private mObjectMap = new IntMap<any>();
     private mPathMap = new IntMap<any>();
-    private mPathData = new IntMap<Float32Array>();
+    private mPathData = new IntMap<Int32Array>();
     private mPathWinding = new IntIntMap();
     private mColorOverride = new IntIntMap();
     private mCollectionMap = new IntMap<any>();
@@ -81,12 +81,12 @@ export class RemoteComposeState {
     getPath(id: number): any { return this.mPathMap.get(id); }
     putPath(id: number, path: any): void { this.mPathMap.put(id, path); }
 
-    putPathData(id: number, data: Float32Array): void {
+    putPathData(id: number, data: Int32Array): void {
         this.mPathData.put(id, data);
         this.mPathMap.remove(id);
     }
 
-    getPathData(id: number): Float32Array | null { return this.mPathData.get(id); }
+    getPathData(id: number): Int32Array | null { return this.mPathData.get(id); }
     getPathWinding(id: number): number { return this.mPathWinding.get(id); }
     putPathWinding(id: number, winding: number): void { this.mPathWinding.put(id, winding); }
 

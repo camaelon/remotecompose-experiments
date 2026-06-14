@@ -6,7 +6,7 @@ import { PaintOperation } from '../PaintOperation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { PaintContext } from '../PaintContext';
-import { idFromNan, listenFloat } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class ConditionalOperations extends PaintOperation {
     static readonly OP_CODE = 178;
@@ -19,30 +19,32 @@ export class ConditionalOperations extends PaintOperation {
 
     mList: Operation[] = [];
     private mType: number;
-    private mVarA: number;
-    private mVarB: number;
+    private mVarABits: number;
+    private mVarBBits: number;
     private mVarAOut: number;
     private mVarBOut: number;
 
-    constructor(type: number, a: number, b: number) {
+    constructor(type: number, aBits: number, bBits: number) {
         super();
         this.mType = type;
-        this.mVarAOut = this.mVarA = a;
-        this.mVarBOut = this.mVarB = b;
+        this.mVarABits = aBits;
+        this.mVarBBits = bBits;
+        this.mVarAOut = isNaNBits(aBits) ? 0 : intBitsToFloat(aBits);
+        this.mVarBOut = isNaNBits(bBits) ? 0 : intBitsToFloat(bBits);
     }
 
     getList(): Operation[] { return this.mList; }
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        listenFloat(this.mVarA, context, this);
-        listenFloat(this.mVarB, context, this);
+        if (isNaNBits(this.mVarABits)) context.listensTo(idFromBits(this.mVarABits), this);
+        if (isNaNBits(this.mVarBBits)) context.listensTo(idFromBits(this.mVarBBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
         this.markNotDirty();
-        this.mVarAOut = Number.isNaN(this.mVarA) ? context.getFloat(idFromNan(this.mVarA)) : this.mVarA;
-        this.mVarBOut = Number.isNaN(this.mVarB) ? context.getFloat(idFromNan(this.mVarB)) : this.mVarB;
+        this.mVarAOut = isNaNBits(this.mVarABits) ? context.getFloat(idFromBits(this.mVarABits)) : intBitsToFloat(this.mVarABits);
+        this.mVarBOut = isNaNBits(this.mVarBBits) ? context.getFloat(idFromBits(this.mVarBBits)) : intBitsToFloat(this.mVarBBits);
         for (const op of this.mList) {
             if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                 (op as any).updateVariables(context);
@@ -83,8 +85,8 @@ export class ConditionalOperations extends PaintOperation {
     deepToString(indent: string): string { return `${indent}ConditionalOperations(type=${this.mType})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readByte();
-        const a = buffer.readFloat();
-        const b = buffer.readFloat();
+        const a = buffer.readInt();   // raw bits; NaN-with-payload => variable ref
+        const b = buffer.readInt();
         operations.push(new ConditionalOperations(type, a, b));
     }
 }

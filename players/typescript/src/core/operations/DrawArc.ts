@@ -19,8 +19,8 @@ export class DrawArc extends DrawBase6 {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawArc(
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(),
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat()
+            buffer.readInt(), buffer.readInt(), buffer.readInt(),
+            buffer.readInt(), buffer.readInt(), buffer.readInt()
         ));
     }
 }

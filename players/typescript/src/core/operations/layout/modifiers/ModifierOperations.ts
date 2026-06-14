@@ -6,7 +6,7 @@ import type { WireBuffer } from '../../../WireBuffer';
 import type { RemoteContext } from '../../../RemoteContext';
 import { ContextMode } from '../../../RemoteContext';
 import { PaintBundle } from '../../paint/PaintBundle';
-import { idFromNan, listenFloat, isVariable } from '../../Utils';
+import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
 import { Visibility } from '../Component';
 
 // ── MODIFIER_WIDTH (16): INT type, FLOAT value ───────────────────────
@@ -22,21 +22,22 @@ export class WidthModifier extends Operation implements VariableSupport {
     static readonly FILL_PARENT_MAX_WIDTH = 7;
     static readonly FILL_PARENT_MAX_HEIGHT = 8;
     private mType: number;
-    private mValue: number;
+    private mValueBits: number;
     private mOutValue: number;
-    constructor(type: number, value: number) {
-        super(); this.mType = type; this.mOutValue = this.mValue = value;
+    constructor(type: number, valueBits: number) {
+        super(); this.mType = type; this.mValueBits = valueBits;
+        this.mOutValue = isNaNBits(valueBits) ? 0 : intBitsToFloat(valueBits);
     }
     getType(): number { return this.mType; }
     getValue(): number { return this.mOutValue; }
     registerListening(context: RemoteContext): void {
-        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && Number.isNaN(this.mValue)) {
-            context.listensTo(idFromNan(this.mValue), this);
+        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            context.listensTo(idFromBits(this.mValueBits), this);
         }
     }
     updateVariables(context: RemoteContext): void {
-        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && Number.isNaN(this.mValue)) {
-            this.mOutValue = context.getFloat(idFromNan(this.mValue));
+        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
             if (this.mType === WidthModifier.EXACT_DP) {
                 this.mOutValue *= context.getDensity();
             }
@@ -44,9 +45,9 @@ export class WidthModifier extends Operation implements VariableSupport {
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
-    deepToString(indent: string): string { return `${indent}WidthModifier(${this.mType}, ${this.mValue})`; }
+    deepToString(indent: string): string { return `${indent}WidthModifier(${this.mType}, ${this.mOutValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new WidthModifier(buffer.readInt(), buffer.readFloat()));
+        operations.push(new WidthModifier(buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -63,21 +64,22 @@ export class HeightModifier extends Operation implements VariableSupport {
     static readonly FILL_PARENT_MAX_WIDTH = 7;
     static readonly FILL_PARENT_MAX_HEIGHT = 8;
     private mType: number;
-    private mValue: number;
+    private mValueBits: number;
     private mOutValue: number;
-    constructor(type: number, value: number) {
-        super(); this.mType = type; this.mOutValue = this.mValue = value;
+    constructor(type: number, valueBits: number) {
+        super(); this.mType = type; this.mValueBits = valueBits;
+        this.mOutValue = isNaNBits(valueBits) ? 0 : intBitsToFloat(valueBits);
     }
     getType(): number { return this.mType; }
     getValue(): number { return this.mOutValue; }
     registerListening(context: RemoteContext): void {
-        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && Number.isNaN(this.mValue)) {
-            context.listensTo(idFromNan(this.mValue), this);
+        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            context.listensTo(idFromBits(this.mValueBits), this);
         }
     }
     updateVariables(context: RemoteContext): void {
-        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && Number.isNaN(this.mValue)) {
-            this.mOutValue = context.getFloat(idFromNan(this.mValue));
+        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
             if (this.mType === HeightModifier.EXACT_DP) {
                 this.mOutValue *= context.getDensity();
             }
@@ -85,61 +87,67 @@ export class HeightModifier extends Operation implements VariableSupport {
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
-    deepToString(indent: string): string { return `${indent}HeightModifier(${this.mType}, ${this.mValue})`; }
+    deepToString(indent: string): string { return `${indent}HeightModifier(${this.mType}, ${this.mOutValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new HeightModifier(buffer.readInt(), buffer.readFloat()));
+        operations.push(new HeightModifier(buffer.readInt(), buffer.readInt()));
     }
 }
 
 // ── MODIFIER_WIDTH_IN (231): FLOAT min, FLOAT max ────────────────────
 export class WidthInModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 231;
-    private mMin: number; private mMax: number;
+    private mMinBits: number; private mMaxBits: number;
     private mOutMin: number; private mOutMax: number;
-    constructor(min: number, max: number) {
-        super(); this.mOutMin = this.mMin = min; this.mOutMax = this.mMax = max;
+    constructor(minBits: number, maxBits: number) {
+        super();
+        this.mMinBits = minBits; this.mMaxBits = maxBits;
+        this.mOutMin = isNaNBits(minBits) ? 0 : intBitsToFloat(minBits);
+        this.mOutMax = isNaNBits(maxBits) ? 0 : intBitsToFloat(maxBits);
     }
     getMin(): number { return this.mOutMin; }
     getMax(): number { return this.mOutMax; }
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mMin)) context.listensTo(idFromNan(this.mMin), this);
-        if (Number.isNaN(this.mMax)) context.listensTo(idFromNan(this.mMax), this);
+        if (isNaNBits(this.mMinBits)) context.listensTo(idFromBits(this.mMinBits), this);
+        if (isNaNBits(this.mMaxBits)) context.listensTo(idFromBits(this.mMaxBits), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mMin)) this.mOutMin = context.getFloat(idFromNan(this.mMin));
-        if (Number.isNaN(this.mMax)) this.mOutMax = context.getFloat(idFromNan(this.mMax));
+        if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
+        if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
-    deepToString(indent: string): string { return `${indent}WidthInModifier(${this.mMin}, ${this.mMax})`; }
+    deepToString(indent: string): string { return `${indent}WidthInModifier(${this.mOutMin}, ${this.mOutMax})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new WidthInModifier(buffer.readFloat(), buffer.readFloat()));
+        operations.push(new WidthInModifier(buffer.readInt(), buffer.readInt()));
     }
 }
 
 // ── MODIFIER_HEIGHT_IN (232): FLOAT min, FLOAT max ───────────────────
 export class HeightInModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 232;
-    private mMin: number; private mMax: number;
+    private mMinBits: number; private mMaxBits: number;
     private mOutMin: number; private mOutMax: number;
-    constructor(min: number, max: number) {
-        super(); this.mOutMin = this.mMin = min; this.mOutMax = this.mMax = max;
+    constructor(minBits: number, maxBits: number) {
+        super();
+        this.mMinBits = minBits; this.mMaxBits = maxBits;
+        this.mOutMin = isNaNBits(minBits) ? 0 : intBitsToFloat(minBits);
+        this.mOutMax = isNaNBits(maxBits) ? 0 : intBitsToFloat(maxBits);
     }
     getMin(): number { return this.mOutMin; }
     getMax(): number { return this.mOutMax; }
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mMin)) context.listensTo(idFromNan(this.mMin), this);
-        if (Number.isNaN(this.mMax)) context.listensTo(idFromNan(this.mMax), this);
+        if (isNaNBits(this.mMinBits)) context.listensTo(idFromBits(this.mMinBits), this);
+        if (isNaNBits(this.mMaxBits)) context.listensTo(idFromBits(this.mMaxBits), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mMin)) this.mOutMin = context.getFloat(idFromNan(this.mMin));
-        if (Number.isNaN(this.mMax)) this.mOutMax = context.getFloat(idFromNan(this.mMax));
+        if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
+        if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
-    deepToString(indent: string): string { return `${indent}HeightInModifier(${this.mMin}, ${this.mMax})`; }
+    deepToString(indent: string): string { return `${indent}HeightInModifier(${this.mOutMin}, ${this.mOutMax})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new HeightInModifier(buffer.readFloat(), buffer.readFloat()));
+        operations.push(new HeightInModifier(buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -164,6 +172,7 @@ export class BackgroundModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 55;
     private static readonly COLOR_REF = 2;
     private mFlags: number; private mColorId: number;
+    // r/g/b/a as raw float32 int bits (may be NaN-encoded color-var refs).
     private mR: number; private mG: number; private mB: number; private mA: number;
     private mOutR: number; private mOutG: number; private mOutB: number; private mOutA: number;
     private mShapeType: number;
@@ -171,8 +180,11 @@ export class BackgroundModifier extends Operation implements VariableSupport {
     private mLayoutW = 0; private mLayoutH = 0;
     constructor(flags: number, colorId: number, r: number, g: number, b: number, a: number, shapeType: number) {
         super(); this.mFlags = flags; this.mColorId = colorId;
-        this.mOutR = this.mR = r; this.mOutG = this.mG = g;
-        this.mOutB = this.mB = b; this.mOutA = this.mA = a;
+        this.mR = r; this.mG = g; this.mB = b; this.mA = a;
+        this.mOutR = isNaNBits(r) ? 0 : intBitsToFloat(r);
+        this.mOutG = isNaNBits(g) ? 0 : intBitsToFloat(g);
+        this.mOutB = isNaNBits(b) ? 0 : intBitsToFloat(b);
+        this.mOutA = isNaNBits(a) ? 0 : intBitsToFloat(a);
         this.mShapeType = shapeType;
     }
     setComponent(c: any): void { this.mComponent = c; }
@@ -181,18 +193,18 @@ export class BackgroundModifier extends Operation implements VariableSupport {
         if (this.mFlags === BackgroundModifier.COLOR_REF) {
             context.listensTo(this.mColorId, this);
         } else {
-            listenFloat(this.mR, context, this);
-            listenFloat(this.mG, context, this);
-            listenFloat(this.mB, context, this);
-            listenFloat(this.mA, context, this);
+            if (isNaNBits(this.mR)) context.listensTo(idFromBits(this.mR), this);
+            if (isNaNBits(this.mG)) context.listensTo(idFromBits(this.mG), this);
+            if (isNaNBits(this.mB)) context.listensTo(idFromBits(this.mB), this);
+            if (isNaNBits(this.mA)) context.listensTo(idFromBits(this.mA), this);
         }
     }
     updateVariables(context: RemoteContext): void {
         if (this.mFlags !== BackgroundModifier.COLOR_REF) {
-            if (Number.isNaN(this.mR)) this.mOutR = context.getFloat(idFromNan(this.mR));
-            if (Number.isNaN(this.mG)) this.mOutG = context.getFloat(idFromNan(this.mG));
-            if (Number.isNaN(this.mB)) this.mOutB = context.getFloat(idFromNan(this.mB));
-            if (Number.isNaN(this.mA)) this.mOutA = context.getFloat(idFromNan(this.mA));
+            if (isNaNBits(this.mR)) this.mOutR = context.getFloat(idFromBits(this.mR));
+            if (isNaNBits(this.mG)) this.mOutG = context.getFloat(idFromBits(this.mG));
+            if (isNaNBits(this.mB)) this.mOutB = context.getFloat(idFromBits(this.mB));
+            if (isNaNBits(this.mA)) this.mOutA = context.getFloat(idFromBits(this.mA));
         }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
@@ -233,14 +245,16 @@ export class BackgroundModifier extends Operation implements VariableSupport {
     }
     deepToString(indent: string): string { return `${indent}BackgroundModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
+        // Java BackgroundModifierOperation.read: colorId remapped (readId),
+        // r/g/b/a are readNanId (NaN-encoded color-var refs remap in macros).
         const flags = buffer.readInt();
-        const colorId = buffer.readInt();
+        const colorId = buffer.readId();
         buffer.readInt(); // reserve1
         buffer.readInt(); // reserve2
-        const r = buffer.readFloat();
-        const g = buffer.readFloat();
-        const b = buffer.readFloat();
-        const a = buffer.readFloat();
+        const r = buffer.readInt();
+        const g = buffer.readInt();
+        const b = buffer.readInt();
+        const a = buffer.readInt();
         const shapeType = buffer.readInt();
         operations.push(new BackgroundModifier(flags, colorId, r, g, b, a, shapeType));
     }
@@ -304,16 +318,18 @@ export class BorderModifier extends Operation {
     }
     deepToString(indent: string): string { return `${indent}BorderModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
+        // Java BorderModifierOperation.read: colorId remapped (readId); float
+        // fields are readNanId (NaN-encoded var refs remap in macros).
         const flags = buffer.readInt();
-        const colorId = buffer.readInt();
+        const colorId = buffer.readId();
         buffer.readInt(); // reserve1
         buffer.readInt(); // reserve2
-        const borderWidth = buffer.readFloat();
-        const roundedCorner = buffer.readFloat();
-        const r = buffer.readFloat();
-        const g = buffer.readFloat();
-        const b = buffer.readFloat();
-        const a = buffer.readFloat();
+        const borderWidth = buffer.readNanId();
+        const roundedCorner = buffer.readNanId();
+        const r = buffer.readNanId();
+        const g = buffer.readNanId();
+        const b = buffer.readNanId();
+        const a = buffer.readNanId();
         const shapeType = buffer.readInt();
         operations.push(new BorderModifier(flags, colorId, borderWidth, roundedCorner, r, g, b, a, shapeType));
     }
@@ -322,33 +338,35 @@ export class BorderModifier extends Operation {
 // ── MODIFIER_PADDING (58): FLOAT left, FLOAT top, FLOAT right, FLOAT bottom
 export class PaddingModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 58;
+    // l/t/r/b as raw float32 int bits (may be NaN-encoded variable refs).
     private mLeft: number; private mTop: number; private mRight: number; private mBottom: number;
     mLeftValue: number; mTopValue: number; mRightValue: number; mBottomValue: number;
     constructor(l: number, t: number, r: number, b: number) {
         super();
-        this.mLeftValue = this.mLeft = l;
-        this.mTopValue = this.mTop = t;
-        this.mRightValue = this.mRight = r;
-        this.mBottomValue = this.mBottom = b;
+        this.mLeft = l; this.mTop = t; this.mRight = r; this.mBottom = b;
+        this.mLeftValue = isNaNBits(l) ? 0 : intBitsToFloat(l);
+        this.mTopValue = isNaNBits(t) ? 0 : intBitsToFloat(t);
+        this.mRightValue = isNaNBits(r) ? 0 : intBitsToFloat(r);
+        this.mBottomValue = isNaNBits(b) ? 0 : intBitsToFloat(b);
     }
     registerListening(context: RemoteContext): void {
-        listenFloat(this.mLeft, context, this);
-        listenFloat(this.mTop, context, this);
-        listenFloat(this.mRight, context, this);
-        listenFloat(this.mBottom, context, this);
+        if (isNaNBits(this.mLeft)) context.listensTo(idFromBits(this.mLeft), this);
+        if (isNaNBits(this.mTop)) context.listensTo(idFromBits(this.mTop), this);
+        if (isNaNBits(this.mRight)) context.listensTo(idFromBits(this.mRight), this);
+        if (isNaNBits(this.mBottom)) context.listensTo(idFromBits(this.mBottom), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mLeft)) this.mLeftValue = context.getFloat(idFromNan(this.mLeft));
-        if (Number.isNaN(this.mTop)) this.mTopValue = context.getFloat(idFromNan(this.mTop));
-        if (Number.isNaN(this.mRight)) this.mRightValue = context.getFloat(idFromNan(this.mRight));
-        if (Number.isNaN(this.mBottom)) this.mBottomValue = context.getFloat(idFromNan(this.mBottom));
+        if (isNaNBits(this.mLeft)) this.mLeftValue = context.getFloat(idFromBits(this.mLeft));
+        if (isNaNBits(this.mTop)) this.mTopValue = context.getFloat(idFromBits(this.mTop));
+        if (isNaNBits(this.mRight)) this.mRightValue = context.getFloat(idFromBits(this.mRight));
+        if (isNaNBits(this.mBottom)) this.mBottomValue = context.getFloat(idFromBits(this.mBottom));
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
-    deepToString(indent: string): string { return `${indent}PaddingModifier(${this.mLeft}, ${this.mTop}, ${this.mRight}, ${this.mBottom})`; }
+    deepToString(indent: string): string { return `${indent}PaddingModifier(${this.mLeftValue}, ${this.mTopValue}, ${this.mRightValue}, ${this.mBottomValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new PaddingModifier(
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -634,18 +652,22 @@ export class VisibilityModifier extends Operation {
 // ── MODIFIER_OFFSET (221): FLOAT x, FLOAT y ──────────────────────────
 export class OffsetModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 221;
+    // x/y as raw float32 int bits (may be NaN-encoded variable refs).
     private mOffX: number; private mOffY: number;
     private mOutX: number; private mOutY: number;
     constructor(x: number, y: number) {
-        super(); this.mOutX = this.mOffX = x; this.mOutY = this.mOffY = y;
+        super();
+        this.mOffX = x; this.mOffY = y;
+        this.mOutX = isNaNBits(x) ? 0 : intBitsToFloat(x);
+        this.mOutY = isNaNBits(y) ? 0 : intBitsToFloat(y);
     }
     registerListening(context: RemoteContext): void {
-        listenFloat(this.mOffX, context, this);
-        listenFloat(this.mOffY, context, this);
+        if (isNaNBits(this.mOffX)) context.listensTo(idFromBits(this.mOffX), this);
+        if (isNaNBits(this.mOffY)) context.listensTo(idFromBits(this.mOffY), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (Number.isNaN(this.mOffX)) this.mOutX = context.getFloat(idFromNan(this.mOffX));
-        if (Number.isNaN(this.mOffY)) this.mOutY = context.getFloat(idFromNan(this.mOffY));
+        if (isNaNBits(this.mOffX)) this.mOutX = context.getFloat(idFromBits(this.mOffX));
+        if (isNaNBits(this.mOffY)) this.mOutY = context.getFloat(idFromBits(this.mOffY));
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(context: RemoteContext): void {
@@ -654,28 +676,31 @@ export class OffsetModifier extends Operation implements VariableSupport {
         if (!pc) return;
         pc.translate(this.mOutX, this.mOutY);
     }
-    deepToString(indent: string): string { return `${indent}OffsetModifier(${this.mOffX}, ${this.mOffY})`; }
+    deepToString(indent: string): string { return `${indent}OffsetModifier(${this.mOutX}, ${this.mOutY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new OffsetModifier(buffer.readFloat(), buffer.readFloat()));
+        operations.push(new OffsetModifier(buffer.readInt(), buffer.readInt()));
     }
 }
 
 // ── MODIFIER_ZINDEX (223): FLOAT value ────────────────────────────────
 export class ZIndexModifier extends Operation {
     static readonly OP_CODE = 223;
-    mValue: number;
+    private mValueBits: number;
     private mCurrentValue: number;
-    constructor(value: number) { super(); this.mCurrentValue = this.mValue = value; }
+    constructor(valueBits: number) {
+        super(); this.mValueBits = valueBits;
+        this.mCurrentValue = isNaNBits(valueBits) ? 0 : intBitsToFloat(valueBits);
+    }
     getValue(): number { return this.mCurrentValue; }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(context: RemoteContext): void {
-        if (context.mMode === ContextMode.PAINT && isVariable(this.mValue)) {
-            this.mCurrentValue = context.getFloat(idFromNan(this.mValue));
+        if (context.mMode === ContextMode.PAINT && isVariableBits(this.mValueBits)) {
+            this.mCurrentValue = context.getFloat(idFromBits(this.mValueBits));
         }
     }
-    deepToString(indent: string): string { return `${indent}ZIndexModifier(${this.mValue})`; }
+    deepToString(indent: string): string { return `${indent}ZIndexModifier(${this.mCurrentValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ZIndexModifier(buffer.readFloat()));
+        operations.push(new ZIndexModifier(buffer.readInt()));
     }
 }
 
@@ -776,6 +801,8 @@ export class ScrollModifier extends Operation {
     static readonly HORIZONTAL = 1;
     mList: Operation[] = [];
     private mDirection: number;
+    // position/max/notchMax as raw float32 int bits (NaN-encoded variable refs;
+    // getMaxNan/getNotchMaxNan return the bits which LayoutManager decodes).
     private mPositionId: number;
     private mMax: number;
     private mNotchMax: number;
@@ -796,8 +823,8 @@ export class ScrollModifier extends Operation {
         const pc = context.getPaintContext();
         if (!pc) return;
         // Read current scroll position from context
-        const pos = Number.isNaN(this.mPositionId)
-            ? context.getFloat(idFromNan(this.mPositionId))
+        const pos = isNaNBits(this.mPositionId)
+            ? context.getFloat(idFromBits(this.mPositionId))
             : 0;
         if (this.mDirection === ScrollModifier.HORIZONTAL) {
             pc.translate(-pos, 0);
@@ -808,9 +835,9 @@ export class ScrollModifier extends Operation {
     deepToString(indent: string): string { return `${indent}ScrollModifier(dir=${this.mDirection})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const direction = buffer.readInt();
-        const position = buffer.readFloat();
-        const max = buffer.readFloat();
-        const notchMax = buffer.readFloat();
+        const position = buffer.readInt();
+        const max = buffer.readInt();
+        const notchMax = buffer.readInt();
         operations.push(new ScrollModifier(direction, position, max, notchMax));
     }
 }

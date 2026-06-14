@@ -7,47 +7,47 @@ import type { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class DrawTweenPath extends PaintOperation implements VariableSupport {
     static readonly OP_CODE = 125;
     private mPath1Id: number;
     private mPath2Id: number;
 
-    // Wire values (may be NaN-encoded variable references)
-    private mTween: number;
-    private mStart: number;
-    private mEnd: number;
+    // Wire values as raw float32 int bits (may be NaN-encoded variable refs).
+    private mTweenBits: number;
+    private mStartBits: number;
+    private mEndBits: number;
 
     // Resolved output values
     private mOutTween: number;
     private mOutStart: number;
     private mOutEnd: number;
 
-    constructor(path1Id: number, path2Id: number, tween: number, start: number, end: number) {
+    constructor(path1Id: number, path2Id: number, tweenBits: number, startBits: number, endBits: number) {
         super();
         this.mPath1Id = path1Id;
         this.mPath2Id = path2Id;
-        this.mTween = tween;
-        this.mStart = start;
-        this.mEnd = end;
-        this.mOutTween = tween;
-        this.mOutStart = start;
-        this.mOutEnd = end;
+        this.mTweenBits = tweenBits;
+        this.mStartBits = startBits;
+        this.mEndBits = endBits;
+        this.mOutTween = isNaNBits(tweenBits) ? 0 : intBitsToFloat(tweenBits);
+        this.mOutStart = isNaNBits(startBits) ? 0 : intBitsToFloat(startBits);
+        this.mOutEnd = isNaNBits(endBits) ? 0 : intBitsToFloat(endBits);
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mTween)) context.listensTo(idFromNan(this.mTween), this);
-        if (Number.isNaN(this.mStart)) context.listensTo(idFromNan(this.mStart), this);
-        if (Number.isNaN(this.mEnd)) context.listensTo(idFromNan(this.mEnd), this);
+        if (isNaNBits(this.mTweenBits)) context.listensTo(idFromBits(this.mTweenBits), this);
+        if (isNaNBits(this.mStartBits)) context.listensTo(idFromBits(this.mStartBits), this);
+        if (isNaNBits(this.mEndBits)) context.listensTo(idFromBits(this.mEndBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutTween = Number.isNaN(this.mTween) ? context.getFloat(idFromNan(this.mTween)) : this.mTween;
-        this.mOutStart = Number.isNaN(this.mStart) ? context.getFloat(idFromNan(this.mStart)) : this.mStart;
-        this.mOutEnd = Number.isNaN(this.mEnd) ? context.getFloat(idFromNan(this.mEnd)) : this.mEnd;
+        this.mOutTween = isNaNBits(this.mTweenBits) ? context.getFloat(idFromBits(this.mTweenBits)) : intBitsToFloat(this.mTweenBits);
+        this.mOutStart = isNaNBits(this.mStartBits) ? context.getFloat(idFromBits(this.mStartBits)) : intBitsToFloat(this.mStartBits);
+        this.mOutEnd = isNaNBits(this.mEndBits) ? context.getFloat(idFromBits(this.mEndBits)) : intBitsToFloat(this.mEndBits);
     }
 
     paint(context: PaintContext): void {
@@ -60,8 +60,8 @@ export class DrawTweenPath extends PaintOperation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawTweenPath(
-            buffer.readInt(), buffer.readInt(), buffer.readFloat(),
-            buffer.readFloat(), buffer.readFloat()
+            buffer.readInt(), buffer.readInt(), buffer.readInt(),
+            buffer.readInt(), buffer.readInt()
         ));
     }
 }

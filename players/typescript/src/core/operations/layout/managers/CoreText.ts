@@ -3,7 +3,7 @@
 
 import { LayoutManager } from './LayoutManager';
 import { PaintBundle } from '../../paint/PaintBundle';
-import { idFromNan, isVariable } from '../../Utils';
+import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits, floatToRawIntBits } from '../../Utils';
 import type { Operation } from '../../../Operation';
 import type { WireBuffer } from '../../../WireBuffer';
 import type { RemoteContext } from '../../../RemoteContext';
@@ -113,7 +113,9 @@ function readCommandParams(buffer: WireBuffer, count: number, cb: ReadCallback):
                 cb.intValue(paramId, buffer.readInt());
                 break;
             case P_FLOAT:
-                cb.floatValue(paramId, buffer.readFloat());
+                // Read raw int32 bits; ref-capable params (font size/weight) keep
+                // the bits, others decode to float in the callback.
+                cb.floatValue(paramId, buffer.readInt());
                 break;
             case P_SHORT:
                 buffer.readShort();
@@ -132,9 +134,10 @@ function readCommandParams(buffer: WireBuffer, count: number, cb: ReadCallback):
                 break;
             }
             case PA_FLOAT: {
+                // Read raw int32 bits so NaN-encoded variable refs survive.
                 const len = buffer.readShort();
                 const arr: number[] = [];
-                for (let j = 0; j < len; j++) arr.push(buffer.readFloat());
+                for (let j = 0; j < len; j++) arr.push(buffer.readInt());
                 cb.floatArrayValue(paramId, arr);
                 break;
             }
@@ -213,11 +216,11 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.mFontSize = fontSize;
         this.mMinFontSize = minFontSize;
         this.mMaxFontSize = maxFontSize;
-        this.mFontSizeValue = Number.isNaN(fontSize) ? 16 : fontSize;
+        this.mFontSizeValue = isNaNBits(fontSize) ? 16 : intBitsToFloat(fontSize);
         this.mMeasureFontSize = this.mFontSizeValue;
         this.mFontStyle = fontStyle;
         this.mFontWeight = fontWeight;
-        this.mFontWeightValue = fontWeight;
+        this.mFontWeightValue = isNaNBits(fontWeight) ? 0 : intBitsToFloat(fontWeight);
         this.mFontFamilyId = fontFamilyId;
         this.mTextAlign = textAlign;
         this.mTextAlignValue = textAlign & 0xFFFF;
@@ -241,11 +244,11 @@ export class CoreText extends LayoutManager implements VariableSupport {
         if (this.mTextId !== -1) {
             context.listensTo(this.mTextId, this);
         }
-        if (Number.isNaN(this.mFontSize)) {
-            context.listensTo(idFromNan(this.mFontSize), this);
+        if (isNaNBits(this.mFontSize)) {
+            context.listensTo(idFromBits(this.mFontSize), this);
         }
-        if (Number.isNaN(this.mFontWeight)) {
-            context.listensTo(idFromNan(this.mFontWeight), this);
+        if (isNaNBits(this.mFontWeight)) {
+            context.listensTo(idFromBits(this.mFontWeight), this);
         }
         if (this.mIsDynamicColorEnabled) {
             context.listensTo(this.mColorId, this);
@@ -253,12 +256,12 @@ export class CoreText extends LayoutManager implements VariableSupport {
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mFontSizeValue = Number.isNaN(this.mFontSize)
-            ? context.getFloat(idFromNan(this.mFontSize))
-            : this.mFontSize;
-        this.mFontWeightValue = Number.isNaN(this.mFontWeight)
-            ? context.getFloat(idFromNan(this.mFontWeight))
-            : this.mFontWeight;
+        this.mFontSizeValue = isNaNBits(this.mFontSize)
+            ? context.getFloat(idFromBits(this.mFontSize))
+            : intBitsToFloat(this.mFontSize);
+        this.mFontWeightValue = isNaNBits(this.mFontWeight)
+            ? context.getFloat(idFromBits(this.mFontWeight))
+            : intBitsToFloat(this.mFontWeight);
         this.mTextAlignValue = this.mTextAlign & 0xFFFF;
         this.mColorValue = this.mIsDynamicColorEnabled
             ? context.getColor(this.mColorId)
@@ -300,12 +303,9 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.mPaint.setTextStyle(this.mType === -1 ? 0 : this.mType,
             Math.round(this.mFontWeightValue), this.mFontStyle === 1);
         if (this.mFontAxis && this.mFontAxis.length > 0) {
-            const values = this.mFontAxisValues!.slice();
-            for (let i = 0; i < values.length; i++) {
-                if (isVariable(values[i])) {
-                    values[i] = context.getContext().getFloat(idFromNan(values[i]));
-                }
-            }
+            // mFontAxisValues holds raw int bits; resolve vars, decode literals.
+            const values = this.mFontAxisValues!.map(b =>
+                isVariableBits(b) ? context.getContext().getFloat(idFromBits(b)) : intBitsToFloat(b));
             this.mPaint.setTextAxis(this.mFontAxis, values);
         }
         this.mPaint.setColor(this.mColorValue);
@@ -421,12 +421,9 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.mPaint.setTextStyle(this.mType === -1 ? 0 : this.mType,
             Math.round(this.mFontWeightValue), this.mFontStyle === 1);
         if (this.mFontAxis && this.mFontAxis.length > 0) {
-            const values = this.mFontAxisValues!.slice();
-            for (let i = 0; i < values.length; i++) {
-                if (isVariable(values[i])) {
-                    values[i] = remoteContext.getFloat(idFromNan(values[i]));
-                }
-            }
+            // mFontAxisValues holds raw int bits; resolve vars, decode literals.
+            const values = this.mFontAxisValues!.map(b =>
+                isVariableBits(b) ? remoteContext.getFloat(idFromBits(b)) : intBitsToFloat(b));
             this.mPaint.setTextAxis(this.mFontAxis, values);
         }
         paintContext.replacePaint(this.mPaint);
@@ -495,7 +492,7 @@ export class CoreText extends LayoutManager implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
+        const textId = buffer.readId();  // Java CoreText.read: readId (remapped in macros)
         const paramsLength = buffer.readShort();
 
         // Default values matching Java
@@ -503,8 +500,9 @@ export class CoreText extends LayoutManager implements VariableSupport {
         let fontStyle = 0, fontFamilyId = -1, textAlign = 1, overflow = 1;
         let maxLines = 0x7FFFFFFF, lineBreakStrategy = 0, hyphenationFrequency = 0;
         let justificationMode = 0, flags = 0;
-        let fontSize = 16, minFontSize = -1, maxFontSize = -1;
-        let fontWeight = 400, letterSpacing = 0, lineHeightAdd = 0, lineHeightMultiplier = 1;
+        // fontSize / fontWeight are kept as raw float32 int bits (default 16.0 / 400.0).
+        let fontSize = floatToRawIntBits(16), minFontSize = -1, maxFontSize = -1;
+        let fontWeight = floatToRawIntBits(400), letterSpacing = 0, lineHeightAdd = 0, lineHeightMultiplier = 1;
         let underline = false, strikethrough = false, autosize = false;
         let fontAxis: number[] | null = null;
         let fontAxisValues: number[] | null = null;
@@ -528,15 +526,17 @@ export class CoreText extends LayoutManager implements VariableSupport {
                     case P_TEXT_STYLE_ID: break; // TODO
                 }
             },
-            floatValue(id: number, value: number) {
+            floatValue(id: number, bits: number) {
                 switch (id) {
-                    case P_FONT_SIZE: fontSize = value; break;
-                    case P_MIN_FONT_SIZE: minFontSize = value; break;
-                    case P_MAX_FONT_SIZE: maxFontSize = value; break;
-                    case P_FONT_WEIGHT: fontWeight = value; break;
-                    case P_LETTER_SPACING: letterSpacing = value; break;
-                    case P_LINE_HEIGHT_ADD: lineHeightAdd = value; break;
-                    case P_LINE_HEIGHT_MULTIPLIER: lineHeightMultiplier = value; break;
+                    // Ref-capable: keep raw bits (resolved later).
+                    case P_FONT_SIZE: fontSize = bits; break;
+                    case P_FONT_WEIGHT: fontWeight = bits; break;
+                    // Non-ref: decode literal float now.
+                    case P_MIN_FONT_SIZE: minFontSize = intBitsToFloat(bits); break;
+                    case P_MAX_FONT_SIZE: maxFontSize = intBitsToFloat(bits); break;
+                    case P_LETTER_SPACING: letterSpacing = intBitsToFloat(bits); break;
+                    case P_LINE_HEIGHT_ADD: lineHeightAdd = intBitsToFloat(bits); break;
+                    case P_LINE_HEIGHT_MULTIPLIER: lineHeightMultiplier = intBitsToFloat(bits); break;
                 }
             },
             boolValue(id: number, value: boolean) {

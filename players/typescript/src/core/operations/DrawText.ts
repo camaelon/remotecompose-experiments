@@ -7,7 +7,7 @@ import type { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class DrawText extends PaintOperation implements VariableSupport {
     static readonly OP_CODE = 43;
@@ -15,21 +15,22 @@ export class DrawText extends PaintOperation implements VariableSupport {
     mContextStart: number; mContextEnd: number;
     mRtl: boolean;
 
-    // Wire values (may be NaN-encoded variable references)
-    private mXValue: number;
-    private mYValue: number;
+    // Wire values as raw float32 int bits (may be NaN-encoded variable refs).
+    private mXBits: number;
+    private mYBits: number;
 
     // Resolved output values
     mX: number;
     mY: number;
 
     constructor(textId: number, start: number, end: number, contextStart: number, contextEnd: number,
-                x: number, y: number, rtl: boolean) {
+                xBits: number, yBits: number, rtl: boolean) {
         super();
         this.mTextId = textId; this.mStart = start; this.mEnd = end;
         this.mContextStart = contextStart; this.mContextEnd = contextEnd;
-        this.mXValue = x; this.mYValue = y;
-        this.mX = x; this.mY = y;
+        this.mXBits = xBits; this.mYBits = yBits;
+        this.mX = isNaNBits(xBits) ? 0 : intBitsToFloat(xBits);
+        this.mY = isNaNBits(yBits) ? 0 : intBitsToFloat(yBits);
         this.mRtl = rtl;
     }
 
@@ -37,13 +38,13 @@ export class DrawText extends PaintOperation implements VariableSupport {
 
     registerListening(context: RemoteContext): void {
         context.listensTo(this.mTextId, this);
-        if (Number.isNaN(this.mXValue)) context.listensTo(idFromNan(this.mXValue), this);
-        if (Number.isNaN(this.mYValue)) context.listensTo(idFromNan(this.mYValue), this);
+        if (isNaNBits(this.mXBits)) context.listensTo(idFromBits(this.mXBits), this);
+        if (isNaNBits(this.mYBits)) context.listensTo(idFromBits(this.mYBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mX = Number.isNaN(this.mXValue) ? context.getFloat(idFromNan(this.mXValue)) : this.mXValue;
-        this.mY = Number.isNaN(this.mYValue) ? context.getFloat(idFromNan(this.mYValue)) : this.mYValue;
+        this.mX = isNaNBits(this.mXBits) ? context.getFloat(idFromBits(this.mXBits)) : intBitsToFloat(this.mXBits);
+        this.mY = isNaNBits(this.mYBits) ? context.getFloat(idFromBits(this.mYBits)) : intBitsToFloat(this.mYBits);
     }
 
     paint(context: PaintContext): void {
@@ -60,7 +61,7 @@ export class DrawText extends PaintOperation implements VariableSupport {
         operations.push(new DrawText(
             buffer.readInt(), buffer.readInt(), buffer.readInt(),
             buffer.readInt(), buffer.readInt(),
-            buffer.readFloat(), buffer.readFloat(), buffer.readBoolean()
+            buffer.readInt(), buffer.readInt(), buffer.readBoolean()
         ));
     }
 }

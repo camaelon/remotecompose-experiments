@@ -7,7 +7,7 @@ import type { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 
 export class DrawBitmap extends PaintOperation implements VariableSupport {
     static readonly OP_CODE = 44;
@@ -15,11 +15,11 @@ export class DrawBitmap extends PaintOperation implements VariableSupport {
     mImageId: number;
     mCdId: number;
 
-    // Wire values (may be NaN-encoded variable references)
-    private mLeft: number;
-    private mTop: number;
-    private mRight: number;
-    private mBottom: number;
+    // Wire values as raw float32 int bits (may be NaN-encoded variable refs).
+    private mLeftBits: number;
+    private mTopBits: number;
+    private mRightBits: number;
+    private mBottomBits: number;
 
     // Resolved output values
     private mOutLeft: number;
@@ -27,34 +27,34 @@ export class DrawBitmap extends PaintOperation implements VariableSupport {
     private mOutRight: number;
     private mOutBottom: number;
 
-    constructor(imageId: number, left: number, top: number, right: number, bottom: number, cdId: number) {
+    constructor(imageId: number, leftBits: number, topBits: number, rightBits: number, bottomBits: number, cdId: number) {
         super();
         this.mImageId = imageId;
-        this.mLeft = left;
-        this.mTop = top;
-        this.mRight = right;
-        this.mBottom = bottom;
+        this.mLeftBits = leftBits;
+        this.mTopBits = topBits;
+        this.mRightBits = rightBits;
+        this.mBottomBits = bottomBits;
         this.mCdId = cdId;
-        this.mOutLeft = left;
-        this.mOutTop = top;
-        this.mOutRight = right;
-        this.mOutBottom = bottom;
+        this.mOutLeft = isNaNBits(leftBits) ? 0 : intBitsToFloat(leftBits);
+        this.mOutTop = isNaNBits(topBits) ? 0 : intBitsToFloat(topBits);
+        this.mOutRight = isNaNBits(rightBits) ? 0 : intBitsToFloat(rightBits);
+        this.mOutBottom = isNaNBits(bottomBits) ? 0 : intBitsToFloat(bottomBits);
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mLeft)) context.listensTo(idFromNan(this.mLeft), this);
-        if (Number.isNaN(this.mTop)) context.listensTo(idFromNan(this.mTop), this);
-        if (Number.isNaN(this.mRight)) context.listensTo(idFromNan(this.mRight), this);
-        if (Number.isNaN(this.mBottom)) context.listensTo(idFromNan(this.mBottom), this);
+        if (isNaNBits(this.mLeftBits)) context.listensTo(idFromBits(this.mLeftBits), this);
+        if (isNaNBits(this.mTopBits)) context.listensTo(idFromBits(this.mTopBits), this);
+        if (isNaNBits(this.mRightBits)) context.listensTo(idFromBits(this.mRightBits), this);
+        if (isNaNBits(this.mBottomBits)) context.listensTo(idFromBits(this.mBottomBits), this);
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutLeft = Number.isNaN(this.mLeft) ? context.getFloat(idFromNan(this.mLeft)) : this.mLeft;
-        this.mOutTop = Number.isNaN(this.mTop) ? context.getFloat(idFromNan(this.mTop)) : this.mTop;
-        this.mOutRight = Number.isNaN(this.mRight) ? context.getFloat(idFromNan(this.mRight)) : this.mRight;
-        this.mOutBottom = Number.isNaN(this.mBottom) ? context.getFloat(idFromNan(this.mBottom)) : this.mBottom;
+        this.mOutLeft = isNaNBits(this.mLeftBits) ? context.getFloat(idFromBits(this.mLeftBits)) : intBitsToFloat(this.mLeftBits);
+        this.mOutTop = isNaNBits(this.mTopBits) ? context.getFloat(idFromBits(this.mTopBits)) : intBitsToFloat(this.mTopBits);
+        this.mOutRight = isNaNBits(this.mRightBits) ? context.getFloat(idFromBits(this.mRightBits)) : intBitsToFloat(this.mRightBits);
+        this.mOutBottom = isNaNBits(this.mBottomBits) ? context.getFloat(idFromBits(this.mBottomBits)) : intBitsToFloat(this.mBottomBits);
     }
 
     paint(context: PaintContext): void {
@@ -68,10 +68,10 @@ export class DrawBitmap extends PaintOperation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
-        const left = buffer.readFloat();
-        const top = buffer.readFloat();
-        const right = buffer.readFloat();
-        const bottom = buffer.readFloat();
+        const left = buffer.readInt();
+        const top = buffer.readInt();
+        const right = buffer.readInt();
+        const bottom = buffer.readInt();
         const cdId = buffer.readInt();
         operations.push(new DrawBitmap(id, left, top, right, bottom, cdId));
     }

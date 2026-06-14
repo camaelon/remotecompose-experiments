@@ -19,8 +19,8 @@ export class DrawSector extends DrawBase6 {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawSector(
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(),
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat()
+            buffer.readInt(), buffer.readInt(), buffer.readInt(),
+            buffer.readInt(), buffer.readInt(), buffer.readInt()
         ));
     }
 }

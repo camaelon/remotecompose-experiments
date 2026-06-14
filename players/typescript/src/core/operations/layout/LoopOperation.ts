@@ -6,21 +6,22 @@ import { Operation } from '../../Operation';
 import type { WireBuffer } from '../../WireBuffer';
 import type { RemoteContext } from '../../RemoteContext';
 import { ContextMode } from '../../RemoteContext';
-import { idFromNan } from '../Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from '../Utils';
 
 export class LoopOperation extends Operation {
     static readonly OP_CODE = 215;
 
     private mIndexId: number;
-    private mFrom: number;
-    private mStep: number;
-    private mUntil: number;
+    // Raw float32 int bits of from/step/until (NaN-with-payload => variable ref).
+    private mFromBits: number;
+    private mStepBits: number;
+    private mUntilBits: number;
     private mList: Operation[] = [];
 
-    constructor(indexId: number, from: number, step: number, until: number) {
+    constructor(indexId: number, fromBits: number, stepBits: number, untilBits: number) {
         super();
-        this.mIndexId = indexId; this.mFrom = from;
-        this.mStep = step; this.mUntil = until;
+        this.mIndexId = indexId; this.mFromBits = fromBits;
+        this.mStepBits = stepBits; this.mUntilBits = untilBits;
     }
 
     getList(): Operation[] { return this.mList; }
@@ -36,9 +37,9 @@ export class LoopOperation extends Operation {
             return;
         }
 
-        const from = this.rv(this.mFrom, context);
-        const step = this.rv(this.mStep, context);
-        const until = this.rv(this.mUntil, context);
+        const from = this.rv(this.mFromBits, context);
+        const step = this.rv(this.mStepBits, context);
+        const until = this.rv(this.mUntilBits, context);
 
         if (step <= 0 || !isFinite(from) || !isFinite(until) || !isFinite(step)) return;
 
@@ -64,19 +65,19 @@ export class LoopOperation extends Operation {
         }
     }
 
-    private rv(v: number, ctx: RemoteContext): number {
-        return Number.isNaN(v) ? ctx.getFloat(idFromNan(v)) : v;
+    private rv(bits: number, ctx: RemoteContext): number {
+        return isNaNBits(bits) ? ctx.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
     }
 
     deepToString(indent: string): string {
-        return `${indent}LoopOperation(${this.mFrom}..${this.mUntil} step ${this.mStep})`;
+        return `${indent}LoopOperation(${intBitsToFloat(this.mFromBits)}..${intBitsToFloat(this.mUntilBits)} step ${intBitsToFloat(this.mStepBits)})`;
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const indexId = buffer.readInt();
-        const from = buffer.readFloat();
-        const step = buffer.readFloat();
-        const until = buffer.readFloat();
+        const from = buffer.readInt();   // raw bits; NaN-with-payload => variable ref
+        const step = buffer.readInt();
+        const until = buffer.readInt();
         operations.push(new LoopOperation(indexId, from, step, until));
     }
 }

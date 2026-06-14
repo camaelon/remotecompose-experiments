@@ -1,7 +1,7 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan, listenFloat } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
 import { Matrix } from './utilities/Matrix';
 
 export class MatrixVectorMath extends Operation {
@@ -9,18 +9,19 @@ export class MatrixVectorMath extends Operation {
     private mType: number;
     mMatrixId: number;
     private mOutputs: Int32Array;
-    private mInputs: Float32Array;
+    // Inputs as raw float32 int bits (may be NaN-encoded variable refs).
+    private mInputBits: Int32Array;
     private mOutInputs: Float32Array;
     private mTempOut: Float32Array;
     private mMatrix = new Matrix();
 
-    constructor(type: number, outputs: Int32Array, matrixId: number, inputs: Float32Array) {
+    constructor(type: number, outputs: Int32Array, matrixId: number, inputBits: Int32Array) {
         super();
         this.mType = type;
         this.mMatrixId = matrixId;
         this.mOutputs = outputs;
-        this.mOutInputs = new Float32Array(inputs.length);
-        this.mInputs = inputs;
+        this.mOutInputs = new Float32Array(inputBits.length);
+        this.mInputBits = inputBits;
         this.mTempOut = new Float32Array(outputs.length);
     }
 
@@ -28,19 +29,15 @@ export class MatrixVectorMath extends Operation {
 
     registerListening(context: RemoteContext): void {
         context.listensTo(this.mMatrixId, this);
-        for (const v of this.mInputs) {
-            listenFloat(v, context, this);
+        for (const b of this.mInputBits) {
+            if (isNaNBits(b)) context.listensTo(idFromBits(b), this);
         }
     }
 
     updateVariables(context: RemoteContext): void {
-        for (let i = 0; i < this.mInputs.length; i++) {
-            const v = this.mInputs[i];
-            if (Number.isNaN(v)) {
-                this.mOutInputs[i] = context.getFloat(idFromNan(v));
-            } else {
-                this.mOutInputs[i] = v;
-            }
+        for (let i = 0; i < this.mInputBits.length; i++) {
+            const b = this.mInputBits[i];
+            this.mOutInputs[i] = isNaNBits(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
         }
     }
 
@@ -71,8 +68,8 @@ export class MatrixVectorMath extends Operation {
         for (let i = 0; i < lenOut; i++) out[i] = buffer.readInt();
         const lenIn = buffer.readInt();
         if (lenIn > 4 || lenIn < 1) throw new Error(`Invalid input length ${lenIn}`);
-        const inputs = new Float32Array(lenIn);
-        for (let i = 0; i < lenIn; i++) inputs[i] = buffer.readFloat();
-        operations.push(new MatrixVectorMath(type, out, matrixId, inputs));
+        const inputBits = new Int32Array(lenIn);
+        for (let i = 0; i < lenIn; i++) inputBits[i] = buffer.readInt();
+        operations.push(new MatrixVectorMath(type, out, matrixId, inputBits));
     }
 }

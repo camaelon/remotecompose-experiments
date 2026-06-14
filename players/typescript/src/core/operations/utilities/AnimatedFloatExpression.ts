@@ -1,8 +1,16 @@
 // AnimatedFloatExpression: standalone RPN float expression evaluator.
 // Port of Java AnimatedFloatExpression.java — used by TouchExpression.
 
-import { idFromNan } from '../Utils';
+import { idFromNan, isNaNBits, idFromBits, intBitsToFloat, floatToRawIntBits } from '../Utils';
 import { FloatExpression } from '../FloatExpression';
+
+// Finite sentinel for array/collection ids carried on the eval stack (mirrors
+// FloatExpression). 2^42 is exact in float64 and far above any real RC value.
+const ARR_SENTINEL = 2 ** 42;
+/** Decode an array/collection id popped from the eval stack (sentinel or legacy NaN). */
+function arrIdFromStack(x: number): number {
+    return x >= ARR_SENTINEL ? ((x - ARR_SENTINEL) | 0) : idFromNan(x);
+}
 
 export class AnimatedFloatExpression {
     static readonly OFFSET = 0x310000;
@@ -26,17 +34,28 @@ export class AnimatedFloatExpression {
         return id > AnimatedFloatExpression.OFFSET && id <= AnimatedFloatExpression.LAST_OP;
     }
 
-    eval(exp: Float32Array | number[], len: number, ...vars: number[]): number;
-    eval(ca: any, exp: Float32Array | number[], len: number, ...vars: number[]): number;
+    /** Bit-aware variant: true if raw float32 int bits encode a math operator token. */
+    static isMathOperatorBits(b: number): boolean {
+        if (!isNaNBits(b)) return false;
+        const id = idFromBits(b);
+        if ((id & AnimatedFloatExpression.ID_REGION_MASK) === AnimatedFloatExpression.ID_REGION_ARRAY) {
+            return false;
+        }
+        return id > AnimatedFloatExpression.OFFSET && id <= AnimatedFloatExpression.LAST_OP;
+    }
+
+    eval(exp: Float32Array | number[] | Int32Array, len: number, ...vars: number[]): number;
+    eval(ca: any, exp: Float32Array | number[] | Int32Array, len: number, ...vars: number[]): number;
     eval(...args: any[]): number {
         let ca: any = null;
-        let exp: Float32Array | number[];
+        let exp: Float32Array | number[] | Int32Array;
         let len: number;
         let vars: number[] = [];
 
-        if (typeof args[0] === 'number' || args[0] instanceof Float32Array || Array.isArray(args[0])) {
+        if (typeof args[0] === 'number' || args[0] instanceof Float32Array
+            || args[0] instanceof Int32Array || Array.isArray(args[0])) {
             // eval(exp, len, ...vars)
-            exp = args[0];
+            exp = args[0] as Float32Array | number[] | Int32Array;
             len = args[1];
             vars = args.slice(2);
         } else {
@@ -47,25 +66,26 @@ export class AnimatedFloatExpression {
             vars = args.slice(3);
         }
 
+        // When given raw int32 token bits (the robust path), classify tokens
+        // directly from bits so NaN-encoded operator/array ids survive engines
+        // that canonicalize NaN payloads (Safari/Firefox).
+        const useBits = exp instanceof Int32Array;
         const s = this.mStack;
-        for (let i = 0; i < len; i++) {
-            s[i] = (exp as any)[i];
-        }
-
         let sp = -1;
-        const OFFSET = AnimatedFloatExpression.OFFSET;
 
         for (let i = 0; i < len; i++) {
-            const v = s[i];
-            if (Number.isNaN(v)) {
-                const id = idFromNan(v);
+            const raw = (exp as any)[i];
+            const bits = useBits ? (raw | 0) : floatToRawIntBits(raw);
+            if (isNaNBits(bits)) {
+                const id = idFromBits(bits);
                 if ((id & AnimatedFloatExpression.ID_REGION_MASK) === AnimatedFloatExpression.ID_REGION_ARRAY) {
-                    s[++sp] = v;
+                    // Push the array id as a finite sentinel (decoded by opEval).
+                    s[++sp] = ARR_SENTINEL + id;
                 } else {
                     sp = this.opEval(sp, id, s, ca, vars);
                 }
             } else {
-                s[++sp] = v;
+                s[++sp] = useBits ? intBitsToFloat(bits) : raw;
             }
         }
         return sp >= 0 ? s[sp] : 0;
@@ -108,37 +128,37 @@ export class AnimatedFloatExpression {
             case OFFSET + 30: s[sp] = s[sp] * 0.017453292; return sp; // RAD
             case OFFSET + 31: s[sp] = Math.ceil(s[sp]); return sp; // CEIL
             case OFFSET + 32: { // A_DEREF
-                const arrId = idFromNan(s[sp - 1]);
+                const arrId = arrIdFromStack(s[sp - 1]);
                 if (ca) s[sp - 1] = ca.getFloatValue(arrId, Math.trunc(s[sp]));
                 return sp - 1;
             }
             case OFFSET + 33: { // A_MAX
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) { const arr = ca.getFloats(arrId); let mx = arr[0]; for (let i = 1; i < arr.length; i++) mx = Math.max(mx, arr[i]); s[sp] = mx; }
                 return sp;
             }
             case OFFSET + 34: { // A_MIN
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) { const arr = ca.getFloats(arrId); if (arr.length > 0) { let mn = arr[0]; for (let i = 1; i < arr.length; i++) mn = Math.min(mn, arr[i]); s[sp] = mn; } }
                 return sp;
             }
             case OFFSET + 35: { // A_SUM
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) { const arr = ca.getFloats(arrId); let sum = 0; for (let i = 0; i < arr.length; i++) sum += arr[i]; s[sp] = sum; }
                 return sp;
             }
             case OFFSET + 36: { // A_AVG
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) { const arr = ca.getFloats(arrId); let sum = 0; for (let i = 0; i < arr.length; i++) sum += arr[i]; s[sp] = arr.length > 0 ? sum / arr.length : 0; }
                 return sp;
             }
             case OFFSET + 37: { // A_LEN
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) s[sp] = ca.getListLength(arrId);
                 return sp;
             }
             case OFFSET + 38: { // A_SPLINE
-                const arrId = idFromNan(s[sp - 1]);
+                const arrId = arrIdFromStack(s[sp - 1]);
                 if (ca) { const fl = ca.getFloats(arrId); s[sp - 1] = fl ? FloatExpression.splineInterp(fl, s[sp]) : 0; }
                 return sp - 1;
             }
@@ -224,14 +244,14 @@ export class AnimatedFloatExpression {
                 return sp - 4;
             }
             case OFFSET + 75: { // A_SPLINE_LOOP
-                const arrId = idFromNan(s[sp - 1]);
+                const arrId = arrIdFromStack(s[sp - 1]);
                 const frac = s[sp] - Math.floor(s[sp]);
                 const r = frac < 0 ? frac + 1 : frac;
                 if (ca) { const fl = ca.getFloats(arrId); s[sp - 1] = fl ? FloatExpression.splineInterp(fl, r) : 0; }
                 return sp - 1;
             }
             case OFFSET + 76: { // A_SUM_TILL
-                const arrId = idFromNan(s[sp - 1]);
+                const arrId = arrIdFromStack(s[sp - 1]);
                 const last = Math.trunc(s[sp]);
                 let sum = 0;
                 if (ca) { for (let j = 0; j <= last; j++) sum += ca.getFloatValue(arrId, j); }
@@ -239,18 +259,18 @@ export class AnimatedFloatExpression {
                 return sp - 1;
             }
             case OFFSET + 77: { // A_SUM_XY
-                const idX = idFromNan(s[sp - 1]);
-                const idY = idFromNan(s[sp]);
+                const idX = arrIdFromStack(s[sp - 1]);
+                const idY = arrIdFromStack(s[sp]);
                 if (ca) { const ax = ca.getFloats(idX); const ay = ca.getFloats(idY); let sum = 0; for (let i = 0; i < ax.length; i++) sum += ax[i] * ay[i]; s[sp - 1] = sum; }
                 return sp - 1;
             }
             case OFFSET + 78: { // A_SUM_SQR
-                const arrId = idFromNan(s[sp]);
+                const arrId = arrIdFromStack(s[sp]);
                 if (ca) { const arr = ca.getFloats(arrId); let sum = 0; for (let i = 0; i < arr.length; i++) sum += arr[i] * arr[i]; s[sp] = sum; }
                 return sp;
             }
             case OFFSET + 79: { // A_LERP
-                const arrId = idFromNan(s[sp - 1]);
+                const arrId = arrIdFromStack(s[sp - 1]);
                 if (ca) {
                     const arr = ca.getFloats(arrId);
                     const p = s[sp] * (arr.length - 1);

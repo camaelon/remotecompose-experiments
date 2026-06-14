@@ -5,7 +5,7 @@ import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan, intBitsToFloat, hsvToRgb, toARGB, interpolateColor } from './Utils';
+import { isNaNBits, idFromBits, intBitsToFloat, floatToRawIntBits, hsvToRgb, toARGB, interpolateColor } from './Utils';
 
 export class ColorExpression extends Operation implements VariableSupport {
     static readonly OP_CODE = 134;
@@ -22,27 +22,29 @@ export class ColorExpression extends Operation implements VariableSupport {
     private mMode: number;
     private mAlpha: number;
 
-    // Interpolation mode fields
+    // Interpolation mode fields. Color ids are plain integers (used directly
+    // with getColor); the float-ref fields are stored as raw float32 int bits
+    // so NaN-encoded variable ids survive engines that canonicalize payloads.
     private mColor1: number;
     private mColor2: number;
-    private mTween: number;
+    private mTweenBits: number;
     private mOutColor1: number;
     private mOutColor2: number;
     private mOutTween: number;
 
-    // HSV mode fields
-    private mHue: number;
-    private mSat: number;
-    private mValue: number;
+    // HSV mode fields (raw bits)
+    private mHueBits: number;
+    private mSatBits: number;
+    private mValueBits: number;
     private mOutHue: number;
     private mOutSat: number;
     private mOutValue: number;
 
-    // ARGB mode fields
-    private mArgbAlpha: number;
-    private mArgbRed: number;
-    private mArgbGreen: number;
-    private mArgbBlue: number;
+    // ARGB mode fields (raw bits)
+    private mArgbAlphaBits: number;
+    private mArgbRedBits: number;
+    private mArgbGreenBits: number;
+    private mArgbBlueBits: number;
     private mOutArgbAlpha: number;
     private mOutArgbRed: number;
     private mOutArgbGreen: number;
@@ -53,55 +55,58 @@ export class ColorExpression extends Operation implements VariableSupport {
         this.mId = id;
         this.mMode = param1 & 0xFF;
         this.mAlpha = (param1 >> 16) & 0xFF;
+        const lit = (b: number) => isNaNBits(b) ? 0 : intBitsToFloat(b);
 
         // Interpolation defaults
         this.mColor1 = param2;
         this.mColor2 = param3;
-        this.mTween = intBitsToFloat(param4);
+        this.mTweenBits = param4;
         this.mOutColor1 = param2;
         this.mOutColor2 = param3;
-        this.mOutTween = this.mTween;
+        this.mOutTween = lit(param4);
 
         // HSV defaults
-        this.mHue = 0; this.mSat = 0; this.mValue = 0;
+        this.mHueBits = 0; this.mSatBits = 0; this.mValueBits = 0;
         this.mOutHue = 0; this.mOutSat = 0; this.mOutValue = 0;
 
         // ARGB defaults
-        this.mArgbAlpha = 0; this.mArgbRed = 0; this.mArgbGreen = 0; this.mArgbBlue = 0;
+        this.mArgbAlphaBits = 0; this.mArgbRedBits = 0; this.mArgbGreenBits = 0; this.mArgbBlueBits = 0;
         this.mOutArgbAlpha = 0; this.mOutArgbRed = 0; this.mOutArgbGreen = 0; this.mOutArgbBlue = 0;
 
         if (this.mMode === ColorExpression.HSV_MODE) {
-            this.mOutHue = this.mHue = intBitsToFloat(param2);
-            this.mOutSat = this.mSat = intBitsToFloat(param3);
-            this.mOutValue = this.mValue = intBitsToFloat(param4);
+            this.mHueBits = param2; this.mOutHue = lit(param2);
+            this.mSatBits = param3; this.mOutSat = lit(param3);
+            this.mValueBits = param4; this.mOutValue = lit(param4);
         } else if (this.mMode === ColorExpression.ARGB_MODE) {
-            this.mOutArgbAlpha = this.mArgbAlpha = (param1 >> 16) / 1024.0;
-            this.mOutArgbRed = this.mArgbRed = intBitsToFloat(param2);
-            this.mOutArgbGreen = this.mArgbGreen = intBitsToFloat(param3);
-            this.mOutArgbBlue = this.mArgbBlue = intBitsToFloat(param4);
+            // Alpha is a literal float here; store its bits for a uniform code path.
+            this.mArgbAlphaBits = floatToRawIntBits((param1 >> 16) / 1024.0);
+            this.mOutArgbAlpha = (param1 >> 16) / 1024.0;
+            this.mArgbRedBits = param2; this.mOutArgbRed = lit(param2);
+            this.mArgbGreenBits = param3; this.mOutArgbGreen = lit(param3);
+            this.mArgbBlueBits = param4; this.mOutArgbBlue = lit(param4);
         } else if (this.mMode === ColorExpression.IDARGB_MODE) {
-            this.mArgbAlpha = intBitsToFloat((param1 >> 16) | 0xFF800000); // NaN-encoded ID
-            this.mOutArgbAlpha = this.mArgbAlpha;
-            this.mOutArgbRed = this.mArgbRed = intBitsToFloat(param2);
-            this.mOutArgbGreen = this.mArgbGreen = intBitsToFloat(param3);
-            this.mOutArgbBlue = this.mArgbBlue = intBitsToFloat(param4);
+            this.mArgbAlphaBits = ((param1 >> 16) | 0xFF800000) | 0; // NaN-encoded ID bits
+            this.mOutArgbAlpha = lit(this.mArgbAlphaBits);
+            this.mArgbRedBits = param2; this.mOutArgbRed = lit(param2);
+            this.mArgbGreenBits = param3; this.mOutArgbGreen = lit(param3);
+            this.mArgbBlueBits = param4; this.mOutArgbBlue = lit(param4);
         }
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (Number.isNaN(this.mTween)) context.listensTo(idFromNan(this.mTween), this);
+        if (isNaNBits(this.mTweenBits)) context.listensTo(idFromBits(this.mTweenBits), this);
         if (this.mMode === ColorExpression.HSV_MODE) {
-            if (Number.isNaN(this.mHue)) context.listensTo(idFromNan(this.mHue), this);
-            if (Number.isNaN(this.mSat)) context.listensTo(idFromNan(this.mSat), this);
-            if (Number.isNaN(this.mValue)) context.listensTo(idFromNan(this.mValue), this);
+            if (isNaNBits(this.mHueBits)) context.listensTo(idFromBits(this.mHueBits), this);
+            if (isNaNBits(this.mSatBits)) context.listensTo(idFromBits(this.mSatBits), this);
+            if (isNaNBits(this.mValueBits)) context.listensTo(idFromBits(this.mValueBits), this);
         }
         if (this.mMode === ColorExpression.ARGB_MODE || this.mMode === ColorExpression.IDARGB_MODE) {
-            if (Number.isNaN(this.mArgbAlpha)) context.listensTo(idFromNan(this.mArgbAlpha), this);
-            if (Number.isNaN(this.mArgbRed)) context.listensTo(idFromNan(this.mArgbRed), this);
-            if (Number.isNaN(this.mArgbGreen)) context.listensTo(idFromNan(this.mArgbGreen), this);
-            if (Number.isNaN(this.mArgbBlue)) context.listensTo(idFromNan(this.mArgbBlue), this);
+            if (isNaNBits(this.mArgbAlphaBits)) context.listensTo(idFromBits(this.mArgbAlphaBits), this);
+            if (isNaNBits(this.mArgbRedBits)) context.listensTo(idFromBits(this.mArgbRedBits), this);
+            if (isNaNBits(this.mArgbGreenBits)) context.listensTo(idFromBits(this.mArgbGreenBits), this);
+            if (isNaNBits(this.mArgbBlueBits)) context.listensTo(idFromBits(this.mArgbBlueBits), this);
         }
     }
 
@@ -139,32 +144,32 @@ export class ColorExpression extends Operation implements VariableSupport {
 
     updateVariables(context: RemoteContext): void {
         if (this.mMode === ColorExpression.HSV_MODE) {
-            if (Number.isNaN(this.mHue)) {
-                this.mOutHue = context.getFloat(idFromNan(this.mHue));
+            if (isNaNBits(this.mHueBits)) {
+                this.mOutHue = context.getFloat(idFromBits(this.mHueBits));
             }
-            if (Number.isNaN(this.mSat)) {
-                this.mOutSat = context.getFloat(idFromNan(this.mSat));
+            if (isNaNBits(this.mSatBits)) {
+                this.mOutSat = context.getFloat(idFromBits(this.mSatBits));
             }
-            if (Number.isNaN(this.mValue)) {
-                this.mOutValue = context.getFloat(idFromNan(this.mValue));
+            if (isNaNBits(this.mValueBits)) {
+                this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
             }
         }
         if (this.mMode === ColorExpression.ARGB_MODE || this.mMode === ColorExpression.IDARGB_MODE) {
-            if (Number.isNaN(this.mArgbAlpha)) {
-                this.mOutArgbAlpha = context.getFloat(idFromNan(this.mArgbAlpha));
+            if (isNaNBits(this.mArgbAlphaBits)) {
+                this.mOutArgbAlpha = context.getFloat(idFromBits(this.mArgbAlphaBits));
             }
-            if (Number.isNaN(this.mArgbRed)) {
-                this.mOutArgbRed = context.getFloat(idFromNan(this.mArgbRed));
+            if (isNaNBits(this.mArgbRedBits)) {
+                this.mOutArgbRed = context.getFloat(idFromBits(this.mArgbRedBits));
             }
-            if (Number.isNaN(this.mArgbGreen)) {
-                this.mOutArgbGreen = context.getFloat(idFromNan(this.mArgbGreen));
+            if (isNaNBits(this.mArgbGreenBits)) {
+                this.mOutArgbGreen = context.getFloat(idFromBits(this.mArgbGreenBits));
             }
-            if (Number.isNaN(this.mArgbBlue)) {
-                this.mOutArgbBlue = context.getFloat(idFromNan(this.mArgbBlue));
+            if (isNaNBits(this.mArgbBlueBits)) {
+                this.mOutArgbBlue = context.getFloat(idFromBits(this.mArgbBlueBits));
             }
         }
-        if (Number.isNaN(this.mTween)) {
-            this.mOutTween = context.getFloat(idFromNan(this.mTween));
+        if (isNaNBits(this.mTweenBits)) {
+            this.mOutTween = context.getFloat(idFromBits(this.mTweenBits));
         }
         if ((this.mMode & 1) === 1) {
             this.mOutColor1 = context.getColor(this.mColor1);
