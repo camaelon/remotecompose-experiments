@@ -6,8 +6,10 @@ a compact binary UI / canvas format for streaming interactive scenes
 (layout, drawing, expressions, animations, particles, paths, shaders,
 bitmaps) to remote players.
 
-This repo is a sandbox: things here may be incomplete, in flux, or
-superseded. Production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
+This repository is not endorsed or supported by Google, and is a sandbox: things here may be incomplete, in flux, or
+superseded.
+
+Official RemoteCompose production code for Android lives in the [AndroidX repository](https://github.com/androidx/androidx/tree/androidx-main/compose/remote).
 
 ## Contents
 
@@ -73,6 +75,8 @@ npm install && npm run bundle
 It also produces three other deliverables — a single-file standalone
 HTML, a static deck site, and a VS Code `.vsix`. See
 [players/typescript/README.md](players/typescript/README.md).
+
+Demo page is here: https://camaelon.github.io/remotecompose-experiments/RemoteComposeIntroduction/
 
 ## License
 
