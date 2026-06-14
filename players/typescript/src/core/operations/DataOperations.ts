@@ -8,13 +8,21 @@ import type { VariableSupport } from '../VariableSupport';
 import { PaintBundle } from './paint/PaintBundle';
 import { isNaNBits, idFromBits, intBitsToFloat, floatToRawIntBits } from './Utils';
 
-// NanMap path-command marker range (MOVE..DONE = base..base+6). A NaN path
-// token in this id range is a path COMMAND, not a variable reference.
+// Path-command marker ids. A NaN path token in one of these ranges is a path
+// COMMAND, not a variable reference. Two encodings exist in the wire:
+//   • short ids 10..17 (MOVE=10, LINE=11, QUAD=12, CONIC=13, CUBIC=14,
+//     CLOSE=15, DONE=16, RESET=17) — emitted by PathData/PathCreate/PathAppend,
+//     and the canonical scheme the native (C++) player uses ("10-17 stay as-is").
+//   • NanMap ids 0x300000..0x300006 (MOVE..DONE) — an alternate path encoding.
+// Coordinate variable refs always use higher ids, so both ranges are safe to
+// treat as markers. Missing the 10..17 range made markers resolve as variables
+// (getFloat(10/11/15)) and corrupted every short-encoded path (e.g. cube3d).
 const NANMAP_PATH_BASE = 0x300000;
 function isPathMarkerBits(b: number): boolean {
     if (!isNaNBits(b)) return false;
     const id = idFromBits(b);
-    return id >= NANMAP_PATH_BASE && id <= NANMAP_PATH_BASE + 6;
+    return (id >= 10 && id <= 17) ||
+        (id >= NANMAP_PATH_BASE && id <= NANMAP_PATH_BASE + 6);
 }
 
 export class TextData extends Operation {
