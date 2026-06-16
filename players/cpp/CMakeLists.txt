@@ -1,4 +1,4 @@
-# rcX — top-level desktop build (macOS arm64).
+# rcX — top-level desktop build.
 #
 # Produces:
 #   - lib/rccore/librccore.a            engine
@@ -7,30 +7,42 @@
 #   - tools/rc2image/rc2image           headless render -> PNG
 #   - apps/viewer/rcviewer              GLFW interactive viewer
 #
-# Skia, GLFW, and miniz are pulled at configure time via CMake FetchContent —
-# nothing is vendored.  Linux + Windows ports are out of scope today; the
-# iOS static-lib build lives under `ios/CMakeLists.txt`.
+# Skia and miniz are pulled at configure time via CMake FetchContent —
+# nothing is vendored. GLFW is downloaded on macOS and found via pkg-config
+# on Linux. The iOS static-lib build lives under `ios/CMakeLists.txt`.
 
 cmake_minimum_required(VERSION 3.20)
-project(RcX VERSION 0.1.0 LANGUAGES C CXX OBJCXX)
+project(RcX VERSION 0.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(NOT APPLE)
+if(APPLE)
+    enable_language(OBJCXX)
+elseif(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR
-        "Desktop build currently targets macOS arm64 only. "
+        "Desktop build currently targets macOS and Linux. "
         "iOS lib build: see ios/CMakeLists.txt.")
 endif()
 
 include(FetchContent)
 
-# ── Skia (pre-built m143 macOS arm64) ─────────────────────────────────
+# ── Skia (pre-built m143) ─────────────────────────────────────────────
 set(SKIA_VERSION "m143-da51f0d60e-2")
-set(SKIA_PLATFORM "macos")
 set(SKIA_BUILD_TYPE "Release")
-set(SKIA_ARCH "arm64")
+
+if(APPLE)
+    set(SKIA_PLATFORM "macos")
+    set(SKIA_ARCH "arm64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+    set(SKIA_PLATFORM "linux")
+    set(SKIA_ARCH "arm64")
+else()
+    set(SKIA_PLATFORM "linux")
+    set(SKIA_ARCH "x64")
+endif()
+
 set(SKIA_ZIP "Skia-${SKIA_VERSION}-${SKIA_PLATFORM}-${SKIA_BUILD_TYPE}-${SKIA_ARCH}.zip")
 
 FetchContent_Declare(skia
@@ -58,35 +70,48 @@ set_target_properties(skia_lib PROPERTIES
 )
 target_include_directories(skia_lib INTERFACE "${SKIA_DIR}")
 
-find_library(APPKIT_FW       AppKit)
-find_library(APPSERVICES_FW  ApplicationServices)
-find_library(CF_FW           CoreFoundation)
-find_library(CG_FW           CoreGraphics)
-find_library(CT_FW           CoreText)
-find_library(IMAGEIO_FW      ImageIO)
-find_library(METAL_FW        Metal)
-find_library(FOUNDATION_FW   Foundation)
-find_library(OPENGL_FW       OpenGL)
+if(APPLE)
+    find_library(APPKIT_FW       AppKit)
+    find_library(APPSERVICES_FW  ApplicationServices)
+    find_library(CF_FW           CoreFoundation)
+    find_library(CG_FW           CoreGraphics)
+    find_library(CT_FW           CoreText)
+    find_library(IMAGEIO_FW      ImageIO)
+    find_library(METAL_FW        Metal)
+    find_library(FOUNDATION_FW   Foundation)
+    find_library(OPENGL_FW       OpenGL)
 
-set_property(TARGET skia_lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES
-    ${APPKIT_FW} ${APPSERVICES_FW} ${CF_FW} ${CG_FW} ${CT_FW}
-    ${IMAGEIO_FW} ${METAL_FW} ${FOUNDATION_FW} ${OPENGL_FW}
-)
-
-# ── GLFW (pre-built macOS arm64, used by the viewer app) ──────────────
-set(GLFW_ZIP "glfw-3.4.bin.MACOS.zip")
-FetchContent_Declare(glfw
-    URL "https://github.com/glfw/glfw/releases/download/3.4/${GLFW_ZIP}"
-    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-FetchContent_GetProperties(glfw)
-if(NOT glfw_POPULATED)
-    FetchContent_Populate(glfw)
+    set_property(TARGET skia_lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+        ${APPKIT_FW} ${APPSERVICES_FW} ${CF_FW} ${CG_FW} ${CT_FW}
+        ${IMAGEIO_FW} ${METAL_FW} ${FOUNDATION_FW} ${OPENGL_FW}
+    )
+else()
+    find_package(Threads REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SKIA_LINUX_DEPS REQUIRED IMPORTED_TARGET
+        fontconfig freetype2 x11 xext xrender gl)
+    set_property(TARGET skia_lib APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+        PkgConfig::SKIA_LINUX_DEPS Threads::Threads ${CMAKE_DL_LIBS})
 endif()
-set(GLFW_DIR "${glfw_SOURCE_DIR}")
-set(GLFW_LIB_PATH     "${GLFW_DIR}/lib-arm64/libglfw3.a")
-set(GLFW_INCLUDE_PATH "${GLFW_DIR}/include")
-message(STATUS "GLFW dir: ${GLFW_DIR}")
+
+# ── GLFW (used by the viewer app) ────────────────────────────────────
+if(APPLE)
+    set(GLFW_ZIP "glfw-3.4.bin.MACOS.zip")
+    FetchContent_Declare(glfw
+        URL "https://github.com/glfw/glfw/releases/download/3.4/${GLFW_ZIP}"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_GetProperties(glfw)
+    if(NOT glfw_POPULATED)
+        FetchContent_Populate(glfw)
+    endif()
+    set(GLFW_DIR "${glfw_SOURCE_DIR}")
+    set(GLFW_LIB_PATH     "${GLFW_DIR}/lib-arm64/libglfw3.a")
+    set(GLFW_INCLUDE_PATH "${GLFW_DIR}/include")
+    message(STATUS "GLFW dir: ${GLFW_DIR}")
+else()
+    pkg_check_modules(GLFW REQUIRED IMPORTED_TARGET glfw3)
+endif()
 
 # ── miniz (zip support inside the viewer) ─────────────────────────────
 FetchContent_Declare(miniz
