@@ -214,6 +214,7 @@ void Operations::init() {
     // ── New baseline ops since 2026-03-16 ───────────────────────────────
     registerReader(SKIP, "SKIP", Skip::read);
     registerReader(TEXT_STYLE, "TEXT_STYLE", TextStyleOp::read);
+    registerReader(ACCESSIBILITY_SEMANTICS, "AccessibilitySemantics", AccessibilitySemantics::read);
 }
 
 } // namespace rccore
