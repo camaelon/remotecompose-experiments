@@ -66,7 +66,7 @@ public:
         int sp = -1;
         for (int i = 0; i < len; i++) {
             int v = mLocalStack[i];
-            if (((1 << i) & mask) != 0) {
+            if (v >= OFFSET) {
                 sp = opEval(sp, v);
             } else {
                 mLocalStack[++sp] = v;
