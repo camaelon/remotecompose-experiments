@@ -749,16 +749,25 @@ public:
     int id = 0, cdId = 0;
     float left = 0, top = 0, right = 0, bottom = 0;
     int metadataId = 0;
+    // Resolved bounds
+    float oLeft = 0, oTop = 0, oRight = 0, oBottom = 0;
+
     std::string name() const override { return "CLICK_AREA"; }
     int opcode() const override { return 64; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {} // TODO
+    void apply(RemoteContext& context) override;
+    bool isVariableSupport() const override { return true; }
+    void registerListening(RemoteContext& context) override;
+    void updateVariables(RemoteContext& context) override;
+
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ClickArea>();
         op->id = buf.readInt(); op->cdId = buf.readInt();
         op->left = buf.readFloat(); op->top = buf.readFloat();
         op->right = buf.readFloat(); op->bottom = buf.readFloat();
         op->metadataId = buf.readInt();
+        op->oLeft = op->left; op->oTop = op->top;
+        op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));
     }
 };

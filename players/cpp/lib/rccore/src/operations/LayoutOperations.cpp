@@ -333,8 +333,11 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
             }
             // Also collect data ops from modifier containers (click, touch)
             if (child->isContainer()) {
-                for (auto& sub : child->mChildren) {
-                    ls.dataOps.push_back(sub.get());
+                int coc = child->opcode();
+                if (coc != 59 && coc != 83 && coc != 219 && coc != 220 && coc != 225) {
+                    for (auto& sub : child->mChildren) {
+                        ls.dataOps.push_back(sub.get());
+                    }
                 }
             }
         } else if (isContentWrapper(child)) {
@@ -1909,6 +1912,7 @@ void LayoutRoot::apply(RemoteContext& context) {
     if (!pc) return;
 
     LTRACE("LayoutRoot::apply PAINT mode, canvas=%.0fx%.0f\n", context.mWidth, context.mHeight);
+    context.setComponentDimension(componentId, context.mWidth, context.mHeight, 0, 0);
 
     // Clear layout state cache for fresh measurement
     getLayoutStates().clear();
