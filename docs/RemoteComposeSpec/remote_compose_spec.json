@@ -1,0 +1,6335 @@
+{
+  "enums": {
+    "Alignment": [
+      "CENTER",
+      "LEFT",
+      "RIGHT"
+    ],
+    "Placement": [
+      "OUTSIDE",
+      "INSIDE"
+    ]
+  },
+  "totalOperations": 168,
+  "operations": [
+    {
+      "addedVersion": 6,
+      "supportsPropertyMap": true,
+      "description": "Document metadata, containing the version, original size & density, capabilities mask",
+      "experimental": false,
+      "encoding": "VARIABLE",
+      "sizeFieldsBytes": 28,
+      "name": "Header",
+      "version_variants": [
+        {
+          "description": "Header v1.0 layout with 25-byte fixed structure (Major, Minor, Patch, Width, Height, Capabilities).",
+          "label": "v1.0 Flat Header",
+          "version": "v10"
+        },
+        {
+          "description": "Header v1.1 dynamic property-map header (Magic Number 0x048C0001, Minor, Patch, Property Count, Map Tuples).",
+          "label": "v1.1 Property Map Header",
+          "version": "v11"
+        }
+      ],
+      "headerFields": [
+        {
+          "name": "majorVersion",
+          "type": "INT",
+          "constantValue": 1
+        },
+        {
+          "name": "minorVersion",
+          "type": "INT",
+          "constantValue": 1
+        },
+        {
+          "name": "patchVersion",
+          "type": "INT",
+          "constantValue": 0
+        }
+      ],
+      "id": 0,
+      "category": "Document Protocol Operations",
+      "fields": [
+        {
+          "name": "width",
+          "description": "Document width in pixels",
+          "type": "INT"
+        },
+        {
+          "name": "height",
+          "description": "Document height in pixels",
+          "type": "INT"
+        },
+        {
+          "name": "density",
+          "description": "Document density",
+          "type": "FLOAT"
+        },
+        {
+          "name": "capabilities",
+          "description": "Capabilities bitmask",
+          "type": "LONG"
+        },
+        {
+          "lengthType": "INT",
+          "name": "tags",
+          "description": "Property map key tags",
+          "type": "SHORT[]"
+        },
+        {
+          "lengthType": "INT",
+          "name": "values",
+          "description": "Property map values",
+          "type": "OBJECT[]"
+        }
+      ],
+      "wip": false
+    },
+    {
+      "addedVersion": 6,
+      "name": "ComponentStart",
+      "description": "Basic component encapsulating draw commands. This is not resizable.",
+      "experimental": false,
+      "id": 2,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "Type of component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "width",
+          "description": "Width of the component",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "height",
+          "description": "Height of the component",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "AnimationSpec",
+      "description": "Define the animation specifications for a component",
+      "experimental": false,
+      "id": 14,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "animationId",
+          "description": "The ID of the animation",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "motionDuration",
+          "description": "Duration of the motion animation in ms",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "motionEasingType",
+          "description": "The type of easing for motion",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "visibilityDuration",
+          "description": "Duration of visibility animation in ms",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "visibilityEasingType",
+          "description": "The type of easing for visibility",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "enterAnimation",
+          "description": "The entry animation type",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "exitAnimation",
+          "description": "The exit animation type",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 6,
+      "name": "WidthModifierOperation",
+      "description": "Set the width dimension on a component",
+      "experimental": false,
+      "id": 16,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "The type of dimension rule (0=FIXED, 1=WRAP, etc.)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The width value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ClipPath",
+      "description": "Intersect the current clip with the specified path",
+      "experimental": false,
+      "id": 38,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "id",
+        "description": "The ID of the path to clip with",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "ClipRect",
+      "description": "Intersect the current clip with rectangle",
+      "experimental": false,
+      "id": 39,
+      "category": "Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the rectangle to intersect with the current clip",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the rectangle to intersect with the current clip",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the rectangle to intersect with the current clip",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the rectangle to intersect with the current clip",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "PaintData",
+      "description": "Encode a Paint object with various properties",
+      "experimental": false,
+      "id": 40,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "paint",
+        "description": "Paint bundle object",
+        "type": "PAINT_BUNDLE"
+      }],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawRect",
+      "description": "Draw the specified rectangle",
+      "experimental": false,
+      "id": 42,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawText",
+      "description": "Draw a run of text, all in a single direction",
+      "experimental": false,
+      "id": 43,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "start",
+          "description": "The start index of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "end",
+          "description": "The end index of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "contextStart",
+          "description": "The index of the start of the shaping context",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "contextEnd",
+          "description": "The index of the end of the shaping context",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "x",
+          "description": "The x position at which to draw the text",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "y",
+          "description": "The y position at which to draw the text",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "rtl",
+          "description": "Whether the run is in RTL direction",
+          "type": "BOOLEAN",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawBitmap",
+      "description": "Draw a bitmap",
+      "experimental": false,
+      "id": 44,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "imageId",
+          "description": "The ID of the bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "left",
+          "description": "The left side of the image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "descriptionId",
+          "description": "The ID of the content description string",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "ShaderData",
+      "description": "Define a shader with associated uniforms",
+      "experimental": false,
+      "id": 45,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "shaderId",
+          "description": "Shader ID",
+          "type": "INT"
+        },
+        {
+          "name": "shaderType",
+          "description": "Shader type",
+          "type": "INT"
+        },
+        {
+          "name": "floatParams",
+          "description": "Float uniforms",
+          "type": "HASHMAP"
+        },
+        {
+          "name": "intParams",
+          "description": "Integer uniforms",
+          "type": "HASHMAP"
+        },
+        {
+          "name": "stringParams",
+          "description": "String uniforms",
+          "type": "HASHMAP"
+        }
+      ],
+      "varSizeExpression": " + null x 4 + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawCircle",
+      "description": "Draw a Circle",
+      "experimental": false,
+      "id": 46,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "centerX",
+          "description": "The x-coordinate of the center of the circle to be drawn",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "centerY",
+          "description": "The y-coordinate of the center of the circle to be drawn",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "radius",
+          "description": "The radius of the circle to be drawn",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawLine",
+      "description": "Draw a line segment",
+      "experimental": false,
+      "id": 47,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "startX",
+          "description": "The x-coordinate of the start point of the line",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startY",
+          "description": "The y-coordinate of the start point of the line",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "endX",
+          "description": "The x-coordinate of the end point of the line",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "endY",
+          "description": "The y-coordinate of the end point of the line",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawBitmapFontText",
+      "description": "Draw text using a bitmap font",
+      "experimental": false,
+      "id": 48,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bitmapFontId",
+          "description": "The ID of the bitmap font",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "start",
+          "description": "The start index of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "end",
+          "description": "The end index of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "x",
+          "description": "The x position at which to draw the text",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "y",
+          "description": "The y position at which to draw the text",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 7,
+      "name": "DrawBitmapFontTextOnPath",
+      "description": "Draw text using a bitmap font along a path",
+      "experimental": false,
+      "id": 49,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "bitmapFontID",
+          "description": "Font ID",
+          "type": "INT"
+        },
+        {
+          "name": "pathID",
+          "description": "Path ID",
+          "type": "INT"
+        },
+        {
+          "name": "start",
+          "description": "Start index",
+          "type": "INT"
+        },
+        {
+          "name": "end",
+          "description": "End index",
+          "type": "INT"
+        },
+        {
+          "name": "yAdj",
+          "description": "Y adjustment",
+          "type": "FLOAT"
+        },
+        {
+          "name": "glyphSpacing",
+          "description": "Glyph spacing",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawRoundRect",
+      "description": "Draw the specified round-rect",
+      "experimental": false,
+      "id": 51,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the rect",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the rect",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the rect",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the rect",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "rx",
+          "description": "The x-radius of the oval used to round the corners",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "ry",
+          "description": "The y-radius of the oval used to round the corners",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawSector",
+      "description": "Draw the specified sector (pie shape)which will be scaled to fit inside the specified oval",
+      "experimental": false,
+      "id": 52,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startAngle",
+          "description": "Starting angle (in degrees) where the arc begins",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "sweepAngle",
+          "description": "Sweep angle (in degrees) measured clockwise",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawTextOnPath",
+      "description": "Draw text along a path",
+      "experimental": false,
+      "id": 53,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pathId",
+          "description": "The ID of the path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "hOffset",
+          "description": "Horizontal offset along the path",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "vOffset",
+          "description": "Vertical offset relative to the path",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "RoundedClipRectModifierOperation",
+      "description": "Clip the component's content to its rounded rectangular bounds",
+      "experimental": false,
+      "id": 54,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "topStart",
+          "description": "The topStart radius of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "topEnd",
+          "description": "The topEnd radius of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottomStart",
+          "description": "The bottomStart radius of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottomEnd",
+          "description": "The bottomEnd radius of the rectangle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "BackgroundModifierOperation",
+      "description": "Define a background color or shape for a component",
+      "experimental": false,
+      "id": 55,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "flags",
+          "description": "Behavior flags",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "colorId",
+          "description": "The ID of the color if flags include COLOR_REF",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "reserve1",
+          "description": "Reserved for future use",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "reserve2",
+          "description": "Reserved for future use",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "r",
+          "description": "Red component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "g",
+          "description": "Green component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "b",
+          "description": "Blue component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "a",
+          "description": "Alpha component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "shapeType",
+          "description": "The shape type (0=RECTANGLE, 1=CIRCLE)",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 36
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawOval",
+      "description": "Draw the specified oval",
+      "experimental": false,
+      "id": 56,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawTextOnCircle",
+      "description": "Draw text along a circle",
+      "experimental": false,
+      "id": 57,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "centerX",
+          "description": "The x coordinate of the center",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "centerY",
+          "description": "The y coordinate of the center",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "radius",
+          "description": "The radius of the circle",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startAngle",
+          "description": "The start angle in degrees",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "warpRadiusOffset",
+          "description": "The warp radius offset",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "0"
+            },
+            {
+              "name": "CENTER",
+              "value": "1"
+            },
+            {
+              "name": "END",
+              "value": "2"
+            }
+          ],
+          "name": "alignment",
+          "description": "The alignment of the text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "OUTSIDE",
+              "value": "0"
+            },
+            {
+              "name": "INSIDE",
+              "value": "1"
+            }
+          ],
+          "name": "placement",
+          "description": "The placement of the text",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 32
+    },
+    {
+      "addedVersion": 6,
+      "name": "PaddingModifierOperation",
+      "description": "Define padding around a component",
+      "experimental": false,
+      "id": 58,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "Left padding",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "Top padding",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "Right padding",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "Bottom padding",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "ClickModifier",
+      "description": "Click modifier. This operation contains a list of action operations executed on click",
+      "experimental": false,
+      "id": 59,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "Theme",
+      "description": "Set a theme",
+      "experimental": false,
+      "id": 63,
+      "category": "Document Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "possibleValues": [
+          {
+            "name": "UNSPECIFIED",
+            "value": "-1"
+          },
+          {
+            "name": "DARK",
+            "value": "-2"
+          },
+          {
+            "name": "LIGHT",
+            "value": "-3"
+          }
+        ],
+        "name": "THEME",
+        "description": "theme id",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "ClickArea",
+      "description": "Define a region you can click on",
+      "experimental": false,
+      "id": 64,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The id of the click area",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "contentDescription",
+          "description": "The content description (as a textId)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "left",
+          "description": "The left side of the region",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the region",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the region",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the region",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "metadata",
+          "description": "User defined string (as a textId) accessible in callback",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 6,
+      "name": "RootContentBehavior",
+      "description": "If sizing is SIZING_SCALE, mode is one of SCALE_* values. If sizing is SIZING_LAYOUT, mode is one of LAYOUT_* values.",
+      "experimental": false,
+      "id": 65,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "possibleValues": [
+            {
+              "name": "NONE",
+              "value": "0"
+            },
+            {
+              "name": "SCROLL_HORIZONTAL",
+              "value": "1"
+            },
+            {
+              "name": "SCROLL_VERTICAL",
+              "value": "2"
+            }
+          ],
+          "name": "scroll",
+          "description": "Scroll behavior",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "ALIGNMENT_TOP",
+              "value": "1"
+            },
+            {
+              "name": "ALIGNMENT_VERTICAL_CENTER",
+              "value": "2"
+            },
+            {
+              "name": "ALIGNMENT_BOTTOM",
+              "value": "4"
+            },
+            {
+              "name": "ALIGNMENT_START",
+              "value": "16"
+            },
+            {
+              "name": "ALIGNMENT_HORIZONTAL_CENTER",
+              "value": "32"
+            },
+            {
+              "name": "ALIGNMENT_END",
+              "value": "64"
+            },
+            {
+              "name": "ALIGNMENT_CENTER",
+              "value": "34"
+            }
+          ],
+          "name": "alignment",
+          "description": "Content alignment",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "NONE",
+              "value": "0"
+            },
+            {
+              "name": "SIZING_LAYOUT",
+              "value": "1"
+            },
+            {
+              "name": "SIZING_SCALE",
+              "value": "2"
+            }
+          ],
+          "name": "sizing",
+          "description": "Sizing type",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "SCALE_INSIDE",
+              "value": "1"
+            },
+            {
+              "name": "SCALE_FIT",
+              "value": "4"
+            },
+            {
+              "name": "SCALE_FILL_WIDTH",
+              "value": "2"
+            },
+            {
+              "name": "SCALE_FILL_HEIGHT",
+              "value": "3"
+            },
+            {
+              "name": "SCALE_CROP",
+              "value": "5"
+            },
+            {
+              "name": "SCALE_FILL_BOUNDS",
+              "value": "6"
+            },
+            {
+              "name": "LAYOUT_HORIZONTAL_MATCH_PARENT",
+              "value": "1"
+            },
+            {
+              "name": "LAYOUT_HORIZONTAL_WRAP_CONTENT",
+              "value": "2"
+            },
+            {
+              "name": "LAYOUT_HORIZONTAL_FIXED",
+              "value": "4"
+            },
+            {
+              "name": "LAYOUT_VERTICAL_MATCH_PARENT",
+              "value": "8"
+            },
+            {
+              "name": "LAYOUT_VERTICAL_WRAP_CONTENT",
+              "value": "16"
+            },
+            {
+              "name": "LAYOUT_VERTICAL_FIXED",
+              "value": "32"
+            },
+            {
+              "name": "LAYOUT_MATCH_PARENT",
+              "value": "9"
+            },
+            {
+              "name": "LAYOUT_WRAP_CONTENT",
+              "value": "18"
+            }
+          ],
+          "name": "mode",
+          "description": "Sizing or Layout mode",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawBitmapInt",
+      "description": "Draw a bitmap using integer coordinates",
+      "experimental": false,
+      "id": 66,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "imageId",
+          "description": "The ID of the bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcLeft",
+          "description": "The left side of the source image",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcTop",
+          "description": "The top of the source image",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcRight",
+          "description": "The right side of the source image",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcBottom",
+          "description": "The bottom of the source image",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstLeft",
+          "description": "The left side of the destination",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstTop",
+          "description": "The top of the destination",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstRight",
+          "description": "The right side of the destination",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstBottom",
+          "description": "The bottom of the destination",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "cdId",
+          "description": "The ID of the content description string",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 40
+    },
+    {
+      "addedVersion": 6,
+      "name": "HeightModifierOperation",
+      "description": "Set the height dimension on a component",
+      "experimental": false,
+      "id": 67,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "The type of dimension rule (0=FIXED, 1=WRAP, etc.)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The height value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "FloatConstant",
+      "description": "A float and its associated id",
+      "experimental": false,
+      "id": 80,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "id of the Float constant",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "32-bit float value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "FloatExpression",
+      "description": "Define a float via dynamic expression and optional animation",
+      "experimental": false,
+      "id": 81,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Variable ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "value",
+          "description": "Source values",
+          "type": "FLOAT[]"
+        },
+        {
+          "lengthType": "INT",
+          "name": "animation",
+          "description": "Animation values",
+          "type": "FLOAT[]"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "MultiClickModifier",
+      "description": "MultiClick modifier. This operation contains a list of action operations executed on click",
+      "experimental": false,
+      "id": 83,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "clickType",
+        "description": "Type of click (0=single, 1=long, 2=double)",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "Custom",
+      "description": "Host and configure platform-specific native custom components",
+      "experimental": false,
+      "id": 93,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "COMPONENT_ID",
+          "description": "component id",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "ANIMATION_ID",
+          "description": "animation id",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "CONFIG_ID",
+          "description": "config string id",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "PROPERTIES_COUNT",
+          "description": "number of custom properties",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "BitmapData",
+      "description": "Embed or reference bitmap image data",
+      "experimental": false,
+      "returns": "imageId",
+      "id": 101,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "imageId",
+          "description": "The ID of the bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "bitfields": [
+            {
+              "name": "imageWidth",
+              "bits": "0..15",
+              "type": "SHORT"
+            },
+            {
+              "name": "imageType",
+              "bits": "16..31",
+              "type": "SHORT"
+            }
+          ],
+          "name": "widthAndType",
+          "description": "Encoded width and image type",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "bitfields": [
+            {
+              "name": "imageHeight",
+              "bits": "0..15",
+              "type": "SHORT"
+            },
+            {
+              "name": "encoding",
+              "bits": "16..31",
+              "type": "SHORT"
+            }
+          ],
+          "name": "heightAndEncoding",
+          "description": "Encoded height and data encoding",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "bitmap",
+          "description": "The raw or encoded bitmap data",
+          "type": "BYTE[]",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextData",
+      "description": "Define a static string and associate it with an ID",
+      "experimental": false,
+      "returns": "textId",
+      "id": 102,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "text",
+          "description": "The string value",
+          "type": "UTF8",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "RootContentDescription",
+      "description": "Content description of root",
+      "experimental": false,
+      "id": 103,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "id",
+        "description": "id of Int",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "BorderModifierOperation",
+      "description": "Define a border for a component",
+      "experimental": false,
+      "id": 107,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "flags",
+          "description": "Behavior flags",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "colorId",
+          "description": "The ID of the color if flags include COLOR_REF",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "reserve1",
+          "description": "0 for legacy behavior, 1 to support dynamic radius",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "reserve2",
+          "description": "Reserved for future use",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "borderWidth",
+          "description": "Width of the border",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "roundedCorner",
+          "description": "Radius for rounded corners",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "r",
+          "description": "Red component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "g",
+          "description": "Green component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "b",
+          "description": "Blue component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "a",
+          "description": "Alpha component [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "shapeType",
+          "description": "The shape type (0=RECTANGLE, 1=CIRCLE)",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 44
+    },
+    {
+      "addedVersion": 6,
+      "name": "ClipRectModifierOperation",
+      "description": "Clip the component's content to its rectangular bounds",
+      "experimental": false,
+      "id": 108,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "PathData",
+      "description": "Define a complete static path",
+      "experimental": false,
+      "returns": "idAndWinding",
+      "id": 123,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "bitfields": [
+            {
+              "name": "id",
+              "bits": "0..23",
+              "type": "INT"
+            },
+            {
+              "name": "winding",
+              "bits": "24..31",
+              "type": "BYTE"
+            }
+          ],
+          "name": "idAndWinding",
+          "description": "Encoded ID and winding rule",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "length",
+          "description": "The number of elements in the path data",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "pathData",
+          "description": "The sequence of commands and coordinates",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawPath",
+      "description": "Draw a path",
+      "experimental": false,
+      "id": 124,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "id",
+        "description": "The ID of the path to draw",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawTweenPath",
+      "description": "Draw an interpolated path between two paths",
+      "experimental": false,
+      "id": 125,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "path1Id",
+          "description": "The ID of the first path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "path2Id",
+          "description": "The ID of the second path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "tween",
+          "description": "Interpolation value [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "start",
+          "description": "Trim the start of the path [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "stop",
+          "description": "Trim the end of the path [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixScale",
+      "description": "Scale the following draw commands",
+      "experimental": false,
+      "id": 126,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "scaleX",
+          "description": "The amount to scale in X",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "scaleY",
+          "description": "The amount to scale in Y",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pivotX",
+          "description": "The x-coordinate for the pivot point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pivotY",
+          "description": "The y-coordinate for the pivot point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixTranslate",
+      "description": "Preconcat the current matrix with the specified translation",
+      "experimental": false,
+      "id": 127,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "dx",
+          "description": "The distance to translate in X",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dy",
+          "description": "The distance to translate in Y",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixSkew",
+      "description": "Current matrix with the specified skew.",
+      "experimental": false,
+      "id": 128,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "skewX",
+          "description": "The amount to skew in X",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "skewY",
+          "description": "The amount to skew in Y",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixRotate",
+      "description": "Apply rotation to matrix",
+      "experimental": false,
+      "id": 129,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "rotate",
+          "description": "Angle to rotate",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pivotX",
+          "description": "X Pivot point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pivotY",
+          "description": "Y Pivot point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixSave",
+      "description": "Save the matrix and clip to a stack",
+      "experimental": false,
+      "id": 130,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "MatrixRestore",
+      "description": "Restore the matrix and clip",
+      "experimental": false,
+      "id": 131,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawTextAnchored",
+      "description": "Draw text centered about an anchor point",
+      "experimental": false,
+      "id": 133,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text to render",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "x",
+          "description": "The x-position of the anchor point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "y",
+          "description": "The y-position of the anchor point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "panX",
+          "description": "The horizontal pan from left(-1) to right(1), 0 being centered",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "panY",
+          "description": "The vertical pan from top(-1) to bottom(1), 0 being centered",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "ANCHOR_TEXT_RTL",
+              "value": "1"
+            },
+            {
+              "name": "ANCHOR_MONOSPACE_MEASURE",
+              "value": "2"
+            },
+            {
+              "name": "MEASURE_EVERY_TIME",
+              "value": "4"
+            },
+            {
+              "name": "BASELINE_RELATIVE",
+              "value": "8"
+            }
+          ],
+          "name": "flags",
+          "description": "Behavior flags",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "ColorExpression",
+      "description": "Define a color via dynamic expression (HSV, ARGB, or Interpolation)",
+      "experimental": false,
+      "returns": "id",
+      "id": 134,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Color ID",
+          "type": "INT"
+        },
+        {
+          "bitfields": [
+            {
+              "name": "colorMode",
+              "bits": "0..7",
+              "type": "BYTE"
+            },
+            {
+              "name": "alpha",
+              "bits": "16..23",
+              "type": "BYTE"
+            }
+          ],
+          "name": "mode",
+          "description": "Color mode",
+          "type": "INT"
+        },
+        {
+          "name": "color1",
+          "description": "Color 1",
+          "type": "INT"
+        },
+        {
+          "name": "color2",
+          "description": "Color 2",
+          "type": "INT"
+        },
+        {
+          "name": "tween",
+          "description": "Tween factor",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextFromFloat",
+      "description": "Convert a float value into a formatted string",
+      "experimental": false,
+      "id": 135,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "value",
+          "description": "Float value",
+          "type": "FLOAT"
+        },
+        {
+          "name": "digitsBefore",
+          "description": "Digits before decimal",
+          "type": "SHORT"
+        },
+        {
+          "name": "digitsAfter",
+          "description": "Digits after decimal",
+          "type": "SHORT"
+        },
+        {
+          "name": "flags",
+          "description": "Flags",
+          "type": "INT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextMerge",
+      "description": "Merge two strings into one",
+      "experimental": false,
+      "id": 136,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the resulting text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcId1",
+          "description": "The ID of the first source string",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcId2",
+          "description": "The ID of the second source string",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "NamedVariable",
+      "description": "Add a string name for an ID",
+      "experimental": false,
+      "id": 137,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "varId",
+          "description": "id to label",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "varType",
+          "description": "The type of variable",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "name",
+          "description": "String",
+          "type": "UTF8",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ColorConstant",
+      "description": "Define a static color and associate it with an ID",
+      "experimental": false,
+      "id": 138,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "colorId",
+          "description": "The ID of the color",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "color",
+          "description": "32-bit ARGB color value",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawContent",
+      "description": "Draw the component content",
+      "experimental": false,
+      "id": 139,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "IntegerConstant",
+      "description": "A integer and its associated id",
+      "experimental": false,
+      "id": 140,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "id of the Int constant",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "32-bit int value",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "PlaySound",
+      "description": "Trigger playback of a sound expression",
+      "experimental": false,
+      "id": 141,
+      "category": "Miscellaneous Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "soundExpressionId",
+        "description": "ID of the SoundExpression to play",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "ReferencedOperations",
+      "description": "A container of operations identified by an id",
+      "experimental": false,
+      "id": 142,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "id",
+        "description": "The id of the container",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "BooleanConstant",
+      "description": "A boolean and its associated id",
+      "experimental": false,
+      "id": 143,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "ID",
+          "type": "INT"
+        },
+        {
+          "name": "value",
+          "description": "Boolean value",
+          "type": "BOOLEAN"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 5
+    },
+    {
+      "addedVersion": 6,
+      "name": "IntegerExpression",
+      "description": "Define an integer via dynamic expression",
+      "experimental": false,
+      "id": 144,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Variable ID",
+          "type": "INT"
+        },
+        {
+          "name": "mask",
+          "description": "Mask",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "value",
+          "description": "Values",
+          "type": "INT[]"
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "DataMapIds",
+      "description": "Encode a collection of named variable IDs",
+      "experimental": false,
+      "id": 145,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Map ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "keys",
+          "description": "Keys",
+          "type": "STRING[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "types",
+          "description": "Types",
+          "type": "BYTE[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "values",
+          "description": "Values",
+          "type": "INT[]"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "IdListData",
+      "description": "A list of IDs",
+      "experimental": false,
+      "id": 146,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "ids",
+          "description": "IDs",
+          "type": "INT[]"
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "FloatListData",
+      "description": "A list of floats",
+      "experimental": false,
+      "id": 147,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "value",
+          "description": "Float values",
+          "type": "FLOAT[]"
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "LongConstant",
+      "description": "A long and its associated id",
+      "experimental": false,
+      "id": 148,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "id of the Long constant",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The long Value",
+          "type": "LONG",
+          "sizeBytes": 8
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawBitmapScaled",
+      "description": "Draw a bitmap with scaling and alignment options",
+      "experimental": false,
+      "id": 149,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "imageId",
+          "description": "The ID of the bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcLeft",
+          "description": "The left side of the source image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcTop",
+          "description": "The top of the source image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcRight",
+          "description": "The right side of the source image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcBottom",
+          "description": "The bottom of the source image",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstLeft",
+          "description": "The left side of the destination",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstTop",
+          "description": "The top of the destination",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstRight",
+          "description": "The right side of the destination",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dstBottom",
+          "description": "The bottom of the destination",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "SCALE_NONE",
+              "value": "0"
+            },
+            {
+              "name": "SCALE_INSIDE",
+              "value": "1"
+            },
+            {
+              "name": "SCALE_FILL_WIDTH",
+              "value": "2"
+            },
+            {
+              "name": "SCALE_FILL_HEIGHT",
+              "value": "3"
+            },
+            {
+              "name": "SCALE_FIT",
+              "value": "4"
+            },
+            {
+              "name": "SCALE_CROP",
+              "value": "5"
+            },
+            {
+              "name": "SCALE_FILL_BOUNDS",
+              "value": "6"
+            },
+            {
+              "name": "SCALE_FIXED_SCALE",
+              "value": "7"
+            }
+          ],
+          "name": "scaleType",
+          "description": "Type of scaling to apply",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "scaleFactor",
+          "description": "Factor for fixed scale",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "cdId",
+          "description": "The ID of the content description string",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 48
+    },
+    {
+      "addedVersion": 6,
+      "name": "ComponentValue",
+      "description": "Expose a component's layout property (width, height, etc.) as a variable",
+      "experimental": false,
+      "id": 150,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "possibleValues": [
+            {
+              "name": "WIDTH",
+              "value": "0"
+            },
+            {
+              "name": "HEIGHT",
+              "value": "1"
+            },
+            {
+              "name": "POS_X",
+              "value": "2"
+            },
+            {
+              "name": "POS_Y",
+              "value": "3"
+            },
+            {
+              "name": "POS_ROOT_X",
+              "value": "4"
+            },
+            {
+              "name": "POS_ROOT_Y",
+              "value": "5"
+            },
+            {
+              "name": "CONTENT_WIDTH",
+              "value": "6"
+            },
+            {
+              "name": "CONTENT_HEIGHT",
+              "value": "7"
+            }
+          ],
+          "name": "type",
+          "description": "The type of value to expose",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "componentId",
+          "description": "The ID of the component to reference",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "valueId",
+          "description": "The ID of the variable to store the value in",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextLookup",
+      "description": "Look up a string from a collection via index",
+      "experimental": false,
+      "id": 151,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the resulting text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dataSetId",
+          "description": "The ID of the string collection",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "index",
+          "description": "The index of the string to retrieve",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawArc",
+      "description": "Draw the specified arcwhich will be scaled to fit inside the specified oval",
+      "experimental": false,
+      "id": 152,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "left",
+          "description": "The left side of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "top",
+          "description": "The top of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "right",
+          "description": "The right side of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bottom",
+          "description": "The bottom of the Oval",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startAngle",
+          "description": "Starting angle (in degrees) where the arc begins",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "sweepAngle",
+          "description": "Sweep angle (in degrees) measured clockwise",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextLookupInt",
+      "description": "Look up a string from a collection via an integer index variable",
+      "experimental": false,
+      "id": 153,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the resulting text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dataSetId",
+          "description": "The ID of the string collection",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "indexId",
+          "description": "The ID of the integer index variable",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "DataMapLookup",
+      "description": "Look up a value in a data map",
+      "experimental": false,
+      "id": 154,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the output value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "dataMapId",
+          "description": "The ID of the data map",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "stringId",
+          "description": "The ID of the string to look up",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextMeasure",
+      "description": "Measure text dimensions and store the result in a float variable",
+      "experimental": false,
+      "id": 155,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the float variable to store the result",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "textId",
+          "description": "The ID of the text to measure",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "MEASURE_WIDTH",
+              "value": "0"
+            },
+            {
+              "name": "MEASURE_HEIGHT",
+              "value": "1"
+            },
+            {
+              "name": "MEASURE_LEFT",
+              "value": "2"
+            },
+            {
+              "name": "MEASURE_RIGHT",
+              "value": "3"
+            },
+            {
+              "name": "MEASURE_TOP",
+              "value": "4"
+            },
+            {
+              "name": "MEASURE_BOTTOM",
+              "value": "5"
+            }
+          ],
+          "name": "type",
+          "description": "The type of measurement (WIDTH, HEIGHT, etc.)",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextLength",
+      "description": "Get the length of a string and store it in a float variable",
+      "experimental": false,
+      "id": 156,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "lengthId",
+          "description": "The ID of the float variable to store the length",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "textId",
+          "description": "The ID of the text to measure",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "TouchExpression",
+      "description": "Define a float value derived from touch interactions",
+      "experimental": false,
+      "id": 157,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Touch ID",
+          "type": "INT"
+        },
+        {
+          "name": "value",
+          "description": "Value",
+          "type": "FLOAT"
+        },
+        {
+          "name": "min",
+          "description": "Min",
+          "type": "FLOAT"
+        },
+        {
+          "name": "max",
+          "description": "Max",
+          "type": "FLOAT"
+        },
+        {
+          "name": "velocityId",
+          "description": "Velocity ID",
+          "type": "FLOAT"
+        },
+        {
+          "name": "touchEffects",
+          "description": "Touch effects",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "exp",
+          "description": "Expression",
+          "type": "FLOAT[]"
+        },
+        {
+          "name": "touchMode",
+          "description": "Touch mode",
+          "type": "INT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "touchSpec",
+          "description": "Touch spec",
+          "type": "FLOAT[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "easingSpec",
+          "description": "Easing spec",
+          "type": "FLOAT[]"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 36
+    },
+    {
+      "addedVersion": 6,
+      "name": "PathTween",
+      "description": "Interpolate between two paths and store the result in a new path ID",
+      "experimental": false,
+      "id": 158,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "outId",
+          "description": "The ID of the resulting interpolated path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pathId1",
+          "description": "The ID of the first source path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "pathId2",
+          "description": "The ID of the second source path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "tween",
+          "description": "The interpolation factor [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "PathCreate",
+      "description": "Start the creation of a dynamic path",
+      "experimental": false,
+      "id": 159,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the path to create",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startX",
+          "description": "The X coordinate of the starting point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startY",
+          "description": "The Y coordinate of the starting point",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "PathAppend",
+      "description": "Append segments to an existing dynamic path",
+      "experimental": false,
+      "id": 160,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Path ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "data",
+          "description": "Path data",
+          "type": "FLOAT[]"
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ParticlesCreate",
+      "description": "Create a particle system",
+      "experimental": false,
+      "id": 161,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Particles ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "particleIds",
+          "description": "Particle IDs",
+          "type": "INT[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "initialValues",
+          "description": "Initial values",
+          "type": "FLOAT_2D_ARRAY"
+        },
+        {
+          "name": "flags",
+          "description": "Flags",
+          "type": "INT"
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "ParticlesLoop",
+      "description": "Update and recycle particles in a system",
+      "experimental": false,
+      "id": 163,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Particles ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "params",
+          "description": "Params",
+          "type": "FLOAT[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "values",
+          "description": "Values",
+          "type": "FLOAT_2D_ARRAY"
+        }
+      ],
+      "varSizeExpression": " + null x 4 + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "ImpulseOperation",
+      "description": "Execute a list of actions once, and a process block for a fixed duration",
+      "experimental": false,
+      "id": 164,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "duration",
+          "description": "Duration of the impulse",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "startAt",
+          "description": "The start time of the impulse",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ImpulseProcess",
+      "description": "A block of operations executed during an active impulse",
+      "experimental": false,
+      "id": 165,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "FunctionCall",
+      "description": "Command to call the function",
+      "experimental": false,
+      "id": 166,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "id of function to call",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "argLen",
+          "description": "the number of Arguments",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "values",
+          "description": "array of float arguments",
+          "varSize": "argLen",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + argLen x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "BitmapFontData",
+      "description": "Define a bitmap font with glyph metadata and optional kerning",
+      "experimental": false,
+      "id": 167,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "fontId",
+          "description": "Font ID",
+          "type": "INT"
+        },
+        {
+          "name": "glyphs",
+          "description": "Glyphs array",
+          "type": "GLYPH_ARRAY"
+        },
+        {
+          "name": "metadata",
+          "description": "Metadata map",
+          "type": "MAP"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 6,
+      "name": "FunctionDefine",
+      "description": "Define a function",
+      "experimental": false,
+      "id": 168,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The reference of the function",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "varLen",
+          "description": "number of arguments to the function",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "varId",
+          "description": "ids of the variables",
+          "varSize": "varLen",
+          "type": "INT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + varLen x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "SoundData",
+      "description": "Embed inline raw PCM sound data (SC format)",
+      "experimental": false,
+      "id": 169,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "soundId",
+          "description": "The ID of the sound resource",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "data",
+          "description": "SC-format audio bytes",
+          "type": "BYTE[]",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextAttribute",
+      "description": "Extract text-related properties (width, length, etc.)",
+      "experimental": false,
+      "id": 170,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Attribute ID",
+          "type": "INT"
+        },
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "type",
+          "description": "Attribute type",
+          "type": "SHORT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "ImageAttribute",
+      "description": "Extract image-related properties (width, height)",
+      "experimental": false,
+      "id": 171,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Attribute ID",
+          "type": "INT"
+        },
+        {
+          "name": "imageId",
+          "description": "Image ID",
+          "type": "INT"
+        },
+        {
+          "name": "type",
+          "description": "Attribute type",
+          "type": "SHORT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "params",
+          "description": "Params",
+          "type": "INT[]"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "TimeAttribute",
+      "description": "Extract time-related information (seconds, hours, etc.)",
+      "experimental": false,
+      "id": 172,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Attribute ID",
+          "type": "INT"
+        },
+        {
+          "name": "timeId",
+          "description": "Time ID",
+          "type": "INT"
+        },
+        {
+          "name": "type",
+          "description": "Attribute type",
+          "type": "SHORT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "params",
+          "description": "Params",
+          "type": "INT[]"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "CanvasOperations",
+      "description": "A collection of canvas operations",
+      "experimental": false,
+      "id": 173,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "DrawContentOperation",
+      "description": "A modifier that triggers drawing of the component's content",
+      "experimental": false,
+      "id": 174,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "PathCombine",
+      "description": "Combine two paths using a boolean operation (Union, Intersect, etc.)",
+      "experimental": false,
+      "id": 175,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Target path ID",
+          "type": "INT"
+        },
+        {
+          "name": "path1",
+          "description": "Path 1 ID",
+          "type": "INT"
+        },
+        {
+          "name": "path2",
+          "description": "Path 2 ID",
+          "type": "INT"
+        },
+        {
+          "name": "mode",
+          "description": "Combine mode",
+          "type": "BYTE"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 13
+    },
+    {
+      "addedVersion": 6,
+      "name": "FitBoxLayout",
+      "description": "FitBox layout implementation.\n\nOnly displays the first child component that fits in the available space.",
+      "experimental": false,
+      "id": 176,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "1"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "END",
+              "value": "3"
+            }
+          ],
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TOP",
+              "value": "4"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "BOTTOM",
+              "value": "5"
+            }
+          ],
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "HapticFeedback",
+      "description": "Generate an haptic feedback",
+      "experimental": false,
+      "id": 177,
+      "category": "Miscellaneous Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "hapticFeedbackType",
+        "description": "Type of haptic feedback",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "ConditionalOperations",
+      "description": "Execute a list of operations if a condition is met",
+      "experimental": false,
+      "id": 178,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "condition",
+          "description": "Condition byte",
+          "type": "BYTE"
+        },
+        {
+          "name": "v1",
+          "description": "Value 1",
+          "type": "FLOAT"
+        },
+        {
+          "name": "v2",
+          "description": "Value 2",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 9
+    },
+    {
+      "addedVersion": 6,
+      "name": "DebugMessage",
+      "description": "Print debugging messages",
+      "experimental": false,
+      "id": 179,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the text to print",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The float value to print",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "flags",
+          "description": "Flags for additional information",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "ColorAttribute",
+      "description": "Extract components (Hue, RGB, Alpha) from a color",
+      "experimental": false,
+      "id": 180,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Attribute ID",
+          "type": "INT"
+        },
+        {
+          "name": "colorId",
+          "description": "Color ID",
+          "type": "INT"
+        },
+        {
+          "name": "type",
+          "description": "Attribute type",
+          "type": "SHORT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 10
+    },
+    {
+      "addedVersion": 7,
+      "name": "MatrixFromPath",
+      "description": "Set the matrix relative to a path position and tangent",
+      "experimental": false,
+      "id": 181,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "pathId",
+          "description": "The ID of the path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "percent",
+          "description": "The position on the path [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "vOffset",
+          "description": "Vertical offset from the path",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "POSITION_MATRIX_FLAG",
+              "value": "1"
+            },
+            {
+              "name": "TANGENT_MATRIX_FLAG",
+              "value": "2"
+            }
+          ],
+          "name": "flags",
+          "description": "Flags for position/tangent",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 7,
+      "name": "TextSubtext",
+      "description": "Extract a substring from a source string",
+      "experimental": false,
+      "id": 182,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the resulting substring",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcId1",
+          "description": "The ID of the source string",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "start",
+          "description": "The start index of the substring",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "len",
+          "description": "The length of the substring (or -1 for remainder)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 7,
+      "name": "BitmapTextMeasure",
+      "description": "Measure text dimensions specifically for bitmap fonts",
+      "experimental": false,
+      "id": 183,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "bitmapFontId",
+          "description": "Bitmap font ID",
+          "type": "INT"
+        },
+        {
+          "name": "start",
+          "description": "Start",
+          "type": "INT"
+        },
+        {
+          "name": "end",
+          "description": "End",
+          "type": "INT"
+        },
+        {
+          "name": "glyphSpacing",
+          "description": "Glyph spacing",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 7,
+      "name": "DrawBitmapTextAnchored",
+      "description": "Draw bitmap font text anchored to a point with alignment (pan)",
+      "experimental": false,
+      "id": 184,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "bitmapFontID",
+          "description": "Bitmap font ID",
+          "type": "INT"
+        },
+        {
+          "name": "start",
+          "description": "Start",
+          "type": "FLOAT"
+        },
+        {
+          "name": "end",
+          "description": "End",
+          "type": "FLOAT"
+        },
+        {
+          "name": "x",
+          "description": "X",
+          "type": "FLOAT"
+        },
+        {
+          "name": "y",
+          "description": "Y",
+          "type": "FLOAT"
+        },
+        {
+          "name": "panX",
+          "description": "Pan X",
+          "type": "FLOAT"
+        },
+        {
+          "name": "panY",
+          "description": "Pan Y",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 32
+    },
+    {
+      "addedVersion": 7,
+      "name": "Rem",
+      "description": "Embed a remark or comment string in the document",
+      "experimental": false,
+      "id": 185,
+      "category": "Document Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "lengthType": "INT",
+        "name": "text",
+        "description": "The comment string",
+        "type": "UTF8",
+        "sizeBytes": 0
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 7,
+      "name": "MatrixConstant",
+      "description": "A constant matrix and its associated ID",
+      "experimental": false,
+      "id": 186,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "matrixId",
+          "description": "The ID of the matrix",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "type",
+          "description": "The type of matrix",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "values",
+          "description": "The matrix values",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "name": "MatrixExpression",
+      "description": "A matrix defined by an expression",
+      "experimental": false,
+      "id": 187,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "matrixId",
+          "description": "The ID of the matrix",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "type",
+          "description": "The type of matrix",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "expression",
+          "description": "The matrix expression",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "name": "MatrixVectorMath",
+      "description": "Evaluates a matrix * vector and outputs a vector",
+      "experimental": false,
+      "id": 188,
+      "category": "Matrix Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "Math operation",
+          "type": "SHORT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "outputs",
+          "description": "Output IDs",
+          "type": "INT[]"
+        },
+        {
+          "name": "matrixId",
+          "description": "Matrix ID",
+          "type": "INT"
+        },
+        {
+          "lengthType": "INT",
+          "name": "inputs",
+          "description": "Input floats",
+          "type": "FLOAT[]"
+        }
+      ],
+      "varSizeExpression": " + null x 4 + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 14
+    },
+    {
+      "addedVersion": 7,
+      "name": "FontData",
+      "description": "Embed raw font data in the document",
+      "experimental": false,
+      "id": 189,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "fontId",
+          "description": "The ID of the font",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "type",
+          "description": "The type of the font (unused)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "fontData",
+          "description": "The raw font file data",
+          "type": "BYTE[]",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "name": "DrawToBitmap",
+      "description": "Draw to a bitmap",
+      "experimental": false,
+      "id": 190,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "bitmapId",
+          "description": "The bitmap to draw to or 0 to draw to the canvas",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "mode",
+          "description": "Flags to support configuration of bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "color",
+          "description": "set the initial of the bitmap",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 7,
+      "name": "WakeIn",
+      "description": "Wake up the render loop after a certain amount of time",
+      "experimental": false,
+      "id": 191,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "wake",
+        "description": "The time in seconds to wake up",
+        "type": "FLOAT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 7,
+      "name": "IdLookup",
+      "description": "Look up an ID from an ID collection via index",
+      "experimental": false,
+      "id": 192,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "ID",
+          "type": "INT"
+        },
+        {
+          "name": "lookupId",
+          "description": "Lookup ID",
+          "type": "INT"
+        },
+        {
+          "name": "value",
+          "description": "Default float value",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 7,
+      "name": "PathExpression",
+      "description": "Generate a path from dynamic expressions (X, Y over a range)",
+      "experimental": false,
+      "id": 193,
+      "category": "Canvas Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the resulting path",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "flags",
+          "description": "Configuration flags (LOOP, POLAR, etc.)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "min",
+          "description": "The minimum range value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "max",
+          "description": "The maximum range value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "count",
+          "description": "The number of points to generate",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "lenX",
+          "description": "The length of the X expression",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "expressionX",
+          "description": "The X coordinate expression (RPN)",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        },
+        {
+          "name": "lenY",
+          "description": "The length of the Y expression",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "expressionY",
+          "description": "The Y coordinate expression (RPN)",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4 + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 7,
+      "name": "ParticlesCompare",
+      "description": "Compare particles and execute conditional logic",
+      "experimental": false,
+      "id": 194,
+      "category": "Animation & Particles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Particles ID",
+          "type": "INT"
+        },
+        {
+          "name": "compOp",
+          "description": "Comp Op",
+          "type": "SHORT"
+        },
+        {
+          "name": "val1",
+          "description": "Val 1",
+          "type": "FLOAT"
+        },
+        {
+          "name": "val2",
+          "description": "Val 2",
+          "type": "FLOAT"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "array1",
+          "description": "Array 1",
+          "type": "FLOAT[]"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "array2",
+          "description": "Array 2",
+          "type": "FLOAT_2D_ARRAY"
+        },
+        {
+          "lengthType": "SHORT",
+          "name": "array3",
+          "description": "Array 3",
+          "type": "FLOAT_2D_ARRAY"
+        }
+      ],
+      "varSizeExpression": " + null x 4 + null x 4 + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 26
+    },
+    {
+      "addedVersion": 7,
+      "name": "ColorTheme",
+      "description": "Define a color that adapts to the current theme (light/dark)",
+      "experimental": true,
+      "id": 196,
+      "category": "Paint & Styles Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "Color theme ID",
+          "type": "INT"
+        },
+        {
+          "name": "groupId",
+          "description": "Color group ID",
+          "type": "INT"
+        },
+        {
+          "name": "lightMode",
+          "description": "Light mode index",
+          "type": "SHORT"
+        },
+        {
+          "name": "darkMode",
+          "description": "Dark mode index",
+          "type": "SHORT"
+        },
+        {
+          "name": "lightModeFallback",
+          "description": "Light mode fallback color",
+          "type": "INT"
+        },
+        {
+          "name": "darkModeFallback",
+          "description": "Dark mode fallback color",
+          "type": "INT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 7,
+      "name": "DataDynamicListFloat",
+      "description": "A dynamic list of floats",
+      "experimental": false,
+      "id": 197,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the list",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "length",
+          "description": "The length of the list",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "name": "UpdateDynamicFloatList",
+      "description": "Update a value in a dynamic float list",
+      "experimental": false,
+      "id": 198,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "arrayId",
+          "description": "The ID of the array",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "index",
+          "description": "The index to update",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The new value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 7,
+      "name": "TextTransform",
+      "description": "Transform a string (case conversion, trimming, etc.)",
+      "experimental": true,
+      "id": 199,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "The ID of the resulting transformed text",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "srcId1",
+          "description": "The ID of the source string",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "start",
+          "description": "The start index of the transformation range",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "len",
+          "description": "The length of the transformation range",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TEXT_TO_LOWERCASE",
+              "value": "1"
+            },
+            {
+              "name": "TEXT_TO_UPPERCASE",
+              "value": "2"
+            },
+            {
+              "name": "TEXT_TRIM",
+              "value": "3"
+            },
+            {
+              "name": "TEXT_CAPITALIZE",
+              "value": "4"
+            },
+            {
+              "name": "TEXT_UPPERCASE_FIRST_CHAR",
+              "value": "5"
+            }
+          ],
+          "name": "operation",
+          "description": "The type of transformation to apply",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "RootLayout",
+      "description": "Root element for a document. Other components / layout managers are children in the component tree starting from this Root component.",
+      "experimental": false,
+      "id": 200,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "componentId",
+        "description": "Unique ID for this component",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "LayoutContent",
+      "description": "Container for child components. BoxLayout, RowLayout and ColumnLayout expect a LayoutComponentContent as a child, encapsulating the components that need to be laid out.",
+      "experimental": false,
+      "id": 201,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "componentId",
+        "description": "Unique ID for this component",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "BoxLayout",
+      "description": "Box layout implementation.\n\nChild components are laid out independently from one another,\n and painted in their hierarchy order (first children drawnbefore the latter). Horizontal and Vertical positioningare supported.",
+      "experimental": false,
+      "id": 202,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "COMPONENT_ID",
+          "description": "unique id for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "ANIMATION_ID",
+          "description": "id used to match components, for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "1"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "END",
+              "value": "3"
+            }
+          ],
+          "name": "HORIZONTAL_POSITIONING",
+          "description": "horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TOP",
+              "value": "4"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "BOTTOM",
+              "value": "5"
+            }
+          ],
+          "name": "VERTICAL_POSITIONING",
+          "description": "vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "RowLayout",
+      "description": "Row layout implementation, positioning components one after the other horizontally.\n\nIt supports weight and horizontal/vertical positioning.",
+      "experimental": false,
+      "id": 203,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "1"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "END",
+              "value": "3"
+            },
+            {
+              "name": "SPACE_BETWEEN",
+              "value": "6"
+            },
+            {
+              "name": "SPACE_EVENLY",
+              "value": "7"
+            },
+            {
+              "name": "SPACE_AROUND",
+              "value": "8"
+            }
+          ],
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TOP",
+              "value": "4"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "BOTTOM",
+              "value": "5"
+            }
+          ],
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacedBy",
+          "description": "Horizontal spacing between components",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "ColumnLayout",
+      "description": "Column layout implementation, positioning components one after the other vertically.\n\nIt supports weight and horizontal/vertical positioning.",
+      "experimental": false,
+      "id": 204,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "1"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "END",
+              "value": "3"
+            }
+          ],
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TOP",
+              "value": "4"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "BOTTOM",
+              "value": "5"
+            },
+            {
+              "name": "SPACE_BETWEEN",
+              "value": "6"
+            },
+            {
+              "name": "SPACE_EVENLY",
+              "value": "7"
+            },
+            {
+              "name": "SPACE_AROUND",
+              "value": "8"
+            }
+          ],
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacedBy",
+          "description": "Horizontal spacing between components",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "CanvasLayout",
+      "description": "Canvas implementation. Encapsulates drawing operations.",
+      "experimental": false,
+      "id": 205,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "SoundExpression",
+      "description": "Define a sound synthesis recipe (tone, etc.)",
+      "experimental": false,
+      "id": 206,
+      "category": "Data Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The ID of the sound expression",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "leftVolume",
+          "description": "Left-channel volume (0.0\u20131.0)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "rightVolume",
+          "description": "Right-channel volume (0.0\u20131.0)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "rate",
+          "description": "Playback rate (1.0 = normal pitch)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "paramsLength",
+          "description": "Number of params elements",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "params",
+          "description": "NaN-encoded type tag at [0], then type-specific floats",
+          "type": "FLOAT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "CanvasContent",
+      "description": "Container for canvas commands.",
+      "experimental": false,
+      "id": 207,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "COMPONENT_ID",
+        "description": "unique id for this component",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "TextLayout",
+      "description": "Text layout implementation",
+      "experimental": false,
+      "id": 208,
+      "category": "Text Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "textId",
+          "description": "The ID of the text to display",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "color",
+          "description": "The text color (ARGB)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "fontSize",
+          "description": "The font size in pixels",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "fontStyle",
+          "description": "The font style (0=normal, 1=italic)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "fontWeight",
+          "description": "The font weight [1..1000]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "fontFamilyId",
+          "description": "The ID of the font family name string",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "bitfields": [
+            {
+              "name": "textAlign",
+              "bits": "0..15",
+              "type": "SHORT"
+            },
+            {
+              "name": "flags",
+              "bits": "16..31",
+              "type": "SHORT"
+            }
+          ],
+          "name": "textAlign",
+          "description": "The text alignment and flags",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "overflow",
+          "description": "The overflow strategy",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "maxLines",
+          "description": "The maximum number of lines",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 44
+    },
+    {
+      "addedVersion": 6,
+      "name": "HostAction",
+      "description": "Host action. This operation represents a host action",
+      "experimental": false,
+      "id": 209,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "ACTION_ID",
+        "description": "Host Action ID",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "HostNamedAction",
+      "description": "Host Named action. This operation represents a host action",
+      "experimental": false,
+      "id": 210,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "type",
+          "description": "Action type",
+          "type": "INT"
+        },
+        {
+          "name": "valueId",
+          "description": "Value ID",
+          "type": "INT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ComponentVisibilityOperation",
+      "description": "Set component visibility from a provided integer variable",
+      "experimental": false,
+      "id": 211,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "visibilityId",
+        "description": "The ID of the integer variable representing visibility",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "ValueIntegerChangeActionOperation",
+      "description": "Action that sets a new value for an integer variable",
+      "experimental": false,
+      "id": 212,
+      "category": "Actions & Events Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "targetValueId",
+          "description": "The ID of the integer variable to update",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The new integer value to assign",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ValueStringChangeActionOperation",
+      "description": "Action that sets a new value for a string variable",
+      "experimental": false,
+      "id": 213,
+      "category": "Actions & Events Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "targetValueId",
+          "description": "The ID of the string variable to update",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "valueId",
+          "description": "The ID of the new string value to assign",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ContainerEnd",
+      "description": "End tag for a container component (Row, Column, etc.)",
+      "experimental": false,
+      "id": 214,
+      "category": "Document Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "Loop",
+      "description": "Execute a list of operations in a loop",
+      "experimental": false,
+      "id": 215,
+      "category": "Logic & Expressions Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "indexId",
+          "description": "The ID of the variable to store the loop index",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "from",
+          "description": "Starting value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "step",
+          "description": "Increment value",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "until",
+          "description": "Stop value (exclusive)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "HostActionMetadata",
+      "description": "Host action + metadata. This operation represents a host action that can also provides some metadata",
+      "experimental": false,
+      "id": 216,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "ACTION_ID",
+          "description": "Host Action ID",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "METADATA",
+          "description": "Host Action Text Metadata ID",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "StateLayout",
+      "description": "A layout that switches between child layouts based on an index",
+      "experimental": false,
+      "id": 217,
+      "category": "Layout Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "indexId",
+          "description": "The ID of the variable providing the current state index",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "ValueIntegerExpressionChangeActionOperation",
+      "description": "Action that updates an integer variable via a dynamic expression",
+      "experimental": false,
+      "id": 218,
+      "category": "Actions & Events Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "targetValueId",
+          "description": "The ID of the integer variable to update",
+          "type": "LONG",
+          "sizeBytes": 8
+        },
+        {
+          "name": "valueExpressionId",
+          "description": "The ID of the expression to evaluate",
+          "type": "LONG",
+          "sizeBytes": 8
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "TouchModifier",
+      "description": "Touch down modifier. This operation contains a list of action operations executed on touch down",
+      "experimental": false,
+      "id": 219,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "TouchUpModifier",
+      "description": "Touch up modifier. This operation contains a list of action operations executed on touch up",
+      "experimental": false,
+      "id": 220,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "OffsetModifierOperation",
+      "description": "Shift the component's position",
+      "experimental": false,
+      "id": 221,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "x",
+          "description": "X offset",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "y",
+          "description": "Y offset",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ValueFloatChangeActionOperation",
+      "description": "Action that sets a new value for a float variable",
+      "experimental": false,
+      "id": 222,
+      "category": "Actions & Events Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "targetValueId",
+          "description": "The ID of the float variable to update",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "value",
+          "description": "The new float value to assign",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "ZIndexModifierOperation",
+      "description": "Define the Z-Index of a component",
+      "experimental": false,
+      "id": 223,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "value",
+        "description": "The Z-Index value",
+        "type": "FLOAT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "GraphicsLayerModifierOperation",
+      "description": "Define transformations (scale, rotation, alpha) for a component",
+      "experimental": false,
+      "id": 224,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "map",
+        "description": "Graphics layer map",
+        "type": "HASHMAP"
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "TouchCancelModifier",
+      "description": "Touch cancel modifier. This operation contains a list of action operations executed on touch cancel",
+      "experimental": false,
+      "id": 225,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "ScrollModifierOperation",
+      "description": "Define a scrolling behavior for a component",
+      "experimental": false,
+      "id": 226,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "direction",
+          "description": "Direction of the scroll (0=VERTICAL, 1=HORIZONTAL)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "position",
+          "description": "The current scroll position (expression)",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "max",
+          "description": "The maximum scroll position",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "notchMax",
+          "description": "The maximum notch position",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 16
+    },
+    {
+      "addedVersion": 6,
+      "name": "ValueFloatExpressionChangeActionOperation",
+      "description": "Action that updates a float variable via a dynamic expression",
+      "experimental": false,
+      "id": 227,
+      "category": "Actions & Events Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "targetValueId",
+          "description": "The ID of the float variable to update",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "valueExpressionId",
+          "description": "The ID of the expression to evaluate",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "MarqueeModifierOperation",
+      "description": "Define a scrolling marquee effect for a component",
+      "experimental": false,
+      "id": 228,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "iterations",
+          "description": "Number of iterations",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationMode",
+          "description": "Animation mode",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "repeatDelayMillis",
+          "description": "Repeat delay in ms",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "initialDelayMillis",
+          "description": "Initial delay in ms",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacing",
+          "description": "Spacing between marquee iterations",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "velocity",
+          "description": "Velocity of the marquee animation",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 24
+    },
+    {
+      "addedVersion": 6,
+      "name": "RippleModifier",
+      "description": "Ripple modifier. This modifier will do a ripple animation on touch down",
+      "experimental": false,
+      "id": 229,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "CollapsibleRow",
+      "description": "A row layout that can hide children if space is insufficient",
+      "experimental": false,
+      "id": 230,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacedBy",
+          "description": "Horizontal spacing between components",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "WidthInModifierOperation",
+      "description": "Add additional constraints to the width",
+      "experimental": false,
+      "id": 231,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "min",
+          "description": "The minimum width, -1 if not applied",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "max",
+          "description": "The maximum width, -1 if not applied",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "HeightInModifierOperation",
+      "description": "Add additional constraints to the height",
+      "experimental": false,
+      "id": 232,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "min",
+          "description": "The minimum height, -1 if not applied",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "max",
+          "description": "The maximum height, -1 if not applied",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "CollapsibleColumn",
+      "description": "A column layout that can hide children if space is insufficient",
+      "experimental": false,
+      "id": 233,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacedBy",
+          "description": "Vertical spacing between components",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "ImageLayout",
+      "description": "Image layout implementation",
+      "experimental": false,
+      "id": 234,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID used to match components for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "bitmapId",
+          "description": "The ID of the bitmap to display",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "scaleType",
+          "description": "The scale type to apply",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "alpha",
+          "description": "The alpha transparency [0..1]",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 20
+    },
+    {
+      "addedVersion": 6,
+      "name": "CollapsiblePriorityModifierOperation",
+      "description": "Add additional priority to children of collapsible layouts",
+      "experimental": false,
+      "id": 235,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "orientation",
+          "description": "Horizontal(0) or Vertical (1)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "priority",
+          "description": "The associated priority",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 6,
+      "name": "RunAction",
+      "description": "This operation runs child actions",
+      "experimental": false,
+      "id": 236,
+      "category": "Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 7,
+      "name": "AlignByModifierOperation",
+      "description": "Align a component based on a specific baseline or anchor",
+      "experimental": true,
+      "id": 237,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "line",
+          "description": "The ID of the float variable or baseline ID to align by",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "flags",
+          "description": "Alignment flags",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "name": "LayoutCompute",
+      "description": "Compute component position and measure via dynamic expressions",
+      "experimental": true,
+      "id": 238,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "Type of computation (0=MEASURE, 1=POSITION)",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "boundsId",
+          "description": "The ID of the float list variable to store the bounds",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animateChanges",
+          "description": "Whether to animate layout changes",
+          "type": "BOOLEAN",
+          "sizeBytes": 0
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 8
+    },
+    {
+      "addedVersion": 7,
+      "sparseParameters": [
+        {
+          "defaultValue": null,
+          "name": "componentId",
+          "description": "Component ID",
+          "paramId": 0,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "animationId",
+          "description": "Animation ID",
+          "paramId": 1,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "color",
+          "description": "Color",
+          "paramId": 2,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "colorId",
+          "description": "Color ID",
+          "paramId": 3,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontSize",
+          "description": "Font size",
+          "paramId": 4,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "minFontSize",
+          "description": "Min font size",
+          "paramId": 25,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "maxFontSize",
+          "description": "Max font size",
+          "paramId": 26,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontStyle",
+          "description": "Font style",
+          "paramId": 5,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontWeight",
+          "description": "Font weight",
+          "paramId": 6,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontFamilyId",
+          "description": "Font family ID",
+          "paramId": 7,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "textAlign",
+          "description": "Text align",
+          "paramId": 8,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "overflow",
+          "description": "Overflow",
+          "paramId": 9,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "maxLines",
+          "description": "Max lines",
+          "paramId": 10,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "letterSpacing",
+          "description": "Letter spacing",
+          "paramId": 11,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineHeightAdd",
+          "description": "Line height add",
+          "paramId": 12,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineHeightMultiplier",
+          "description": "Line height multiplier",
+          "paramId": 13,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineBreakStrategy",
+          "description": "Line break strategy",
+          "paramId": 14,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "hyphenationFrequency",
+          "description": "Hyphenation frequency",
+          "paramId": 15,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "justificationMode",
+          "description": "Justification mode",
+          "paramId": 16,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "underline",
+          "description": "Underline",
+          "paramId": 17,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "strikethrough",
+          "description": "Strikethrough",
+          "paramId": 18,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontAxis",
+          "description": "Font axis",
+          "paramId": 20,
+          "type": "INT[]"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontAxisValues",
+          "description": "Font axis values",
+          "paramId": 21,
+          "type": "FLOAT[]"
+        },
+        {
+          "defaultValue": null,
+          "name": "autosize",
+          "description": "Autosize",
+          "paramId": 22,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "flags",
+          "description": "Flags",
+          "paramId": 23,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "textStyleId",
+          "description": "Text style ID",
+          "paramId": 24,
+          "type": "INT"
+        }
+      ],
+      "name": "CoreText",
+      "description": "Core text layout implementation with advanced styling",
+      "experimental": true,
+      "headerFields": [{
+        "name": "textId",
+        "description": "Text ID",
+        "type": "INT"
+      }],
+      "id": 239,
+      "category": "Layout Managers",
+      "encoding": "SPARSE_PARAMETERS",
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 7,
+      "name": "FlowLayout",
+      "description": "Flow layout implementation. Positions components one after the other horizontally and wraps to the next line if space is exhausted.",
+      "experimental": true,
+      "id": 240,
+      "category": "Layout Managers",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "componentId",
+          "description": "Unique ID for this component",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "animationId",
+          "description": "ID for animation purposes",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "START",
+              "value": "1"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "END",
+              "value": "3"
+            },
+            {
+              "name": "SPACE_BETWEEN",
+              "value": "6"
+            },
+            {
+              "name": "SPACE_EVENLY",
+              "value": "7"
+            },
+            {
+              "name": "SPACE_AROUND",
+              "value": "8"
+            }
+          ],
+          "name": "horizontalPositioning",
+          "description": "Horizontal positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "possibleValues": [
+            {
+              "name": "TOP",
+              "value": "4"
+            },
+            {
+              "name": "CENTER",
+              "value": "2"
+            },
+            {
+              "name": "BOTTOM",
+              "value": "5"
+            }
+          ],
+          "name": "verticalPositioning",
+          "description": "Vertical positioning value",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "spacedBy",
+          "description": "Horizontal spacing between components",
+          "type": "FLOAT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "maxItemsInEachRow",
+          "description": "Maximum number of items in each row",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "maxLines",
+          "description": "Maximum number of lines in the layout",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 28
+    },
+    {
+      "addedVersion": 6,
+      "name": "Skip",
+      "description": "Skin a section of bytes if condition is true",
+      "experimental": false,
+      "id": 241,
+      "returnOffsetOf": "Length",
+      "category": "Miscellaneous Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "Condition",
+          "description": "The type of condition",
+          "type": "SHORT",
+          "sizeBytes": 2
+        },
+        {
+          "name": "Value",
+          "description": "The value to compare against",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "Length",
+          "description": "the number of bytes to skip",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 10
+    },
+    {
+      "addedVersion": 6,
+      "sparseParameters": [
+        {
+          "defaultValue": -1,
+          "name": "id",
+          "description": "ID",
+          "paramId": 0,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "color",
+          "description": "Color",
+          "paramId": 2,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "colorId",
+          "description": "Color ID",
+          "paramId": 3,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontSize",
+          "description": "Font size",
+          "paramId": 4,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "minFontSize",
+          "description": "Min font size",
+          "paramId": 25,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "maxFontSize",
+          "description": "Max font size",
+          "paramId": 26,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontStyle",
+          "description": "Font style",
+          "paramId": 5,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontWeight",
+          "description": "Font weight",
+          "paramId": 6,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontFamilyId",
+          "description": "Font family ID",
+          "paramId": 7,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "textAlign",
+          "description": "Text align",
+          "paramId": 8,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "overflow",
+          "description": "Overflow",
+          "paramId": 9,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "maxLines",
+          "description": "Max lines",
+          "paramId": 10,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "letterSpacing",
+          "description": "Letter spacing",
+          "paramId": 11,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineHeightAdd",
+          "description": "Line height add",
+          "paramId": 12,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineHeightMultiplier",
+          "description": "Line height multiplier",
+          "paramId": 13,
+          "type": "FLOAT"
+        },
+        {
+          "defaultValue": null,
+          "name": "lineBreakStrategy",
+          "description": "Line break strategy",
+          "paramId": 14,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "hyphenationFrequency",
+          "description": "Hyphenation frequency",
+          "paramId": 15,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "justificationMode",
+          "description": "Justification mode",
+          "paramId": 16,
+          "type": "INT"
+        },
+        {
+          "defaultValue": null,
+          "name": "underline",
+          "description": "Underline",
+          "paramId": 17,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "strikethrough",
+          "description": "Strikethrough",
+          "paramId": 18,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontAxis",
+          "description": "Font axis",
+          "paramId": 20,
+          "type": "INT[]"
+        },
+        {
+          "defaultValue": null,
+          "name": "fontAxisValues",
+          "description": "Font axis values",
+          "paramId": 21,
+          "type": "FLOAT[]"
+        },
+        {
+          "defaultValue": null,
+          "name": "autosize",
+          "description": "Autosize",
+          "paramId": 22,
+          "type": "BOOLEAN"
+        },
+        {
+          "defaultValue": null,
+          "name": "parentId",
+          "description": "Parent ID",
+          "paramId": 24,
+          "type": "INT"
+        }
+      ],
+      "name": "TextStyle",
+      "description": "Text style implementation",
+      "experimental": false,
+      "headerFields": [],
+      "id": 242,
+      "category": "Text Operations",
+      "encoding": "SPARSE_PARAMETERS",
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "DimensionConstraintsModifierOperation",
+      "description": "Add additional constraints to the dimensions",
+      "experimental": false,
+      "id": 243,
+      "category": "Modifier Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "type",
+          "description": "Constraint type",
+          "type": "BYTE"
+        },
+        {
+          "name": "min",
+          "description": "Minimum",
+          "type": "FLOAT"
+        },
+        {
+          "name": "max",
+          "description": "Maximum",
+          "type": "FLOAT"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 9
+    },
+    {
+      "addedVersion": 6,
+      "name": "PatternForEach",
+      "description": "Iterates over a collection parameter and expands its children for each item",
+      "experimental": false,
+      "id": 244,
+      "returnOffsetOf": "skipLength",
+      "category": "Loom Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "collectionId",
+          "description": "The collection id",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "localItemId",
+          "description": "The local item id",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "name": "skipLength",
+          "description": "Offset for end of loop",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 12
+    },
+    {
+      "addedVersion": 6,
+      "name": "IncludeReferencedOperations",
+      "description": "Includes operations from a referenced container by ID",
+      "experimental": false,
+      "id": 245,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "ID",
+        "description": "referenced container id",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "description": "Defines a pattern template",
+      "experimental": false,
+      "encoding": "FIXED",
+      "sizeFieldsBytes": 8,
+      "name": "PatternDefine",
+      "returns": "id",
+      "id": 246,
+      "returnOffsetOf": "skipLength",
+      "category": "Loom Operations",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The id of the pattern",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "paramIds",
+          "description": "The parameter ids",
+          "type": "INT[]",
+          "sizeBytes": -1
+        },
+        {
+          "name": "skipLength",
+          "description": "Offset for end of pattern definition",
+          "type": "INT",
+          "sizeBytes": 4
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false
+    },
+    {
+      "addedVersion": 6,
+      "name": "PatternInflation",
+      "description": "Calls a pattern with specific arguments",
+      "experimental": false,
+      "id": 247,
+      "category": "Loom Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "id",
+          "description": "The id of the pattern to inflate",
+          "type": "INT",
+          "sizeBytes": 4
+        },
+        {
+          "lengthType": "INT",
+          "name": "argIds",
+          "description": "The argument ids",
+          "type": "INT[]",
+          "sizeBytes": -1
+        }
+      ],
+      "varSizeExpression": " + null x 4",
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "PatternArgument",
+      "description": "Placeholder for an operation-block argument in a macro definition",
+      "experimental": false,
+      "id": 248,
+      "category": "Loom Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "paramIndex",
+        "description": "The parameter index",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "PatternBlock",
+      "description": "Contains an operation-block argument for a macro call",
+      "experimental": false,
+      "id": 249,
+      "category": "Loom Operations",
+      "encoding": "FIXED",
+      "fields": [{
+        "name": "paramIndex",
+        "description": "The parameter index",
+        "type": "INT",
+        "sizeBytes": 4
+      }],
+      "wip": false,
+      "sizeFieldsBytes": 4
+    },
+    {
+      "addedVersion": 6,
+      "name": "CoreSemantics",
+      "description": "Define accessibility semantics for a component",
+      "experimental": false,
+      "id": 250,
+      "category": "Accessibility Operations",
+      "encoding": "FIXED",
+      "fields": [
+        {
+          "name": "contentDescriptionId",
+          "description": "Content description ID",
+          "type": "INT"
+        },
+        {
+          "name": "role",
+          "description": "Role",
+          "type": "BYTE"
+        },
+        {
+          "name": "textId",
+          "description": "Text ID",
+          "type": "INT"
+        },
+        {
+          "name": "stateDescriptionId",
+          "description": "State description ID",
+          "type": "INT"
+        },
+        {
+          "name": "mode",
+          "description": "Mode",
+          "type": "INT"
+        },
+        {
+          "name": "enabled",
+          "description": "Enabled",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "clickable",
+          "description": "Clickable",
+          "type": "BOOLEAN"
+        }
+      ],
+      "wip": false,
+      "sizeFieldsBytes": 14
+    },
+    {
+      "addedVersion": 6,
+      "name": "ExtensionRangeReserved4",
+      "description": "Reserved extension range opcode 4",
+      "experimental": false,
+      "id": 251,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "ExtensionRangeReserved3",
+      "description": "Reserved extension range opcode 3",
+      "experimental": false,
+      "id": 252,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "ExtensionRangeReserved2",
+      "description": "Reserved extension range opcode 2",
+      "experimental": false,
+      "id": 253,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "ExtensionRangeReserved1",
+      "description": "Reserved extension range opcode 1",
+      "experimental": false,
+      "id": 254,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    },
+    {
+      "addedVersion": 6,
+      "name": "ExtendedOpcode",
+      "description": "Reserved opcode for future extended protocol operations",
+      "experimental": false,
+      "id": 255,
+      "category": "Protocol Operations",
+      "encoding": "FIXED",
+      "fields": [],
+      "wip": false,
+      "sizeFieldsBytes": 0
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "structures": {
+    "Header": {
+      "name": "Header",
+      "description": "Header document metadata property map tags and constants",
+      "tags": [
+        {
+          "name": "DOC_WIDTH",
+          "id": 5
+        },
+        {
+          "name": "DOC_HEIGHT",
+          "id": 6
+        },
+        {
+          "name": "DOC_DENSITY_AT_GENERATION",
+          "id": 7
+        },
+        {
+          "name": "DOC_DESIRED_FPS",
+          "id": 8
+        },
+        {
+          "name": "DOC_CONTENT_DESCRIPTION",
+          "id": 9
+        },
+        {
+          "name": "DOC_SOURCE",
+          "id": 11
+        },
+        {
+          "name": "DOC_DATA_UPDATE",
+          "id": 12
+        },
+        {
+          "name": "HOST_EXCEPTION_HANDLER",
+          "id": 13
+        },
+        {
+          "name": "DOC_PROFILES",
+          "id": 14
+        },
+        {
+          "name": "FEATURE_PAINT_MEASURE",
+          "id": 15
+        },
+        {
+          "name": "DEBUG",
+          "id": 16
+        },
+        {
+          "name": "FEATURE_MEASURE_VERSION",
+          "id": 17
+        },
+        {
+          "name": "FEATURE_TOUCH_VERSION",
+          "id": 18
+        },
+        {
+          "name": "TEST_TIME",
+          "id": 19
+        },
+        {
+          "name": "TEST_AFTER",
+          "id": 20
+        },
+        {
+          "name": "TEST_COLOR_THEME",
+          "id": 21
+        },
+        {
+          "name": "TEST_ACTIONS",
+          "id": 22
+        },
+        {
+          "name": "FEATURE_PRIORITY_FIX",
+          "id": 23
+        },
+        {
+          "name": "FEATURE_LT_RESIZE",
+          "id": 24
+        },
+        {
+          "name": "FEATURE_ARRAY_LISTENERS",
+          "id": 25
+        },
+        {
+          "name": "FEATURE_CLICK_VERSION",
+          "id": 26
+        },
+        {
+          "name": "DOC_DENSITY_BEHAVIOR",
+          "id": 27
+        },
+        {
+          "name": "FEATURE_OPTIMIZATION_LEVEL",
+          "id": 28
+        }
+      ]
+    },
+    "PaintBundle": {
+      "name": "PaintBundle",
+      "description": "Delta bundle of paint properties and styles encoded as a tagged integer array",
+      "fields": [{
+        "lengthType": "INT",
+        "name": "array",
+        "description": "Encoded integer array of paint delta commands",
+        "type": "INT[]"
+      }]
+    }
+  },
+  "title": "RemoteCompose Operations Binary Specification",
+  "version": "1.1.0"
+}
