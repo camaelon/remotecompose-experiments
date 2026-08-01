@@ -157,6 +157,9 @@ void CoreDocument::updateTimeVariables(RemoteContext& context) {
     context.loadFloat(RemoteContext::ID_DAY_OF_YEAR, static_cast<float>(dayOfYear));
     context.loadFloat(RemoteContext::ID_YEAR, static_cast<float>(year));
     context.loadFloat(RemoteContext::ID_API_LEVEL, static_cast<float>(DOCUMENT_API_LEVEL));
+    if (!context.hasFloat(RemoteContext::ID_ANIMATION_TIME)) {
+        context.loadFloat(RemoteContext::ID_ANIMATION_TIME, static_cast<float>(ms) / 1000.0f);
+    }
 }
 
 // ── Data pass ─────────────────────────────────────────────────────────
