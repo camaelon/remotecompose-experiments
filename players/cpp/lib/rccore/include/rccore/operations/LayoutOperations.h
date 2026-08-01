@@ -23,6 +23,7 @@ public:
 class LayoutRoot : public Operation {
 public:
     int componentId = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_ROOT"; }
     int opcode() const override { return 200; }
@@ -60,6 +61,7 @@ class LayoutBox : public Operation {
 public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_BOX"; }
     int opcode() const override { return 202; }
@@ -84,6 +86,7 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     float oSpacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_ROW"; }
     int opcode() const override { return 203; }
@@ -113,6 +116,7 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     float oSpacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_COLUMN"; }
     int opcode() const override { return 204; }
@@ -139,6 +143,7 @@ public:
 class LayoutCanvas : public Operation {
 public:
     int componentId = 0, animationId = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_CANVAS"; }
     int opcode() const override { return 205; }
@@ -158,6 +163,7 @@ public:
 class CanvasContent : public Operation {
 public:
     int componentId = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CanvasContent"; }
     int opcode() const override { return 207; }
@@ -182,6 +188,7 @@ public:
     float fontWeight = 400;
     int fontFamilyId = 0, textAlign = 0, overflow = 0, maxLines = 0;
     float oFontSize = 14, oFontWeight = 400;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_TEXT"; }
     int opcode() const override { return 208; }
@@ -226,6 +233,7 @@ public:
     int flags = 0;
 
     float oFontSize = 16, oFontWeight = 400;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CoreText"; }
     int opcode() const override { return 239; }
@@ -298,6 +306,7 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     float oSpacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_FLOW"; }
     int opcode() const override { return 240; }
@@ -347,6 +356,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontalPositioning = 0, verticalPositioning = 0;
     int indexId = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "StateLayout"; }
     int opcode() const override { return 217; }

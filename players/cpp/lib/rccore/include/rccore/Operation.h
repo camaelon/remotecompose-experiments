@@ -33,6 +33,8 @@ public:
     void markNotDirty() { mDirty = false; }
 
     // ── Variable support ─────────────────────────────────────────────
+    virtual int getOpComponentId() const { return -1; }
+
     // Override to return true if this operation depends on variables.
     virtual bool isVariableSupport() const { return false; }
 
