@@ -1,8 +1,9 @@
 # rcviewer
 
-GLFW + Metal desktop viewer. Loads `.rc`/`.rcd` documents, animated images
-(WebP / GIF / APNG), video (MP4 / MOV via AVFoundation), and zip archives
-of any mix, then plays through them with keyboard navigation.
+GLFW desktop viewer. On macOS it can use Metal or CPU rendering; on Linux it
+uses the CPU/OpenGL path. Loads `.rc`/`.rcd` documents, animated images
+(WebP / GIF / APNG), macOS video (MP4 / MOV via AVFoundation), and zip
+archives of any mix, then plays through them with keyboard navigation.
 
 ## Build
 
@@ -72,3 +73,6 @@ rcviewer --auto 5 ./samples
 # Run as a borderless, always-on-top widget with a transparent background.
 rcviewer --widget some-doc.rc
 ```
+
+On Linux, widget mode applies the GLFW hints but does not currently move the
+window to a desktop layer.
