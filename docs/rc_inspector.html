@@ -1,0 +1,1781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemoteCompose Binary Inspector & Player (.rc)</title>
+    <!-- Load RemoteCompose Standalone Player & Serializer Runtimes -->
+    <script src="remote_compose_player.js"></script>
+    <script src="RemoteComposeSerializer.js"></script>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-surface: #1e293b;
+            --bg-card: #0f172a;
+            --bg-hover: #334155;
+            --border-color: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #38bdf8;
+            --accent-emerald: #10b981;
+            --accent-purple: #c084fc;
+            --accent-amber: #fbbf24;
+            --accent-rose: #f43f5e;
+            --code-font: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: rgba(56, 189, 248, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        select, button, input[type="file"] {
+            font-family: inherit;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+
+        select {
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+
+        select:focus {
+            outline: 2px solid var(--accent-blue);
+        }
+
+        .btn {
+            background-color: var(--accent-blue);
+            color: #0f172a;
+            border: none;
+            padding: 6px 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 360px 1fr 1fr;
+            gap: 16px;
+            padding: 16px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        @media (max-width: 1200px) {
+            .main-container {
+                grid-template-columns: 1fr 1fr;
+            }
+            .panel-left {
+                grid-column: span 2;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            .panel-left {
+                grid-column: span 1;
+            }
+        }
+
+        .panel {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(15, 23, 42, 0.4);
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-body {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Drop Zone */
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 24px 16px;
+            text-align: center;
+            background-color: rgba(15, 23, 42, 0.5);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+
+        .drop-zone.dragover {
+            border-color: var(--accent-blue);
+            background-color: rgba(56, 189, 248, 0.08);
+        }
+
+        .drop-zone-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .drop-zone span {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Canvas Player Stage */
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 280px;
+            position: relative;
+        }
+
+        canvas {
+            background: #ffffff;
+            border-radius: 6px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            max-width: 100%;
+            max-height: 360px;
+        }
+
+        .canvas-meta {
+            margin-top: 12px;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 16px;
+            font-family: var(--code-font);
+        }
+
+        /* Commands Disassembly */
+        .search-box {
+            width: 100%;
+            padding: 8px 12px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            margin-bottom: 12px;
+        }
+
+        .search-box:focus {
+            outline: 2px solid var(--accent-blue);
+        }
+
+        .command-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .command-card:hover {
+            border-color: var(--accent-blue);
+            background-color: var(--bg-hover);
+        }
+
+        .command-card.selected {
+            border-color: var(--accent-blue);
+            background-color: rgba(56, 189, 248, 0.12);
+            box-shadow: 0 0 0 1px var(--accent-blue);
+        }
+
+        .command-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .command-op {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .op-badge {
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: #334155;
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .op-name {
+            font-weight: 600;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+        }
+
+        .op-offset {
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .op-detail {
+            font-family: var(--code-font);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            word-break: break-all;
+        }
+
+        .op-bytes {
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed var(--border-color);
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            color: var(--accent-amber);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        /* Compact Indented Commands Row */
+        .command-compact-row {
+            font-family: var(--code-font);
+            font-size: 0.82rem;
+            padding: 5px 10px;
+            border-radius: 5px;
+            margin-bottom: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            transition: all 0.12s ease;
+        }
+
+        .command-compact-row:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--accent-blue);
+        }
+
+        .command-compact-row.selected {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 1px var(--accent-blue);
+        }
+
+        .cmd-compact-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        .cmd-indent-guide {
+            color: var(--text-muted);
+            opacity: 0.5;
+            font-family: var(--code-font);
+            white-space: pre;
+            user-select: none;
+            font-weight: 600;
+        }
+
+        .cmd-idx {
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+            min-width: 24px;
+            text-align: right;
+            display: inline-block;
+        }
+
+        /* Component Tree */
+        .tree-node {
+            margin-left: 12px;
+            border-left: 1px dashed var(--border-color);
+            padding-left: 8px;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 2px;
+            font-size: 0.85rem;
+        }
+
+        .tree-node-content:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .tree-node-content.selected {
+            background-color: rgba(16, 185, 129, 0.15);
+            border: 1px solid var(--accent-emerald);
+        }
+
+        .tree-icon {
+            font-size: 0.9rem;
+        }
+
+        .tree-tag {
+            font-weight: 600;
+            color: var(--accent-emerald);
+        }
+
+        .tree-id {
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: rgba(255,255,255,0.06);
+            padding: 1px 5px;
+            border-radius: 3px;
+        }
+
+        .tree-dim {
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            color: var(--accent-purple);
+        }
+
+        .tree-modifier {
+            margin-left: 24px;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            padding: 2px 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .caret {
+            cursor: pointer;
+            user-select: none;
+            display: inline-block;
+            transition: transform 0.15s ease;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            width: 12px;
+        }
+
+        .caret-down {
+            transform: rotate(90deg);
+        }
+
+        .nested-collapsed {
+            display: none;
+        }
+
+        /* JSON Code Drawer */
+        .json-drawer {
+            margin-top: 12px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 12px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: var(--code-font);
+            font-size: 0.8rem;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: 2px solid var(--accent-blue);
+        }
+
+        .status-msg {
+            font-size: 0.8rem;
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Document Structure & Size Stats Panel */
+        .stats-container {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 14px;
+            margin-top: 12px;
+        }
+
+        .stats-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .stats-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .byte-bar-wrapper {
+            width: 100%;
+            height: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            margin: 8px 0 10px 0;
+            display: flex;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .byte-bar-segment {
+            height: 100%;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+
+        .byte-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 12px;
+            font-size: 0.73rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .kpi-card {
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 10px;
+            text-align: center;
+            transition: border-color 0.15s ease;
+        }
+
+        .kpi-card:hover {
+            border-color: var(--accent-blue);
+        }
+
+        .kpi-label {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-bottom: 3px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-value {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: var(--code-font);
+        }
+
+        .kpi-sub {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+            font-family: var(--code-font);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-title">
+            <h1>⚡ RemoteCompose Binary Inspector</h1>
+            <span class="badge" id="fileStatusBadge">No File Loaded</span>
+        </div>
+        <div class="header-controls">
+            <label for="demoSelect" style="font-size:0.85rem; color:var(--text-secondary);">Sample Demos:</label>
+            <select id="demoSelect" onchange="loadSelectedDemo()">
+                <option value="">-- Choose Sample Demo --</option>
+                <option value="interactive">Interactive Box (Click & Text)</option>
+                <option value="clock">Clock Sample (Animated Hands)</option>
+                <option value="boxlayout">BoxLayout Container</option>
+                <option value="columnlayout">ColumnLayout & Alignment</option>
+                <option value="fitbox">FitBox Layout</option>
+                <option value="rotate">Rotate Animation (Matrix)</option>
+                <option value="simple">Simple Column & Row Layout</option>
+            </select>
+            <button class="btn btn-secondary" onclick="toggleCanvasBg()">🎨 Canvas Theme</button>
+            <button class="btn" onclick="exportRcFile()">💾 Download .rc</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Panel 1: Player & Controls -->
+        <div class="panel panel-left">
+            <div class="panel-header">
+                <div class="panel-title">🎨 Canvas Render & Player</div>
+                <div id="docDimBadge" style="font-size:0.75rem; color:var(--text-muted); font-family:var(--code-font);">---</div>
+            </div>
+            <div class="panel-body">
+                <!-- Drop Zone -->
+                <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                    <div class="drop-zone-icon">📁</div>
+                    <p>Drop <strong>.rc</strong> binary or <strong>.json</strong> file here</p>
+                    <span>or click to browse local files</span>
+                    <input type="file" id="fileInput" accept=".rc,.json" style="display:none" onchange="handleFileSelect(event)">
+                </div>
+
+                <!-- Canvas Preview -->
+                <div class="canvas-container">
+                    <canvas id="previewCanvas" width="300" height="300"></canvas>
+                    <div class="canvas-meta">
+                        <span id="metaSize">Size: 0 B</span>
+                        <span id="metaOps">Ops: 0</span>
+                        <span id="metaFps">FPS: 60</span>
+                    </div>
+                </div>
+
+                <!-- Document Size & Structure Statistics Card -->
+                <div class="stats-container" id="statsContainer">
+                    <div class="stats-header">
+                        <span class="stats-title">📊 Document Structure & Size Breakdown</span>
+                        <span id="statsTotalSizeBadge" class="badge">0 B</span>
+                    </div>
+
+                    <!-- Visual Byte Distribution Bar -->
+                    <div class="byte-bar-wrapper" id="byteBarWrapper" title="Byte Distribution across Operation Categories">
+                        <div class="byte-bar-segment" id="segHeader" style="width:0%; background:#64748b;" title="Header"></div>
+                        <div class="byte-bar-segment" id="segLayout" style="width:0%; background:#10b981;" title="Layout"></div>
+                        <div class="byte-bar-segment" id="segData" style="width:0%; background:#fbbf24;" title="Data & Vars"></div>
+                        <div class="byte-bar-segment" id="segDraw" style="width:0%; background:#c084fc;" title="Draw & Paint"></div>
+                        <div class="byte-bar-segment" id="segModifier" style="width:0%; background:#f43f5e;" title="Modifiers"></div>
+                    </div>
+
+                    <!-- Category Legend -->
+                    <div class="byte-legend">
+                        <div class="legend-item"><span class="legend-dot" style="background:#64748b;"></span> Header</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Layout</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;"></span> Data & Vars</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#c084fc;"></span> Draw</div>
+                        <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span> Modifiers</div>
+                    </div>
+
+                    <!-- KPI Tiles Grid -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-label">Components</div>
+                            <div class="kpi-value" id="kpiComponents">0</div>
+                            <div class="kpi-sub" id="kpiTreeDepthSub">Depth: 0</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Data Ops</div>
+                            <div class="kpi-value" id="kpiDataSize" style="color:var(--accent-amber);">0 B</div>
+                            <div class="kpi-sub" id="kpiDataSub">0 ops (0%)</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Layout Ops</div>
+                            <div class="kpi-value" id="kpiLayoutSize" style="color:var(--accent-emerald);">0 B</div>
+                            <div class="kpi-sub" id="kpiLayoutSub">0 ops (0%)</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Draw Cmds</div>
+                            <div class="kpi-value" id="kpiDrawSize" style="color:var(--accent-purple);">0 B</div>
+                            <div class="kpi-sub" id="kpiDrawSub">0 ops (0%)</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Modifiers</div>
+                            <div class="kpi-value" id="kpiModifierSize" style="color:var(--accent-rose);">0 B</div>
+                            <div class="kpi-sub" id="kpiModifierSub">0 ops (0%)</div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-label">Total Size</div>
+                            <div class="kpi-value" id="kpiTotalSize" style="color:var(--accent-blue);">0 B</div>
+                            <div class="kpi-sub" id="kpiTotalSub">0 ops total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- JSON Editor Drawer -->
+                <div class="json-drawer">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">JSON Source & Recompiler:</span>
+                        <button class="btn" style="padding:3px 10px; font-size:0.75rem;" onclick="recompileJsonInput()">⚡ Recompile JSON</button>
+                    </div>
+                    <textarea id="jsonTextarea" placeholder="JSON RemoteCompose document representation will appear here..."></textarea>
+                    <div class="status-msg" id="compileStatusMsg"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 2: Commands Disassembly -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">📜 Commands List (Disassembly)</div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button id="toggleCmdModeBtn" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleCmdDisplayMode()" title="Toggle Compact (Indented) vs Detailed Mode">📋 Compact</button>
+                    <span id="cmdCountBadge" class="badge">0 Ops</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <input type="text" class="search-box" id="cmdSearchInput" placeholder="🔍 Search opcode, name, or offset..." oninput="filterCommands()">
+                <div id="commandsListContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No commands loaded yet. Drop a .rc file or select a sample demo to inspect binary operations.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel 3: Component Tree -->
+        <div class="panel">
+            <div class="panel-header">
+                <div class="panel-title">🌳 Component Hierarchy Tree</div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllTree(true)">Expand All</button>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllTree(false)">Collapse All</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="componentTreeContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No component tree available. Load a .rc file with layout components.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embedded Sample Demos -->
+    <script>
+        const SAMPLE_DEMOS = {
+            interactive: {
+                name: "Interactive Box (Click & Text)",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "type": "Box",
+                        "modifiers": [
+                            { "type": "Background", "c": "#0F172A" },
+                            { "type": "Padding", "all": 24 }
+                        ],
+                        "horizontalAlignment": "center",
+                        "verticalAlignment": "center",
+                        "children": [
+                            {
+                                "type": "Box",
+                                "modifiers": [
+                                    { "type": "Width", "v": 240 },
+                                    { "type": "Height", "v": 120 },
+                                    { "type": "Background", "c": "#1E293B" },
+                                    { "type": "Border", "width": 2, "color": "#38BDF8", "cornerRadius": 16 },
+                                    { "type": "Padding", "all": 16 },
+                                    { "type": "Click", "id": 777 }
+                                ],
+                                "children": [
+                                    {
+                                        "type": "CoreText",
+                                        "text": "Click Interactive Box!",
+                                        "textSize": 18,
+                                        "color": "#38BDF8"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            },
+            clock: {
+                name: "Clock Sample (Animated Hands)",
+                json: {
+                    "header": { "width": 400, "height": 400, "fps": 60 },
+                    "root": {
+                        "box": {
+                            "modifiers": [
+                                "fillMaxWidth",
+                                "fillMaxHeight",
+                                { "background": "#0F172A" }
+                            ],
+                            "children": [
+                                {
+                                    "canvas": {
+                                        "modifiers": ["fillMaxWidth", "fillMaxHeight"],
+                                        "commands": [
+                                            { "variable": { "name": "cx", "value": "componentWidth() / 2.0", "commit": true } },
+                                            { "variable": { "name": "cy", "value": "componentHeight() / 2.0", "commit": true } },
+                                            { "variable": { "name": "secAngle", "value": "continuousSec() * 6.0", "commit": true } },
+                                            { "paint": { "color": "#1E293B", "style": "fill" } },
+                                            { "drawCircle": { "cx": "@vars.cx", "cy": "@vars.cy", "radius": 150 } },
+                                            { "paint": { "color": "#38BDF8", "style": "stroke", "strokeWidth": 6.0 } },
+                                            { "drawCircle": { "cx": "@vars.cx", "cy": "@vars.cy", "radius": 150 } },
+                                            { "paint": { "color": "#EF4444", "style": "stroke", "strokeWidth": 4.0 } },
+                                            {
+                                                "save": {
+                                                    "commands": [
+                                                        { "rotate": { "angle": "@vars.secAngle", "pivotX": "@vars.cx", "pivotY": "@vars.cy" } },
+                                                        { "drawLine": { "x1": "@vars.cx", "y1": "@vars.cy", "x2": "@vars.cx", "y2": "@vars.cy - 120" } }
+                                                    ]
+                                                }
+                                            },
+                                            { "paint": { "color": "#F8FAFC", "style": "fill" } },
+                                            { "drawCircle": { "cx": "@vars.cx", "cy": "@vars.cy", "radius": 8 } }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            boxlayout: {
+                name: "BoxLayout Container",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "box": {
+                            "modifiers": [
+                                "fillMaxSize",
+                                { "background": "#0f172a" },
+                                { "border": { "width": 3, "color": "#38bdf8", "cornerRadius": 16 } },
+                                { "padding": 24 }
+                            ],
+                            "horizontalAlignment": "center",
+                            "verticalAlignment": "center",
+                            "children": [
+                                {
+                                    "box": {
+                                        "modifiers": [
+                                            { "background": "#1e293b" },
+                                            { "border": { "width": 2, "color": "#38bdf8", "cornerRadius": 12 } },
+                                            { "padding": 20 }
+                                        ],
+                                        "children": [
+                                            {
+                                                "text": { "text": "BoxLayout Container", "textSize": 20, "color": "#38bdf8" }
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            columnlayout: {
+                name: "ColumnLayout & Alignment",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "column": {
+                            "modifiers": [
+                                "fillMaxSize",
+                                { "background": "#0f172a" },
+                                { "padding": 24 }
+                            ],
+                            "horizontalAlignment": "center",
+                            "verticalArrangement": "spaceEvenly",
+                            "children": [
+                                {
+                                    "text": { "text": "Top Item", "textSize": 18, "color": "#38bdf8" }
+                                },
+                                {
+                                    "text": { "text": "Middle Item", "textSize": 18, "color": "#10b981" }
+                                },
+                                {
+                                    "text": { "text": "Bottom Item", "textSize": 18, "color": "#fbbf24" }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            fitbox: {
+                name: "FitBox Layout",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "type": "FitBox",
+                        "modifiers": [
+                            { "type": "Background", "c": "#0f172a" },
+                            { "type": "Padding", "all": 20 }
+                        ],
+                        "children": [
+                            {
+                                "type": "CoreText",
+                                "text": "Scalable FitBox Text",
+                                "color": "#38bdf8",
+                                "textSize": 24
+                            }
+                        ]
+                    }
+                }
+            },
+            rotate: {
+                name: "Rotate Animation (Matrix)",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "type": "canvas",
+                        "modifiers": ["fillMaxSize"],
+                        "commands": [
+                            { "variable": { "name": "animAngle", "value": "time * 45" } },
+                            { "matrixSave": {} },
+                            { "matrixRotate": { "angle": "$animAngle", "pivotX": 200, "pivotY": 200 } },
+                            { "setColor": { "color": "#38bdf8" } },
+                            { "drawRect": { "left": 120, "top": 120, "right": 280, "bottom": 280 } },
+                            { "matrixRestore": {} }
+                        ]
+                    }
+                }
+            },
+            simple: {
+                name: "Simple Column & Row Layout",
+                json: {
+                    "header": { "width": 400, "height": 400 },
+                    "root": {
+                        "type": "Column",
+                        "modifiers": [
+                            { "type": "Padding", "l": 16, "t": 16, "r": 16, "b": 16 },
+                            { "type": "Background", "c": "#0f172a" }
+                        ],
+                        "children": [
+                            {
+                                "type": "Row",
+                                "modifiers": [
+                                    { "type": "Height", "v": 80 },
+                                    { "type": "Width", "v": "FILL" }
+                                ],
+                                "children": [
+                                    {
+                                        "type": "CoreText",
+                                        "text": "Header Row",
+                                        "color": "#38bdf8",
+                                        "textSize": 20
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            }
+        };
+
+        // App Global State
+        let currentPlayer = null;
+        let currentDocument = null;
+        let currentBuffer = null;
+        let currentParsedOps = [];
+        let canvasBgWhite = true;
+
+        // Window & Drop Zone Level Drag & Drop (Allows dropping .rc file ANYWHERE on screen)
+        const dropZone = document.getElementById('dropZone');
+        ['dragenter', 'dragover'].forEach(eventName => {
+            window.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dropZone) dropZone.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            window.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (dropZone) dropZone.classList.remove('dragover');
+            }, false);
+        });
+
+        window.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const dt = e.dataTransfer;
+            if (dt && dt.files && dt.files.length > 0) {
+                processFile(dt.files[0]);
+            }
+        });
+
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files && files.length > 0) {
+                processFile(files[0]);
+                event.target.value = '';
+            }
+        }
+
+        function processFile(file) {
+            if (!file) return;
+            const fileName = file.name || 'file.rc';
+            const isJson = fileName.toLowerCase().endsWith('.json');
+            const reader = new FileReader();
+
+            showCompileStatus(`⏳ Loading ${fileName}...`, true);
+
+            if (isJson) {
+                reader.onload = (e) => {
+                    try {
+                        const jsonText = e.target.result;
+                        document.getElementById('jsonTextarea').value = jsonText;
+                        const jsonObj = JSON.parse(jsonText);
+                        compileAndLoadJson(jsonObj, fileName);
+                    } catch (err) {
+                        showCompileStatus(`❌ JSON Parse Error: ${err.message}`, false);
+                    }
+                };
+                reader.onerror = () => showCompileStatus('❌ Failed to read JSON file.', false);
+                reader.readAsText(file);
+            } else {
+                reader.onload = (e) => {
+                    try {
+                        const arrayBuffer = e.target.result;
+                        showCompileStatus(`✓ Loaded ${fileName} (${arrayBuffer.byteLength} B)`, true);
+                        loadRcArrayBuffer(arrayBuffer, fileName);
+                    } catch (err) {
+                        showCompileStatus(`❌ Error loading .rc file: ${err.message}`, false);
+                    }
+                };
+                reader.onerror = () => showCompileStatus('❌ Failed to read .rc binary file.', false);
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function loadSelectedDemo() {
+            const select = document.getElementById('demoSelect');
+            const key = select.value;
+            if (!key || !SAMPLE_DEMOS[key]) return;
+
+            const demo = SAMPLE_DEMOS[key];
+            const jsonText = JSON.stringify(demo.json, null, 2);
+            document.getElementById('jsonTextarea').value = jsonText;
+            compileAndLoadJson(demo.json, demo.name);
+        }
+
+        function decompileDocumentToJson(doc) {
+            if (!doc) return {};
+            const docWidth = doc.getWidth ? doc.getWidth() : 300;
+            const docHeight = doc.getHeight ? doc.getHeight() : 300;
+
+            function decompileNode(op) {
+                if (!op) return null;
+                const name = getOpName(op);
+                if (name === 'LayoutComponentContent' || op.OP_CODE === 201) return null;
+                const node = { type: name };
+
+                if (typeof op.getId === 'function') {
+                    const id = op.getId();
+                    if (id !== undefined && id !== null) node.id = id;
+                }
+
+                const text = op.mText || (op.mTextId ? doc.getText(op.mTextId) : null);
+                if (text) node.text = text;
+
+                const children = getEffectiveChildren(op);
+                const childComponents = [];
+                const modifiers = [];
+                const drawOps = [];
+
+                children.forEach(child => {
+                    const cName = getOpName(child);
+                    if (cName === 'ContainerEnd' || cName === 'Mi') return;
+
+                    if (isContainerOp(child)) {
+                        const childJson = decompileNode(child);
+                        if (childJson) childComponents.push(childJson);
+                    } else if (isModifierOp(child)) {
+                        const modDesc = typeof child.deepToString === 'function' ? child.deepToString("").trim() : cName;
+                        modifiers.push(modDesc || cName);
+                    } else {
+                        const dDesc = typeof child.deepToString === 'function' ? child.deepToString("").trim() : cName;
+                        drawOps.push(dDesc || cName);
+                    }
+                });
+
+                if (modifiers.length > 0) node.modifiers = modifiers;
+                if (childComponents.length > 0) node.children = childComponents;
+                if (drawOps.length > 0) node.drawOperations = drawOps;
+
+                return node;
+            }
+
+            const rootLayout = doc.getRootLayoutComponent();
+            const topOps = doc.getOperations() || [];
+
+            let rootNode = null;
+            if (rootLayout) {
+                rootNode = decompileNode(rootLayout);
+            } else if (topOps.length > 0) {
+                const containers = topOps.filter(op => isContainerOp(op)).map(op => decompileNode(op)).filter(Boolean);
+                rootNode = containers.length === 1 ? containers[0] : (containers.length > 0 ? containers : null);
+            }
+
+            return {
+                header: { width: docWidth, height: docHeight },
+                root: rootNode || { type: "CanvasContent" }
+            };
+        }
+
+        function compileAndLoadJson(jsonObj, name) {
+            try {
+                if (typeof RemoteComposeSerializer === 'undefined') {
+                    showCompileStatus('❌ RemoteComposeSerializer runtime not loaded.', false);
+                    return;
+                }
+                const serializer = new RemoteComposeSerializer();
+                const u8 = serializer.serialize(jsonObj);
+                const buf = u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength);
+                showCompileStatus(`✓ Compiled ${u8.length} B binary stream`, true);
+                loadRcArrayBuffer(buf, name || 'compiled.rc', jsonObj);
+            } catch (err) {
+                showCompileStatus(`❌ Serialization Error: ${err.message}`, false);
+            }
+        }
+
+        function recompileJsonInput() {
+            const text = document.getElementById('jsonTextarea').value;
+            try {
+                const jsonObj = JSON.parse(text);
+                compileAndLoadJson(jsonObj, 'custom.rc');
+            } catch (err) {
+                showCompileStatus(`❌ JSON Syntax Error: ${err.message}`, false);
+            }
+        }
+
+        function getAllOperationsFlat(doc, u8) {
+            if (!doc) return [];
+            const topOps = doc.getOperations() || [];
+            const result = [];
+            const visited = new Set();
+
+            function visit(op) {
+                if (!op || visited.has(op)) return;
+                visited.add(op);
+                result.push(op);
+                if (typeof op.getList === 'function') {
+                    const list = op.getList();
+                    if (Array.isArray(list)) {
+                        list.forEach(child => visit(child));
+                    }
+                }
+            }
+
+            topOps.forEach(op => visit(op));
+
+            if (u8 && u8.length > 0) {
+                const covered = new Array(u8.length).fill(false);
+                result.forEach(op => {
+                    if (op._byteStart !== undefined && op._byteEnd !== undefined) {
+                        for (let i = op._byteStart; i < op._byteEnd; i++) {
+                            covered[i] = true;
+                        }
+                    }
+                });
+
+                for (let i = 0; i < u8.length; i++) {
+                    if (!covered[i] && u8[i] === 214) {
+                        result.push({
+                            OP_CODE: 214,
+                            _byteStart: i,
+                            _byteEnd: i + 1,
+                            deepToString: () => "ContainerEnd",
+                            constructor: { name: "ContainerEnd", OP_CODE: 214 }
+                        });
+                        covered[i] = true;
+                    }
+                }
+
+                result.sort((a, b) => (a._byteStart ?? 0) - (b._byteStart ?? 0));
+            }
+
+            return result;
+        }
+
+        async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
+            currentBuffer = arrayBuffer;
+            const u8 = new Uint8Array(arrayBuffer);
+
+            // Update UI Header Stats
+            const badgeEl = document.getElementById('fileStatusBadge');
+            if (badgeEl) badgeEl.textContent = name;
+            const sizeEl = document.getElementById('metaSize');
+            if (sizeEl) sizeEl.textContent = `Size: ${u8.length} B`;
+
+            const canvas = document.getElementById('previewCanvas');
+            if (currentPlayer) {
+                currentPlayer.stop();
+            }
+
+            if (typeof RC !== 'undefined' && typeof RC.RcdPlayer !== 'undefined') {
+                currentPlayer = new RC.RcdPlayer(canvas);
+                currentDocument = await currentPlayer.loadFromArrayBuffer(arrayBuffer);
+            }
+
+            const docWidth = currentDocument ? currentDocument.getWidth() : 300;
+            const docHeight = currentDocument ? currentDocument.getHeight() : 300;
+            const dimEl = document.getElementById('docDimBadge');
+            if (dimEl) dimEl.textContent = `${docWidth}x${docHeight} px`;
+
+            // Update JSON Textarea Source
+            const jsonTextarea = document.getElementById('jsonTextarea');
+            if (jsonTextarea) {
+                if (sourceJson) {
+                    jsonTextarea.value = typeof sourceJson === 'string' ? sourceJson : JSON.stringify(sourceJson, null, 2);
+                } else if (currentDocument) {
+                    const decompiled = decompileDocumentToJson(currentDocument);
+                    jsonTextarea.value = JSON.stringify(decompiled, null, 2);
+                }
+            }
+
+            // Extract Operations & Component Tree
+            const allOps = currentDocument ? getAllOperationsFlat(currentDocument, u8) : [];
+            const metaOpsEl = document.getElementById('metaOps');
+            if (metaOpsEl) metaOpsEl.textContent = `Ops: ${allOps.length}`;
+            const cmdBadgeEl = document.getElementById('cmdCountBadge');
+            if (cmdBadgeEl) cmdBadgeEl.textContent = `${allOps.length} Ops`;
+
+            renderCommandsList(allOps, u8);
+            renderComponentTree(currentDocument);
+            renderDocumentStatistics(currentDocument, allOps, u8);
+        }
+
+        function renderDocumentStatistics(doc, ops, u8) {
+            const totalBytes = u8 ? u8.length : 0;
+            const sizeBadge = document.getElementById('statsTotalSizeBadge');
+            const totalVal = document.getElementById('kpiTotalSize');
+            const totalSub = document.getElementById('kpiTotalSub');
+
+            if (sizeBadge) sizeBadge.textContent = `${totalBytes} B`;
+            if (totalVal) totalVal.textContent = `${totalBytes} B`;
+            if (totalSub) totalSub.textContent = `${ops ? ops.length : 0} ops total`;
+
+            if (!ops || ops.length === 0 || !totalBytes) {
+                resetStatsUI();
+                return;
+            }
+
+            let headerB = 0, headerCount = 0;
+            let layoutB = 0, layoutCount = 0;
+            let dataB = 0, dataCount = 0;
+            let drawB = 0, drawCount = 0;
+            let modB = 0, modCount = 0;
+
+            ops.forEach(op => {
+                const startOff = op._byteStart ?? 0;
+                const endOff = op._byteEnd ?? 0;
+                const sizeB = endOff > startOff ? endOff - startOff : 0;
+                const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor.OP_CODE ?? 0);
+                const name = getOpName(op);
+
+                if (opCode === 0 || name === 'Header') {
+                    headerB += sizeB;
+                    headerCount++;
+                } else if ((opCode >= 200 && opCode <= 214) || name.includes('Layout') || name === 'ContainerEnd' || name === 'Mi') {
+                    layoutB += sizeB;
+                    layoutCount++;
+                } else if ((opCode >= 100 && opCode <= 106) || opCode === 81 || opCode === 176 || opCode === 189 || name.includes('TextData') || name.includes('Expression') || name.includes('Variable') || name.includes('Data') || name.includes('Bitmap') || name.includes('PathData') || name.includes('FontData')) {
+                    dataB += sizeB;
+                    dataCount++;
+                } else if (isModifierOp(op)) {
+                    modB += sizeB;
+                    modCount++;
+                } else {
+                    drawB += sizeB;
+                    drawCount++;
+                }
+            });
+
+            const headerPct = totalBytes ? Math.round((headerB / totalBytes) * 100) : 0;
+            const layoutPct = totalBytes ? Math.round((layoutB / totalBytes) * 100) : 0;
+            const dataPct = totalBytes ? Math.round((dataB / totalBytes) * 100) : 0;
+            const drawPct = totalBytes ? Math.round((drawB / totalBytes) * 100) : 0;
+            const modPct = totalBytes ? Math.round((modB / totalBytes) * 100) : 0;
+
+            // Update Progress Segments
+            setSegment('segHeader', headerPct, `Header: ${headerB} B (${headerPct}%)`);
+            setSegment('segLayout', layoutPct, `Layout: ${layoutB} B (${layoutPct}%)`);
+            setSegment('segData', dataPct, `Data & Vars: ${dataB} B (${dataPct}%)`);
+            setSegment('segDraw', drawPct, `Draw & Paint: ${drawB} B (${drawPct}%)`);
+            setSegment('segModifier', modPct, `Modifiers: ${modB} B (${modPct}%)`);
+
+            // Update KPI Card Values
+            setKpi('kpiDataSize', `${dataB} B`, 'kpiDataSub', `${dataCount} ops (${dataPct}%)`);
+            setKpi('kpiLayoutSize', `${layoutB} B`, 'kpiLayoutSub', `${layoutCount} ops (${layoutPct}%)`);
+            setKpi('kpiDrawSize', `${drawB} B`, 'kpiDrawSub', `${drawCount} ops (${drawPct}%)`);
+            setKpi('kpiModifierSize', `${modB} B`, 'kpiModifierSub', `${modCount} ops (${modPct}%)`);
+
+            // Tree metrics (components count & depth)
+            const treeMetrics = computeTreeMetrics(doc);
+            const compEl = document.getElementById('kpiComponents');
+            const depthEl = document.getElementById('kpiTreeDepthSub');
+            if (compEl) compEl.textContent = treeMetrics.totalComponents;
+            if (depthEl) depthEl.textContent = `Depth: ${treeMetrics.maxDepth}`;
+        }
+
+        function setSegment(id, pct, title) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.width = `${pct}%`;
+                el.title = title;
+            }
+        }
+
+        function setKpi(valId, valText, subId, subText) {
+            const vEl = document.getElementById(valId);
+            const sEl = document.getElementById(subId);
+            if (vEl) vEl.textContent = valText;
+            if (sEl) sEl.textContent = subText;
+        }
+
+        function computeTreeMetrics(doc) {
+            if (!doc) return { totalComponents: 0, maxDepth: 0 };
+            const root = doc.getRootLayoutComponent();
+            let totalComponents = 0;
+            let maxDepth = 0;
+
+            function traverse(op, depth) {
+                if (!op) return;
+                const name = getOpName(op);
+                if (isContainerOp(op) || name.includes('Text') || name.includes('Canvas')) {
+                    totalComponents++;
+                    if (depth > maxDepth) maxDepth = depth;
+                }
+
+                if (typeof op.getList === 'function') {
+                    const list = op.getList();
+                    if (Array.isArray(list)) {
+                        list.forEach(child => {
+                            if (isContainerOp(child)) {
+                                traverse(child, depth + 1);
+                            } else if (!isModifierOp(child) && name !== 'ContainerEnd' && name !== 'Mi') {
+                                traverse(child, depth);
+                            }
+                        });
+                    }
+                }
+            }
+
+            if (root) {
+                traverse(root, 1);
+            } else {
+                const topOps = doc.getOperations() || [];
+                topOps.forEach(op => {
+                    if (isContainerOp(op)) traverse(op, 1);
+                });
+            }
+
+            return { totalComponents, maxDepth };
+        }
+
+        function resetStatsUI() {
+            setSegment('segHeader', 0, '');
+            setSegment('segLayout', 0, '');
+            setSegment('segData', 0, '');
+            setSegment('segDraw', 0, '');
+            setSegment('segModifier', 0, '');
+            setKpi('kpiDataSize', '0 B', 'kpiDataSub', '0 ops (0%)');
+            setKpi('kpiLayoutSize', '0 B', 'kpiLayoutSub', '0 ops (0%)');
+            setKpi('kpiDrawSize', '0 B', 'kpiDrawSub', '0 ops (0%)');
+            setKpi('kpiModifierSize', '0 B', 'kpiModifierSub', '0 ops (0%)');
+            const compEl = document.getElementById('kpiComponents');
+            const depthEl = document.getElementById('kpiTreeDepthSub');
+            if (compEl) compEl.textContent = '0';
+            if (depthEl) depthEl.textContent = 'Depth: 0';
+        }
+
+        function getOpName(op) {
+            if (!op) return 'Operation';
+            if (typeof op.deepToString === 'function') {
+                const str = op.deepToString("").trim();
+                const match = str.match(/^([A-Za-z0-9_]+)/);
+                if (match && match[1]) return match[1];
+            }
+            return op.constructor.name || 'Operation';
+        }
+
+        function isContainerOp(op) {
+            if (!op) return false;
+            const name = getOpName(op);
+            return typeof op.getList === 'function' && 
+                   name !== 'ContainerEnd' && name !== 'Mi' && op.OP_CODE !== 214 &&
+                   name !== 'LayoutComponentContent' && op.OP_CODE !== 201;
+        }
+
+        function isModifierOp(op) {
+            if (!op) return false;
+            const name = getOpName(op);
+            return name.includes('Modifier') || (op.OP_CODE >= 50 && op.OP_CODE <= 90);
+        }
+
+        function getEffectiveChildren(op) {
+            if (!op || typeof op.getList !== 'function') return [];
+            const result = [];
+            const list = op.getList() || [];
+            list.forEach(child => {
+                const name = getOpName(child);
+                if (name === 'LayoutComponentContent' || child.OP_CODE === 201) {
+                    result.push(...getEffectiveChildren(child));
+                } else if (name !== 'ContainerEnd' && name !== 'Mi' && child.OP_CODE !== 214) {
+                    result.push(child);
+                }
+            });
+            return result;
+        }
+
+        let cmdDisplayCompact = true; // Default: Compact (Indented by Container Depth)
+
+        function toggleCmdDisplayMode() {
+            cmdDisplayCompact = !cmdDisplayCompact;
+            const btn = document.getElementById('toggleCmdModeBtn');
+            if (btn) {
+                btn.textContent = cmdDisplayCompact ? '📋 Compact' : '🔍 Detailed';
+                btn.title = cmdDisplayCompact ? 'Switch to Detailed Mode' : 'Switch to Compact (Indented) Mode';
+            }
+            if (currentParsedOps) {
+                const u8 = currentBuffer ? new Uint8Array(currentBuffer) : null;
+                renderCommandsList(currentParsedOps, u8);
+            }
+        }
+
+        function renderCommandsList(ops, u8) {
+            const container = document.getElementById('commandsListContainer');
+            if (!ops || ops.length === 0) {
+                container.innerHTML = `<div style="text-align:center; padding:32px; color:var(--text-muted);">No operations found.</div>`;
+                return;
+            }
+
+            currentParsedOps = ops;
+            let html = '';
+            let currentDepth = 0;
+
+            ops.forEach((op, idx) => {
+                const opName = getOpName(op);
+                const opId = typeof op.getId === 'function' ? op.getId() : (op.mId ?? null);
+                const startOff = op._byteStart ?? 0;
+                const endOff = op._byteEnd ?? 0;
+                const sizeB = endOff > startOff ? endOff - startOff : 0;
+                const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
+                const hexCode = '0x' + opCode.toString(16).padStart(2, '0').toUpperCase();
+                const desc = typeof op.deepToString === 'function' ? op.deepToString("") : (op.toString ? op.toString() : "");
+
+                let itemDepth = currentDepth;
+                if (opCode === 214 || opName === 'ContainerEnd') {
+                    currentDepth = Math.max(0, currentDepth - 1);
+                    itemDepth = currentDepth;
+                } else if (isContainerOp(op) || [200, 201, 202, 203, 204, 205, 207, 59].includes(opCode)) {
+                    currentDepth++;
+                }
+
+                const textSnippet = op.mText || (op.mTextId ? currentDocument?.getText(op.mTextId) : null);
+
+                if (cmdDisplayCompact) {
+                    // COMPACT / INDENTED MODE (Default)
+                    const indentPrefix = '│ '.repeat(itemDepth);
+                    html += `
+                        <div class="command-compact-row" id="cmdCard-${idx}" onclick="selectCommandCard(${idx}, ${opId})">
+                            <div class="cmd-compact-left">
+                                <span class="cmd-idx">#${idx + 1}</span>
+                                ${itemDepth > 0 ? `<span class="cmd-indent-guide">${escapeHtml(indentPrefix)}</span>` : ''}
+                                <span class="op-badge" style="${opCode === 214 ? 'background:rgba(255,255,255,0.06); color:var(--text-muted);' : ''}">${hexCode}</span>
+                                <span class="op-name" style="${opCode === 214 ? 'color:var(--text-muted); font-style:italic;' : ''}">${opName}</span>
+                                ${opId !== undefined && opId !== null && opCode !== 214 ? `<span style="font-size:0.72rem; color:var(--accent-emerald);">[ID: ${opId}]</span>` : ''}
+                                ${textSnippet ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml(textSnippet)}"</span>` : ''}
+                            </div>
+                            <span class="op-offset">Off ${startOff}–${endOff} (${sizeB} B)</span>
+                        </div>
+                    `;
+                } else {
+                    // DETAILED / HEX MODE
+                    let bytesHex = '';
+                    if (u8 && endOff > startOff && endOff <= u8.length) {
+                        const slice = u8.subarray(startOff, Math.min(endOff, u8.length));
+                        bytesHex = Array.from(slice).map(b => '0x' + b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+                    }
+
+                    html += `
+                        <div class="command-card" id="cmdCard-${idx}" onclick="selectCommandCard(${idx}, ${opId})">
+                            <div class="command-header">
+                                <div class="command-op">
+                                    <span class="cmd-idx">#${idx + 1}</span>
+                                    <span class="op-badge">${hexCode}</span>
+                                    <span class="op-name">${opName}</span>
+                                    ${opId !== undefined && opId !== null ? `<span style="font-size:0.75rem; color:var(--accent-emerald);">[ID: ${opId}]</span>` : ''}
+                                </div>
+                                <span class="op-offset">Off ${startOff}–${endOff} (${sizeB} B)</span>
+                            </div>
+                            ${desc ? `<div class="op-detail">${escapeHtml(desc)}</div>` : ''}
+                            ${bytesHex ? `<div class="op-bytes"><span>HEX:</span> ${bytesHex}</div>` : ''}
+                        </div>
+                    `;
+                }
+            });
+
+            container.innerHTML = html;
+        }
+
+        function renderComponentTree(doc) {
+            const container = document.getElementById('componentTreeContainer');
+            if (!doc) {
+                container.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">No document parsed.</div>`;
+                return;
+            }
+
+            const rootLayout = doc.getRootLayoutComponent();
+            const topOps = doc.getOperations();
+
+            let html = '';
+
+            if (rootLayout) {
+                html += buildTreeNodeHtml(rootLayout, 0);
+            } else if (topOps && topOps.length > 0) {
+                topOps.forEach(op => {
+                    if (isContainerOp(op)) {
+                        html += buildTreeNodeHtml(op, 0);
+                    }
+                });
+            }
+
+            if (!html) {
+                html = `<div style="padding:16px; color:var(--text-muted); font-size:0.85rem;">Document contains drawing primitives without layout containers.</div>`;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function buildTreeNodeHtml(op, depth) {
+            const name = getOpName(op);
+            const id = typeof op.getId === 'function' ? op.getId() : (op.mId ?? null);
+            const width = typeof op.getWidth === 'function' ? op.getWidth() : (op.mWidth ?? null);
+            const height = typeof op.getHeight === 'function' ? op.getHeight() : (op.mHeight ?? null);
+            const textContent = op.mText || (op.mTextId ? currentDocument?.getText(op.mTextId) : null);
+
+            const children = getEffectiveChildren(op);
+            const childComponents = [];
+            const modifiers = [];
+            const drawOps = [];
+
+            children.forEach(child => {
+                if (isContainerOp(child)) {
+                    childComponents.push(child);
+                } else if (isModifierOp(child)) {
+                    modifiers.push(child);
+                } else {
+                    drawOps.push(child);
+                }
+            });
+
+            const hasChildren = childComponents.length > 0 || modifiers.length > 0 || drawOps.length > 0;
+            const nodeId = `treeNode-${Math.random().toString(36).substr(2, 9)}`;
+
+            let html = `
+                <div class="tree-node" style="margin-left: ${depth * 12}px;">
+                    <div class="tree-node-content" onclick="selectTreeNode('${nodeId}', ${id})">
+                        ${hasChildren ? `<span class="caret caret-down" onclick="toggleTreeNode(event, '${nodeId}')">▶</span>` : '<span style="width:12px;"></span>'}
+                        <span class="tree-icon">${getComponentIcon(name)}</span>
+                        <span class="tree-tag">${name}</span>
+                        ${id !== null && id !== undefined ? `<span class="tree-id">ID:${id}</span>` : ''}
+                        ${width && height ? `<span class="tree-dim">(${width}x${height})</span>` : ''}
+                        ${textContent ? `<span style="color:var(--accent-amber); font-style:italic;">"${escapeHtml(textContent)}"</span>` : ''}
+                    </div>
+                    <div id="${nodeId}-children">
+            `;
+
+            // Render Modifiers (Collapsed by default under a toggle)
+            if (modifiers.length > 0) {
+                html += `
+                    <div class="tree-modifier-toggle" onclick="toggleModifiers(event, '${nodeId}')" style="margin-left: 12px; margin-top: 2px; margin-bottom: 2px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); user-select: none; border-radius: 4px;">
+                        <span class="caret caret-modifiers-${nodeId}">▶</span>
+                        <span>🎨</span>
+                        <strong>Modifiers (${modifiers.length})</strong>
+                    </div>
+                    <div id="${nodeId}-modifiers" class="nested-collapsed" style="margin-left: 24px; border-left: 1px dashed var(--border-color); padding-left: 6px;">
+                `;
+                modifiers.forEach(mod => {
+                    const modName = getOpName(mod).replace('ModifierOperation', '').replace('Modifier', '');
+                    const modDesc = typeof mod.deepToString === 'function' ? mod.deepToString("") : "";
+                    html += `
+                        <div class="tree-modifier">
+                            <strong>${modName}:</strong>
+                            <span style="font-family:var(--code-font); font-size:0.75rem;">${escapeHtml(modDesc)}</span>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+            }
+
+            // Render Children Components
+            childComponents.forEach(child => {
+                html += buildTreeNodeHtml(child, depth + 1);
+            });
+
+            // Render Draw Operations inside Container
+            drawOps.forEach(dOp => {
+                const dName = getOpName(dOp);
+                if (dName !== 'ContainerEnd' && dName !== 'Mi') {
+                    const dDesc = typeof dOp.deepToString === 'function' ? dOp.deepToString("") : "";
+                    html += `
+                        <div class="tree-modifier" style="color:var(--accent-blue);">
+                            <span>🖌️</span>
+                            <strong>${dName}</strong>
+                            <span style="font-family:var(--code-font); font-size:0.75rem; color:var(--text-muted);">${escapeHtml(dDesc)}</span>
+                        </div>
+                    `;
+                }
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            return html;
+        }
+
+        function getComponentIcon(name) {
+            if (name.includes('Box')) return '📦';
+            if (name.includes('Column')) return '📊';
+            if (name.includes('Row')) return '⏸️';
+            if (name.includes('Text')) return '🔤';
+            if (name.includes('Canvas')) return '🎨';
+            if (name.includes('Image') || name.includes('Bitmap')) return '🖼️';
+            return '🧩';
+        }
+
+        function toggleTreeNode(event, nodeId) {
+            event.stopPropagation();
+            const caret = event.target;
+            const container = document.getElementById(`${nodeId}-children`);
+            if (!container) return;
+
+            if (container.classList.contains('nested-collapsed')) {
+                container.classList.remove('nested-collapsed');
+                caret.classList.add('caret-down');
+            } else {
+                container.classList.add('nested-collapsed');
+                caret.classList.remove('caret-down');
+            }
+        }
+
+        function toggleModifiers(event, nodeId) {
+            event.stopPropagation();
+            const container = document.getElementById(`${nodeId}-modifiers`);
+            const caret = document.querySelector(`.caret-modifiers-${nodeId}`);
+            if (!container) return;
+
+            if (container.classList.contains('nested-collapsed')) {
+                container.classList.remove('nested-collapsed');
+                if (caret) caret.classList.add('caret-down');
+            } else {
+                container.classList.add('nested-collapsed');
+                if (caret) caret.classList.remove('caret-down');
+            }
+        }
+
+        function expandAllTree(expand) {
+            const containers = document.querySelectorAll('[id$="-children"]');
+            const carets = document.querySelectorAll('.caret');
+
+            containers.forEach(c => {
+                if (expand) c.classList.remove('nested-collapsed');
+                else c.classList.add('nested-collapsed');
+            });
+
+            carets.forEach(c => {
+                if (expand) c.classList.add('caret-down');
+                else c.classList.remove('caret-down');
+            });
+        }
+
+        function selectCommandCard(idx, opId) {
+            document.querySelectorAll('.command-card').forEach(c => c.classList.remove('selected'));
+            const card = document.getElementById(`cmdCard-${idx}`);
+            if (card) card.classList.add('selected');
+        }
+
+        function selectTreeNode(nodeId, opId) {
+            document.querySelectorAll('.tree-node-content').forEach(n => n.classList.remove('selected'));
+            const node = event.currentTarget;
+            if (node) node.classList.add('selected');
+
+            // Scroll command card into view if opId matched
+            if (opId !== undefined && currentParsedOps) {
+                const targetIdx = currentParsedOps.findIndex(op => (typeof op.getId === 'function' ? op.getId() : op.mId) === opId);
+                if (targetIdx >= 0) {
+                    selectCommandCard(targetIdx, opId);
+                    const cmdCard = document.getElementById(`cmdCard-${targetIdx}`);
+                    if (cmdCard) cmdCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+        }
+
+        function filterCommands() {
+            const query = document.getElementById('cmdSearchInput').value.toLowerCase();
+            document.querySelectorAll('.command-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                card.style.display = text.includes(query) ? 'block' : 'none';
+            });
+        }
+
+        function toggleCanvasBg() {
+            const canvas = document.getElementById('previewCanvas');
+            canvasBgWhite = !canvasBgWhite;
+            canvas.style.background = canvasBgWhite ? '#ffffff' : '#0f172a';
+        }
+
+        function exportRcFile() {
+            if (!currentBuffer) {
+                alert('No binary .rc buffer to download.');
+                return;
+            }
+            const blob = new Blob([currentBuffer], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'document.rc';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function showCompileStatus(msg, isSuccess) {
+            const el = document.getElementById('compileStatusMsg');
+            el.style.color = isSuccess ? 'var(--accent-emerald)' : 'var(--accent-rose)';
+            el.textContent = msg;
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        // Auto load first sample demo on startup
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('demoSelect').value = 'interactive';
+            loadSelectedDemo();
+        });
+    </script>
+</body>
+</html>
