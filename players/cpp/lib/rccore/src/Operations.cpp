@@ -154,6 +154,16 @@ void Operations::init() {
     registerReader(MODIFIER_TOUCH_CANCEL, "MODIFIER_TOUCH_CANCEL", ModifierTouchCancel::read);
     registerReader(MODIFIER_SCROLL, "ScrollModifierOperation", ModifierScroll::read);
     registerReader(MODIFIER_RIPPLE, "MODIFIER_RIPPLE", ModifierRipple::read);
+    registerReader(ACCESSIBILITY_SEMANTICS, "ACCESSIBILITY_SEMANTICS",
+                   AccessibilitySemantics::read);
+    registerReader(REFERENCED_OPERATIONS, "REFERENCED_OPERATIONS", ReferencedOperations::read);
+    registerReader(MACRO_FOR_EACH, "MACRO_FOR_EACH", PatternForEach::read);
+    registerReader(INCLUDE_REFERENCED_OPERATIONS, "INCLUDE_REFERENCED_OPERATIONS",
+                   IncludeReferencedOperations::read);
+    registerReader(MACRO_DEFINE, "MACRO_DEFINE", PatternDefine::read);
+    registerReader(MACRO_CALL, "MACRO_CALL", PatternInflation::read);
+    registerReader(MACRO_ARGUMENT, "MACRO_ARGUMENT", PatternArgument::read);
+    registerReader(MACRO_BLOCK, "MACRO_BLOCK", PatternBlock::read);
     registerReader(ANIMATION_SPEC, "ANIMATION_SPEC", AnimationSpec::read);
 
     // ── Other ──────────────────────────────────────────────────────────

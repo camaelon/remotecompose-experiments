@@ -72,6 +72,8 @@ private:
     void applyOperations(RemoteContext& context,
                          std::vector<std::unique_ptr<Operation>>& ops,
                          int theme = -3);
+    static void prunePatternDefinitions(
+            std::vector<std::unique_ptr<Operation>>& ops);
     void registerListenersRecursive(RemoteContext& context,
                                      std::vector<std::unique_ptr<Operation>>& ops);
     void computeScale(float w, float h, float* scaleOutput);

@@ -61,6 +61,12 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
         }
     }
 
+    // A pattern definition must not draw where it is defined — only where it is
+    // called. Until macro expansion exists (see the note on the loom ops in
+    // LayoutOperations.h), drop the bodies so an unexpanded document is missing its
+    // macro content rather than showing one stray copy of every template.
+    prunePatternDefinitions(mOperations);
+
     // Extract dimensions from header if present
     if (!mOperations.empty()) {
         auto* header = dynamic_cast<Header*>(mOperations[0].get());
@@ -74,6 +80,23 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
         }
     }
     return true;
+}
+
+// ── Loom ───────────────────────────────────────────────────────────────
+
+void CoreDocument::prunePatternDefinitions(
+        std::vector<std::unique_ptr<Operation>>& ops) {
+    for (auto& op : ops) {
+        if (!op) continue;
+        // 246 MACRO_DEFINE, 249 MACRO_BLOCK: bodies belong to a call site, not here.
+        if (op->opcode() == 246 || op->opcode() == 249) {
+            op->mChildren.clear();
+            continue;
+        }
+        if (!op->mChildren.empty()) {
+            prunePatternDefinitions(op->mChildren);
+        }
+    }
 }
 
 // ── Listener registration ─────────────────────────────────────────────

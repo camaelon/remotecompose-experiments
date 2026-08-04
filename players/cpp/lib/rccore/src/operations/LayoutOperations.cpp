@@ -196,7 +196,11 @@ static bool isModifierOp(const Operation* op) {
            oc == 59 || oc == 108 || oc == 54 || oc == 211 || oc == 237 ||
            oc == 231 || oc == 232 || oc == 221 || oc == 223 || oc == 219 ||
            oc == 220 || oc == 225 || oc == 226 || oc == 229 || oc == 14 ||
-           oc == 224 || oc == 235 || oc == 228 || oc == 238 || oc == 174;
+           oc == 224 || oc == 235 || oc == 228 || oc == 238 || oc == 174 ||
+           // 243 MODIFIER_DIMENSION_CONSTRAINTS (requiredWidthIn/requiredHeightIn) and
+           // 250 ACCESSIBILITY_SEMANTICS are modifiers too. Omitting them here meant
+           // the switch below never saw them: 243's constraints were silently dropped.
+           oc == 243 || oc == 250;
 }
 
 static bool isLayoutComponent(const Operation* op) {
@@ -278,6 +282,22 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     auto* m = static_cast<ModifierHeightIn*>(child);
                     ls.heightInMin = m->oMin;
                     ls.heightInMax = m->oMax;
+                    break;
+                }
+                case 243: { // ModifierDimensionConstraints
+                    // What `requiredWidthIn` / `requiredHeightIn` compile to. The op was
+                    // read but never consumed here, so the constraints were dropped and
+                    // a component sized only by them wrapped to nothing.
+                    auto* m = static_cast<ModifierDimensionConstraints*>(child);
+                    if (m->constraintType == ModifierDimensionConstraints::HORIZONTAL
+                        || m->constraintType
+                               == ModifierDimensionConstraints::REQUIRED_HORIZONTAL) {
+                        ls.widthInMin = m->minVal;
+                        ls.widthInMax = m->maxVal;
+                    } else {
+                        ls.heightInMin = m->minVal;
+                        ls.heightInMax = m->maxVal;
+                    }
                     break;
                 }
                 case 221: { // ModifierOffset

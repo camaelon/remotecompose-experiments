@@ -146,6 +146,14 @@ public:
     static constexpr int MODIFIER_ALIGN_BY = 237;
     static constexpr int LAYOUT_COMPUTE = 238;
     static constexpr int LAYOUT_FLOW = 240;
+    static constexpr int ACCESSIBILITY_SEMANTICS = 250;
+    static constexpr int REFERENCED_OPERATIONS = 142;
+    static constexpr int MACRO_FOR_EACH = 244;
+    static constexpr int INCLUDE_REFERENCED_OPERATIONS = 245;
+    static constexpr int MACRO_DEFINE = 246;
+    static constexpr int MACRO_CALL = 247;
+    static constexpr int MACRO_ARGUMENT = 248;
+    static constexpr int MACRO_BLOCK = 249;
     static constexpr int SKIP = 241;
     static constexpr int TEXT_STYLE = 242;
     static constexpr int MODIFIER_DIMENSION_CONSTRAINTS = 243;

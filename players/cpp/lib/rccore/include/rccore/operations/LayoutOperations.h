@@ -298,6 +298,8 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     float oSpacedBy = 0;
+    int maxItemsInEachRow = INT32_MAX;
+    int maxLines = INT32_MAX;
 
     std::string name() const override { return "LAYOUT_FLOW"; }
     int opcode() const override { return 240; }
@@ -316,6 +318,11 @@ public:
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
         op->oSpacedBy = op->spacedBy;
+        // FlowLayout.apply() writes these two after spacedBy. Omitting them left the
+        // cursor 8 bytes short, so every operation after a flow was read from the wrong
+        // offset and the whole document rendered blank.
+        op->maxItemsInEachRow = buf.readInt();
+        op->maxLines = buf.readInt();
         ops.push_back(std::move(op));
     }
 };
@@ -739,6 +746,190 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         ops.push_back(std::make_unique<ModifierRipple>());
+    }
+};
+
+// ── ACCESSIBILITY_SEMANTICS (250) ──────────────────────────────────────
+// Java source: core/semantics/CoreSemantics.java
+//   INT contentDescriptionId, BYTE role, INT textId, INT stateDescriptionId,
+//   BYTE mode, BOOLEAN enabled, BOOLEAN clickable
+//
+// Accessibility metadata only — nothing to draw. It still has to be read: the buffer
+// has no per-operation length, so an unrecognised opcode aborts the whole document
+// rather than costing one operation.
+class AccessibilitySemantics : public Operation {
+public:
+    int contentDescriptionId = 0;
+    int role = 0;
+    int textId = 0;
+    int stateDescriptionId = 0;
+    int mode = 0;
+    bool enabled = false;
+    bool clickable = false;
+
+    std::string name() const override { return "ACCESSIBILITY_SEMANTICS"; }
+    int opcode() const override { return 250; }
+    std::vector<Field> fields() const override { return {}; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<AccessibilitySemantics>();
+        op->contentDescriptionId = buf.readInt();
+        op->role = buf.readByte();
+        op->textId = buf.readInt();
+        op->stateDescriptionId = buf.readInt();
+        op->mode = buf.readByte();
+        op->enabled = buf.readBoolean();
+        op->clickable = buf.readBoolean();
+        ops.push_back(std::move(op));
+    }
+};
+
+// ── Loom / pattern operations ──────────────────────────────────────────
+// Java: core/operations/loom/*.java, and see the TypeScript port in
+// players/typescript/src/core/operations/loom/PatternOperations.ts.
+//
+// These are READ but NOT EXPANDED. Expansion means re-inflating a template body
+// once per call site through an ID-remapping buffer so each instance gets unique
+// component/data ids; that needs readId()/declareId() indirection in every op
+// reader, which this engine does not have. Until then:
+//   * documents containing patterns parse and render everything OUTSIDE the
+//     macros (previously an unknown opcode aborted the whole document), and
+//   * macro-produced content is absent rather than wrong.
+// PatternDefine and PatternBlock deliberately do not expose children to the
+// layout tree: a template body must not draw at its definition site.
+
+// REFERENCED_OPERATIONS (142) — a named, reusable group of modifiers/ops.
+class ReferencedOperations : public Operation {
+public:
+    int refId = 0;
+    std::string name() const override { return "REFERENCED_OPERATIONS"; }
+    int opcode() const override { return 142; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<ReferencedOperations>();
+        op->refId = buf.readInt();
+        ops.push_back(std::move(op));
+    }
+};
+
+// MACRO_FOR_EACH (244) — repeat the body over a collection.
+class PatternForEach : public Operation {
+public:
+    int collectionId = 0;
+    int localItemId = 0;
+    std::string name() const override { return "MACRO_FOR_EACH"; }
+    int opcode() const override { return 244; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<PatternForEach>();
+        op->collectionId = buf.readInt();
+        op->localItemId = buf.readInt();
+        ops.push_back(std::move(op));
+    }
+};
+
+// INCLUDE_REFERENCED_OPERATIONS (245) — apply a REFERENCED_OPERATIONS group here.
+class IncludeReferencedOperations : public Operation {
+public:
+    int refId = 0;
+    std::string name() const override { return "INCLUDE_REFERENCED_OPERATIONS"; }
+    int opcode() const override { return 245; }
+    std::vector<Field> fields() const override { return {}; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<IncludeReferencedOperations>();
+        op->refId = buf.readInt();
+        ops.push_back(std::move(op));
+    }
+};
+
+// MACRO_DEFINE (246) — a template. Two wire forms, selected by skipLength:
+//   skipLength > 0 : the body follows as skipLength raw bytes (leaf form)
+//   skipLength == 0: children follow, terminated by ContainerEnd (container form)
+class PatternDefine : public Operation {
+public:
+    int patternId = 0;
+    std::vector<int> paramIds;
+    std::vector<uint8_t> body;
+    bool containerForm = false;
+
+    std::string name() const override { return "MACRO_DEFINE"; }
+    int opcode() const override { return 246; }
+    std::vector<Field> fields() const override { return {}; }
+    // Container on the wire so ContainerEnd is balanced, but see the note above:
+    // the body must not render where it is defined.
+    bool isContainer() const override { return containerForm; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<PatternDefine>();
+        op->patternId = buf.readInt();
+        int paramCount = buf.readInt();
+        if (paramCount < 0 || paramCount > 4096) paramCount = 0;
+        op->paramIds.reserve(paramCount);
+        for (int i = 0; i < paramCount; i++) op->paramIds.push_back(buf.readInt());
+        int skipLength = buf.readInt();
+        op->containerForm = (skipLength == 0);
+        if (skipLength > 0) {
+            op->body.resize(skipLength);
+            for (int i = 0; i < skipLength; i++) op->body[i] = (uint8_t)buf.readByte();
+        }
+        ops.push_back(std::move(op));
+    }
+};
+
+// MACRO_CALL (247) — inflate a template with the given argument ids.
+class PatternInflation : public Operation {
+public:
+    int patternId = 0;
+    std::vector<int> argIds;
+    std::string name() const override { return "MACRO_CALL"; }
+    int opcode() const override { return 247; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<PatternInflation>();
+        op->patternId = buf.readInt();
+        int argCount = buf.readInt();
+        if (argCount < 0 || argCount > 4096) argCount = 0;
+        op->argIds.reserve(argCount);
+        for (int i = 0; i < argCount; i++) op->argIds.push_back(buf.readInt());
+        ops.push_back(std::move(op));
+    }
+};
+
+// MACRO_ARGUMENT (248) — a slot inside a template body.
+class PatternArgument : public Operation {
+public:
+    int paramIndex = 0;
+    std::string name() const override { return "MACRO_ARGUMENT"; }
+    int opcode() const override { return 248; }
+    std::vector<Field> fields() const override { return {}; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<PatternArgument>();
+        op->paramIndex = buf.readInt();
+        ops.push_back(std::move(op));
+    }
+};
+
+// MACRO_BLOCK (249) — content supplied at the call site for a MACRO_ARGUMENT slot.
+class PatternBlock : public Operation {
+public:
+    int paramIndex = 0;
+    std::string name() const override { return "MACRO_BLOCK"; }
+    int opcode() const override { return 249; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override {}
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<PatternBlock>();
+        op->paramIndex = buf.readInt();
+        ops.push_back(std::move(op));
     }
 };
 
