@@ -1,0 +1,100 @@
+# Known gaps and questionable behaviour
+
+Two engines implement this format: `remote-core` (Java, what Android runs) and this
+TypeScript player. Everything below is a place they are known or suspected to differ,
+found by tracing both over the same documents and comparing state.
+
+Ordered by what a document is most likely to hit.
+
+## 1. Opcodes the reference registers and this player does not
+
+Eleven. An unregistered opcode is worse than an unimplemented one: the reader has no
+length for it, so the byte stream desynchronises and everything after it is garbage.
+
+| op | name | note |
+| :-- | :--- | :--- |
+| 2 | `COMPONENT_START` | |
+| 14 | `ANIMATION_SPEC` | animation curves |
+| 48 | `DRAW_BITMAP_FONT_TEXT_RUN` | bitmap-font text |
+| 57 | `DRAW_TEXT_ON_CIRCLE` | |
+| 153 | `TEXT_LOOKUP_INT` | |
+| 166 | `FUNCTION_CALL` | with 168, the float-function mechanism |
+| 167 | `DATA_BITMAP_FONT` | |
+| 168 | `FUNCTION_DEFINE` | |
+| 171 | `ATTRIBUTE_IMAGE` | |
+| 175 | `PATH_COMBINE` | |
+| 208 | `LAYOUT_TEXT` | the text op used when a document declares no `profiles` |
+
+208 deserves attention: it is the *fallback* text op. A document without a `profiles`
+header tag gets it instead of `CORE_TEXT` (239), so such documents cannot render text
+here at all.
+
+## 2. Operations that parse their bytes and then do nothing
+
+Fourteen. These are safe — the stream stays aligned — but the feature silently does
+nothing, which is the hardest failure mode to notice. Two of the worst offenders in this
+list (`ImpulseOperation`, `ImpulseProcess`) have now been implemented; these remain.
+
+| op | name | consequence |
+| :-- | :--- | :--- |
+| 244–249 | `PatternDefine`, `PatternInflation`, `PatternArgument`, `PatternBlock`, `PatternForEach`, `IncludeReferencedOperations` | the entire macro/Loom system renders nothing |
+| 158 | `PathTween` | path morphing is inert |
+| 172 | `TimeAttribute` | clock-derived values |
+| 191 | `WakeIn` | no repaint scheduling — a time-gated block cannot wake itself |
+| 173 | `CanvasOperationsOp` | |
+| 143 | `BooleanConstant` | |
+| 177 | `HapticFeedback` | side effect only |
+| 179 | `DebugMessage` | side effect only |
+| 216 | `HostActionMetadataOperation` | host callback metadata |
+
+`WakeIn` (191) is worth pairing with the impulse work: `ImpulseOperation.paint` calls
+`context.wakeIn(...)` before its window opens, and if nothing acts on that the document
+depends on some other source of repaints to reach its own start time.
+
+## 3. Documents that still diverge
+
+159 of 180 corpus documents agree frame-by-frame with the reference. The remaining 21,
+worst first:
+
+```
+73 ids  upstream/cube_3d            45 ids  upstream/demo_json_kt_3
+16 ids  upstream/graphs             16 ids  upstream/rc_json_graphs2
+11 ids  upstream/linear_regression  10 ids  examples/10_variables
+ 7 ids  upstream/02_ticker           7 ids  upstream/rc_json_pressure_gauge
+```
+
+by category: `upstream` 10, `examples` 4, `generated` 3, `demos_anim` 3, `probes` 1.
+
+`cube_3d` and `demo_json_kt_3` lead by a wide margin and both use matrices and 3D
+transforms — no fixture has touched that area yet.
+
+## 4. Behaviour that differs deliberately, and why
+
+- **`LoopOperation`** refreshes children only when dirty, matching the reference. This
+  was changed to match and measurably altered nothing; it is kept for fidelity.
+- **`ParticlesCompare.runChildren`** refreshes children *unconditionally*. The particle's
+  variables were just written into the context, so a child is stale by definition and
+  nothing marks it dirty. Gating this was a real bug.
+- **`ValueFloatExpressionChangeAction`** only acts in `PAINT` mode. The reference keeps
+  `apply` empty and does its work in a separate `runAction`, which only action-runners
+  call; here the effect lives in `apply`, and a `PaintOperation` container also walks its
+  children outside PAINT — so without the guard every action fired an extra time in the
+  data pass.
+- **`ParticlesCompareOp` min/max** use the raw `mMin`/`mMax`, where the reference uses
+  the *resolved* `mOutMin`/`mOutMax`. Equivalent for literal bounds, wrong if a document
+  ever makes them expressions. Untested.
+
+## 5. Harness bugs in androidx worth upstreaming
+
+Not this player's problem, but they cost days of misattribution here. All in
+`MacroTest.MockRemoteContext`, which is what any headless `remote-core` test uses:
+
+| method | was | should be |
+| :--- | :--- | :--- |
+| `overrideFloat` | `{}` | `mRemoteComposeState.overrideFloat(...)` |
+| `putObject` | `updateData(...)` | `updateObject(...)` — a *different* store from what `getObject` reads |
+| `listensTo` | `{}` | `mRemoteComposeState.listenToVar(...)` |
+| `addCollection` | `{}` | `mRemoteComposeState.addCollection(...)` |
+
+Each one makes the reference silently wrong in a way that reads as a bug in whatever you
+are comparing against it. `listensTo` alone accounted for 15 corpus documents.

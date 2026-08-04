@@ -6,6 +6,11 @@ a compact binary UI / canvas format for streaming interactive scenes
 (layout, drawing, expressions, animations, particles, paths, shaders,
 bitmaps) to remote players.
 
+> **Picking this up cold?** Read [STATUS.md](STATUS.md) first. It records what is
+> verified versus believed, the known gaps in each player, and several traps that have
+> already cost days — including four bugs that turned out to be empty stubs in androidx's
+> own test harness rather than in any player here.
+
 This repository is not endorsed or supported by Google, and is a sandbox: things here may be incomplete, in flux, or
 superseded.
 
