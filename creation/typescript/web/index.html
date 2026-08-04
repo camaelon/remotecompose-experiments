@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RemoteCompose JSON editor</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161c24; --field:#12161c; --border:#232c38;
+    --fg:#d7dee8; --muted:#8b95a5; --accent:#4da3ff; --ok:#35d07f;
+    --warn:#f2c14e; --bad:#ff6b6b;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;height:100vh;display:flex;flex-direction:column;background:var(--bg);
+       color:var(--fg);font:14px/1.5 system-ui,-apple-system,sans-serif}
+  header{display:flex;gap:12px;align-items:center;padding:10px 16px;
+         border-bottom:1px solid var(--border)}
+  h1{font-size:15px;margin:0;font-weight:600}
+  h1 span{color:var(--muted);font-weight:400}
+  .spacer{flex:1}
+  button,select{background:var(--panel);color:var(--fg);border:1px solid var(--border);
+    border-radius:6px;padding:6px 12px;font:inherit;cursor:pointer}
+  button:hover:not([disabled]),select:hover{border-color:var(--accent)}
+  button[disabled]{opacity:.45;cursor:default}
+  button.primary{color:var(--accent)}
+  main{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0}
+  @media (max-width:820px){main{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+  .pane{display:flex;flex-direction:column;min-width:0;min-height:0}
+  .pane + .pane{border-left:1px solid var(--border)}
+  @media (max-width:820px){.pane + .pane{border-left:0;border-top:1px solid var(--border)}}
+  textarea{flex:1;width:100%;resize:none;border:0;outline:0;padding:14px 16px;
+    background:var(--field);color:var(--fg);font-family:var(--mono);font-size:12.5px;
+    line-height:1.6;tab-size:2}
+  #stage{flex:1;display:flex;align-items:center;justify-content:center;
+    background:var(--panel);overflow:auto;padding:16px}
+  #stage canvas{max-width:100%;max-height:100%;box-shadow:0 2px 24px rgba(0,0,0,.45)}
+  .status{padding:8px 16px;border-top:1px solid var(--border);font-family:var(--mono);
+    font-size:12px;color:var(--muted);white-space:pre-wrap}
+  .status.ok{color:var(--ok)} .status.warn{color:var(--warn)} .status.bad,.status.err{color:var(--bad)}
+  .hint{padding:8px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--muted)}
+  code{font-family:var(--mono);color:var(--fg)}
+</style>
+</head>
+<body>
+<header>
+  <h1>RemoteCompose <span>JSON &rarr; RC, in the browser</span></h1>
+  <div class="spacer"></div>
+  <select id="samples" title="Load a sample"></select>
+  <button id="run" class="primary">Run &#8984;&#9166;</button>
+  <button id="download" disabled>Download .rc</button>
+</header>
+<main>
+  <section class="pane">
+    <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
+    <div class="hint">Compiled locally &mdash; no server. <code>&#8984;&#9166;</code> to run now;
+      otherwise it recompiles when you stop typing.</div>
+  </section>
+  <section class="pane">
+    <div id="stage"></div>
+    <div class="status" id="status">ready</div>
+  </section>
+</main>
+<script src="player.js"></script>
+<script src="bundle.js"></script>
+</body>
+</html>
