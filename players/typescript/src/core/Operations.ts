@@ -60,7 +60,7 @@ import {
     TouchDownModifier, TouchUpModifier, TouchCancelModifier,
     VisibilityModifier, OffsetModifier, ZIndexModifier, GraphicsLayerModifier,
     ScrollModifier, MarqueeModifier, RippleModifier, DrawContentModifier,
-    AlignByModifier
+    AlignByModifier, AccessibilitySemantics
 } from './operations/layout/modifiers/ModifierOperations';
 import { Skip } from './operations/Skip';
 import { TextStyle } from './operations/layout/managers/TextStyle';
@@ -85,7 +85,7 @@ import {
     ImpulseOperation, ImpulseProcess, CanvasOperationsOp,
     DebugMessage,
     HostActionMetadataOperation, RunActionOperation,
-    ValueFloatExpressionChangeAction, TextLayout,
+    ValueFloatExpressionChangeAction,
     PathTween, HapticFeedback, WakeIn, TimeAttribute
 } from './operations/StubOperations';
 import {
@@ -93,6 +93,7 @@ import {
 } from './operations/ParticleOperations';
 import { FlowLayout } from './operations/layout/managers/FlowLayout';
 import { LoopOperation } from './operations/layout/LoopOperation';
+import { TextLayout } from './operations/layout/managers/TextLayout';
 import { CoreText } from './operations/layout/managers/CoreText';
 import { FitBoxLayout } from './operations/layout/managers/FitBoxLayout';
 import { CollapsibleRowLayout } from './operations/layout/managers/CollapsibleRowLayout';
@@ -227,6 +228,7 @@ export class Operations {
         m.set(RippleModifier.OP_CODE, RippleModifier.read);
         m.set(DrawContentModifier.OP_CODE, DrawContentModifier.read);
         m.set(AlignByModifier.OP_CODE, AlignByModifier.read);
+        m.set(AccessibilitySemantics.OP_CODE, AccessibilitySemantics.read);
 
         // Misc operations
         m.set(TouchExpression.OP_CODE, TouchExpression.read);

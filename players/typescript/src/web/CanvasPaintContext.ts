@@ -42,6 +42,14 @@ export class CanvasPaintContext extends PaintContext {
     // Active shader (set via PaintBundle.SHADER)
     private activeShaderData: ShaderData | null = null;
     private shaderRenderer: WebGLShaderRenderer | null = null;
+
+    /** Release the WebGL context this paint context lazily created, if any. */
+    destroy(): void {
+        if (this.shaderRenderer) {
+            this.shaderRenderer.destroy();
+            this.shaderRenderer = null;
+        }
+    }
     private glslCache = new Map<number, string>();  // shaderTextId -> transpiled GLSL
 
     // Paint stack for save/restore
@@ -711,7 +719,11 @@ export class CanvasPaintContext extends PaintContext {
             }
         }
 
-        // Lazy-init renderer
+        // One renderer per document. Sharing a single renderer page-wide looks
+        // tempting (a browser allows only ~16 live WebGL contexts) but is wrong: the
+        // renderer draws into its own offscreen canvas, so documents sharing one read
+        // back whichever shader drew last. Every card on a page then shows the same
+        // shader. Contexts are bounded by paginating the page, not by sharing.
         if (!this.shaderRenderer) {
             this.shaderRenderer = new WebGLShaderRenderer();
             if (!this.shaderRenderer.isAvailable()) {

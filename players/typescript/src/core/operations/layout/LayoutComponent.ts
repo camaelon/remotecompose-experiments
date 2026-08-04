@@ -6,8 +6,10 @@ import type { Operation } from '../../Operation';
 import type { PaintContext } from '../../PaintContext';
 import type { RemoteContext } from '../../RemoteContext';
 import type { MeasurePass } from './measure/MeasurePass';
+import type { DimensionConstraint } from './modifiers/ModifierOperations';
 import { WidthModifier, HeightModifier, PaddingModifier,
          WidthInModifier, HeightInModifier, ZIndexModifier,
+         DimensionConstraintsModifier,
          GraphicsLayerModifier, BackgroundModifier, BorderModifier,
          RoundedClipRectModifier, ClipRectModifier, OffsetModifier,
          DrawContentModifier, VisibilityModifier, ClickModifier,
@@ -24,8 +26,12 @@ export class LayoutComponent extends Component {
     // Extracted modifiers
     private mWidthMod: WidthModifier | null = null;
     private mHeightMod: HeightModifier | null = null;
-    private mWidthInMod: WidthInModifier | null = null;
-    private mHeightInMod: HeightInModifier | null = null;
+    // Min/max constraints reach a component two ways: the older WidthIn/HeightIn ops
+    // (231/232) and DimensionConstraints (243), which is what `requiredWidthIn` and
+    // `requiredHeightIn` compile to. Both expose getMin()/getMax(), and the measure
+    // pass only needs that, so store either.
+    private mWidthInMod: DimensionConstraint | null = null;
+    private mHeightInMod: DimensionConstraint | null = null;
     private mZIndexMod: ZIndexModifier | null = null;
     private mGraphicsLayerMod: GraphicsLayerModifier | null = null;
 
@@ -64,8 +70,8 @@ export class LayoutComponent extends Component {
 
     getWidthModifier(): WidthModifier | null { return this.mWidthMod; }
     getHeightModifier(): HeightModifier | null { return this.mHeightMod; }
-    getWidthInModifier(): WidthInModifier | null { return this.mWidthInMod; }
-    getHeightInModifier(): HeightInModifier | null { return this.mHeightInMod; }
+    getWidthInModifier(): DimensionConstraint | null { return this.mWidthInMod; }
+    getHeightInModifier(): DimensionConstraint | null { return this.mHeightInMod; }
     getScrollModifier(): ScrollModifier | null { return this.mScrollModifier; }
 
     inflate(): void {
@@ -97,6 +103,17 @@ export class LayoutComponent extends Component {
                 this.mWidthInMod = op;
             } else if (op instanceof HeightInModifier) {
                 this.mHeightInMod = op;
+            } else if (op instanceof DimensionConstraintsModifier) {
+                // Mirrors Java LayoutComponent: horizontal types feed the width
+                // constraint, vertical types the height one.
+                const t = op.getType();
+                if (t === DimensionConstraintsModifier.HORIZONTAL
+                    || t === DimensionConstraintsModifier.REQUIRED_HORIZONTAL) {
+                    this.mWidthInMod = op;
+                } else if (t === DimensionConstraintsModifier.VERTICAL
+                    || t === DimensionConstraintsModifier.REQUIRED_VERTICAL) {
+                    this.mHeightInMod = op;
+                }
             } else if (op instanceof ZIndexModifier) {
                 this.mZIndexMod = op;
                 this.mZIndex = (op as any).mValue ?? 0;

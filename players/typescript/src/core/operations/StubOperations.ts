@@ -1,30 +1,125 @@
 // StubOperations: parse-only operation stubs that read fields but have no apply() logic.
 
 import { Operation } from '../Operation';
+import { PaintOperation } from '../PaintOperation';
+import { idFromBits, floatToRawIntBits } from './Utils';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
+import type { PaintContext } from '../PaintContext';
+import { ContextMode } from '../RemoteContext';
 
-// ── ImpulseOperation (164) ──────────────────────────────────────────
-export class ImpulseOperation extends Operation {
+// ── ImpulseOperation (164): container, time-gated ────────────────────
+/**
+ * Runs its body **once** when its time window opens, then hands every later frame to
+ * the trailing {@link ImpulseProcess}.
+ *
+ * This is how a document separates setup from per-frame work: everything directly in
+ * the impulse body is initialisation, and the repeating part lives in the nested
+ * `impulseProcess`. Treating the operation as a no-op — which this was — leaves its
+ * children as ordinary siblings that run on every frame, so a one-time assignment like
+ * `current = flow` is re-executed forever and any value derived from it is pinned.
+ */
+export class ImpulseOperation extends PaintOperation {
     static readonly OP_CODE = 164;
-    constructor() { super(); }
+    mList: Operation[] = [];
+    private mDuration: number;
+    private mStartAt: number;
+    private mOutDuration: number;
+    private mOutStartAt: number;
+    private mProcess: ImpulseProcess | null = null;
+    private mInitialPass = true;
+
+    constructor(duration: number, startAt: number) {
+        super();
+        this.mDuration = duration;
+        this.mStartAt = startAt;
+        this.mOutDuration = duration;
+        this.mOutStartAt = startAt;
+    }
+
+    getList(): Operation[] { return this.mList; }
+
+    updateVariables(context: RemoteContext): void {
+        this.mOutDuration = Number.isNaN(this.mDuration)
+            ? context.getFloat(idFromBits(floatToRawIntBits(this.mDuration))) : this.mDuration;
+        this.mOutStartAt = Number.isNaN(this.mStartAt)
+            ? context.getFloat(idFromBits(floatToRawIntBits(this.mStartAt))) : this.mStartAt;
+    }
+
+    /** The trailing ImpulseProcess is the repeating part; it is not run as setup. */
+    private takeProcess(): void {
+        if (this.mProcess || !this.mList.length) return;
+        const last = this.mList[this.mList.length - 1];
+        if (last instanceof ImpulseProcess) {
+            this.mProcess = last;
+            this.mList.pop();
+        }
+    }
+
     write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}ImpulseOperation`; }
+
+    paint(context: PaintContext): void {
+        this.takeProcess();
+        const remote = context.getContext();
+        const now = remote.getAnimationTime();
+        if (now < this.mOutStartAt) {
+            context.wakeIn(this.mOutStartAt - now);
+            return;
+        }
+        if (now <= this.mOutStartAt + this.mOutDuration) {
+            if (this.mInitialPass) {
+                for (const op of this.mList) {
+                    if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
+                        (op as any).updateVariables(remote);
+                    }
+                    remote.incrementOpCount();
+                    op.apply(remote);
+                }
+                this.mInitialPass = false;
+            } else {
+                remote.incrementOpCount();
+                if (this.mProcess) this.mProcess.paint(context);
+            }
+        } else {
+            // Past the window: arm again so a later window replays the setup.
+            this.mInitialPass = true;
+        }
+    }
+
+    deepToString(indent: string): string {
+        return `${indent}ImpulseOperation(${this.mList.length} setup ops)`;
+    }
+
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readFloat(); // duration
-        buffer.readFloat(); // startAt
-        operations.push(new ImpulseOperation());
+        const duration = buffer.readFloat();
+        const startAt = buffer.readFloat();
+        operations.push(new ImpulseOperation(duration, startAt));
     }
 }
 
-// ── ImpulseProcess (165) ─────────────────────────────────────────────
-export class ImpulseProcess extends Operation {
+// ── ImpulseProcess (165): the per-frame body of an impulse ────────────
+export class ImpulseProcess extends PaintOperation {
     static readonly OP_CODE = 165;
+    mList: Operation[] = [];
     constructor() { super(); }
+    getList(): Operation[] { return this.mList; }
     write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}ImpulseProcess`; }
+
+    paint(context: PaintContext): void {
+        const remote = context.getContext();
+        for (const op of this.mList) {
+            if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
+                (op as any).updateVariables(remote);
+            }
+            remote.incrementOpCount();
+            op.apply(remote);
+        }
+    }
+
+    deepToString(indent: string): string {
+        return `${indent}ImpulseProcess(${this.mList.length})`;
+    }
+
     static read(_buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new ImpulseProcess());
     }
@@ -72,16 +167,28 @@ export class HostActionMetadataOperation extends Operation {
 }
 
 // ── RunActionOperation (236): container — children are action operations ──
-export class RunActionOperation extends Operation {
+/**
+ * Runs its child actions **as part of painting**, once per frame.
+ *
+ * This is a `PaintOperation` in the reference, not a load-time one, and the difference
+ * is the whole point: a document drives per-frame state — a score, a physics step —
+ * by putting a run-action in the draw stream. Executing the children from `apply`
+ * instead runs them exactly once, at load, and the document then sits frozen while
+ * still drawing perfectly, which reads as "the actions do nothing".
+ */
+export class RunActionOperation extends PaintOperation {
     static readonly OP_CODE = 236;
     mList: Operation[] = [];
     constructor() { super(); }
     getList(): Operation[] { return this.mList; }
     write(_buffer: WireBuffer): void { /* stub */ }
-    apply(context: RemoteContext): void {
-        // Execute child action operations
+    // `apply` comes from PaintOperation: it routes to paint() in PAINT mode, and
+    // outside it walks children without running them, which is what we want — the
+    // actions must fire per frame, not once at load.
+    paint(context: PaintContext): void {
+        const remote = context.getContext();
         for (const op of this.mList) {
-            op.apply(context);
+            op.apply(remote);
         }
     }
     deepToString(indent: string): string { return `${indent}RunActionOperation(${this.mList.length} actions)`; }
@@ -91,55 +198,47 @@ export class RunActionOperation extends Operation {
 }
 
 // ── ValueFloatExpressionChangeAction (227) ──────────────────────────
+/**
+ * Evaluate an expression and write the result into a float variable.
+ *
+ * This is how a document mutates its own state: `score = score + 1`,
+ * `y = y + dy`. It had been reading both ids off the wire and discarding them, so
+ * every such assignment was silently dropped — the document still drew, it just never
+ * changed.
+ */
 export class ValueFloatExpressionChangeAction extends Operation {
     static readonly OP_CODE = 227;
-    constructor() { super(); }
-    write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}ValueFloatExpressionChangeAction`; }
-    static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt(); // valueId
-        buffer.readInt(); // value (expression id)
-        operations.push(new ValueFloatExpressionChangeAction());
-    }
-}
+    private mTargetValueId: number;
+    private mValueExpressionId: number;
 
-// ── TextLayout (208) ─────────────────────────────────────────────────
-// In Java, TEXT_LAYOUT is a Container (TextLayout extends LayoutManager -> Component).
-// This parse-only stub mirrors that: it exposes getList() so the player nests its
-// (empty) child list and emits a ContainerEnd, matching the wire layout. IDs are
-// read via declareId/readId/readNanId so macro expansion can uniqueify them.
-export class TextLayout extends Operation {
-    static readonly OP_CODE = 208;
-    private mComponentId: number;
-    private mTextId: number;
-    private mList: Operation[] = [];
-    constructor(componentId = -1, textId = -1) {
+    constructor(targetValueId: number, valueExpressionId: number) {
         super();
-        this.mComponentId = componentId;
-        this.mTextId = textId;
+        this.mTargetValueId = targetValueId;
+        this.mValueExpressionId = valueExpressionId;
     }
-    getComponentId(): number { return this.mComponentId; }
-    getId(): number { return this.mComponentId; }
-    getList(): Operation[] { return this.mList; }
+
     write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string {
-        return `${indent}TEXT_LAYOUT [${this.mComponentId}] textId=${this.mTextId}`;
+
+    apply(context: RemoteContext): void {
+        // Only while painting. The reference keeps `apply` empty and does the work in a
+        // separate `runAction`, which only the action-runners call — so the action fires
+        // exactly once per frame. Here the effect lives in `apply`, and a PaintOperation
+        // container also walks its children outside PAINT mode, so the DATA pass ran the
+        // action an extra time and every counter sat one increment ahead of the reference.
+        if (context.mMode !== ContextMode.PAINT) return;
+        const document = context.getDocument();
+        if (!document) return;
+        document.evaluateFloatExpression(this.mValueExpressionId, this.mTargetValueId, context);
     }
+
+    deepToString(indent: string): string {
+        return `${indent}ValueFloatExpressionChangeAction(${this.mTargetValueId} <- ${this.mValueExpressionId})`;
+    }
+
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.declareId();
-        buffer.declareId(); // animationId
-        const textId = buffer.readId();
-        buffer.readInt(); // color
-        buffer.readNanId(); // fontSize
-        buffer.readInt(); // fontStyle
-        buffer.readNanId(); // fontWeight
-        buffer.readId(); // fontFamilyId
-        buffer.readInt(); // textAlign
-        buffer.readInt(); // overflow
-        buffer.readInt(); // maxLines
-        operations.push(new TextLayout(componentId, textId));
+        const valueId = buffer.readInt();
+        const expressionId = buffer.readInt();
+        operations.push(new ValueFloatExpressionChangeAction(valueId, expressionId));
     }
 }
 

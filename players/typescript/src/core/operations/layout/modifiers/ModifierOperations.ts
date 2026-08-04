@@ -9,6 +9,15 @@ import { PaintBundle } from '../../paint/PaintBundle';
 import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
 import { Visibility } from '../Component';
 
+/**
+ * What the measure pass needs from a min/max constraint, regardless of which op it
+ * arrived as (WidthIn/HeightIn 231/232, or DimensionConstraints 243).
+ */
+export interface DimensionConstraint {
+    getMin(): number;
+    getMax(): number;
+}
+
 // ── MODIFIER_WIDTH (16): INT type, FLOAT value ───────────────────────
 export class WidthModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 16;
@@ -958,5 +967,66 @@ export class AlignByModifier extends Operation {
     deepToString(indent: string): string { return `${indent}AlignByModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new AlignByModifier(buffer.readFloat(), buffer.readInt()));
+    }
+}
+
+// ── ACCESSIBILITY_SEMANTICS (250) ─────────────────────────────────────
+// Java source: core/semantics/CoreSemantics.java
+//   INT contentDescriptionId, BYTE role, INT textId, INT stateDescriptionId,
+//   BYTE mode, BOOLEAN enabled, BOOLEAN clickable
+//
+// Purely accessibility metadata: it describes the component to a screen reader and
+// contributes nothing to the painted frame, so `apply` and painting are no-ops. It
+// still has to be *read*, because the buffer has no length prefixes — an unknown
+// opcode costs the remainder of the document, not just this operation.
+export class AccessibilitySemantics extends Operation {
+    static readonly OP_CODE = 250;
+
+    mContentDescriptionId: number;
+    mRole: number;
+    mTextId: number;
+    mStateDescriptionId: number;
+    mMode: number;
+    mEnabled: boolean;
+    mClickable: boolean;
+
+    constructor(contentDescriptionId: number, role: number, textId: number,
+                stateDescriptionId: number, mode: number,
+                enabled: boolean, clickable: boolean) {
+        super();
+        this.mContentDescriptionId = contentDescriptionId;
+        this.mRole = role;
+        this.mTextId = textId;
+        this.mStateDescriptionId = stateDescriptionId;
+        this.mMode = mode;
+        this.mEnabled = enabled;
+        this.mClickable = clickable;
+    }
+
+    getContentDescriptionId(): number { return this.mContentDescriptionId; }
+
+    write(_buffer: WireBuffer): void { /* stub */ }
+    apply(_context: RemoteContext): void { /* accessibility only — nothing to paint */ }
+    deepToString(indent: string): string {
+        return `${indent}AccessibilitySemantics(contentDescriptionId=`
+            + `${this.mContentDescriptionId}, role=${this.mRole}, enabled=${this.mEnabled}`
+            + `, clickable=${this.mClickable})`;
+    }
+
+    static read(buffer: WireBuffer, operations: Operation[]): void {
+        // declareId() where the Java side declares, so macro expansion can uniqueify.
+        const contentDescriptionId = (buffer as any).declareId
+            ? (buffer as any).declareId() : buffer.readInt();
+        const role = buffer.readByte();
+        const textId = (buffer as any).declareId
+            ? (buffer as any).declareId() : buffer.readInt();
+        const stateDescriptionId = (buffer as any).declareId
+            ? (buffer as any).declareId() : buffer.readInt();
+        const mode = buffer.readByte();
+        const enabled = buffer.readBoolean();
+        const clickable = buffer.readBoolean();
+        operations.push(new AccessibilitySemantics(
+            contentDescriptionId, role, textId, stateDescriptionId,
+            mode, enabled, clickable));
     }
 }

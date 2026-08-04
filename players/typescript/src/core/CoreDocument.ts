@@ -163,7 +163,20 @@ export class CoreDocument implements ExpansionDocument {
         return this.mWidth;
     }
 
-    setWidth(w: number): void { this.mWidth = w; }
+    /**
+     * Set the document width **and** the `windowWidth()` system variable.
+     *
+     * The reference `CoreDocument.setWidth` updates both. Setting only the field left
+     * ids 5/6 at whatever the header declared, so every expression built on
+     * `windowWidth()` / `windowHeight()` was computed against the header size rather
+     * than the viewport the document is actually being played at. A document that
+     * declares no size reports 256x256, so a full-bleed document played at any other
+     * size laid itself out for a 256-pixel world while being drawn much larger.
+     */
+    setWidth(w: number): void {
+        this.mWidth = w;
+        this.mRemoteComposeState?.setWindowWidth(w);
+    }
 
     getHeight(): number {
         if (this.mRootLayoutComponent) {
@@ -173,7 +186,11 @@ export class CoreDocument implements ExpansionDocument {
         return this.mHeight;
     }
 
-    setHeight(h: number): void { this.mHeight = h; }
+    /** Set the document height and the `windowHeight()` system variable — see setWidth. */
+    setHeight(h: number): void {
+        this.mHeight = h;
+        this.mRemoteComposeState?.setWindowHeight(h);
+    }
 
     setProperties(properties: IntMap<any> | null): void { this.mProperties = properties; }
     getProperty(key: number): any { return this.mProperties?.get(key) ?? null; }
@@ -384,6 +401,34 @@ export class CoreDocument implements ExpansionDocument {
         operations.length = 0;
         for (const op of finalOps) {
             operations.push(op);
+        }
+        this.mFloatExpressions.clear();
+        this.indexFloatExpressions(operations);
+    }
+
+    /**
+     * Float expressions by id, so an action can evaluate one on demand.
+     * Mirrors `CoreDocument.mFloatExpressions` / `evaluateFloatExpression`.
+     */
+    mFloatExpressions: Map<number, any> = new Map();
+
+    /** Collect every FloatExpression in the tree, including inside containers. */
+    indexFloatExpressions(operations: Operation[]): void {
+        for (const op of operations) {
+            if ((op as any).constructor?.OP_CODE === 81 && typeof (op as any).mId === 'number') {
+                this.mFloatExpressions.set((op as any).mId, op);
+            }
+            if (typeof (op as any).getList === 'function') {
+                this.indexFloatExpressions((op as any).getList());
+            }
+        }
+    }
+
+    /** Evaluate `expressionId` and write the result into `targetId`. */
+    evaluateFloatExpression(expressionId: number, targetId: number, context: RemoteContext): void {
+        const expression = this.mFloatExpressions.get(expressionId);
+        if (expression && typeof expression.evaluate === 'function') {
+            context.overrideFloat(targetId, expression.evaluate(context));
         }
     }
 
