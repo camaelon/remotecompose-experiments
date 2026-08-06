@@ -214,6 +214,12 @@ public:
         return it != mComponentDims.end() ? &it->second : nullptr;
     }
     void clearComponentDimensions() { mComponentDims.clear(); }
+    // Enumerate every measured component. Used by rc2layout to dump the computed
+    // layout for cross-engine comparison: a layout disagreement is a disagreement
+    // about a number on a component, and only the full map localises it.
+    const std::unordered_map<int, ComponentDim>& getComponentDimensions() const {
+        return mComponentDims;
+    }
 
     // ── Variable listener system ─────────────────────────────────────
 

@@ -9,10 +9,23 @@
 //   node trace.mjs DOC.rc [--frames 30] [--fps 30] [--hold] [--ops] [--watch id,id]
 //
 //   --hold   press and keep pressing at the centre from frame 2 (touch/impulse tests)
+//   --tap    simulate discrete taps: --tap 30:120:200,90:300:260  (frame:x:y, ...)
 //   --ops    also count how many times each operation class was applied
 //   --dump   print `frame N id=value ...` for diffing against the reference tracer
 //   --width/--height  viewport for a document that declares no size (default 400x800)
 //   --watch  print these float ids every frame instead of only the ones that change
+//
+// --tap exists because `--hold` alone cannot drive a touch-reactive document. It calls
+// `doc.touchDown`, which moves touchX/touchY (13/14) but never writes the touch event
+// time (29) — that is done by the *web* player (`web/main.ts`), not the core. A document
+// that derives "is the finger down" the way the working Flappy Droid demo does,
+//
+//     sign(max(0, touchTime - animationTime + 0.15))
+//
+// therefore reads a touch that never ends under --hold and never begins otherwise.
+// --tap writes both clocks itself, so the whole input path is testable headlessly:
+// animation time (30) advances at exactly --fps, and touch time (29) is stamped on each
+// tap. Without it, the only way to know a tap works is to play the document by hand.
 //
 // Exit code is 1 if nothing changed at all, so it can be used as a regression check.
 
@@ -77,6 +90,17 @@ if (!file) {
 const FRAMES = Number(flag('frames', 30));
 const FPS = Number(flag('fps', 30));
 const HOLD = Boolean(flag('hold', false));
+// --tap 30:120:200,90:300:260 -> [{frame, x, y}, ...]
+const TAP_ARG = flag('tap', null);
+const TAPS = TAP_ARG && TAP_ARG !== true
+    ? TAP_ARG.split(',').map((s) => {
+        const [frame, x, y] = s.split(':').map(Number);
+        return { frame, x, y };
+    })
+    : null;
+const TAP_HOLD_FRAMES = Number(flag('tapHold', 3));
+// Synthetic document clock, shared by the tap stamp and the animationTime slot below.
+let synthTime = 0;
 const OPS = Boolean(flag('ops', false));
 const DUMP = Boolean(flag('dump', false));
 const WATCH = flag('watch', null);
@@ -158,6 +182,16 @@ function snapshot() {
     return out;
 }
 
+// The player derives animationTime (slot 30) from wall-clock elapsed seconds, and a
+// trace runs hundreds of frames in a few milliseconds — so a document that measures a
+// 0.15s window against it sees a clock that never advances, and a tap never expires.
+// Under --tap the slot is forced to the synthetic frame clock instead, which is what
+// makes "the finger came up" observable at all.
+if (TAPS) {
+    const realLoadFloat = remote.loadFloat.bind(remote);
+    remote.loadFloat = (id, value) => realLoadFloat(id, id === 30 ? synthTime : value);
+}
+
 const changed = new Map();     // id -> how many frames it changed on
 let prev = null;
 const centre = { x: W / 2, y: H / 2 };
@@ -167,6 +201,20 @@ for (let f = 0; f < FRAMES; f++) {
     remote.setAnimationTime?.(t / 1000);
     if (HOLD && f === 2) doc.touchDown?.(remote, centre.x, centre.y);
     if (HOLD && f > 2) doc.touchDrag?.(remote, centre.x, centre.y);
+    if (TAPS) {
+        synthTime = t / 1000;
+        for (const tap of TAPS) {
+            if (f === tap.frame) {
+                remote.loadFloat?.(29, synthTime);   // touch event time, as web/main.ts does
+                doc.touchDown?.(remote, tap.x, tap.y);
+            } else if (f > tap.frame && f < tap.frame + TAP_HOLD_FRAMES) {
+                remote.loadFloat?.(29, synthTime);
+                doc.touchDrag?.(remote, tap.x, tap.y);
+            } else if (f === tap.frame + TAP_HOLD_FRAMES) {
+                doc.touchUp?.(remote, tap.x, tap.y, 0, 0);
+            }
+        }
+    }
     paint.reset?.();
     paint.clearNeedsRepaint?.();
     doc.paint(remote, -1);
