@@ -27,14 +27,25 @@ void ModifierWidth::registerListening(RemoteContext& context) {
     Utils::registerFloatVar(width, context, this);
 }
 void ModifierWidth::updateVariables(RemoteContext& context) {
-    oWidth = Utils::resolveFloat(width, context);
+    // Only EXACT/EXACT_DP carry a variable reference. For FILL the value is a fraction
+    // of the parent and NaN means "no fraction"; resolving it as a variable id would
+    // turn every fractional fill into a full one.
+    if (type == 0 /* EXACT */ || type == 6 /* EXACT_DP */) {
+        oWidth = Utils::resolveFloat(width, context);
+    } else {
+        oWidth = width;
+    }
 }
 
 void ModifierHeight::registerListening(RemoteContext& context) {
     Utils::registerFloatVar(height, context, this);
 }
 void ModifierHeight::updateVariables(RemoteContext& context) {
-    oHeight = Utils::resolveFloat(height, context);
+    if (type == 0 /* EXACT */ || type == 6 /* EXACT_DP */) {
+        oHeight = Utils::resolveFloat(height, context);
+    } else {
+        oHeight = height;
+    }
 }
 
 void ModifierPadding::registerListening(RemoteContext& context) {
@@ -223,6 +234,10 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
     ls.canvasOps.clear();
     ls.dataOps.clear();
     ls.canvasContentIds.clear();
+    ls.padBeforeWidth = 0;
+    ls.padBeforeHeight = 0;
+    bool sawWidth = false;
+    bool sawHeight = false;
 
     LTRACE("    inflate op=%d, %d children\n", self->opcode(), (int)self->mChildren.size());
     for (auto& childPtr : self->mChildren) {
@@ -230,13 +245,19 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
         if (isModifierOp(child)) {
             // Extract modifier data
             switch (child->opcode()) {
+                case 211: { // ModifierVisibility
+                    ls.visibilityId = static_cast<ModifierVisibility*>(child)->visibilityId;
+                    break;
+                }
                 case 16: { // ModifierWidth
                     auto* mw = static_cast<ModifierWidth*>(child);
                     ls.widthType = static_cast<DimType>(mw->type);
                     ls.widthValue = mw->oWidth;
+                    sawWidth = true;
                     break;
                 }
                 case 67: { // ModifierHeight
+                    sawHeight = true;
                     auto* mh = static_cast<ModifierHeight*>(child);
                     ls.heightType = static_cast<DimType>(mh->type);
                     ls.heightValue = mh->oHeight;
@@ -244,6 +265,8 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 }
                 case 58: { // ModifierPadding
                     auto* mp = static_cast<ModifierPadding*>(child);
+                    if (!sawWidth)  ls.padBeforeWidth  += mp->oLeft + mp->oRight;
+                    if (!sawHeight) ls.padBeforeHeight += mp->oTop + mp->oBottom;
                     ls.paddingLeft += mp->oLeft;
                     ls.paddingTop += mp->oTop;
                     ls.paddingRight += mp->oRight;
@@ -544,19 +567,21 @@ static std::vector<TextLine> wrapText(PaintContext* pc, const std::string& text,
 // ── Compute modifier-defined width (padding + exact size) ────────────
 // Java: returns padding + value for EXACT/EXACT_DP, just padding otherwise.
 static float computeModifierDefinedWidth(const LayoutState& ls) {
-    float pw = ls.paddingLeft + ls.paddingRight;
+    // Only padding declared *before* the size modifier adds to it — the reference walks
+    // the modifier list and breaks at the size modifier, which is Compose's ordering
+    // rule. Using total padding here makes `.width(200).padding(30)` 260 wide instead
+    // of 200 with 140 of content.
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        return pw + ls.widthValue;
+        return ls.padBeforeWidth + ls.widthValue;
     }
-    return pw;
+    return ls.paddingLeft + ls.paddingRight;
 }
 
 static float computeModifierDefinedHeight(const LayoutState& ls) {
-    float ph = ls.paddingTop + ls.paddingBottom;
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        return ph + ls.heightValue;
+        return ls.padBeforeHeight + ls.heightValue;
     }
-    return ph;
+    return ls.paddingTop + ls.paddingBottom;
 }
 
 // ── Forward declarations for layout functions ────────────────────────
@@ -602,6 +627,18 @@ static int getComponentId(const Operation* op) {
         default: return -1;
     }
 }
+// Resolve a component's visibility from its modifier every measure pass. The reference
+// re-evaluates unconditionally (ComponentVisibilityOperation.evaluateInLayout) and maps
+// anything it cannot resolve to GONE, which is what makes a document that switches
+// between mutually exclusive branches show exactly one of them.
+static void applyVisibility(const LayoutState& ls, RemoteContext& ctx, ComponentMeasure& m) {
+    if (ls.visibilityId < 0) return;
+    int v = ctx.getInteger(ls.visibilityId);
+    m.visibility = (v == VIS_VISIBLE) ? VIS_VISIBLE
+                 : (v == VIS_INVISIBLE) ? VIS_INVISIBLE
+                 : VIS_GONE;
+}
+
 
 // ── Measure a text component ─────────────────────────────────────────
 static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
@@ -615,17 +652,21 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     int tid = 0;
     float fsize = 16;
     int col = 0;
+    int maxLines = INT32_MAX;
     if (op->opcode() == 208) {
         auto* lt = static_cast<LayoutText*>(op);
         tid = lt->textId;
         fsize = lt->oFontSize;
         col = lt->color;
+        maxLines = lt->maxLines;
     } else {
         auto* ct = static_cast<CoreTextOp*>(op);
         tid = ct->textId;
         fsize = ct->oFontSize;
         col = ct->color;
+        maxLines = ct->maxLines;
     }
+    if (maxLines <= 0) maxLines = INT32_MAX;
 
     // Resolve NaN-encoded variable references (fallback for unresolved)
     fsize = resolveVar(fsize, ctx);
@@ -641,9 +682,16 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     float contentMaxW = maxW - ls.paddingLeft - ls.paddingRight;
     float textH = lineH;
     bool hasNewlines = (text.find('\n') != std::string::npos);
-    if (contentMaxW > 0 && (textW > contentMaxW || hasNewlines)) {
+    // The reference wraps only when the text overflows AND more than one line is
+    // allowed (TextLayout: `textWidth > maxWidth && mMaxLines > 1 && maxWidth > 0`),
+    // or when a newline forces it. Wrapping regardless of maxLines made every
+    // `maxLines: 1` text twice as tall as it is on the device.
+    if (contentMaxW > 0 && ((textW > contentMaxW && maxLines > 1) || hasNewlines)) {
         auto wrappedLines = wrapText(pc, text, fsize,
                                      contentMaxW > 0 ? contentMaxW : 1e9f);
+        if ((int) wrappedLines.size() > maxLines) {
+            wrappedLines.resize(maxLines);
+        }
         textH = lineH * wrappedLines.size();
         // Compute actual max line width for proper sizing
         float maxLineW = 0;
@@ -660,15 +708,15 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
 
     // Apply width/height modifiers
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        measuredW = ls.widthValue + ls.paddingLeft + ls.paddingRight;
+        measuredW = ls.widthValue + ls.padBeforeWidth;
     } else if (ls.widthType == DimType::FILL) {
-        measuredW = maxW;
+        measuredW = std::isnan(ls.widthValue) ? maxW : maxW * ls.widthValue;
     }
 
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        measuredH = ls.heightValue + ls.paddingTop + ls.paddingBottom;
+        measuredH = ls.heightValue + ls.padBeforeHeight;
     } else if (ls.heightType == DimType::FILL) {
-        measuredH = maxH;
+        measuredH = std::isnan(ls.heightValue) ? maxH : maxH * ls.heightValue;
     }
 
     measuredW = std::max(measuredW, minW);
@@ -676,6 +724,7 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     measuredH = std::max(measuredH, minH);
     measuredH = std::min(measuredH, maxH);
 
+    applyVisibility(ls, ctx, m);
     m.w = measuredW;
     m.h = measuredH;
     LTRACE("    measureText DONE cid=%d w=%.1f h=%.1f (text='%.20s' fsize=%.1f)\n", cid, m.w, m.h, text.c_str(), fsize);
@@ -710,8 +759,10 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     bool hasVWrap = false;
 
     if (ls.widthType == DimType::FILL) {
-        measuredW = maxW;
-        minW = insetMaxW;  // Java: children get full width
+        // A fill may carry a fraction of the parent; NaN means fill completely.
+        measuredW = std::isnan(ls.widthValue) ? maxW : maxW * ls.widthValue;
+        minW = std::isnan(ls.widthValue) ? insetMaxW
+                                         : measuredW - ls.paddingLeft - ls.paddingRight;
     } else if (ls.widthType != DimType::WEIGHT) {
         measuredW = std::clamp(measuredW, minW, maxW);
         hasHWrap = (ls.widthType == DimType::WRAP);
@@ -722,8 +773,9 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     }
 
     if (ls.heightType == DimType::FILL) {
-        measuredH = maxH;
-        minH = insetMaxH;  // Java: children get full height
+        measuredH = std::isnan(ls.heightValue) ? maxH : maxH * ls.heightValue;
+        minH = std::isnan(ls.heightValue) ? insetMaxH
+                                          : measuredH - ls.paddingTop - ls.paddingBottom;
     } else if (ls.heightType != DimType::WEIGHT) {
         measuredH = std::clamp(measuredH, minH, maxH);
         hasVWrap = (ls.heightType == DimType::WRAP);
@@ -1106,6 +1158,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     measuredW = std::max(measuredW, minW);
     measuredH = std::max(measuredH, minH);
 
+    applyVisibility(ls, ctx, m);
     m.w = measuredW;
     m.h = measuredH;
     LTRACE("  measureLayout DONE cid=%d opcode=%d w=%.1f h=%.1f wrapW=%.1f wrapH=%.1f hasHWrap=%d hasVWrap=%d\n",
@@ -1633,6 +1686,8 @@ static void measureComponent(Operation* op, PaintContext* pc, RemoteContext& ctx
         measureLayoutManager(op, pc, ctx, minW, maxW, minH, maxH, measure);
     }
 }
+
+
 
 // ── Generic layout dispatcher ────────────────────────────────────────
 static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& measure) {

@@ -87,6 +87,16 @@ struct LayoutState {
 
     // Accumulated padding from modifiers
     float paddingLeft = 0, paddingTop = 0, paddingRight = 0, paddingBottom = 0;
+    // Padding declared *before* the size modifier — the only padding that adds to
+    // an explicit width/height. The reference stops walking modifiers at the size
+    // modifier, so `.width(200).padding(30)` is 200 wide with 140 of content while
+    // `.padding(30).width(200)` is 260 wide. That is Compose's modifier-order rule.
+    float padBeforeWidth = 0, padBeforeHeight = 0;
+    // Id of the integer variable driving this component's visibility, or -1.
+    // Resolved on every measure, as the reference does in
+    // ComponentVisibilityOperation.evaluateInLayout — a value that is never
+    // written resolves to GONE.
+    int visibilityId = -1;
 
     // WidthIn/HeightIn constraints
     float widthInMin = -1, widthInMax = -1;
