@@ -5,6 +5,50 @@ working, what is known broken, what is *verified* versus merely *believed*, and 
 traps have already cost days. `players/typescript/GAPS.md` has the per-opcode detail;
 `players/typescript/DEBUGGING.md` has the tooling plan.
 
+## What changed most recently — layout & text conformance
+
+A three-engine layout conformance harness now exists, and using it found and fixed **eight
+defects**. The harness compares the *computed bounds of every component* between the
+TypeScript player, the C++ player and the Java reference; the corpus and findings live in
+`rcJson/layout/` (`PLAN.md`, `FINDINGS.md`, `run.py`, 117 documents across categories A–K).
+
+New tools here:
+
+| tool | what it answers |
+| :--- | :--- |
+| `players/typescript/layout.mjs` | the computed layout tree, `LAYOUT id=… x= y= w= h=` |
+| `players/typescript/render.mjs` | render a document to PNG headlessly |
+| `players/typescript/pvars.mjs` | which id belongs to which particle variable |
+| `players/cpp/tools/rc2layout` | the same layout dump from the C++ player |
+| `trace.mjs --tap f:x:y` | simulate discrete taps, with a deterministic clock |
+
+Fixed in **both** players: fractional `fillMaxWidth/Height` was ignored; modifier order was
+ignored for padding versus an explicit size (`.width(200).padding(30)` must be 200 wide
+with 140 of content, not 260); the visibility modifier did not affect layout.
+
+Fixed in **TypeScript**: oversized children were not clamped to the parent; a weight leaked
+the full width where no distribution pass ran; children were measured against the space
+offered rather than the parent's resolved size; `IntegerExpression` evaluated with the
+unresolved mask, so "copy variable X" returned 0; `ID_DENSITY` and `ID_FONT_SIZE` were
+seeded in `paint()` although the expressions consuming them evaluate in the **data** pass.
+`TimeAttribute` (op 172) is now implemented rather than a parse-only stub.
+
+Fixed in **C++**: `maxLines` was ignored; the visibility modifier was parsed and never
+consulted; a bare fill's `NaN` was resolved as a variable id, destroying the fraction.
+
+**Three of these share one shape** — the player relies on dirty propagation where the
+reference recomputes unconditionally, and the failure is always *to zero*, silently. That
+pattern is worth checking first when a value is mysteriously 0.
+
+**Two things the harness cannot do.** The headless Java reference measures every text
+component as `0x0` (its paint context returns no metrics and its text store does not
+populate), so **text must be arbitrated on a device**, not headlessly. And a device
+screenshot measures the *painted background*, which equals the component bounds only when
+`background` is the last modifier.
+
+`rcJson/docs/TEXT_SPEC.md` documents all 21 text operations and `CoreText` in detail —
+worth reading before touching text layout.
+
 ## The one-paragraph version
 
 Three implementations of the RemoteCompose format live here: a TypeScript player, a C++
@@ -36,7 +80,8 @@ Full detail in `GAPS.md`. Summary:
   desynchronises and everything after it is garbage. Notably `LAYOUT_TEXT` (208), the
   fallback text op for documents that declare no `profiles` — such documents cannot
   render text here at all.
-- **14 opcodes that parse their bytes and then do nothing.** Safe for the stream, but the
+- **13 opcodes that parse their bytes and then do nothing** (`TimeAttribute` is now
+  implemented; the rest remain). Safe for the stream, but the
   feature silently does nothing — the hardest failure to notice. Includes the entire
   macro/Loom system (244–249), `PathTween`, `TimeAttribute`, and `WakeIn`.
 - **21 corpus documents still diverge**, led by `upstream/cube_3d` (73 ids) and
@@ -130,7 +175,14 @@ node trace.mjs DOC.rc --frames 30 --dump --ops   # state per frame, ops that ran
 node trace.mjs DOC.rc --frames 30 --hold         # with touch held
 node sweep.mjs DIR 8                             # a whole corpus
 node whowrites.mjs DOC.rc                        # which op writes which variable
+node layout.mjs DOC.rc --width 400 --height 400  # computed layout tree
+node render.mjs DOC.rc out.png --width 400       # headless PNG
+node pvars.mjs DOC.rc --names a,b,c              # id -> particle variable
+node trace.mjs DOC.rc --tap 30:120:200           # simulate a discrete tap
 ```
+
+The C++ side has `build/tools/rc2layout/rc2layout DOC.rc W H`, emitting the same
+`LAYOUT id=…` format so the three engines diff line by line.
 
 The reference side lives in the androidx tree (`remote-core/src/test`): `RcTraceTest`
 emits the same `frame N id=value` format, `RcFixtureTest` generates the fixtures, and

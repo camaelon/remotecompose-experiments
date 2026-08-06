@@ -39,7 +39,7 @@ list (`ImpulseOperation`, `ImpulseProcess`) have now been implemented; these rem
 | :-- | :--- | :--- |
 | 244–249 | `PatternDefine`, `PatternInflation`, `PatternArgument`, `PatternBlock`, `PatternForEach`, `IncludeReferencedOperations` | the entire macro/Loom system renders nothing |
 | 158 | `PathTween` | path morphing is inert |
-| 172 | `TimeAttribute` | clock-derived values |
+| ~~172~~ | ~~`TimeAttribute`~~ | **implemented** — clock-derived values; was the cause of a real document rendering with no text |
 | 191 | `WakeIn` | no repaint scheduling — a time-gated block cannot wake itself |
 | 173 | `CanvasOperationsOp` | |
 | 143 | `BooleanConstant` | |
