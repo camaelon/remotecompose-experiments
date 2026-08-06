@@ -39,6 +39,10 @@ export class WidthModifier extends Operation implements VariableSupport {
     }
     getType(): number { return this.mType; }
     getValue(): number { return this.mOutValue; }
+    /** True when a fill fraction was supplied. A bare fill encodes NaN, which
+     *  getValue() reports as 0 — so the raw bits are the only way to tell
+     *  "fill half" from "fill completely". */
+    hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
     registerListening(context: RemoteContext): void {
         if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
             context.listensTo(idFromBits(this.mValueBits), this);
@@ -81,6 +85,10 @@ export class HeightModifier extends Operation implements VariableSupport {
     }
     getType(): number { return this.mType; }
     getValue(): number { return this.mOutValue; }
+    /** True when a fill fraction was supplied. A bare fill encodes NaN, which
+     *  getValue() reports as 0 — so the raw bits are the only way to tell
+     *  "fill half" from "fill completely". */
+    hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
     registerListening(context: RemoteContext): void {
         if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
             context.listensTo(idFromBits(this.mValueBits), this);
@@ -651,6 +659,20 @@ export class VisibilityModifier extends Operation {
         if (this.isDirty()) {
             this.updateVariables(context);
         }
+    }
+    /**
+     * Re-resolve the visibility every layout pass, matching
+     * ComponentVisibilityOperation.evaluateInLayout in the reference.
+     *
+     * `apply` only runs when the op is dirty, which never happens for a visibility id
+     * that nothing writes — so the component stayed VISIBLE while the reference
+     * resolved the same id to GONE. A document using visibility to switch between
+     * mutually exclusive branches therefore drew *both* of them.
+     */
+    evaluateInLayout(context: RemoteContext): boolean {
+        const before = this.mVisibility;
+        this.updateVariables(context);
+        return before !== this.mVisibility;
     }
     deepToString(indent: string): string { return `${indent}VisibilityModifier(${this.mVisibilityId})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {

@@ -37,6 +37,13 @@ export class LayoutComponent extends Component {
 
     // Padding
     mPaddingLeft = 0;
+    // Padding declared *before* the size modifier, which is the only padding that adds
+    // to an explicit width/height. The reference walks the modifier list and stops at
+    // the size modifier (LayoutComponent.computeModifierDefinedWidth), so
+    // `.width(200).padding(30)` is 200 wide with 140 of content, while
+    // `.padding(30).width(200)` is 260 wide — exactly Compose's modifier-order rule.
+    mPadBeforeWidth = 0;
+    mPadBeforeHeight = 0;
     mPaddingRight = 0;
     mPaddingTop = 0;
     mPaddingBottom = 0;
@@ -83,6 +90,10 @@ export class LayoutComponent extends Component {
         this.mPaddingRight = 0;
         this.mPaddingTop = 0;
         this.mPaddingBottom = 0;
+        this.mPadBeforeWidth = 0;
+        this.mPadBeforeHeight = 0;
+        let sawWidth = false;
+        let sawHeight = false;
         this.mComputedLayoutModifiers = null;
 
         for (const op of this.getList()) {
@@ -92,12 +103,16 @@ export class LayoutComponent extends Component {
                 this.mPaddingTop += op.mTopValue;
                 this.mPaddingRight += op.mRightValue;
                 this.mPaddingBottom += op.mBottomValue;
+                if (!sawWidth) this.mPadBeforeWidth += op.mLeftValue + op.mRightValue;
+                if (!sawHeight) this.mPadBeforeHeight += op.mTopValue + op.mBottomValue;
                 // Also keep in modifier list for paint-time translation
                 // (matches Java ComponentModifiers pattern)
                 this.mComponentModifiers.push(op);
             } else if (op instanceof WidthModifier) {
                 this.mWidthMod = op;
+                sawWidth = true;
             } else if (op instanceof HeightModifier) {
+                sawHeight = true;
                 this.mHeightMod = op;
             } else if (op instanceof WidthInModifier) {
                 this.mWidthInMod = op;

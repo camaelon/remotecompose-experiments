@@ -66,6 +66,9 @@ export interface ActionCallback {
     onAction(name: string, value: any): void;
 }
 
+/** Accessibility font scale. The browser exposes no equivalent, so 1. */
+const FONT_SCALE = 1;
+
 export class CoreDocument implements ExpansionDocument {
     static readonly MAJOR_VERSION = 1;
     static readonly MINOR_VERSION = 1;
@@ -74,6 +77,8 @@ export class CoreDocument implements ExpansionDocument {
 
     mOperations: Operation[] = [];
     mRootLayoutComponent: RootLayoutComponent | null = null;
+    /** Ops re-evaluated before every layout pass — see registerVariables. */
+    private mLayoutComputeOps = new Set<any>();
     mRemoteComposeState = new RemoteComposeState();
     mVersion: Version | null = null;
     mWidth = 256;
@@ -445,8 +450,36 @@ export class CoreDocument implements ExpansionDocument {
         this.mRemoteComposeState.setContext(context);
     }
 
+
+    /**
+     * Seed ID_FONT_SIZE, the platform's default text size.
+     *
+     * The host owns this value: the Android view uses `14 * density * fontScale`
+     * (RemoteComposeView.getDefaultTextSize) and the Compose player the same. Without it
+     * the variable reads 0, and any font size a document derives from it resolves to 0 as
+     * well. A zero font size is a legal float, so nothing errors — the text measures a
+     * real width with zero height, takes up no space, and never paints.
+     */
+    private seedPlatformTextSize(context: RemoteContext): void {
+        let density = context.getDensity();
+        if (!(density > 0)) {
+            density = (this.getProperty(7 /* DOC_DENSITY_AT_GENERATION */) as number) || 1;
+        }
+        // Density has to be seeded here too, not only in paint(). Documents scale type as
+        // `size * fontSize / density / 14`, and that expression is evaluated during the
+        // *data* pass — so a density seeded later leaves the whole term 0 and every
+        // derived font size with it.
+        context.loadFloat(27 /* ID_DENSITY */, density);
+        context.loadFloat(33 /* ID_FONT_SIZE */, 14 * density * FONT_SCALE);
+    }
+
     applyDataOperations(context: RemoteContext): void {
         context.setMode(ContextMode.DATA);
+        // Seed the platform text size *before* the data pass: expressions that derive a
+        // font size from it are evaluated here, so seeding later (in paint) is too late
+        // and they resolve to 0. The Android view does the same, seeding ID_FONT_SIZE
+        // immediately before applyDataOperations.
+        this.seedPlatformTextSize(context);
         this.mTimeVariables.updateTime(context);
         this.registerVariables(context, this.mOperations);
         this.applyOperations(context, this.mOperations);
@@ -474,6 +507,14 @@ export class CoreDocument implements ExpansionDocument {
             if (typeof (op as any).registerListening === 'function') {
                 (op as any).registerListening(context);
             }
+            // Operations that must be re-evaluated *before* every layout pass rather than
+            // only when a variable they listen to goes dirty. The reference keeps the
+            // same set (CoreDocument.registerLayoutCompute) and drains it in the layout
+            // loop; without it a visibility whose id nothing writes is never resolved
+            // and the component stays visible forever.
+            if (typeof (op as any).evaluateInLayout === 'function') {
+                this.mLayoutComputeOps.add(op);
+            }
             // Recurse into containers
             if (typeof (op as any).getList === 'function' && !(op instanceof ContainerEnd)) {
                 this.registerVariables(context, (op as any).getList());
@@ -490,6 +531,19 @@ export class CoreDocument implements ExpansionDocument {
 
         this.mClickAreas.clear();
         this.mTimeVariables.updateTime(context);
+
+        // Resolve layout-affecting operations (visibility, layout compute) before
+        // measuring. The reference bounds this at two rounds because one evaluation can
+        // dirty another; matching that bound keeps a cyclic document from spinning.
+        if (this.mRootLayoutComponent && this.mLayoutComputeOps.size > 0) {
+            let needsEvaluate = true;
+            for (let round = 0; needsEvaluate && round < 2; round++) {
+                needsEvaluate = false;
+                for (const op of this.mLayoutComputeOps) {
+                    if (op.evaluateInLayout(context)) needsEvaluate = true;
+                }
+            }
+        }
 
         // Run layout pass if needed
         if (this.mRootLayoutComponent && this.mRootLayoutComponent.needsMeasure()) {
@@ -517,6 +571,14 @@ export class CoreDocument implements ExpansionDocument {
             context.setDensity(density);
         }
         context.loadFloat(27 /* ID_DENSITY */, density);
+        this.seedPlatformTextSize(context);
+        // The host is responsible for seeding the platform text size; the Android view
+        // uses `14 * density * fontScale` (RemoteComposeView.getDefaultTextSize) and the
+        // Compose player the same. Without it ID_FONT_SIZE reads 0, and any font size
+        // derived from it — documents commonly scale their type off this — resolves to
+        // 0 too. A zero font size is a legal float, so nothing reports an error: the text
+        // measures a real width with zero height, occupies no space and never paints.
+
 
         // Save canvas state so content scaling transforms don't accumulate across frames
         const pc = context.getPaintContext();
