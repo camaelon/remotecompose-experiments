@@ -5,7 +5,58 @@ import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundl
 import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
 import { WebGLShaderRenderer } from './shader/WebGLShaderRenderer';
+import { RemoteComposeState } from '../core/RemoteComposeState';
+import { ensureWebFont, parseFamily, cssQuoted } from './WebFonts';
 import type { ShaderData } from '../core/operations/ShaderData';
+
+/** One font-variation axis of the current paint: an OpenType tag and the value asked for. */
+interface FontAxis {
+    readonly tag: string;
+    readonly value: number;
+}
+
+/**
+ * The nine `font-stretch` keywords and the percentage each stands for.
+ *
+ * Canvas is the constraint here, not CSS. The `font` shorthand rejects a `font-stretch` percentage
+ * outright — assigning `ctx.font = "25% 32px RF"` leaves the context at its `10px sans-serif`
+ * default, i.e. the whole assignment is voided — and `ctx.fontStretch` is an *enum* attribute whose
+ * only accepted values are these keywords (`'25%'` logs "not a valid enum value of type
+ * CanvasFontStretch" and is ignored). So a `wdth` axis reaches a canvas quantised to these nine
+ * steps, and no finer. It is a real narrowing next to the CSS property, which does take a
+ * percentage, and next to what the other lanes apply — recorded in the audit doc rather than
+ * papered over.
+ */
+/**
+ * The nine keywords `ctx.fontStretch` accepts. Spelled as a union rather than `string` because that
+ * property is typed as this same enum in lib.dom: widening it here makes the assignment below a
+ * type error, and casting at the assignment would lose the check that these spellings are the ones
+ * canvas actually takes — a typo'd step is silently ignored at runtime.
+ */
+type FontStretchKeyword =
+    | 'ultra-condensed' | 'extra-condensed' | 'condensed' | 'semi-condensed' | 'normal'
+    | 'semi-expanded' | 'expanded' | 'extra-expanded' | 'ultra-expanded';
+
+const FONT_STRETCH_STEPS: ReadonlyArray<readonly [number, FontStretchKeyword]> = [
+    [50, 'ultra-condensed'],
+    [62.5, 'extra-condensed'],
+    [75, 'condensed'],
+    [87.5, 'semi-condensed'],
+    [100, 'normal'],
+    [112.5, 'semi-expanded'],
+    [125, 'expanded'],
+    [150, 'extra-expanded'],
+    [200, 'ultra-expanded'],
+];
+
+/** The keyword whose percentage is closest to [percent]; the face clamps it to its own range. */
+export function nearestFontStretch(percent: number): FontStretchKeyword {
+    let best = FONT_STRETCH_STEPS[0];
+    for (const step of FONT_STRETCH_STEPS) {
+        if (Math.abs(step[0] - percent) < Math.abs(best[0] - percent)) best = step;
+    }
+    return best[1];
+}
 
 function argbToRgba(argb: number): string {
     const a = ((argb >>> 24) & 0xFF) / 255;
@@ -13,6 +64,57 @@ function argbToRgba(argb: number): string {
     const g = (argb >>> 8) & 0xFF;
     const b = argb & 0xFF;
     return `rgba(${r},${g},${b},${a.toFixed(3)})`;
+}
+
+/**
+ * CSS font stack for an Android typeface id (`0=DEFAULT, 1=SANS_SERIF, 2=SERIF, 3=MONOSPACE`).
+ *
+ * Each stack names the concrete face Android's own `fonts.xml` resolves the family to, then falls
+ * back to the CSS generic. That first name is what makes a browser render match the baked raster:
+ * Android's `DEFAULT`/`sans-serif` is **Roboto**, not whatever the host calls `sans-serif` (a
+ * headless Linux container typically answers DejaVu or Liberation). Naming only the generic — as
+ * this did before — guarantees a different typeface from the snapshot renderer for every string
+ * drawn, which reads as a permanent few-percent parity residual that no amount of layout work can
+ * close.
+ *
+ * The concrete names are only a *request*: a page that has not registered the faces falls straight
+ * through to the generic and renders exactly as it did before, so this is safe in viewers that ship
+ * no fonts. The parity harness (`scripts/design-artifacts/rc-compare.mjs --fonts`) registers them
+ * from the same vendored files the snapshot renderer rasterizes with, which is what turns the
+ * request into a match. Families are kept in sync with `FAMILY_FILES` in
+ * `scripts/design-artifacts/render-fonts-manifest.mjs`.
+ *
+ * Multi-word names are quoted because this is fed to the canvas `font` shorthand, where a bare
+ * `Noto Serif` is a parse error that silently voids the whole assignment.
+ */
+export function cssFontStackFor(fontType: number): string {
+    switch (fontType) {
+        case 2: return '"Noto Serif", serif';
+        case 3: return '"Droid Sans Mono", monospace';
+        // 1 = SANS_SERIF is Android's own name for the Roboto stack, so it and
+        // DEFAULT (0, and anything unrecognised) resolve to the same face.
+        default: return 'Roboto, sans-serif';
+    }
+}
+
+/**
+ * CSS font stack for a *named* family (`RemoteFontFamily.Named("Orbitron")`), with the default
+ * stack behind it.
+ *
+ * The fallback is the whole safety story: the name is only a request, so a page that could not
+ * register the family (no network, a webview CSP, a family Google doesn't serve) renders the same
+ * Roboto it rendered before this existed, rather than whatever the host picks for an unknown family.
+ *
+ * Quoted because this is fed to the canvas `font` shorthand, where a bare multi-word `Space Grotesk`
+ * is a parse error that silently voids the entire assignment — leaving the previous font in place,
+ * which reads as "the named family was ignored" rather than as the syntax error it is.
+ *
+ * `cssQuoted` escapes `\` as well as `"`; escaping only the quote would let a family ending in a
+ * backslash swallow the rest of the stack, which is the same silent-void failure the quoting exists
+ * to prevent.
+ */
+export function namedFontStack(family: string): string {
+    return `"${cssQuoted(family)}", ${cssFontStackFor(0)}`;
 }
 
 /** Fallback text size when the paint carries none. */
@@ -40,9 +142,22 @@ export class CanvasPaintContext extends PaintContext {
     private filterBitmap = true;
     private letterSpacing = 0;
     private gradientStyle: CanvasGradient | CanvasPattern | null = null;
-    private fontFamily = 'sans-serif';
+    private fontFamily = cssFontStackFor(0);
     private fontWeight = 400;
     private fontItalic = false;
+    /** The document's font-variation axes for the current paint, resolved to their tag names. */
+    private fontAxes: FontAxis[] = [];
+    /**
+     * The bare `google:` family of the current paint, or null when it names none.
+     *
+     * Kept because the axes arrive *after* the family does: a paint bundle serialises `setTextStyle`
+     * (TYPEFACE) before `setTextAxis` (FONT_AXIS), so the request made while resolving the typeface
+     * necessarily has no axes yet. Re-requesting once they are decoded is what actually asks the API
+     * for the variable face; without it a networked render keeps the enumerated static stylesheet and
+     * paints a `wdth` ramp as identical lines. (It looks fine on a page that vendored the variable
+     * face itself, which is exactly how this hid.)
+     */
+    private googleFamily: string | null = null;
     private colorFilterColor: string | null = null;
     private colorFilterArgb = 0;
     private colorFilterMode = 3; // SRC_OVER default
@@ -67,6 +182,7 @@ export class CanvasPaintContext extends PaintContext {
         miterLimit: number; blendMode: GlobalCompositeOperation; antiAlias: boolean;
         letterSpacing: number; gradientStyle: CanvasGradient | CanvasPattern | null;
         fontFamily: string; fontWeight: number; fontItalic: boolean;
+        fontAxes: FontAxis[]; googleFamily: string | null;
         filterBitmap: boolean;
         colorFilterColor: string | null; colorFilterArgb: number; colorFilterMode: number;
         activeShaderData: ShaderData | null;
@@ -125,6 +241,59 @@ export class CanvasPaintContext extends PaintContext {
 
     getText(id: number): string | null { return this.textCache.get(id) ?? null; }
 
+    // --- Typeface resolution ---
+
+    /**
+     * Called when a named family finishes loading, so a player that already painted a frame in the
+     * fallback face can repaint it in the real one. Null for single-shot renderers, which instead
+     * await `webFontsReady()` before painting the frame they keep.
+     */
+    onFontLoaded: (() => void) | null = null;
+
+    /**
+     * CSS stack for a `PaintBundle.TYPEFACE` operand.
+     *
+     * The operand is overloaded: below `START_ID` it is one of the four generic typeface constants,
+     * at or above it the document's *text id* for a named family (`CoreText.updateVariables` ends
+     * `else this.mType = this.mFontFamilyId`). The two ranges cannot collide — ids are handed out
+     * from `START_ID` upward, so no text id is ever 0..3 — which is what makes this single integer
+     * safe to disambiguate by magnitude.
+     *
+     * A `google:`-namespaced family is fetched; an unprefixed one is only *named*, leaving it to
+     * whatever the host already has. Requesting the face is fire-and-forget: resolution has to be
+     * synchronous because it happens mid-paint, so the stack names the family now and the face
+     * arrives later (repainted via `onFontLoaded`, or awaited by a single-shot renderer). Until then
+     * the fallback paints.
+     */
+    private fontStackForTypeface(fontType: number): string {
+        if (fontType < RemoteComposeState.START_ID) return cssFontStackFor(fontType);
+        const family = this.getText(fontType);
+        // A named family whose text id resolves to nothing means the document referenced a string it
+        // never loaded; treat it as unstyled rather than painting a stack named "null".
+        if (!family) return cssFontStackFor(0);
+        const { source, name } = parseFamily(family);
+        if (!name) return cssFontStackFor(0);
+        // Only the weight/style this op actually asks for. `fontWeight`/`fontItalic` were decoded
+        // from the same operation a few lines up, so the request is exact rather than "every face
+        // the family publishes".
+        this.googleFamily = source === 'google' ? name : null;
+        if (source === 'google') {
+            // The axes go with the request: asked for an enumerated weight list the API answers
+            // with pinned static instances, and asked for the axis *ranges* the document uses it
+            // answers with a variable face. Only the second can be varied at paint time. This first
+            // ask carries whatever axes the paint has so far — none, for the usual TYPEFACE-then-
+            // FONT_AXIS order — and the FONT_AXIS branch repeats it once they are known.
+            ensureWebFont(
+                name,
+                this.fontWeight,
+                this.fontItalic,
+                this.onFontLoaded ?? undefined,
+                this.fontAxes,
+            );
+        }
+        return namedFontStack(name);
+    }
+
     // --- Bitmap cache ---
 
     loadBitmap(imageId: number, encoding: number, type: number,
@@ -168,6 +337,15 @@ export class CanvasPaintContext extends PaintContext {
     // NanMap path command base (Java convention used in binary PathData)
     private static readonly NANMAP_PATH_BASE = 0x300000;
 
+    // A path operand is either a literal float or a NaN-encoded variable id (a
+    // dynamic coordinate, e.g. a button/card fill sized from its component's
+    // measured dimensions). Dereference the id to its current float value, the way
+    // the command word and every other expression operand are resolved — reading
+    // it as a literal `intBitsToFloat` would yield NaN and collapse the path.
+    private pathCoord(bits: number): number {
+        return isNaNBits(bits) ? this.mContext.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
+    }
+
     private buildPath2D(data: Int32Array, start = 0, end = 1): Path2D {
         const path = new Path2D();
         let i = 0;
@@ -185,33 +363,33 @@ export class CanvasPaintContext extends PaintContext {
                 case CanvasPaintContext.PATH_MOVE:
                     // Format: [MOVE, x, y] = 3 positions
                     i++;
-                    path.moveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
+                    path.moveTo(this.pathCoord(data[i]), this.pathCoord(data[i + 1]));
                     i += 2;
                     break;
                 case CanvasPaintContext.PATH_LINE:
                     // Format: [LINE, startX, startY, endX, endY] = 5 positions
                     // startX,startY are redundant (previous endpoint), skip them
                     i += 3;
-                    path.lineTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
+                    path.lineTo(this.pathCoord(data[i]), this.pathCoord(data[i + 1]));
                     i += 2;
                     break;
                 case CanvasPaintContext.PATH_QUADRATIC:
                     // Format: [QUAD, startX, startY, cpX, cpY, endX, endY] = 7 positions
                     i += 3;
-                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
+                    path.quadraticCurveTo(this.pathCoord(data[i]), this.pathCoord(data[i + 1]), this.pathCoord(data[i + 2]), this.pathCoord(data[i + 3]));
                     i += 4;
                     break;
                 case CanvasPaintContext.PATH_CONIC:
                     // Format: [CONIC, startX, startY, cpX, cpY, endX, endY, weight] = 8 positions
                     // Approximate conic as quadratic (ignore weight)
                     i += 3;
-                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
+                    path.quadraticCurveTo(this.pathCoord(data[i]), this.pathCoord(data[i + 1]), this.pathCoord(data[i + 2]), this.pathCoord(data[i + 3]));
                     i += 5;
                     break;
                 case CanvasPaintContext.PATH_CUBIC:
                     // Format: [CUBIC, startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY] = 9 positions
                     i += 3;
-                    path.bezierCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]), intBitsToFloat(data[i + 4]), intBitsToFloat(data[i + 5]));
+                    path.bezierCurveTo(this.pathCoord(data[i]), this.pathCoord(data[i + 1]), this.pathCoord(data[i + 2]), this.pathCoord(data[i + 3]), this.pathCoord(data[i + 4]), this.pathCoord(data[i + 5]));
                     i += 6;
                     break;
                 case CanvasPaintContext.PATH_CLOSE:
@@ -375,13 +553,60 @@ export class CanvasPaintContext extends PaintContext {
         }
     }
 
+    /**
+     * The axis name a [tag] int stands for, in either encoding the format uses.
+     *
+     * A `CoreText` style interns its axis names in the text table like any other string and puts the
+     * *text id* in the array; the paint bundle's own `setTextAxis` carries the **raw OpenType tag**
+     * packed into four bytes (`0x77676874` = `wght`). Reading the text table first (ids start at
+     * `START_ID`, so the two ranges can't collide) and unpacking the bytes otherwise covers both
+     * without having to know which writer produced the document. Anything that is neither is dropped
+     * rather than guessed at.
+     */
+    private axisName(tag: number): string | null {
+        if (tag >= RemoteComposeState.START_ID) {
+            const name = this.getText(tag);
+            if (name) return name;
+        }
+        let packed = '';
+        for (let shift = 24; shift >= 0; shift -= 8) {
+            const code = (tag >> shift) & 0xff;
+            if (code < 0x21 || code > 0x7e) return null;
+            packed += String.fromCharCode(code);
+        }
+        return packed;
+    }
+
+    private axisValue(tag: string): number | null {
+        const axis = this.fontAxes.find((a) => a.tag === tag);
+        return axis ? axis.value : null;
+    }
+
     private setFont(): void {
         // CSS canvas font shorthand: [style] [weight] size family.
         // Anything skipped here is silently ignored at render time, so
         // weight + italic must always be folded in for them to take effect.
-        const style = this.fontItalic ? 'italic ' : '';
-        const weight = this.fontWeight !== 400 ? `${this.fontWeight} ` : '';
+        //
+        // Font-variation axes reach the canvas through the shorthand's *own* properties rather than
+        // a `font-variation-settings` (which `ctx.font` has no room for): `wght` is the weight and
+        // `wdth` is `fontStretch` as a percentage, both of which the browser resolves against a
+        // registered variable face's declared ranges. That covers the two axes a document can
+        // actually be seen to vary; anything else — `opsz`, `GRAD`, a custom axis — has no canvas
+        // expression at all and is dropped, which is a platform limit rather than a decode gap.
+        const wght = this.axisValue('wght');
+        const ital = this.axisValue('ital');
+        const italic = this.fontItalic || (ital !== null && ital >= 0.5);
+        const effectiveWeight = wght !== null ? Math.round(wght) : this.fontWeight;
+        const style = italic ? 'italic ' : '';
+        const weight = effectiveWeight !== 400 ? `${effectiveWeight} ` : '';
         this.ctx.font = `${style}${weight}${this.textSize}px ${this.fontFamily}`;
+        // After `font`, not before: assigning the shorthand resets `fontStretch` to the shorthand's
+        // own (absent, so `normal`) value, which would undo this.
+        const stretchable = this.ctx as CanvasRenderingContext2D & { fontStretch?: FontStretchKeyword };
+        if ('fontStretch' in stretchable) {
+            const wdth = this.axisValue('wdth');
+            stretchable.fontStretch = wdth !== null ? nearestFontStretch(wdth) : 'normal';
+        }
     }
 
     // --- PaintContext abstract methods ---
@@ -513,14 +738,7 @@ export class CanvasPaintContext extends PaintContext {
                     this.fontItalic = italic;
 
                     const fontType = arr[i++];
-                    // Map Android typeface IDs to CSS font families
-                    // 0=DEFAULT, 1=SANS_SERIF, 2=SERIF, 3=MONOSPACE
-                    switch (fontType) {
-                        case 1: this.fontFamily = 'sans-serif'; break;
-                        case 2: this.fontFamily = 'serif'; break;
-                        case 3: this.fontFamily = 'monospace'; break;
-                        default: this.fontFamily = 'sans-serif'; break;
-                    }
+                    this.fontFamily = this.fontStackForTypeface(fontType);
                     this.setFont();
                     break;
                 }
@@ -552,7 +770,27 @@ export class CanvasPaintContext extends PaintContext {
                     break;
                 case PaintBundle.FONT_AXIS: {
                     const axisCount = upper;
-                    i += axisCount * 2; // each axis: tag int + value float-as-int
+                    const axes: FontAxis[] = [];
+                    for (let k = 0; k < axisCount; k++) {
+                        const tag = arr[i++];
+                        const value = intBitsToFloat(arr[i++]);
+                        const name = this.axisName(tag);
+                        if (name) axes.push({ tag: name, value });
+                    }
+                    this.fontAxes = axes;
+                    // Now that the axes are known, ask again: this is the request that can come
+                    // back variable. `ensureWebFont` is idempotent per (family, weight, style,
+                    // axes), so the repeat costs one map lookup when nothing changed.
+                    if (this.googleFamily && axes.length > 0) {
+                        ensureWebFont(
+                            this.googleFamily,
+                            this.fontWeight,
+                            this.fontItalic,
+                            this.onFontLoaded ?? undefined,
+                            axes,
+                        );
+                    }
+                    this.setFont();
                     break;
                 }
                 case PaintBundle.TEXTURE: {
@@ -627,9 +865,14 @@ export class CanvasPaintContext extends PaintContext {
         this.filterBitmap = true;
         this.letterSpacing = 0;
         this.gradientStyle = null;
-        this.fontFamily = 'sans-serif';
+        this.fontFamily = cssFontStackFor(0);
         this.fontWeight = 400;
         this.fontItalic = false;
+        // Axes belong to the paint like weight and slant do. Left behind, the previous op's `wdth`
+        // would keep being applied to text that asked for none — and, worse, keep being *requested*,
+        // widening a family's axis span with values no document line uses.
+        this.fontAxes = [];
+        this.googleFamily = null;
         this.colorFilterColor = null;
         this.colorFilterArgb = 0;
         this.colorFilterMode = 3;
@@ -684,7 +927,8 @@ export class CanvasPaintContext extends PaintContext {
             letterSpacing: this.letterSpacing, gradientStyle: this.gradientStyle,
             activeShaderData: this.activeShaderData,
             fontFamily: this.fontFamily, fontWeight: this.fontWeight,
-            fontItalic: this.fontItalic, filterBitmap: this.filterBitmap,
+            fontItalic: this.fontItalic, fontAxes: this.fontAxes,
+            googleFamily: this.googleFamily, filterBitmap: this.filterBitmap,
             colorFilterColor: this.colorFilterColor,
             colorFilterArgb: this.colorFilterArgb, colorFilterMode: this.colorFilterMode
         });
@@ -1378,8 +1622,18 @@ export class CanvasPaintContext extends PaintContext {
 
     roundedClipRect(width: number, height: number, topStart: number, topEnd: number,
                     bottomStart: number, bottomEnd: number): void {
+        // `roundRect` silently ignores the whole call when a radius is non-finite — leaving `clip()`
+        // an empty path, which hides every draw inside the component rather than merely losing its
+        // rounded corners — and throws outright on a negative one, which aborts the paint. Sanitise
+        // just those two cases (unresolvable or negative → square corner) so a radius bug is cosmetic
+        // (#2930). Over-large radii are deliberately passed through: Canvas scales an *overlapping*
+        // set down proportionally on its own, and a single large corner on an oblong rect is valid
+        // geometry — clamping every corner to half the shorter side would rewrite shapes that
+        // render correctly today and that the embedded player draws unmodified.
+        const r = (v: number) => (Number.isFinite(v) && v > 0 ? v : 0);
         this.ctx.beginPath();
-        this.ctx.roundRect(0, 0, width, height, [topStart, topEnd, bottomEnd, bottomStart]);
+        this.ctx.roundRect(0, 0, width, height,
+            [r(topStart), r(topEnd), r(bottomEnd), r(bottomStart)]);
         this.ctx.clip();
     }
 

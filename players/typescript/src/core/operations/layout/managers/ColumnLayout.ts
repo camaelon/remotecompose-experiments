@@ -98,7 +98,7 @@ export class ColumnLayout extends LayoutManager {
         }
 
         if (visibleChildren > 0) {
-            size.setHeight(size.getHeight() + this.mSpacedBy * (visibleChildren - 1));
+            size.setHeight(size.getHeight() + this.mSpacedBy * this.getDpBehaviorScale(context) * (visibleChildren - 1));
         }
     }
 
@@ -176,6 +176,7 @@ export class ColumnLayout extends LayoutManager {
         }
 
         if (hasWeights) {
+            const dp = this.getDpScale(context);
             const availableSpace = selfHeight - nonWeightHeight;
             for (const child of children) {
                 if (!(child instanceof LayoutComponent && child.hasHeightWeight())) continue;
@@ -183,10 +184,11 @@ export class ColumnLayout extends LayoutManager {
                 if (cm.isGone()) continue;
                 const weight = child.getHeightModValue();
                 let childHeight = (weight * availableSpace) / totalWeights;
+                // heightIn bounds are dp — scale to px by the generation density.
                 const hIn = child.getHeightInModifier();
                 if (hIn) {
-                    if (hIn.getMin() >= 0) childHeight = Math.max(hIn.getMin(), childHeight);
-                    if (hIn.getMax() >= 0) childHeight = Math.min(hIn.getMax(), childHeight);
+                    if (hIn.getMin() >= 0) childHeight = Math.max(hIn.getMin() * dp, childHeight);
+                    if (hIn.getMax() >= 0) childHeight = Math.min(hIn.getMax() * dp, childHeight);
                 }
                 cm.setH(childHeight);
                 child.measure(context, cm.getW(), cm.getW(), cm.getH(), cm.getH(), measure);
@@ -205,7 +207,7 @@ export class ColumnLayout extends LayoutManager {
             childrenHeight += cm.getH();
             visibleChildren++;
         }
-        childrenHeight += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+        childrenHeight += this.mSpacedBy * this.getDpBehaviorScale(context) * Math.max(0, visibleChildren - 1);
 
         // Compute vertical starting position
         let ty = 0;
@@ -259,7 +261,7 @@ export class ColumnLayout extends LayoutManager {
                 || this.mVerticalPositioning === ColumnLayout.SPACE_EVENLY) {
                 ty += verticalGap;
             }
-            ty += this.mSpacedBy;
+            ty += this.mSpacedBy * this.getDpBehaviorScale(context);
         }
     }
 

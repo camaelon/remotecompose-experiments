@@ -4,7 +4,7 @@ import { Operation } from '../../../Operation';
 import type { VariableSupport } from '../../../VariableSupport';
 import type { WireBuffer } from '../../../WireBuffer';
 import type { RemoteContext } from '../../../RemoteContext';
-import { ContextMode } from '../../../RemoteContext';
+import { ContextMode, DENSITY_BEHAVIOR_DP } from '../../../RemoteContext';
 import { PaintBundle } from '../../paint/PaintBundle';
 import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
 import { Visibility } from '../Component';
@@ -50,10 +50,9 @@ export class WidthModifier extends Operation implements VariableSupport {
     }
     updateVariables(context: RemoteContext): void {
         if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            // Resolve to the raw value; EXACT_DP dp→px scaling is applied uniformly
+            // in LayoutManager.measure (so static and variable values scale once).
             this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
-            if (this.mType === WidthModifier.EXACT_DP) {
-                this.mOutValue *= context.getDensity();
-            }
         }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
@@ -96,10 +95,9 @@ export class HeightModifier extends Operation implements VariableSupport {
     }
     updateVariables(context: RemoteContext): void {
         if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
+            // Resolve to the raw value; EXACT_DP dp→px scaling is applied uniformly
+            // in LayoutManager.measure (so static and variable values scale once).
             this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
-            if (this.mType === HeightModifier.EXACT_DP) {
-                this.mOutValue *= context.getDensity();
-            }
         }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
@@ -320,14 +318,24 @@ export class BorderModifier extends Operation {
             const b = Math.trunc(this.mB * 255 + 0.5);
             argb = ((a << 24) | (r << 16) | (g << 8) | b) | 0;
         }
+        // Border width and corner radius are authored in dp; AndroidX
+        // BorderModifierOperation scales them by the doc density under DP density
+        // behavior (local copies → idempotent).
+        let borderWidth = this.mBorderWidth;
+        let roundedCorner = this.mRoundedCorner;
+        if (context.getDensityBehavior() === DENSITY_BEHAVIOR_DP) {
+            const d = context.getDensity();
+            if (!Number.isNaN(d) && d > 0) { borderWidth *= d; roundedCorner *= d; }
+        }
+
         pb.reset();
         pb.setStyle(PaintBundle.STROKE);
         pb.setColor(argb);
-        pb.setStrokeWidth(this.mBorderWidth);
+        pb.setStrokeWidth(borderWidth);
         pc.replacePaint(pb);
 
-        if (this.mRoundedCorner > 0) {
-            pc.drawRoundRect(0, 0, w, h, this.mRoundedCorner, this.mRoundedCorner);
+        if (roundedCorner > 0) {
+            pc.drawRoundRect(0, 0, w, h, roundedCorner, roundedCorner);
         } else {
             pc.drawRect(0, 0, w, h);
         }
@@ -373,10 +381,26 @@ export class PaddingModifier extends Operation implements VariableSupport {
         if (isNaNBits(this.mBottom)) context.listensTo(idFromBits(this.mBottom), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (isNaNBits(this.mLeft)) this.mLeftValue = context.getFloat(idFromBits(this.mLeft));
-        if (isNaNBits(this.mTop)) this.mTopValue = context.getFloat(idFromBits(this.mTop));
-        if (isNaNBits(this.mRight)) this.mRightValue = context.getFloat(idFromBits(this.mRight));
-        if (isNaNBits(this.mBottom)) this.mBottomValue = context.getFloat(idFromBits(this.mBottom));
+        // Re-derive every side from its raw bits each call (NaN → variable lookup,
+        // else the literal float) so density scaling below is idempotent across the
+        // repeated updateVariables passes the engine runs (data + per-op paint).
+        this.mLeftValue = isNaNBits(this.mLeft) ? context.getFloat(idFromBits(this.mLeft)) : intBitsToFloat(this.mLeft);
+        this.mTopValue = isNaNBits(this.mTop) ? context.getFloat(idFromBits(this.mTop)) : intBitsToFloat(this.mTop);
+        this.mRightValue = isNaNBits(this.mRight) ? context.getFloat(idFromBits(this.mRight)) : intBitsToFloat(this.mRight);
+        this.mBottomValue = isNaNBits(this.mBottom) ? context.getFloat(idFromBits(this.mBottom)) : intBitsToFloat(this.mBottom);
+        // Padding is authored in dp. Under DP density behavior AndroidX's
+        // PaddingModifierOperation.updateVariables multiplies each side by the doc
+        // density to get pixels; replicate that so padded content matches the baked
+        // render at densities != 1 (e.g. the density-2.0 Wear-aligned catalog).
+        if (context.getDensityBehavior() === DENSITY_BEHAVIOR_DP) {
+            const d = context.getDensity();
+            if (!Number.isNaN(d) && d > 0) {
+                this.mLeftValue *= d;
+                this.mTopValue *= d;
+                this.mRightValue *= d;
+                this.mBottomValue *= d;
+            }
+        }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
@@ -388,16 +412,68 @@ export class PaddingModifier extends Operation implements VariableSupport {
 }
 
 // ── MODIFIER_ROUNDED_CLIP_RECT (54): FLOAT topStart, FLOAT topEnd, FLOAT bottomStart, FLOAT bottomEnd
-export class RoundedClipRectModifier extends Operation {
+//
+// Each corner arrives as raw float32 bits that may be a NaN-encoded variable
+// reference rather than a literal: a *fixed* shape (`RemoteRoundedCornerShape(4.dp)`)
+// writes a dp literal, but a *size-relative* one — `RemoteCircleShape`, i.e. a 50%
+// corner — writes an expression id computed from the component's measured width and
+// height. Reading those bits as a float yields NaN, and `ctx.roundRect` ignores a
+// non-finite radius list entirely, leaving an empty path for the following `clip()`
+// — which clips away *everything drawn inside the component*, not just the corners.
+// That is why the round watch screen rendered as a blank canvas (#2930).
+export class RoundedClipRectModifier extends Operation implements VariableSupport {
     static readonly OP_CODE = 54;
+    // Corners as raw float32 int bits (may be NaN-encoded variable refs).
     private mTopStart: number; private mTopEnd: number;
     private mBottomStart: number; private mBottomEnd: number;
+    // Resolved pixel radii, re-derived on every updateVariables pass.
+    mTopStartValue: number; mTopEndValue: number;
+    mBottomStartValue: number; mBottomEndValue: number;
     private mLayoutW = 0; private mLayoutH = 0;
     private mComponent: any = null;
     constructor(topStart: number, topEnd: number, bottomStart: number, bottomEnd: number) {
         super();
         this.mTopStart = topStart; this.mTopEnd = topEnd;
         this.mBottomStart = bottomStart; this.mBottomEnd = bottomEnd;
+        this.mTopStartValue = isNaNBits(topStart) ? 0 : intBitsToFloat(topStart);
+        this.mTopEndValue = isNaNBits(topEnd) ? 0 : intBitsToFloat(topEnd);
+        this.mBottomStartValue = isNaNBits(bottomStart) ? 0 : intBitsToFloat(bottomStart);
+        this.mBottomEndValue = isNaNBits(bottomEnd) ? 0 : intBitsToFloat(bottomEnd);
+    }
+    registerListening(context: RemoteContext): void {
+        if (isNaNBits(this.mTopStart)) context.listensTo(idFromBits(this.mTopStart), this);
+        if (isNaNBits(this.mTopEnd)) context.listensTo(idFromBits(this.mTopEnd), this);
+        if (isNaNBits(this.mBottomStart)) context.listensTo(idFromBits(this.mBottomStart), this);
+        if (isNaNBits(this.mBottomEnd)) context.listensTo(idFromBits(this.mBottomEnd), this);
+    }
+    updateVariables(context: RemoteContext): void {
+        // Re-derive every corner from its raw bits each call (NaN → variable lookup,
+        // else the literal float) so the density scaling below stays idempotent across
+        // the repeated updateVariables passes the engine runs — same shape as
+        // PaddingModifier above.
+        const ts = this.resolve(context, this.mTopStart);
+        const te = this.resolve(context, this.mTopEnd);
+        const bs = this.resolve(context, this.mBottomStart);
+        const be = this.resolve(context, this.mBottomEnd);
+        this.mTopStartValue = ts; this.mTopEndValue = te;
+        this.mBottomStartValue = bs; this.mBottomEndValue = be;
+    }
+    /**
+     * A literal corner is authored in dp, so under DP density behavior AndroidX's
+     * `RoundedClipRectModifierOperation.paint` scales it by the doc density — replicate
+     * that so the clipped corners match the baked render at densities != 1. A *variable*
+     * corner is deliberately left alone: it is computed from the component's measured
+     * width/height, which the engine already carries in generation pixels, so scaling it
+     * would double-apply the density and over-round the shape.
+     */
+    private resolve(context: RemoteContext, bits: number): number {
+        if (isNaNBits(bits)) return context.getFloat(idFromBits(bits));
+        let v = intBitsToFloat(bits);
+        if (context.getDensityBehavior() === DENSITY_BEHAVIOR_DP) {
+            const d = context.getDensity();
+            if (!Number.isNaN(d) && d > 0) v *= d;
+        }
+        return v;
     }
     setComponent(c: any): void { this.mComponent = c; }
     layoutDecorator(w: number, h: number): void { this.mLayoutW = w; this.mLayoutH = h; }
@@ -409,13 +485,23 @@ export class RoundedClipRectModifier extends Operation {
         const w = this.mLayoutW;
         const h = this.mLayoutH;
         if (w > 0 && h > 0) {
-            pc.roundedClipRect(w, h, this.mTopStart, this.mTopEnd, this.mBottomStart, this.mBottomEnd);
+            // Resolve here too: a modifier whose corner is an expression over the
+            // component's own size only gets its final value once the component has been
+            // measured, which happens after the data pass that ran updateVariables.
+            this.updateVariables(context);
+            pc.roundedClipRect(w, h, this.mTopStartValue, this.mTopEndValue,
+                this.mBottomStartValue, this.mBottomEndValue);
         }
     }
-    deepToString(indent: string): string { return `${indent}RoundedClipRectModifier`; }
+    deepToString(indent: string): string {
+        return `${indent}RoundedClipRectModifier(${this.mTopStartValue}, ${this.mTopEndValue}, ` +
+            `${this.mBottomStartValue}, ${this.mBottomEndValue})`;
+    }
     static read(buffer: WireBuffer, operations: Operation[]): void {
+        // readInt, not readFloat: the raw bits are kept so a NaN-encoded variable
+        // reference survives to be resolved against the context.
         operations.push(new RoundedClipRectModifier(
-            buffer.readFloat(), buffer.readFloat(), buffer.readFloat(), buffer.readFloat()));
+            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -705,7 +791,14 @@ export class OffsetModifier extends Operation implements VariableSupport {
         if (context.mMode !== ContextMode.PAINT) return;
         const pc = context.getPaintContext();
         if (!pc) return;
-        pc.translate(this.mOutX, this.mOutY);
+        // Offsets are authored in dp; AndroidX OffsetModifierOperation scales them by
+        // the doc density under DP density behavior (local copies → idempotent).
+        let ox = this.mOutX, oy = this.mOutY;
+        if (context.getDensityBehavior() === DENSITY_BEHAVIOR_DP) {
+            const d = context.getDensity();
+            if (!Number.isNaN(d) && d > 0) { ox *= d; oy *= d; }
+        }
+        pc.translate(ox, oy);
     }
     deepToString(indent: string): string { return `${indent}OffsetModifier(${this.mOutX}, ${this.mOutY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
