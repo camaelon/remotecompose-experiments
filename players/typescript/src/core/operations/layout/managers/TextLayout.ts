@@ -36,9 +36,15 @@ export class TextLayout extends CoreText {
         // bits: a value driven by a variable is a NaN-encoded id, and round-tripping it
         // through a JS number can canonicalise the NaN and lose the payload. This is the
         // same reason CoreText's parameter reader takes floats via readInt().
-        const fontSize = buffer.readInt();
+        //
+        // Read via readNanIdBits() rather than a bare readInt(): both consume the same
+        // four bytes, but only the former is a remapping hook — under macro/pattern
+        // expansion LoomWireBuffer rewrites the id in the NaN payload, and a plain
+        // readInt() skips that, leaving every expanded instance pointing at the
+        // template's id.
+        const fontSize = buffer.readNanIdBits();
         const fontStyle = buffer.readInt();
-        const fontWeight = buffer.readInt();
+        const fontWeight = buffer.readNanIdBits();
         const fontFamilyId = buffer.readId();
         const textAlign = buffer.readInt();
         const overflow = buffer.readInt();

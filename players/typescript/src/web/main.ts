@@ -4,6 +4,7 @@ import { WireBuffer } from '../core/WireBuffer';
 import { CoreDocument } from '../core/CoreDocument';
 import { RemoteComposeBuffer } from '../core/RemoteComposeBuffer';
 import { CanvasPaintContext } from './CanvasPaintContext';
+import { configureWebFonts, webFontsReady } from './WebFonts';
 import { WebRemoteContext } from './WebRemoteContext';
 import { ContextMode, RemoteContext } from '../core/RemoteContext';
 import { Header } from '../core/operations/Header';
@@ -141,9 +142,16 @@ export class RcdPlayer {
         this.document = doc;
 
         // Use the current canvas size — don't resize to document dimensions.
+        // DOC_DENSITY_AT_GENERATION is the dp→px scale the document was authored
+        // at. It is NOT a layout-space divisor: DOC_WIDTH/HEIGHT and px-typed
+        // modifiers (padding, offsets) are already in generation pixels, so the
+        // layout space is the canvas 1:1. The density is applied only to the
+        // dp-typed dimension modifiers (EXACT_DP width/height, width/heightIn),
+        // which the wire stores as raw dp. Absent (all density-1 docs today) it
+        // is 1 and nothing changes.
         const density = doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) as number || 1;
-        const docWidth = this.canvas.width / density;
-        const docHeight = this.canvas.height / density;
+        const docWidth = this.canvas.width;
+        const docHeight = this.canvas.height;
 
         // Override document dimensions to match canvas
         doc.setWidth(docWidth);
@@ -151,6 +159,9 @@ export class RcdPlayer {
 
         // Create contexts
         this.paintContext = new CanvasPaintContext(null as any, this.ctx);
+        // A named family is fetched from the network mid-paint, so the first frame that uses one
+        // paints in the fallback face. Repaint when it lands.
+        this.paintContext.onFontLoaded = () => this.scheduleRepaint();
         this.remoteContext = new WebRemoteContext(this.paintContext);
 
         // Wire up
@@ -267,6 +278,18 @@ export class RcdPlayer {
         }
     }
 
+    /**
+     * Resolves once every named font family this document has asked for is paintable.
+     *
+     * Only a single-shot renderer needs this — it has no later frame in which a face could appear,
+     * so it must `await player.fontsReady()` between the first paint (which is what *discovers* the
+     * families) and the frame it keeps. Interactive players get the same effect from the repaint the
+     * player schedules when a face lands.
+     */
+    fontsReady(): Promise<void> {
+        return webFontsReady();
+    }
+
     resize(newWidth: number, newHeight: number): void {
         this.canvas.width = newWidth;
         this.canvas.height = newHeight;
@@ -275,13 +298,13 @@ export class RcdPlayer {
         // Keep the engine's RemoteContext in sync with the new canvas
         // size so non-SIZING_SCALE documents re-flow into it on next
         // paint.  Without this the content would keep drawing at the
-        // original load-time size.
+        // original load-time size. The layout space is canvas pixels 1:1
+        // (matching loadFromArrayBuffer) — the generation density scales the
+        // dp-typed modifiers, it is not a layout-space divisor, so dividing
+        // here would shrink density>1 documents on every resize.
         if (this.remoteContext) {
-            const density = this.remoteContext.getDensity() || 1;
-            const docW = newWidth  / density;
-            const docH = newHeight / density;
-            this.remoteContext.mWidth  = docW;
-            this.remoteContext.mHeight = docH;
+            this.remoteContext.mWidth  = newWidth;
+            this.remoteContext.mHeight = newHeight;
             // The DATA pass in CoreDocument.paint reloads
             // ID_WINDOW_WIDTH / ID_WINDOW_HEIGHT from these, so
             // expressions track the new size automatically.
@@ -336,6 +359,11 @@ export class RcdPlayer {
 import { createPlayer, RcPlayerElement, base64ToArrayBuffer } from './RcPlayerElement';
 export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
 export type { RcPlayerOptions, RcPlayerHandle } from './RcPlayerElement';
+// Named-family web fonts. `configureWebFonts` is the switch an embedder needs: a webview whose CSP
+// forbids the font origins, or a hermetic CI lane, turns it off and renders the fallback stack.
+export { configureWebFonts, webFontsReady, googleFontsUrl, googleFontsAxisUrl, ensureWebFont, parseFamily, cssQuoted, resetWebFonts, GOOGLE_PREFIX } from './WebFonts';
+export { namedFontStack, cssFontStackFor } from './CanvasPaintContext';
+export type { WebFontConfig } from './WebFonts';
 
 // Auto-initialize if running in browser
 if (typeof window !== 'undefined') {

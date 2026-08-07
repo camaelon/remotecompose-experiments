@@ -3,6 +3,7 @@
 
 import { Component, Visibility } from './Component';
 import type { Operation } from '../../Operation';
+import { PaintOperation } from '../../PaintOperation';
 import type { PaintContext } from '../../PaintContext';
 import type { RemoteContext } from '../../RemoteContext';
 import type { MeasurePass } from './measure/MeasurePass';
@@ -18,6 +19,7 @@ import { WidthModifier, HeightModifier, PaddingModifier,
 import { LayoutComputeOperation } from './modifiers/LayoutComputeOperation';
 import { LayoutComponentContent } from './LayoutComponentContent';
 import { CanvasContent } from './CanvasContent';
+import { CanvasOperations } from './CanvasOperations';
 import { ComponentValue } from '../../operations/ComponentValue';
 import { TouchExpression } from '../../operations/TouchExpression';
 import type { ComponentMeasure } from './measure/ComponentMeasure';
@@ -81,6 +83,22 @@ export class LayoutComponent extends Component {
     getHeightInModifier(): DimensionConstraint | null { return this.mHeightInMod; }
     getScrollModifier(): ScrollModifier | null { return this.mScrollModifier; }
 
+    /** Choose which of two competing width/height modifiers a component keeps.
+     *  An EXACT / EXACT_DP fixed-size constraint takes precedence over a FILL/WRAP
+     *  (Compose composes `size().fillMaxSize()` so the fixed size wins); otherwise
+     *  the later modifier wins, preserving the previous last-writer behaviour. */
+    private static preferExactSize(
+        current: WidthModifier | HeightModifier | null,
+        next: WidthModifier | HeightModifier,
+    ): WidthModifier | HeightModifier {
+        const isExact = (t: number): boolean =>
+            t === WidthModifier.EXACT || t === WidthModifier.EXACT_DP;
+        if (current && isExact(current.getType()) && !isExact(next.getType())) {
+            return current;
+        }
+        return next;
+    }
+
     inflate(): void {
         // Separate children ops into structure: modifiers, content, child components
         this.mChildrenComponents = [];
@@ -109,11 +127,16 @@ export class LayoutComponent extends Component {
                 // (matches Java ComponentModifiers pattern)
                 this.mComponentModifiers.push(op);
             } else if (op instanceof WidthModifier) {
-                this.mWidthMod = op;
+                // A component can carry several size modifiers (e.g. an explicit
+                // `size(72)` plus a widget's internal `fillMaxSize()`). Compose
+                // composes them so the fixed constraint wins — `size().fillMaxSize()`
+                // measures at the fixed size. So keep an EXACT/EXACT_DP constraint
+                // rather than letting a later FILL/WRAP clobber it (last-wins).
+                this.mWidthMod = LayoutComponent.preferExactSize(this.mWidthMod, op) as WidthModifier;
                 sawWidth = true;
             } else if (op instanceof HeightModifier) {
+                this.mHeightMod = LayoutComponent.preferExactSize(this.mHeightMod, op) as HeightModifier;
                 sawHeight = true;
-                this.mHeightMod = op;
             } else if (op instanceof WidthInModifier) {
                 this.mWidthInMod = op;
             } else if (op instanceof HeightInModifier) {
@@ -176,6 +199,9 @@ export class LayoutComponent extends Component {
                 // Content container — extract its children.
                 // IMPORTANT: this check must come BEFORE `instanceof Component`
                 // because LCC and CC extend Component.
+                // Parent the wrapper to this component so its (unmeasured) size can
+                // delegate to ours — ComponentValues reference the wrapper by id.
+                (op as Component).setParent(this);
                 for (const contentOp of (op as any).getList()) {
                     if (contentOp instanceof Component) {
                         contentOp.setParent(this);
@@ -199,6 +225,7 @@ export class LayoutComponent extends Component {
                             (contentOp as any).setComponent(this);
                         }
                         this.mContentOps.push(contentOp);
+                        this.hoistNestedComponentValues(contentOp);
                     }
                 }
                 if (op instanceof CanvasContent) {
@@ -217,6 +244,7 @@ export class LayoutComponent extends Component {
                 } else {
                     this.mContentOps.push(op);
                 }
+                this.hoistNestedComponentValues(op);
             }
         }
 
@@ -322,6 +350,37 @@ export class LayoutComponent extends Component {
 
     // --- ComponentValue (Java ComponentData pattern) ---
 
+    /**
+     * Collect ComponentValue bindings that live *inside* a content container (e.g.
+     * a `CanvasOperations` draw block) so this component's measured size reaches
+     * them via updateComponentValues. Without this, a CanvasOperations fill whose
+     * path geometry is built from `FloatExpression`s reading WIDTH/HEIGHT sees
+     * those variables unset (zero) and draws an empty path. Recurses through
+     * non-Component containers only — a nested child `Component` owns and collects
+     * its own ComponentValues in its own `inflate()`.
+     */
+    private hoistNestedComponentValues(op: Operation): void {
+        if (op instanceof Component) return;
+        const getList = (op as { getList?: () => Operation[] }).getList;
+        if (typeof getList !== 'function') return;
+        for (const child of getList.call(op)) {
+            if (child instanceof ComponentValue) {
+                // Only adopt a binding that actually targets *this* component.
+                // updateComponentValues writes this component's dimensions to every
+                // entry, so a nested cross-component reference (its own
+                // `getComponentId2()`) must be left alone — it's resolved against
+                // its real target by ComponentValue.apply, and adopting it here
+                // would clobber that value with our dimensions each measure.
+                if (child.getComponentId2() === this.getComponentId()) {
+                    if (this.mComponentValues === null) this.mComponentValues = [];
+                    this.mComponentValues.push(child);
+                }
+            } else {
+                this.hoistNestedComponentValues(child);
+            }
+        }
+    }
+
     /** Update bound float variables with this component's dimensions/position.
      *  Matches Java Component.updateComponentValues — called during both measure
      *  (for WIDTH/HEIGHT) and layout (for all types including POS_X/POS_Y). */
@@ -375,6 +434,28 @@ export class LayoutComponent extends Component {
         this.mNeedsMeasure = false;
     }
 
+    /** Re-sum the cached padding totals from the padding modifiers' resolved
+     *  values. `inflate()` snapshots these at load time from the raw (dp) values,
+     *  before `PaddingModifier.updateVariables` has resolved variables or applied
+     *  DP density scaling — so the snapshot is stale for dynamic or density-scaled
+     *  padding. Called at the start of each measure (after updateVariables has run
+     *  in the data pass) so measure and paint both see the final pixel padding. */
+    protected refreshPadding(): void {
+        let l = 0, t = 0, r = 0, b = 0;
+        for (const mod of this.mComponentModifiers) {
+            if (mod instanceof PaddingModifier) {
+                l += mod.mLeftValue;
+                t += mod.mTopValue;
+                r += mod.mRightValue;
+                b += mod.mBottomValue;
+            }
+        }
+        this.mPaddingLeft = l;
+        this.mPaddingTop = t;
+        this.mPaddingRight = r;
+        this.mPaddingBottom = b;
+    }
+
     /** Walk modifiers reducing dimensions by padding and passing to decorators.
      *  Matches Java ComponentModifiers.layout(). */
     layoutModifiers(w: number, h: number): void {
@@ -402,12 +483,21 @@ export class LayoutComponent extends Component {
     }
 
     paint(paintContext: PaintContext): void {
-        if (this.mDrawContentOperations !== null && this.mDrawContentOperations.length > 0) {
+        // The draw-content path (a `Modifier.drawWithContent` block) replaces the
+        // component's normal painting with its own draw ops. Only take it when the
+        // block actually contains a *drawing* op — a `DrawContentModifier` can be
+        // trailed by non-visual ops alone (e.g. accessibility `AccessibilitySemantics`),
+        // and treating that as a custom draw would blank the component's real
+        // content (its `CanvasOperations` fill, text, and children).
+        const drawContentOps = this.mDrawContentOperations;
+        const hasCustomDraw =
+            drawContentOps !== null && drawContentOps.some((op) => op instanceof PaintOperation);
+        if (hasCustomDraw) {
             // Draw content operations handle their own painting
             paintContext.matrixSave();
             paintContext.matrixTranslate(this.mX, this.mY);
             const context = paintContext.getContext();
-            for (const op of this.mDrawContentOperations) {
+            for (const op of drawContentOps!) {
                 context.incrementOpCount();
                 if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                     op.markNotDirty();
@@ -451,14 +541,28 @@ export class LayoutComponent extends Component {
         // Translate by total padding for content
         paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
 
-        // Paint content operations (non-layout draw ops)
+        // Paint content operations in wire order (preserving the document's
+        // draw/state sequencing). A `CanvasOperations` block is a
+        // `Modifier.drawWithContent` decoration (e.g. a Material3 button/card
+        // fill + outline) whose path geometry is bound from the component's
+        // measured WIDTH/HEIGHT: it must draw at the component's *full* padded
+        // bounds, so temporarily undo the padding inset around just that op —
+        // otherwise the fill is shifted into the content region and the leading
+        // clip crops its top/left. Every other content op stays padding-inset.
         for (const op of this.mContentOps) {
+            const isDecoration = op instanceof CanvasOperations;
+            if (isDecoration) {
+                paintContext.matrixTranslate(-this.mPaddingLeft, -this.mPaddingTop);
+            }
             context.incrementOpCount();
             if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                 op.markNotDirty();
                 (op as any).updateVariables(context);
             }
             op.apply(context);
+            if (isDecoration) {
+                paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
+            }
         }
 
         // Paint children sorted by z-index

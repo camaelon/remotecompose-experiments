@@ -74,6 +74,7 @@ import { MatrixConstant } from './operations/MatrixConstant';
 import { MatrixVectorMath } from './operations/MatrixVectorMath';
 import { TextTransform } from './operations/TextTransform';
 import { TextLookup } from './operations/TextLookup';
+import { TextLookupInt } from './operations/TextLookupInt';
 import { ColorTheme } from './operations/ColorTheme';
 import { ColorAttribute } from './operations/ColorAttribute';
 import { DataMapLookup } from './operations/DataMapLookup';
@@ -82,12 +83,13 @@ import { TextAttribute } from './operations/TextAttribute';
 import { TextLength } from './operations/TextLength';
 import { TextSubtext } from './operations/TextSubtext';
 import {
-    ImpulseOperation, ImpulseProcess, CanvasOperationsOp,
+    ImpulseOperation, ImpulseProcess,
     DebugMessage,
     HostActionMetadataOperation, RunActionOperation,
     ValueFloatExpressionChangeAction,
     PathTween, HapticFeedback, WakeIn, TimeAttribute
 } from './operations/StubOperations';
+import { CanvasOperations } from './operations/layout/CanvasOperations';
 import {
     ParticlesCreateOp, ParticlesLoopOp, ParticlesCompareOp
 } from './operations/ParticleOperations';
@@ -238,13 +240,14 @@ export class Operations {
         m.set(MatrixExpression.OP_CODE, MatrixExpression.read);
         m.set(PathExpression.OP_CODE, PathExpression.read);
         m.set(TextLookup.OP_CODE, TextLookup.read);
+        m.set(TextLookupInt.OP_CODE, TextLookupInt.read);
         m.set(ColorTheme.OP_CODE, ColorTheme.read);
         m.set(ColorAttribute.OP_CODE, ColorAttribute.read);
         m.set(TextLayout.OP_CODE, TextLayout.read);
         m.set(PathAppend.OP_CODE, PathAppend.read);
         m.set(ImpulseOperation.OP_CODE, ImpulseOperation.read);
         m.set(TextAttribute.OP_CODE, TextAttribute.read);
-        m.set(CanvasOperationsOp.OP_CODE, CanvasOperationsOp.read);
+        m.set(CanvasOperations.OP_CODE, CanvasOperations.read);
         m.set(DebugMessage.OP_CODE, DebugMessage.read);
         m.set(MatrixVectorMath.OP_CODE, MatrixVectorMath.read);
         m.set(MatrixConstant.OP_CODE, MatrixConstant.read);

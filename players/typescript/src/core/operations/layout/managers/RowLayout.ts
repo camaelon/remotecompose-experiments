@@ -138,7 +138,7 @@ export class RowLayout extends LayoutManager {
         }
 
         if (visibleChildren > 0) {
-            size.setWidth(size.getWidth() + this.mSpacedBy * (visibleChildren - 1));
+            size.setWidth(size.getWidth() + this.mSpacedBy * this.getDpBehaviorScale(context) * (visibleChildren - 1));
         }
     }
 
@@ -198,6 +198,7 @@ export class RowLayout extends LayoutManager {
         }
 
         if (hasWeights) {
+            const dp = this.getDpScale(context);
             const availableSpace = selfWidth - nonWeightWidth;
             for (const child of components) {
                 if (!(child instanceof LayoutComponent && child.hasWidthWeight())) continue;
@@ -205,10 +206,11 @@ export class RowLayout extends LayoutManager {
                 if (cm.isGone()) continue;
                 const weight = child.getWidthModValue();
                 let childWidth = (weight * availableSpace) / totalWeights;
+                // widthIn bounds are dp — scale to px by the generation density.
                 const wIn = child.getWidthInModifier();
                 if (wIn) {
-                    if (wIn.getMin() >= 0) childWidth = Math.max(wIn.getMin(), childWidth);
-                    if (wIn.getMax() >= 0) childWidth = Math.min(wIn.getMax(), childWidth);
+                    if (wIn.getMin() >= 0) childWidth = Math.max(wIn.getMin() * dp, childWidth);
+                    if (wIn.getMax() >= 0) childWidth = Math.min(wIn.getMax() * dp, childWidth);
                 }
                 cm.setW(childWidth);
                 child.measure(context, childWidth, childWidth, cm.getH(), cm.getH(), measure);
@@ -227,7 +229,7 @@ export class RowLayout extends LayoutManager {
             childrenHeight = Math.max(childrenHeight, cm.getH());
             visibleChildren++;
         }
-        childrenWidth += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+        childrenWidth += this.mSpacedBy * this.getDpBehaviorScale(context) * Math.max(0, visibleChildren - 1);
 
         // Compute horizontal starting position
         let tx = 0;
@@ -281,7 +283,7 @@ export class RowLayout extends LayoutManager {
                 || this.mHorizontalPositioning === RowLayout.SPACE_EVENLY) {
                 tx += horizontalGap;
             }
-            tx += this.mSpacedBy;
+            tx += this.mSpacedBy * this.getDpBehaviorScale(context);
         }
 
         if (size !== null) {
