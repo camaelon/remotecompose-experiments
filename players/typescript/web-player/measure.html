@@ -13652,11 +13652,13 @@ var RC = (() => {
             context.loadFloat(varIds[j], particle1[j]);
           }
           this.runChildren(context);
+          context.incrementOpCount(this);
           for (let j = 0; j < eq2.length && j < varCount; j++) {
             particle2[j] = FloatExpression.evalRPN(context, eq2[j]);
             context.loadFloat(varIds[j], particle2[j]);
           }
           this.runChildren(context);
+          context.incrementOpCount(this);
         }
       }
     }
@@ -13879,6 +13881,7 @@ var RC = (() => {
       if (step <= 0 || !isFinite(from) || !isFinite(until) || !isFinite(step)) return;
       if (this.mIndexId === 0) {
         for (let i = from; i < until; i += step) {
+          context.incrementOpCount(this);
           for (const op of this.mList) {
             context.incrementOpCount(op);
             op.apply(context);
@@ -13887,6 +13890,7 @@ var RC = (() => {
       } else {
         for (let i = from; i < until; i += step) {
           context.loadFloat(this.mIndexId, i);
+          context.incrementOpCount(this);
           for (const op of this.mList) {
             if (op.isDirty() && typeof op.updateVariables === "function") {
               op.updateVariables(context);

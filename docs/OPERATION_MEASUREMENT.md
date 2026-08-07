@@ -103,9 +103,10 @@ and it is why it is opt-in.
 
 ## 4. Where the counting happens
 
-Attribution needed almost no new call sites: 17 of the 20 already existed and already had
-the relevant operation in scope, so the change was to pass it. The other three were a
-genuine gap — see "child components" below.
+Attribution needed almost no new call sites: 17 of the 24 already existed and already had
+the relevant operation in scope, so the change was to pass it. The other seven were
+genuine gaps found afterwards — three for child components (below) and four by the Java
+call-site audit in §8.
 
 | file | line | passes | counts |
 | :--- | ---: | :--- | :--- |
@@ -113,6 +114,7 @@ genuine gap — see "child components" below.
 | `core/CoreDocument.ts` | 624 | `op` | paint pass, top level |
 | `core/operations/ParticleOperations.ts` | 292, 446 | `child` | per-particle child op |
 | `core/operations/ParticleOperations.ts` | 470 | `this` | one pair comparison |
+| `core/operations/ParticleOperations.ts` | 486, 493 | `this` | one matched pair (added, §8) |
 | `core/operations/StubOperations.ts` | 76, 115 | `op` | impulse list op |
 | `core/operations/StubOperations.ts` | 81 | `this` | impulse process paint |
 | `core/operations/ConditionalOperations.ts` | 75 | `op` | taken branch |
@@ -121,7 +123,8 @@ genuine gap — see "child components" below.
 | `core/operations/layout/LayoutComponent.ts` | 411, 456 | `op` | draw-content / content ops |
 | `core/operations/layout/LayoutComponent.ts` | 435 | `mod` | modifier |
 | `core/operations/layout/LayoutComponent.ts` | 476, 484, 491 | `child` | **child components** (added, see below) |
-| `core/operations/layout/LoopOperation.ts` | 49, 65 | `op` | per-iteration body op |
+| `core/operations/layout/LoopOperation.ts` | 53, 70 | `op` | per-iteration body op |
+| `core/operations/layout/LoopOperation.ts` | 51, 60 | `this` | one loop iteration (added, §8) |
 | `core/operations/layout/managers/StateLayout.ts` | 133 | `op` | active state's ops |
 
 Two sites pass `this` because they count work the enclosing operation performed itself
@@ -266,27 +269,63 @@ invariants hold with a real canvas and a real `requestAnimationFrame`.
 
 ## 8. Porting to C++ and Java
 
-### The counts are not comparable across engines today
+### Parity with the Java call sites — audited class by class
 
-This is the single most important thing to know before porting, and it is easy to get
-wrong: **the three engines do not count the same events.** As of this writing there are
-**26** `incrementOpCount()` call sites in Java `remote-core` and **20** in TypeScript.
+Java `remote-core` has **26** `incrementOpCount()` call sites; TypeScript now has **24**.
+The difference is *not* 2 missing counts — the mapping is structural, and the audit below
+is the actual state after diffing every Java site against its TypeScript counterpart.
 
-TypeScript is missing counting entirely in: `ComponentModifiers`, `CanvasOperations`,
-`ClickModifierOperation`, `MultiClickModifier`, `ListActionsOperation`,
-`FloatFunctionDefine`. TypeScript *adds* a site Java does not have, in `StateLayout`.
+| Java class | sites | TypeScript | sites | status |
+| :--- | ---: | :--- | ---: | :--- |
+| `CoreDocument` | 2 | `CoreDocument` | 2 | match |
+| `ConditionalOperations` | 1 | `ConditionalOperations` | 1 | match |
+| `Component` | 2 | `layout/Component` | 1 | **equivalent** — Java counts in both arms of an `if (op instanceof PaintOperation)`; TS counts once before the branch. Same count per operation. |
+| `ImpulseOperation` | 2 | `StubOperations` | 2 | match |
+| `ImpulseProcess` | 1 | `StubOperations` | 1 | match |
+| `RootLayoutComponent` | 1 | `layout/RootLayoutComponent` | 1 | match |
+| `LayoutComponent` | 2 | `layout/LayoutComponent` | 3 | **equivalent** — Java has z-sorted and unsorted branches, TS additionally splits the single-child case. Same count per child. |
+| `LoopOperation` | 4 | `layout/LoopOperation` | 4 | match *(2 added — see below)* |
+| `ParticlesCompare` | 4 | `ParticleOperations` | 4 | match *(2 added — see below)* |
+| `ParticlesLoop` | 1 | `ParticleOperations` | 1 | match |
+| `ComponentModifiers` | 1 | `layout/LayoutComponent` | 1 | **divergent phase** — see below |
+| `CanvasOperations` | 1 | `CanvasOperationsOp` | 0 | TS class is a stub: `apply()` is empty and it holds no child list. Nothing executes, so nothing can be counted. |
+| `ClickModifierOperation` | 1 | `ClickModifier` | 0 | Java counts in `apply()` over its `TextData` children; the TS `apply()` is a documented no-op ("handled by layout") and actions run from `onClick`. No equivalent path. |
+| `MultiClickModifier` | 1 | `MultiClickModifier` | 0 | same shape as above |
+| `ListActionsOperation` | 1 | — | 0 | class not implemented in TS |
+| `FloatFunctionDefine` | 1 | — | 0 | class not implemented in TS |
+| — | 0 | `managers/StateLayout` | 1 | **TS extra** — Java has no counting in its state-layout paint |
 
-Note what `coverage.mjs` reporting zero does and does not prove. It proves every operation
-that **executed during paint** was counted, for this corpus. It does not prove parity with
-Java: several of the missing sites count events that are not paint-time operation
-executions at all (a click being dispatched, an action list running), so a paint sweep
-cannot see them. Closing those needs a diff against the Java call sites, not another
-coverage run.
+**Two real gaps were found by this audit and closed:**
 
-So a per-type or per-instance report from two engines on the same document will differ,
-and the difference is a **call-site parity gap, not a measurement bug**. Fixing that gap is
-worth doing but is a separate change with its own risk: adding a count site can push a
-borderline document over `MAX_OP_COUNT` and turn a working document into a thrown error.
+* `LoopOperation` counted its body operations but not the loop itself. Java counts **once
+  per iteration** in both branches (`LoopOperation.java:126`, `:135`), so a loop's cost
+  scales with its iteration count even when its body is cheap. TS counted `N × M`; Java
+  counts `N × (M + 1)`.
+* `ParticlesCompare` counted `runChildren` and the per-pair condition evaluation, but not
+  the **per-matched-pair** count Java adds after each `runChildren`
+  (`ParticlesCompare.java:559`, `:606`).
+
+Effect on the corpus: `02_ticker.rc` 1,240 → 1,498 ops/frame, `foo.rc` 2,085 → 2,145. The
+corpus peak is unchanged at 6,426, still well under the 20,000 limit.
+
+**The one remaining divergence that is not simply "unimplemented":** Java counts component
+modifiers in `ComponentModifiers.apply()` — the *data* pass — and its `paint()` does not
+count at all. TypeScript counts them in `LayoutComponent.paintingComponent`, the *paint*
+pass. Since the measured window is paint-only (§5), modifier counts appear in a TypeScript
+frame report and would not appear in the equivalent Java one. Moving TS to match would
+push those counts out of the measured window entirely, which is arguably worse for a
+profiler; it is recorded here as a known, deliberate difference rather than silently
+matched.
+
+What `coverage.mjs` reporting zero does and does not prove: it proves every operation that
+**executed during paint** was counted, for this corpus. It cannot see the four
+unimplemented paths above, because nothing executes there — those are format-support gaps,
+not counting gaps, and they close when the operations are implemented.
+
+So a per-type or per-instance report from two engines on the same document can still
+differ, and the difference is a **call-site parity gap, not a measurement bug**. Note the
+risk when closing one: adding a count site can push a borderline document over
+`MAX_OP_COUNT` and turn a working document into a thrown error.
 
 ### C++ does not enforce the limit
 

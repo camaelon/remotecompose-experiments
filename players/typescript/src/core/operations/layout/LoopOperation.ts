@@ -45,6 +45,10 @@ export class LoopOperation extends Operation {
 
         if (this.mIndexId === 0) {
             for (let i = from; i < until; i += step) {
+                // One count per iteration for the loop itself, as the reference does
+                // (LoopOperation.java:126 / :135) — so a loop's cost scales with its
+                // iteration count even when its body is empty.
+                context.incrementOpCount(this);
                 for (const op of this.mList) {
                     context.incrementOpCount(op);
                     op.apply(context);
@@ -53,6 +57,7 @@ export class LoopOperation extends Operation {
         } else {
             for (let i = from; i < until; i += step) {
                 context.loadFloat(this.mIndexId, i);
+                context.incrementOpCount(this);
                 for (const op of this.mList) {
                     // Refresh only what is dirty, as the reference does. Recomputing
                     // every operation on every iteration is not merely wasteful: an

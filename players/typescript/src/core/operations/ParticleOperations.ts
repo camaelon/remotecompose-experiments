@@ -481,12 +481,16 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
                     context.loadFloat(varIds[j], particle1[j]);
                 }
                 this.runChildren(context);
+                // One count per matched pair, as ParticlesCompare does after each
+                // runChildren (ParticlesCompare.java:559 / :606).
+                context.incrementOpCount(this);
 
                 for (let j = 0; j < eq2.length && j < varCount; j++) {
                     particle2[j] = FloatExpression.evalRPN(context, eq2[j]);
                     context.loadFloat(varIds[j], particle2[j]);
                 }
                 this.runChildren(context);
+                context.incrementOpCount(this);
             }
         }
     }
