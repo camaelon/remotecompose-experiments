@@ -72,7 +72,7 @@ export class ConditionalOperations extends PaintOperation {
         }
         if (run) {
             for (const op of this.mList) {
-                context.incrementOpCount();
+                context.incrementOpCount(op);
                 if (op instanceof ConditionalOperations) {
                     op.paint(paintContext);
                 } else {

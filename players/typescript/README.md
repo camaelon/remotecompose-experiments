@@ -159,6 +159,26 @@ So treat ids 1/2/3 (clock), 5/6 (window) and anything derived from them as harne
 parity until proven otherwise. The game's own state — on `flappy.rc` that is ids 44 and
 48-61 — is where a real divergence would show, and those are still differing.
 
+## Counting what executed: operation measurement
+
+The player can report, once per painted frame, how many operations executed — in total,
+per operation *type*, and per operation *instance*. It is off by default and costs
+nothing measurable when off (the disabled path is one null check on a call that already
+existed). Timing is deliberately not measured; see the doc for why.
+
+```bash
+node measure.mjs --verify path/to/*.rc   # invariants, exit 1 on failure
+node measure.mjs --top 12 DOC.rc         # hottest types and instances
+
+npm run bundle && python3 packaging/mkmeasure.py   # -> web-player/measure.html
+```
+
+`web-player/measure.html` is a self-contained drop-a-document page that consumes the hook
+and nothing else — if a profiler could not be built on what that page uses, the hook is
+inadequate, which is what the page is for. Full design, call-site map, cost measurements
+and a porting checklist for the C++/Java players:
+[../../docs/OPERATION_MEASUREMENT.md](../../docs/OPERATION_MEASUREMENT.md).
+
 ## Status, gaps and debugging
 
 - [../../STATUS.md](../../STATUS.md) — repo-wide state: what is verified, what is broken.
