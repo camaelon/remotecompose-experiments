@@ -8,6 +8,9 @@ import type { PaintContext } from './PaintContext';
 import type { CoreDocument } from './CoreDocument';
 import type { VariableSupport } from './VariableSupport';
 import type { IntMap } from './operations/utilities/IntMap';
+import type { Operation } from './Operation';
+import type { MeasurementSink } from './OperationMeasurement';
+import { OperationMeasurement } from './OperationMeasurement';
 
 export enum ContextMode {
     UNSET = 'UNSET',
@@ -28,6 +31,8 @@ export abstract class RemoteContext {
     mMode = ContextMode.UNSET;
     private mDebug = 0;
     private mOpCount = 0;
+    /** null while measurement is disabled — the disabled path is one null check. */
+    private mMeasurement: OperationMeasurement | null = null;
     private mTheme = -1; // Theme.UNSPECIFIED
     mWidth = 0;
     mHeight = 0;
@@ -93,11 +98,53 @@ export abstract class RemoteContext {
         if (this.mPaintContext) this.mPaintContext.needsRepaint();
     }
 
-    incrementOpCount(): void {
+    /**
+     * Count one executed operation, and — only while measurement is enabled — attribute it.
+     *
+     * `op` is optional and is a reference already in scope at every call site, so with
+     * measurement off this costs the argument push plus one null check on top of the
+     * counting that happened before measurement existed. See `OperationMeasurement`.
+     */
+    incrementOpCount(op?: Operation): void {
         this.mOpCount++;
+        if (this.mMeasurement !== null) {
+            this.mMeasurement.record(op);
+        }
         if (this.mOpCount > RemoteContext.MAX_OP_COUNT) {
             throw new Error('Too many operations executed');
         }
+    }
+
+    /**
+     * Turn per-frame operation measurement on or off.
+     *
+     * Pass a sink to enable: it is called once per painted frame with that frame's counts.
+     * Pass `null` to disable, which drops the collector entirely — the instrumented path
+     * is gone, not merely idle.
+     *
+     * Instance ids are assigned lazily and persist for the life of an operation object, so
+     * disabling and re-enabling keeps ids stable for operations already seen.
+     */
+    setMeasurementSink(sink: MeasurementSink | null): void {
+        if (sink === null) {
+            this.mMeasurement = null;
+        } else if (this.mMeasurement === null) {
+            this.mMeasurement = new OperationMeasurement(sink);
+        } else {
+            this.mMeasurement.setSink(sink);
+        }
+    }
+
+    isMeasurementEnabled(): boolean { return this.mMeasurement !== null; }
+
+    /** Reset the frame's counts. Called by CoreDocument where it clears the op count. */
+    beginMeasuredFrame(): void {
+        if (this.mMeasurement !== null) this.mMeasurement.beginFrame();
+    }
+
+    /** Hand the frame's counts to the sink. Called by CoreDocument at end of paint. */
+    emitMeasuredFrame(): void {
+        if (this.mMeasurement !== null) this.mMeasurement.emit();
     }
 
     getLastOpCount(): number {

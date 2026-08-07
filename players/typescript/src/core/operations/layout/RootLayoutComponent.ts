@@ -106,7 +106,7 @@ export class RootLayoutComponent extends Component {
         for (const op of this.getList()) {
             if (op instanceof PaintOperation) {
                 op.paint(paintContext);
-                remoteContext.incrementOpCount();
+                remoteContext.incrementOpCount(op);
             }
         }
 

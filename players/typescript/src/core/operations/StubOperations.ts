@@ -73,12 +73,12 @@ export class ImpulseOperation extends PaintOperation {
                     if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                         (op as any).updateVariables(remote);
                     }
-                    remote.incrementOpCount();
+                    remote.incrementOpCount(op);
                     op.apply(remote);
                 }
                 this.mInitialPass = false;
             } else {
-                remote.incrementOpCount();
+                remote.incrementOpCount(this);
                 if (this.mProcess) this.mProcess.paint(context);
             }
         } else {
@@ -112,7 +112,7 @@ export class ImpulseProcess extends PaintOperation {
             if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                 (op as any).updateVariables(remote);
             }
-            remote.incrementOpCount();
+            remote.incrementOpCount(op);
             op.apply(remote);
         }
     }

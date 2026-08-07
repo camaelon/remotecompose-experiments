@@ -186,7 +186,7 @@ export class Component extends PaintOperation implements Container {
         paintContext.matrixTranslate(this.mX, this.mY);
 
         for (const op of this.mChildren) {
-            context.incrementOpCount();
+            context.incrementOpCount(op);
             if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                 op.markNotDirty();
                 (op as any).updateVariables(context);

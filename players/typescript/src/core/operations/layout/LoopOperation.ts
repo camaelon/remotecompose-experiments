@@ -46,7 +46,7 @@ export class LoopOperation extends Operation {
         if (this.mIndexId === 0) {
             for (let i = from; i < until; i += step) {
                 for (const op of this.mList) {
-                    context.incrementOpCount();
+                    context.incrementOpCount(op);
                     op.apply(context);
                 }
             }
@@ -62,7 +62,7 @@ export class LoopOperation extends Operation {
                     if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                         (op as any).updateVariables(context);
                     }
-                    context.incrementOpCount();
+                    context.incrementOpCount(op);
                     op.apply(context);
                 }
             }

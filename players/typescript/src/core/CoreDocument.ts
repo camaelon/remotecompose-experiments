@@ -493,7 +493,7 @@ export class CoreDocument implements ExpansionDocument {
                 (op as any).updateVariables(context);
             }
             op.markNotDirty();
-            context.incrementOpCount();
+            context.incrementOpCount(op);
             if (this.isContainer(op)) {
                 this.applyOperations(context, (op as any).getList());
             } else {
@@ -552,6 +552,11 @@ export class CoreDocument implements ExpansionDocument {
 
         context.setMode(ContextMode.PAINT);
         context.clearLastOpCount();
+        // Measurement's frame window is exactly the window the op counter already used, so
+        // a report's `total` is the same number `getOpsPerFrame()` reports and the same
+        // number MAX_OP_COUNT is enforced against. Operations executed in the data pass and
+        // in layout fall outside it — they are outside the existing counter too.
+        context.beginMeasuredFrame();
 
         // Pre-load theme colors before painting (matches Java CoreDocument)
         const themeColors = this.getThemedColors();
@@ -616,12 +621,13 @@ export class CoreDocument implements ExpansionDocument {
                     op.markNotDirty();
                     (op as any).updateVariables(context);
                 }
-                context.incrementOpCount();
+                context.incrementOpCount(op);
                 op.apply(context);
             }
         }
 
         this.mLastOpCount = context.getLastOpCount();
+        context.emitMeasuredFrame();
 
         // Restore canvas state (matches save before content scaling)
         if (pc) pc.restore();

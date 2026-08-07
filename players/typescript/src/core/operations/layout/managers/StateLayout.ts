@@ -130,7 +130,7 @@ export class StateLayout extends LayoutManager {
             // Paint the current layout's operations
             const context = paintContext.getContext();
             for (const op of layout.getList()) {
-                context.incrementOpCount();
+                context.incrementOpCount(op);
                 if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                     op.markNotDirty();
                     (op as any).updateVariables(context);

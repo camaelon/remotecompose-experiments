@@ -8,6 +8,7 @@ import { WebRemoteContext } from './WebRemoteContext';
 import { ContextMode, RemoteContext } from '../core/RemoteContext';
 import { Header } from '../core/operations/Header';
 import { Theme } from '../core/operations/DataOperations';
+import type { MeasurementSink } from '../core/OperationMeasurement';
 
 export class RcdPlayer {
     private canvas: HTMLCanvasElement;
@@ -24,6 +25,9 @@ export class RcdPlayer {
 
     // Variable listener
     private variableListener: ((entries: Array<[number, number]>) => void) | null = null;
+
+    // Measurement sink, remembered across document loads.
+    private measurementSink: MeasurementSink | null = null;
 
     // Touch/pointer tracking
     private pointerIsDown = false;
@@ -131,6 +135,22 @@ export class RcdPlayer {
         this.variableListener = null;
     }
 
+    /**
+     * Enable per-frame operation measurement; `sink` is called once per painted frame.
+     * Pass `null` to disable. Safe to call before a document is loaded — the setting is
+     * remembered and reapplied to each document, so a profiler can be armed up front and
+     * see the very first frame.
+     */
+    setMeasurementSink(sink: MeasurementSink | null): void {
+        this.measurementSink = sink;
+        this.remoteContext?.setMeasurementSink(sink);
+    }
+
+    /** Operations executed in the last painted frame — available with measurement off. */
+    getOpsPerFrame(): number {
+        return this.document?.getOpsPerFrame() ?? 0;
+    }
+
     async loadFromArrayBuffer(data: ArrayBuffer): Promise<CoreDocument> {
         this.stop();
 
@@ -160,6 +180,8 @@ export class RcdPlayer {
         this.remoteContext.mWidth = docWidth;
         this.remoteContext.mHeight = docHeight;
         this.remoteContext.setDensity(density);
+        // Reapply an armed sink so measurement covers this document from its first frame.
+        if (this.measurementSink) this.remoteContext.setMeasurementSink(this.measurementSink);
 
         // Apply data operations first (load texts, bitmaps, paths, etc.)
         doc.applyDataOperations(this.remoteContext);
@@ -336,6 +358,7 @@ export class RcdPlayer {
 import { createPlayer, RcPlayerElement, base64ToArrayBuffer } from './RcPlayerElement';
 export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
 export type { RcPlayerOptions, RcPlayerHandle } from './RcPlayerElement';
+export type { MeasurementSink, FrameMeasurement, TypeCount, InstanceCount } from '../core/OperationMeasurement';
 
 // Auto-initialize if running in browser
 if (typeof window !== 'undefined') {

@@ -408,7 +408,7 @@ export class LayoutComponent extends Component {
             paintContext.matrixTranslate(this.mX, this.mY);
             const context = paintContext.getContext();
             for (const op of this.mDrawContentOperations) {
-                context.incrementOpCount();
+                context.incrementOpCount(op);
                 if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                     op.markNotDirty();
                     (op as any).updateVariables(context);
@@ -432,7 +432,7 @@ export class LayoutComponent extends Component {
         let tx = 0;
         let ty = 0;
         for (const mod of this.mComponentModifiers) {
-            context.incrementOpCount();
+            context.incrementOpCount(mod);
             if (mod.isDirty() && typeof (mod as any).updateVariables === 'function') {
                 mod.markNotDirty();
                 (mod as any).updateVariables(context);
@@ -453,7 +453,7 @@ export class LayoutComponent extends Component {
 
         // Paint content operations (non-layout draw ops)
         for (const op of this.mContentOps) {
-            context.incrementOpCount();
+            context.incrementOpCount(op);
             if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
                 op.markNotDirty();
                 (op as any).updateVariables(context);
