@@ -69,6 +69,11 @@ export class LoopOperation extends Operation {
         }
     }
 
+    getIndexId(): number { return this.mIndexId; }
+    getFrom(ctx: RemoteContext): number { return this.rv(this.mFromBits, ctx); }
+    getStep(ctx: RemoteContext): number { return this.rv(this.mStepBits, ctx); }
+    getUntil(ctx: RemoteContext): number { return this.rv(this.mUntilBits, ctx); }
+
     private rv(bits: number, ctx: RemoteContext): number {
         return isNaNBits(bits) ? ctx.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
     }
