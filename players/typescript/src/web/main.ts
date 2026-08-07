@@ -93,6 +93,8 @@ export class RcdPlayer {
         const scaleY = this.canvas.height / rect.height;
         const px = (e.clientX - rect.left) * scaleX;
         const py = (e.clientY - rect.top) * scaleY;
+        // Inverse of the renderFrame fit transform: map canvas pixels
+        // back into the document's native coordinate space.
         const s = this.mContentScale || 1;
         return {
             x: (px - this.mContentOffsetX) / s,
@@ -104,7 +106,7 @@ export class RcdPlayer {
         if (this.pointerHistory.length < 2) return { dx: 0, dy: 0 };
         const first = this.pointerHistory[0];
         const now = performance.now();
-        const dt = (now - first.t) / 1000;
+        const dt = (now - first.t) / 1000; // seconds
         if (dt <= 0) return { dx: 0, dy: 0 };
         return {
             dx: (curX - first.x) / dt,
@@ -175,16 +177,20 @@ export class RcdPlayer {
 
         this.document = doc;
 
+        // Use the current canvas size — don't resize to document dimensions.
         const density = doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) as number || 1;
         const docWidth = this.canvas.width / density;
         const docHeight = this.canvas.height / density;
 
+        // Override document dimensions to match canvas
         doc.setWidth(docWidth);
         doc.setHeight(docHeight);
 
+        // Create contexts
         this.paintContext = new CanvasPaintContext(null as any, this.ctx);
         this.remoteContext = new WebRemoteContext(this.paintContext);
 
+        // Wire up
         doc.initializeContext(this.remoteContext);
         this.remoteContext.setPaintContext(this.paintContext);
         this.paintContext.setContext(this.remoteContext);
@@ -194,12 +200,15 @@ export class RcdPlayer {
         // Reapply an armed sink so measurement covers this document from its first frame.
         if (this.measurementSink) this.remoteContext.setMeasurementSink(this.measurementSink);
 
+        // Apply data operations first (load texts, bitmaps, paths, etc.)
         doc.applyDataOperations(this.remoteContext);
 
+        // Wait a tick for bitmap decoding
         await new Promise(resolve => setTimeout(resolve, 50));
 
         if (this.onLoad) this.onLoad(doc);
 
+        // Start rendering
         this.startTime = performance.now();
         this.renderFrame(this.startTime);
 
@@ -223,13 +232,23 @@ export class RcdPlayer {
         this.ctx.setTransform(1, 0, 0, 1, 0, 0);
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+        // The engine already sizes the document to `context.mWidth` /
+        // `context.mHeight` (which we keep in sync with the canvas in
+        // `loadFromArrayBuffer` and `resize`).  For SIZING_SCALE
+        // documents `paint()` applies its own translate+scale transform
+        // internally; for everything else `paint()` does
+        // `setWidth(context.mWidth)` so the content fills the context
+        // space natively.  Either way, no outer ctx transform is needed
+        // — applying one here would double-scale.
         this.mContentScale = 1;
         this.mContentOffsetX = 0;
         this.mContentOffsetY = 0;
 
+        // Reset paint state
         this.paintContext.reset();
         this.paintContext.clearNeedsRepaint();
 
+        // Paint the document — resolve theme
         let theme: number;
         if (this.themeOverride === 'light') {
             theme = Theme.LIGHT;
@@ -241,12 +260,14 @@ export class RcdPlayer {
         }
         this.document.paint(this.remoteContext, theme);
 
+        // Notify variable listener after paint
         if (this.variableListener) {
             this.variableListener(this.remoteContext.mRemoteComposeState.getFloatEntries());
         }
 
         if (this.isPaused) return;
 
+        // Schedule next frame if needed
         const repaintDelay = this.document.needsRepaint();
         if (repaintDelay >= 0) {
             if (repaintDelay <= 1) {
@@ -266,6 +287,14 @@ export class RcdPlayer {
         }
     }
 
+    /**
+     * Stop, and release the WebGL context.
+     *
+     * `stop()` only cancels the animation frame; a document that used a shader still
+     * holds a WebGL context afterwards. Callers showing many documents at once must
+     * use this instead, or the browser's context limit silently blanks the earliest
+     * ones.
+     */
     destroy(): void {
         this.stop();
         if (this.paintContext) {
@@ -284,13 +313,19 @@ export class RcdPlayer {
         this.canvas.height = newHeight;
         this.canvas.style.width = newWidth + 'px';
         this.canvas.style.height = newHeight + 'px';
-
+        // Keep the engine's RemoteContext in sync with the new canvas
+        // size so non-SIZING_SCALE documents re-flow into it on next
+        // paint.  Without this the content would keep drawing at the
+        // original load-time size.
         if (this.remoteContext) {
             const density = this.remoteContext.getDensity() || 1;
             const docW = newWidth  / density;
             const docH = newHeight / density;
             this.remoteContext.mWidth  = docW;
             this.remoteContext.mHeight = docH;
+            // The DATA pass in CoreDocument.paint reloads
+            // ID_WINDOW_WIDTH / ID_WINDOW_HEIGHT from these, so
+            // expressions track the new size automatically.
         }
         this.scheduleRepaint();
     }
@@ -298,6 +333,20 @@ export class RcdPlayer {
     getDocument(): CoreDocument | null { return this.document; }
     getRemoteContext(): WebRemoteContext | null { return this.remoteContext; }
 
+    /**
+     * Capture a screenshot of the current canvas as a PNG Blob.
+     *
+     * Usage:
+     *   const blob = await player.screenshot();
+     *   // Download:
+     *   const a = document.createElement('a');
+     *   a.href = URL.createObjectURL(blob);
+     *   a.download = 'screenshot.png';
+     *   a.click();
+     *
+     *   // Or get as data URL:
+     *   const url = await player.screenshotDataURL();
+     */
     async screenshot(type = 'image/png', quality?: number): Promise<Blob> {
         return new Promise((resolve, reject) => {
             this.canvas.toBlob(
@@ -307,10 +356,12 @@ export class RcdPlayer {
         });
     }
 
+    /** Capture a screenshot as a data URL string (e.g. "data:image/png;base64,..."). */
     screenshotDataURL(type = 'image/png', quality?: number): string {
         return this.canvas.toDataURL(type, quality);
     }
 
+    /** Save a screenshot as a file download. */
     async saveScreenshot(filename = 'screenshot.png'): Promise<void> {
         const blob = await this.screenshot();
         const url = URL.createObjectURL(blob);
@@ -322,11 +373,13 @@ export class RcdPlayer {
     }
 }
 
+// Re-export public API
 import { createPlayer, RcPlayerElement, base64ToArrayBuffer } from './RcPlayerElement';
 export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
 export type { RcPlayerOptions, RcPlayerHandle } from './RcPlayerElement';
 export type { MeasurementSink, FrameMeasurement, TypeCount, InstanceCount } from '../core/OperationMeasurement';
 
+// Auto-initialize if running in browser
 if (typeof window !== 'undefined') {
     (window as any).RcdPlayer = RcdPlayer;
     (window as any).RC = {
@@ -336,6 +389,7 @@ if (typeof window !== 'undefined') {
         base64ToArrayBuffer
     };
 
+    // Register <rc-player> custom element
     if (!customElements.get('rc-player')) {
         customElements.define('rc-player', RcPlayerElement);
     }

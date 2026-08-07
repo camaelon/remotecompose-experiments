@@ -19985,6 +19985,14 @@ void main() {
         this.animationFrameId = null;
       }
     }
+    /**
+     * Stop, and release the WebGL context.
+     *
+     * `stop()` only cancels the animation frame; a document that used a shader still
+     * holds a WebGL context afterwards. Callers showing many documents at once must
+     * use this instead, or the browser's context limit silently blanks the earliest
+     * ones.
+     */
     destroy() {
       this.stop();
       if (this.paintContext) {
@@ -20016,6 +20024,20 @@ void main() {
     getRemoteContext() {
       return this.remoteContext;
     }
+    /**
+     * Capture a screenshot of the current canvas as a PNG Blob.
+     *
+     * Usage:
+     *   const blob = await player.screenshot();
+     *   // Download:
+     *   const a = document.createElement('a');
+     *   a.href = URL.createObjectURL(blob);
+     *   a.download = 'screenshot.png';
+     *   a.click();
+     *
+     *   // Or get as data URL:
+     *   const url = await player.screenshotDataURL();
+     */
     async screenshot(type = "image/png", quality) {
       return new Promise((resolve, reject) => {
         this.canvas.toBlob(
@@ -20025,9 +20047,11 @@ void main() {
         );
       });
     }
+    /** Capture a screenshot as a data URL string (e.g. "data:image/png;base64,..."). */
     screenshotDataURL(type = "image/png", quality) {
       return this.canvas.toDataURL(type, quality);
     }
+    /** Save a screenshot as a file download. */
     async saveScreenshot(filename = "screenshot.png") {
       const blob = await this.screenshot();
       const url = URL.createObjectURL(blob);
