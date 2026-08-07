@@ -182,8 +182,12 @@ and a porting checklist for the C++/Java players:
 ## Status, gaps and debugging
 
 - [../../STATUS.md](../../STATUS.md) — repo-wide state: what is verified, what is broken.
-- [GAPS.md](GAPS.md) — per-opcode: 11 unregistered, 14 that parse and do nothing, and the
-  21 corpus documents that still diverge from the reference.
+- [../../docs/MISSING_SUPPORT.md](../../docs/MISSING_SUPPORT.md) — every operation this
+  player does not implement: 15 unregistered opcodes (the reader desynchronises on those),
+  17 that parse and then do nothing, and the 18 whose empty `apply()` is correct and should
+  be left alone. Regenerate with `python3 support-audit.py`.
+- [GAPS.md](GAPS.md) — the corpus documents that still diverge, deliberate behaviour
+  differences, and androidx harness bugs. Its opcode sections are superseded by the above.
 - [DEBUGGING.md](DEBUGGING.md) — the tooling (`trace.mjs`, `sweep.mjs`, `whowrites.mjs`)
   and the plan for what is still missing.
 
