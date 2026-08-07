@@ -103,8 +103,9 @@ and it is why it is opt-in.
 
 ## 4. Where the counting happens
 
-Attribution required no new call sites. Every existing `incrementOpCount()` already had
-the relevant operation in scope; the change was to pass it.
+Attribution needed almost no new call sites: 17 of the 20 already existed and already had
+the relevant operation in scope, so the change was to pass it. The other three were a
+genuine gap — see "child components" below.
 
 | file | line | passes | counts |
 | :--- | ---: | :--- | :--- |
@@ -119,6 +120,7 @@ the relevant operation in scope; the change was to pass it.
 | `core/operations/layout/RootLayoutComponent.ts` | 109 | `op` | root child paint |
 | `core/operations/layout/LayoutComponent.ts` | 411, 456 | `op` | draw-content / content ops |
 | `core/operations/layout/LayoutComponent.ts` | 435 | `mod` | modifier |
+| `core/operations/layout/LayoutComponent.ts` | 476, 484, 491 | `child` | **child components** (added, see below) |
 | `core/operations/layout/LoopOperation.ts` | 49, 65 | `op` | per-iteration body op |
 | `core/operations/layout/managers/StateLayout.ts` | 133 | `op` | active state's ops |
 
@@ -126,6 +128,27 @@ Two sites pass `this` because they count work the enclosing operation performed 
 rather than a child it dispatched to. That is not a fudge: a `ParticlesCompare` that runs
 10,000 pair comparisons *should* show 10,000 against itself, because that is where the
 work is.
+
+### Child components — the gap that was there before measurement
+
+`LayoutComponent.paintingComponent` paints `mChildrenComponents` in three branches
+(z-sorted, unsorted, and the single-child case) and **counted none of them**. Every
+component nested inside a layout container — every `BoxLayout`, `RowLayout`,
+`ColumnLayout`, `CoreText`, `CanvasContent` below the top level — executed without being
+counted. Across the 281-document corpus that was **740 uncounted executions in 272 of 274
+paintable documents**: nearly every document in the corpus, and on some of them the
+majority of the real work.
+
+This was a pre-existing defect in the op counter, not something measurement introduced —
+`getOpsPerFrame()` had always under-reported, and `MAX_OP_COUNT` had always been enforced
+against a number that ignored nested components. The Java reference counts in exactly
+these loops (`LayoutComponent.internalPaintingComponent`, both branches), so this was also
+a parity gap. Fixed by adding the three counts where Java has its two.
+
+Consequence worth knowing: **op counts went up.** `foo.rc` 2,066 → 2,085, `02_ticker.rc`
+1,166 → 1,240, the corpus peak 6,424 → 6,426. Nothing comes near the 20,000 limit, so no
+document changed from working to throwing, but a document that was already borderline
+could.
 
 ### `unattributed`
 
@@ -199,6 +222,28 @@ plausible-looking number.
 
 Plus: **with the sink set to `null`, nothing is emitted.**
 
+### Self-consistency is not completeness — check coverage separately
+
+The four invariants above prove the breakdowns agree with their own total. They **cannot**
+detect a missing count site, because a missing site lowers `total`, `byType` and
+`byInstance` by the same amount and everything still adds up perfectly. That is exactly
+how the child-component gap survived a clean 274/274 invariant run.
+
+Completeness needs an independent source of truth for what *should* have been counted.
+`coverage.mjs` provides one: it walks the whole operation tree, wraps every operation's
+`apply`/`paint` to record what actually executed, paints a frame, and reports operations
+that **executed but were never counted**.
+
+```sh
+node coverage.mjs path/to/*.rc
+```
+
+The executed-vs-inert distinction is the load-bearing part. A first version reported every
+uncounted operation in the tree and indicted ~6 per document — but most were layout-only
+modifiers that never run during paint and are *correctly* absent. Only
+executed-and-uncounted is a defect. Current status: **0 uncounted executions across all
+274 paintable documents.**
+
 ```sh
 cd players/typescript
 npx esbuild src/node-entry.ts --bundle --outfile=build-node/node-entry.js \
@@ -225,11 +270,18 @@ invariants hold with a real canvas and a real `requestAnimationFrame`.
 
 This is the single most important thing to know before porting, and it is easy to get
 wrong: **the three engines do not count the same events.** As of this writing there are
-**26** `incrementOpCount()` call sites in Java `remote-core` and **17** in TypeScript.
+**26** `incrementOpCount()` call sites in Java `remote-core` and **20** in TypeScript.
 
 TypeScript is missing counting entirely in: `ComponentModifiers`, `CanvasOperations`,
 `ClickModifierOperation`, `MultiClickModifier`, `ListActionsOperation`,
 `FloatFunctionDefine`. TypeScript *adds* a site Java does not have, in `StateLayout`.
+
+Note what `coverage.mjs` reporting zero does and does not prove. It proves every operation
+that **executed during paint** was counted, for this corpus. It does not prove parity with
+Java: several of the missing sites count events that are not paint-time operation
+executions at all (a click being dispatched, an action list running), so a paint sweep
+cannot see them. Closing those needs a diff against the Java call sites, not another
+coverage run.
 
 So a per-type or per-instance report from two engines on the same document will differ,
 and the difference is a **call-site parity gap, not a measurement bug**. Fixing that gap is
@@ -279,6 +331,7 @@ A timing channel needs its own design and its own honest statement of what it me
 | `players/typescript/src/core/CoreDocument.ts` | calls `beginMeasuredFrame` / `emitMeasuredFrame` |
 | `players/typescript/src/web/main.ts` | `RcdPlayer.setMeasurementSink` / `getOpsPerFrame` |
 | `players/typescript/measure.mjs` | headless harness and invariant checker |
+| `players/typescript/coverage.mjs` | executed-but-uncounted detector (completeness) |
 | `players/typescript/packaging/mkmeasure.py` | builds the demo page |
 | `players/typescript/web-player/measure.html` | the demo page (generated; do not hand-edit) |
 

@@ -473,12 +473,14 @@ export class LayoutComponent extends Component {
                 const sorted = [...children].sort((a, b) => a.mZIndex - b.mZIndex);
                 for (const child of sorted) {
                     if (!Visibility.isGone(child.mVisibility)) {
+                        context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
                 }
             } else {
                 for (const child of children) {
                     if (!Visibility.isGone(child.mVisibility)) {
+                        context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
                 }
@@ -486,6 +488,7 @@ export class LayoutComponent extends Component {
         } else {
             for (const child of children) {
                 if (!Visibility.isGone(child.mVisibility)) {
+                    context.incrementOpCount(child);
                     child.paint(paintContext);
                 }
             }
