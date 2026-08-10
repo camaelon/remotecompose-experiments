@@ -398,10 +398,30 @@ export class PaddingModifier extends Operation implements VariableSupport {
         if (isNaNBits(this.mBottom)) context.listensTo(idFromBits(this.mBottom), this);
     }
     updateVariables(context: RemoteContext): void {
-        if (isNaNBits(this.mLeft)) this.mLeftValue = context.getFloat(idFromBits(this.mLeft));
-        if (isNaNBits(this.mTop)) this.mTopValue = context.getFloat(idFromBits(this.mTop));
-        if (isNaNBits(this.mRight)) this.mRightValue = context.getFloat(idFromBits(this.mRight));
-        if (isNaNBits(this.mBottom)) this.mBottomValue = context.getFloat(idFromBits(this.mBottom));
+        // Reassign from the source bits every time rather than only in the NaN branch, which
+        // is what Java does. It matters now that density scaling follows: leaving a literal
+        // in place and scaling it again on the next call would multiply the density in.
+        this.mLeftValue = isNaNBits(this.mLeft)
+            ? context.getFloat(idFromBits(this.mLeft)) : intBitsToFloat(this.mLeft);
+        this.mTopValue = isNaNBits(this.mTop)
+            ? context.getFloat(idFromBits(this.mTop)) : intBitsToFloat(this.mTop);
+        this.mRightValue = isNaNBits(this.mRight)
+            ? context.getFloat(idFromBits(this.mRight)) : intBitsToFloat(this.mRight);
+        this.mBottomValue = isNaNBits(this.mBottom)
+            ? context.getFloat(idFromBits(this.mBottom)) : intBitsToFloat(this.mBottom);
+
+        // Padding is dp only when the document says so — note this is `== DP`, not the
+        // `!= PIXELS` the dimension modifiers use. Under the default LEGACY behaviour Java
+        // does not scale padding either, so this is deliberately inert for most documents.
+        if (context.getDensityBehavior() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+            const density = context.getDensity();
+            if (density > 0 && !Number.isNaN(density)) {
+                this.mLeftValue *= density;
+                this.mTopValue *= density;
+                this.mRightValue *= density;
+                this.mBottomValue *= density;
+            }
+        }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }

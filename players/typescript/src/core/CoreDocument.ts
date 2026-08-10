@@ -460,6 +460,23 @@ export class CoreDocument implements ExpansionDocument {
      * well. A zero font size is a legal float, so nothing errors — the text measures a
      * real width with zero height, takes up no space, and never paints.
      */
+    /**
+     * Push the document's declared density behaviour onto the context.
+     *
+     * Java keeps this on the document and has `RemoteContext.getDensityBehavior()` delegate
+     * to it; here the context owns the field, so the document has to hand it over. Absent
+     * from the header means LEGACY, and under LEGACY only the dimension modifiers scale —
+     * padding, spacing, borders and offsets deliberately do not.
+     *
+     * Seeded in both passes because layout runs in each: a behaviour applied only at paint
+     * would leave the data pass measuring against unscaled values.
+     */
+    private seedDensityBehavior(context: RemoteContext): void {
+        const declared = this.getProperty(Header.DOC_DENSITY_BEHAVIOR) as number | null;
+        context.setDensityBehavior(
+            typeof declared === 'number' ? declared : RemoteContext.DENSITY_BEHAVIOR_LEGACY);
+    }
+
     private seedPlatformTextSize(context: RemoteContext): void {
         let density = context.getDensity();
         if (!(density > 0)) {
@@ -475,6 +492,7 @@ export class CoreDocument implements ExpansionDocument {
 
     applyDataOperations(context: RemoteContext): void {
         context.setMode(ContextMode.DATA);
+        this.seedDensityBehavior(context);
         // Seed the platform text size *before* the data pass: expressions that derive a
         // font size from it are evaluated here, so seeding later (in paint) is too late
         // and they resolve to 0. The Android view does the same, seeding ID_FONT_SIZE
@@ -576,6 +594,7 @@ export class CoreDocument implements ExpansionDocument {
             context.setDensity(density);
         }
         context.loadFloat(27 /* ID_DENSITY */, density);
+        this.seedDensityBehavior(context);
         this.seedPlatformTextSize(context);
         // The host is responsible for seeding the platform text size; the Android view
         // uses `14 * density * fontScale` (RemoteComposeView.getDefaultTextSize) and the

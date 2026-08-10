@@ -3,7 +3,7 @@
 
 import { LayoutComponent } from '../LayoutComponent';
 import type { PaintContext } from '../../../PaintContext';
-import type { RemoteContext } from '../../../RemoteContext';
+import { RemoteContext } from '../../../RemoteContext';
 import type { MeasurePass } from '../measure/MeasurePass';
 import { Size } from '../measure/Size';
 import { WidthModifier, HeightModifier, ScrollModifier } from '../modifiers/ModifierOperations';
@@ -193,4 +193,22 @@ export abstract class LayoutManager extends LayoutComponent {
 
     // Override in subclasses to position children
     internalLayoutMeasure(_context: PaintContext, _measure: MeasurePass): void { /* override */ }
+
+    /**
+     * `spacedBy` in physical pixels.
+     *
+     * Spacing is authored in dp but only scales when the document declares DENSITY_BEHAVIOR_DP
+     * — note `== DP`, not the `!= PIXELS` the dimension modifiers use. Under the default
+     * LEGACY behaviour the reference does not scale spacing either, so this returns the raw
+     * value for almost every document in the corpus.
+     *
+     * Takes a PaintContext because that is all the layout managers are handed.
+     */
+    protected spacedByPx(context: PaintContext, spacedBy: number): number {
+        if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_DP) {
+            return spacedBy;
+        }
+        const density = context.getDensity();
+        return (density > 0 && !Number.isNaN(density)) ? spacedBy * density : spacedBy;
+    }
 }

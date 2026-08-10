@@ -71,7 +71,8 @@ export class CollapsibleColumnLayout extends ColumnLayout {
             }
         }
         if (this.mChildrenComponents.length > 0 && size !== null) {
-            size.setHeight(size.getHeight() + (this.mSpacedBy * (visibleChildren - 1)));
+            size.setHeight(size.getHeight()
+                + (this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1)));
         }
 
         let childrenWidth = 0;

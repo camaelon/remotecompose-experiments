@@ -138,7 +138,8 @@ export class RowLayout extends LayoutManager {
         }
 
         if (visibleChildren > 0) {
-            size.setWidth(size.getWidth() + this.mSpacedBy * (visibleChildren - 1));
+            size.setWidth(size.getWidth()
+                + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
         }
     }
 
@@ -227,7 +228,8 @@ export class RowLayout extends LayoutManager {
             childrenHeight = Math.max(childrenHeight, cm.getH());
             visibleChildren++;
         }
-        childrenWidth += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+        childrenWidth += this.spacedByPx(context, this.mSpacedBy)
+            * Math.max(0, visibleChildren - 1);
 
         // Compute horizontal starting position
         let tx = 0;
@@ -281,7 +283,7 @@ export class RowLayout extends LayoutManager {
                 || this.mHorizontalPositioning === RowLayout.SPACE_EVENLY) {
                 tx += horizontalGap;
             }
-            tx += this.mSpacedBy;
+            tx += this.spacedByPx(context, this.mSpacedBy);
         }
 
         if (size !== null) {

@@ -1501,6 +1501,12 @@ var RC = (() => {
   _Header.DOC_WIDTH = 5;
   _Header.DOC_HEIGHT = 6;
   _Header.DOC_DENSITY_AT_GENERATION = 7;
+  /**
+   * How the document wants dp handled: LEGACY (0), PIXELS (1) or DP (2). Absent means
+   * LEGACY, which is what almost every document in the corpus is — under LEGACY only the
+   * dimension modifiers scale, and padding/spacing do not.
+   */
+  _Header.DOC_DENSITY_BEHAVIOR = 27;
   _Header.DOC_DESIRED_FPS = 8;
   _Header.DOC_CONTENT_DESCRIPTION = 9;
   _Header.DOC_SOURCE = 11;
@@ -5354,10 +5360,19 @@ var RC = (() => {
       if (isNaNBits(this.mBottom)) context.listensTo(idFromBits(this.mBottom), this);
     }
     updateVariables(context) {
-      if (isNaNBits(this.mLeft)) this.mLeftValue = context.getFloat(idFromBits(this.mLeft));
-      if (isNaNBits(this.mTop)) this.mTopValue = context.getFloat(idFromBits(this.mTop));
-      if (isNaNBits(this.mRight)) this.mRightValue = context.getFloat(idFromBits(this.mRight));
-      if (isNaNBits(this.mBottom)) this.mBottomValue = context.getFloat(idFromBits(this.mBottom));
+      this.mLeftValue = isNaNBits(this.mLeft) ? context.getFloat(idFromBits(this.mLeft)) : intBitsToFloat(this.mLeft);
+      this.mTopValue = isNaNBits(this.mTop) ? context.getFloat(idFromBits(this.mTop)) : intBitsToFloat(this.mTop);
+      this.mRightValue = isNaNBits(this.mRight) ? context.getFloat(idFromBits(this.mRight)) : intBitsToFloat(this.mRight);
+      this.mBottomValue = isNaNBits(this.mBottom) ? context.getFloat(idFromBits(this.mBottom)) : intBitsToFloat(this.mBottom);
+      if (context.getDensityBehavior() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+        const density = context.getDensity();
+        if (density > 0 && !Number.isNaN(density)) {
+          this.mLeftValue *= density;
+          this.mTopValue *= density;
+          this.mRightValue *= density;
+          this.mBottomValue *= density;
+        }
+      }
     }
     write(_buffer) {
     }
@@ -8264,6 +8279,18 @@ var RC = (() => {
     saveLayer(_x, _y, _w, _h) {
       this.matrixSave();
     }
+    /** Display density, from the underlying RemoteContext (mirrors Java's PaintContext). */
+    getDensity() {
+      return this.mContext.getDensity();
+    }
+    /**
+     * The document's density behaviour. Layout managers need this to decide whether their
+     * dp-valued spacing scales; they only ever hold a PaintContext, so it has to be reachable
+     * from here.
+     */
+    getDensityBehavior() {
+      return this.mContext.getDensityBehavior();
+    }
     getClock() {
       return this.mContext.getClock();
     }
@@ -10710,6 +10737,23 @@ var RC = (() => {
     // Override in subclasses to position children
     internalLayoutMeasure(_context, _measure) {
     }
+    /**
+     * `spacedBy` in physical pixels.
+     *
+     * Spacing is authored in dp but only scales when the document declares DENSITY_BEHAVIOR_DP
+     * — note `== DP`, not the `!= PIXELS` the dimension modifiers use. Under the default
+     * LEGACY behaviour the reference does not scale spacing either, so this returns the raw
+     * value for almost every document in the corpus.
+     *
+     * Takes a PaintContext because that is all the layout managers are handed.
+     */
+    spacedByPx(context, spacedBy) {
+      if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_DP) {
+        return spacedBy;
+      }
+      const density = context.getDensity();
+      return density > 0 && !Number.isNaN(density) ? spacedBy * density : spacedBy;
+    }
   };
 
   // src/core/operations/layout/managers/BoxLayout.ts
@@ -10918,7 +10962,7 @@ var RC = (() => {
         }
       }
       if (visibleChildren > 0) {
-        size.setWidth(size.getWidth() + this.mSpacedBy * (visibleChildren - 1));
+        size.setWidth(size.getWidth() + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
       }
     }
     // --- Compute size ---
@@ -10999,7 +11043,7 @@ var RC = (() => {
         childrenHeight = Math.max(childrenHeight, cm.getH());
         visibleChildren++;
       }
-      childrenWidth += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+      childrenWidth += this.spacedByPx(context, this.mSpacedBy) * Math.max(0, visibleChildren - 1);
       let tx = 0;
       let horizontalGap = 0;
       switch (this.mHorizontalPositioning) {
@@ -11064,7 +11108,7 @@ var RC = (() => {
         if (this.mHorizontalPositioning === _RowLayout.SPACE_BETWEEN || this.mHorizontalPositioning === _RowLayout.SPACE_AROUND || this.mHorizontalPositioning === _RowLayout.SPACE_EVENLY) {
           tx += horizontalGap;
         }
-        tx += this.mSpacedBy;
+        tx += this.spacedByPx(context, this.mSpacedBy);
       }
       if (size !== null) {
         size.setWidth(childrenWidth);
@@ -11171,7 +11215,7 @@ var RC = (() => {
         }
       }
       if (visibleChildren > 0) {
-        size.setHeight(size.getHeight() + this.mSpacedBy * (visibleChildren - 1));
+        size.setHeight(size.getHeight() + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
       }
     }
     computeSize(context, minWidth, maxWidth, minHeight, maxHeight, measure) {
@@ -11264,7 +11308,7 @@ var RC = (() => {
         childrenHeight += cm.getH();
         visibleChildren++;
       }
-      childrenHeight += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+      childrenHeight += this.spacedByPx(context, this.mSpacedBy) * Math.max(0, visibleChildren - 1);
       let ty = 0;
       let verticalGap = 0;
       switch (this.mVerticalPositioning) {
@@ -11329,7 +11373,7 @@ var RC = (() => {
         if (this.mVerticalPositioning === _ColumnLayout.SPACE_BETWEEN || this.mVerticalPositioning === _ColumnLayout.SPACE_AROUND || this.mVerticalPositioning === _ColumnLayout.SPACE_EVENLY) {
           ty += verticalGap;
         }
-        ty += this.mSpacedBy;
+        ty += this.spacedByPx(context, this.mSpacedBy);
       }
     }
     write(buffer) {
@@ -13808,7 +13852,7 @@ var RC = (() => {
           currentWidth = 0;
         }
         currentRow.push(c);
-        currentWidth += componentWidth;
+        currentWidth += componentWidth + this.spacedByPx(context, this.mSpacedBy);
       }
       return rows;
     }
@@ -14804,7 +14848,7 @@ var RC = (() => {
         }
       }
       if (this.mChildrenComponents.length > 0 && size !== null) {
-        size.setWidth(size.getWidth() + this.mSpacedBy * (visibleChildren - 1));
+        size.setWidth(size.getWidth() + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
       }
       let childrenWidth = 0;
       let childrenHeight = 0;
@@ -14913,7 +14957,7 @@ var RC = (() => {
         }
       }
       if (this.mChildrenComponents.length > 0 && size !== null) {
-        size.setHeight(size.getHeight() + this.mSpacedBy * (visibleChildren - 1));
+        size.setHeight(size.getHeight() + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
       }
       let childrenWidth = 0;
       let childrenHeight = 0;
@@ -17043,6 +17087,23 @@ var RC = (() => {
      * well. A zero font size is a legal float, so nothing errors — the text measures a
      * real width with zero height, takes up no space, and never paints.
      */
+    /**
+     * Push the document's declared density behaviour onto the context.
+     *
+     * Java keeps this on the document and has `RemoteContext.getDensityBehavior()` delegate
+     * to it; here the context owns the field, so the document has to hand it over. Absent
+     * from the header means LEGACY, and under LEGACY only the dimension modifiers scale —
+     * padding, spacing, borders and offsets deliberately do not.
+     *
+     * Seeded in both passes because layout runs in each: a behaviour applied only at paint
+     * would leave the data pass measuring against unscaled values.
+     */
+    seedDensityBehavior(context) {
+      const declared = this.getProperty(Header.DOC_DENSITY_BEHAVIOR);
+      context.setDensityBehavior(
+        typeof declared === "number" ? declared : RemoteContext.DENSITY_BEHAVIOR_LEGACY
+      );
+    }
     seedPlatformTextSize(context) {
       let density = context.getDensity();
       if (!(density > 0)) {
@@ -17056,6 +17117,7 @@ var RC = (() => {
     }
     applyDataOperations(context) {
       context.setMode("DATA" /* DATA */);
+      this.seedDensityBehavior(context);
       this.seedPlatformTextSize(context);
       this.mTimeVariables.updateTime(context);
       this.registerVariables(context, this.mOperations);
@@ -17128,6 +17190,7 @@ var RC = (() => {
         context.setDensity(density);
       }
       context.loadFloat(27, density);
+      this.seedDensityBehavior(context);
       this.seedPlatformTextSize(context);
       const pc = context.getPaintContext();
       if (pc) pc.save();

@@ -98,7 +98,8 @@ export class ColumnLayout extends LayoutManager {
         }
 
         if (visibleChildren > 0) {
-            size.setHeight(size.getHeight() + this.mSpacedBy * (visibleChildren - 1));
+            size.setHeight(size.getHeight()
+                + this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1));
         }
     }
 
@@ -205,7 +206,8 @@ export class ColumnLayout extends LayoutManager {
             childrenHeight += cm.getH();
             visibleChildren++;
         }
-        childrenHeight += this.mSpacedBy * Math.max(0, visibleChildren - 1);
+        childrenHeight += this.spacedByPx(context, this.mSpacedBy)
+            * Math.max(0, visibleChildren - 1);
 
         // Compute vertical starting position
         let ty = 0;
@@ -259,7 +261,7 @@ export class ColumnLayout extends LayoutManager {
                 || this.mVerticalPositioning === ColumnLayout.SPACE_EVENLY) {
                 ty += verticalGap;
             }
-            ty += this.mSpacedBy;
+            ty += this.spacedByPx(context, this.mSpacedBy);
         }
     }
 

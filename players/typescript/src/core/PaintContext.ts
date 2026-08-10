@@ -33,6 +33,16 @@ export abstract class PaintContext {
     restore(): void { this.matrixRestore(); }
     saveLayer(_x: number, _y: number, _w: number, _h: number): void { this.matrixSave(); }
 
+    /** Display density, from the underlying RemoteContext (mirrors Java's PaintContext). */
+    getDensity(): number { return this.mContext.getDensity(); }
+
+    /**
+     * The document's density behaviour. Layout managers need this to decide whether their
+     * dp-valued spacing scales; they only ever hold a PaintContext, so it has to be reachable
+     * from here.
+     */
+    getDensityBehavior(): number { return this.mContext.getDensityBehavior(); }
+
     getClock(): RemoteClock { return this.mContext.getClock(); }
 
     isDebug(): boolean { return this.mContext.isBasicDebug(); }

@@ -62,7 +62,10 @@ export class FlowLayout extends RowLayout {
                 currentWidth = 0;
             }
             currentRow.push(c);
-            currentWidth += componentWidth;
+            // Java accumulates `componentWidth + spacedBy` here; leaving the spacing out
+            // segments as though components were flush, so a spaced flow fits more per
+            // row than the reference does.
+            currentWidth += componentWidth + this.spacedByPx(context, this.mSpacedBy);
         }
         return rows;
     }

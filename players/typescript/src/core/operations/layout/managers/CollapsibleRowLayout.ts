@@ -71,7 +71,8 @@ export class CollapsibleRowLayout extends RowLayout {
             }
         }
         if (this.mChildrenComponents.length > 0 && size !== null) {
-            size.setWidth(size.getWidth() + (this.mSpacedBy * (visibleChildren - 1)));
+            size.setWidth(size.getWidth()
+                + (this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1)));
         }
 
         let childrenWidth = 0;
