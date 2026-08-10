@@ -137,9 +137,9 @@ export abstract class RemoteContext {
 
     isMeasurementEnabled(): boolean { return this.mMeasurement !== null; }
 
-    /** Reset the frame's counts. Called by CoreDocument where it clears the op count. */
+    /** Mark where paint begins. Called by CoreDocument where it clears the op count. */
     beginMeasuredFrame(): void {
-        if (this.mMeasurement !== null) this.mMeasurement.beginFrame();
+        if (this.mMeasurement !== null) this.mMeasurement.markFrameStart();
     }
 
     /** Hand the frame's counts to the sink. Called by CoreDocument at end of paint. */

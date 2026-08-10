@@ -61,6 +61,11 @@ export interface FrameMeasurement {
     total: number;
     /** Operations that executed without an identifiable instance (see `record`). */
     unattributed: number;
+    /** Of `total`, how many ran inside the paint pass. Equals `getOpsPerFrame()`. */
+    inPaint: number;
+    /** Of `total`, how many ran *between* frames — input handlers firing click and touch
+     *  actions. These execute for real but fall outside the engine's own op window. */
+    betweenFrames: number;
     byType: TypeCount[];
     byInstance: InstanceCount[];
 }
@@ -78,6 +83,8 @@ export class OperationMeasurement {
     private mSink: MeasurementSink | null;
     private mFrame = 0;
     private mTotal = 0;
+    /** Value of mTotal when the paint pass opened; everything before it ran between frames. */
+    private mFrameStart = 0;
     private mUnattributed = 0;
     private mNextId = 1;
 
@@ -161,12 +168,17 @@ export class OperationMeasurement {
         return info;
     }
 
-    /** Discard this frame's counts and advance the frame number. */
-    beginFrame(): void {
-        this.mTotal = 0;
-        this.mUnattributed = 0;
-        this.mByType.clear();
-        this.mByInstance.clear();
+    /**
+     * Mark where the paint pass begins.
+     *
+     * Deliberately does NOT clear. Click and touch handlers execute their child actions
+     * between frames, and clearing here would throw that work away — the engine's own
+     * counter does exactly that, which is why input-driven operations have never appeared
+     * in an op count. Recording the boundary instead keeps them, and lets a report say
+     * which side of it each one fell on.
+     */
+    markFrameStart(): void {
+        this.mFrameStart = this.mTotal;
     }
 
     /** Build this frame's report and hand it to the sink. */
@@ -178,17 +190,31 @@ export class OperationMeasurement {
             frame: this.mFrame++,
             total: this.mTotal,
             unattributed: this.mUnattributed,
+            inPaint: this.mTotal - this.mFrameStart,
+            betweenFrames: this.mFrameStart,
             byType,
             byInstance,
         };
         try {
             this.mSink(report);
+            this.reset();
         } catch (e) {
+            this.reset();
             // A sink that throws must not take the document down with it: measurement is
             // an observer, and an observer that can break the thing it observes is worse
             // than no observer.
             // eslint-disable-next-line no-console
             console.error('measurement sink threw:', e);
         }
+    }
+
+    /** Clear after emitting, so the next window starts here — which means work done
+     *  between frames lands in the *next* report rather than being discarded. */
+    private reset(): void {
+        this.mTotal = 0;
+        this.mFrameStart = 0;
+        this.mUnattributed = 0;
+        this.mByType.clear();
+        this.mByInstance.clear();
     }
 }

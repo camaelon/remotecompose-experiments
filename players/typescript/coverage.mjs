@@ -51,8 +51,12 @@ function walk(doc) {
             // gap that is really a walk gap.
             const lists = [];
             if (typeof op.getList === 'function') { try { lists.push(op.getList()); } catch {} }
-            for (const f of ['mList', 'mChildren', 'mContentOps', 'mDrawContentOperations',
-                             'mComponentModifiers']) {
+            // Every field any operation uses to hold children. Derived from a scan of
+            // `export class` bodies for `Operation[]`-typed members, not from memory:
+            // an omission here hides a container from the tree *and* from the check,
+            // which is how mChildrenComponents went unnoticed.
+            for (const f of ['mList', 'mChildren', 'mChildrenComponents', 'mContentOps',
+                             'mDrawContentOperations', 'mComponentModifiers']) {
                 if (Array.isArray(op[f])) lists.push(op[f]);
             }
             for (const l of lists) rec(l, depth + 1, op);

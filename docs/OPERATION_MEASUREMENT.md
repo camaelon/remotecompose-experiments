@@ -225,6 +225,13 @@ plausible-looking number.
 
 Plus: **with the sink set to `null`, nothing is emitted.**
 
+`coverage.mjs` has two limits worth knowing, both of which produced a false clean result
+at some point: it only exercises the **paint** path, so it cannot see click/touch handlers
+executing actions; and it walks a hand-written list of child-field names, so a container
+whose children live in an unlisted field is invisible to the tree *and* to the check.
+[`CONTAINER_COUNTING.md`](CONTAINER_COUNTING.md) enumerates every container from a source
+scan instead, and is the list to check against.
+
 ### Self-consistency is not completeness — check coverage separately
 
 The four invariants above prove the breakdowns agree with their own total. They **cannot**
@@ -365,6 +372,7 @@ A timing channel needs its own design and its own honest statement of what it me
 
 | path | what |
 | :--- | :--- |
+| `docs/CONTAINER_COUNTING.md` | every container and where its children are counted |
 | `players/typescript/src/core/OperationMeasurement.ts` | the collector and the report types |
 | `players/typescript/src/core/RemoteContext.ts` | `incrementOpCount(op?)`, `setMeasurementSink`, frame bracket |
 | `players/typescript/src/core/CoreDocument.ts` | calls `beginMeasuredFrame` / `emitMeasuredFrame` |

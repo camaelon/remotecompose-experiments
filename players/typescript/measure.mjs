@@ -84,6 +84,7 @@ for (const file of files) {
         // also what a real profiler would do before accumulating.
         frames.push({
             frame: r.frame, total: r.total, unattributed: r.unattributed,
+            inPaint: r.inPaint, betweenFrames: r.betweenFrames,
             byType: r.byType.map((t) => ({ ...t })),
             byInstance: r.byInstance.map((i) => ({ ...i })),
         });
@@ -98,7 +99,12 @@ for (const file of files) {
             const r = frames[frames.length - 1];
             if (!r) { problems.push(`frame ${f}: no report emitted`); continue; }
             const ops = doc.getOpsPerFrame();
-            if (r.total !== ops) problems.push(`frame ${f}: total ${r.total} != getOpsPerFrame ${ops}`);
+            // inPaint, not total: `total` also carries work done *between* frames (click
+            // and touch handlers running their actions), which the engine's own counter
+            // discards. inPaint is the part that must agree with it.
+            if (r.inPaint !== ops) problems.push(`frame ${f}: inPaint ${r.inPaint} != getOpsPerFrame ${ops}`);
+            if (r.total !== r.inPaint + r.betweenFrames)
+                problems.push(`frame ${f}: total ${r.total} != inPaint ${r.inPaint} + between ${r.betweenFrames}`);
             const st = r.byType.reduce((a, t) => a + t.count, 0) + r.unattributed;
             const si = r.byInstance.reduce((a, i) => a + i.count, 0) + r.unattributed;
             if (st !== r.total) problems.push(`frame ${f}: byType sums to ${st}, total ${r.total}`);

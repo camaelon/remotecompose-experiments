@@ -49,6 +49,10 @@ export class LayoutComputeOperation extends Operation implements Container, Vari
         for (const op of this.mList) {
             if (typeof (op as any).updateVariables === 'function' && op.isDirty()) {
                 (op as any).updateVariables(context);
+                // This genuinely executes the child, not just refreshes it. It runs
+                // during layout, before the paint window opens, so it lands in the
+                // report's `betweenFrames` rather than `inPaint`.
+                context.incrementOpCount(op);
                 op.apply(context);
                 op.markNotDirty();
                 needsInvalidate = true;

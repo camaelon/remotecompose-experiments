@@ -456,6 +456,7 @@ export class ClickModifier extends Operation {
     onClick(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
         // Execute action operations
         for (const op of this.mList) {
+            context.incrementOpCount(op);
             op.apply(context);
         }
         context.needsRepaint();
@@ -493,21 +494,21 @@ export class MultiClickModifier extends Operation {
 
     onClick(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
         if (this.mClickType !== MultiClickModifier.CLICK_TYPE_SINGLE) return false;
-        for (const op of this.mList) op.apply(context);
+        for (const op of this.mList) { context.incrementOpCount(op); op.apply(context); }
         context.needsRepaint();
         return true;
     }
 
     onLongPress(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
         if (this.mClickType !== MultiClickModifier.CLICK_TYPE_LONG) return false;
-        for (const op of this.mList) op.apply(context);
+        for (const op of this.mList) { context.incrementOpCount(op); op.apply(context); }
         context.needsRepaint();
         return true;
     }
 
     onDoubleClick(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
         if (this.mClickType !== MultiClickModifier.CLICK_TYPE_DOUBLE) return false;
-        for (const op of this.mList) op.apply(context);
+        for (const op of this.mList) { context.incrementOpCount(op); op.apply(context); }
         context.needsRepaint();
         return true;
     }
@@ -571,6 +572,7 @@ export class TouchDownModifier extends Operation {
 
     onTouchDown(context: RemoteContext): void {
         for (const op of this.mList) {
+            context.incrementOpCount(op);
             op.apply(context);
         }
     }
@@ -592,6 +594,7 @@ export class TouchUpModifier extends Operation {
 
     onTouchUp(context: RemoteContext): void {
         for (const op of this.mList) {
+            context.incrementOpCount(op);
             op.apply(context);
         }
     }
@@ -613,6 +616,7 @@ export class TouchCancelModifier extends Operation {
 
     onTouchCancel(context: RemoteContext): void {
         for (const op of this.mList) {
+            context.incrementOpCount(op);
             op.apply(context);
         }
     }

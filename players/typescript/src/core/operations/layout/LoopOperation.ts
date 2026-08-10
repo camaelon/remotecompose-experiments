@@ -32,6 +32,7 @@ export class LoopOperation extends Operation {
         if (context.mMode === ContextMode.DATA) {
             // During data pass, just apply children once to register variables
             for (const op of this.mList) {
+                context.incrementOpCount(op);
                 op.apply(context);
             }
             return;

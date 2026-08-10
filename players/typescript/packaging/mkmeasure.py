@@ -80,6 +80,10 @@ PAGE = r"""<!doctype html>
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
   th{text-align:right;color:var(--muted);font-weight:500;font-size:10.5px;padding:0 0 5px;
      letter-spacing:.05em;text-transform:uppercase}
+  /* Match the cells' left padding, or narrow headers collide: the instance table has a
+     leading #id column, which pushes `operation` into second place and ran the headers
+     together as OPERATIONFRAMEPEAK. */
+  th:not(:first-child){padding-left:14px}
   th:first-child,td:first-child{text-align:left}
   td{padding:2px 0;white-space:nowrap}
   td:not(:first-child){text-align:right;padding-left:14px}
@@ -106,7 +110,10 @@ PAGE = r"""<!doctype html>
 <header>
   <h1>RemoteCompose <b>operation measurement</b></h1>
   <p>Drop a <code>.rc</code> document. Everything below comes from the per-frame
-     measurement hook — no player internals are read.</p>
+     measurement hook — no player internals are read.<br>
+     <b>in paint</b> is the frame's draw work; <b>between frames</b> is everything that
+     ran outside it — click and touch actions, and on the very first frame the document's
+     one-time load pass. Tap the canvas to see it move.</p>
 </header>
 
 <div class="bar">
@@ -144,6 +151,8 @@ PAGE = r"""<!doctype html>
         <div class="num"><b id="n-last">0</b><span>this frame</span></div>
         <div class="num dim"><b id="n-peak">0</b><span>peak</span></div>
         <div class="num dim"><b id="n-mean">0</b><span>mean</span></div>
+        <div class="num dim"><b id="n-paint">0</b><span>in paint</span></div>
+        <div class="num dim"><b id="n-between">0</b><span>between frames</span></div>
         <div class="num dim"><b id="n-frames">0</b><span>frames</span></div>
         <div class="num dim"><b id="n-types">0</b><span>types</span></div>
         <div class="num dim"><b id="n-inst">0</b><span>instances</span></div>
@@ -205,6 +214,7 @@ PAGE = r"""<!doctype html>
   function freshAcc() {
     return {
       frames: 0, total: 0, peak: 0, last: 0,
+      lastPaint: 0, lastBetween: 0, betweenTotal: 0, loadOps: 0,
       history: [],                 // per-frame totals, for the sparkline
       types: new Map(),            // key -> {name, opCode, total, peak, last}
       insts: new Map(),            // id  -> {name, total, peak, last}
@@ -252,10 +262,22 @@ PAGE = r"""<!doctype html>
     var problem = "";
     if (st !== m.total) problem = "byType sums to " + st + ", total " + m.total;
     else if (si !== m.total) problem = "byInstance sums to " + si + ", total " + m.total;
-    else if (opsPerFrame !== null && opsPerFrame !== m.total)
-      problem = "total " + m.total + " != getOpsPerFrame() " + opsPerFrame;
+    else if (m.total !== m.inPaint + m.betweenFrames)
+      problem = "total " + m.total + " != inPaint " + m.inPaint
+              + " + between " + m.betweenFrames;
+    // inPaint, NOT total: `total` also carries work done between frames — click and touch
+    // handlers running their actions — which the engine's own counter discards. Comparing
+    // total here would flag a false failure the moment anyone taps the document.
+    else if (opsPerFrame !== null && opsPerFrame !== m.inPaint)
+      problem = "inPaint " + m.inPaint + " != getOpsPerFrame() " + opsPerFrame;
     if (problem) { a.badFrames++; a.lastProblem = problem; }
     a.unattributed = m.unattributed;
+    a.lastPaint = m.inPaint;
+    a.lastBetween = m.betweenFrames;
+    // Frame 0 carries the document's load pass, which is one-time and would otherwise
+    // read as recurring input cost. Keep it out of the running total, and label it.
+    if (m.frame === 0) a.loadOps = m.betweenFrames;
+    else a.betweenTotal += m.betweenFrames;
   }
 
   // ---------------------------------------------------------------------------
@@ -338,6 +360,8 @@ PAGE = r"""<!doctype html>
     $("n-last").textContent = fmt(acc.last);
     $("n-peak").textContent = fmt(acc.peak);
     $("n-mean").textContent = acc.frames ? Math.round(acc.total / acc.frames) : 0;
+    $("n-paint").textContent = fmt(acc.lastPaint);
+    $("n-between").textContent = fmt(acc.lastBetween);
     $("n-frames").textContent = fmt(acc.frames);
     $("n-types").textContent = fmt(acc.types.size);
     $("n-inst").textContent = fmt(acc.insts.size);
@@ -352,7 +376,11 @@ PAGE = r"""<!doctype html>
     } else {
       check.className = "ok";
       check.textContent = "invariants hold over " + fmt(acc.frames) + " frame(s): "
-        + "byType and byInstance both sum to total, total = getOpsPerFrame()"
+        + "byType and byInstance sum to total, total = inPaint + betweenFrames, "
+        + "inPaint = getOpsPerFrame()"
+        + (acc.loadOps ? " · " + fmt(acc.loadOps) + " in the one-time load pass" : "")
+        + (acc.betweenTotal ? " · " + fmt(acc.betweenTotal) + " from input between frames"
+                            : "")
         + (acc.unattributed ? " · " + acc.unattributed + " unattributed" : "");
     }
   }

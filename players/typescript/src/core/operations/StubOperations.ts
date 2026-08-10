@@ -189,6 +189,7 @@ export class RunActionOperation extends PaintOperation {
     paint(context: PaintContext): void {
         const remote = context.getContext();
         for (const op of this.mList) {
+            remote.incrementOpCount(op);
             op.apply(remote);
         }
     }
