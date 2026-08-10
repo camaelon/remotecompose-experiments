@@ -37,7 +37,15 @@ export abstract class LayoutManager extends LayoutComponent {
             // (max(measured, computeModifierDefinedWidth)). Defaulting to maxWidth here
             // leaks the full width whenever no distribution happens — a weight on the
             // cross axis, or in a parent that wraps and so has no slack to share.
-            w = this.mPadBeforeWidth;
+            //
+            // ...but once the distribution HAS run, it pins the width by calling
+            // measure(share, share, ...), and that has to be honoured *here*, before the
+            // children are measured. Taking mPadBeforeWidth unconditionally made a
+            // weighted container offer its children `0 - padding` — a negative width —
+            // so every child collapsed to 0 and never recovered: the `w = max(w, minWidth)`
+            // further down repairs only this component's own reported size, long after the
+            // children were measured against nonsense.
+            w = Math.max(this.mPadBeforeWidth, minWidth);
         } else {
             // WRAP or other — compute from children
             w = maxWidth; // temporary, will be adjusted by computeWrapSize
@@ -50,7 +58,7 @@ export abstract class LayoutManager extends LayoutComponent {
         } else if (hMod && hMod.getType() === HeightModifier.FILL) {
             h = hMod.hasFraction() ? maxHeight * hMod.getValue() : maxHeight;
         } else if (hMod && hMod.getType() === HeightModifier.WEIGHT) {
-            h = this.mPadBeforeHeight;
+            h = Math.max(this.mPadBeforeHeight, minHeight);   // see the width case above
         } else {
             h = maxHeight;
         }
