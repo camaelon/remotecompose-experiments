@@ -389,6 +389,11 @@ export class CanvasPaintContext extends PaintContext {
     applyPaint(paintData: PaintBundle): void {
         const arr = paintData.getArray();
         const len = paintData.getLength();
+        // A bundle describes a whole paint, so it starts without a shader — the reference
+        // walks the bundle building a mask of the properties it touched. Clearing here (as
+        // opposed to on the COLOR command, see below) is what lets colour and gradient
+        // coexist within one bundle while still not leaking a gradient into the next.
+        this.gradientStyle = null;
         let i = 0;
         while (i < len) {
             const cmd = arr[i++];
@@ -400,8 +405,11 @@ export class CanvasPaintContext extends PaintContext {
                     this.setFont();
                     break;
                 case PaintBundle.COLOR:
+                    // Does NOT clear the gradient: colour and shader are independent
+                    // properties of a Paint, and the shader wins when filling. This
+                    // document sets COLOR *after* its GRADIENT, and clearing here painted
+                    // the chart in the default opaque black.
                     this.color = argbToRgba(arr[i++]);
-                    this.gradientStyle = null;
                     break;
                 case PaintBundle.STROKE_WIDTH:
                     this.strokeWidth = intBitsToFloat(arr[i++]);
@@ -532,9 +540,9 @@ export class CanvasPaintContext extends PaintContext {
                     this.blendMode = this.mapBlendMode(upper);
                     break;
                 case PaintBundle.COLOR_ID: {
-                    // Value is already resolved to ARGB by PaintBundle.updateVariables()
+                    // Value is already resolved to ARGB by PaintBundle.updateVariables().
+                    // As with COLOR, this leaves any shader alone.
                     this.color = argbToRgba(arr[i++]);
-                    this.gradientStyle = null;
                     break;
                 }
                 case PaintBundle.COLOR_FILTER_ID: {
