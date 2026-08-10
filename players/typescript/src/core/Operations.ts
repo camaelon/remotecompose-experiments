@@ -116,6 +116,22 @@ import {
     PatternArgument, PatternDefine
 } from './operations/loom/PatternOperations';
 import { Custom } from './operations/layout/managers/Custom';
+import {
+    ComponentStartStub,
+    AnimationSpecStub,
+    DrawBitmapFontTextStub,
+    DrawBitmapFontTextOnPathStub,
+    BitmapTextMeasureStub,
+    DrawBitmapTextAnchoredStub,
+    BitmapFontDataStub,
+    FontDataStub,
+    FloatFunctionCallStub,
+    FloatFunctionDefineStub,
+    TextLookupIntStub,
+    ImageAttributeStub,
+    PathCombineStub,
+    RemStub,
+} from './operations/UnsupportedOperations';
 
 export class Operations {
     private static readonly sMap = new Map<number, CompanionOperationFn>();
@@ -316,6 +332,24 @@ export class Operations {
 
         // Custom layout component (parse-only)
         m.set(Custom.OP_CODE, Custom.read);
+
+        // Parsed-but-unimplemented operations. Registered so the reader stays
+        // aligned: the wire format has no length prefix, so an unregistered opcode
+        // truncates the rest of the document. See operations/UnsupportedOperations.ts.
+        m.set(ComponentStartStub.OP_CODE, ComponentStartStub.read);
+        m.set(AnimationSpecStub.OP_CODE, AnimationSpecStub.read);
+        m.set(DrawBitmapFontTextStub.OP_CODE, DrawBitmapFontTextStub.read);
+        m.set(DrawBitmapFontTextOnPathStub.OP_CODE, DrawBitmapFontTextOnPathStub.read);
+        m.set(BitmapTextMeasureStub.OP_CODE, BitmapTextMeasureStub.read);
+        m.set(DrawBitmapTextAnchoredStub.OP_CODE, DrawBitmapTextAnchoredStub.read);
+        m.set(BitmapFontDataStub.OP_CODE, BitmapFontDataStub.read);
+        m.set(FontDataStub.OP_CODE, FontDataStub.read);
+        m.set(FloatFunctionCallStub.OP_CODE, FloatFunctionCallStub.read);
+        m.set(FloatFunctionDefineStub.OP_CODE, FloatFunctionDefineStub.read);
+        m.set(TextLookupIntStub.OP_CODE, TextLookupIntStub.read);
+        m.set(ImageAttributeStub.OP_CODE, ImageAttributeStub.read);
+        m.set(PathCombineStub.OP_CODE, PathCombineStub.read);
+        m.set(RemStub.OP_CODE, RemStub.read);
     }
 
     static getOperations(): Map<number, CompanionOperationFn> {

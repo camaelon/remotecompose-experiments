@@ -16,44 +16,42 @@ Device figures come from a Pixel Fold, 420 dpi (density 2.625), `dsl_ticker.rc` 
 
 ## A. Wrong output that looks right
 
-### A1. Light and dark themes are swapped
+### A1. ~~Light and dark themes are swapped~~ — FIXED
 
-**Verified against the device, twice.** Asking the player for `LIGHT` renders the document's
-dark section and vice versa:
+**Was:** asking the player for `LIGHT` rendered the document's dark colours and vice versa,
+verified against a device in both night modes.
 
-| | background |
-| :--- | :--- |
-| device, night mode off | light lavender |
-| device, night mode on | dark navy |
-| TypeScript `--theme light` | dark navy `(30,45,66)` |
-| TypeScript `--theme dark` | light lavender `(221,232,255)` |
+**It was not theme handling.** Everything on that path matches the reference exactly and was
+checked: the constants, `ColorTheme`'s read order and light/dark branch, the paint-loop
+gating condition, the `Theme` operation, and `RemoteContext`'s field wiring. Gating provably
+selects the right section — an instrumented paint showed `paint(LIGHT)` running exactly the
+operations following `Theme.LIGHT`.
 
-Exactly inverted. Reproduce with `adb shell cmd uimode night no|yes` and
-`python3 ts_broken/compare.py dsl_ticker`.
+**The defect was in `DefaultSystemColors`**, the stand-in Material You palette used when no
+host supplies dynamic colours. AOSP's tonal ramps run light to dark as the number rises:
 
-What the mechanism is **not** — all of these were checked and match the reference exactly,
-so do not spend time re-reading them:
+```
+system_accent2_50  = #EEF0FF   (near white)      ours: 0xFF1E2D42  (dark navy)
+system_accent2_800 = #2A3042   (dark navy)       ours: 0xFFDDE8FF  (near white)
+```
 
-- the constants (`LIGHT = -3`, `DARK = -2`, `UNSPECIFIED = -1` in both engines)
-- `ColorTheme.read()` field order, and `ColorTheme.setTheme()`'s light/dark branch
-- the paint-loop gating condition, which is character-for-character Java's
-  `apply = currentTheme == theme || currentTheme == UNSPECIFIED || op instanceof Theme`
-- the `Theme` operation's own read and `apply`
-- `RemoteContext.setTheme`/`getTheme` field wiring
-- `ID_LIGHT` (26) — this is the **ambient light sensor**, not a theme flag. A dead end that
-  looks relevant.
+Our ramp ran the other way. A document doing `addThemedColor(accent2_50, accent2_800)`
+therefore got a dark colour for its light theme and a light one for its dark theme — which
+reads as inverted theming while every operation involved behaves correctly.
 
-What the mechanism **is**: `dsl_ticker.rc` carries **zero** `ColorTheme` (196) operations
-and 24 `Theme` (63) markers — 8 `LIGHT`, 8 `DARK`, 8 `UNSPECIFIED` — so the whole effect
-runs through paint-loop gating, not themed colour resolution.
+Values were regenerated from the platform's own table
+(`$ANDROID_SDK/platforms/android-36/data/res/values/colors.xml`) rather than hand-corrected:
+151 of 189 entries changed, 30 were already right, 15 names the platform does not define are
+left alone.
 
-*Suggested next step:* trace which op indices execute under `paint(theme = LIGHT)` versus
-`paint(theme = DARK)` and diff the two sets, then take the same trace from the Java
-reference and diff across engines. That names the operation that gates the wrong way. A
-first instrumented pass showed all 13 top-level `ColorConstant`s running while the current
-theme was still `UNSPECIFIED`, which means the colours that differ are set **inside the
-layout tree**, not at top level — so the trace has to walk children, not just
-`doc.mOperations`.
+*Worth keeping as a methodology note.* Every layer of the theme machinery was suspect and
+none of it was at fault; the bug was in a data table three layers away from the symptom.
+The thing that finally located it was giving up on reading code and instrumenting instead —
+logging which operation wrote the colour, with what inputs.
+
+*Also worth knowing:* the device derives Material You colours from the wallpaper, so hues
+will not match this baseline palette and comparing them across engines proves nothing. What
+is comparable is whether the light theme is lighter than the dark one.
 
 ### A2. Density is applied in 2 places; the reference applies it in 11
 
@@ -125,27 +123,32 @@ it is a behavioural change to the measurement feature, not just a perf tweak.
 Full per-opcode inventory in [`MISSING_SUPPORT.md`](MISSING_SUPPORT.md), regenerable with
 `players/typescript/support-audit.py`.
 
-### B1. 15 opcodes the reference reads and TypeScript does not — the reader desynchronises
+### B1. ~~15 unreadable opcodes~~ — parsing stubs added, 14 of 15
 
-**The worst category.** An unregistered opcode has no known length, so the reader cannot skip
-it: the byte stream loses alignment and **every operation after it is garbage**. The document
-does not fail cleanly; it renders nonsense or throws somewhere unrelated.
+**Corrected from the first version of this document:** an unknown opcode does not garble
+what follows. `RemoteComposeBuffer` warns and returns, so everything after it is **dropped**
+and the document renders a prefix of itself. Measured: an unregistered opcode spliced into
+`dsl_ticker.rc` takes it from 75 operations to 1.
 
-```
-  2 COMPONENT_START          153 TEXT_LOOKUP_INT          183 BITMAP_TEXT_MEASURE
- 14 ANIMATION_SPEC           166 FUNCTION_CALL            184 DRAW_BITMAP_TEXT_ANCHORED
- 48 DRAW_BITMAP_FONT_TEXT_RUN        167 DATA_BITMAP_FONT         185 REM
- 49 DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH  168 FUNCTION_DEFINE        189 DATA_FONT
- 57 DRAW_TEXT_ON_CIRCLE      171 ATTRIBUTE_IMAGE          175 PATH_COMBINE
-```
+All fourteen that were genuinely missing now have parsing stubs in
+`src/core/operations/UnsupportedOperations.ts`. Each reads exactly the fields the reference
+reads and does nothing, so a document using one loses that feature instead of losing
+everything after it. Full list in [MISSING_SUPPORT.md](MISSING_SUPPORT.md) §1b.
 
-*Suggested order:* the font cluster first (48, 49, 167, 183, 184, 189) — six of the fifteen,
-one coherent feature, and a document with a custom font is currently unreadable rather than
-merely unstyled. Then `FUNCTION_DEFINE`/`FUNCTION_CALL` (166/168) as the other natural pair.
+The fifteenth, `DRAW_TEXT_ON_CIRCLE` (57), is **parity rather than a gap** — `remote-core`
+defines and documents the class but does not register it either, so the reference cannot
+read it any more than this player can.
 
-Cheapest possible mitigation, worth doing first regardless: make the reader **fail loudly**
-on an unknown opcode instead of desynchronising silently. A clear "unsupported operation 167"
-is worth more than a garbled render.
+Stub layouts are not obvious and were taken from the reference readers, not inferred: four
+of them (48, 49, 183, 184) hide an optional float behind the sign bit of their first int,
+and `DATA_BITMAP_FONT` (167) packs a version into the high half of a count word with a
+kerning table that only exists from version 2. All fourteen are covered by a splice test
+that inserts a synthetic operation after a real document's header and asserts the document
+still parses to the same tail, with an unregistered opcode as the negative control.
+
+*Still to do:* the stubs make documents survive; they do not implement anything. The bitmap
+font cluster (48, 49, 167, 183, 184, 189) is still the largest coherent feature gap, and
+`FUNCTION_DEFINE`/`FUNCTION_CALL` (166/168) the other natural pair.
 
 ### B2. 17 operations parse and then do nothing
 
@@ -236,12 +239,12 @@ same-viewport/same-density/same-theme comparison:
 
 ## Suggested order
 
-1. **B1 mitigation** — fail loudly on unknown opcodes. Small, and it converts a class of
-   silent corruption into a readable message.
-2. **A2 density** — mechanical, corpus-checked, and it is the visible remaining geometry
+1. **A2 density** — mechanical, corpus-checked, and the visible remaining geometry
    difference. Padding and `spacedBy` first.
-3. **A1 theme** — user-visible and wrong in the most confusing possible way, and the
-   investigation is narrowed to a single trace.
-4. **C1 modifier scrolling** — the largest missing feature, self-contained, direct port.
-5. **A3 dirty gate** — measure first; only then decide.
-6. **B1 proper** — the font opcode cluster.
+2. **C1 modifier scrolling** — the largest missing feature, self-contained, direct port.
+3. **A3 dirty gate** — measure first; only then decide.
+4. **B1 proper** — the bitmap-font cluster, now that documents using it survive parsing.
+5. **B3** — make integer and string `SetValue` write, or say plainly that they do not.
+
+Done since this document was written: **A1** (theme inversion) and the **B1 mitigation**
+(parsing stubs).

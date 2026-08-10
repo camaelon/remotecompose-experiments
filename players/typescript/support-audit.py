@@ -122,12 +122,36 @@ def consumers(name, own_file):
     return out
 
 
+STUB_FILE = "UnsupportedOperations.ts"
+
+
+def stub_opcodes():
+    """Opcodes handled by a parsing stub: read correctly, executed not at all.
+
+    These would otherwise vanish from this report. The stubs inherit an empty `apply` from
+    a shared base rather than declaring their own, so the inert-body scan below never sees
+    them, and being registered they are not 'unregistered' either. Reporting a gap as
+    nothing is the failure mode this whole tool exists to avoid.
+    """
+    f = SRC / "core" / "operations" / STUB_FILE
+    if not f.exists():
+        return {}
+    src = f.read_text()
+    out = {}
+    for m in re.finditer(r"export class (\w+) extends UnsupportedOperation \{"
+                         r"(?:.(?!export class))*?OP_CODE = (\d+)", src, re.S):
+        out[int(m.group(2))] = m.group(1)
+    return out
+
+
 def main():
     classes = scan_typescript()
+    stubs = stub_opcodes()
     consts, jreg = java_opcodes()
     tsreg = ts_registered(classes)
 
     unregistered = sorted(jreg - tsreg)
+    stub_rows = sorted((op, name) for op, name in stubs.items())
     dead, consumed = [], []
     for c in classes:
         if not any(c["inert"].get(m) for m in ("apply", "paint")):
@@ -143,6 +167,7 @@ def main():
 
     if "--json" in sys.argv:
         print(json.dumps(dict(unregistered=[[c, consts[c]] for c in unregistered],
+                              stubs=[[op, name, consts.get(op, "?")] for op, name in stub_rows],
                               dead=dead, consumed=consumed), indent=2))
         return
 
@@ -150,6 +175,10 @@ def main():
     print(f"=== A. Unregistered — the reader desynchronises on these ({len(unregistered)})")
     for c in unregistered:
         print(f"  {c:>4}  {consts[c]}")
+    print(f"\n=== D. Parsed by a stub — stream stays aligned, operation does nothing ({len(stub_rows)})")
+    for op, name in stub_rows:
+        print(f"  {op:4d}  {consts.get(op, '?'):38s} {name}")
+
     print(f"\n=== B. Parsed, then ignored — silently does nothing ({len(dead)})")
     for r in dead:
         print(f"  {r['opcode']:>4}  {r['java']:<38} {r['name']}")

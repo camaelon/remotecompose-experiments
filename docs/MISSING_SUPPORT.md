@@ -3,11 +3,12 @@
 *Every operation this player does not implement, and what each one costs. Generated and
 re-checkable with `players/typescript/support-audit.py`.*
 
-Java `remote-core` registers **163** opcodes. This player registers **148**. Of those 148,
-**17** parse their bytes and then do nothing.
+Java `remote-core` registers **163** opcodes. This player registers **162**. Of those 162,
+**17** parse their bytes and then do nothing, and a further **14** are parsing stubs that
+keep the byte stream aligned without implementing anything (§1b).
 
-The three categories below are ordered by how badly they fail, which is not the same as how
-often they are hit. Read §0 before treating anything here as a work item.
+The categories below are ordered by how badly they fail, which is not the same as how often
+they are hit. Read §0 before treating anything here as a work item.
 
 ---
 
@@ -29,12 +30,31 @@ stay unfixed.
 
 ---
 
-## 1. Unregistered opcodes — the reader desynchronises (15)
+## 1. Unregistered opcodes — the reader stops dead (1)
 
-**The worst category by a wide margin.** An unregistered opcode has no known length, so the
-reader cannot skip it. The byte stream loses alignment and **every operation after it is
-garbage** — the document does not fail cleanly, it renders nonsense or throws somewhere
-unrelated to the actual cause.
+An unregistered opcode has no known length, so the reader cannot skip it. It does not
+silently garble what follows — `RemoteComposeBuffer` warns and returns, so **every
+operation after it is dropped** and the document renders a prefix of itself. Measured: an
+unregistered opcode spliced into `dsl_ticker.rc` takes it from 75 operations to 1.
+
+| op | name | what it is |
+| ---: | :--- | :--- |
+| 57 | `DRAW_TEXT_ON_CIRCLE` | text laid out around a circle |
+
+**This one is parity, not a gap.** `DrawTextOnCircle` exists as a class in `remote-core` and
+has documentation, but it is not registered in `Operations.java` either — the reference
+cannot read it any more than this player can. It is listed for completeness and needs no
+work until the reference registers it.
+
+The other fourteen used to live here. They are now §1b.
+
+---
+
+## 1b. Parsing stubs — stream stays aligned, operation does nothing (14)
+
+`src/core/operations/UnsupportedOperations.ts`. Each stub reads *exactly* the fields the
+reference reader reads and then does nothing, so a document using one of these loses that
+one feature instead of losing everything after it.
 
 | op | name | what it is |
 | ---: | :--- | :--- |
@@ -42,7 +62,6 @@ unrelated to the actual cause.
 | 14 | `ANIMATION_SPEC` | animation curve specification |
 | 48 | `DRAW_BITMAP_FONT_TEXT_RUN` | bitmap-font text |
 | 49 | `DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH` | bitmap-font text along a path |
-| 57 | `DRAW_TEXT_ON_CIRCLE` | |
 | 153 | `TEXT_LOOKUP_INT` | integer-keyed text lookup |
 | 166 | `FUNCTION_CALL` | with 168, the float-function mechanism |
 | 167 | `DATA_BITMAP_FONT` | bitmap font data |
@@ -51,17 +70,25 @@ unrelated to the actual cause.
 | 175 | `PATH_COMBINE` | boolean path operations |
 | 183 | `BITMAP_TEXT_MEASURE` | bitmap-font metrics |
 | 184 | `DRAW_BITMAP_TEXT_ANCHORED` | anchored bitmap-font text |
-| 185 | `REM` | |
+| 185 | `REM` | a comment; inert by design, so this stub is complete |
 | 189 | `DATA_FONT` | font data |
 
-Six of the fifteen (48, 49, 167, 183, 184, 189) are one cluster: **bitmap fonts and font
-data**. A document using a custom font is unreadable here, not merely unstyled. That is the
-single largest coherent gap in this list and the obvious first thing to take on.
-
-`FUNCTION_DEFINE` (168) and `FUNCTION_CALL` (166) are the other pair — together they are
-the whole float-function mechanism, and Java's `FloatFunctionDefine` is one of the six
-places it counts operations that this player has no equivalent for (see
+Six of the fourteen (48, 49, 167, 183, 184, 189) are one cluster — **bitmap fonts and font
+data** — and remain the single largest coherent gap. `FUNCTION_DEFINE` (168) and
+`FUNCTION_CALL` (166) are the other pair: together the whole float-function mechanism, and
+one of the six places Java counts operations that this player has no equivalent for (see
 [OPERATION_MEASUREMENT.md](OPERATION_MEASUREMENT.md) §8).
+
+**Do not trust a stub's layout by eye.** Three of them (48, 49, 183, 184) hide an optional
+float behind the sign bit of their first int, and `DATA_BITMAP_FONT` packs a version into
+the high half of a count word and then has a kerning table that only exists from version 2.
+A stub that mis-reads a length is worse than no stub, because it desynchronises the stream
+while looking like support. All fourteen are covered by a splice test — a synthetic
+operation inserted after a real document's header, asserting the document still parses to
+the same tail — with an unregistered opcode as the negative control.
+
+`REM` is the one that is genuinely finished: it is a comment, so parsing it and doing
+nothing is the correct implementation. Its `deepToString` prints the comment text.
 
 ---
 

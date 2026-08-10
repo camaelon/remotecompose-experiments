@@ -15727,6 +15727,266 @@ var RC = (() => {
   _Custom.OP_CODE = 93;
   var Custom = _Custom;
 
+  // src/core/operations/UnsupportedOperations.ts
+  var UnsupportedOperation = class extends Operation {
+    write(_buffer) {
+    }
+    apply(_context) {
+    }
+    deepToString(indent) {
+      return `${indent}${this.opName} (unsupported, parsed only)`;
+    }
+  };
+  function readGlyphSpacedId(buffer) {
+    const first = buffer.readInt();
+    if ((first & 2147483648) !== 0) {
+      buffer.readFloat();
+    }
+  }
+  var _ComponentStartStub = class _ComponentStartStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "ComponentStart";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readFloat();
+      buffer.readFloat();
+      operations.push(new _ComponentStartStub());
+    }
+  };
+  _ComponentStartStub.OP_CODE = 2;
+  var ComponentStartStub = _ComponentStartStub;
+  var _AnimationSpecStub = class _AnimationSpecStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "AnimationSpec";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readFloat();
+      buffer.readInt();
+      buffer.readFloat();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      operations.push(new _AnimationSpecStub());
+    }
+  };
+  _AnimationSpecStub.OP_CODE = 14;
+  var AnimationSpecStub = _AnimationSpecStub;
+  var _DrawBitmapFontTextStub = class _DrawBitmapFontTextStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "DrawBitmapFontText";
+    }
+    static read(buffer, operations) {
+      readGlyphSpacedId(buffer);
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readFloat();
+      buffer.readFloat();
+      operations.push(new _DrawBitmapFontTextStub());
+    }
+  };
+  _DrawBitmapFontTextStub.OP_CODE = 48;
+  var DrawBitmapFontTextStub = _DrawBitmapFontTextStub;
+  var _DrawBitmapFontTextOnPathStub = class _DrawBitmapFontTextOnPathStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "DrawBitmapFontTextOnPath";
+    }
+    static read(buffer, operations) {
+      readGlyphSpacedId(buffer);
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readFloat();
+      operations.push(new _DrawBitmapFontTextOnPathStub());
+    }
+  };
+  _DrawBitmapFontTextOnPathStub.OP_CODE = 49;
+  var DrawBitmapFontTextOnPathStub = _DrawBitmapFontTextOnPathStub;
+  var _BitmapTextMeasureStub = class _BitmapTextMeasureStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "BitmapTextMeasure";
+    }
+    static read(buffer, operations) {
+      readGlyphSpacedId(buffer);
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      operations.push(new _BitmapTextMeasureStub());
+    }
+  };
+  _BitmapTextMeasureStub.OP_CODE = 183;
+  var BitmapTextMeasureStub = _BitmapTextMeasureStub;
+  var _DrawBitmapTextAnchoredStub = class _DrawBitmapTextAnchoredStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "DrawBitmapTextAnchored";
+    }
+    static read(buffer, operations) {
+      readGlyphSpacedId(buffer);
+      buffer.readInt();
+      buffer.readFloat();
+      buffer.readFloat();
+      buffer.readFloat();
+      buffer.readFloat();
+      buffer.readFloat();
+      buffer.readFloat();
+      operations.push(new _DrawBitmapTextAnchoredStub());
+    }
+  };
+  _DrawBitmapTextAnchoredStub.OP_CODE = 184;
+  var DrawBitmapTextAnchoredStub = _DrawBitmapTextAnchoredStub;
+  var _BitmapFontDataStub = class _BitmapFontDataStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "BitmapFontData";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      const versionAndCount = buffer.readInt();
+      const version = versionAndCount >>> 16;
+      const numGlyphs = versionAndCount & 65535;
+      for (let i = 0; i < numGlyphs; i++) {
+        buffer.readUTF8();
+        buffer.readInt();
+        buffer.readShort();
+        buffer.readShort();
+        buffer.readShort();
+        buffer.readShort();
+        buffer.readShort();
+        buffer.readShort();
+      }
+      if (version >= _BitmapFontDataStub.VERSION_2) {
+        const numKerning = buffer.readShort();
+        for (let i = 0; i < numKerning; i++) {
+          buffer.readUTF8();
+          buffer.readShort();
+        }
+      }
+      operations.push(new _BitmapFontDataStub());
+    }
+  };
+  _BitmapFontDataStub.OP_CODE = 167;
+  _BitmapFontDataStub.VERSION_2 = 2;
+  var BitmapFontDataStub = _BitmapFontDataStub;
+  var _FontDataStub = class _FontDataStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "FontData";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readBuffer();
+      operations.push(new _FontDataStub());
+    }
+  };
+  _FontDataStub.OP_CODE = 189;
+  var FontDataStub = _FontDataStub;
+  var _FloatFunctionCallStub = class _FloatFunctionCallStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "FloatFunctionCall";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      const argLen = buffer.readInt();
+      for (let i = 0; i < argLen; i++) {
+        buffer.readFloat();
+      }
+      operations.push(new _FloatFunctionCallStub());
+    }
+  };
+  _FloatFunctionCallStub.OP_CODE = 166;
+  var FloatFunctionCallStub = _FloatFunctionCallStub;
+  var _FloatFunctionDefineStub = class _FloatFunctionDefineStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "FloatFunctionDefine";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      const varLen = buffer.readInt();
+      for (let i = 0; i < varLen; i++) {
+        buffer.readInt();
+      }
+      operations.push(new _FloatFunctionDefineStub());
+    }
+  };
+  _FloatFunctionDefineStub.OP_CODE = 168;
+  var FloatFunctionDefineStub = _FloatFunctionDefineStub;
+  var _TextLookupIntStub = class _TextLookupIntStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "TextLookupInt";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      operations.push(new _TextLookupIntStub());
+    }
+  };
+  _TextLookupIntStub.OP_CODE = 153;
+  var TextLookupIntStub = _TextLookupIntStub;
+  var _ImageAttributeStub = class _ImageAttributeStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "ImageAttribute";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readShort();
+      const len = buffer.readShort();
+      for (let i = 0; i < len; i++) {
+        buffer.readInt();
+      }
+      operations.push(new _ImageAttributeStub());
+    }
+  };
+  _ImageAttributeStub.OP_CODE = 171;
+  var ImageAttributeStub = _ImageAttributeStub;
+  var _PathCombineStub = class _PathCombineStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "PathCombine";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readByte();
+      operations.push(new _PathCombineStub());
+    }
+  };
+  _PathCombineStub.OP_CODE = 175;
+  var PathCombineStub = _PathCombineStub;
+  var _RemStub = class _RemStub extends UnsupportedOperation {
+    constructor(text) {
+      super();
+      this.opName = "Rem";
+      this.mText = text;
+    }
+    static read(buffer, operations) {
+      operations.push(new _RemStub(buffer.readUTF8()));
+    }
+    // The one stub that can show something useful: a REM is a comment, so print it.
+    deepToString(indent) {
+      return `${indent}Rem("${this.mText}")`;
+    }
+  };
+  _RemStub.OP_CODE = 185;
+  var RemStub = _RemStub;
+
   // src/core/Operations.ts
   var _Operations = class _Operations {
     static init() {
@@ -15881,6 +16141,20 @@ var RC = (() => {
       m.set(PatternArgument.OP_CODE, PatternArgument.read);
       m.set(PatternDefine.OP_CODE, PatternDefine.read);
       m.set(Custom.OP_CODE, Custom.read);
+      m.set(ComponentStartStub.OP_CODE, ComponentStartStub.read);
+      m.set(AnimationSpecStub.OP_CODE, AnimationSpecStub.read);
+      m.set(DrawBitmapFontTextStub.OP_CODE, DrawBitmapFontTextStub.read);
+      m.set(DrawBitmapFontTextOnPathStub.OP_CODE, DrawBitmapFontTextOnPathStub.read);
+      m.set(BitmapTextMeasureStub.OP_CODE, BitmapTextMeasureStub.read);
+      m.set(DrawBitmapTextAnchoredStub.OP_CODE, DrawBitmapTextAnchoredStub.read);
+      m.set(BitmapFontDataStub.OP_CODE, BitmapFontDataStub.read);
+      m.set(FontDataStub.OP_CODE, FontDataStub.read);
+      m.set(FloatFunctionCallStub.OP_CODE, FloatFunctionCallStub.read);
+      m.set(FloatFunctionDefineStub.OP_CODE, FloatFunctionDefineStub.read);
+      m.set(TextLookupIntStub.OP_CODE, TextLookupIntStub.read);
+      m.set(ImageAttributeStub.OP_CODE, ImageAttributeStub.read);
+      m.set(PathCombineStub.OP_CODE, PathCombineStub.read);
+      m.set(RemStub.OP_CODE, RemStub.read);
     }
     static getOperations() {
       _Operations.init();
