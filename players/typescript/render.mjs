@@ -50,10 +50,16 @@ paint.createLayerCanvas = (w, h) => patch(createCanvas(Math.max(1, w), Math.max(
 paint.loadBitmap = () => {};
 doc.applyDataOperations(remote);
 const frames = Number(flag('frames', 3));
+// Theme matters for any document carrying Theme ops or themed colours: painting with
+// UNSPECIFIED (-1) is NOT the same as what a device shows, and comparing a -1 render
+// against a light-mode phone reports a difference that is purely the harness's.
+//   --theme light | dark | unspecified   (default: light, which is the phone's default)
+const THEMES = { light: -3, dark: -2, unspecified: -1 };  // Theme.LIGHT/DARK/UNSPECIFIED
+const theme = THEMES[String(flag('theme', 'light'))] ?? -1;
 for (let f = 0; f < frames; f++) {
     remote.setAnimationTime?.(f / 60);
     paint.reset?.(); paint.clearNeedsRepaint?.();
-    doc.paint(remote, -1);
+    doc.paint(remote, theme);
 }
 writeFileSync(out, canvas.toBuffer('image/png'));
 console.error(`${out} ${W}x${H} ${frames} frames`);
