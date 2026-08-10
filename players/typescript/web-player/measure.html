@@ -1061,7 +1061,14 @@ var RC = (() => {
       this.mAnimate = true;
       this.mLastComponent = null;
       this.currentTime = 0;
-      this.mTouchVersion = 0;
+      /**
+       * Touch coordinate convention. 1 (FIX_TOUCH_EVENT) means component-local, which is what
+       * the dispatch code actually passes; 0 means absolute. The reference defaults to 1
+       * (LayoutManager.DEFAULT_TOUCH_VERSION) and CoreDocument overrides it from the header.
+       * Defaulting to 0 here paired local coordinates with absolute bounds, so a
+       * TouchExpression inside a component rejected touches that were within it.
+       */
+      this.mTouchVersion = 1;
       this.mDensityBehavior = _RemoteContext.DENSITY_BEHAVIOR_LEGACY;
       this.mClock = clock;
       this.mDocLoadTime = clock.millis();
@@ -5896,6 +5903,29 @@ var RC = (() => {
     constructor(direction, positionId, max, notchMax) {
       super();
       this.mList = [];
+      // ── Scroll state ────────────────────────────────────────────────────────────────
+      // Two ways a scroll position is driven, and a document picks one by whether its
+      // position field is a NaN-encoded variable reference:
+      //
+      //   expression-driven — the TouchExpression below computes the position and writes it
+      //       to that variable. The modifier only feeds it touch events. (stock.rc)
+      //   direct — no variable, so the modifier tracks the offset itself, clamped to
+      //       [-maxScroll, 0]. (dsl_ticker.rc, 02_ticker.rc)
+      //
+      // Both need touch events, which is what was missing: the TouchExpression lives in this
+      // modifier's own list rather than the component's children, so the component's touch
+      // walk never reached it and nothing ever moved.
+      this.mTouchExpression = null;
+      this.mTouchDown = false;
+      this.mTouchDownX = 0;
+      this.mTouchDownY = 0;
+      this.mInitialScrollX = 0;
+      this.mInitialScrollY = 0;
+      this.mScrollX = 0;
+      this.mScrollY = 0;
+      this.mMaxScrollX = 0;
+      this.mMaxScrollY = 0;
+      this.mContentDimension = 0;
       this.mDirection = direction;
       this.mPositionId = positionId;
       this.mMax = max;
@@ -5913,18 +5943,121 @@ var RC = (() => {
     getNotchMaxNan() {
       return this.mNotchMax;
     }
+    getScrollX() {
+      return this.mScrollX;
+    }
+    getScrollY() {
+      return this.mScrollY;
+    }
+    isVertical() {
+      return this.mDirection === _ScrollModifier.VERTICAL;
+    }
+    /** True when the position is a variable the contained TouchExpression writes. */
+    isExpressionDriven() {
+      return isNaNBits(this.mPositionId);
+    }
+    /** Bind the contained TouchExpression to the component, as Java's inflate() does. */
+    inflate(component) {
+      for (const op of this.mList) {
+        if (op instanceof TouchExpression) {
+          this.mTouchExpression = op;
+          op.setComponent(component);
+        }
+      }
+    }
+    updateVariables(context) {
+      this.mTouchExpression?.updateVariables(context);
+    }
+    /** Called by the layout pass once the host and content sizes are known. */
+    setVerticalScrollDimension(hostDimension, contentDimension) {
+      this.mContentDimension = contentDimension;
+      this.mMaxScrollY = Math.max(0, contentDimension - hostDimension);
+    }
+    setHorizontalScrollDimension(hostDimension, contentDimension) {
+      this.mContentDimension = contentDimension;
+      this.mMaxScrollX = Math.max(0, contentDimension - hostDimension);
+    }
+    onTouchDown(context, x, y) {
+      this.mTouchDown = true;
+      this.mTouchDownX = x;
+      this.mTouchDownY = y;
+      this.mInitialScrollX = this.mScrollX;
+      this.mInitialScrollY = this.mScrollY;
+      if (this.mTouchExpression) {
+        this.mTouchExpression.updateVariables(context);
+        if (context.getTouchVersion() === _ScrollModifier.FIX_TOUCH_EVENT) {
+          this.mTouchExpression.touchDown(context, x, y);
+        } else {
+          this.mTouchExpression.touchDown(context, x + this.mScrollX, y + this.mScrollY);
+        }
+      }
+      return true;
+    }
+    onTouchDrag(context, x, y) {
+      this.mTouchDown = true;
+      if (this.mTouchExpression) {
+        this.mTouchExpression.updateVariables(context);
+        if (context.getTouchVersion() === _ScrollModifier.FIX_TOUCH_EVENT) {
+          this.mTouchExpression.touchDrag(context, x, y);
+        } else {
+          this.mTouchExpression.touchDrag(context, x + this.mScrollX, y + this.mScrollY);
+        }
+      }
+      if (!this.isExpressionDriven()) {
+        if (this.isVertical()) {
+          const dy = y - this.mTouchDownY;
+          this.mScrollY = Math.max(
+            -this.mMaxScrollY,
+            Math.min(0, this.mInitialScrollY + dy)
+          );
+        } else {
+          const dx = x - this.mTouchDownX;
+          this.mScrollX = Math.max(
+            -this.mMaxScrollX,
+            Math.min(0, this.mInitialScrollX + dx)
+          );
+        }
+      }
+      return true;
+    }
+    onTouchUp(context, x, y, dx, dy) {
+      const handled = this.mTouchDown;
+      this.mTouchDown = false;
+      if (this.mTouchExpression) {
+        this.mTouchExpression.updateVariables(context);
+        if (context.getTouchVersion() === _ScrollModifier.FIX_TOUCH_EVENT) {
+          this.mTouchExpression.touchUp(context, x, y, dx, dy);
+        } else {
+          this.mTouchExpression.touchUp(context, x + this.mScrollX, y + this.mScrollY, dx, dy);
+        }
+      }
+      return handled;
+    }
+    onTouchCancel(context, x, y) {
+      const handled = this.mTouchDown;
+      this.mTouchDown = false;
+      this.mTouchExpression?.touchUp(context, x, y, 0, 0);
+      return handled;
+    }
     write(_buffer) {
     }
     apply(context) {
       if (context.mMode !== "PAINT" /* PAINT */) return;
+      for (const op of this.mList) {
+        op.apply(context);
+        context.incrementOpCount(op);
+      }
       const pc = context.getPaintContext();
       if (!pc) return;
-      const pos = isNaNBits(this.mPositionId) ? context.getFloat(idFromBits(this.mPositionId)) : 0;
-      if (this.mDirection === _ScrollModifier.HORIZONTAL) {
-        pc.translate(-pos, 0);
-      } else {
-        pc.translate(0, -pos);
+      if (this.mTouchExpression) {
+        const position = context.getFloat(idFromBits(this.mPositionId));
+        if (this.isVertical()) {
+          this.mScrollY = -Math.min(this.mMaxScrollY, position);
+        } else {
+          this.mScrollX = -Math.min(this.mMaxScrollX, position);
+        }
       }
+      pc.translate(this.mScrollX, this.mScrollY);
     }
     deepToString(indent) {
       return `${indent}ScrollModifier(dir=${this.mDirection})`;
@@ -5940,6 +6073,8 @@ var RC = (() => {
   _ScrollModifier.OP_CODE = 226;
   _ScrollModifier.VERTICAL = 0;
   _ScrollModifier.HORIZONTAL = 1;
+  /** LayoutManager.FIX_TOUCH_EVENT — touch coordinates are component-local from here on. */
+  _ScrollModifier.FIX_TOUCH_EVENT = 1;
   var ScrollModifier = _ScrollModifier;
   var _MarqueeModifier = class _MarqueeModifier extends Operation {
     constructor(iterations, animationMode, repeatDelay, initialDelay, spacing, velocity) {
@@ -10201,6 +10336,7 @@ var RC = (() => {
           this.mComponentModifiers.push(op);
         } else if (op instanceof ScrollModifier) {
           this.mScrollModifier = op;
+          op.inflate(this);
           this.mComponentModifiers.push(op);
         } else if (op instanceof MarqueeModifier) {
           op.setComponent(this);
@@ -10557,8 +10693,41 @@ var RC = (() => {
             handled = true;
           }
         }
+        if (this.mScrollModifier) {
+          const sloc = this.getLocationInWindow();
+          this.mScrollModifier.onTouchDown(context, x - sloc[0], y - sloc[1]);
+          doc.appliedTouchOperation(this);
+          handled = true;
+        }
       }
       return handled;
+    }
+    /**
+     * Drag and up/cancel for a scrolling component.
+     *
+     * Separate from the base Component walk because that one dispatches to children and to
+     * TouchExpressions in the children list; a scroll modifier is neither. Coordinates are
+     * made relative to the component, matching what onTouchDown handed the modifier —
+     * feeding window coordinates to one and local to the other makes the first drag jump.
+     */
+    onScrollTouchDrag(context, x, y) {
+      if (!this.mScrollModifier) return false;
+      const loc = this.getLocationInWindow();
+      const handled = this.mScrollModifier.onTouchDrag(context, x - loc[0], y - loc[1]);
+      if (handled) this.invalidateMeasure();
+      return handled;
+    }
+    onScrollTouchUp(context, x, y, dx, dy) {
+      if (!this.mScrollModifier) return false;
+      const loc = this.getLocationInWindow();
+      const handled = this.mScrollModifier.onTouchUp(context, x - loc[0], y - loc[1], dx, dy);
+      if (handled) this.invalidateMeasure();
+      return handled;
+    }
+    onScrollTouchCancel(context, x, y) {
+      if (!this.mScrollModifier) return false;
+      const loc = this.getLocationInWindow();
+      return this.mScrollModifier.onTouchCancel(context, x - loc[0], y - loc[1]);
     }
     /** Recursively search operation list for TouchExpression and dispatch touchDown */
     dispatchTouchDownToOps(ops, context, doc, lx, ly) {
@@ -10710,9 +10879,17 @@ var RC = (() => {
         if (isVertical) {
           this.mScrollHostDimension = hostH;
           this.mScrollContentDimension = this.mCachedWrapSize.getHeight();
+          scrollMod.setVerticalScrollDimension(
+            this.mScrollHostDimension,
+            this.mScrollContentDimension
+          );
         } else {
           this.mScrollHostDimension = hostW;
           this.mScrollContentDimension = this.mCachedWrapSize.getWidth();
+          scrollMod.setHorizontalScrollDimension(
+            this.mScrollHostDimension,
+            this.mScrollContentDimension
+          );
         }
         const childMaxW = isVertical ? w - padding_w : Math.max(w - padding_w, this.mScrollContentDimension);
         const childMaxH = isVertical ? Math.max(h - padding_h, this.mScrollContentDimension) : h - padding_h;
@@ -17115,6 +17292,14 @@ var RC = (() => {
      * Seeded in both passes because layout runs in each: a behaviour applied only at paint
      * would leave the data pass measuring against unscaled values.
      */
+    /**
+     * Push the document's touch-coordinate convention onto the context, as Java does.
+     * Absent from the header means FIX_TOUCH_EVENT, not 0.
+     */
+    seedTouchVersion(context) {
+      const declared = this.getProperty(Header.FEATURE_TOUCH_VERSION);
+      context.setTouchVersion(typeof declared === "number" ? declared : 1);
+    }
     seedDensityBehavior(context) {
       const declared = this.getProperty(Header.DOC_DENSITY_BEHAVIOR);
       context.setDensityBehavior(
@@ -17135,6 +17320,7 @@ var RC = (() => {
     applyDataOperations(context) {
       context.setMode("DATA" /* DATA */);
       this.seedDensityBehavior(context);
+      this.seedTouchVersion(context);
       this.seedPlatformTextSize(context);
       this.mTimeVariables.updateTime(context);
       this.registerVariables(context, this.mOperations);
@@ -17208,6 +17394,7 @@ var RC = (() => {
       }
       context.loadFloat(27, density);
       this.seedDensityBehavior(context);
+      this.seedTouchVersion(context);
       this.seedPlatformTextSize(context);
       const pc = context.getPaintContext();
       if (pc) pc.save();
@@ -17342,6 +17529,10 @@ var RC = (() => {
           if (component.onTouchDrag(context, this, x, y, true)) {
             handled = true;
           }
+          if (component.onScrollTouchDrag?.(context, x, y)) {
+            handled = true;
+            this.mNeedsRepaintFlag = 1;
+          }
         }
       }
       return handled;
@@ -17358,6 +17549,9 @@ var RC = (() => {
           if (component.onTouchUp(context, this, x, y, dx, dy, true)) {
             handled = true;
           }
+          if (component.onScrollTouchUp?.(context, x, y, dx, dy)) {
+            handled = true;
+          }
         }
         this.mAppliedTouchOperations.clear();
       }
@@ -17369,6 +17563,9 @@ var RC = (() => {
         let handled = false;
         for (const component of this.mAppliedTouchOperations) {
           if (component.onTouchCancel(context, this, x, y, true)) {
+            handled = true;
+          }
+          if (component.onScrollTouchCancel?.(context, x, y)) {
             handled = true;
           }
         }

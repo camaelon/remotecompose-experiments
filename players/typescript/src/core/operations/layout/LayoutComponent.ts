@@ -158,6 +158,9 @@ export class LayoutComponent extends Component {
                 this.mComponentModifiers.push(op);
             } else if (op instanceof ScrollModifier) {
                 this.mScrollModifier = op;
+                // Bind the TouchExpression the modifier carries. It lives in the modifier's
+                // own list, not in this component's children, so nothing else reaches it.
+                op.inflate(this);
                 this.mComponentModifiers.push(op);
             } else if (op instanceof MarqueeModifier) {
                 op.setComponent(this);
@@ -572,8 +575,54 @@ export class LayoutComponent extends Component {
                     handled = true;
                 }
             }
+            if (this.mScrollModifier) {
+                // Same basis as the drag/up handlers below — `lx`/`ly` above are relative to
+                // this component's own origin and ignore ancestors, so using them here and
+                // window-relative coordinates on drag makes the first drag jump by the
+                // component's offset.
+                const sloc = this.getLocationInWindow();
+                this.mScrollModifier.onTouchDown(context, x - sloc[0], y - sloc[1]);
+                // Registering here is what gets this component drag and up events at all:
+                // CoreDocument only forwards those to components in mAppliedTouchOperations.
+                doc.appliedTouchOperation(this);
+                handled = true;
+            }
         }
         return handled;
+    }
+
+    /**
+     * Drag and up/cancel for a scrolling component.
+     *
+     * Separate from the base Component walk because that one dispatches to children and to
+     * TouchExpressions in the children list; a scroll modifier is neither. Coordinates are
+     * made relative to the component, matching what onTouchDown handed the modifier —
+     * feeding window coordinates to one and local to the other makes the first drag jump.
+     */
+    onScrollTouchDrag(context: RemoteContext, x: number, y: number): boolean {
+        if (!this.mScrollModifier) return false;
+        const loc = this.getLocationInWindow();
+        const handled = this.mScrollModifier.onTouchDrag(context, x - loc[0], y - loc[1]);
+        // The reference invalidates measure on every drag and release: content whose size
+        // depends on the scroll offset (a collapsing header, a sticky row) needs re-measuring
+        // as it moves, and without this it would only settle on some later unrelated frame.
+        if (handled) this.invalidateMeasure();
+        return handled;
+    }
+
+    onScrollTouchUp(context: RemoteContext, x: number, y: number,
+                    dx: number, dy: number): boolean {
+        if (!this.mScrollModifier) return false;
+        const loc = this.getLocationInWindow();
+        const handled = this.mScrollModifier.onTouchUp(context, x - loc[0], y - loc[1], dx, dy);
+        if (handled) this.invalidateMeasure();
+        return handled;
+    }
+
+    onScrollTouchCancel(context: RemoteContext, x: number, y: number): boolean {
+        if (!this.mScrollModifier) return false;
+        const loc = this.getLocationInWindow();
+        return this.mScrollModifier.onTouchCancel(context, x - loc[0], y - loc[1]);
     }
 
     /** Recursively search operation list for TouchExpression and dispatch touchDown */

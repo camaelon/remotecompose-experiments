@@ -7,6 +7,7 @@ import { ContextMode, RemoteContext } from '../../../RemoteContext';
 import { PaintBundle } from '../../paint/PaintBundle';
 import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
 import { Visibility } from '../Component';
+import { TouchExpression } from '../../TouchExpression';
 
 /**
  * What the measure pass needs from a min/max constraint, regardless of which op it
@@ -879,6 +880,8 @@ export class ScrollModifier extends Operation {
     static readonly OP_CODE = 226;
     static readonly VERTICAL = 0;
     static readonly HORIZONTAL = 1;
+    /** LayoutManager.FIX_TOUCH_EVENT — touch coordinates are component-local from here on. */
+    static readonly FIX_TOUCH_EVENT = 1;
     mList: Operation[] = [];
     private mDirection: number;
     // position/max/notchMax as raw float32 int bits (NaN-encoded variable refs;
@@ -893,24 +896,156 @@ export class ScrollModifier extends Operation {
         this.mMax = max;
         this.mNotchMax = notchMax;
     }
+
+    // ── Scroll state ────────────────────────────────────────────────────────────────
+    // Two ways a scroll position is driven, and a document picks one by whether its
+    // position field is a NaN-encoded variable reference:
+    //
+    //   expression-driven — the TouchExpression below computes the position and writes it
+    //       to that variable. The modifier only feeds it touch events. (stock.rc)
+    //   direct — no variable, so the modifier tracks the offset itself, clamped to
+    //       [-maxScroll, 0]. (dsl_ticker.rc, 02_ticker.rc)
+    //
+    // Both need touch events, which is what was missing: the TouchExpression lives in this
+    // modifier's own list rather than the component's children, so the component's touch
+    // walk never reached it and nothing ever moved.
+    private mTouchExpression: TouchExpression | null = null;
+    private mTouchDown = false;
+    private mTouchDownX = 0;
+    private mTouchDownY = 0;
+    private mInitialScrollX = 0;
+    private mInitialScrollY = 0;
+    private mScrollX = 0;
+    private mScrollY = 0;
+    private mMaxScrollX = 0;
+    private mMaxScrollY = 0;
+    private mContentDimension = 0;
+
     getList(): Operation[] { return this.mList; }
     getDirection(): number { return this.mDirection; }
     getMaxNan(): number { return this.mMax; }
     getNotchMaxNan(): number { return this.mNotchMax; }
+    getScrollX(): number { return this.mScrollX; }
+    getScrollY(): number { return this.mScrollY; }
+    isVertical(): boolean { return this.mDirection === ScrollModifier.VERTICAL; }
+
+    /** True when the position is a variable the contained TouchExpression writes. */
+    private isExpressionDriven(): boolean { return isNaNBits(this.mPositionId); }
+
+    /** Bind the contained TouchExpression to the component, as Java's inflate() does. */
+    inflate(component: any): void {
+        for (const op of this.mList) {
+            if (op instanceof TouchExpression) {
+                this.mTouchExpression = op;
+                op.setComponent(component);
+            }
+        }
+    }
+
+    updateVariables(context: RemoteContext): void {
+        this.mTouchExpression?.updateVariables(context);
+    }
+
+    /** Called by the layout pass once the host and content sizes are known. */
+    setVerticalScrollDimension(hostDimension: number, contentDimension: number): void {
+        this.mContentDimension = contentDimension;
+        this.mMaxScrollY = Math.max(0, contentDimension - hostDimension);
+    }
+
+    setHorizontalScrollDimension(hostDimension: number, contentDimension: number): void {
+        this.mContentDimension = contentDimension;
+        this.mMaxScrollX = Math.max(0, contentDimension - hostDimension);
+    }
+
+    onTouchDown(context: RemoteContext, x: number, y: number): boolean {
+        this.mTouchDown = true;
+        this.mTouchDownX = x;
+        this.mTouchDownY = y;
+        this.mInitialScrollX = this.mScrollX;
+        this.mInitialScrollY = this.mScrollY;
+        if (this.mTouchExpression) {
+            this.mTouchExpression.updateVariables(context);
+            if (context.getTouchVersion() === ScrollModifier.FIX_TOUCH_EVENT) {
+                this.mTouchExpression.touchDown(context, x, y);
+            } else {
+                this.mTouchExpression.touchDown(context, x + this.mScrollX, y + this.mScrollY);
+            }
+        }
+        return true;
+    }
+
+    onTouchDrag(context: RemoteContext, x: number, y: number): boolean {
+        this.mTouchDown = true;
+        if (this.mTouchExpression) {
+            this.mTouchExpression.updateVariables(context);
+            if (context.getTouchVersion() === ScrollModifier.FIX_TOUCH_EVENT) {
+                this.mTouchExpression.touchDrag(context, x, y);
+            } else {
+                this.mTouchExpression.touchDrag(context, x + this.mScrollX, y + this.mScrollY);
+            }
+        }
+        // Integrate the drag ourselves only when the position is a plain value. When it is
+        // a variable, apply() below recomputes the offset from it every frame and would
+        // overwrite anything set here.
+        if (!this.isExpressionDriven()) {
+            if (this.isVertical()) {
+                const dy = y - this.mTouchDownY;
+                this.mScrollY = Math.max(-this.mMaxScrollY,
+                    Math.min(0, this.mInitialScrollY + dy));
+            } else {
+                const dx = x - this.mTouchDownX;
+                this.mScrollX = Math.max(-this.mMaxScrollX,
+                    Math.min(0, this.mInitialScrollX + dx));
+            }
+        }
+        return true;
+    }
+
+    onTouchUp(context: RemoteContext, x: number, y: number, dx: number, dy: number): boolean {
+        const handled = this.mTouchDown;
+        this.mTouchDown = false;
+        if (this.mTouchExpression) {
+            this.mTouchExpression.updateVariables(context);
+            if (context.getTouchVersion() === ScrollModifier.FIX_TOUCH_EVENT) {
+                this.mTouchExpression.touchUp(context, x, y, dx, dy);
+            } else {
+                this.mTouchExpression.touchUp(context, x + this.mScrollX, y + this.mScrollY, dx, dy);
+            }
+        }
+        return handled;
+    }
+
+    onTouchCancel(context: RemoteContext, x: number, y: number): boolean {
+        const handled = this.mTouchDown;
+        this.mTouchDown = false;
+        this.mTouchExpression?.touchUp(context, x, y, 0, 0);
+        return handled;
+    }
+
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(context: RemoteContext): void {
         if (context.mMode !== ContextMode.PAINT) return;
+        // Run the contained operations first. This is what gets the TouchExpression applied
+        // — and its apply() is what refreshes the bounds it rejects out-of-range touches
+        // against. Without it those bounds stay at 0x0 and every touchDown is discarded,
+        // which presents as scrolling being unimplemented rather than as an error.
+        for (const op of this.mList) {
+            op.apply(context);
+            context.incrementOpCount(op);
+        }
         const pc = context.getPaintContext();
         if (!pc) return;
-        // Read current scroll position from context
-        const pos = isNaNBits(this.mPositionId)
-            ? context.getFloat(idFromBits(this.mPositionId))
-            : 0;
-        if (this.mDirection === ScrollModifier.HORIZONTAL) {
-            pc.translate(-pos, 0);
-        } else {
-            pc.translate(0, -pos);
+        // With an expression, the position variable is authoritative and is recomputed here
+        // every frame. Without one, mScroll* is whatever the drag integrated.
+        if (this.mTouchExpression) {
+            const position = context.getFloat(idFromBits(this.mPositionId));
+            if (this.isVertical()) {
+                this.mScrollY = -Math.min(this.mMaxScrollY, position);
+            } else {
+                this.mScrollX = -Math.min(this.mMaxScrollX, position);
+            }
         }
+        pc.translate(this.mScrollX, this.mScrollY);
     }
     deepToString(indent: string): string { return `${indent}ScrollModifier(dir=${this.mDirection})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {

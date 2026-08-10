@@ -471,6 +471,15 @@ export class CoreDocument implements ExpansionDocument {
      * Seeded in both passes because layout runs in each: a behaviour applied only at paint
      * would leave the data pass measuring against unscaled values.
      */
+    /**
+     * Push the document's touch-coordinate convention onto the context, as Java does.
+     * Absent from the header means FIX_TOUCH_EVENT, not 0.
+     */
+    private seedTouchVersion(context: RemoteContext): void {
+        const declared = this.getProperty(Header.FEATURE_TOUCH_VERSION) as number | null;
+        context.setTouchVersion(typeof declared === 'number' ? declared : 1);
+    }
+
     private seedDensityBehavior(context: RemoteContext): void {
         const declared = this.getProperty(Header.DOC_DENSITY_BEHAVIOR) as number | null;
         context.setDensityBehavior(
@@ -493,6 +502,7 @@ export class CoreDocument implements ExpansionDocument {
     applyDataOperations(context: RemoteContext): void {
         context.setMode(ContextMode.DATA);
         this.seedDensityBehavior(context);
+        this.seedTouchVersion(context);
         // Seed the platform text size *before* the data pass: expressions that derive a
         // font size from it are evaluated here, so seeding later (in paint) is too late
         // and they resolve to 0. The Android view does the same, seeding ID_FONT_SIZE
@@ -595,6 +605,7 @@ export class CoreDocument implements ExpansionDocument {
         }
         context.loadFloat(27 /* ID_DENSITY */, density);
         this.seedDensityBehavior(context);
+        this.seedTouchVersion(context);
         this.seedPlatformTextSize(context);
         // The host is responsible for seeding the platform text size; the Android view
         // uses `14 * density * fontScale` (RemoteComposeView.getDefaultTextSize) and the
@@ -757,6 +768,12 @@ export class CoreDocument implements ExpansionDocument {
                 if (component.onTouchDrag(context, this, x, y, true)) {
                     handled = true;
                 }
+                // A scrolling component's TouchExpression sits in its scroll modifier, not
+                // among its children, so the walk above never reaches it.
+                if ((component as any).onScrollTouchDrag?.(context, x, y)) {
+                    handled = true;
+                    this.mNeedsRepaintFlag = 1;
+                }
             }
         }
         return handled;
@@ -774,6 +791,9 @@ export class CoreDocument implements ExpansionDocument {
                 if (component.onTouchUp(context, this, x, y, dx, dy, true)) {
                     handled = true;
                 }
+                if ((component as any).onScrollTouchUp?.(context, x, y, dx, dy)) {
+                    handled = true;
+                }
             }
             this.mAppliedTouchOperations.clear();
         }
@@ -786,6 +806,9 @@ export class CoreDocument implements ExpansionDocument {
             let handled = false;
             for (const component of this.mAppliedTouchOperations) {
                 if (component.onTouchCancel(context, this, x, y, true)) {
+                    handled = true;
+                }
+                if ((component as any).onScrollTouchCancel?.(context, x, y)) {
                     handled = true;
                 }
             }

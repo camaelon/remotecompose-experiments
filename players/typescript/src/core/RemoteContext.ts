@@ -42,7 +42,14 @@ export abstract class RemoteContext {
     private mAnimate = true;
     mLastComponent: any = null;
     currentTime = 0;
-    private mTouchVersion = 0;
+    /**
+     * Touch coordinate convention. 1 (FIX_TOUCH_EVENT) means component-local, which is what
+     * the dispatch code actually passes; 0 means absolute. The reference defaults to 1
+     * (LayoutManager.DEFAULT_TOUCH_VERSION) and CoreDocument overrides it from the header.
+     * Defaulting to 0 here paired local coordinates with absolute bounds, so a
+     * TouchExpression inside a component rejected touches that were within it.
+     */
+    private mTouchVersion = 1;
 
     constructor(clock: RemoteClock = SYSTEM_CLOCK) {
         this.mClock = clock;

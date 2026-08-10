@@ -125,9 +125,16 @@ export abstract class LayoutManager extends LayoutComponent {
             if (isVertical) {
                 this.mScrollHostDimension = hostH;
                 this.mScrollContentDimension = this.mCachedWrapSize.getHeight();
+                // The modifier needs these too: they are what bound a direct-mode drag.
+                // Without them its max stays 0 and dragging is clamped to nothing, which
+                // looks exactly like scrolling not being implemented.
+                scrollMod.setVerticalScrollDimension(
+                    this.mScrollHostDimension, this.mScrollContentDimension);
             } else {
                 this.mScrollHostDimension = hostW;
                 this.mScrollContentDimension = this.mCachedWrapSize.getWidth();
+                scrollMod.setHorizontalScrollDimension(
+                    this.mScrollHostDimension, this.mScrollContentDimension);
             }
 
             // Re-measure children with unbounded content dimension

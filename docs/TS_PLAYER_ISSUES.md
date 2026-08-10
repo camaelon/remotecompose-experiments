@@ -172,32 +172,56 @@ runs, it is even counted by the measurement hooks, and no value changes.
 
 ## C. Interaction
 
-### C1. Scrolling does not work — neither kind
+### C1. Modifier scrolling — implemented; top-level still missing
 
-**Verified by source.** `ScrollModifier` (226) is ~30 lines that read a position variable and
-`translate()` by it. The reference's `ScrollModifierOperation` is 619 lines and carries
-everything that makes the position *move*:
+`ScrollModifier` was ~30 lines that translated by a position nothing ever wrote. The
+measurement half was already there (`LayoutManager` measures content unbounded on the scroll
+axis and writes the max/notch variables); what was missing was every touch path.
 
-```
-onTouchDown / onTouchUp / onTouchDrag / onTouchCancel
-registerListening / updateVariables / layout / reset
-setHorizontalScrollDimension / setVerticalScrollDimension
-applyEdgeEffect
-```
+The reason it looked inert rather than broken: **the modifier carries its own
+`TouchExpression` in its operation list**, not among the component's children, so the
+component's touch walk — which only ever looks for a `TouchExpression` among children —
+never reached it. Nothing wrote a position, so the translate was always by zero.
 
-None of these exist in TypeScript. Nothing ever writes the scroll position, so the modifier
-translates by a value that is always its initial one. Top-level (host) scrolling is
-separately unimplemented in `RcdPlayer`.
+Ported from `ScrollModifierOperation`:
 
-*Suggested order:* modifier scrolling first, because it is self-contained and the reference
-is a direct port — position state, clamp to content-minus-host, drag from the existing
-touch-down/move/up plumbing (which works, since the click fix), then notch snapping and
-fling. Top-level scrolling is host work in `RcdPlayer` and can follow.
+- `inflate()` binds the contained `TouchExpression` to the component
+- `onTouchDown/Drag/Up/Cancel`, each with the reference's touch-version branch
+- `setVerticalScrollDimension` / `setHorizontalScrollDimension`, called from the measure
+  pass — without them the modifier's max stays 0 and a drag clamps to nothing
+- `apply()` now runs its own list first. That is what applies the `TouchExpression`, and
+  its `apply()` is what refreshes the bounds it rejects out-of-range touches against.
+  Bounds left at 0×0 discard every touch, which reads as "not implemented".
+- the two position modes the reference distinguishes: expression-driven (the variable is
+  authoritative and recomputed each frame) and direct (the drag is integrated and clamped
+  to `[-max, 0]`)
+- `invalidateMeasure()` on drag and release
 
-*Watch for:* `setHorizontalScrollDimension`/`setVerticalScrollDimension` are called by the
-layout pass, so the port is not purely inside the modifier — the container has to hand it
-the content size. This is the part most likely to be missed and to leave the scroll range
-stuck at zero, which looks exactly like "scrolling still not implemented".
+**A related defect found on the way.** `RemoteContext.mTouchVersion` defaulted to 0 while
+the reference defaults to `FIX_TOUCH_EVENT` (1), and nothing read `FEATURE_TOUCH_VERSION`
+from the header. Version 0 makes `TouchExpression.updateBounds` compute *absolute* bounds
+while the dispatch code passes *component-local* coordinates, so a touch expression inside
+any positioned component rejected touches that were inside it. Now seeded from the header
+with the reference's default.
+
+**Verified**: vertical, horizontal and notched, each dragging, clamping at both ends, and
+moving pixels; through `doc.touchDown/Drag/Up` headlessly and through real `PointerEvent`s
+in Chrome. Nothing in the corpus scrolled, so `ts_broken/src/scroll_probe.py` generates the
+three probes — 12 numbered bands of 200 in a 600 viewport, so the offset is readable off a
+render rather than only from a number. Horizontal had never been exercised by anything.
+
+*Not done:* fling parity. Both engines ease after release — a 400px slow drag settles at 424
+here against the device's 499 — but the easing is wall-clock driven and a headless loop does
+not advance wall-clock realistically, so that gap is unconfirmed rather than measured. Edge
+effects (`applyEdgeEffect`, `ScrollingEdgeEffect`) are not ported; they are the overscroll
+glow and affect nothing structural.
+
+*Still missing:* **top-level scrolling** — the `RootContentBehavior` scroll modes, which are
+host work in `RcdPlayer` rather than in the engine.
+
+*Authoring gap:* `rcj` implements neither `verticalScroll` nor `horizontalScroll`, so the
+probes fall back to the Java oracle. Worth closing if scroll documents are going to be
+iterated on.
 
 ### C2. Text arbitration is device-only
 
