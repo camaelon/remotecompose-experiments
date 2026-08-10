@@ -11,6 +11,13 @@
 // which component owns the mistake, and antialiasing makes small offsets invisible while
 // making irrelevant ones loud. The C++ player's `rc2layout` and the Java reference's
 // `RcLayoutTest` emit this exact format so all three diff line by line.
+//
+// --density N : display density. Documents are authored in dp, and a dimension modifier
+// scales its min/max by this — `widthIn(120)` is 120dp, which is 315 physical pixels at
+// 420dpi (density 2.625). A browser reads devicePixelRatio; headless there is no such
+// thing, so this defaults to 1. Pass the device's density when comparing against a phone,
+// or the layout differs for reasons that have nothing to do with the player.
+// `adb shell wm density` reports it in dpi: 420 => 420/160 => 2.625.
 
 import { readFileSync } from 'fs';
 import { createCanvas } from 'canvas';
@@ -69,6 +76,10 @@ remote.mHeight = H;
 doc.initializeContext(remote);
 remote.loadFloat(5, W);
 remote.loadFloat(6, H);
+// Density before the data pass: dimension modifiers scale their min/max in
+// updateVariables, which runs there.
+const density = Number(flag('density', 1));
+if (density > 0) remote.setDensity(density);
 remote.setPaintContext(paint);
 paint.setContext(remote);
 paint.createLayerCanvas = (w, h) =>

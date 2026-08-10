@@ -1045,6 +1045,7 @@ var RC = (() => {
       this.mLastComponent = null;
       this.currentTime = 0;
       this.mTouchVersion = 0;
+      this.mDensityBehavior = _RemoteContext.DENSITY_BEHAVIOR_LEGACY;
       this.mClock = clock;
       this.mDocLoadTime = clock.millis();
     }
@@ -1053,6 +1054,12 @@ var RC = (() => {
     }
     getDensity() {
       return this.mDensity;
+    }
+    getDensityBehavior() {
+      return this.mDensityBehavior;
+    }
+    setDensityBehavior(v) {
+      this.mDensityBehavior = v;
     }
     setDensity(density) {
       if (!Number.isNaN(density) && density > 0) this.mDensity = density;
@@ -1232,6 +1239,16 @@ var RC = (() => {
     }
   };
   _RemoteContext.MAX_OP_COUNT = 2e4;
+  /**
+   * How the document's dimensions are meant to be interpreted.
+   *
+   * LEGACY(0) and DP(2) both mean "these are dp, scale them by density"; only
+   * PIXELS(1) means "already in pixels". The reference defaults to LEGACY, so scaling
+   * is the default — see DimensionInModifierOperation.updateVariables.
+   */
+  _RemoteContext.DENSITY_BEHAVIOR_LEGACY = 0;
+  _RemoteContext.DENSITY_BEHAVIOR_PIXELS = 1;
+  _RemoteContext.DENSITY_BEHAVIOR_DP = 2;
   // --- System variable IDs ---
   _RemoteContext.ID_CONTINUOUS_SEC = 1;
   _RemoteContext.ID_TIME_IN_SEC = 2;
@@ -5060,6 +5077,13 @@ var RC = (() => {
     updateVariables(context) {
       if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
       if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
+      if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_PIXELS) {
+        const density = context.getDensity();
+        if (density > 0 && !Number.isNaN(density)) {
+          if (this.mOutMin !== -1) this.mOutMin *= density;
+          if (this.mOutMax !== -1 && Number.isFinite(this.mOutMax)) this.mOutMax *= density;
+        }
+      }
     }
     write(_buffer) {
     }
@@ -5095,6 +5119,13 @@ var RC = (() => {
     updateVariables(context) {
       if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
       if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
+      if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_PIXELS) {
+        const density = context.getDensity();
+        if (density > 0 && !Number.isNaN(density)) {
+          if (this.mOutMin !== -1) this.mOutMin *= density;
+          if (this.mOutMax !== -1 && Number.isFinite(this.mOutMax)) this.mOutMax *= density;
+        }
+      }
     }
     write(_buffer) {
     }
@@ -10559,7 +10590,7 @@ var RC = (() => {
       } else if (wMod && wMod.getType() === WidthModifier.FILL) {
         w = wMod.hasFraction() ? maxWidth * wMod.getValue() : maxWidth;
       } else if (wMod && wMod.getType() === WidthModifier.WEIGHT) {
-        w = this.mPadBeforeWidth;
+        w = Math.max(this.mPadBeforeWidth, minWidth);
       } else {
         w = maxWidth;
       }
@@ -10569,7 +10600,7 @@ var RC = (() => {
       } else if (hMod && hMod.getType() === HeightModifier.FILL) {
         h = hMod.hasFraction() ? maxHeight * hMod.getValue() : maxHeight;
       } else if (hMod && hMod.getType() === HeightModifier.WEIGHT) {
-        h = this.mPadBeforeHeight;
+        h = Math.max(this.mPadBeforeHeight, minHeight);
       } else {
         h = maxHeight;
       }
@@ -18098,6 +18129,7 @@ void main() {
     applyPaint(paintData) {
       const arr = paintData.getArray();
       const len = paintData.getLength();
+      this.gradientStyle = null;
       let i = 0;
       while (i < len) {
         const cmd = arr[i++];
@@ -18110,7 +18142,6 @@ void main() {
             break;
           case PaintBundle.COLOR:
             this.color = argbToRgba(arr[i++]);
-            this.gradientStyle = null;
             break;
           case PaintBundle.STROKE_WIDTH:
             this.strokeWidth = intBitsToFloat2(arr[i++]);
@@ -18239,7 +18270,6 @@ void main() {
             break;
           case PaintBundle.COLOR_ID: {
             this.color = argbToRgba(arr[i++]);
-            this.gradientStyle = null;
             break;
           }
           case PaintBundle.COLOR_FILTER_ID: {
@@ -19846,6 +19876,16 @@ void main() {
       this.variableListener = null;
       // Measurement sink, remembered across document loads.
       this.measurementSink = null;
+      /**
+       * Display density. Dimensions in a document are authored in dp and scaled by this —
+       * a `widthIn(120)` is 120dp, which is 315 physical pixels on a 420dpi phone.
+       *
+       * Defaults to the browser's devicePixelRatio, the closest equivalent to Android's
+       * DisplayMetrics.density. Headless there is no such thing, so it falls back to 1 —
+       * which is what a document authored for a phone will NOT look right at, so the render
+       * tools take an explicit --density.
+       */
+      this.density = typeof window !== "undefined" && window.devicePixelRatio || 1;
       // Touch/pointer tracking
       this.pointerIsDown = false;
       this.pointerHistory = [];
@@ -20015,6 +20055,17 @@ void main() {
       this.measurementSink = sink;
       this.remoteContext?.setMeasurementSink(sink);
     }
+    /** Set the display density; documents are authored in dp and scale by it. */
+    setDensity(density) {
+      if (density > 0 && !Number.isNaN(density)) {
+        this.density = density;
+        this.remoteContext?.setDensity(density);
+        this.scheduleRepaint();
+      }
+    }
+    getDensity() {
+      return this.density;
+    }
     /** Operations executed in the last painted frame — available with measurement off. */
     getOpsPerFrame() {
       return this.document?.getOpsPerFrame() ?? 0;
@@ -20025,9 +20076,9 @@ void main() {
       const doc = new CoreDocument();
       doc.initFromBuffer(buffer);
       this.document = doc;
-      const density = doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) || 1;
-      const docWidth = this.canvas.width / density;
-      const docHeight = this.canvas.height / density;
+      const density = this.density || doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) || 1;
+      const docWidth = this.canvas.width;
+      const docHeight = this.canvas.height;
       doc.setWidth(docWidth);
       doc.setHeight(docHeight);
       this.paintContext = new CanvasPaintContext(null, this.ctx);
@@ -20082,11 +20133,8 @@ void main() {
       this.canvas.style.width = newWidth + "px";
       this.canvas.style.height = newHeight + "px";
       if (this.remoteContext) {
-        const density = this.remoteContext.getDensity() || 1;
-        const docW = newWidth / density;
-        const docH = newHeight / density;
-        this.remoteContext.mWidth = docW;
-        this.remoteContext.mHeight = docH;
+        this.remoteContext.mWidth = newWidth;
+        this.remoteContext.mHeight = newHeight;
       }
       this.scheduleRepaint();
     }

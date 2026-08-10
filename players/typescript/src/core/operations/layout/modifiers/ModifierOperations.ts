@@ -3,8 +3,7 @@
 import { Operation } from '../../../Operation';
 import type { VariableSupport } from '../../../VariableSupport';
 import type { WireBuffer } from '../../../WireBuffer';
-import type { RemoteContext } from '../../../RemoteContext';
-import { ContextMode } from '../../../RemoteContext';
+import { ContextMode, RemoteContext } from '../../../RemoteContext';
 import { PaintBundle } from '../../paint/PaintBundle';
 import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
 import { Visibility } from '../Component';
@@ -130,6 +129,19 @@ export class WidthInModifier extends Operation implements VariableSupport {
     updateVariables(context: RemoteContext): void {
         if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
         if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
+        // These bounds are authored in dp, so they scale with density — the reference
+        // does the same in DimensionInModifierOperation.updateVariables, and scales unless
+        // the document explicitly says PIXELS (LEGACY, the default, still scales).
+        // Without it a `widthIn(120, MAX)` card was compared against a pixel viewport as
+        // if it were 120 physical pixels, so a Flow packed four cards into a row the
+        // device fits three into.
+        if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_PIXELS) {
+            const density = context.getDensity();
+            if (density > 0 && !Number.isNaN(density)) {
+                if (this.mOutMin !== -1) this.mOutMin *= density;
+                if (this.mOutMax !== -1 && Number.isFinite(this.mOutMax)) this.mOutMax *= density;
+            }
+        }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
@@ -159,6 +171,19 @@ export class HeightInModifier extends Operation implements VariableSupport {
     updateVariables(context: RemoteContext): void {
         if (isNaNBits(this.mMinBits)) this.mOutMin = context.getFloat(idFromBits(this.mMinBits));
         if (isNaNBits(this.mMaxBits)) this.mOutMax = context.getFloat(idFromBits(this.mMaxBits));
+        // These bounds are authored in dp, so they scale with density — the reference
+        // does the same in DimensionInModifierOperation.updateVariables, and scales unless
+        // the document explicitly says PIXELS (LEGACY, the default, still scales).
+        // Without it a `widthIn(120, MAX)` card was compared against a pixel viewport as
+        // if it were 120 physical pixels, so a Flow packed four cards into a row the
+        // device fits three into.
+        if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_PIXELS) {
+            const density = context.getDensity();
+            if (density > 0 && !Number.isNaN(density)) {
+                if (this.mOutMin !== -1) this.mOutMin *= density;
+                if (this.mOutMax !== -1 && Number.isFinite(this.mOutMax)) this.mOutMax *= density;
+            }
+        }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }

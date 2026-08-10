@@ -38,6 +38,18 @@ export class RcdPlayer {
     // Measurement sink, remembered across document loads.
     private measurementSink: MeasurementSink | null = null;
 
+    /**
+     * Display density. Dimensions in a document are authored in dp and scaled by this —
+     * a `widthIn(120)` is 120dp, which is 315 physical pixels on a 420dpi phone.
+     *
+     * Defaults to the browser's devicePixelRatio, the closest equivalent to Android's
+     * DisplayMetrics.density. Headless there is no such thing, so it falls back to 1 —
+     * which is what a document authored for a phone will NOT look right at, so the render
+     * tools take an explicit --density.
+     */
+    private density: number =
+        (typeof window !== 'undefined' && window.devicePixelRatio) || 1;
+
     // Touch/pointer tracking
     private pointerIsDown = false;
     private pointerHistory: { x: number; y: number; t: number }[] = [];
@@ -200,6 +212,17 @@ export class RcdPlayer {
         this.remoteContext?.setMeasurementSink(sink);
     }
 
+    /** Set the display density; documents are authored in dp and scale by it. */
+    setDensity(density: number): void {
+        if (density > 0 && !Number.isNaN(density)) {
+            this.density = density;
+            this.remoteContext?.setDensity(density);
+            this.scheduleRepaint();
+        }
+    }
+
+    getDensity(): number { return this.density; }
+
     /** Operations executed in the last painted frame — available with measurement off. */
     getOpsPerFrame(): number {
         return this.document?.getOpsPerFrame() ?? 0;
@@ -215,9 +238,18 @@ export class RcdPlayer {
         this.document = doc;
 
         // Use the current canvas size — don't resize to document dimensions.
-        const density = doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) as number || 1;
-        const docWidth = this.canvas.width / density;
-        const docHeight = this.canvas.height / density;
+        // The document's own generation density is only a hint about how it was authored;
+        // what matters for layout is the density of the display it is being shown on.
+        const density = this.density
+            || (doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) as number) || 1;
+        // The viewport is in *physical pixels*, not dp — density is not divided out here.
+        // Android hands RemoteComposeView its pixel width and sets the display density
+        // alongside it; the dp→px conversion happens per-modifier in updateVariables, so
+        // dividing here would apply it a second time. Verified against the device: a 980px
+        // viewport at density 2.625 reproduces the phone's flow segmentation exactly, while
+        // 980/2.625 = 373 puts one card per row.
+        const docWidth = this.canvas.width;
+        const docHeight = this.canvas.height;
 
         // Override document dimensions to match canvas
         doc.setWidth(docWidth);
@@ -355,11 +387,10 @@ export class RcdPlayer {
         // paint.  Without this the content would keep drawing at the
         // original load-time size.
         if (this.remoteContext) {
-            const density = this.remoteContext.getDensity() || 1;
-            const docW = newWidth  / density;
-            const docH = newHeight / density;
-            this.remoteContext.mWidth  = docW;
-            this.remoteContext.mHeight = docH;
+            // Physical pixels, matching the load path — see the note there on why density
+            // is not divided out.
+            this.remoteContext.mWidth  = newWidth;
+            this.remoteContext.mHeight = newHeight;
             // The DATA pass in CoreDocument.paint reloads
             // ID_WINDOW_WIDTH / ID_WINDOW_HEIGHT from these, so
             // expressions track the new size automatically.

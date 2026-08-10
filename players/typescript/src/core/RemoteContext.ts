@@ -54,6 +54,20 @@ export abstract class RemoteContext {
     }
 
     getDensity(): number { return this.mDensity; }
+
+    /**
+     * How the document's dimensions are meant to be interpreted.
+     *
+     * LEGACY(0) and DP(2) both mean "these are dp, scale them by density"; only
+     * PIXELS(1) means "already in pixels". The reference defaults to LEGACY, so scaling
+     * is the default — see DimensionInModifierOperation.updateVariables.
+     */
+    static readonly DENSITY_BEHAVIOR_LEGACY = 0;
+    static readonly DENSITY_BEHAVIOR_PIXELS = 1;
+    static readonly DENSITY_BEHAVIOR_DP = 2;
+    private mDensityBehavior = RemoteContext.DENSITY_BEHAVIOR_LEGACY;
+    getDensityBehavior(): number { return this.mDensityBehavior; }
+    setDensityBehavior(v: number): void { this.mDensityBehavior = v; }
     setDensity(density: number): void {
         if (!Number.isNaN(density) && density > 0) this.mDensity = density;
     }

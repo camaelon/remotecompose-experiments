@@ -11,6 +11,13 @@
 //
 // Both are handled here. Getting either wrong is quiet, not loud: frames come out
 // differing only by float noise and a working animation reads as broken.
+//
+// --density N : display density. Documents are authored in dp, and a dimension modifier
+// scales its min/max by this — `widthIn(120)` is 120dp, which is 315 physical pixels at
+// 420dpi (density 2.625). A browser reads devicePixelRatio; headless there is no such
+// thing, so this defaults to 1. Pass the device's density when comparing against a phone,
+// or the layout differs for reasons that have nothing to do with the player.
+// `adb shell wm density` reports it in dpi: 420 => 420/160 => 2.625.
 
 import { readFileSync, writeFileSync } from 'fs';
 import { createCanvas } from 'canvas';
@@ -25,8 +32,11 @@ globalThis.performance = { now: () => fakeNow };
 const { RemoteComposeBuffer, CoreDocument, CanvasPaintContext, WebRemoteContext } =
   await import('./build-node/node-entry.js');
 const [file, out] = process.argv.slice(2);
+// Times are positional, so anything that is a flag *or a flag's value* has to be excluded
+// — otherwise `--density 2.625` silently adds 2.625 to the list of frame times.
+const VALUED = ['--width', '--height', '--density', '--theme', '--frames'];
 const times = process.argv.slice(4).filter(a => !a.startsWith('--') &&
-    !['--width','--height'].includes(process.argv[process.argv.indexOf(a) - 1])).map(Number);
+    !VALUED.includes(process.argv[process.argv.indexOf(a) - 1])).map(Number);
 const flag = (n, d) => { const i = process.argv.indexOf('--' + n);
     return i > 0 ? process.argv[i + 1] : d; };
 const W = Number(flag('width', 400)), H = Number(flag('height', 400));
@@ -59,7 +69,11 @@ for (let k=0;k<times.length;k++){
   const paint=new CanvasPaintContext(null,x), remote=new WebRemoteContext(paint);
   remote.mWidth=W; remote.mHeight=H;
   doc.setClock?.(clock); remote.setClock?.(clock); doc.initializeContext(remote); remote.loadFloat(5,W); remote.loadFloat(6,H);
-  remote.setPaintContext(paint); paint.setContext(remote);
+  // Density before the data pass: dimension modifiers scale their min/max in
+// updateVariables, which runs there.
+const density = Number(flag('density', 1));
+if (density > 0) remote.setDensity(density);
+remote.setPaintContext(paint); paint.setContext(remote);
   paint.createLayerCanvas=(w,h)=>createCanvas(Math.max(1,w),Math.max(1,h)).getContext('2d');
   paint.loadBitmap=()=>{};
   doc.applyDataOperations(remote);
