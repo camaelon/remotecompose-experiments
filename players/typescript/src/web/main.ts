@@ -10,6 +10,15 @@ import { Header } from '../core/operations/Header';
 import { Theme } from '../core/operations/DataOperations';
 import type { MeasurementSink } from '../core/OperationMeasurement';
 
+/**
+ * How far a press may travel and still count as a tap, in document units.
+ *
+ * Android takes this from `ViewConfiguration.getScaledTouchSlop()` (8dp on most devices).
+ * The browser exposes no equivalent, so 8 is used directly — CSS pixels and dp agree
+ * closely enough, and the value only has to separate "finger wobble" from "drag".
+ */
+const TOUCH_SLOP = 8;
+
 export class RcdPlayer {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
@@ -33,6 +42,13 @@ export class RcdPlayer {
     private pointerIsDown = false;
     private pointerHistory: { x: number; y: number; t: number }[] = [];
 
+    // Tap detection. A press that ends without travelling more than TOUCH_SLOP is a
+    // click, and clicks are a *separate dispatch channel* from touch — see the
+    // pointerup handler.
+    private pointerDownX = 0;
+    private pointerDownY = 0;
+    private pointerHasMoved = false;
+
     // Fit transform applied each frame in renderFrame to scale the document's
     // native size into the canvas. Pointer coords must be inverse-mapped.
     private mContentScale = 1;
@@ -54,6 +70,9 @@ export class RcdPlayer {
             if (!this.document || !this.remoteContext) return;
             this.pointerIsDown = true;
             const { x, y } = this.canvasCoords(e);
+            this.pointerDownX = x;
+            this.pointerDownY = y;
+            this.pointerHasMoved = false;
             this.pointerHistory = [{ x, y, t: performance.now() }];
             this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
             this.document.touchDown(this.remoteContext, x, y);
@@ -63,6 +82,12 @@ export class RcdPlayer {
         this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
             if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
             const { x, y } = this.canvasCoords(e);
+            if (!this.pointerHasMoved) {
+                const dx = x - this.pointerDownX;
+                const dy = y - this.pointerDownY;
+                const slop = TOUCH_SLOP / (this.mContentScale || 1);
+                if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
+            }
             this.pointerHistory.push({ x, y, t: performance.now() });
             if (this.pointerHistory.length > 5) this.pointerHistory.shift();
             this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
@@ -76,6 +101,17 @@ export class RcdPlayer {
             const { x, y } = this.canvasCoords(e);
             const { dx, dy } = this.computeVelocity(x, y);
             this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+            // Taps and touches are two separate dispatch channels, and a document can use
+            // either. `touchUp` drives touch listeners and touch modifiers; `onClick` is
+            // what reaches ClickModifier — a button does nothing without it. Only the
+            // touch channel was wired here, so no clickable document responded at all.
+            //
+            // Order and the slop test both follow RemoteComposeView.onTouchEvent: the
+            // click fires first, and only when the press did not travel far enough to be
+            // a drag (otherwise scrolling a list would also press whatever it started on).
+            if (!this.pointerHasMoved) {
+                this.document.onClick(this.remoteContext, x, y);
+            }
             this.document.touchUp(this.remoteContext, x, y, dx, dy);
             this.pointerHistory = [];
             this.scheduleRepaint();
@@ -83,6 +119,7 @@ export class RcdPlayer {
 
         this.canvas.addEventListener('pointercancel', () => {
             this.pointerIsDown = false;
+            this.pointerHasMoved = false;
             this.pointerHistory = [];
         });
     }

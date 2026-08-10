@@ -48,6 +48,10 @@
   table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
   th{text-align:right;color:var(--muted);font-weight:500;font-size:10.5px;padding:0 0 5px;
      letter-spacing:.05em;text-transform:uppercase}
+  /* Match the cells' left padding, or narrow headers collide: the instance table has a
+     leading #id column, which pushes `operation` into second place and ran the headers
+     together as OPERATIONFRAMEPEAK. */
+  th:not(:first-child){padding-left:14px}
   th:first-child,td:first-child{text-align:left}
   td{padding:2px 0;white-space:nowrap}
   td:not(:first-child){text-align:right;padding-left:14px}
@@ -74,7 +78,10 @@
 <header>
   <h1>RemoteCompose <b>operation measurement</b></h1>
   <p>Drop a <code>.rc</code> document. Everything below comes from the per-frame
-     measurement hook — no player internals are read.</p>
+     measurement hook — no player internals are read.<br>
+     <b>in paint</b> is the frame's draw work; <b>between frames</b> is everything that
+     ran outside it — click and touch actions, and on the very first frame the document's
+     one-time load pass. Tap the canvas to see it move.</p>
 </header>
 
 <div class="bar">
@@ -112,6 +119,8 @@
         <div class="num"><b id="n-last">0</b><span>this frame</span></div>
         <div class="num dim"><b id="n-peak">0</b><span>peak</span></div>
         <div class="num dim"><b id="n-mean">0</b><span>mean</span></div>
+        <div class="num dim"><b id="n-paint">0</b><span>in paint</span></div>
+        <div class="num dim"><b id="n-between">0</b><span>between frames</span></div>
         <div class="num dim"><b id="n-frames">0</b><span>frames</span></div>
         <div class="num dim"><b id="n-types">0</b><span>types</span></div>
         <div class="num dim"><b id="n-inst">0</b><span>instances</span></div>
@@ -896,6 +905,8 @@ var RC = (() => {
     constructor(sink) {
       this.mFrame = 0;
       this.mTotal = 0;
+      /** Value of mTotal when the paint pass opened; everything before it ran between frames. */
+      this.mFrameStart = 0;
       this.mUnattributed = 0;
       this.mNextId = 1;
       /** type key -> counts for this frame */
@@ -966,12 +977,17 @@ var RC = (() => {
       }
       return info;
     }
-    /** Discard this frame's counts and advance the frame number. */
-    beginFrame() {
-      this.mTotal = 0;
-      this.mUnattributed = 0;
-      this.mByType.clear();
-      this.mByInstance.clear();
+    /**
+     * Mark where the paint pass begins.
+     *
+     * Deliberately does NOT clear. Click and touch handlers execute their child actions
+     * between frames, and clearing here would throw that work away — the engine's own
+     * counter does exactly that, which is why input-driven operations have never appeared
+     * in an op count. Recording the boundary instead keeps them, and lets a report say
+     * which side of it each one fell on.
+     */
+    markFrameStart() {
+      this.mFrameStart = this.mTotal;
     }
     /** Build this frame's report and hand it to the sink. */
     emit() {
@@ -982,14 +998,27 @@ var RC = (() => {
         frame: this.mFrame++,
         total: this.mTotal,
         unattributed: this.mUnattributed,
+        inPaint: this.mTotal - this.mFrameStart,
+        betweenFrames: this.mFrameStart,
         byType,
         byInstance
       };
       try {
         this.mSink(report);
+        this.reset();
       } catch (e) {
+        this.reset();
         console.error("measurement sink threw:", e);
       }
+    }
+    /** Clear after emitting, so the next window starts here — which means work done
+     *  between frames lands in the *next* report rather than being discarded. */
+    reset() {
+      this.mTotal = 0;
+      this.mFrameStart = 0;
+      this.mUnattributed = 0;
+      this.mByType.clear();
+      this.mByInstance.clear();
     }
   };
 
@@ -1142,9 +1171,9 @@ var RC = (() => {
     isMeasurementEnabled() {
       return this.mMeasurement !== null;
     }
-    /** Reset the frame's counts. Called by CoreDocument where it clears the op count. */
+    /** Mark where paint begins. Called by CoreDocument where it clears the op count. */
     beginMeasuredFrame() {
-      if (this.mMeasurement !== null) this.mMeasurement.beginFrame();
+      if (this.mMeasurement !== null) this.mMeasurement.markFrameStart();
     }
     /** Hand the frame's counts to the sink. Called by CoreDocument at end of paint. */
     emitMeasuredFrame() {
@@ -5410,6 +5439,7 @@ var RC = (() => {
     }
     onClick(context, _doc, _x, _y) {
       for (const op of this.mList) {
+        context.incrementOpCount(op);
         op.apply(context);
       }
       context.needsRepaint();
@@ -5447,19 +5477,28 @@ var RC = (() => {
     }
     onClick(context, _doc, _x, _y) {
       if (this.mClickType !== _MultiClickModifier.CLICK_TYPE_SINGLE) return false;
-      for (const op of this.mList) op.apply(context);
+      for (const op of this.mList) {
+        context.incrementOpCount(op);
+        op.apply(context);
+      }
       context.needsRepaint();
       return true;
     }
     onLongPress(context, _doc, _x, _y) {
       if (this.mClickType !== _MultiClickModifier.CLICK_TYPE_LONG) return false;
-      for (const op of this.mList) op.apply(context);
+      for (const op of this.mList) {
+        context.incrementOpCount(op);
+        op.apply(context);
+      }
       context.needsRepaint();
       return true;
     }
     onDoubleClick(context, _doc, _x, _y) {
       if (this.mClickType !== _MultiClickModifier.CLICK_TYPE_DOUBLE) return false;
-      for (const op of this.mList) op.apply(context);
+      for (const op of this.mList) {
+        context.incrementOpCount(op);
+        op.apply(context);
+      }
       context.needsRepaint();
       return true;
     }
@@ -5526,6 +5565,7 @@ var RC = (() => {
     }
     onTouchDown(context) {
       for (const op of this.mList) {
+        context.incrementOpCount(op);
         op.apply(context);
       }
     }
@@ -5552,6 +5592,7 @@ var RC = (() => {
     }
     onTouchUp(context) {
       for (const op of this.mList) {
+        context.incrementOpCount(op);
         op.apply(context);
       }
     }
@@ -5578,6 +5619,7 @@ var RC = (() => {
     }
     onTouchCancel(context) {
       for (const op of this.mList) {
+        context.incrementOpCount(op);
         op.apply(context);
       }
     }
@@ -6558,6 +6600,7 @@ var RC = (() => {
     paint(context) {
       const remote = context.getContext();
       for (const op of this.mList) {
+        remote.incrementOpCount(op);
         op.apply(remote);
       }
     }
@@ -9874,6 +9917,7 @@ var RC = (() => {
       for (const op of this.mList) {
         if (typeof op.updateVariables === "function" && op.isDirty()) {
           op.updateVariables(context);
+          context.incrementOpCount(op);
           op.apply(context);
           op.markNotDirty();
           needsInvalidate = true;
@@ -13871,6 +13915,7 @@ var RC = (() => {
     apply(context) {
       if (context.mMode === "DATA" /* DATA */) {
         for (const op of this.mList) {
+          context.incrementOpCount(op);
           op.apply(context);
         }
         return;
@@ -19786,6 +19831,7 @@ void main() {
   RcPlayerElement.observedAttributes = ["src", "data", "width", "height", "theme", "background"];
 
   // src/web/main.ts
+  var TOUCH_SLOP = 8;
   var RcdPlayer = class {
     constructor(canvas) {
       this.document = null;
@@ -19803,6 +19849,12 @@ void main() {
       // Touch/pointer tracking
       this.pointerIsDown = false;
       this.pointerHistory = [];
+      // Tap detection. A press that ends without travelling more than TOUCH_SLOP is a
+      // click, and clicks are a *separate dispatch channel* from touch — see the
+      // pointerup handler.
+      this.pointerDownX = 0;
+      this.pointerDownY = 0;
+      this.pointerHasMoved = false;
       // Fit transform applied each frame in renderFrame to scale the document's
       // native size into the canvas. Pointer coords must be inverse-mapped.
       this.mContentScale = 1;
@@ -19858,6 +19910,9 @@ void main() {
         if (!this.document || !this.remoteContext) return;
         this.pointerIsDown = true;
         const { x, y } = this.canvasCoords(e);
+        this.pointerDownX = x;
+        this.pointerDownY = y;
+        this.pointerHasMoved = false;
         this.pointerHistory = [{ x, y, t: performance.now() }];
         this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
         this.document.touchDown(this.remoteContext, x, y);
@@ -19866,6 +19921,12 @@ void main() {
       this.canvas.addEventListener("pointermove", (e) => {
         if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
         const { x, y } = this.canvasCoords(e);
+        if (!this.pointerHasMoved) {
+          const dx = x - this.pointerDownX;
+          const dy = y - this.pointerDownY;
+          const slop = TOUCH_SLOP / (this.mContentScale || 1);
+          if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
+        }
         this.pointerHistory.push({ x, y, t: performance.now() });
         if (this.pointerHistory.length > 5) this.pointerHistory.shift();
         this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
@@ -19878,12 +19939,16 @@ void main() {
         const { x, y } = this.canvasCoords(e);
         const { dx, dy } = this.computeVelocity(x, y);
         this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        if (!this.pointerHasMoved) {
+          this.document.onClick(this.remoteContext, x, y);
+        }
         this.document.touchUp(this.remoteContext, x, y, dx, dy);
         this.pointerHistory = [];
         this.scheduleRepaint();
       });
       this.canvas.addEventListener("pointercancel", () => {
         this.pointerIsDown = false;
+        this.pointerHasMoved = false;
         this.pointerHistory = [];
       });
     }
@@ -20115,6 +20180,7 @@ void main() {
   function freshAcc() {
     return {
       frames: 0, total: 0, peak: 0, last: 0,
+      lastPaint: 0, lastBetween: 0, betweenTotal: 0, loadOps: 0,
       history: [],                 // per-frame totals, for the sparkline
       types: new Map(),            // key -> {name, opCode, total, peak, last}
       insts: new Map(),            // id  -> {name, total, peak, last}
@@ -20162,10 +20228,22 @@ void main() {
     var problem = "";
     if (st !== m.total) problem = "byType sums to " + st + ", total " + m.total;
     else if (si !== m.total) problem = "byInstance sums to " + si + ", total " + m.total;
-    else if (opsPerFrame !== null && opsPerFrame !== m.total)
-      problem = "total " + m.total + " != getOpsPerFrame() " + opsPerFrame;
+    else if (m.total !== m.inPaint + m.betweenFrames)
+      problem = "total " + m.total + " != inPaint " + m.inPaint
+              + " + between " + m.betweenFrames;
+    // inPaint, NOT total: `total` also carries work done between frames — click and touch
+    // handlers running their actions — which the engine's own counter discards. Comparing
+    // total here would flag a false failure the moment anyone taps the document.
+    else if (opsPerFrame !== null && opsPerFrame !== m.inPaint)
+      problem = "inPaint " + m.inPaint + " != getOpsPerFrame() " + opsPerFrame;
     if (problem) { a.badFrames++; a.lastProblem = problem; }
     a.unattributed = m.unattributed;
+    a.lastPaint = m.inPaint;
+    a.lastBetween = m.betweenFrames;
+    // Frame 0 carries the document's load pass, which is one-time and would otherwise
+    // read as recurring input cost. Keep it out of the running total, and label it.
+    if (m.frame === 0) a.loadOps = m.betweenFrames;
+    else a.betweenTotal += m.betweenFrames;
   }
 
   // ---------------------------------------------------------------------------
@@ -20248,6 +20326,8 @@ void main() {
     $("n-last").textContent = fmt(acc.last);
     $("n-peak").textContent = fmt(acc.peak);
     $("n-mean").textContent = acc.frames ? Math.round(acc.total / acc.frames) : 0;
+    $("n-paint").textContent = fmt(acc.lastPaint);
+    $("n-between").textContent = fmt(acc.lastBetween);
     $("n-frames").textContent = fmt(acc.frames);
     $("n-types").textContent = fmt(acc.types.size);
     $("n-inst").textContent = fmt(acc.insts.size);
@@ -20262,7 +20342,11 @@ void main() {
     } else {
       check.className = "ok";
       check.textContent = "invariants hold over " + fmt(acc.frames) + " frame(s): "
-        + "byType and byInstance both sum to total, total = getOpsPerFrame()"
+        + "byType and byInstance sum to total, total = inPaint + betweenFrames, "
+        + "inPaint = getOpsPerFrame()"
+        + (acc.loadOps ? " · " + fmt(acc.loadOps) + " in the one-time load pass" : "")
+        + (acc.betweenTotal ? " · " + fmt(acc.betweenTotal) + " from input between frames"
+                            : "")
         + (acc.unattributed ? " · " + acc.unattributed + " unattributed" : "");
     }
   }
