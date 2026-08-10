@@ -56,7 +56,7 @@ PAGE = r"""<!doctype html>
        border-radius:8px;padding:5px 12px;font:inherit;font-size:12.5px;cursor:pointer}
   button:hover,select:hover{border-color:var(--accent);color:var(--accent)}
   button[aria-pressed="true"]{background:var(--accent);color:#08110b;border-color:var(--accent)}
-  main{flex:1;display:flex;gap:16px;padding:16px;min-height:0;align-items:flex-start;
+  main{flex:1;display:flex;gap:16px;padding:16px;min-height:0;align-items:flex-start;overflow:auto;
        justify-content:center;flex-wrap:wrap}
   #stage{display:flex;flex-direction:column;align-items:center;gap:10px}
   #frame{position:relative;background:var(--panel);border-radius:14px;padding:10px;
@@ -128,6 +128,23 @@ PAGE = r"""<!doctype html>
       <option value="dark">dark</option>
     </select>
   </label>
+  <label>Viewport
+    <select id="aspect">
+      <option value="2:3">2:3</option>
+      <option value="9:16">9:16</option>
+      <option value="1:1">1:1</option>
+      <option value="4:3">4:3</option>
+      <option value="3:2">3:2</option>
+      <option value="fill">fill</option>
+    </select>
+  </label>
+  <label>Size
+    <select id="vsize">
+      <option value="360">S</option>
+      <option value="520" selected>M</option>
+      <option value="720">L</option>
+    </select>
+  </label>
   <label>Rank by
     <select id="rank">
       <option value="last">this frame</option>
@@ -189,7 +206,7 @@ PAGE = r"""<!doctype html>
   var $ = function (id) { return document.getElementById(id); };
   var status = $("status"), empty = $("empty"), panel = $("panel"), check = $("check");
   var canvas = $("c");
-  var player = null, lastName = "", measuring = true;
+  var player = null, lastName = "", lastBuf = null, measuring = true;
 
   if (!window.RC || !window.RC.RcdPlayer) {
     status.textContent = "player bundle failed to load";
@@ -411,6 +428,52 @@ PAGE = r"""<!doctype html>
     say(measuring ? "measuring" : "measurement off — the hook is gone, not idle");
   });
 
+  // Viewport sizing. The ratios are DocPlayerActivity's, so a document can be measured
+  // here at the same shape it is laid out in on the device — the aspect a document is
+  // given changes its layout, so comparing across two different ones proves nothing.
+  //
+  // The size picks the LONG side and the ratio derives the other. Sizing by width instead
+  // would make 9:16 enormous and 4:3 squat at the same nominal "size", which defeats the
+  // point of being able to switch ratios and still compare.
+  function viewport() {
+    var spec = $("aspect").value, long = parseInt($("vsize").value, 10);
+    if (spec === "fill") {
+      var box = document.getElementById("stage").getBoundingClientRect();
+      return { w: Math.max(64, Math.round(box.width)),
+               h: Math.max(64, Math.round(box.height || long)) };
+    }
+    var parts = spec.split(":"), rw = parseFloat(parts[0]), rh = parseFloat(parts[1]);
+    return rw >= rh
+      ? { w: long, h: Math.round(long * rh / rw) }
+      : { w: Math.round(long * rw / rh), h: long };
+  }
+
+  function applyViewport() {
+    var v = viewport();
+    canvas.width = v.w; canvas.height = v.h;
+    // resize() also reloads the document's window width/height variables, so an
+    // expression-driven layout re-flows instead of drawing at the old size.
+    if (player) { try { player.resize(v.w, v.h); } catch (e) {} }
+    return v;
+  }
+
+  function viewportChanged() {
+    // Reload rather than resize in place. resize() leaves a SIZING_SCALE document at its
+    // load-time size and letterboxes it into the new box, so switching the viewport would
+    // not match opening the same document at that viewport — and comparing a document
+    // across two viewports is the whole reason this control exists. Reloading also resets
+    // the counters, which is correct: a different layout is a different workload.
+    if (lastBuf) { load(lastBuf, lastName); return; }
+    var v = applyViewport();
+    say(v.w + "x" + v.h);
+  }
+  $("aspect").addEventListener("change", viewportChanged);
+  $("vsize").addEventListener("change", viewportChanged);
+  // "fill" tracks the window; the fixed ratios do not, so only relayout when it applies.
+  window.addEventListener("resize", function () {
+    if ($("aspect").value === "fill") applyViewport();
+  });
+
   $("reset").addEventListener("click", function () { acc = freshAcc(); draw(); });
   $("rank").addEventListener("change", draw);
   $("theme").addEventListener("change", function () {
@@ -423,13 +486,15 @@ PAGE = r"""<!doctype html>
 
   function load(buf, name) {
     lastName = name;
+    lastBuf = buf;
     acc = freshAcc();
 
     // A fresh canvas per load: reusing one leaks the WebGL context between documents,
     // and a document that used a shader can poison the next one.
     if (player) { try { player.stop && player.stop(); } catch (e) {} }
     var fresh = canvas.cloneNode(false);
-    fresh.width = 400; fresh.height = 400;
+    var v = viewport();
+    fresh.width = v.w; fresh.height = v.h;
     canvas.parentNode.replaceChild(fresh, canvas);
     canvas = fresh;
     ["touchstart", "touchmove", "gesturestart"].forEach(function (t) {
@@ -446,7 +511,8 @@ PAGE = r"""<!doctype html>
     say("loading " + name + "…");
 
     player.loadFromArrayBuffer(buf).then(function () {
-      say(name + " · " + buf.byteLength.toLocaleString() + " bytes · 400x400"
+      say(name + " · " + buf.byteLength.toLocaleString() + " bytes · "
+          + canvas.width + "x" + canvas.height
           + " · interact with the canvas to drive the counts");
       draw();
     }).catch(function (e) {
