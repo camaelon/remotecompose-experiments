@@ -53,39 +53,32 @@ logging which operation wrote the colour, with what inputs.
 will not match this baseline palette and comparing them across engines proves nothing. What
 is comparable is whether the light theme is lighter than the dark one.
 
-### A2. Density is applied in 2 places; the reference applies it in 11
+### A2. Density — padding and spacedBy done; ~6 sites remain
 
-**Verified by source in both engines.** `RemoteContext.setDensity` and the two dimension
-modifiers landed in `typescript: give the player a display density`. The reference consults
-`getDensityBehavior()`/`getDensity()` in nine further files:
+`RemoteContext.setDensity` and the two dimension modifiers landed first; `PaddingModifier`
+and the four `spacedBy` sites (row, column, flow, both collapsibles) followed, along with
+`PaintContext.getDensity`/`getDensityBehavior` and reading `Header.DOC_DENSITY_BEHAVIOR`.
 
-| file | what it scales |
+**The guard differs per operation and this is the thing to get right:**
+
+| operation | scales when |
 | :--- | :--- |
-| `PaddingModifierOperation` | all four insets |
-| `RowLayout`, `ColumnLayout` | `spacedBy` (2 sites each) |
-| `FlowLayout` | `spacedBy` |
-| `BorderModifierOperation` | `borderWidth`, `roundedCorner` |
-| `OffsetModifierOperation` | `x`, `y` |
-| `MarqueeModifierOperation` | scroll geometry |
-| `CollapsibleRowLayout`, `CollapsibleColumnLayout` | collapse thresholds |
+| `DimensionInModifierOperation` (widthIn/heightIn) | `!= DENSITY_BEHAVIOR_PIXELS` |
+| padding, `spacedBy`, border, offset, marquee, collapsibles | `== DENSITY_BEHAVIOR_DP` |
 
-This is visible right now: with density otherwise correct, the TypeScript render of
-`dsl_ticker.rc` has a **visibly compressed vertical rhythm** — shorter cards, tighter gaps —
-against the device, which is what unscaled dp padding and unscaled `spacedBy` produce.
+The default is LEGACY, so everything in the second row is inert unless the document declares
+DP — and **no document in the corpus declares it**. Verified by injecting the header value:
+padding 24 stays 24 under LEGACY and PIXELS, becomes 63 under DP at density 2.625, and stays
+63 across five paints rather than compounding.
 
-*Suggested fix:* mechanical, and the pattern is already established in
-`ModifierOperations.updateVariables`:
+**Correction.** An earlier version of this entry claimed unscaled padding and spacing
+explained the compressed vertical rhythm against the device. That was wrong: every
+`spacedBy` in `dsl_ticker.rc` is 0 and the document is LEGACY, so neither scales in either
+engine. The rhythm difference is still unexplained — see §D2.
 
-```ts
-if (context.getDensityBehavior?.() !== RemoteContext.DENSITY_BEHAVIOR_PIXELS) {
-    const d = context.getDensity();
-    if (d > 0 && !Number.isNaN(d)) { /* scale the dp-valued fields */ }
-}
-```
-
-Do them one file at a time against `layout/run.py` (117 documents, three engines) — the
-corpus is the check that a scale factor went in the right place. Padding and the three
-`spacedBy` sites are the ones with visible payoff.
+*Still unscaled:* `BorderModifierOperation` (`borderWidth`, `roundedCorner`),
+`OffsetModifierOperation` (`x`, `y`), `MarqueeModifierOperation`. Same `== DP` guard, same
+shape as the ones already done, and equally inert until a document declares DP.
 
 ### A3. The paint loop is missing the reference's dirty gate
 
@@ -225,7 +218,10 @@ cards on row 1 plus NYA on row 2, chart, and button all agree. What is left, in 
 same-viewport/same-density/same-theme comparison:
 
 1. **Theme inverted** — A1.
-2. **Vertical rhythm compressed** — A2, unscaled padding and spacing.
+2. **Vertical rhythm compressed** — cause open. *Not* padding or `spacedBy`: this document
+   is LEGACY and all its spacing is 0, so neither scales in either engine (§A2). Next thing
+   to look at is text line height and the intrinsic height of the card contents, since the
+   cards are shorter rather than merely closer together.
 3. **Cents overflow the small cards.** TypeScript draws `.51 / .9 / .98` and they clip or
    overflow the card; the device omits them in the small cards and shows them only on the
    wide NYA card. Since both engines have the same text, this is likely a measurement or
