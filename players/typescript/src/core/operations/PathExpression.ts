@@ -3,6 +3,7 @@ import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import { intBitsToFloat, idFromBits, isNaNBits, floatToRawIntBits } from './Utils';
 import { FloatExpression } from './FloatExpression';
+import { PathGenerator, PATH_MODE_MASK } from './utilities/PathGenerator';
 
 // Finite sentinel for array/collection ids carried on the eval stack (mirrors
 // FloatExpression). 2^42 is exact in float64 and far above any real RC value.
@@ -33,6 +34,9 @@ export class PathExpression extends Operation {
     private mExprX: Int32Array;
     private mExprY: Int32Array;
     private mWinding: number;
+    // One generator per operation, as the reference keeps one per PathExpression — the
+    // scratch arrays inside it are reused across frames.
+    private mPathGenerator = new PathGenerator();
 
     constructor(id: number, flags: number, minBits: number, maxBits: number, countBits: number,
                 exprX: Int32Array, exprY: Int32Array) {
@@ -104,7 +108,10 @@ export class PathExpression extends Operation {
             }
         }
 
-        const pathData = this.splinePath(xData, yData, loop);
+        // Dispatch on the mode the document asked for. This used to always spline, so a
+        // LINEAR path came out curved and a MONOTONIC one overshot at every extremum.
+        const mode = this.mFlags & PATH_MODE_MASK;
+        const pathData = this.mPathGenerator.getPath(xData, yData, mode, loop);
         context.loadPathData(this.mId, this.mWinding, pathData);
     }
 
@@ -213,71 +220,6 @@ export class PathExpression extends Operation {
             }
         }
         return sp >= 0 ? s[sp] : 0;
-    }
-
-    // Emits resolved path data as raw float32 int bits: command markers as
-    // their NaN-marker bits, coordinates via floatToRawIntBits. Internal float
-    // math is unchanged; only the final emitted array is bits.
-    private splinePath(x: Float32Array, y: Float32Array, loop: boolean): Int32Array {
-        const n = x.length;
-        if (n === 0) return new Int32Array(0);
-        const segs = loop ? n : n - 1;
-        const out = new Int32Array(3 + segs * 9 + (loop ? 1 : 0));
-        let p = 0;
-        out[p++] = PathExpression.MOVE_BITS;
-        out[p++] = floatToRawIntBits(x[0]);
-        out[p++] = floatToRawIntBits(y[0]);
-        if (n <= 1) return out.subarray(0, p);
-
-        const h = new Float32Array(segs);
-        const dxS = new Float32Array(segs);
-        const dyS = new Float32Array(segs);
-        for (let i = 0; i < segs; i++) {
-            const i1 = (i + 1) % n;
-            const sx = x[i1] - x[i], sy = y[i1] - y[i];
-            let d = Math.hypot(sx, sy);
-            if (d === 0) d = 1e-12;
-            h[i] = d; dxS[i] = sx / d; dyS[i] = sy / d;
-        }
-        const tn = loop ? segs : segs + 1;
-        const dxT = new Float32Array(tn);
-        const dyT = new Float32Array(tn);
-        this.smoothTan(dxT, dxS, h, loop);
-        this.smoothTan(dyT, dyS, h, loop);
-
-        let cx = x[0], cy = y[0];
-        for (let i = 0; i < segs; i++) {
-            const i1 = (i + 1) % n;
-            const ti1 = loop ? (i + 1) % segs : i + 1;
-            const hi = h[i];
-            out[p++] = PathExpression.CUBIC_BITS;
-            out[p++] = floatToRawIntBits(cx); out[p++] = floatToRawIntBits(cy);
-            out[p++] = floatToRawIntBits(x[i] + dxT[i] * hi / 3);
-            out[p++] = floatToRawIntBits(y[i] + dyT[i] * hi / 3);
-            out[p++] = floatToRawIntBits(x[i1] - dxT[ti1] * hi / 3);
-            out[p++] = floatToRawIntBits(y[i1] - dyT[ti1] * hi / 3);
-            out[p++] = floatToRawIntBits(x[i1]); out[p++] = floatToRawIntBits(y[i1]);
-            cx = x[i1]; cy = y[i1];
-        }
-        if (loop) out[p++] = PathExpression.CLOSE_BITS;
-        return out.subarray(0, p);
-    }
-
-    private smoothTan(d: Float32Array, delta: Float32Array, h: Float32Array, loop: boolean): void {
-        const segs = delta.length;
-        const n = loop ? segs : segs + 1;
-        if (loop) {
-            for (let i = 0; i < n; i++) {
-                const im = (i - 1 + segs) % segs;
-                const ip = i % segs;
-                d[i] = (h[im] * delta[ip] + h[ip] * delta[im]) / (h[im] + h[ip]);
-            }
-        } else {
-            d[0] = delta[0]; d[n - 1] = delta[segs - 1];
-            for (let i = 1; i < n - 1; i++) {
-                d[i] = (h[i-1] * delta[i] + h[i] * delta[i-1]) / (h[i-1] + h[i]);
-            }
-        }
     }
 
     deepToString(indent: string): string { return `${indent}PathExpression`; }

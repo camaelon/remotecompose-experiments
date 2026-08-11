@@ -12079,11 +12079,244 @@ var RC = (() => {
   _PathAppend.OP_CODE = 160;
   var PathAppend = _PathAppend;
 
+  // src/core/operations/utilities/PathGenerator.ts
+  var MOVE_BITS = 10 | -8388608 | 0;
+  var CUBIC_BITS = 14 | -8388608 | 0;
+  var CLOSE_BITS = 15 | -8388608 | 0;
+  var PATH_MONOTONIC = 2;
+  var PATH_LINEAR = 4;
+  var PATH_MODE_MASK = 6;
+  var fr = Math.fround;
+  var PathBuf = class {
+    constructor(bufferSize) {
+      this.mSize = 0;
+      this.mCx = 0;
+      this.mCy = 0;
+      this.mPath = new Int32Array(Math.max(10, bufferSize));
+    }
+    reset() {
+      this.mSize = 0;
+    }
+    ensure(extra) {
+      if (this.mSize + extra <= this.mPath.length) return;
+      const grown = new Int32Array(Math.max(this.mPath.length * 2, this.mSize + extra));
+      grown.set(this.mPath.subarray(0, this.mSize));
+      this.mPath = grown;
+    }
+    moveTo(x, y) {
+      this.ensure(3);
+      this.mPath[this.mSize++] = MOVE_BITS;
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(x));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(y));
+      this.mCx = fr(x);
+      this.mCy = fr(y);
+    }
+    cubicTo(x1, y1, x2, y2, x3, y3) {
+      this.ensure(9);
+      this.mPath[this.mSize++] = CUBIC_BITS;
+      this.mPath[this.mSize++] = floatToRawIntBits(this.mCx);
+      this.mPath[this.mSize++] = floatToRawIntBits(this.mCy);
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(x1));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(y1));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(x2));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(y2));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(x3));
+      this.mPath[this.mSize++] = floatToRawIntBits(fr(y3));
+      this.mCx = fr(x3);
+      this.mCy = fr(y3);
+    }
+    closePath() {
+      this.ensure(1);
+      this.mPath[this.mSize++] = CLOSE_BITS;
+    }
+    copyPoints() {
+      return this.mPath.slice(0, this.mSize);
+    }
+  };
+  function segments(x, y, segs, n, h, dxSeg, dySeg) {
+    for (let i0 = 0; i0 < segs; i0++) {
+      const i1 = (i0 + 1) % n;
+      const sx = fr(x[i1] - x[i0]);
+      const sy = fr(y[i1] - y[i0]);
+      let dist = fr(Math.hypot(sx, sy));
+      if (dist === 0) dist = 1e-12;
+      h[i0] = dist;
+      dxSeg[i0] = fr(sx / dist);
+      dySeg[i0] = fr(sy / dist);
+    }
+  }
+  function monotoneTangents(d, delta, h, loop) {
+    const segs = delta.length;
+    const n = loop ? segs : segs + 1;
+    for (let i = 0; i < n; i++) {
+      const prev = ((i - 1 + segs) % segs + segs) % segs;
+      const next = i % segs;
+      if (!loop && i === 0) {
+        d[i] = delta[0];
+      } else if (!loop && i === n - 1) {
+        d[i] = delta[segs - 1];
+      } else {
+        const dp = delta[prev];
+        const dn = delta[next];
+        if (dp === 0 || dn === 0 || Math.sign(dp) !== Math.sign(dn)) {
+          d[i] = 0;
+        } else {
+          const w1 = fr(fr(2 * h[next]) + h[prev]);
+          const w2 = fr(h[next] + fr(2 * h[prev]));
+          d[i] = fr(fr(w1 + w2) / fr(fr(w1 / dp) + fr(w2 / dn)));
+        }
+      }
+    }
+    for (let i = 0; i < segs; i++) {
+      if (delta[i] === 0) {
+        d[i] = 0;
+        d[(i + 1) % n] = 0;
+      } else {
+        const a = fr(d[i] / delta[i]);
+        const b = fr(d[(i + 1) % n] / delta[i]);
+        const s = fr(fr(a * a) + fr(b * b));
+        if (s > 9) {
+          const t = fr(3 / fr(Math.sqrt(s)));
+          d[i] = fr(fr(t * a) * delta[i]);
+          d[(i + 1) % n] = fr(fr(t * b) * delta[i]);
+        }
+      }
+    }
+  }
+  function smoothTangents(d, delta, h, loop) {
+    const segs = delta.length;
+    const n = loop ? segs : segs + 1;
+    if (loop) {
+      for (let i = 0; i < n; i++) {
+        const im1 = ((i - 1 + segs) % segs + segs) % segs;
+        const ip0 = i % segs;
+        d[i] = fr(fr(fr(h[im1] * delta[ip0]) + fr(h[ip0] * delta[im1])) / fr(h[im1] + h[ip0]));
+      }
+    } else {
+      d[0] = delta[0];
+      d[n - 1] = delta[segs - 1];
+      for (let i = 1; i < n - 1; i++) {
+        const hm1 = h[i - 1];
+        const hi = h[i];
+        d[i] = fr(fr(fr(hm1 * delta[i]) + fr(hi * delta[i - 1])) / fr(hm1 + hi));
+      }
+    }
+  }
+  var Scratch = class {
+    constructor() {
+      this.h = new Float32Array(0);
+      this.dxSeg = new Float32Array(0);
+      this.dySeg = new Float32Array(0);
+      this.dxTan = new Float32Array(0);
+      this.dyTan = new Float32Array(0);
+      this.path = new PathBuf(10);
+    }
+    fit(segs, loop, n) {
+      if (segs !== this.h.length) {
+        this.path = new PathBuf(n * 10);
+        this.h = new Float32Array(segs);
+        this.dxSeg = new Float32Array(segs);
+        this.dySeg = new Float32Array(segs);
+        const tans = loop ? segs : segs + 1;
+        this.dxTan = new Float32Array(tans);
+        this.dyTan = new Float32Array(tans);
+      }
+    }
+  };
+  var PathGenerator = class {
+    constructor() {
+      this.mMonotonic = new Scratch();
+      this.mSpline = new Scratch();
+      this.mLinear = new PathBuf(10);
+    }
+    /** Length of the buffer `getPath` will fill — the reference's `getReturnLength`. */
+    getReturnLength(len, loop) {
+      let ret = 3;
+      ret += loop ? len * 9 + 1 : (len - 1) * 9;
+      return ret;
+    }
+    /**
+     * Build the path for the given sampled points.
+     *
+     * `mode` is the already-masked `flags & 0x6`; anything that is not LINEAR or MONOTONIC
+     * falls through to the spline, matching the reference's `default:` branch.
+     */
+    getPath(x, y, mode, loop) {
+      switch (mode) {
+        case PATH_LINEAR:
+          return this.linearPath(x, y, loop);
+        case PATH_MONOTONIC:
+          return this.curvePath(x, y, loop, this.mMonotonic, true);
+        default:
+          return this.curvePath(x, y, loop, this.mSpline, false);
+      }
+    }
+    /** Straight segments, emitted as cubics whose controls sit on the end points. */
+    linearPath(x, y, loop) {
+      const n = x.length;
+      this.mLinear.reset();
+      if (n === 0) return this.mLinear.copyPoints();
+      this.mLinear.moveTo(x[0], y[0]);
+      if (n === 1) return this.mLinear.copyPoints();
+      const segs = loop ? n : n - 1;
+      for (let i0 = 0; i0 < segs; i0++) {
+        const i1 = (i0 + 1) % n;
+        this.mLinear.cubicTo(x[i0], y[i0], x[i1], y[i1], x[i1], y[i1]);
+      }
+      if (loop) this.mLinear.closePath();
+      return this.mLinear.copyPoints();
+    }
+    /**
+     * Shared body of the spline and monotonic generators. They differ only in which tangent
+     * rule runs and in whether the control points are computed in double (monotonic) or
+     * float (spline) — see the precision note at the top of the file.
+     */
+    curvePath(x, y, loop, sc, monotonic) {
+      const n = x.length;
+      const segs = loop ? n : n - 1;
+      sc.fit(segs, loop, n);
+      sc.path.reset();
+      if (n === 0) return sc.path.copyPoints();
+      sc.path.moveTo(x[0], y[0]);
+      if (n === 1) return sc.path.copyPoints();
+      segments(x, y, segs, n, sc.h, sc.dxSeg, sc.dySeg);
+      if (monotonic) {
+        monotoneTangents(sc.dxTan, sc.dxSeg, sc.h, loop);
+        monotoneTangents(sc.dyTan, sc.dySeg, sc.h, loop);
+      } else {
+        smoothTangents(sc.dxTan, sc.dxSeg, sc.h, loop);
+        smoothTangents(sc.dyTan, sc.dySeg, sc.h, loop);
+      }
+      for (let i0 = 0; i0 < segs; i0++) {
+        const i1 = (i0 + 1) % n;
+        const hi = sc.h[i0];
+        let c1x, c1y, c2x, c2y;
+        if (monotonic) {
+          c1x = x[i0] + sc.dxTan[i0] * hi / 3;
+          c1y = y[i0] + sc.dyTan[i0] * hi / 3;
+          c2x = x[i1] - sc.dxTan[i1] * hi / 3;
+          c2y = y[i1] - sc.dyTan[i1] * hi / 3;
+        } else {
+          c1x = fr(x[i0] + fr(fr(sc.dxTan[i0] * hi) / 3));
+          c1y = fr(y[i0] + fr(fr(sc.dyTan[i0] * hi) / 3));
+          c2x = fr(x[i1] - fr(fr(sc.dxTan[i1] * hi) / 3));
+          c2y = fr(y[i1] - fr(fr(sc.dyTan[i1] * hi) / 3));
+        }
+        sc.path.cubicTo(c1x, c1y, c2x, c2y, x[i1], y[i1]);
+      }
+      if (loop) sc.path.closePath();
+      return sc.path.copyPoints();
+    }
+  };
+
   // src/core/operations/PathExpression.ts
   var ARR_SENTINEL3 = 2 ** 42;
   var _PathExpression = class _PathExpression extends Operation {
     constructor(id, flags, minBits, maxBits, countBits, exprX, exprY) {
       super();
+      // One generator per operation, as the reference keeps one per PathExpression — the
+      // scratch arrays inside it are reused across frames.
+      this.mPathGenerator = new PathGenerator();
       this.mId = id;
       this.mFlags = flags;
       this.mMinBits = minBits;
@@ -12145,7 +12378,8 @@ var RC = (() => {
           yData[i] = this.evalRPN(exprY, val, ca);
         }
       }
-      const pathData = this.splinePath(xData, yData, loop);
+      const mode = this.mFlags & PATH_MODE_MASK;
+      const pathData = this.mPathGenerator.getPath(xData, yData, mode, loop);
       context.loadPathData(this.mId, this.mWinding, pathData);
     }
     rv(bits, ctx) {
@@ -12402,73 +12636,6 @@ var RC = (() => {
         }
       }
       return sp >= 0 ? s[sp] : 0;
-    }
-    // Emits resolved path data as raw float32 int bits: command markers as
-    // their NaN-marker bits, coordinates via floatToRawIntBits. Internal float
-    // math is unchanged; only the final emitted array is bits.
-    splinePath(x, y, loop) {
-      const n = x.length;
-      if (n === 0) return new Int32Array(0);
-      const segs = loop ? n : n - 1;
-      const out = new Int32Array(3 + segs * 9 + (loop ? 1 : 0));
-      let p = 0;
-      out[p++] = _PathExpression.MOVE_BITS;
-      out[p++] = floatToRawIntBits(x[0]);
-      out[p++] = floatToRawIntBits(y[0]);
-      if (n <= 1) return out.subarray(0, p);
-      const h = new Float32Array(segs);
-      const dxS = new Float32Array(segs);
-      const dyS = new Float32Array(segs);
-      for (let i = 0; i < segs; i++) {
-        const i1 = (i + 1) % n;
-        const sx = x[i1] - x[i], sy = y[i1] - y[i];
-        let d = Math.hypot(sx, sy);
-        if (d === 0) d = 1e-12;
-        h[i] = d;
-        dxS[i] = sx / d;
-        dyS[i] = sy / d;
-      }
-      const tn = loop ? segs : segs + 1;
-      const dxT = new Float32Array(tn);
-      const dyT = new Float32Array(tn);
-      this.smoothTan(dxT, dxS, h, loop);
-      this.smoothTan(dyT, dyS, h, loop);
-      let cx = x[0], cy = y[0];
-      for (let i = 0; i < segs; i++) {
-        const i1 = (i + 1) % n;
-        const ti1 = loop ? (i + 1) % segs : i + 1;
-        const hi = h[i];
-        out[p++] = _PathExpression.CUBIC_BITS;
-        out[p++] = floatToRawIntBits(cx);
-        out[p++] = floatToRawIntBits(cy);
-        out[p++] = floatToRawIntBits(x[i] + dxT[i] * hi / 3);
-        out[p++] = floatToRawIntBits(y[i] + dyT[i] * hi / 3);
-        out[p++] = floatToRawIntBits(x[i1] - dxT[ti1] * hi / 3);
-        out[p++] = floatToRawIntBits(y[i1] - dyT[ti1] * hi / 3);
-        out[p++] = floatToRawIntBits(x[i1]);
-        out[p++] = floatToRawIntBits(y[i1]);
-        cx = x[i1];
-        cy = y[i1];
-      }
-      if (loop) out[p++] = _PathExpression.CLOSE_BITS;
-      return out.subarray(0, p);
-    }
-    smoothTan(d, delta, h, loop) {
-      const segs = delta.length;
-      const n = loop ? segs : segs + 1;
-      if (loop) {
-        for (let i = 0; i < n; i++) {
-          const im = (i - 1 + segs) % segs;
-          const ip = i % segs;
-          d[i] = (h[im] * delta[ip] + h[ip] * delta[im]) / (h[im] + h[ip]);
-        }
-      } else {
-        d[0] = delta[0];
-        d[n - 1] = delta[segs - 1];
-        for (let i = 1; i < n - 1; i++) {
-          d[i] = (h[i - 1] * delta[i] + h[i] * delta[i - 1]) / (h[i - 1] + h[i]);
-        }
-      }
     }
     deepToString(indent) {
       return `${indent}PathExpression`;
@@ -19274,8 +19441,8 @@ void main() {
       if (!text) return;
       const data = this.pathDataCache.get(pathId);
       if (!data) return;
-      const { segments, totalLen } = this.collectPathSegments(data);
-      if (totalLen === 0 || segments.length === 0) return;
+      const { segments: segments2, totalLen } = this.collectPathSegments(data);
+      if (totalLen === 0 || segments2.length === 0) return;
       this.setFont();
       this.ctx.textBaseline = "alphabetic";
       let progress = hOffset;
@@ -19285,7 +19452,7 @@ void main() {
         const charCenter = progress + charWidth / 2;
         if (charCenter >= 0 && charCenter <= totalLen) {
           this.ctx.save();
-          this.positionOnPath(segments, charCenter, vOffset);
+          this.positionOnPath(segments2, charCenter, vOffset);
           this.fillOrStroke(
             () => {
               this.applyFillStyle();
@@ -19530,22 +19697,22 @@ void main() {
     matrixFromPath(pathId, fraction, vOffset, _flags) {
       const data = this.pathDataCache.get(pathId);
       if (!data) return;
-      const { segments, totalLen } = this.collectPathSegments(data);
+      const { segments: segments2, totalLen } = this.collectPathSegments(data);
       if (totalLen === 0) return;
       let target = totalLen * fraction % totalLen;
       if (target < 0) target += totalLen;
-      this.positionOnPath(segments, target, vOffset);
+      this.positionOnPath(segments2, target, vOffset);
     }
     // --- Path measurement helpers ---
     /** Flatten path data into line segments (curves are subdivided). */
     collectPathSegments(data) {
-      const segments = [];
+      const segments2 = [];
       let curX = 0, curY = 0, startX = 0, startY = 0;
       let i = 0;
       const addLine = (x1, y1, x2, y2) => {
         const dx = x2 - x1, dy = y2 - y1;
         const len = Math.sqrt(dx * dx + dy * dy);
-        if (len > 0) segments.push({ x1, y1, x2, y2, len });
+        if (len > 0) segments2.push({ x1, y1, x2, y2, len });
       };
       while (i < data.length) {
         const bits = data[i];
@@ -19616,8 +19783,8 @@ void main() {
         }
       }
       let totalLen = 0;
-      for (const s of segments) totalLen += s.len;
-      return { segments, totalLen };
+      for (const s of segments2) totalLen += s.len;
+      return { segments: segments2, totalLen };
     }
     /** Subdivide a quadratic bezier into line segments. */
     flattenQuadratic(x0, y0, cpx, cpy, x1, y1, addLine) {
@@ -19646,10 +19813,10 @@ void main() {
       }
     }
     /** Translate and rotate the canvas to a point at the given distance along segments. */
-    positionOnPath(segments, distance, vOffset) {
+    positionOnPath(segments2, distance, vOffset) {
       let accum = 0;
-      for (const s of segments) {
-        if (accum + s.len >= distance || s === segments[segments.length - 1]) {
+      for (const s of segments2) {
+        if (accum + s.len >= distance || s === segments2[segments2.length - 1]) {
           const t = s.len > 0 ? (distance - accum) / s.len : 0;
           const px = s.x1 + (s.x2 - s.x1) * t;
           const py = s.y1 + (s.y2 - s.y1) * t;
