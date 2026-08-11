@@ -10662,72 +10662,153 @@ var RC = (() => {
       }
       return false;
     }
+    /**
+     * Touch dispatch, ported from `Component.onTouchDown` in the reference.
+     *
+     * This class has to override the base implementation because the base walks `mChildren`
+     * — the raw operation list — while a layout component keeps its children in
+     * `mChildrenComponents`. That divergence is what broke drag: `onTouchDown` was
+     * overridden and found the children, `onTouchDrag`/`Up`/`Cancel` were inherited and
+     * walked a list that, for a ColumnLayout with 12 children, holds 6 unrelated ops. Down
+     * worked and nothing after it did.
+     *
+     * Three rules come from the reference and all three matter:
+     *
+     *  - **Children receive window coordinates**, not content-relative ones. The previous
+     *    code subtracted this component's origin before recursing, so every level of
+     *    nesting shifted the hit test further off; only `getLocationInWindow` knows the
+     *    real offset, and `contains` already works in window space.
+     *  - **Iterate backwards and let the first component win.** The top-most component
+     *    under the finger captures the gesture; without this, several overlapping
+     *    components all captured the same press and then all received the drags.
+     *  - **`force` skips the bounds test.** This is what locks a drag to the component the
+     *    press landed in: `CoreDocument` only forwards drag/up to components that captured
+     *    the press, and passes force, so they keep receiving events after the finger has
+     *    moved outside them.
+     */
     onTouchDown(context, doc, x, y) {
+      if (!this.contains(x, y)) return false;
+      return this.dispatchTouch(context, doc, x, y, 0, 0, true, "down");
+    }
+    onTouchDrag(context, doc, x, y, force) {
+      if (!force && !this.contains(x, y)) return false;
+      return this.dispatchTouch(context, doc, x, y, 0, 0, force, "drag");
+    }
+    onTouchUp(context, doc, x, y, dx, dy, force) {
+      if (!force && !this.contains(x, y)) return false;
+      return this.dispatchTouch(context, doc, x, y, dx, dy, force, "up");
+    }
+    onTouchCancel(context, doc, x, y, force) {
+      if (!force && !this.contains(x, y)) return false;
+      return this.dispatchTouch(context, doc, x, y, 0, 0, force, "cancel");
+    }
+    /**
+     * The shared body of all four, mirroring the reference's single loop.
+     *
+     * The reference keeps components, touch handlers and touch expressions in one list and
+     * switches on type; here they live in three collections, so the loop is unrolled but
+     * the order and the coordinate spaces are the same: children first (window coords),
+     * then this component's own consumers (local coords).
+     */
+    dispatchTouch(context, doc, x, y, dx, dy, force, phase) {
+      const loc = this.getLocationInWindow();
+      const lx = x - loc[0];
+      const ly = y - loc[1];
       let handled = false;
-      const cx = x - this.mX - this.mPaddingLeft;
-      const cy = y - this.mY - this.mPaddingTop;
-      for (const child of this.mChildrenComponents) {
-        if (child instanceof _LayoutComponent) {
-          handled = child.onTouchDown(context, doc, cx, cy) || handled;
+      let componentHandled = false;
+      for (let i = this.mChildrenComponents.length - 1; i >= 0; i--) {
+        const child = this.mChildrenComponents[i];
+        if (!(child instanceof _LayoutComponent)) continue;
+        if (componentHandled) continue;
+        const took = phase === "down" ? child.onTouchDown(context, doc, x, y) : phase === "drag" ? child.onTouchDrag(context, doc, x, y, force) : phase === "up" ? child.onTouchUp(context, doc, x, y, dx, dy, force) : child.onTouchCancel(context, doc, x, y, force);
+        if (took) componentHandled = true;
+      }
+      for (const op of this.mContentOps) {
+        if (op instanceof TouchExpression) {
+          if (this.deliverToExpression(op, context, lx, ly, dx, dy, phase)) {
+            if (phase === "down") doc.appliedTouchOperation(this);
+            handled = true;
+          }
         }
       }
-      if (x >= this.mX && x <= this.mX + this.mWidth && y >= this.mY && y <= this.mY + this.mHeight) {
-        const lx = x - this.mX;
-        const ly = y - this.mY;
-        for (const op of this.mContentOps) {
-          if (op instanceof TouchExpression) {
-            op.updateVariables(context);
-            op.touchDown(context, lx, ly);
-            doc.appliedTouchOperation(this);
+      for (const child of this.mChildrenComponents) {
+        if (!(child instanceof _LayoutComponent)) {
+          if (this.dispatchToOps(child.getList(), context, doc, lx, ly, dx, dy, phase)) {
             handled = true;
           }
         }
-        for (const child of this.mChildrenComponents) {
-          if (!(child instanceof _LayoutComponent)) {
-            handled = this.dispatchTouchDownToOps(child.getList(), context, doc, lx, ly) || handled;
-          }
-        }
-        for (const mod of this.mComponentModifiers) {
-          if (mod instanceof TouchDownModifier) {
-            mod.onTouchDown(context);
-            handled = true;
-          }
-        }
-        if (this.mScrollModifier) {
-          const sloc = this.getLocationInWindow();
-          this.mScrollModifier.onTouchDown(context, x - sloc[0], y - sloc[1]);
-          doc.appliedTouchOperation(this);
+      }
+      for (const mod of this.mComponentModifiers) {
+        if (phase === "down" && mod instanceof TouchDownModifier) {
+          mod.onTouchDown(context);
+          handled = true;
+        } else if (phase === "up" && mod instanceof TouchUpModifier) {
+          mod.onTouchUp(context);
+          handled = true;
+        } else if (phase === "cancel" && mod instanceof TouchCancelModifier) {
+          mod.onTouchCancel(context);
           handled = true;
         }
       }
-      return handled;
+      if (this.mScrollModifier) {
+        if (phase === "down") {
+          this.mScrollModifier.onTouchDown(context, lx, ly);
+          doc.appliedTouchOperation(this);
+          handled = true;
+        } else if (phase === "drag") {
+          if (this.mScrollModifier.onTouchDrag(context, lx, ly)) {
+            this.invalidateMeasure();
+            handled = true;
+          }
+        } else if (phase === "up") {
+          if (this.mScrollModifier.onTouchUp(context, lx, ly, dx, dy)) {
+            this.invalidateMeasure();
+            handled = true;
+          }
+        } else if (this.mScrollModifier.onTouchCancel(context, lx, ly)) {
+          handled = true;
+        }
+      }
+      return componentHandled || handled;
     }
-    /**
-     * Drag and up/cancel for a scrolling component.
-     *
-     * Separate from the base Component walk because that one dispatches to children and to
-     * TouchExpressions in the children list; a scroll modifier is neither. Coordinates are
-     * made relative to the component, matching what onTouchDown handed the modifier —
-     * feeding window coordinates to one and local to the other makes the first drag jump.
-     */
-    onScrollTouchDrag(context, x, y) {
-      if (!this.mScrollModifier) return false;
-      const loc = this.getLocationInWindow();
-      const handled = this.mScrollModifier.onTouchDrag(context, x - loc[0], y - loc[1]);
-      if (handled) this.invalidateMeasure();
-      return handled;
+    /** One touch phase on a single expression. Only `down` is bounds-checked, as upstream. */
+    deliverToExpression(op, context, lx, ly, dx, dy, phase) {
+      op.updateVariables(context);
+      if (phase === "down") {
+        op.touchDown(context, lx, ly);
+      } else if (phase === "drag") {
+        op.touchDrag(context, lx, ly);
+      } else if (phase === "up") {
+        op.touchUp(context, lx, ly, dx, dy);
+      } else {
+        op.touchUp(context, lx, ly, 0, 0);
+      }
+      return true;
     }
-    onScrollTouchUp(context, x, y, dx, dy) {
-      if (!this.mScrollModifier) return false;
-      const loc = this.getLocationInWindow();
-      const handled = this.mScrollModifier.onTouchUp(context, x - loc[0], y - loc[1], dx, dy);
-      if (handled) this.invalidateMeasure();
+    /** Recurse into a non-layout child's operations looking for touch expressions. */
+    dispatchToOps(ops, context, doc, lx, ly, dx, dy, phase) {
+      let handled = false;
+      for (const op of ops) {
+        if (op instanceof TouchExpression) {
+          this.deliverToExpression(op, context, lx, ly, dx, dy, phase);
+          if (phase === "down") doc.appliedTouchOperation(this);
+          handled = true;
+        } else if (typeof op.getList === "function") {
+          if (this.dispatchToOps(
+            op.getList(),
+            context,
+            doc,
+            lx,
+            ly,
+            dx,
+            dy,
+            phase
+          )) {
+            handled = true;
+          }
+        }
+      }
       return handled;
-    }
-    onScrollTouchCancel(context, x, y) {
-      if (!this.mScrollModifier) return false;
-      const loc = this.getLocationInWindow();
-      return this.mScrollModifier.onTouchCancel(context, x - loc[0], y - loc[1]);
     }
     /** Recursively search operation list for TouchExpression and dispatch touchDown */
     dispatchTouchDownToOps(ops, context, doc, lx, ly) {
@@ -17696,10 +17777,6 @@ var RC = (() => {
           if (component.onTouchDrag(context, this, x, y, true)) {
             handled = true;
           }
-          if (component.onScrollTouchDrag?.(context, x, y)) {
-            handled = true;
-            this.mNeedsRepaintFlag = 1;
-          }
         }
       }
       return handled;
@@ -17716,9 +17793,6 @@ var RC = (() => {
           if (component.onTouchUp(context, this, x, y, dx, dy, true)) {
             handled = true;
           }
-          if (component.onScrollTouchUp?.(context, x, y, dx, dy)) {
-            handled = true;
-          }
         }
         this.mAppliedTouchOperations.clear();
       }
@@ -17730,9 +17804,6 @@ var RC = (() => {
         let handled = false;
         for (const component of this.mAppliedTouchOperations) {
           if (component.onTouchCancel(context, this, x, y, true)) {
-            handled = true;
-          }
-          if (component.onScrollTouchCancel?.(context, x, y)) {
             handled = true;
           }
         }
