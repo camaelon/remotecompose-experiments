@@ -389,11 +389,14 @@ export class CanvasPaintContext extends PaintContext {
     applyPaint(paintData: PaintBundle): void {
         const arr = paintData.getArray();
         const len = paintData.getLength();
-        // A bundle describes a whole paint, so it starts without a shader — the reference
-        // walks the bundle building a mask of the properties it touched. Clearing here (as
-        // opposed to on the COLOR command, see below) is what lets colour and gradient
-        // coexist within one bundle while still not leaking a gradient into the next.
-        this.gradientStyle = null;
+        // A paint bundle is a *delta*: it carries only the properties it changes, and
+        // everything else stays as the previous bundle left it. So nothing is cleared on
+        // entry — not the shader, not anything else. `replacePaint` is the variant that
+        // resets first, and the host resets once per paint cycle (RcdPlayer.renderFrame),
+        // which is what stops state leaking from one frame into the next.
+        //
+        // This previously cleared `gradientStyle` here, which quietly broke that contract:
+        // a bundle setting only an alpha would drop a shader an earlier bundle had set.
         let i = 0;
         while (i < len) {
             const cmd = arr[i++];
