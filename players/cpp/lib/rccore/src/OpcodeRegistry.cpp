@@ -41,6 +41,7 @@ void OpcodeRegistry::init() {
         {"metadataId", FT::INT}}});
     reg({103, "ROOT_CONTENT_DESCRIPTION", {{"contentDescriptionId", FT::INT}}});
     reg({137, "NAMED_VARIABLE", {{"varId", FT::INT}, {"varType", FT::INT}, {"name", FT::UTF8}}});
+    reg({250, "AccessibilitySemantics", {{"contentDescriptionId", FT::INT}, {"role", FT::BYTE}, {"textId", FT::INT}, {"stateDescriptionId", FT::INT}, {"mode", FT::BYTE}, {"enabled", FT::BOOLEAN}, {"clickable", FT::BOOLEAN}}});
 
     // Basic Draw Commands
     reg({42, "DRAW_RECT", {{"left", FT::FLOAT}, {"top", FT::FLOAT},
