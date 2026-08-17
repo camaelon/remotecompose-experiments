@@ -180,6 +180,23 @@ void CoreDocument::updateTimeVariables(RemoteContext& context) {
     context.loadFloat(RemoteContext::ID_DAY_OF_YEAR, static_cast<float>(dayOfYear));
     context.loadFloat(RemoteContext::ID_YEAR, static_cast<float>(year));
     context.loadFloat(RemoteContext::ID_API_LEVEL, static_cast<float>(DOCUMENT_API_LEVEL));
+
+    // Animation time: seconds since the first frame, not since the epoch. This is what the
+    // reference player feeds in (RemoteComposeView computes (now - mStart) * 1e-9), and what a
+    // document expects — it starts near zero and advances, so sin(animationTime) is a wave
+    // rather than an arbitrary phase.
+    //
+    // Always written, never guarded. A host that wants to drive the clock itself calls
+    // overrideFloat, which makes these loads no-ops for the id; guarding on "has someone set
+    // this yet" instead would latch on the first frame and freeze time.
+    if (mAnimationStartMs < 0) {
+        mAnimationStartMs = ms;
+    }
+    float animationTime = static_cast<float>(ms - mAnimationStartMs) / 1000.0f;
+    context.loadFloat(RemoteContext::ID_ANIMATION_TIME, animationTime);
+    context.loadFloat(RemoteContext::ID_ANIMATION_DELTA_TIME,
+                      animationTime - mLastAnimationTime);
+    mLastAnimationTime = animationTime;
 }
 
 // ── Data pass ─────────────────────────────────────────────────────────

@@ -87,6 +87,10 @@ private:
     int mPatchVersion = 0;
     int64_t mCapabilities = 0;
     int64_t mFixedTimeMs = 0;
+    // Epoch-millis of the first frame, so animation time can be measured from playback start
+    // rather than from the epoch. -1 until the first updateTimeVariables.
+    int64_t mAnimationStartMs = -1;
+    float mLastAnimationTime = 0.0f;
     int mContentScroll = 0;
     int mContentAlignment = 0;
     int mContentSizing = 0;
