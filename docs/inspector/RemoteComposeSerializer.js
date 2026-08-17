@@ -1844,14 +1844,29 @@ class RemoteComposeSerializer {
 
   scanResources(json, writer) {
     const processVar = (v) => {
-      if (typeof v === 'object' && v.name && v.value !== undefined) {
+      if (typeof v === 'object' && v && v.name && v.value !== undefined) {
         if (!this.varRegistry.has(v.name)) {
           const varId = this.nextVarId++;
           this.varRegistry.set(v.name, varId);
           if (typeof v.value === 'string' && /[a-zA-Z_()]/.test(v.value)) {
             const bits = ExpressionCompiler.compileToBits(v.value);
             encodeFloatExpression(writer, { id: varId, srcExpression: bits });
+          } else if (typeof v.value === 'number') {
+            encodeFloatConstant(writer, { id: varId, value: v.value });
           }
+        }
+      }
+    };
+
+    const traverse = (obj) => {
+      if (!obj || typeof obj !== 'object') return;
+      if (obj.variable) processVar(obj.variable);
+      if (obj.type === 'variable' || obj.variableName) processVar(obj);
+      if (Array.isArray(obj)) {
+        for (const item of obj) traverse(item);
+      } else {
+        for (const key of Object.keys(obj)) {
+          traverse(obj[key]);
         }
       }
     };
@@ -1859,11 +1874,7 @@ class RemoteComposeSerializer {
     if (json.resources && Array.isArray(json.resources.variables)) {
       for (const v of json.resources.variables) processVar(v);
     }
-    if (json.root && Array.isArray(json.root.commands)) {
-      for (const cmd of json.root.commands) {
-        if (cmd.variable) processVar(cmd.variable);
-      }
-    }
+    traverse(json.root);
   }
 
   compileComponent(node, writer) {

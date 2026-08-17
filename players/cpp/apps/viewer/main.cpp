@@ -9,7 +9,7 @@
 //   Q/Escape    - Quit
 //
 // Flags:
-//   --metal         - Use Metal GPU backend (default)
+//   --metal         - Use Metal GPU backend (default on macOS)
 //   --cpu           - Use CPU software backend
 //   --widget [x,y]  - Desktop widget mode (borderless, on desktop layer)
 //   --interactive   - Enable mouse interaction in widget mode
@@ -20,7 +20,9 @@
 
 #include "RenderBackend.h"
 #include "CpuRenderBackend.h"
+#if defined(__APPLE__)
 #include "MetalRenderBackend.h"
+#endif
 #include "WidgetHelper.h"
 
 #include "rccore/WireBuffer.h"
@@ -74,7 +76,12 @@ static bool isCodecVideoExt(const std::string& ext) {
 
 // Real video files decoded by AVFoundation (AvfVideoPlayer).
 static bool isAvfVideoExt(const std::string& ext) {
+#if defined(__APPLE__)
     return ext == ".mp4" || ext == ".mov" || ext == ".m4v";
+#else
+    (void)ext;
+    return false;
+#endif
 }
 
 static bool isPlayableExt(const std::string& ext) {
@@ -910,7 +917,7 @@ int main(int argc, char* argv[]) {
                   << "       rcviewer --screenshot-dir <dir_of_rc> <output_dir> [width height] [delay_sec]\n"
                   << "       rcviewer --pdf <input.zip|dir|file.rc> <output.pdf> [page_w page_h] [delay_sec]\n"
                   << "\nBackend options:\n"
-                  << "  --metal        Use Metal GPU backend (default)\n"
+                  << "  --metal        Use Metal GPU backend (default on macOS)\n"
                   << "  --cpu          Use CPU software backend\n"
                   << "\nWidget mode:\n"
                   << "  --widget [x,y] Desktop widget (borderless, always on desktop)\n"
@@ -925,7 +932,12 @@ int main(int argc, char* argv[]) {
     }
 
     // Parse flags (order-independent before the positional file arg)
-    bool useMetal = true;
+    bool useMetal =
+#if defined(__APPLE__)
+        true;
+#else
+        false;
+#endif
     int argOffset = 1;
 
     // Scan for flags
@@ -935,7 +947,12 @@ int main(int argc, char* argv[]) {
             useMetal = false;
             argOffset++;
         } else if (arg == "--metal") {
+#if defined(__APPLE__)
             useMetal = true;
+#else
+            std::cerr << "--metal is only available on macOS; using CPU backend\n";
+            useMetal = false;
+#endif
             argOffset++;
         } else if (arg == "--widget") {
             g.widgetMode = true;
@@ -1252,12 +1269,17 @@ int main(int argc, char* argv[]) {
 
     // Create rendering backend
     if (useMetal) {
+#if defined(__APPLE__)
         g.backend = MetalRenderBackend::Create(window);
         if (!g.backend) {
             std::cerr << "Metal backend failed, falling back to CPU\n";
             g.backend = std::make_unique<CpuRenderBackend>();
             useMetal = false;
         }
+#else
+        g.backend = std::make_unique<CpuRenderBackend>();
+        useMetal = false;
+#endif
     } else {
         g.backend = std::make_unique<CpuRenderBackend>();
     }
