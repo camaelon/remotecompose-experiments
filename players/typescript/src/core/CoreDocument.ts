@@ -768,12 +768,6 @@ export class CoreDocument implements ExpansionDocument {
                 if (component.onTouchDrag(context, this, x, y, true)) {
                     handled = true;
                 }
-                // A scrolling component's TouchExpression sits in its scroll modifier, not
-                // among its children, so the walk above never reaches it.
-                if ((component as any).onScrollTouchDrag?.(context, x, y)) {
-                    handled = true;
-                    this.mNeedsRepaintFlag = 1;
-                }
             }
         }
         return handled;
@@ -791,9 +785,6 @@ export class CoreDocument implements ExpansionDocument {
                 if (component.onTouchUp(context, this, x, y, dx, dy, true)) {
                     handled = true;
                 }
-                if ((component as any).onScrollTouchUp?.(context, x, y, dx, dy)) {
-                    handled = true;
-                }
             }
             this.mAppliedTouchOperations.clear();
         }
@@ -806,9 +797,6 @@ export class CoreDocument implements ExpansionDocument {
             let handled = false;
             for (const component of this.mAppliedTouchOperations) {
                 if (component.onTouchCancel(context, this, x, y, true)) {
-                    handled = true;
-                }
-                if ((component as any).onScrollTouchCancel?.(context, x, y)) {
                     handled = true;
                 }
             }
