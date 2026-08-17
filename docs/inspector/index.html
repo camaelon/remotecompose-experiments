@@ -9805,6 +9805,9 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       headerRow.appendChild(colHeader);
     });
     gridWrapper.appendChild(headerRow);
+    container.innerHTML = "";
+    container.appendChild(gridWrapper);
+    const cellPromises = [];
     for (let rIdx = 0; rIdx < heights.length; rIdx++) {
       const row = heights[rIdx];
       const rowEl = doc.createElement("div");
@@ -9845,47 +9848,56 @@ Check network, CORS headers, or file path. Click to browse local files.`;
           canvas.style.height = `${row.height}px`;
           cardWrapper.appendChild(canvas);
           cellEl.appendChild(cardWrapper);
-          try {
-            const player = new rcRuntime.RcdPlayer(canvas);
-            if (typeof player.setDensity === "function") {
-              player.setDensity(density);
-            }
-            const bufClone = buffer.slice(0);
-            const rcDoc = await player.loadFromArrayBuffer(bufClone);
-            const rContext = player.getRemoteContext();
-            if (rContext) {
-              rContext.setDensity(density);
-            }
-            const targetW = Math.round(col.width * density);
-            const targetH = Math.round(row.height * density);
-            if (rcDoc) {
-              if (typeof rcDoc.setWidth === "function") rcDoc.setWidth(targetW);
-              if (typeof rcDoc.setHeight === "function") rcDoc.setHeight(targetH);
-              rcDoc.mWidth = targetW;
-              rcDoc.mHeight = targetH;
-              if (rcDoc.mHeader) {
-                rcDoc.mHeader.mWidth = targetW;
-                rcDoc.mHeader.mHeight = targetH;
+          cellPromises.push((async () => {
+            if (renderId !== activeRenderId) return;
+            try {
+              const player = new rcRuntime.RcdPlayer(canvas);
+              if (typeof player.setDensity === "function") {
+                player.setDensity(density);
               }
-              rcDoc.mNeedsMeasure = true;
-              const rootComp = typeof rcDoc.getRootLayoutComponent === "function" ? rcDoc.getRootLayoutComponent() : null;
-              if (rootComp) rootComp.mNeedsMeasure = true;
+              const bufClone = buffer.slice(0);
+              const rcDoc = await player.loadFromArrayBuffer(bufClone);
+              if (renderId !== activeRenderId) {
+                if (typeof player.stop === "function") player.stop();
+                return;
+              }
+              const rContext = player.getRemoteContext();
+              if (rContext) {
+                rContext.setDensity(density);
+              }
+              const targetW = Math.round(col.width * density);
+              const targetH = Math.round(row.height * density);
+              if (rcDoc) {
+                if (typeof rcDoc.setWidth === "function") rcDoc.setWidth(targetW);
+                if (typeof rcDoc.setHeight === "function") rcDoc.setHeight(targetH);
+                rcDoc.mWidth = targetW;
+                rcDoc.mHeight = targetH;
+                if (rcDoc.mHeader) {
+                  rcDoc.mHeader.mWidth = targetW;
+                  rcDoc.mHeader.mHeight = targetH;
+                }
+                rcDoc.mNeedsMeasure = true;
+                const rootComp = typeof rcDoc.getRootLayoutComponent === "function" ? rcDoc.getRootLayoutComponent() : null;
+                if (rootComp) rootComp.mNeedsMeasure = true;
+              }
+              if (!isMatrixPaused && (rcDoc?.mClock || rcDoc?.mNeedsRepaintFlag) && typeof player.play === "function") {
+                player.play();
+              } else if (typeof player.repaint === "function") {
+                player.repaint();
+              }
+              matrixPlayers.push({
+                player,
+                canvas,
+                col,
+                row,
+                width: col.width,
+                height: row.height
+              });
+            } catch (err) {
+              console.error(`Failed to initialize matrix player at ${col.id}\xD7${row.id}:`, err);
+              cellEl.innerHTML = `<div style="color:#F87171; font-size:0.65rem;">Err</div>`;
             }
-            if (typeof player.repaint === "function") {
-              player.repaint();
-            }
-            matrixPlayers.push({
-              player,
-              canvas,
-              col,
-              row,
-              width: col.width,
-              height: row.height
-            });
-          } catch (err) {
-            console.error(`Failed to initialize matrix player at ${col.id}\xD7${row.id}:`, err);
-            cellEl.innerHTML = `<div style="color:#F87171; font-size:0.65rem;">Err</div>`;
-          }
+          })());
         } else {
           cellEl.classList.add("matrix-empty-cell");
         }
@@ -9893,9 +9905,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       }
       gridWrapper.appendChild(rowEl);
     }
-    if (renderId !== activeRenderId) return;
-    container.innerHTML = "";
-    container.appendChild(gridWrapper);
+    await Promise.all(cellPromises);
   }
 
   // src/panels/LayoutManager.js
