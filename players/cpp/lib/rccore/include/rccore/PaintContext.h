@@ -9,12 +9,44 @@ namespace rccore {
 class RemoteContext;
 class PaintBundle;
 
+/**
+ * Optional 3D extension surface. The Java reference makes this a separate interface and has the
+ * 3D operations do `instanceof Paint3DContext`; the C++ equivalent is this virtual downcast,
+ * which returns null on a 2D-only backend. Either way a 3D document degrades to drawing nothing
+ * rather than failing to load.
+ *
+ * Conventions: right-handed, +Y up, -Z forward; column-major 4x4; clip = projection x view x
+ * model; matrix ops post-multiply the modelview; CCW front-facing; radians.
+ */
+class Paint3D {
+public:
+    virtual ~Paint3D() = default;
+    virtual void defineMesh3D(int id, const std::vector<int32_t>& indices,
+                              const std::vector<float>& verts,
+                              const std::vector<float>& normals,
+                              const std::vector<float>& uv) = 0;
+    virtual void setCamera3D(int projection, const std::vector<float>& projParams,
+                             const std::vector<float>& viewParams) = 0;
+    virtual void matrix3Op(int sub, const std::vector<float>& args) = 0;
+    virtual void drawMesh3D(int meshId, int mode) = 0;
+    virtual void clearDepth3D() = 0;
+    virtual void setLights3D(const std::vector<int>& types,
+                             const std::vector<int32_t>& colors,
+                             const std::vector<float>& params) = 0;
+    virtual void setTexture3D(int bitmapId) = 0;
+    virtual void setMaterial3D(float specStrength, float shininess) = 0;
+    virtual void setDepthBias3D(float constant, float slope) = 0;
+};
+
 class PaintContext {
 public:
     explicit PaintContext(RemoteContext& context) : mContext(context) {}
     virtual ~PaintContext() = default;
 
     RemoteContext& getContext() { return mContext; }
+
+    /** Null unless this backend renders 3D. See Paint3D. */
+    virtual Paint3D* asPaint3D() { return nullptr; }
 
     // Drawing
     virtual void drawRect(float left, float top, float right, float bottom) = 0;

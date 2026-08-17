@@ -1,6 +1,7 @@
 // CanvasPaintContext: concrete PaintContext that renders to an HTML5 Canvas 2D.
 
 import { PaintContext } from '../core/PaintContext';
+import { SoftwarePaint3DContext } from '../core/d3/SoftwarePaint3DContext';
 import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundle';
 import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
@@ -28,6 +29,8 @@ export class CanvasPaintContext extends PaintContext {
 
     // Current paint state
     private color = 'rgba(0,0,0,1)';
+    /** The same paint color as a packed ARGB int — what drawMesh3D shades with. */
+    private colorArgb = 0xFF000000 | 0;
     private style = 0; // 0=FILL, 1=STROKE, 2=FILL_AND_STROKE
     private strokeWidth = 1;
     private textSize = 14;
@@ -412,6 +415,7 @@ export class CanvasPaintContext extends PaintContext {
                     // properties of a Paint, and the shader wins when filling. This
                     // document sets COLOR *after* its GRADIENT, and clearing here painted
                     // the chart in the default opaque black.
+                    this.colorArgb = arr[i] | 0;
                     this.color = argbToRgba(arr[i++]);
                     break;
                 case PaintBundle.STROKE_WIDTH:
@@ -1537,4 +1541,120 @@ export class CanvasPaintContext extends PaintContext {
         this.resetPaintState();
         this.clearNeedsRepaint();
     }
+
+    // ---- 3D (Paint3DContext) -----------------------------------------------
+    //
+    // Only the software backend is implemented here. Every other backend in the mode word
+    // (canvas-vertices, drawMesh, GL) falls back to software, which is exactly what the
+    // reference does on a platform that lacks them — so a document renders the same picture
+    // rather than silently drawing nothing.
+
+    private d3: SoftwarePaint3DContext | null = null;
+    private d3Blit: CanvasRenderingContext2D | null = null;
+
+    private ensure3D(): SoftwarePaint3DContext {
+        const w = this.ctx.canvas.width;
+        const h = this.ctx.canvas.height;
+        if (this.d3 === null) {
+            this.d3 = new SoftwarePaint3DContext();
+        }
+        this.d3.setSize(w, h);
+        if (this.d3Blit === null
+            || this.d3Blit.canvas.width !== w || this.d3Blit.canvas.height !== h) {
+            this.d3Blit = this.createLayerCanvas(w, h);
+        }
+        return this.d3;
+    }
+
+    defineMesh3D(id: number, indices: Int32Array, verts: Float32Array,
+                 normals: Float32Array | null, uv: Float32Array | null = null): void {
+        this.ensure3D().defineMesh3D(id, indices, verts, normals, uv);
+    }
+
+    setCamera3D(projection: number, projParams: Float32Array | number[],
+                viewParams: Float32Array | number[]): void {
+        this.ensure3D().setCamera3D(projection, projParams, viewParams);
+    }
+
+    matrix3Op(sub: number, args: Float32Array | number[]): void {
+        this.ensure3D().matrix3Op(sub, args);
+    }
+
+    clearDepth3D(): void {
+        this.ensure3D().clearDepth3D();
+    }
+
+    setLights3D(types: Int32Array | number[], colors: Int32Array | number[],
+                params: Float32Array | number[]): void {
+        this.ensure3D().setLights3D(types, colors, params);
+    }
+
+    setTexture3D(bitmapId: number): void {
+        const ctx3d = this.ensure3D();
+        if (bitmapId === 0) {
+            ctx3d.setTextureData(null, 0, 0);
+            return;
+        }
+        // The engine has no bitmap store of its own; the host decodes and hands over pixels.
+        const bmp = this.mContext.mRemoteComposeState.getFromId(bitmapId) as
+            { width: number; height: number; data?: Uint8ClampedArray } | null;
+        if (!bmp || !bmp.data) {
+            ctx3d.setTextureData(null, 0, 0);
+            return;
+        }
+        const n = bmp.width * bmp.height;
+        const argb = new Int32Array(n);
+        for (let i = 0; i < n; i++) {
+            argb[i] = ((bmp.data[i * 4 + 3] << 24) | (bmp.data[i * 4] << 16)
+                | (bmp.data[i * 4 + 1] << 8) | bmp.data[i * 4 + 2]) | 0;
+        }
+        ctx3d.setTextureData(argb, bmp.width, bmp.height);
+    }
+
+    setMaterial3D(specStrength: number, shininess: number): void {
+        this.ensure3D().setMaterial3D(specStrength, shininess);
+    }
+
+    setDepthBias3D(constant: number, slope: number): void {
+        this.ensure3D().setDepthBias3D(constant, slope);
+    }
+
+    drawMesh3D(meshId: number, mode: number): void {
+        const ctx3d = this.ensure3D();
+        ctx3d.setBaseColorArgb(this.colorArgb);
+        ctx3d.drawMesh3D(meshId, mode);
+        this.blit3D();
+    }
+
+    /**
+     * Composite the software color buffer onto the canvas. The reference blits after every
+     * software mesh rather than once per pass, so a 3D draw interleaves with 2D content in
+     * document order; matching that keeps mixed 2D/3D documents looking the same.
+     */
+    private blit3D(): void {
+        const ctx3d = this.d3;
+        const blit = this.d3Blit;
+        if (ctx3d === null || blit === null) {
+            return;
+        }
+        const argb = ctx3d.getColorBuffer();
+        if (argb === null) {
+            return;
+        }
+        const w = ctx3d.getWidth();
+        const h = ctx3d.getHeight();
+        const img = blit.createImageData(w, h);
+        const d = img.data;
+        for (let i = 0; i < w * h; i++) {
+            const p = argb[i];
+            d[i * 4] = (p >>> 16) & 0xFF;
+            d[i * 4 + 1] = (p >>> 8) & 0xFF;
+            d[i * 4 + 2] = p & 0xFF;
+            d[i * 4 + 3] = (p >>> 24) & 0xFF;
+        }
+        blit.putImageData(img, 0, 0);
+        // Drawn under the live transform, matching the reference's Canvas.drawBitmap(b, 0, 0).
+        this.ctx.drawImage(blit.canvas as unknown as CanvasImageSource, 0, 0);
+    }
+
 }

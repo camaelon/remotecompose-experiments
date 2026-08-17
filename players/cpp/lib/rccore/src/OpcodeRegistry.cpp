@@ -42,6 +42,20 @@ void OpcodeRegistry::init() {
     reg({103, "ROOT_CONTENT_DESCRIPTION", {{"contentDescriptionId", FT::INT}}});
     reg({137, "NAMED_VARIABLE", {{"varId", FT::INT}, {"varType", FT::INT}, {"name", FT::UTF8}}});
 
+    // 3D commands. Variable-length payloads, so the inspector reports the header fields and
+    // leaves the arrays to the operation classes, which decode them properly.
+    reg({110, "DEFINE_MESH_3D", {{"id", FT::INT}}, true, false});
+    reg({111, "SET_CAMERA_3D", {{"projection", FT::INT}}, true, false});
+    reg({112, "MATRIX_3D_OP", {{"sub", FT::INT}}, true, false});
+    reg({113, "DRAW_MESH_3D", {{"meshId", FT::INT}, {"mode", FT::INT}}});
+    reg({114, "PAINT_3D_STATE", {{"sub", FT::INT}}, true, false});
+    reg({115, "SET_LIGHTS_3D", {{"count", FT::INT}}, true, false});
+    reg({116, "VECTOR_EXPRESSION", {{"id", FT::INT}}, true, false});
+    reg({117, "MESH_EXPRESSION_3D", {{"id", FT::INT}, {"type", FT::INT}, {"flags", FT::INT}},
+         true, false});
+    reg({118, "SET_TEXTURE_3D", {{"bitmapId", FT::INT}}});
+    reg({120, "MESH_PRIMITIVE_3D", {{"id", FT::INT}, {"type", FT::INT}}, true, false});
+
     // Basic Draw Commands
     reg({42, "DRAW_RECT", {{"left", FT::FLOAT}, {"top", FT::FLOAT},
         {"right", FT::FLOAT}, {"bottom", FT::FLOAT}}});

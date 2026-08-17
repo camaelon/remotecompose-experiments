@@ -9,6 +9,19 @@ class Operations {
 public:
     // Opcodes - matching Java Operations.java
     static constexpr int HEADER = 0;
+
+    // 3D commands. Registered in the experimental profiles upstream; they dispatch through
+    // PaintContext::asPaint3D() and no-op on a 2D-only backend.
+    static constexpr int DEFINE_MESH_3D = 110;
+    static constexpr int SET_CAMERA_3D = 111;
+    static constexpr int MATRIX_3D_OP = 112;
+    static constexpr int DRAW_MESH_3D = 113;
+    static constexpr int PAINT_3D_STATE = 114;
+    static constexpr int SET_LIGHTS_3D = 115;
+    static constexpr int VECTOR_EXPRESSION = 116;
+    static constexpr int MESH_EXPRESSION_3D = 117;
+    static constexpr int SET_TEXTURE_3D = 118;
+    static constexpr int MESH_PRIMITIVE_3D = 120;
     static constexpr int COMPONENT_START = 2;
     static constexpr int ANIMATION_SPEC = 14;
     static constexpr int MODIFIER_WIDTH = 16;
