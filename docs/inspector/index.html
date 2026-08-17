@@ -609,12 +609,20 @@
             border-color: var(--accent-blue);
         }
 
-        .canvas-container canvas {
+        .canvas-container #previewCanvas {
             background: #ffffff;
             border-radius: 6px;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
             max-width: 100%;
             transition: width 0.15s ease, height 0.15s ease;
+        }
+
+        #layoutBoundsOverlayCanvas {
+            background: transparent !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            pointer-events: none !important;
         }
 
         .canvas-meta {
@@ -804,21 +812,30 @@
 
         /* Component Tree */
         .tree-node {
-            margin-left: 12px;
-            border-left: 1px dashed var(--border-color);
-            padding-left: 8px;
+            margin-left: 8px;
+            border-left: 1px dashed rgba(255, 255, 255, 0.12);
+            padding-left: 4px;
+        }
+
+        .tree-node-root {
+            margin-left: 0 !important;
+            border-left: none !important;
+            padding-left: 0 !important;
         }
 
         .tree-node-content {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 8px;
-            border-radius: 6px;
+            gap: 4px;
+            padding: 3px 6px;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.15s ease;
-            margin-bottom: 2px;
-            font-size: 0.85rem;
+            margin-bottom: 1px;
+            font-size: 0.78rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .tree-node-content:hover {
@@ -826,7 +843,7 @@
         }
 
         .tree-node-content.selected {
-            background-color: rgba(16, 185, 129, 0.15);
+            background-color: rgba(16, 185, 129, 0.18);
             border: 1px solid var(--accent-emerald);
         }
 
@@ -840,70 +857,105 @@
             background: rgba(239, 68, 68, 0.2);
             color: #f87171;
             border: 1px solid rgba(239, 68, 68, 0.5);
-            padding: 1px 5px;
+            padding: 1px 4px;
             border-radius: 3px;
-            font-size: 0.65rem;
+            font-size: 0.62rem;
             font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 3px;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+
+        .tree-vis-icon {
+            font-size: 0.72rem;
+            line-height: 1;
+            flex-shrink: 0;
+            cursor: default;
+            user-select: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 1px;
+            transition: opacity 0.15s ease, filter 0.15s ease;
+        }
+
+        .tree-vis-icon.vis-visible {
+            opacity: 0.9;
+        }
+
+        .tree-vis-icon.vis-invisible {
+            opacity: 0.65;
+            filter: saturate(0.8);
+        }
+
+        .tree-vis-icon.vis-gone {
+            opacity: 0.45;
+            filter: grayscale(100%);
         }
 
         .tree-icon {
-            font-size: 0.9rem;
+            font-size: 0.82rem;
+            flex-shrink: 0;
         }
 
         .tree-tag {
             font-weight: 600;
             color: var(--accent-emerald);
+            font-size: 0.78rem;
+            flex-shrink: 0;
         }
 
         .tree-id {
             font-family: var(--code-font);
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--text-muted);
             background: rgba(255,255,255,0.06);
-            padding: 1px 5px;
+            padding: 0 4px;
             border-radius: 3px;
+            flex-shrink: 0;
         }
 
         .tree-dim {
             font-family: var(--code-font);
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--accent-purple);
+            flex-shrink: 0;
         }
 
         .tree-modifier {
-            margin-left: 24px;
-            font-size: 0.78rem;
+            margin-left: 10px;
+            font-size: 0.72rem;
             color: var(--text-secondary);
-            padding: 2px 6px;
+            padding: 1px 4px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+            white-space: nowrap;
         }
 
         .tree-modifier-badge {
             font-family: var(--code-font);
-            font-size: 0.72rem;
-            color: var(--accent-rose);
-            background: rgba(244, 63, 94, 0.12);
-            border: 1px solid rgba(244, 63, 94, 0.3);
-            padding: 1px 6px;
-            border-radius: 4px;
+            font-size: 0.68rem;
+            color: var(--accent-purple);
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.3);
+            padding: 0 4px;
+            border-radius: 3px;
             cursor: pointer;
             margin-left: auto;
             display: inline-flex;
             align-items: center;
-            gap: 4px;
+            gap: 3px;
             font-weight: 600;
             transition: all 0.15s ease;
             user-select: none;
+            flex-shrink: 0;
         }
 
         .tree-modifier-badge:hover {
-            background: rgba(244, 63, 94, 0.25);
-            border-color: var(--accent-rose);
+            background: rgba(168, 85, 247, 0.25);
+            border-color: var(--accent-purple);
         }
 
         .caret {
@@ -911,9 +963,11 @@
             user-select: none;
             display: inline-block;
             transition: transform 0.15s ease;
-            font-size: 0.7rem;
+            font-size: 0.62rem;
             color: var(--text-muted);
-            width: 12px;
+            width: 10px;
+            flex-shrink: 0;
+            text-align: center;
         }
 
         .caret-down {
@@ -1620,6 +1674,110 @@
             border-radius: 0 !important;
             filter: none !important;
         }
+
+        /* =========================================================================
+           Panel 13: Layout & Box Model Inspector Styles
+           ========================================================================= */
+        .panel-p13 {
+            width: 440px;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .panel-p13 .panel-body {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .box-model-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin: 4px 0;
+            user-select: none;
+        }
+
+        .box-model-layer {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            border-radius: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .box-model-margin {
+            width: 100%;
+            max-width: 380px;
+            background: rgba(249, 115, 22, 0.12);
+            border: 1px dashed rgba(249, 115, 22, 0.6);
+            padding: 24px 32px;
+        }
+
+        .box-model-border {
+            width: 100%;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(251, 191, 36, 0.7);
+            padding: 16px 20px;
+        }
+
+        .box-model-padding {
+            width: 100%;
+            background: rgba(52, 211, 153, 0.15);
+            border: 1px dashed rgba(52, 211, 153, 0.7);
+            padding: 22px 28px;
+        }
+
+        .box-model-content {
+            width: 100%;
+            background: rgba(56, 189, 248, 0.2);
+            border: 1px solid var(--accent-blue);
+            padding: 14px 10px;
+            flex-direction: column;
+            text-align: center;
+            border-radius: 4px;
+        }
+
+        .box-model-label {
+            position: absolute;
+            top: 3px;
+            left: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            opacity: 0.75;
+            pointer-events: none;
+        }
+
+        .box-model-margin .box-model-label { color: #f97316; }
+        .box-model-border .box-model-label { color: #fbbf24; }
+        .box-model-padding .box-model-label { color: #34d399; }
+
+        .box-model-val-top,
+        .box-model-val-bottom,
+        .box-model-val-left,
+        .box-model-val-right {
+            position: absolute;
+            font-family: var(--code-font);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            pointer-events: none;
+        }
+
+        .box-model-val-top { top: 4px; left: 50%; transform: translateX(-50%); }
+        .box-model-val-bottom { bottom: 4px; left: 50%; transform: translateX(-50%); }
+        .box-model-val-left { left: 6px; top: 50%; transform: translateY(-50%); }
+        .box-model-val-right { right: 6px; top: 50%; transform: translateY(-50%); }
 </style>
 </head>
 <body>
@@ -1643,6 +1801,7 @@
                 <option value="rc_json_particle_sphere.rc">✨ Particle Sphere</option>
                 <option value="rc_json_material_toggle_button_macro_demo.rc">🔘 Material Toggle Button</option>
             </select>
+            <button class="btn btn-secondary" onclick="restorePanel('pane13')" title="Open Layout & Box Model Inspector Panel">📐 Layout Inspector</button>
             <button class="btn btn-secondary" onclick="restorePanel('pane12')" title="Open Responsive Size Buckets Matrix Panel">📐 Responsive Matrix</button>
             <button class="btn btn-secondary" onclick="toggleCanvasBg()">🎨 Canvas Theme</button>
             <button class="btn" onclick="exportRcFile()">💾 Download .rc</button>
@@ -2378,6 +2537,25 @@
                 <!-- Dynamically populated Responsive Matrix Multi-Player Grid -->
             </div>
         </div>
+
+        <!-- Resizer Handle 11 -->
+        <div class="resizer" id="resizer12_13" title="Drag to resize Pane 12 & 13 (Double click to reset)"></div>
+
+        <!-- Panel 13: Layout & Box Model Inspector -->
+        <div class="panel panel-p13 hidden-panel" id="pane13">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane13')" title="Hide Layout & Box Model panel">✕</button>
+                    <div class="panel-title">📐 Layout & Box Model</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn btn-secondary btn-xs" onclick="renderLayoutInspectorPanel(window.currentDocument)" title="Refresh layout measurements">⟳</button>
+                </div>
+            </div>
+            <div class="panel-body" id="layoutInspectorContainer" style="overflow-y:auto;">
+                <!-- Dynamically populated Layout & Box Model Inspector -->
+            </div>
+        </div>
     </div>
 
     <!-- Inspector Application Runtime -->
@@ -2518,7 +2696,7 @@
   function renderExprVariableSimulator() {
     const listEl = document.getElementById("exprSimulatorList");
     const currentDocument2 = window.currentDocument;
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     if (!listEl || !currentDocument2) return;
     const state = typeof currentDocument2.getRemoteComposeState === "function" ? currentDocument2.getRemoteComposeState() : currentDocument2.mRemoteComposeState;
     if (!state || !exprGraphData || !exprGraphData.nodes) {
@@ -2568,8 +2746,8 @@
       const formatted = Number.isInteger(currVal) ? currVal.toString() : currVal.toFixed(2);
       html += `
             <div style="display:flex; align-items:center; gap:8px; background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px; border:1px solid var(--border-color);">
-                <span style="font-family:var(--code-font); font-weight:600; color:${node.type === "sys_var" ? "#d97706" : "#059669"}; width:140px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${escapeHtml5(node.label)}">
-                    ${node.type === "sys_var" ? "\u{1F7E8}" : "\u{1F7E9}"} ${escapeHtml5(node.label)}
+                <span style="font-family:var(--code-font); font-weight:600; color:${node.type === "sys_var" ? "#d97706" : "#059669"}; width:140px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${escapeHtml6(node.label)}">
+                    ${node.type === "sys_var" ? "\u{1F7E8}" : "\u{1F7E9}"} ${escapeHtml6(node.label)}
                 </span>
                 <input type="range" min="${minVal}" max="${maxVal}" step="${stepVal}" value="${formatted}" style="flex:1; accent-color:var(--accent-amber); cursor:pointer;" oninput="onExprSimulatorSliderChange(${varId}, this.value, 'slider-${varId}')">
                 <input type="number" id="slider-${varId}-num" value="${formatted}" step="${stepVal}" style="width:60px; padding:1px 4px; font-size:0.72rem; font-family:var(--code-font); background:var(--bg-main); border:1px solid var(--border-color); color:var(--text-primary); border-radius:3px;" oninput="onExprSimulatorSliderChange(${varId}, this.value, 'slider-${varId}')">
@@ -3152,7 +3330,7 @@
   }
   function renderExprGraphSvg(nodesToRender, query) {
     const svgEl = document.getElementById("exprGraphSvg");
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     if (!svgEl) return;
     if (nodesToRender.length === 0) {
       svgEl.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="var(--text-muted)" font-size="13">No expressions match the selected filter.</text>`;
@@ -3371,7 +3549,7 @@
       if (selectedExprNodeId && nodeMap.has(selectedExprNodeId)) {
         const selNode = nodeMap.get(selectedExprNodeId);
         legendEl.innerHTML = `
-                <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#38bdf8; display:inline-block;"></span> <strong>Selected:</strong> ${escapeHtml5(selNode.label)}</span>
+                <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#38bdf8; display:inline-block;"></span> <strong>Selected:</strong> ${escapeHtml6(selNode.label)}</span>
                 <span style="display:flex; align-items:center; gap:3px; margin-left:6px;"><span style="width:8px; height:8px; border-radius:50%; background:#34d399; display:inline-block;"></span> <strong>Dependencies Needed</strong> (${ancestorSet.size})</span>
                 <span style="display:flex; align-items:center; gap:3px; margin-left:6px;"><span style="width:8px; height:8px; border-radius:50%; background:#c084fc; display:inline-block;"></span> <strong>Dependents</strong> (${descendantSet.size})</span>
                 <button onclick="deselectExprGraphNode()" style="margin-left:auto; background:rgba(255,255,255,0.08); border:1px solid var(--border-color); border-radius:4px; color:var(--text-secondary); cursor:pointer; font-size:0.68rem; padding:1px 6px;" title="Clear selection highlight">\u2715 Clear Highlight</button>
@@ -3491,7 +3669,7 @@
           svgContent += `
                     <g class="expr-edge-badge" transform="translate(${midX}, ${midY})" opacity="${opacity}">
                         <rect x="-38" y="-9" width="76" height="17" rx="8" fill="#0f172a" stroke="${isCriticalEdge ? "#f59e0b" : "#34d399"}" stroke-width="1.2" />
-                        <text x="0" y="3" text-anchor="middle" fill="${isCriticalEdge ? "#f59e0b" : "#34d399"}" font-size="8.5" font-weight="bold" font-family="var(--code-font)">${escapeHtml5(evalText.length > 15 ? evalText.slice(0, 14) + "\u2026" : evalText)}</text>
+                        <text x="0" y="3" text-anchor="middle" fill="${isCriticalEdge ? "#f59e0b" : "#34d399"}" font-size="8.5" font-weight="bold" font-family="var(--code-font)">${escapeHtml6(evalText.length > 15 ? evalText.slice(0, 14) + "\u2026" : evalText)}</text>
                     </g>
                 `;
         }
@@ -3583,26 +3761,26 @@
                 <rect x="0" y="0" width="${NODE_W}" height="${NODE_H}" rx="8" fill="${fillBg}" stroke="${strokeColor}" stroke-width="${strokeWidth}" ${filterStyle} />
                 <rect x="8" y="8" width="16" height="16" rx="4" fill="${badgeBg}" />
                 <text x="16" y="20" text-anchor="middle" fill="#ffffff" font-size="10" font-weight="bold">${typeIcon}</text>
-                <text x="30" y="20" fill="#f8fafc" font-size="11" font-weight="bold" font-family="var(--code-font)">${escapeHtml5(node.label)}</text>
-                <text x="10" y="38" fill="#94a3b8" font-size="10" font-family="var(--code-font)">${escapeHtml5(truncFormula || "Val")}</text>
-                <text x="10" y="53" fill="#34d399" font-size="11" font-weight="bold" font-family="var(--code-font)" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml5(node.value)}</text>
+                <text x="30" y="20" fill="#f8fafc" font-size="11" font-weight="bold" font-family="var(--code-font)">${escapeHtml6(node.label)}</text>
+                <text x="10" y="38" fill="#94a3b8" font-size="10" font-family="var(--code-font)">${escapeHtml6(truncFormula || "Val")}</text>
+                <text x="10" y="53" fill="#34d399" font-size="11" font-weight="bold" font-family="var(--code-font)" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml6(node.value)}</text>
             `;
       } else if (lodMode === "medium") {
         nodeInnerHTML = `
                 <rect x="0" y="0" width="${NODE_W}" height="${NODE_H}" rx="8" fill="${fillBg}" stroke="${strokeColor}" stroke-width="${strokeWidth}" ${filterStyle} />
                 <rect x="10" y="14" width="20" height="20" rx="4" fill="${badgeBg}" />
                 <text x="20" y="28" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="bold">${typeIcon}</text>
-                <text x="38" y="28" fill="#f8fafc" font-size="13" font-weight="bold" font-family="var(--code-font)">${escapeHtml5(node.label)}</text>
-                <text x="38" y="48" fill="#34d399" font-size="11" font-weight="bold" font-family="var(--code-font)" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml5(node.value)}</text>
+                <text x="38" y="28" fill="#f8fafc" font-size="13" font-weight="bold" font-family="var(--code-font)">${escapeHtml6(node.label)}</text>
+                <text x="38" y="48" fill="#34d399" font-size="11" font-weight="bold" font-family="var(--code-font)" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml6(node.value)}</text>
             `;
       } else {
         nodeInnerHTML = `
                 <rect x="0" y="0" width="${NODE_W}" height="${NODE_H}" rx="8" fill="${badgeBg}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />
-                <text x="${NODE_W / 2}" y="${NODE_H / 2 + 5}" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold" font-family="var(--code-font)">${escapeHtml5(node.label)}</text>
+                <text x="${NODE_W / 2}" y="${NODE_H / 2 + 5}" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="bold" font-family="var(--code-font)">${escapeHtml6(node.label)}</text>
             `;
       }
       svgContent += `
-            <g class="expr-node" transform="translate(${pos.x}, ${pos.y})" opacity="${opacity}" onclick="selectExprGraphNode('${node.id}')" style="cursor:pointer;" title="${escapeHtml5(node.label)}: ${escapeHtml5(node.formula)}">
+            <g class="expr-node" transform="translate(${pos.x}, ${pos.y})" opacity="${opacity}" onclick="selectExprGraphNode('${node.id}')" style="cursor:pointer;" title="${escapeHtml6(node.label)}: ${escapeHtml6(node.formula)}">
                 ${nodeInnerHTML}
             </g>
         `;
@@ -3613,7 +3791,7 @@
   }
   function renderExprGraphTree(nodesToRender, query) {
     const treeEl = document.getElementById("exprTreeContainer");
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     if (!treeEl) return;
     if (nodesToRender.length === 0) {
       treeEl.innerHTML = `<div style="text-align:center; color:var(--text-muted); padding:20px;">No expressions match search criteria.</div>`;
@@ -3634,12 +3812,12 @@
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div style="display:flex; align-items:center; gap:6px;">
                         ${typeBadge}
-                        <strong>${escapeHtml5(node.label)}</strong>
+                        <strong>${escapeHtml6(node.label)}</strong>
                     </div>
-                    <span style="color:var(--accent-emerald); font-weight:600;" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml5(node.value)}</span>
+                    <span style="color:var(--accent-emerald); font-weight:600;" class="expr-live-val" data-node-id="${node.id}">Val: ${escapeHtml6(node.value)}</span>
                 </div>
                 <div style="color:var(--text-secondary); margin-top:4px; font-size:0.72rem; word-break:break-all;">
-                    <strong>Formula:</strong> <code>${escapeHtml5(node.formula || "--")}</code>
+                    <strong>Formula:</strong> <code>${escapeHtml6(node.formula || "--")}</code>
                 </div>
                 <div style="display:flex; gap:12px; margin-top:4px; font-size:0.68rem; color:var(--text-muted);">
                     <span>Inputs: ${node.inputs.length}</span>
@@ -3655,7 +3833,7 @@
     selectedExprNodeId = nodeId;
     const node = exprGraphData ? exprGraphData.nodeMap.get(nodeId) : null;
     const card = document.getElementById("exprNodeDetailCard");
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     const currentParsedOps2 = window.currentParsedOps;
     const getOpId2 = typeof window.getOpId === "function" ? window.getOpId : (() => null);
     const selectCommandCard2 = typeof window.selectCommandCard === "function" ? window.selectCommandCard : (() => null);
@@ -3680,11 +3858,11 @@
     if (linksEl) {
       let inBadges = node.inputs.map((inId) => {
         const inNode = exprGraphData.nodeMap.get(inId);
-        return `<span class="badge" style="background:#059669; cursor:pointer;" onclick="event.stopPropagation(); selectExprGraphNode('${inId}', { source: 'user', scrollTo: true })" title="Click to jump to dependency">\u2190 ${escapeHtml5(inNode ? inNode.label : inId)}</span>`;
+        return `<span class="badge" style="background:#059669; cursor:pointer;" onclick="event.stopPropagation(); selectExprGraphNode('${inId}', { source: 'user', scrollTo: true })" title="Click to jump to dependency">\u2190 ${escapeHtml6(inNode ? inNode.label : inId)}</span>`;
       }).join(" ");
       let outBadges = node.outputs.map((outId) => {
         const outNode = exprGraphData.nodeMap.get(outId);
-        return `<span class="badge" style="background:#a855f7; cursor:pointer;" onclick="event.stopPropagation(); selectExprGraphNode('${outId}', { source: 'user', scrollTo: true })" title="Click to jump to output dependent">\u2192 ${escapeHtml5(outNode ? outNode.label : outId)}</span>`;
+        return `<span class="badge" style="background:#a855f7; cursor:pointer;" onclick="event.stopPropagation(); selectExprGraphNode('${outId}', { source: 'user', scrollTo: true })" title="Click to jump to output dependent">\u2192 ${escapeHtml6(outNode ? outNode.label : outId)}</span>`;
       }).join(" ");
       linksEl.innerHTML = `
             <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
@@ -4558,9 +4736,11 @@
   function escapeHtml2(str) {
     return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  var __componentTreeOpRegistry = /* @__PURE__ */ new Map();
   function renderComponentTree(doc) {
     const container = document.getElementById("componentTreeContainer");
     if (!container) return;
+    __componentTreeOpRegistry.clear();
     if (!doc) {
       container.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">No document parsed.</div>`;
       return;
@@ -4582,7 +4762,94 @@
     }
     container.innerHTML = html;
   }
-  function buildTreeNodeHtml(op, depth) {
+  function getMinDimensions(op, parentOp) {
+    if (!op) return null;
+    const parentName = parentOp ? getOpName(parentOp) : "";
+    const isChildOfFitBox = parentName === "FitBoxLayout" || parentName.includes("FitBox");
+    if (!isChildOfFitBox) return null;
+    let minW = null;
+    let minH = null;
+    if (typeof op.getWidthInModifier === "function") {
+      const wm = op.getWidthInModifier();
+      if (wm && typeof wm.getMin === "function") {
+        const val = wm.getMin();
+        if (val !== void 0 && val !== null && !Number.isNaN(val) && val < 1e30) minW = val;
+      }
+    }
+    if (typeof op.getHeightInModifier === "function") {
+      const hm = op.getHeightInModifier();
+      if (hm && typeof hm.getMin === "function") {
+        const val = hm.getMin();
+        if (val !== void 0 && val !== null && !Number.isNaN(val) && val < 1e30) minH = val;
+      }
+    }
+    const children = getEffectiveChildren(op) || [];
+    for (const child of children) {
+      if (isModifierOp(child)) {
+        const modName = getOpName(child);
+        if (minW === null && (modName.includes("WidthIn") || modName.includes("SizeIn"))) {
+          const val = child.mMin ?? child.mMinDimensionValue ?? (typeof child.getMin === "function" ? child.getMin() : null);
+          if (val !== void 0 && val !== null && !Number.isNaN(val) && val < 1e30) minW = val;
+        }
+        if (minH === null && (modName.includes("HeightIn") || modName.includes("SizeIn"))) {
+          const val = child.mMin ?? child.mMinDimensionValue ?? (typeof child.getMin === "function" ? child.getMin() : null);
+          if (val !== void 0 && val !== null && !Number.isNaN(val) && val < 1e30) minH = val;
+        }
+      }
+    }
+    if (minW === null && minH === null) return null;
+    return {
+      minW: minW ?? 0,
+      minH: minH ?? 0
+    };
+  }
+  function getVisibilityInfo(op, parentVisInfo = null) {
+    if (!op) return { status: "VISIBLE", icon: "\u{1F441}\uFE0F", title: "Visibility: VISIBLE", className: "vis-visible" };
+    const rawVis = typeof op.getVisibility === "function" ? op.getVisibility() : op.mVisibility ?? null;
+    let isSelfGone = false;
+    let isSelfInvisible = false;
+    let isSelfVisible = false;
+    if (rawVis !== null && rawVis !== void 0) {
+      if (typeof op.isGone === "function") {
+        isSelfGone = op.isGone();
+      } else if (rawVis >> 4 > 0) {
+        isSelfGone = (rawVis & 16) === 16;
+        isSelfVisible = (rawVis & 32) === 32;
+        isSelfInvisible = (rawVis & 64) === 64;
+      } else if (rawVis === 17 || rawVis === 16 || rawVis === 0 || rawVis === 8) {
+        isSelfGone = true;
+      } else if (rawVis === 2 || rawVis === 4) {
+        isSelfInvisible = true;
+      } else if (rawVis === 1 || rawVis === 33 || rawVis === 32) {
+        isSelfVisible = true;
+      }
+    }
+    const parentIsGone = parentVisInfo && parentVisInfo.status === "GONE";
+    const parentIsInvisible = parentVisInfo && parentVisInfo.status === "INVISIBLE";
+    if (isSelfGone || parentIsGone) {
+      return {
+        status: "GONE",
+        icon: "\u{1F6AB}",
+        title: isSelfGone ? "Visibility: GONE (hidden & removed from layout)" : "Visibility: GONE (inherited from parent)",
+        className: "vis-gone"
+      };
+    } else if (isSelfInvisible || parentIsInvisible) {
+      return {
+        status: "INVISIBLE",
+        icon: "\u{1F648}",
+        title: isSelfInvisible ? "Visibility: INVISIBLE (hidden, takes layout space)" : "Visibility: INVISIBLE (inherited from parent)",
+        className: "vis-invisible"
+      };
+    } else {
+      return {
+        status: "VISIBLE",
+        icon: "\u{1F441}\uFE0F",
+        title: "Visibility: VISIBLE",
+        className: "vis-visible"
+      };
+    }
+  }
+  function buildTreeNodeHtml(op, depth, parentOp = null) {
     const name = getOpName(op);
     const id = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
     const width = typeof op.getWidth === "function" ? op.getWidth() : op.mWidth ?? null;
@@ -4591,6 +4858,11 @@
     const formattedH = formatDimensionNumber(height);
     const currentDocument2 = window.currentDocument;
     const textContent = op.mText || (op.mTextId && currentDocument2?.getText ? currentDocument2.getText(op.mTextId) : null);
+    const minDims = getMinDimensions(op, parentOp);
+    const formattedMinW = minDims ? formatDimensionNumber(minDims.minW) : "";
+    const formattedMinH = minDims ? formatDimensionNumber(minDims.minH) : "";
+    const parentVisInfo = parentOp ? getVisibilityInfo(parentOp) : null;
+    const visInfo = getVisibilityInfo(op, parentVisInfo);
     const children = getEffectiveChildren(op);
     const childComponents = [];
     const modifiers = [];
@@ -4605,30 +4877,36 @@
       }
     });
     const hasSubContent = childComponents.length > 0 || drawOps.length > 0;
+    const isCanvasOnlyDraw = (name.includes("Canvas") || name === "CanvasLayout") && childComponents.length === 0 && drawOps.length > 0;
+    const startCollapsed = isCanvasOnlyDraw;
     const nodeId = `treeNode-${Math.random().toString(36).substr(2, 9)}`;
+    __componentTreeOpRegistry.set(nodeId, op);
     let html = `
-        <div class="tree-node" style="margin-left: ${depth * 12}px;">
-            <div class="tree-node-content" onclick="selectTreeNode('${nodeId}', ${id})">
-                ${hasSubContent ? `<span class="caret caret-down" onclick="toggleTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:12px;"></span>'}
+        <div class="tree-node ${depth === 0 ? "tree-node-root" : ""}">
+            <div class="tree-node-content" data-node-id="${nodeId}" onclick="selectTreeNode('${nodeId}', ${id})">
+                ${hasSubContent ? `<span class="caret ${startCollapsed ? "" : "caret-down"}" onclick="toggleTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:10px;"></span>'}
+                <span id="ctVis-${nodeId}" class="tree-vis-icon ${visInfo.className}" title="${visInfo.title}">${visInfo.icon}</span>
                 <span class="tree-icon">${getComponentIcon(name)}</span>
                 <span class="tree-tag">${name}</span>
                 ${id !== null && id !== void 0 ? `<span class="tree-id">ID:${id}</span>` : ""}
-                ${formattedW !== "" && formattedH !== "" ? `<span class="tree-dim">(${formattedW}x${formattedH})</span>` : ""}
+                <span id="ctDim-${nodeId}" class="tree-dim" style="${formattedW !== "" && formattedH !== "" ? "" : "display:none;"}" title="Layout Dimensions: ${formattedW}x${formattedH}">(${formattedW}x${formattedH})</span>
+                ${minDims ? `<span class="badge" style="font-size:0.68rem; font-family:var(--code-font); background:rgba(245,158,11,0.14); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.35); font-weight:600; padding:1px 5px;" title="FitBoxLayout Constraints: min width = ${formattedMinW}dp, min height = ${formattedMinH}dp">min: ${formattedMinW}\xD7${formattedMinH}</span>` : ""}
                 ${textContent ? `<span style="color:var(--accent-amber); font-style:italic;">"${escapeHtml2(textContent)}"</span>` : ""}
+                ${isCanvasOnlyDraw ? `<span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.12); color:var(--accent-blue);">${drawOps.length} draw ops</span>` : ""}
                 ${modifiers.length > 0 ? `<span class="tree-modifier-badge" onclick="toggleModifiers(event, '${nodeId}')" title="Click to show/hide ${modifiers.length} modifiers">\u{1F3A8} ${modifiers.length} <span class="caret caret-modifiers-${nodeId}">\u25B6</span></span>` : ""}
             </div>
     `;
     if (modifiers.length > 0) {
       html += `
-            <div id="${nodeId}-modifiers" class="nested-collapsed" style="margin-left: 24px; border-left: 1px dashed rgba(244, 63, 94, 0.4); padding-left: 8px; margin-top: 2px; margin-bottom: 4px;">
+            <div id="${nodeId}-modifiers" class="nested-collapsed" style="margin-left: 8px; border-left: 1px dashed rgba(168, 85, 247, 0.4); padding-left: 6px; margin-top: 2px; margin-bottom: 3px;">
         `;
       modifiers.forEach((mod) => {
         const modName = getOpName(mod).replace("ModifierOperation", "").replace("Modifier", "");
         const modDesc = typeof mod.deepToString === "function" ? mod.deepToString("") : "";
         html += `
                 <div class="tree-modifier">
-                    <span style="color:var(--accent-rose);">\u{1F3A8}</span>
-                    <strong style="color:var(--accent-rose);">${modName}:</strong>
+                    <span style="color:var(--accent-purple);">\u{1F3A8}</span>
+                    <strong style="color:var(--accent-purple);">${modName}:</strong>
                     <span style="font-family:var(--code-font); font-size:0.75rem;">${escapeHtml2(modDesc)}</span>
                 </div>
             `;
@@ -4636,10 +4914,10 @@
       html += `</div>`;
     }
     html += `
-        <div id="${nodeId}-children">
+        <div id="${nodeId}-children" class="${startCollapsed ? "nested-collapsed" : ""}">
     `;
     childComponents.forEach((child) => {
-      html += buildTreeNodeHtml(child, depth + 1);
+      html += buildTreeNodeHtml(child, depth + 1, op);
     });
     drawOps.forEach((dOp) => {
       const dName = getOpName(dOp);
@@ -4709,12 +4987,12 @@
   }
   function selectTreeNode(nodeId, opId) {
     document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
-    const node = event?.currentTarget;
+    const node = event?.currentTarget || (nodeId ? document.querySelector(`.tree-node-content[onclick*="${nodeId}"]`) : null);
     if (node) node.classList.add("selected");
     const currentParsedOps2 = window.currentParsedOps;
     const currentBuffer2 = window.currentBuffer;
-    if (opId !== void 0 && currentParsedOps2) {
-      const targetIdx = currentParsedOps2.findIndex((op) => (typeof op.getId === "function" ? op.getId() : op.mId) === opId);
+    if (opId !== void 0 && opId !== null && currentParsedOps2) {
+      const targetIdx = currentParsedOps2.findIndex((op2) => (typeof op2.getId === "function" ? op2.getId() : op2.mId) === opId);
       if (targetIdx >= 0) {
         const u8 = currentBuffer2 ? new Uint8Array(currentBuffer2) : null;
         renderCommandsList(currentParsedOps2, u8);
@@ -4722,6 +5000,10 @@
         const cmdCard = document.getElementById(`cmdCard-${targetIdx}`);
         if (cmdCard) cmdCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
+    }
+    const op = __componentTreeOpRegistry.get(nodeId);
+    if (typeof window !== "undefined" && typeof window.selectLayoutComponent === "function") {
+      window.selectLayoutComponent(op || opId);
     }
   }
   function renderRunningOperationsTree(doc) {
@@ -4750,7 +5032,7 @@
     if (badge) badge.textContent = `${__rtOpRegistry.size} Running Ops`;
     filterRunningTree();
   }
-  function buildRunningTreeNodeHtml(op, depth, path) {
+  function buildRunningTreeNodeHtml(op, depth, path, parentOp = null) {
     if (!op) return "";
     const nodeId = `rtNode-${path}`;
     __rtOpRegistry.set(nodeId, op);
@@ -4766,21 +5048,13 @@
     const h = typeof op.getHeight === "function" ? op.getHeight() : op.mHeight ?? 0;
     const formattedW = formatDimensionNumber(w);
     const formattedH = formatDimensionNumber(h);
-    const rawVis = typeof op.getVisibility === "function" ? op.getVisibility() : op.mVisibility ?? null;
-    let visStr = "";
-    let visClass = "";
-    if (rawVis !== null) {
-      if (rawVis === 0) {
-        visStr = "VISIBLE";
-        visClass = "color:var(--accent-emerald);";
-      } else if (rawVis === 4) {
-        visStr = "INVISIBLE";
-        visClass = "color:var(--accent-amber);";
-      } else if (rawVis === 8) {
-        visStr = "GONE";
-        visClass = "color:var(--text-muted);";
-      }
-    }
+    const minDims = getMinDimensions(op, parentOp);
+    const formattedMinW = minDims ? formatDimensionNumber(minDims.minW) : "";
+    const formattedMinH = minDims ? formatDimensionNumber(minDims.minH) : "";
+    const parentVisInfo = parentOp ? getVisibilityInfo(parentOp) : null;
+    const visInfo = getVisibilityInfo(op, parentVisInfo);
+    const visStr = visInfo.status;
+    const visClass = visInfo.status === "VISIBLE" ? "color:var(--accent-emerald);" : visInfo.status === "INVISIBLE" ? "color:var(--accent-amber);" : "color:var(--text-muted);";
     const subOps = getRunningNodeChildren(op);
     const hasChildren = subOps.length > 0;
     let valBadge = "";
@@ -4834,10 +5108,13 @@
     const icon = getRunningOpIcon(opName, opCode);
     const stepTargetOp2 = window.stepTargetOp;
     const isTarget = stepTargetOp2 === op;
+    const isCanvasOnlyDraw = (opName.includes("Canvas") || opName === "CanvasLayout") && subOps.every((c) => !isContainerOp(c)) && subOps.length > 0;
+    const startCollapsed = isCanvasOnlyDraw;
     let html = `
-        <div class="tree-node running-tree-node" style="margin-left:${depth > 0 ? 12 : 0}px;" data-opname="${escapeHtml2(opName.toLowerCase())}" data-opid="${opId ?? ""}" data-cid="${cid ?? ""}">
+        <div class="tree-node running-tree-node ${depth === 0 ? "tree-node-root" : ""}" data-opname="${escapeHtml2(opName.toLowerCase())}" data-opid="${opId ?? ""}" data-cid="${cid ?? ""}">
             <div class="tree-node-content running-node-content ${isTarget ? "selected step-active" : ""}" onclick="selectRunningTreeNode('${nodeId}')" title="Click to draw frame up to ${opName}">
-                ${hasChildren ? `<span class="caret caret-down" onclick="toggleRunningTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:12px; display:inline-block;"></span>'}
+                ${hasChildren ? `<span class="caret ${startCollapsed ? "" : "caret-down"}" onclick="toggleRunningTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:10px; display:inline-block;"></span>'}
+                <span id="rtVisIcon-${nodeId}" class="tree-vis-icon ${visInfo.className}" title="${visInfo.title}">${visInfo.icon}</span>
                 <span class="tree-icon">${icon}</span>
                 <strong class="tree-tag" style="color:var(--text-primary); font-size:0.82rem;">${escapeHtml2(opName)}</strong>
                 ${opCode !== null ? `<span class="op-badge" style="font-size:0.65rem; padding:1px 4px;">#${opCode}</span>` : ""}
@@ -4849,6 +5126,7 @@
       return `<span class="badge" style="font-size:0.65rem; background:rgba(234,179,8,0.15); color:var(--accent-amber);">Var#${indexId} = ${from}..${until} (+${step})</span>`;
     })() : ""}
                 <span id="rtDim-${nodeId}" class="tree-dim" style="color:var(--accent-emerald); ${hasLayout && formattedW && formattedH ? "" : "display:none;"}" title="Evaluated Layout Bounds: x:${x}, y:${y}, w:${w}, h:${h}">(${formattedW}\xD7${formattedH})</span>
+                ${minDims ? `<span class="badge" style="font-size:0.65rem; font-family:var(--code-font); background:rgba(245,158,11,0.14); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.35); font-weight:600; padding:1px 4px;" title="FitBoxLayout Constraints: min width = ${formattedMinW}dp, min height = ${formattedMinH}dp">min: ${formattedMinW}\xD7${formattedMinH}</span>` : ""}
                 <span id="rtVis-${nodeId}" style="font-size:0.68rem; font-weight:600; ${visClass}; ${visStr ? "" : "display:none;"}">[${visStr}]</span>
                 <span id="rtVal-${nodeId}" class="rt-val-container">${valBadge}</span>
                 ${textContent ? `<span style="color:var(--accent-amber); font-style:italic; font-size:0.75rem;">"${escapeHtml2(textContent)}"</span>` : ""}
@@ -4856,19 +5134,58 @@
             </div>
     `;
     if (desc && desc !== opName && !desc.startsWith(opName)) {
-      html += `<div style="font-family:var(--code-font); font-size:0.72rem; color:var(--text-muted); margin-left:24px; margin-bottom:4px; padding:2px 6px; background:rgba(0,0,0,0.15); border-radius:3px; word-break:break-all;">${escapeHtml2(desc)}</div>`;
+      html += `<div style="font-family:var(--code-font); font-size:0.72rem; color:var(--text-muted); margin-left:10px; margin-bottom:4px; padding:2px 6px; background:rgba(0,0,0,0.15); border-radius:3px; word-break:break-all;">${escapeHtml2(desc)}</div>`;
     }
     if (hasChildren) {
-      html += `<div id="${nodeId}-children">`;
+      html += `<div id="${nodeId}-children" class="${startCollapsed ? "nested-collapsed" : ""}">`;
       subOps.forEach((child, cIdx) => {
-        html += buildRunningTreeNodeHtml(child, depth + 1, `${path}-${cIdx}`);
+        html += buildRunningTreeNodeHtml(child, depth + 1, `${path}-${cIdx}`, op);
       });
       html += `</div>`;
     }
     html += `</div>`;
     return html;
   }
+  function updateComponentTreeLive() {
+    const pane3 = typeof document !== "undefined" ? document.getElementById("pane3") : null;
+    if (!pane3 || pane3.classList.contains("hidden-panel") || !__componentTreeOpRegistry) return;
+    for (const [nodeId, op] of __componentTreeOpRegistry.entries()) {
+      if (!op) continue;
+      const dimEl = document.getElementById(`ctDim-${nodeId}`);
+      if (dimEl) {
+        const w = typeof op.getWidth === "function" ? op.getWidth() : op.mWidth ?? null;
+        const h = typeof op.getHeight === "function" ? op.getHeight() : op.mHeight ?? null;
+        const formattedW = formatDimensionNumber(w);
+        const formattedH = formatDimensionNumber(h);
+        if (formattedW !== "" && formattedH !== "") {
+          const text = `(${formattedW}x${formattedH})`;
+          if (dimEl.textContent !== text) {
+            dimEl.textContent = text;
+            dimEl.title = `Layout Dimensions: ${formattedW}x${formattedH}`;
+          }
+          if (dimEl.style.display === "none") {
+            dimEl.style.display = "";
+          }
+        } else if (dimEl.style.display !== "none") {
+          dimEl.style.display = "none";
+        }
+      }
+      const visEl = document.getElementById(`ctVis-${nodeId}`);
+      if (visEl) {
+        const visInfo = getVisibilityInfo(op);
+        if (visEl.textContent !== visInfo.icon) {
+          visEl.textContent = visInfo.icon;
+          visEl.title = visInfo.title;
+          visEl.className = `tree-vis-icon ${visInfo.className}`;
+        }
+      }
+    }
+    if (typeof window !== "undefined" && typeof window.drawLayoutBoundsOverlay === "function") {
+      window.drawLayoutBoundsOverlay();
+    }
+  }
   function updateRunningTreeLive() {
+    updateComponentTreeLive();
     const pane7 = document.getElementById("pane7");
     if (!pane7 || pane7.classList.contains("hidden-panel") || !__rtOpRegistry) return;
     const currentPlayer2 = window.currentPlayer;
@@ -4891,30 +5208,22 @@
           dimEl.style.display = "none";
         }
       }
+      const visInfo = getVisibilityInfo(op);
+      const visIconEl = document.getElementById(`rtVisIcon-${nodeId}`);
+      if (visIconEl) {
+        if (visIconEl.textContent !== visInfo.icon) {
+          visIconEl.textContent = visInfo.icon;
+          visIconEl.title = visInfo.title;
+          visIconEl.className = `tree-vis-icon ${visInfo.className}`;
+        }
+      }
       const visEl = document.getElementById(`rtVis-${nodeId}`);
       if (visEl) {
-        const rawVis = typeof op.getVisibility === "function" ? op.getVisibility() : op.mVisibility ?? null;
-        if (rawVis !== null) {
-          let visStr = "";
-          let visColor = "";
-          if (rawVis === 0) {
-            visStr = "VISIBLE";
-            visColor = "var(--accent-emerald)";
-          } else if (rawVis === 4) {
-            visStr = "INVISIBLE";
-            visColor = "var(--accent-amber)";
-          } else if (rawVis === 8) {
-            visStr = "GONE";
-            visColor = "var(--text-muted)";
-          }
-          if (visStr) {
-            visEl.textContent = `[${visStr}]`;
-            visEl.style.color = visColor;
-            visEl.style.display = "";
-          } else {
-            visEl.style.display = "none";
-          }
-        }
+        const visStr = visInfo.status;
+        const visColor = visInfo.status === "VISIBLE" ? "var(--accent-emerald)" : visInfo.status === "INVISIBLE" ? "var(--accent-amber)" : "var(--text-muted)";
+        visEl.textContent = `[${visStr}]`;
+        visEl.style.color = visColor;
+        visEl.style.display = "";
       }
       const valEl = document.getElementById(`rtVal-${nodeId}`);
       if (valEl) {
@@ -5015,6 +5324,9 @@
         if (cmdCard) cmdCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
+    if (typeof window !== "undefined" && typeof window.selectLayoutComponent === "function") {
+      window.selectLayoutComponent(op || opId);
+    }
   }
   function onRunningTreeSearchInput() {
     const input = document.getElementById("runningTreeSearchInput");
@@ -5065,6 +5377,7 @@
     });
   }
   window.__rtOpRegistry = __rtOpRegistry;
+  window.__componentTreeOpRegistry = __componentTreeOpRegistry;
   window.renderComponentTree = renderComponentTree;
   window.buildTreeNodeHtml = buildTreeNodeHtml;
   window.getComponentIcon = getComponentIcon;
@@ -5074,7 +5387,9 @@
   window.selectTreeNode = selectTreeNode;
   window.renderRunningOperationsTree = renderRunningOperationsTree;
   window.buildRunningTreeNodeHtml = buildRunningTreeNodeHtml;
+  window.updateComponentTreeLive = updateComponentTreeLive;
   window.updateRunningTreeLive = updateRunningTreeLive;
+  window.getVisibilityInfo = getVisibilityInfo;
   window.getRunningOpIcon = getRunningOpIcon;
   window.toggleRunningTreeNode = toggleRunningTreeNode;
   window.expandAllRunningTree = expandAllRunningTree;
@@ -6685,7 +7000,7 @@
   function renderReferencingOpsHtml(opId) {
     const currentDocument2 = window.currentDocument;
     const currentParsedOps2 = window.currentParsedOps;
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     if (opId === null || opId === void 0 || !currentDocument2 && (!currentParsedOps2 || currentParsedOps2.length === 0)) return "";
     const usageInfo = getVariableUsageInfo(currentDocument2, currentParsedOps2);
     const refOps = usageInfo.refMap.get(opId) || [];
@@ -6696,7 +7011,7 @@
     if (isUnusedIsland) {
       const listHtml2 = refOps.map((ref) => `
             <span onclick="event.stopPropagation(); ${ref.idx >= 0 ? `toggleCommandExpand(${ref.idx}, ${ref.opId}); const el = document.getElementById('cmdCard-${ref.idx}'); if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});` : ""}" style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:rgba(249,115,22,0.18); border:1px solid rgba(249,115,22,0.45); border-radius:4px; color:#f97316; font-size:0.72rem; font-family:var(--code-font); cursor:pointer; margin:2px;" title="${ref.idx >= 0 ? `Click to scroll to operation #${ref.idx + 1}` : ""}">
-                ${ref.idx >= 0 ? `#${ref.idx + 1}` : "\u26A1"} <strong>${escapeHtml5(ref.opName)}</strong> ${ref.opId !== null && ref.idx >= 0 ? `[ID: ${ref.opId}]` : ""}
+                ${ref.idx >= 0 ? `#${ref.idx + 1}` : "\u26A1"} <strong>${escapeHtml6(ref.opName)}</strong> ${ref.opId !== null && ref.idx >= 0 ? `[ID: ${ref.opId}]` : ""}
             </span>
         `).join("");
       return `
@@ -6708,7 +7023,7 @@
     }
     const listHtml = refOps.map((ref) => `
         <span onclick="event.stopPropagation(); ${ref.idx >= 0 ? `toggleCommandExpand(${ref.idx}, ${ref.opId}); const el = document.getElementById('cmdCard-${ref.idx}'); if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});` : ""}" style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.35); border-radius:4px; color:var(--accent-blue); font-size:0.72rem; font-family:var(--code-font); cursor:pointer; margin:2px; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.3)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'" title="${ref.idx >= 0 ? `Click to scroll to operation #${ref.idx + 1}` : "Active State Listener / Event Binding"}">
-            ${ref.idx >= 0 ? `#${ref.idx + 1}` : "\u26A1"} <strong>${escapeHtml5(ref.opName)}</strong> ${ref.opId !== null && ref.idx >= 0 ? `[ID: ${ref.opId}]` : ""}
+            ${ref.idx >= 0 ? `#${ref.idx + 1}` : "\u26A1"} <strong>${escapeHtml6(ref.opName)}</strong> ${ref.opId !== null && ref.idx >= 0 ? `[ID: ${ref.opId}]` : ""}
         </span>
     `).join("");
     return `
@@ -7336,7 +7651,7 @@
     const container = document.getElementById("commandsListContainer");
     const unusedBadge = document.getElementById("unusedVarBadge");
     const currentDocument2 = window.currentDocument;
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => String(s));
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => String(s));
     if (!ops || ops.length === 0) {
       container.innerHTML = `<div style="text-align:center; padding:32px; color:var(--text-muted);">No operations found.</div>`;
       if (unusedBadge) unusedBadge.style.display = "none";
@@ -7489,14 +7804,14 @@
                         <div class="cmd-compact-left">
                             <span onclick="event.stopPropagation(); toggleCommandExpand(${idx}, ${opId})" style="font-size:0.65rem; color:var(--text-muted); cursor:pointer; width:12px; display:inline-block; user-select:none;" title="Click to toggle details">${isExpanded ? "\u25BC" : "\u25B6"}</span>
                             <span class="cmd-idx">#${idx + 1}</span>
-                            ${itemDepth > 0 ? `<span class="cmd-indent-guide">${escapeHtml5(indentPrefix)}</span>` : ""}
+                            ${itemDepth > 0 ? `<span class="cmd-indent-guide">${escapeHtml6(indentPrefix)}</span>` : ""}
                             <span class="op-badge" style="${opCode === 214 ? "background:rgba(251,251,251,0.06); color:var(--text-muted);" : ""}">${hexCode}</span>
                             <span class="op-name" style="${opCode === 214 ? "color:var(--text-muted); font-style:italic;" : ""}">${opName}</span>
                             ${opId !== void 0 && opId !== null && opCode !== 214 ? `<span style="font-size:0.72rem; color:var(--accent-emerald);">[ID: ${opId}]</span>` : ""}
                             ${opCode === 101 || opName === "BitmapData" ? `<span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:0.68rem;">\u{1F5BC}\uFE0F ${op.mWidth ?? op.width ?? "?"}\xD7${op.mHeight ?? op.height ?? "?"} px</span>` : ""}
                             ${([44, 48, 49, 66, 149, 190].includes(opCode) || opName.includes("Bitmap") && opCode !== 101) && (op.mImageId !== void 0 || op.imageId !== void 0 || op.mBitmapId !== void 0) ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.68rem;">\u{1F5BC}\uFE0F Bmp #${op.mImageId ?? op.imageId ?? op.mBitmapId}</span>` : ""}
                             ${exprPrettyStr ? `<span style="font-size:0.75rem; color:var(--accent-blue); font-family:var(--code-font); font-weight:500; display:inline-flex; align-items:center; gap:4px;">= ${exprPrettyStr}</span>` : ""}
-                            ${textSnippet ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml5(textSnippet)}"</span>` : ""}
+                            ${textSnippet ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml6(textSnippet)}"</span>` : ""}
                             ${unusedBadgeHtml}
                         </div>
                         <span class="op-offset">Off ${startOff}\u2013${endOff} (${sizeB} B)</span>
@@ -7507,7 +7822,7 @@
                                 <div style="font-weight:600; font-size:0.8rem; color:${isIslandUnused ? "#f97316" : "var(--accent-blue)"};">\u{1F50D} Detailed View (${opName} #${idx + 1})</div>
                                 <span class="op-offset" style="font-size:0.72rem; color:var(--text-secondary);">Binary Offset: ${startOff}\u2013${endOff} (${sizeB} Bytes)</span>
                             </div>
-                            ${desc ? `<div class="op-detail" style="font-family:var(--code-font); font-size:0.8rem; color:var(--text-primary); margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px 8px; border-radius:4px; white-space:pre-wrap; word-break:break-word;">${escapeHtml5(desc)}</div>` : ""}
+                            ${desc ? `<div class="op-detail" style="font-family:var(--code-font); font-size:0.8rem; color:var(--text-primary); margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px 8px; border-radius:4px; white-space:pre-wrap; word-break:break-word;">${escapeHtml6(desc)}</div>` : ""}
                             ${opCode === 101 || opName === "BitmapData" ? renderBitmapDataPreviewHtml(op, idx) : ""}
                             ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
                             ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
@@ -7543,7 +7858,7 @@
                         </div>
                         <span class="op-offset">Off ${startOff}\u2013${endOff} (${sizeB} B)</span>
                     </div>
-                    ${desc ? `<div class="op-detail">${escapeHtml5(desc)}</div>` : ""}
+                    ${desc ? `<div class="op-detail">${escapeHtml6(desc)}</div>` : ""}
                     ${opCode === 101 || opName === "BitmapData" ? renderBitmapDataPreviewHtml(op, idx) : ""}
                     ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
                     ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
@@ -9218,6 +9533,707 @@ Click to inspect in Command List</title>
     window.resetStatsUI = resetStatsUI;
   }
 
+  // src/panels/LayoutInspectorPanel.js
+  var selectedComponentKey = null;
+  var showLayoutBoundsOverlay = false;
+  var cachedLayoutComponents = [];
+  function getSelectedComponentKey() {
+    return selectedComponentKey;
+  }
+  function getShowLayoutBoundsOverlay() {
+    return showLayoutBoundsOverlay;
+  }
+  function getCachedLayoutComponents() {
+    return cachedLayoutComponents;
+  }
+  function escapeHtml5(str) {
+    return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function getSafeFloat(val, fallback = 0) {
+    if (typeof val !== "number" || Number.isNaN(val) || !isFinite(val)) return fallback;
+    if (val > 5e4 || val < -5e4) return fallback;
+    return val;
+  }
+  function getComponentPadding(op) {
+    if (!op) return { left: 0, top: 0, right: 0, bottom: 0 };
+    let pl = getSafeFloat(typeof op.getPaddingLeft === "function" ? op.getPaddingLeft() : op.mPaddingLeft);
+    let pt = getSafeFloat(typeof op.getPaddingTop === "function" ? op.getPaddingTop() : op.mPaddingTop);
+    let pr = getSafeFloat(typeof op.getPaddingRight === "function" ? op.getPaddingRight() : op.mPaddingRight);
+    let pb = getSafeFloat(typeof op.getPaddingBottom === "function" ? op.getPaddingBottom() : op.mPaddingBottom);
+    const rawChildren = getEffectiveChildren(op) || [];
+    rawChildren.forEach((child) => {
+      if (isModifierOp(child)) {
+        const modName = getOpName(child);
+        if (modName.includes("Padding")) {
+          const l = getSafeFloat(typeof child.getLeft === "function" ? child.getLeft() : child.mLeftValue ?? child.mLeft);
+          const t = getSafeFloat(typeof child.getTop === "function" ? child.getTop() : child.mTopValue ?? child.mTop);
+          const r = getSafeFloat(typeof child.getRight === "function" ? child.getRight() : child.mRightValue ?? child.mRight);
+          const b = getSafeFloat(typeof child.getBottom === "function" ? child.getBottom() : child.mBottomValue ?? child.mBottom);
+          pl = Math.max(pl, l);
+          pt = Math.max(pt, t);
+          pr = Math.max(pr, r);
+          pb = Math.max(pb, b);
+        }
+      }
+    });
+    return { left: pl, top: pt, right: pr, bottom: pb };
+  }
+  function getComponentGlobalPosition(op) {
+    let gx = 0, gy = 0;
+    let curr = op;
+    while (curr) {
+      const x = getSafeFloat(typeof curr.getX === "function" ? curr.getX() : curr.mX);
+      const y = getSafeFloat(typeof curr.getY === "function" ? curr.getY() : curr.mY);
+      gx += x;
+      gy += y;
+      const parent = curr.mParent || (typeof curr.getParent === "function" ? curr.getParent() : null);
+      if (parent) {
+        const pad = getComponentPadding(parent);
+        const sx = getSafeFloat(typeof parent.getScrollX === "function" ? parent.getScrollX() : parent.mScrollX);
+        const sy = getSafeFloat(typeof parent.getScrollY === "function" ? parent.getScrollY() : parent.mScrollY);
+        gx += pad.left + sx;
+        gy += pad.top + sy;
+      }
+      curr = parent;
+    }
+    return { gx, gy };
+  }
+  function extractLayoutComponents(doc) {
+    const list = [];
+    if (!doc) return list;
+    const rootLayout = typeof doc.getRootLayoutComponent === "function" ? doc.getRootLayoutComponent() : doc.mRootLayoutComponent;
+    const topOps = (typeof doc.getOperations === "function" ? doc.getOperations() : doc.mOperations) || [];
+    let counter = 0;
+    function walk(op, depth, parentKey = null, parentX = 0, parentY = 0) {
+      if (!op) return;
+      const name = getOpName(op);
+      if (name === "ContainerEnd" || name === "Mi" || op.OP_CODE === 214) return;
+      const isContainer = isContainerOp(op);
+      const hasLayoutProps = typeof op.getWidth === "function" || op.mWidth !== void 0 || isContainer;
+      if (hasLayoutProps || isContainer) {
+        const key = `comp_${++counter}`;
+        const id = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
+        const cid = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
+        const localX = getSafeFloat(typeof op.getX === "function" ? op.getX() : op.mX);
+        const localY = getSafeFloat(typeof op.getY === "function" ? op.getY() : op.mY);
+        const width = getSafeFloat(typeof op.getWidth === "function" ? op.getWidth() : op.mWidth);
+        const height = getSafeFloat(typeof op.getHeight === "function" ? op.getHeight() : op.mHeight);
+        const rawChildren = getEffectiveChildren(op) || [];
+        const modifiers = [];
+        const childComponents = [];
+        const drawOps = [];
+        const padding = getComponentPadding(op);
+        let paddingLeft = padding.left;
+        let paddingTop = padding.top;
+        let paddingRight = padding.right;
+        let paddingBottom = padding.bottom;
+        let marginLeft = getSafeFloat(op.mMarginLeft);
+        let marginTop = getSafeFloat(op.mMarginTop);
+        let marginRight = getSafeFloat(op.mMarginRight);
+        let marginBottom = getSafeFloat(op.mMarginBottom);
+        let borderWidth = getSafeFloat(op.mBorderWidth);
+        let borderColor = op.mBorderColor ?? null;
+        let cornerRadius = getSafeFloat(op.mCornerRadius);
+        let isClickable = false;
+        let isScrollable = false;
+        let alignment = op.mAlignment || op.mHorizontalAlignment || op.mVerticalAlignment || null;
+        rawChildren.forEach((child) => {
+          if (isModifierOp(child)) {
+            const modName = getOpName(child);
+            const modDesc = typeof child.deepToString === "function" ? child.deepToString("") : "";
+            modifiers.push({ op: child, name: modName, desc: modDesc });
+            if (modName.includes("Margin")) {
+              const l = getSafeFloat(typeof child.getLeft === "function" ? child.getLeft() : child.mLeftValue ?? child.mLeft ?? child.mMarginLeft);
+              const t = getSafeFloat(typeof child.getTop === "function" ? child.getTop() : child.mTopValue ?? child.mTop ?? child.mMarginTop);
+              const r = getSafeFloat(typeof child.getRight === "function" ? child.getRight() : child.mRightValue ?? child.mRight ?? child.mMarginRight);
+              const b = getSafeFloat(typeof child.getBottom === "function" ? child.getBottom() : child.mBottomValue ?? child.mBottom ?? child.mMarginBottom);
+              marginLeft = Math.max(marginLeft, l);
+              marginTop = Math.max(marginTop, t);
+              marginRight = Math.max(marginRight, r);
+              marginBottom = Math.max(marginBottom, b);
+            }
+            if (modName.includes("Border")) {
+              borderWidth = Math.max(borderWidth, getSafeFloat(child.mWidth ?? child.mBorderWidth ?? 1));
+              borderColor = child.mColor ?? child.mBorderColor ?? borderColor;
+              cornerRadius = Math.max(cornerRadius, getSafeFloat(child.mRadius ?? child.mCornerRadius));
+            }
+            if (modName.includes("Clip")) {
+              cornerRadius = Math.max(cornerRadius, getSafeFloat(child.mRadius ?? child.mCornerRadius));
+            }
+            if (modName.includes("Click") || modName.includes("Touch")) {
+              isClickable = true;
+            }
+            if (modName.includes("Scroll")) {
+              isScrollable = true;
+            }
+          } else if (isContainerOp(child)) {
+            childComponents.push(child);
+          } else {
+            drawOps.push(child);
+          }
+        });
+        const pos = getComponentGlobalPosition(op);
+        const globalX = op.mParent || typeof op.getParent === "function" ? pos.gx : parentX + localX;
+        const globalY = op.mParent || typeof op.getParent === "function" ? pos.gy : parentY + localY;
+        const text = op.mText || (op.mTextId && doc.getText ? doc.getText(op.mTextId) : null);
+        const imageId = op.mImageId ?? op.imageId ?? op.mBitmapId ?? null;
+        const compData = {
+          key,
+          op,
+          name,
+          id,
+          cid,
+          depth,
+          parentKey,
+          localX,
+          localY,
+          globalX,
+          globalY,
+          width,
+          height,
+          padding: { top: paddingTop, right: paddingRight, bottom: paddingBottom, left: paddingLeft },
+          margin: { top: marginTop, right: marginRight, bottom: marginBottom, left: marginLeft },
+          border: { width: borderWidth, color: borderColor, radius: cornerRadius },
+          isClickable,
+          isScrollable,
+          alignment,
+          modifiers,
+          childCount: childComponents.length,
+          drawOpCount: drawOps.length,
+          text,
+          imageId
+        };
+        list.push(compData);
+        childComponents.forEach((child) => {
+          walk(child, depth + 1, key, globalX + paddingLeft, globalY + paddingTop);
+        });
+      } else if (typeof op.getList === "function") {
+        const children = getEffectiveChildren(op);
+        children.forEach((c) => walk(c, depth, parentKey, parentX, parentY));
+      }
+    }
+    if (rootLayout) {
+      walk(rootLayout, 0, null, 0, 0);
+    } else {
+      topOps.forEach((op) => {
+        if (isContainerOp(op)) walk(op, 0, null, 0, 0);
+      });
+    }
+    return list;
+  }
+  function runLayoutDiagnostics(components) {
+    const issues = [];
+    if (!components || components.length === 0) return issues;
+    components.forEach((c) => {
+      if (c.width <= 0 || c.height <= 0) {
+        issues.push({
+          severity: "warning",
+          type: "zero_size",
+          compKey: c.key,
+          compName: c.name,
+          id: c.id,
+          title: `Zero Dimensions (${c.width}\xD7${c.height} dp)`,
+          message: `${c.name} #${c.id ?? c.key} has 0 width or height. It will not be visible on screen unless given fixed or wrap-content constraints.`
+        });
+      }
+      if (c.isClickable && (c.width < 48 || c.height < 48)) {
+        issues.push({
+          severity: "info",
+          type: "touch_target",
+          compKey: c.key,
+          compName: c.name,
+          id: c.id,
+          title: `Touch Target < 48dp (${Math.round(c.width)}\xD7${Math.round(c.height)} dp)`,
+          message: `Clickable element ${c.name} #${c.id ?? c.key} is smaller than the recommended 48\xD748dp minimum accessible touch target.`
+        });
+      }
+      if (c.depth > 8) {
+        issues.push({
+          severity: "warning",
+          type: "deep_nesting",
+          compKey: c.key,
+          compName: c.name,
+          id: c.id,
+          title: `Deep Nesting (Depth ${c.depth})`,
+          message: `${c.name} is nested ${c.depth} levels deep. Deep layout trees increase measure/layout pass overhead.`
+        });
+      }
+      if (c.childCount === 0 && c.drawOpCount === 0 && !c.text && !c.imageId) {
+        issues.push({
+          severity: "info",
+          type: "empty_container",
+          compKey: c.key,
+          compName: c.name,
+          id: c.id,
+          title: `Empty Container`,
+          message: `${c.name} #${c.id ?? c.key} contains no child components or drawing operations.`
+        });
+      }
+    });
+    return issues;
+  }
+  function renderBoxModelDiagram(comp, density = 1) {
+    if (!comp) {
+      return `
+            <div style="text-align:center; padding:32px 16px; color:var(--text-muted); font-size:0.85rem;">
+                Select a layout component above to inspect its box model.
+            </div>
+        `;
+    }
+    const m = comp.margin || { top: 0, right: 0, bottom: 0, left: 0 };
+    const p = comp.padding || { top: 0, right: 0, bottom: 0, left: 0 };
+    const b = comp.border || { width: 0, radius: 0 };
+    const wDp = Math.max(0, comp.width);
+    const hDp = Math.max(0, comp.height);
+    const contentWDp = Math.max(0, wDp - p.left - p.right);
+    const contentHDp = Math.max(0, hDp - p.top - p.bottom);
+    const wPx = Math.round(wDp * density);
+    const hPx = Math.round(hDp * density);
+    const contentWPx = Math.round(contentWDp * density);
+    const contentHPx = Math.round(contentHDp * density);
+    return `
+        <div class="box-model-container">
+            <!-- Margin Layer (Outer / Orange) -->
+            <div class="box-model-layer box-model-margin">
+                <div class="box-model-label">margin</div>
+                <div class="box-model-val-top">${formatDimensionNumber(m.top)}</div>
+                <div class="box-model-val-left">${formatDimensionNumber(m.left)}</div>
+                <div class="box-model-val-right">${formatDimensionNumber(m.right)}</div>
+                <div class="box-model-val-bottom">${formatDimensionNumber(m.bottom)}</div>
+
+                <!-- Border Layer (Amber) -->
+                <div class="box-model-layer box-model-border">
+                    <div class="box-model-label">border ${b.width > 0 ? `(${b.width}dp${b.radius > 0 ? `, r:${b.radius}` : ""})` : ""}</div>
+                    
+                    <!-- Padding Layer (Green) -->
+                    <div class="box-model-layer box-model-padding">
+                        <div class="box-model-label">padding</div>
+                        <div class="box-model-val-top">${formatDimensionNumber(p.top)}</div>
+                        <div class="box-model-val-left">${formatDimensionNumber(p.left)}</div>
+                        <div class="box-model-val-right">${formatDimensionNumber(p.right)}</div>
+                        <div class="box-model-val-bottom">${formatDimensionNumber(p.bottom)}</div>
+
+                        <!-- Content Layer (Sky Blue) -->
+                        <div class="box-model-layer box-model-content">
+                            <div style="font-weight:700; color:#38bdf8; font-size:0.85rem;">
+                                ${formatDimensionNumber(contentWDp)} \xD7 ${formatDimensionNumber(contentHDp)} <span style="font-size:0.7rem; opacity:0.8;">dp</span>
+                            </div>
+                            <div style="font-size:0.7rem; color:var(--text-muted);">
+                                (${contentWPx} \xD7 ${contentHPx} px)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; padding:6px 12px; background:rgba(0,0,0,0.2); border-radius:6px; font-size:0.75rem;">
+            <span style="color:var(--text-secondary);">Total Bounds:</span>
+            <span style="font-family:var(--code-font); font-weight:600; color:var(--text-primary);">
+                ${formatDimensionNumber(wDp)} \xD7 ${formatDimensionNumber(hDp)} dp <span style="color:var(--text-muted);">(${wPx}\xD7${hPx} px)</span>
+            </span>
+            <span style="color:var(--text-secondary);">Pos:</span>
+            <span style="font-family:var(--code-font); color:var(--accent-emerald);">
+                (${formatDimensionNumber(comp.localX)}, ${formatDimensionNumber(comp.localY)}) dp
+            </span>
+        </div>
+    `;
+  }
+  function renderModifierChain(comp) {
+    if (!comp || !comp.modifiers || comp.modifiers.length === 0) {
+      return `
+            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">
+                No modifiers attached to ${comp ? comp.name : "this component"}.
+            </div>
+        `;
+    }
+    let html = `
+        <div style="display:flex; flex-direction:column; gap:6px;">
+    `;
+    comp.modifiers.forEach((m, idx) => {
+      let icon = "\u{1F3A8}";
+      let badgeColor = "#94a3b8";
+      let role = "Visual";
+      if (m.name.includes("Padding") || m.name.includes("Margin")) {
+        icon = "\u{1F3F7}\uFE0F";
+        badgeColor = "#34d399";
+        role = "Spacing / Inset";
+      } else if (m.name.includes("Width") || m.name.includes("Height") || m.name.includes("Size") || m.name.includes("Dimension") || m.name.includes("Weight")) {
+        icon = "\u{1F4CF}";
+        badgeColor = "#38bdf8";
+        role = "Constraints";
+      } else if (m.name.includes("Clip") || m.name.includes("Border") || m.name.includes("Shape")) {
+        icon = "\u2702\uFE0F";
+        badgeColor = "#fbbf24";
+        role = "Clip / Geometry";
+      } else if (m.name.includes("Click") || m.name.includes("Touch") || m.name.includes("Ripple")) {
+        icon = "\u{1F446}";
+        badgeColor = "#f43f5e";
+        role = "Interaction";
+      } else if (m.name.includes("Scroll")) {
+        icon = "\u{1F4DC}";
+        badgeColor = "#c084fc";
+        role = "Scrollable";
+      }
+      html += `
+            <div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; font-size:0.75rem;">
+                <span style="font-weight:700; color:var(--text-muted); font-family:var(--code-font); min-width:20px;">#${idx + 1}</span>
+                <span style="font-size:0.9rem;">${icon}</span>
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                        <strong style="color:var(--text-primary);">${escapeHtml5(m.name)}</strong>
+                        <span class="badge" style="background:${badgeColor}20; color:${badgeColor}; font-size:0.65rem;">${role}</span>
+                    </div>
+                    ${m.desc ? `<div style="font-family:var(--code-font); font-size:0.7rem; color:var(--text-secondary); word-break:break-all;">${escapeHtml5(m.desc)}</div>` : ""}
+                </div>
+            </div>
+        `;
+    });
+    html += `</div>`;
+    return html;
+  }
+  function renderLayoutInspectorPanel(doc) {
+    const container = document.getElementById("layoutInspectorContainer");
+    if (!container) return;
+    if (!doc) {
+      container.innerHTML = `
+            <div style="text-align:center; padding:48px 16px; color:var(--text-muted);">
+                <div style="font-size:2rem; margin-bottom:8px;">\u{1F4D0}</div>
+                <div style="font-weight:600; font-size:0.95rem;">No Document Loaded</div>
+                <div style="font-size:0.8rem; margin-top:4px;">Open a .rc document to inspect component box models, modifier chains, and layout constraints.</div>
+            </div>
+        `;
+      return;
+    }
+    cachedLayoutComponents = extractLayoutComponents(doc);
+    const diagnostics = runLayoutDiagnostics(cachedLayoutComponents);
+    const density = currentDensity || 1;
+    if (!selectedComponentKey || !cachedLayoutComponents.find((c) => c.key === selectedComponentKey)) {
+      selectedComponentKey = cachedLayoutComponents.length > 0 ? cachedLayoutComponents[0].key : null;
+    }
+    const selectedComp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey) || null;
+    let html = `
+        <div style="display:flex; flex-direction:column; gap:12px; padding:12px;">
+            <!-- Top Controls: Selected Component Info & Overlay Toggle -->
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; background:rgba(0,0,0,0.25); padding:10px 12px; border-radius:8px; border:1px solid var(--border-color);">
+                <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
+                    <span style="font-size:1.3rem;">${selectedComp ? getComponentIcon(selectedComp.name) : "\u{1F4D0}"}</span>
+                    <div style="display:flex; flex-direction:column; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <strong style="color:var(--accent-blue); font-size:0.85rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
+                                ${selectedComp ? `${escapeHtml5(selectedComp.name)}` : "No Component Selected"}
+                            </strong>
+                            ${selectedComp && selectedComp.id !== null ? `
+                                <span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent-blue); font-size:0.65rem;">ID: ${selectedComp.id}</span>
+                            ` : ""}
+                        </div>
+                        <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--code-font);">
+                            ${selectedComp ? `${Math.round(selectedComp.width)}\xD7${Math.round(selectedComp.height)} dp \u2022 Depth ${selectedComp.depth}` : "Select an element in the Component Tree panel to inspect"}
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn btn-xs ${showLayoutBoundsOverlay ? "btn-primary" : "btn-secondary"}" onclick="toggleLayoutBoundsOverlay()" title="Toggle visual bounding boxes overlay on stage canvas">
+                        <span>${showLayoutBoundsOverlay ? "\u{1F532} Hide Bounds" : "\u{1F532} Show Bounds"}</span>
+                    </button>
+                    ${selectedComp && selectedComp.id !== null ? `
+                        <button class="btn btn-secondary btn-xs" onclick="jumpToCommandCard(${selectedComp.id})" title="Jump to command card">
+                            \u{1F4DC} Card
+                        </button>
+                    ` : ""}
+                </div>
+            </div>
+
+            <!-- Diagnostics Badge & Drawer (if any issues found) -->
+            ${diagnostics.length > 0 ? `
+                <div style="background:rgba(251,191,36,0.08); border:1px solid rgba(251,191,36,0.3); border-radius:6px; padding:8px 10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-weight:700; font-size:0.75rem; color:var(--accent-amber); display:flex; align-items:center; gap:4px;">
+                            \u26A0\uFE0F Layout Diagnostics (${diagnostics.length} issue${diagnostics.length > 1 ? "s" : ""})
+                        </span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:4px; max-height:100px; overflow-y:auto;">
+                        ${diagnostics.slice(0, 4).map((d) => `
+                            <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.72rem; background:rgba(0,0,0,0.2); padding:3px 6px; border-radius:4px;">
+                                <span style="color:var(--text-primary); text-overflow:ellipsis; overflow:hidden; white-space:nowrap; max-width:240px;" title="${escapeHtml5(d.message)}">
+                                    \u2022 <strong>${escapeHtml5(d.title)}</strong>
+                                </span>
+                                <button class="btn btn-secondary btn-xs" style="padding:0 4px; font-size:0.65rem;" onclick="selectLayoutComponent('${d.compKey}')">Inspect</button>
+                            </div>
+                        `).join("")}
+                    </div>
+                </div>
+            ` : ""}
+
+            <!-- Section 1: Visual Box Model Diagram -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F4E6}</span> Visual Box Model
+                </div>
+                ${renderBoxModelDiagram(selectedComp, density)}
+            </div>
+
+            <!-- Section 2: Step-by-Step Modifier Pipeline -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div style="font-weight:700; font-size:0.8rem; color:var(--accent-rose); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <span>\u{1F9F1}</span> Modifier Execution Chain (${selectedComp ? selectedComp.modifiers.length : 0})
+                    </span>
+                    <span style="font-size:0.7rem; color:var(--text-muted);">Outer \u2192 Inner</span>
+                </div>
+                ${renderModifierChain(selectedComp)}
+            </div>
+
+            <!-- Section 3: Live Layout Sandbox & Tweaker -->
+            <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
+                <div style="font-weight:700; font-size:0.8rem; color:var(--accent-emerald); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F39B}\uFE0F</span> Layout Sandbox & Tweaker
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.75rem;">
+                    <div>
+                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Width (dp)</label>
+                        <input id="tweakWidthInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? Math.round(selectedComp.width) : 100}" onchange="applyLayoutTweaks()" />
+                    </div>
+                    <div>
+                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Height (dp)</label>
+                        <input id="tweakHeightInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? Math.round(selectedComp.height) : 50}" onchange="applyLayoutTweaks()" />
+                    </div>
+                    <div>
+                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Padding (dp)</label>
+                        <input id="tweakPaddingInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? selectedComp.padding.top : 0}" onchange="applyLayoutTweaks()" />
+                    </div>
+                    <div>
+                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Corner Radius (dp)</label>
+                        <input id="tweakRadiusInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? selectedComp.border.radius : 0}" onchange="applyLayoutTweaks()" />
+                    </div>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:10px;">
+                    <button class="btn btn-secondary btn-xs" onclick="resetLayoutTweaks()">\u27F3 Reset</button>
+                    <button class="btn btn-xs" onclick="applyLayoutTweaks()">\u26A1 Apply Live</button>
+                </div>
+            </div>
+        </div>
+    `;
+    container.innerHTML = html;
+    drawLayoutBoundsOverlay();
+  }
+  function selectLayoutComponent(target) {
+    if (!target && target !== 0) return;
+    const win = typeof window !== "undefined" ? window : globalThis;
+    if (win.currentDocument) {
+      cachedLayoutComponents = extractLayoutComponents(win.currentDocument);
+    }
+    if (typeof target === "string" && target.startsWith("comp_")) {
+      selectedComponentKey = target;
+    } else if (typeof target === "number") {
+      let found = cachedLayoutComponents.find((c) => c.cid !== null && c.cid !== void 0 && c.cid === target);
+      if (!found && target !== 0) {
+        found = cachedLayoutComponents.find((c) => c.id !== null && c.id !== void 0 && c.id === target);
+      }
+      if (found) selectedComponentKey = found.key;
+    } else if (typeof target === "object" && target !== null) {
+      const targetId = typeof target.getId === "function" ? target.getId() : target.mId ?? null;
+      const targetCid = typeof target.getComponentId === "function" ? target.getComponentId() : target.mComponentId ?? null;
+      let found = cachedLayoutComponents.find((c) => c.op === target);
+      if (!found && targetCid !== null && targetCid !== void 0) {
+        found = cachedLayoutComponents.find((c) => c.cid === targetCid);
+      }
+      if (!found && targetId !== null && targetId !== 0) {
+        found = cachedLayoutComponents.find((c) => c.id === targetId);
+      }
+      if (found) selectedComponentKey = found.key;
+    }
+    const selectedComp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+    if (selectedComp && typeof document !== "undefined") {
+      const matchId = selectedComp.cid ?? selectedComp.id;
+      const nodeEl = matchId !== null && matchId !== void 0 ? document.querySelector(`.tree-node-content[onclick*="${matchId}"]`) : null;
+      if (nodeEl) {
+        document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
+        nodeEl.classList.add("selected");
+      }
+    }
+    const p13 = typeof document !== "undefined" ? document.getElementById("pane13") : null;
+    if (p13 && !p13.classList.contains("hidden-panel")) {
+      renderLayoutInspectorPanel(win.currentDocument);
+    }
+    drawLayoutBoundsOverlay();
+  }
+  function jumpToCommandCard(opId) {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    const allOps = win.currentParsedOps || [];
+    const idx = allOps.findIndex((o) => (typeof o.getId === "function" ? o.getId() : o.mId) === opId);
+    if (idx >= 0) {
+      selectCommandCard(idx, opId);
+      const card = document.getElementById(`cmdCard-${idx}`);
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+  function toggleLayoutBoundsOverlay() {
+    showLayoutBoundsOverlay = !showLayoutBoundsOverlay;
+    const win = typeof window !== "undefined" ? window : globalThis;
+    renderLayoutInspectorPanel(win.currentDocument);
+    drawLayoutBoundsOverlay();
+  }
+  function drawLayoutBoundsOverlay() {
+    const doc = typeof document !== "undefined" ? document : null;
+    if (!doc) return;
+    let overlayCanvas = doc.getElementById("layoutBoundsOverlayCanvas");
+    const stageCanvas = doc.getElementById("previewCanvas") || doc.getElementById("canvas");
+    const stageWrapper = doc.getElementById("canvasStageWrapper");
+    const win = typeof window !== "undefined" ? window : globalThis;
+    if (win.currentDocument) {
+      cachedLayoutComponents = extractLayoutComponents(win.currentDocument);
+    }
+    const shouldDraw = (showLayoutBoundsOverlay || Boolean(selectedComponentKey)) && Boolean(stageCanvas) && Boolean(cachedLayoutComponents && cachedLayoutComponents.length > 0);
+    if (!shouldDraw) {
+      if (overlayCanvas) overlayCanvas.style.display = "none";
+      return;
+    }
+    if (!overlayCanvas && stageWrapper) {
+      overlayCanvas = doc.createElement("canvas");
+      overlayCanvas.id = "layoutBoundsOverlayCanvas";
+      overlayCanvas.style.position = "absolute";
+      overlayCanvas.style.top = "0";
+      overlayCanvas.style.left = "0";
+      overlayCanvas.style.pointerEvents = "none";
+      overlayCanvas.style.zIndex = "5";
+      overlayCanvas.style.background = "transparent";
+      overlayCanvas.style.backgroundColor = "transparent";
+      overlayCanvas.style.boxShadow = "none";
+      overlayCanvas.style.border = "none";
+      stageWrapper.appendChild(overlayCanvas);
+    }
+    if (!overlayCanvas) return;
+    overlayCanvas.style.display = "block";
+    overlayCanvas.style.background = "transparent";
+    overlayCanvas.style.backgroundColor = "transparent";
+    overlayCanvas.style.boxShadow = "none";
+    overlayCanvas.style.border = "none";
+    overlayCanvas.style.borderRadius = stageCanvas.style.borderRadius || "8px";
+    overlayCanvas.width = stageCanvas.width;
+    overlayCanvas.height = stageCanvas.height;
+    overlayCanvas.style.width = stageCanvas.style.width || `${stageCanvas.width}px`;
+    overlayCanvas.style.height = stageCanvas.style.height || `${stageCanvas.height}px`;
+    const ctx = overlayCanvas.getContext("2d");
+    if (!ctx) return;
+    ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    const density = currentDensity || 1;
+    cachedLayoutComponents.forEach((comp) => {
+      const isSelected = comp.key === selectedComponentKey;
+      if (!showLayoutBoundsOverlay && !isSelected) return;
+      const op = comp.op;
+      const livePos = op ? getComponentGlobalPosition(op) : { gx: comp.globalX, gy: comp.globalY };
+      const liveW = op ? getSafeFloat(typeof op.getWidth === "function" ? op.getWidth() : op.mWidth ?? comp.width) : comp.width;
+      const liveH = op ? getSafeFloat(typeof op.getHeight === "function" ? op.getHeight() : op.mHeight ?? comp.height) : comp.height;
+      const livePad = op ? getComponentPadding(op) : comp.padding;
+      const x = Math.round(livePos.gx * density);
+      const y = Math.round(livePos.gy * density);
+      const w = Math.round(liveW * density);
+      const h = Math.round(liveH * density);
+      if (w <= 0 || h <= 0) {
+        if (isSelected) {
+          const label = `${comp.name} (0\xD70 - Inactive / GONE)`;
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+          ctx.setLineDash([4, 4]);
+          ctx.strokeRect(x, y, 40, 20);
+          ctx.setLineDash([]);
+          ctx.font = "bold 11px monospace";
+          const textW = ctx.measureText(label).width;
+          const badgeY = Math.max(0, y - 18);
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(x, badgeY, textW + 10, 16);
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+          ctx.lineWidth = 1;
+          ctx.strokeRect(x, badgeY, textW + 10, 16);
+          ctx.fillStyle = "#f59e0b";
+          ctx.fillText(label, x + 5, badgeY + 12);
+        }
+        return;
+      }
+      ctx.strokeStyle = isSelected ? "#38bdf8" : "rgba(56, 189, 248, 0.4)";
+      ctx.lineWidth = isSelected ? 2.5 : 1;
+      ctx.setLineDash([]);
+      ctx.strokeRect(x, y, w, h);
+      if (isSelected) {
+        ctx.fillStyle = "rgba(56, 189, 248, 0.15)";
+        ctx.fillRect(x, y, w, h);
+      }
+      const pt = Math.round(livePad.top * density);
+      const pr = Math.round(livePad.right * density);
+      const pb = Math.round(livePad.bottom * density);
+      const pl = Math.round(livePad.left * density);
+      if (pt > 0 || pr > 0 || pb > 0 || pl > 0) {
+        ctx.fillStyle = "rgba(52, 211, 153, 0.15)";
+        if (pt > 0) ctx.fillRect(x, y, w, pt);
+        if (pb > 0) ctx.fillRect(x, y + h - pb, w, pb);
+        if (pl > 0) ctx.fillRect(x, y + pt, pl, h - pt - pb);
+        if (pr > 0) ctx.fillRect(x + w - pr, y + pt, pr, h - pt - pb);
+      }
+      if (comp.isClickable) {
+        ctx.strokeStyle = "#fbbf24";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+        ctx.setLineDash([]);
+      }
+      if (isSelected) {
+        const label = `${comp.name} (${Math.round(liveW)}\xD7${Math.round(liveH)}dp)`;
+        ctx.font = "bold 11px monospace";
+        const textW = ctx.measureText(label).width;
+        const badgeY = Math.max(0, y - 18);
+        ctx.fillStyle = "#0f172a";
+        ctx.fillRect(x, badgeY, textW + 10, 16);
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, badgeY, textW + 10, 16);
+        ctx.fillStyle = "#38bdf8";
+        ctx.fillText(label, x + 5, badgeY + 12);
+      }
+    });
+  }
+  function applyLayoutTweaks() {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    const doc = win.currentDocument;
+    const player = win.currentPlayer;
+    if (!doc || !selectedComponentKey) return;
+    const comp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+    if (!comp || !comp.op) return;
+    const wInput = document.getElementById("tweakWidthInput");
+    const hInput = document.getElementById("tweakHeightInput");
+    const pInput = document.getElementById("tweakPaddingInput");
+    const rInput = document.getElementById("tweakRadiusInput");
+    if (wInput && !isNaN(parseFloat(wInput.value))) {
+      const w = parseFloat(wInput.value);
+      if (typeof comp.op.setWidth === "function") comp.op.setWidth(w);
+      comp.op.mWidth = w;
+    }
+    if (hInput && !isNaN(parseFloat(hInput.value))) {
+      const h = parseFloat(hInput.value);
+      if (typeof comp.op.setHeight === "function") comp.op.setHeight(h);
+      comp.op.mHeight = h;
+    }
+    if (pInput && !isNaN(parseFloat(pInput.value))) {
+      const p = parseFloat(pInput.value);
+      comp.op.mPaddingLeft = p;
+      comp.op.mPaddingTop = p;
+      comp.op.mPaddingRight = p;
+      comp.op.mPaddingBottom = p;
+    }
+    if (rInput && !isNaN(parseFloat(rInput.value))) {
+      comp.op.mCornerRadius = parseFloat(rInput.value);
+    }
+    comp.op.mNeedsMeasure = true;
+    doc.mNeedsMeasure = true;
+    if (player && typeof player.repaint === "function") {
+      player.repaint();
+    }
+    renderLayoutInspectorPanel(doc);
+  }
+  function resetLayoutTweaks() {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    renderLayoutInspectorPanel(win.currentDocument);
+  }
+
   // src/panels/DocumentLoader.js
   var currentPlayer = null;
   var currentDocument = null;
@@ -9372,6 +10388,8 @@ Click to inspect in Command List</title>
       if (currentPlayer && typeof currentPlayer.setVariableListener === "function") {
         currentPlayer.setVariableListener(() => {
           if (typeof window.updateVariableValuesLive === "function") window.updateVariableValuesLive();
+          if (typeof window.updateComponentTreeLive === "function") window.updateComponentTreeLive();
+          if (typeof window.updateRunningTreeLive === "function") window.updateRunningTreeLive();
         });
       }
       drawProfiler();
@@ -9406,6 +10424,10 @@ Click to inspect in Command List</title>
     const p12 = document.getElementById("pane12");
     if (p12 && !p12.classList.contains("hidden-panel")) {
       renderResponsiveMatrixPanel(currentBuffer);
+    }
+    const p13 = document.getElementById("pane13");
+    if (p13 && !p13.classList.contains("hidden-panel")) {
+      renderLayoutInspectorPanel(currentDocument);
     }
   }
   function exportRcFile() {
@@ -9921,7 +10943,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     pane9: "480px",
     pane10: "480px",
     pane11: "400px",
-    pane12: "640px"
+    pane12: "640px",
+    pane13: "440px"
   };
   var PANEL_META = {
     pane1: { name: "Player & Controls", icon: "\u{1F3A8}" },
@@ -9935,7 +10958,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     pane9: { name: "Expression Dependency Graph", icon: "\u{1F9EC}" },
     pane10: { name: "Binary Treemap & Allocation", icon: "\u{1F4E6}" },
     pane11: { name: "System Theme & Environment", icon: "\u{1F3A8}" },
-    pane12: { name: "Responsive Matrix (Buckets)", icon: "\u{1F4D0}" }
+    pane12: { name: "Responsive Matrix (Buckets)", icon: "\u{1F4D0}" },
+    pane13: { name: "Layout & Box Model", icon: "\u{1F4D0}" }
   };
   function hidePanel(event2, paneId) {
     if (event2) event2.stopPropagation();
@@ -9982,6 +11006,9 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (paneId === "pane12") {
       renderResponsiveMatrixPanel(window.currentBuffer || window.currentDocument);
     }
+    if (paneId === "pane13") {
+      renderLayoutInspectorPanel(window.currentDocument);
+    }
   }
   function updateHeaderCollapsedBar() {
     const container = document.getElementById("headerCollapsedPanels");
@@ -10015,6 +11042,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     const p10 = document.getElementById("pane10");
     const p11 = document.getElementById("pane11");
     const p12 = document.getElementById("pane12");
+    const p13 = document.getElementById("pane13");
     const r1 = document.getElementById("resizer1");
     const r2 = document.getElementById("resizer2");
     const r6 = document.getElementById("resizer6");
@@ -10026,6 +11054,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     const r9_10 = document.getElementById("resizer9_10");
     const r10_11 = document.getElementById("resizer10_11");
     const r11_12 = document.getElementById("resizer11_12");
+    const r12_13 = document.getElementById("resizer12_13");
     const p1Vis = p1 && !p1.classList.contains("hidden-panel");
     const p2Vis = p2 && !p2.classList.contains("hidden-panel");
     const p7Vis = p7 && !p7.classList.contains("hidden-panel");
@@ -10038,6 +11067,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     const p10Vis = p10 && !p10.classList.contains("hidden-panel");
     const p11Vis = p11 && !p11.classList.contains("hidden-panel");
     const p12Vis = p12 && !p12.classList.contains("hidden-panel");
+    const p13Vis = p13 && !p13.classList.contains("hidden-panel");
     const visiblePanels = [];
     if (p1Vis) visiblePanels.push(p1);
     if (p2Vis) visiblePanels.push(p2);
@@ -10051,6 +11081,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (p10Vis) visiblePanels.push(p10);
     if (p11Vis) visiblePanels.push(p11);
     if (p12Vis) visiblePanels.push(p12);
+    if (p13Vis) visiblePanels.push(p13);
     visiblePanels.forEach((p, idx) => {
       if (idx === visiblePanels.length - 1) {
         p.style.flex = "1";
@@ -10062,17 +11093,18 @@ Check network, CORS headers, or file path. Click to browse local files.`;
         }
       }
     });
-    const anyAfter1 = p2Vis || p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter2 = p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter7 = p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter3 = p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter4 = p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter5 = p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter6 = p8Vis || p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter8 = p9Vis || p10Vis || p11Vis || p12Vis;
-    const anyAfter9 = p10Vis || p11Vis || p12Vis;
-    const anyAfter10 = p11Vis || p12Vis;
-    const anyAfter11 = p12Vis;
+    const anyAfter1 = p2Vis || p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter2 = p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter7 = p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter3 = p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter4 = p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter5 = p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter6 = p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter8 = p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter9 = p10Vis || p11Vis || p12Vis || p13Vis;
+    const anyAfter10 = p11Vis || p12Vis || p13Vis;
+    const anyAfter11 = p12Vis || p13Vis;
+    const anyAfter12 = p13Vis;
     if (r1) r1.style.display = p1Vis && anyAfter1 ? "flex" : "none";
     if (r2) r2.style.display = p2Vis && anyAfter2 ? "flex" : "none";
     if (r6) r6.style.display = p7Vis && anyAfter7 ? "flex" : "none";
@@ -10084,6 +11116,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (r9_10) r9_10.style.display = p9Vis && anyAfter9 ? "flex" : "none";
     if (r10_11) r10_11.style.display = p10Vis && anyAfter10 ? "flex" : "none";
     if (r11_12) r11_12.style.display = p11Vis && anyAfter11 ? "flex" : "none";
+    if (r12_13) r12_13.style.display = p12Vis && anyAfter12 ? "flex" : "none";
   }
   function initPaneResizers() {
     const resizer1 = document.getElementById("resizer1");
@@ -10334,6 +11367,26 @@ Check network, CORS headers, or file path. Click to browse local files.`;
           pane11.style.width = "400px";
           pane11.style.flex = "none";
           lastPaneWidths.pane11 = "400px";
+          updateResizersVisibility();
+        }
+      });
+    }
+    const resizer12_13 = document.getElementById("resizer12_13");
+    const pane12 = document.getElementById("pane12");
+    setupDrag(resizer12_13, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W, p9W, p10W, p11W, p12W) => {
+      if (pane12 && !pane12.classList.contains("hidden-panel")) {
+        const newP12W = Math.max(200, Math.min(1400, (p12W || 640) + deltaX));
+        pane12.style.width = `${newP12W}px`;
+        pane12.style.flex = "none";
+        lastPaneWidths.pane12 = `${newP12W}px`;
+      }
+    });
+    if (resizer12_13) {
+      resizer12_13.addEventListener("dblclick", () => {
+        if (pane12) {
+          pane12.style.width = "640px";
+          pane12.style.flex = "none";
+          lastPaneWidths.pane12 = "640px";
           updateResizersVisibility();
         }
       });
@@ -10663,7 +11716,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     const fmt = (n) => typeof n === "number" ? n.toLocaleString() : n ?? "0";
     const currentPlayer2 = window.currentPlayer;
     const KNOWN_OPCODES2 = window.KNOWN_OPCODES || {};
-    const escapeHtml5 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
+    const escapeHtml6 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => s);
     const rCtx = currentPlayer2 && typeof currentPlayer2.getRemoteContext === "function" ? currentPlayer2.getRemoteContext() : null;
     const typeList = [];
     a.types.forEach((v, key) => typeList.push({ key, v }));
@@ -10684,7 +11737,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
         const friendlyName = v.opCode >= 0 && KNOWN_OPCODES2[v.opCode] ? KNOWN_OPCODES2[v.opCode] : v.name;
         typesHtml += `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04); ${isMuted ? "opacity:0.6;" : ""}">
-                    <td style="padding:4px 0; font-weight:600; color:var(--text-primary);">${escapeHtml5(friendlyName)}</td>
+                    <td style="padding:4px 0; font-weight:600; color:var(--text-primary);">${escapeHtml6(friendlyName)}</td>
                     <td style="padding:4px 4px; text-align:center;">${opCodeBadge}</td>
                     <td style="padding:4px 6px; text-align:right; color:var(--accent-emerald); font-weight:600;">${fmt(v.last)}</td>
                     <td style="padding:4px 6px; text-align:right; color:var(--accent-amber);">${fmt(v.peak)}</td>
@@ -10728,7 +11781,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
             if (Number.isNaN(curVal) && typeof op.getValue === "function") curVal = op.getValue();
             const valFormatted = !Number.isNaN(curVal) && isFinite(curVal) ? Number.isInteger(curVal) ? curVal.toString() : curVal.toFixed(2) : "";
             if (exprStr) {
-              exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-blue); margin-top:2px; word-break:break-all;" title="${escapeHtml5(exprStr)}">fx: <strong style="color:var(--text-primary);">${escapeHtml5(exprStr)}</strong>${valFormatted ? ` = <strong style="color:var(--accent-emerald);">${valFormatted}</strong>` : ""}</div>`;
+              exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-blue); margin-top:2px; word-break:break-all;" title="${escapeHtml6(exprStr)}">fx: <strong style="color:var(--text-primary);">${escapeHtml6(exprStr)}</strong>${valFormatted ? ` = <strong style="color:var(--accent-emerald);">${valFormatted}</strong>` : ""}</div>`;
             }
           } else if (opCode === 83 || opCode === 144 || friendlyName === "IntegerExpression") {
             const mask = op.mMask ?? op.mask ?? 0;
@@ -10736,7 +11789,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
             const exprStr = typeof window.prettyPrintIntegerExpression === "function" ? window.prettyPrintIntegerExpression(mask, values) : "";
             const curVal = rCtx ? rCtx.getInteger(op.mId) : op.mValue ?? null;
             if (exprStr) {
-              exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-indigo, #818cf8); margin-top:2px; word-break:break-all;" title="${escapeHtml5(exprStr)}">ix: <strong style="color:var(--text-primary);">${escapeHtml5(exprStr)}</strong>${curVal !== null && curVal !== void 0 ? ` = <strong style="color:var(--accent-emerald);">${curVal}</strong>` : ""}</div>`;
+              exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-indigo, #818cf8); margin-top:2px; word-break:break-all;" title="${escapeHtml6(exprStr)}">ix: <strong style="color:var(--text-primary);">${escapeHtml6(exprStr)}</strong>${curVal !== null && curVal !== void 0 ? ` = <strong style="color:var(--accent-emerald);">${curVal}</strong>` : ""}</div>`;
             }
           } else if (opCode === 85 || friendlyName === "ColorExpression") {
             const curVal = rCtx ? rCtx.getColor(op.mId) : op.mColor ?? 0;
@@ -10745,14 +11798,14 @@ Check network, CORS headers, or file path. Click to browse local files.`;
           } else if (friendlyName === "DrawLine" && op.mX1 !== void 0 && op.mX2 !== void 0) {
             exprBadge = `<div style="font-size:0.62rem; font-family:var(--code-font); color:var(--text-muted); margin-top:2px;">(${op.mX1},${op.mY1}) \u2192 (${op.mX2},${op.mY2})</div>`;
           } else if (friendlyName === "NamedVariable" && op.mName) {
-            exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-amber); margin-top:2px;">"${escapeHtml5(op.mName)}" = ${op.mValue ?? ""}</div>`;
+            exprBadge = `<div style="font-size:0.65rem; font-family:var(--code-font); color:var(--accent-amber); margin-top:2px;">"${escapeHtml6(op.mName)}" = ${op.mValue ?? ""}</div>`;
           }
         }
         instsHtml += `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04); ${isMuted ? "opacity:0.6;" : ""}; cursor:pointer;" onclick="selectRunningTreeNodeFromInstance(${item.id})" title="Click to step to this operation instance">
                     <td style="padding:4px 0; color:var(--accent-blue); font-weight:600; vertical-align:top;">#${item.id}</td>
                     <td style="padding:4px 6px; color:var(--text-primary); vertical-align:top;">
-                        <div>${escapeHtml5(friendlyName)}</div>
+                        <div>${escapeHtml6(friendlyName)}</div>
                         ${exprBadge}
                     </td>
                     <td style="padding:4px 6px; text-align:right; color:var(--accent-emerald); font-weight:600; vertical-align:top;">${fmt(v.last)}</td>
@@ -10829,6 +11882,23 @@ Check network, CORS headers, or file path. Click to browse local files.`;
 
   // src/_tmp_entry.js
   if (typeof window !== "undefined") {
+    window.extractLayoutComponents = extractLayoutComponents;
+    window.runLayoutDiagnostics = runLayoutDiagnostics;
+    window.renderBoxModelDiagram = renderBoxModelDiagram;
+    window.renderModifierChain = renderModifierChain;
+    window.renderLayoutInspectorPanel = renderLayoutInspectorPanel;
+    window.selectLayoutComponent = selectLayoutComponent;
+    window.jumpToCommandCard = jumpToCommandCard;
+    window.toggleLayoutBoundsOverlay = toggleLayoutBoundsOverlay;
+    window.drawLayoutBoundsOverlay = drawLayoutBoundsOverlay;
+    window.applyLayoutTweaks = applyLayoutTweaks;
+    window.resetLayoutTweaks = resetLayoutTweaks;
+    window.getSelectedComponentKey = getSelectedComponentKey;
+    window.getShowLayoutBoundsOverlay = getShowLayoutBoundsOverlay;
+    window.getCachedLayoutComponents = getCachedLayoutComponents;
+    window.getSafeFloat = getSafeFloat;
+    window.getComponentPadding = getComponentPadding;
+    window.getComponentGlobalPosition = getComponentGlobalPosition;
     window.MATRIX_PRESETS = MATRIX_PRESETS;
     window.MATRIX_THEMES = MATRIX_THEMES;
     window.getMatrixPlayers = getMatrixPlayers;
@@ -10877,6 +11947,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     window.expandAllTree = expandAllTree;
     window.selectTreeNode = selectTreeNode;
     window.renderRunningOperationsTree = renderRunningOperationsTree;
+    window.updateComponentTreeLive = updateComponentTreeLive;
+    window.updateRunningTreeLive = updateRunningTreeLive;
     window.toggleRunningTreeNode = toggleRunningTreeNode;
     window.expandAllRunningTree = expandAllRunningTree;
     window.selectRunningTreeNode = selectRunningTreeNode;
@@ -11485,6 +12557,10 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   } catch (e) {
   }
   try {
+    window.updateComponentTreeLive = updateComponentTreeLive;
+  } catch (e) {
+  }
+  try {
     window.updateRunningTreeLive = updateRunningTreeLive;
   } catch (e) {
   }
@@ -11842,6 +12918,74 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.renderResponsiveMatrixPanel = renderResponsiveMatrixPanel;
+  } catch (e) {
+  }
+  try {
+    window.extractLayoutComponents = extractLayoutComponents;
+  } catch (e) {
+  }
+  try {
+    window.runLayoutDiagnostics = runLayoutDiagnostics;
+  } catch (e) {
+  }
+  try {
+    window.renderBoxModelDiagram = renderBoxModelDiagram;
+  } catch (e) {
+  }
+  try {
+    window.renderModifierChain = renderModifierChain;
+  } catch (e) {
+  }
+  try {
+    window.renderLayoutInspectorPanel = renderLayoutInspectorPanel;
+  } catch (e) {
+  }
+  try {
+    window.selectLayoutComponent = selectLayoutComponent;
+  } catch (e) {
+  }
+  try {
+    window.jumpToCommandCard = jumpToCommandCard;
+  } catch (e) {
+  }
+  try {
+    window.toggleLayoutBoundsOverlay = toggleLayoutBoundsOverlay;
+  } catch (e) {
+  }
+  try {
+    window.drawLayoutBoundsOverlay = drawLayoutBoundsOverlay;
+  } catch (e) {
+  }
+  try {
+    window.applyLayoutTweaks = applyLayoutTweaks;
+  } catch (e) {
+  }
+  try {
+    window.resetLayoutTweaks = resetLayoutTweaks;
+  } catch (e) {
+  }
+  try {
+    window.getSelectedComponentKey = getSelectedComponentKey;
+  } catch (e) {
+  }
+  try {
+    window.getShowLayoutBoundsOverlay = getShowLayoutBoundsOverlay;
+  } catch (e) {
+  }
+  try {
+    window.getCachedLayoutComponents = getCachedLayoutComponents;
+  } catch (e) {
+  }
+  try {
+    window.getSafeFloat = getSafeFloat;
+  } catch (e) {
+  }
+  try {
+    window.getComponentPadding = getComponentPadding;
+  } catch (e) {
+  }
+  try {
+    window.getComponentGlobalPosition = getComponentGlobalPosition;
   } catch (e) {
   }
 })();
