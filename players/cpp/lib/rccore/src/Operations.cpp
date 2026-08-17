@@ -3,6 +3,7 @@
 #include "rccore/operations/DrawOperations.h"
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/operations/LayoutOperations.h"
+#include "rccore/operations/Operations3D.h"
 
 namespace rccore {
 
@@ -73,6 +74,18 @@ void Operations::init() {
     registerReader(PAINT_VALUES, "PAINT_VALUES", PaintValues::read);
 
     // ── Draw ───────────────────────────────────────────────────────────
+    // ── 3D ─────────────────────────────────────────────────────────────
+    registerReader(DEFINE_MESH_3D, "DEFINE_MESH_3D", DefineMesh3D::read);
+    registerReader(SET_CAMERA_3D, "SET_CAMERA_3D", SetCamera3D::read);
+    registerReader(MATRIX_3D_OP, "MATRIX_3D_OP", Matrix3DOp::read);
+    registerReader(DRAW_MESH_3D, "DRAW_MESH_3D", DrawMesh3D::read);
+    registerReader(PAINT_3D_STATE, "PAINT_3D_STATE", Paint3DState::read);
+    registerReader(SET_LIGHTS_3D, "SET_LIGHTS_3D", SetLights3D::read);
+    registerReader(VECTOR_EXPRESSION, "VECTOR_EXPRESSION", VectorExpression::read);
+    registerReader(MESH_EXPRESSION_3D, "MESH_EXPRESSION_3D", MeshExpression::read);
+    registerReader(SET_TEXTURE_3D, "SET_TEXTURE_3D", SetTexture3D::read);
+    registerReader(MESH_PRIMITIVE_3D, "MESH_PRIMITIVE_3D", MeshPrimitive::read);
+
     registerReader(DRAW_RECT, "DRAW_RECT", DrawRect::read);
     registerReader(DRAW_CIRCLE, "DRAW_CIRCLE", DrawCircle::read);
     registerReader(DRAW_LINE, "DRAW_LINE", DrawLine::read);
