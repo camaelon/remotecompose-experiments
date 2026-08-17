@@ -876,6 +876,9 @@ public:
     int opcode() const override { return 222; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
+    void runAction(RemoteContext& context, float, float) override {
+        context.overrideFloat(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueFloatChangeOp>();
         op->targetId = buf.readInt();
@@ -891,6 +894,9 @@ public:
     int opcode() const override { return 212; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
+    void runAction(RemoteContext& context, float, float) override {
+        context.overrideInteger(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueIntChangeOp>();
         op->targetId = buf.readInt(); op->value = buf.readInt();
@@ -906,6 +912,9 @@ public:
     int opcode() const override { return 213; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
+    void runAction(RemoteContext& context, float, float) override {
+        context.loadText(targetId, value);
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueStringChangeOp>();
         op->targetId = buf.readInt(); op->value = buf.readUTF8();
@@ -968,6 +977,9 @@ public:
     int opcode() const override { return 227; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
+    void runAction(RemoteContext& context, float, float) override {
+        context.overrideFloat(targetId, static_cast<float>(value));
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueBooleanChangeOp>();
         op->targetId = buf.readInt();
@@ -984,6 +996,11 @@ public:
     int opcode() const override { return 218; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
+    void runAction(RemoteContext& context, float, float) override {
+        int targetVarId = static_cast<int>(targetId & 0xFFFFFFFF);
+        int expressionVarId = static_cast<int>(value & 0xFFFFFFFF);
+        context.overrideInteger(targetVarId, context.getInteger(expressionVarId));
+    }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueLongChangeOp>();
         op->targetId = buf.readLong();
@@ -1907,6 +1924,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CollapsibleRowLayout"; }
     int opcode() const override { return 230; }
@@ -1932,6 +1950,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "CollapsibleColumnLayout"; }
     int opcode() const override { return 233; }
@@ -1956,6 +1975,7 @@ class FitBoxLayout : public Operation {
 public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "FitBoxLayout"; }
     int opcode() const override { return 176; }
@@ -2024,6 +2044,7 @@ public:
     int componentId = 0, animationId = 0;
     int imageId = 0, contentScale = 0;
     float aspectRatio = 1.0f;
+    int getOpComponentId() const override { return componentId; }
 
     std::string name() const override { return "LAYOUT_IMAGE"; }
     int opcode() const override { return 234; }
@@ -2291,5 +2312,6 @@ public:
         ops.push_back(std::move(op));
     }
 };
+
 
 } // namespace rccore

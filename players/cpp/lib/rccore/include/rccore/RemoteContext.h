@@ -211,6 +211,10 @@ public:
     }
 
     // Path store (delegated to paint context)
+    /** Register a click area with the document; the ClickArea operation calls this each frame. */
+    void addClickArea(int id, int contentDescriptionId, float left, float top,
+                      float right, float bottom, int metadataId);
+
     void loadPathData(int instanceId, int winding, const std::vector<float>& path);
     void appendPathData(int instanceId, const std::vector<float>& path);
 
