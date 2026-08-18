@@ -13,6 +13,41 @@ function arrIdFromStack(x: number): number {
 }
 
 export class AnimatedFloatExpression {
+    // ── seeded randomness ────────────────────────────────────────────────────────
+    //
+    // `RAND_SEED` used to be a no-op here ("ignore seed in JS"), so a document that seeded
+    // itself was reproducible on the device and different in the browser on every frame —
+    // which defeats the point of seeding. This is `java.util.Random`'s generator, so the
+    // sequence matches the reference: a 48-bit LCG, with `nextFloat()` being the top 24
+    // bits over 2^24.
+    //
+    // The state is a BigInt because the multiply overflows a double's 53 bits. At a few
+    // hundred draws a frame that cost is irrelevant beside being wrong.
+    private static readonly RNG_MULT = 0x5deece66dn;
+    private static readonly RNG_MASK = (1n << 48n) - 1n;
+    private static rngState: bigint | null = null;
+
+    /** Seed the generator. A seed of 0 means "unseeded", as the reference has it. */
+    static seedRandom(seed: number): void {
+        if (seed === 0) {
+            AnimatedFloatExpression.rngState = null;   // reference does `new Random()`
+            return;
+        }
+        // The reference seeds from the float's raw bits, not from its value.
+        const asLong = BigInt.asUintN(64, BigInt(floatToRawIntBits(seed)));
+        AnimatedFloatExpression.rngState =
+            (asLong ^ AnimatedFloatExpression.RNG_MULT) & AnimatedFloatExpression.RNG_MASK;
+    }
+
+    /** `Random.nextFloat()` when seeded; the platform generator when not. */
+    static nextRandom(): number {
+        if (AnimatedFloatExpression.rngState === null) return Math.random();
+        AnimatedFloatExpression.rngState =
+            (AnimatedFloatExpression.rngState * AnimatedFloatExpression.RNG_MULT + 0xbn)
+            & AnimatedFloatExpression.RNG_MASK;
+        return Number(AnimatedFloatExpression.rngState >> 24n) / 16777216;
+    }
+
     static readonly OFFSET = 0x310000;
     static readonly LAST_OP = AnimatedFloatExpression.OFFSET + 79;
 
@@ -163,9 +198,10 @@ export class AnimatedFloatExpression {
                 return sp - 1;
             }
             case OFFSET + 39: // RAND
-                s[++sp] = Math.random();
+                s[++sp] = AnimatedFloatExpression.nextRandom();
                 return sp;
-            case OFFSET + 40: // RAND_SEED (ignore seed in JS)
+            case OFFSET + 40: // RAND_SEED
+                AnimatedFloatExpression.seedRandom(s[sp]);
                 return sp - 1;
             case OFFSET + 41: { // NOISE_FROM
                 let x = Math.trunc(s[sp]);

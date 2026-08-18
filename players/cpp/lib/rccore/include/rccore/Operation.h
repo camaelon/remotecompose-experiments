@@ -33,6 +33,18 @@ public:
     void markNotDirty() { mDirty = false; }
 
     // ── Variable support ─────────────────────────────────────────────
+    /** The component this operation belongs to, or -1. Used to hit-test a click. */
+    virtual int getOpComponentId() const { return -1; }
+
+    /**
+     * Run this operation as the result of an interaction. Separate from apply() on purpose:
+     * apply() runs every frame in the data pass, so a value-change action implemented there
+     * would fire continuously and latch its override at load instead of on the click. The
+     * reference draws the same line — ActionOperation.runAction does the work and apply() is
+     * left empty.
+     */
+    virtual void runAction(RemoteContext& context, float x, float y) {}
+
     // Override to return true if this operation depends on variables.
     virtual bool isVariableSupport() const { return false; }
 

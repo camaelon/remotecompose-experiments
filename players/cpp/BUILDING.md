@@ -5,14 +5,15 @@
 | Platform | Tools                                                |
 |----------|------------------------------------------------------|
 | macOS    | Xcode 15+ (Command Line Tools), CMake 3.20+, git     |
+| Linux    | CMake 3.20+, git, pkg-config, GLFW, OpenGL, FontConfig, FreeType, X11 dev packages |
 | iOS      | Xcode 15+, CMake 3.20+, Homebrew (for `xcodegen`)    |
 
 `brew install cmake` if you don't already have CMake on `PATH`.
 
-The build pulls Skia, GLFW (desktop only), and miniz (desktop viewer only)
-via CMake `FetchContent`. Nothing is vendored. Network access is required
-for the first configure on each platform; after that, all dependencies are
-cached under `build/_deps/`.
+The build pulls Skia and miniz via CMake `FetchContent`. On macOS it also
+fetches GLFW; on Linux it uses system GLFW via pkg-config. Nothing is
+vendored. Network access is required for the first configure on each platform;
+after that, fetched dependencies are cached under `build/_deps/`.
 
 ---
 
@@ -53,6 +54,48 @@ Smoke tests:
 - The first configure takes 2-3 minutes (Skia download). Subsequent
   configures and clean builds are seconds-to-minutes depending on whether
   Skia has changed.
+
+---
+
+## Desktop (Linux x86_64)
+
+Install the development packages for CMake, git, pkg-config, GLFW, OpenGL,
+FontConfig, FreeType, and X11. Package names vary by distro; for example,
+Arch packages this as `cmake`, `git`, `pkgconf`, `glfw-x11`, `fontconfig`,
+`freetype2`, `libx11`, `libxext`, and `libxrender`.
+
+```sh
+cmake -B build
+cmake --build build -j
+```
+
+You'll get the same desktop tools under `build/`:
+
+| Path                              | What it is                                  |
+|-----------------------------------|---------------------------------------------|
+| `lib/rccore/librccore.a`          | engine                                      |
+| `lib/rcskia/librcskia.a`          | Skia bridge                                 |
+| `tools/rc2json/rc2json`           | binary → JSON                               |
+| `tools/rc2image/rc2image`         | binary → PNG (headless)                     |
+| `apps/viewer/rcviewer`            | interactive GLFW + CPU/OpenGL viewer        |
+
+Smoke tests:
+
+```sh
+./build/tools/rc2image/rc2image samples/canvas.rc out.png
+./build/apps/viewer/rcviewer --screenshot samples/canvas.rc out.png 400 400 0.2
+./build/apps/viewer/rcviewer samples/balls_animation_example.rc
+```
+
+### Notes / pitfalls
+
+- The Linux viewer currently uses the CPU renderer with OpenGL texture upload.
+  `--metal` remains macOS-only.
+- MP4/MOV/M4V playback and first-frame PDF export are AVFoundation-backed and
+  therefore macOS-only. `.rc`/`.rcd`, WebP, GIF, APNG, directories, and zip
+  decks are supported.
+- Widget mode keeps the cross-platform GLFW window hints, but the macOS-only
+  desktop-layer behavior is a no-op on Linux for now.
 
 ---
 
@@ -127,12 +170,10 @@ signing team, ⌘R.
 
 GitHub Actions workflows live under `.github/workflows/`:
 
-- **`macos-desktop.yml`** — runs `cmake -B build && cmake --build build`
-  on `macos-latest` for every push and PR. Smoke-tests `rc2image` against
-  `samples/`.
-- **`ios.yml`** — builds the iOS static libs and the iosViewer app on
-  `macos-latest`. Triggered manually (`workflow_dispatch`) since signing
-  isn't required but it's slower and the libs alone don't change often.
+- **`cpp.yml`** — builds the desktop C++ project on separate Linux and macOS
+  runners for every relevant push and PR. It builds all desktop C++ targets
+  and smoke-tests `rc2json`, `rc2image`, and `rcviewer` headless commands
+  against `samples/`.
 
 ---
 

@@ -20,7 +20,12 @@
 #include "include/codec/SkCodec.h"
 #include "include/core/SkStream.h"
 #include "include/core/SkTextBlob.h"
+#if defined(__APPLE__)
 #include "include/ports/SkFontMgr_mac_ct.h"
+#else
+#include "include/ports/SkFontMgr_fontconfig.h"
+#include "include/ports/SkFontScanner_FreeType.h"
+#endif
 
 #include <algorithm>
 #include <cmath>
@@ -102,10 +107,16 @@ SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
     // Build the font manager once and reuse it for every typeface lookup.
     // CoreText font catalog scans are expensive — doing this per draw op
     // tanks frame rate on text-heavy slides (e.g. syntax-highlighted code).
-    mFontMgr = SkFontMgr_New_CoreText(nullptr);
+    mFontMgr =
+#if defined(__APPLE__)
+        SkFontMgr_New_CoreText(nullptr);
+#else
+        SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
+#endif
 
     // Initialize font with a valid typeface (required on macOS/Skia m143+)
-    auto defaultTf = mFontMgr->matchFamilyStyle(nullptr, SkFontStyle());
+    auto defaultTf = mFontMgr ? mFontMgr->matchFamilyStyle(nullptr, SkFontStyle())
+                              : nullptr;
     if (defaultTf) {
         mFont = SkFont(sk_sp<SkTypeface>(defaultTf), 14);
     } else {

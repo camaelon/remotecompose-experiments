@@ -85,9 +85,26 @@ public:
 
     // ── Variable stores (with listener notification) ─────────────────
 
+    /**
+     * Set a float from the document. Ignored once the id has been overridden — see
+     * overrideFloat. Mirrors RemoteComposeState.updateFloat, which is gated on
+     * !mFloatOverride[id] in the reference.
+     */
     void loadFloat(int id, float value) {
+        if (mFloatOverrides.count(id)) return;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
+        notifyListeners(id);
+    }
+    /**
+     * Set a float from outside the document — a host, or a click action — and make it stick:
+     * later loadFloat calls for this id are ignored. This is how the reference lets an
+     * interaction win over whatever the document keeps writing every frame.
+     */
+    void overrideFloat(int id, float value) {
+        mFloats[id] = value;
+        mIntegers[id] = static_cast<int>(value);
+        mFloatOverrides.insert(id);
         notifyListeners(id);
     }
     float getFloat(int id) const {
@@ -96,8 +113,16 @@ public:
     }
 
     void loadInteger(int id, int value) {
+        if (mIntegerOverrides.count(id)) return;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
+        notifyListeners(id);
+    }
+    /** As overrideFloat, for integers. */
+    void overrideInteger(int id, int value) {
+        mIntegers[id] = value;
+        mFloats[id] = static_cast<float>(value);
+        mIntegerOverrides.insert(id);
         notifyListeners(id);
     }
     int getInteger(int id) const {
@@ -186,6 +211,10 @@ public:
     }
 
     // Path store (delegated to paint context)
+    /** Register a click area with the document; the ClickArea operation calls this each frame. */
+    void addClickArea(int id, int contentDescriptionId, float left, float top,
+                      float right, float bottom, int metadataId);
+
     void loadPathData(int instanceId, int winding, const std::vector<float>& path);
     void appendPathData(int instanceId, const std::vector<float>& path);
 
@@ -267,6 +296,8 @@ private:
     std::unordered_map<int, bool> mBooleans;
     std::unordered_map<int, int> mColors;
     std::unordered_set<int> mColorOverrides;  // IDs overridden by system theme defaults
+    std::unordered_set<int> mFloatOverrides;
+    std::unordered_set<int> mIntegerOverrides;
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, std::vector<float>> mFloatLists;
     std::unordered_map<int, std::vector<float>> mObjectMatrices;

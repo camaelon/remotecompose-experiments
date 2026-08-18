@@ -517,4 +517,24 @@ void ShaderData::read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& 
     ops.push_back(std::move(op));
 }
 
+void ClickArea::registerListening(RemoteContext& context) {
+    Utils::registerFloatVar(left, context, this);
+    Utils::registerFloatVar(top, context, this);
+    Utils::registerFloatVar(right, context, this);
+    Utils::registerFloatVar(bottom, context, this);
+}
+
+void ClickArea::updateVariables(RemoteContext& context) {
+    oLeft = Utils::resolveFloat(left, context);
+    oTop = Utils::resolveFloat(top, context);
+    oRight = Utils::resolveFloat(right, context);
+    oBottom = Utils::resolveFloat(bottom, context);
+}
+
+void ClickArea::apply(RemoteContext& context) {
+    if (context.getMode() == ContextMode::PAINT) {
+        context.addClickArea(id, cdId, oLeft, oTop, oRight, oBottom, metadataId);
+    }
+}
+
 } // namespace rccore

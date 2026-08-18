@@ -2,6 +2,7 @@
 // Matches Java FloatExpression.java — extends Operation, implements VariableSupport.
 
 import { Operation } from '../Operation';
+import { AnimatedFloatExpression } from './utilities/AnimatedFloatExpression';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
@@ -369,10 +370,15 @@ export class FloatExpression extends Operation implements VariableSupport {
                             break;
                         }
                         case 39: // RAND
-                            stack.push(Math.random());
+                            stack.push(AnimatedFloatExpression.nextRandom());
                             break;
-                        case 40: // RAND_SEED (no-op for now)
-                            stack.pop();
+                        case 40: // RAND_SEED
+                            // There are two expression evaluators in this player and both
+                            // implement RAND. They have to share one generator, or seeding
+                            // in a document variable would leave the other one unseeded —
+                            // which is exactly what happened: the RPN was correct, the
+                            // parser change worked, and the sequence still differed.
+                            AnimatedFloatExpression.seedRandom(stack.pop()!);
                             break;
                         case 41: { // NOISE_FROM: deterministic noise from float bits
                             let x = floatToRawIntBits(stack.pop()!);
@@ -385,7 +391,7 @@ export class FloatExpression extends Operation implements VariableSupport {
                         }
                         case 42: { // RAND_IN_RANGE: random in [min, max)
                             const max = stack.pop()!, min = stack.pop()!;
-                            stack.push(min + Math.random() * (max - min));
+                            stack.push(min + AnimatedFloatExpression.nextRandom() * (max - min));
                             break;
                         }
                         case 43: { // SQUARE_SUM (x*x + y*y)

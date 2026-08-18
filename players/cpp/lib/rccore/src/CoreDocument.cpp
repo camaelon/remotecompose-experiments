@@ -5,6 +5,7 @@
 #include "rccore/operations/Header.h"
 #include "rccore/operations/DrawOperations.h"
 #include "rccore/operations/AdvancedOperations.h"
+#include "rccore/operations/LayoutOperations.h"
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
@@ -180,6 +181,23 @@ void CoreDocument::updateTimeVariables(RemoteContext& context) {
     context.loadFloat(RemoteContext::ID_DAY_OF_YEAR, static_cast<float>(dayOfYear));
     context.loadFloat(RemoteContext::ID_YEAR, static_cast<float>(year));
     context.loadFloat(RemoteContext::ID_API_LEVEL, static_cast<float>(DOCUMENT_API_LEVEL));
+
+    // Animation time: seconds since the first frame, not since the epoch. This is what the
+    // reference player feeds in (RemoteComposeView computes (now - mStart) * 1e-9), and what a
+    // document expects — it starts near zero and advances, so sin(animationTime) is a wave
+    // rather than an arbitrary phase.
+    //
+    // Always written, never guarded. A host that wants to drive the clock itself calls
+    // overrideFloat, which makes these loads no-ops for the id; guarding on "has someone set
+    // this yet" instead would latch on the first frame and freeze time.
+    if (mAnimationStartMs < 0) {
+        mAnimationStartMs = ms;
+    }
+    float animationTime = static_cast<float>(ms - mAnimationStartMs) / 1000.0f;
+    context.loadFloat(RemoteContext::ID_ANIMATION_TIME, animationTime);
+    context.loadFloat(RemoteContext::ID_ANIMATION_DELTA_TIME,
+                      animationTime - mLastAnimationTime);
+    mLastAnimationTime = animationTime;
 }
 
 // ── Data pass ─────────────────────────────────────────────────────────
@@ -200,6 +218,7 @@ void CoreDocument::applyDataOperations(RemoteContext& context, int theme) {
 // ── Paint pass ────────────────────────────────────────────────────────
 
 void CoreDocument::paint(RemoteContext& context, int theme) {
+    mClickAreas.clear();
     auto* pc = context.getPaintContext();
     if (!pc) return;
 
@@ -403,6 +422,138 @@ void CoreDocument::computeTranslate(float w, float h,
 
     translateOutput[0] = translateX;
     translateOutput[1] = translateY;
+}
+
+void CoreDocument::addClickArea(int id, const std::string& contentDescription, float left, float top, float right, float bottom, const std::string& metadata) {
+    mClickAreas.push_back({id, contentDescription, left, top, right, bottom, metadata});
+}
+
+static bool onClickRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops, float x, float y, float parentX, float parentY) {
+    for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+        const auto& op = *it;
+        int cid = op->getOpComponentId();
+        if (cid != -1) {
+            auto* dim = context.getComponentDimension(cid);
+            if (dim) {
+                float absX = parentX + dim->x;
+                float absY = parentY + dim->y;
+                
+                // Check children first (back to front)
+                if (!op->mChildren.empty()) {
+                    if (onClickRecursive(context, op->mChildren, x, y, absX, absY)) {
+                        return true;
+                    }
+                }
+                
+                // Check component bounds
+                if (x >= absX && x <= absX + dim->w && y >= absY && y <= absY + dim->h) {
+                    for (const auto& child : op->mChildren) {
+                        if (child->opcode() == 59) { // MODIFIER_CLICK
+                            for (const auto& action : child->mChildren) {
+                                action->runAction(context, x, y);
+                            }
+                            context.needsRepaint();
+                            return true;
+                        } else if (child->opcode() == 83) { // MODIFIER_MULTI_CLICK
+                            auto* mc = dynamic_cast<ModifierMultiClick*>(child.get());
+                            if (mc && mc->clickType == 0) {
+                                for (const auto& action : child->mChildren) {
+                                    action->runAction(context, x, y);
+                                }
+                                context.needsRepaint();
+                                return true;
+                            }
+                        }
+                    }
+                }
+            } else {
+            }
+        } else {
+            if (!op->mChildren.empty()) {
+                if (onClickRecursive(context, op->mChildren, x, y, parentX, parentY)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool CoreDocument::onClick(RemoteContext& context, float windowX, float windowY) {
+    float docX = windowX;
+    float docY = windowY;
+
+    if (mContentSizing == SIZING_SCALE) {
+        float scaleOutput[2] = {1.0f, 1.0f};
+        computeScale(context.mWidth, context.mHeight, scaleOutput);
+        float sw = scaleOutput[0];
+        float sh = scaleOutput[1];
+        float translateOutput[2] = {0.0f, 0.0f};
+        computeTranslate(context.mWidth, context.mHeight, sw, sh, translateOutput);
+
+        if (sw != 0.0f && sh != 0.0f) {
+            docX = (windowX - translateOutput[0]) / sw;
+            docY = (windowY - translateOutput[1]) / sh;
+        }
+    } else {
+        if (context.mWidth > 0 && context.mHeight > 0) {
+            docX = windowX * mWidth / context.mWidth;
+            docY = windowY * mHeight / context.mHeight;
+        }
+    }
+
+    for (const auto& area : mClickAreas) {
+        if (docX >= area.left && docX <= area.right && docY >= area.top && docY <= area.bottom) {
+            return performClick(context, area.id, area.metadata);
+        }
+    }
+    return onClickRecursive(context, mOperations, docX, docY, 0, 0);
+}
+
+static bool applyActionsRecursive(RemoteContext& context,
+                                  const std::vector<std::unique_ptr<Operation>>& ops,
+                                  int id, float x, float y) {
+    for (const auto& op : ops) {
+        int cid = op->getOpComponentId();
+        if (cid == id) {
+            for (const auto& child : op->mChildren) {
+                if (child->opcode() == 59) { // MODIFIER_CLICK
+                    for (const auto& action : child->mChildren) {
+                        action->runAction(context, x, y);
+                    }
+                } else if (child->opcode() == 83) { // MODIFIER_MULTI_CLICK
+                    auto* mc = dynamic_cast<ModifierMultiClick*>(child.get());
+                    if (mc && mc->clickType == 0) {
+                        for (const auto& action : child->mChildren) {
+                            action->runAction(context, x, y);
+                        }
+                    }
+                }
+            }
+            context.needsRepaint();
+            return true;
+        }
+
+        if (!op->mChildren.empty()) {
+            if (applyActionsRecursive(context, op->mChildren, id, x, y)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool CoreDocument::performClick(RemoteContext& context, int id, const std::string& metadata) {
+    // A click area names a component rather than a point, so the actions get the area's
+    // centre as their coordinates.
+    for (const auto& area : mClickAreas) {
+        if (area.id == id) {
+            return applyActionsRecursive(context, mOperations, id,
+                                         (area.left + area.right) * 0.5f,
+                                         (area.top + area.bottom) * 0.5f);
+        }
+    }
+    return applyActionsRecursive(context, mOperations, id, 0.0f, 0.0f);
 }
 
 } // namespace rccore

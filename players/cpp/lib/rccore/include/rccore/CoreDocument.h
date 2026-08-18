@@ -38,6 +38,11 @@ public:
     void touchDrag(RemoteContext& context, float x, float y);
     void touchUp(RemoteContext& context, float x, float y, float dx, float dy);
 
+    // Click dispatch and registration
+    void addClickArea(int id, const std::string& contentDescription, float left, float top, float right, float bottom, const std::string& metadata);
+    bool onClick(RemoteContext& context, float x, float y);
+    bool performClick(RemoteContext& context, int id, const std::string& metadata);
+
     // Accessors
     int getWidth() const { return mWidth; }
     int getHeight() const { return mHeight; }
@@ -87,10 +92,23 @@ private:
     int mPatchVersion = 0;
     int64_t mCapabilities = 0;
     int64_t mFixedTimeMs = 0;
+    // Epoch-millis of the first frame, so animation time can be measured from playback start
+    // rather than from the epoch. -1 until the first updateTimeVariables.
+    int64_t mAnimationStartMs = -1;
+    float mLastAnimationTime = 0.0f;
     int mContentScroll = 0;
     int mContentAlignment = 0;
     int mContentSizing = 0;
     int mContentMode = 0;
+
+public:
+    struct ClickAreaSpec {
+        int id = 0;
+        std::string contentDescription;
+        float left = 0, top = 0, right = 0, bottom = 0;
+        std::string metadata;
+    };
+    std::vector<ClickAreaSpec> mClickAreas;
 };
 
 } // namespace rccore
