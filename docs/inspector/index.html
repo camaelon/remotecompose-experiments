@@ -4304,6 +4304,9 @@
       }
     } catch (e) {
     }
+    if (typeof window.updateRunningTreeLive === "function") {
+      window.updateRunningTreeLive();
+    }
   }
   function toggleCanvasBg() {
     const canvasEl = document.getElementById("previewCanvas");
@@ -4927,6 +4930,22 @@
         isSelfVisible = true;
       }
     }
+    if (!parentVisInfo) {
+      let parent = op.mParent || (typeof op.getParent === "function" ? op.getParent() : null);
+      while (parent) {
+        const pVis = typeof parent.getVisibility === "function" ? parent.getVisibility() : parent.mVisibility ?? null;
+        const pIsGone = typeof parent.isGone === "function" ? parent.isGone() : pVis === 17 || pVis === 16 || pVis === 0 || pVis === 8 || pVis >> 4 > 0 && (pVis & 16) === 16;
+        const pIsInvisible = typeof parent.isInvisible === "function" ? parent.isInvisible() : pVis === 2 || pVis === 4 || pVis >> 4 > 0 && (pVis & 64) === 64;
+        if (pIsGone) {
+          parentVisInfo = { status: "GONE" };
+          break;
+        }
+        if (pIsInvisible && (!parentVisInfo || parentVisInfo.status !== "GONE")) {
+          parentVisInfo = { status: "INVISIBLE" };
+        }
+        parent = parent.mParent || (typeof parent.getParent === "function" ? parent.getParent() : null);
+      }
+    }
     const parentIsGone = parentVisInfo && parentVisInfo.status === "GONE";
     const parentIsInvisible = parentVisInfo && parentVisInfo.status === "INVISIBLE";
     if (isSelfGone || parentIsGone) {
@@ -5266,6 +5285,15 @@
           dimEl.style.display = "";
         } else {
           dimEl.style.display = "none";
+        }
+      }
+      const visEl = document.getElementById(`ctVis-${nodeId}`);
+      if (visEl) {
+        const visInfo = getVisibilityInfo(op);
+        if (visEl.textContent !== visInfo.icon) {
+          visEl.textContent = visInfo.icon;
+          visEl.title = visInfo.title;
+          visEl.className = `tree-vis-icon ${visInfo.className}`;
         }
       }
     }
