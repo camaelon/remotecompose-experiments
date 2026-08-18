@@ -34,9 +34,9 @@ export class CollapsibleColumnLayout extends ColumnLayout {
     }
 
     override internalLayoutMeasure(context: PaintContext, measure: MeasurePass): void {
-        super.internalLayoutMeasure(context, measure);
         const m = measure.get(this);
         this.computeVisibleChildren(context, m.getW(), m.getH(), false, measure, null);
+        super.internalLayoutMeasure(context, measure);
     }
 
     private computeVisibleChildren(context: PaintContext, maxWidth: number, maxHeight: number,
@@ -57,6 +57,7 @@ export class CollapsibleColumnLayout extends ColumnLayout {
                 }
             }
             const m = measure.get(c);
+            m.clearVisibilityOverride();
             if (!m.isGone()) {
                 if (size !== null) {
                     size.setWidth(Math.max(size.getWidth(), m.getW()));
@@ -96,6 +97,7 @@ export class CollapsibleColumnLayout extends ColumnLayout {
                 childMeasure.addVisibilityOverride(Visibility.OVERRIDE_GONE);
                 overflow = true;
             } else {
+                childMeasure.addVisibilityOverride(Visibility.OVERRIDE_VISIBLE);
                 childrenHeight += childHeight;
                 childrenWidth = Math.max(childrenWidth, childMeasure.getW());
                 visibleChildren++;

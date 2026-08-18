@@ -16,7 +16,7 @@ export class CollapsiblePriority {
                 return priority.getPriority();
             }
         }
-        return Number.MAX_VALUE;
+        return 0;
     }
 
     static sortWithPriorities(components: Component[], orientation: number): Component[] {

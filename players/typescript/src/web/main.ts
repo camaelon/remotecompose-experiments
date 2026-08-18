@@ -395,6 +395,11 @@ export class RcdPlayer {
             // ID_WINDOW_WIDTH / ID_WINDOW_HEIGHT from these, so
             // expressions track the new size automatically.
         }
+        if (this.document) {
+            this.document.setWidth(newWidth);
+            this.document.setHeight(newHeight);
+            this.document.invalidateMeasure();
+        }
         this.scheduleRepaint();
     }
 

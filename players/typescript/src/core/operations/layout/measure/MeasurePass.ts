@@ -31,12 +31,13 @@ export class MeasurePass {
         const id = c.getComponentId();
         let m = this.mList.get(id);
         if (!m) {
-            // Seed the entry with the component's own visibility. Without it the entry
+            // Seed the entry with the component's own base visibility. Without it the entry
             // defaults to VISIBLE, and Component.layout() then copies that back over
             // whatever a VisibilityModifier had set — so a GONE component silently
-            // became visible again on every layout pass.
+            // became visible again on every layout pass. Masking with & 15 strips any transient
+            // visibility overrides from previous layout passes.
             m = new ComponentMeasure(id, c.getX(), c.getY(), c.getWidth(), c.getHeight(),
-                                     c.getVisibility());
+                                     c.getVisibility() & 15);
             this.mList.set(id, m);
         }
         return m;

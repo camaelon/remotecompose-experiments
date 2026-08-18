@@ -22,7 +22,7 @@ export class ComponentMeasure {
         this.mY = y;
         this.mW = w;
         this.mH = h;
-        this.mVisibility = visibility;
+        this.mVisibility = visibility & 15;
     }
 
     getX(): number { return this.mX; }
