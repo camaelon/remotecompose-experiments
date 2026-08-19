@@ -2584,7 +2584,7 @@
     if (!bits || !bits.length) return [];
     const deps = /* @__PURE__ */ new Set();
     const OFFSET = 3211264;
-    function isNaNBits(b) {
+    function isNaNBits2(b) {
       return (b & 2139095040) === 2139095040 && (b & 8388607) !== 0;
     }
     function idFromBits(b) {
@@ -2593,7 +2593,7 @@
     for (let i = 0; i < bits.length; i++) {
       const raw = bits[i];
       const b = toRawBitsHelper(raw);
-      if (isNaNBits(b)) {
+      if (isNaNBits2(b)) {
         const id = idFromBits(b);
         if ((id & 7340032) === 2097152) {
         } else if (id > OFFSET && id <= OFFSET + 79) {
@@ -4194,6 +4194,16 @@
         applyStagePreset("doc");
       });
     }
+    const workspace = document.getElementById("stageWorkspaceContainer");
+    if (workspace) {
+      workspace.addEventListener("pointerdown", (e) => {
+        if (!e.target.closest("#previewCanvas") && !e.target.closest(".stage-resize-handle")) {
+          if (typeof window.selectLayoutComponent === "function") {
+            window.selectLayoutComponent(null);
+          }
+        }
+      });
+    }
   }
   function applyStageDimensions(w, h) {
     const d = currentDensity || 1;
@@ -4990,7 +5000,7 @@
     const modifiers = [];
     const drawOps = [];
     children.forEach((child) => {
-      if (isContainerOp(child)) {
+      if (isContainerOp(child) || isComponentOp(child)) {
         childComponents.push(child);
       } else if (isModifierOp(child)) {
         modifiers.push(child);
@@ -5003,9 +5013,11 @@
     const startCollapsed = isCanvasOnlyDraw;
     const nodeId = `treeNode-${Math.random().toString(36).substr(2, 9)}`;
     __componentTreeOpRegistry.set(nodeId, op);
+    const isCoreText = name === "CoreText" || name === "TextLayout" || op.OP_CODE === 239 || op.OP_CODE === 208 || op.mTextId !== void 0;
+    const coreTextParams = isCoreText ? getCoreTextParameters(op, currentDocument2) : null;
     let html = `
         <div class="tree-node ${depth === 0 ? "tree-node-root" : ""}">
-            <div class="tree-node-content" data-node-id="${nodeId}" onclick="selectTreeNode('${nodeId}', ${id})">
+            <div class="tree-node-content" id="${nodeId}" data-node-id="${nodeId}" onclick="selectTreeNode('${nodeId}', ${id})">
                 ${hasSubContent ? `<span class="caret ${startCollapsed ? "" : "caret-down"}" onclick="toggleTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:10px;"></span>'}
                 <span id="ctVis-${nodeId}" class="tree-vis-icon ${visInfo.className}" title="${visInfo.title}">${visInfo.icon}</span>
                 <span class="tree-icon">${getComponentIcon(name)}</span>
@@ -5013,7 +5025,20 @@
                 ${id !== null && id !== void 0 ? `<span class="tree-id">ID:${id}</span>` : ""}
                 <span id="ctDim-${nodeId}" class="tree-dim" style="${formattedW !== "" && formattedH !== "" ? "" : "display:none;"}" title="Layout Dimensions: ${formattedW}x${formattedH}">(${formattedW}x${formattedH})</span>
                 ${minDims ? `<span class="badge" style="font-size:0.68rem; font-family:var(--code-font); background:rgba(245,158,11,0.14); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.35); font-weight:600; padding:1px 5px;" title="FitBoxLayout Constraints: min width = ${formattedMinW}dp, min height = ${formattedMinH}dp">min: ${formattedMinW}\xD7${formattedMinH}</span>` : ""}
+                ${(() => {
+      const layoutAlign = getLayoutAlignmentInfo(op);
+      if (!layoutAlign || !layoutAlign.hName && !layoutAlign.vName) return "";
+      return `<span class="badge" style="font-size:0.65rem; background:rgba(59,130,246,0.12); color:var(--accent-blue); font-family:var(--code-font);" title="Layout Alignment: Horizontal=${layoutAlign.hName || "none"}, Vertical=${layoutAlign.vName || "none"}${layoutAlign.spacedBy !== null ? `, SpacedBy=${layoutAlign.spacedBy}dp` : ""}">\u2194 ${layoutAlign.hName || "\u2014"} \u2195 ${layoutAlign.vName || "\u2014"}${layoutAlign.spacedBy !== null ? ` \u2022 \u{1F4CF}${layoutAlign.spacedBy}dp` : ""}</span>`;
+    })()}
                 ${textContent ? `<span style="color:var(--accent-amber); font-style:italic;">"${escapeHtml3(textContent)}"</span>` : ""}
+                ${coreTextParams ? `
+                    <span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.12); color:var(--accent-blue); font-family:var(--code-font);" title="Font Size: ${coreTextParams.fontSize}sp, Weight: ${coreTextParams.fontWeightName}">\u{1F524} ${coreTextParams.fontSize}sp \u2022 ${coreTextParams.fontWeight}</span>
+                    <span class="badge" style="font-size:0.65rem; background:rgba(168,85,247,0.12); color:var(--accent-purple); font-family:var(--code-font);" title="Alignment: ${coreTextParams.textAlignName}, Overflow: ${coreTextParams.overflowName}">${coreTextParams.textAlignName}${coreTextParams.maxLines < 1e4 ? ` \u2022 ${coreTextParams.maxLines}L` : ""}</span>
+                    ${coreTextParams.colorHex ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${coreTextParams.cssColor}; border:1px solid rgba(255,255,255,0.4); vertical-align:middle;" title="Color: ${coreTextParams.colorHex}${coreTextParams.isDynamicColor ? ` (Var #${coreTextParams.colorId})` : ""}"></span>` : ""}
+                    ${coreTextParams.autosize ? `<span class="badge" style="font-size:0.62rem; background:rgba(16,185,129,0.15); color:var(--accent-emerald);">auto</span>` : ""}
+                    ${coreTextParams.underline ? `<span class="badge" style="font-size:0.62rem; background:rgba(168,85,247,0.15); color:var(--accent-purple);"><u>U</u></span>` : ""}
+                    ${coreTextParams.strikethrough ? `<span class="badge" style="font-size:0.62rem; background:rgba(239,68,68,0.15); color:#f87171;"><s>S</s></span>` : ""}
+                ` : ""}
                 ${isCanvasOnlyDraw ? `<span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.12); color:var(--accent-blue);">${drawOps.length} draw ops</span>` : ""}
                 ${modifiers.length > 0 ? `<span class="tree-modifier-badge" onclick="toggleModifiers(event, '${nodeId}')" title="Click to show/hide ${modifiers.length} modifiers">\u{1F3A8} ${modifiers.length} <span class="caret caret-modifiers-${nodeId}">\u25B6</span></span>` : ""}
             </div>
@@ -5107,10 +5132,27 @@
       else c.classList.remove("caret-down");
     });
   }
+  function expandTreeAncestors(nodeEl) {
+    if (!nodeEl) return;
+    let parent = nodeEl.parentElement;
+    while (parent) {
+      if (parent.id && parent.id.endsWith("-children") && parent.classList.contains("nested-collapsed")) {
+        parent.classList.remove("nested-collapsed");
+        const parentNodeId = parent.id.replace("-children", "");
+        const caret = document.querySelector(`.tree-node-content[data-node-id="${parentNodeId}"] .caret, #${parentNodeId} .caret, .running-node-content[data-node-id="${parentNodeId}"] .caret`);
+        if (caret) caret.classList.add("caret-down");
+      }
+      parent = parent.parentElement;
+    }
+  }
   function selectTreeNode(nodeId, opId) {
     document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
-    const node = event?.currentTarget || (nodeId ? document.querySelector(`.tree-node-content[onclick*="${nodeId}"]`) : null);
-    if (node) node.classList.add("selected");
+    const node = document.querySelector(`.tree-node-content[data-node-id="${nodeId}"], #${nodeId}`) || event?.currentTarget;
+    if (node) {
+      node.classList.add("selected");
+      expandTreeAncestors(node);
+      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
     const currentParsedOps2 = window.currentParsedOps;
     const currentBuffer2 = window.currentBuffer;
     if (opId !== void 0 && opId !== null && currentParsedOps2) {
@@ -5235,7 +5277,7 @@
     const startCollapsed = isCanvasOnlyDraw;
     let html = `
         <div class="tree-node running-tree-node ${depth === 0 ? "tree-node-root" : ""}" data-opname="${escapeHtml3(opName.toLowerCase())}" data-opid="${opId ?? ""}" data-cid="${cid ?? ""}">
-            <div class="tree-node-content running-node-content ${isTarget ? "selected step-active" : ""}" onclick="selectRunningTreeNode('${nodeId}')" title="Click to draw frame up to ${opName}">
+            <div class="tree-node-content running-node-content ${isTarget ? "selected step-active" : ""}" id="${nodeId}" data-node-id="${nodeId}" onclick="selectRunningTreeNode('${nodeId}')" title="Click to draw frame up to ${opName}">
                 ${hasChildren ? `<span class="caret ${startCollapsed ? "" : "caret-down"}" onclick="toggleRunningTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:10px; display:inline-block;"></span>'}
                 ${isComponent && visInfo ? `<span id="rtVisIcon-${nodeId}" class="tree-vis-icon ${visInfo.className}" title="${visInfo.title}">${visInfo.icon}</span>` : ""}
                 <span class="tree-icon">${icon}</span>
@@ -5252,7 +5294,22 @@
                 ${minDims ? `<span class="badge" style="font-size:0.65rem; font-family:var(--code-font); background:rgba(245,158,11,0.14); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.35); font-weight:600; padding:1px 4px;" title="FitBoxLayout Constraints: min width = ${formattedMinW}dp, min height = ${formattedMinH}dp">min: ${formattedMinW}\xD7${formattedMinH}</span>` : ""}
                 ${isComponent && visStr ? `<span id="rtVis-${nodeId}" style="font-size:0.68rem; font-weight:600; ${visClass};">[${visStr}]</span>` : ""}
                 <span id="rtVal-${nodeId}" class="rt-val-container">${valBadge}</span>
+                ${(() => {
+      const layoutAlign = getLayoutAlignmentInfo(op);
+      if (!layoutAlign || !layoutAlign.hName && !layoutAlign.vName) return "";
+      return `<span class="badge" style="font-size:0.65rem; background:rgba(59,130,246,0.12); color:var(--accent-blue); font-family:var(--code-font);" title="Layout Alignment: Horizontal=${layoutAlign.hName || "none"}, Vertical=${layoutAlign.vName || "none"}${layoutAlign.spacedBy !== null ? `, SpacedBy=${layoutAlign.spacedBy}dp` : ""}">\u2194 ${layoutAlign.hName || "\u2014"} \u2195 ${layoutAlign.vName || "\u2014"}${layoutAlign.spacedBy !== null ? ` \u2022 \u{1F4CF}${layoutAlign.spacedBy}dp` : ""}</span>`;
+    })()}
                 ${textContent ? `<span style="color:var(--accent-amber); font-style:italic; font-size:0.75rem;">"${escapeHtml3(textContent)}"</span>` : ""}
+                ${(() => {
+      const isCoreText = opName === "CoreText" || opName === "TextLayout" || op.OP_CODE === 239 || op.OP_CODE === 208 || op.mTextId !== void 0;
+      const coreTextParams = isCoreText ? getCoreTextParameters(op, currentDocument2) : null;
+      if (!coreTextParams) return "";
+      return `
+                        <span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.12); color:var(--accent-blue); font-family:var(--code-font);" title="Font Size: ${coreTextParams.fontSize}sp, Weight: ${coreTextParams.fontWeightName}">\u{1F524} ${coreTextParams.fontSize}sp \u2022 ${coreTextParams.fontWeight}</span>
+                        <span class="badge" style="font-size:0.65rem; background:rgba(168,85,247,0.12); color:var(--accent-purple); font-family:var(--code-font);" title="Alignment: ${coreTextParams.textAlignName}, Overflow: ${coreTextParams.overflowName}">${coreTextParams.textAlignName}${coreTextParams.maxLines < 1e4 ? ` \u2022 ${coreTextParams.maxLines}L` : ""}</span>
+                        ${coreTextParams.colorHex ? `<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:${coreTextParams.cssColor}; border:1px solid rgba(255,255,255,0.4); vertical-align:middle;" title="Color: ${coreTextParams.colorHex}"></span>` : ""}
+                    `;
+    })()}
                 ${hasChildren ? `<span class="badge" style="font-size:0.65rem; background:rgba(255,255,255,0.06); color:var(--text-muted);">${subOps.length} sub-ops</span>` : ""}
             </div>
     `;
@@ -5436,10 +5493,11 @@
       n.classList.remove("selected");
       n.classList.remove("step-active");
     });
-    const nodeEl = document.querySelector(`.running-node-content[onclick*="${nodeId}"]`);
+    const nodeEl = document.querySelector(`.running-node-content[data-node-id="${nodeId}"], #${nodeId}`) || document.querySelector(`.running-node-content[onclick*="${nodeId}"]`);
     if (nodeEl) {
       nodeEl.classList.add("selected");
       nodeEl.classList.add("step-active");
+      expandTreeAncestors(nodeEl);
       nodeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
     const currentParsedOps2 = window.currentParsedOps;
@@ -6228,17 +6286,23 @@
     }
     return code >= 0 ? `Op_${code}` : "Operation";
   }
-  function isContainerOp(op) {
-    if (!op) return false;
-    const name = getOpName(op);
-    return typeof op.getList === "function" && name !== "ContainerEnd" && name !== "Mi" && op.OP_CODE !== 214 && name !== "LayoutComponentContent" && op.OP_CODE !== 201 && name !== "CanvasContent" && op.OP_CODE !== 207;
-  }
   function isModifierOp(op) {
     if (!op) return false;
     const name = getOpName(op);
-    if (name.includes("Expression") || name.includes("Variable") || name.includes("Constant") || name.includes("Theme")) return false;
-    const code = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor?.OP_CODE ?? 0;
-    return name.includes("Modifier") || code >= 16 && code <= 19 || code === 54 || code === 55 || code === 58 || code === 59 || code === 67 || code === 83 || code === 107 || code === 108 || code >= 219 && code <= 235;
+    if (name.includes("Layout") || name.includes("Component") || name === "CoreText" || name.endsWith("Box") || name.endsWith("Row") || name.endsWith("Column")) return false;
+    if (name.includes("Expression") || name.includes("Variable") || name.includes("Constant") || name.includes("Theme") || name.includes("Action") || name.includes("Data") || name.includes("Draw")) return false;
+    const code = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor?.OP_CODE ?? -1;
+    if (code === 176 || code >= 200 && code <= 213 || code === 217 || code === 230 || code === 233 || code === 234 || code === 239 || code === 240) return false;
+    return name.includes("Modifier") || code >= 16 && code <= 19 || code === 54 || code === 55 || code === 58 || code === 59 || code === 67 || code === 83 || code === 107 || code === 108 || code === 219 || code === 220 || code === 221 || code === 223 || code === 224 || code === 225 || code === 226 || code === 228 || code === 229 || code === 231 || code === 232 || code === 235 || code === 237 || code === 243;
+  }
+  function isContainerOp(op) {
+    if (!op) return false;
+    const name = getOpName(op);
+    if (name === "ContainerEnd" || name === "Mi" || op.OP_CODE === 214 || name === "LayoutComponentContent" || op.OP_CODE === 201 || name === "CanvasContent" || op.OP_CODE === 207) {
+      return false;
+    }
+    if (isModifierOp(op)) return false;
+    return typeof op.getList === "function";
   }
   function isComponentOp(op) {
     if (!op) return false;
@@ -6249,8 +6313,7 @@
     if (isModifierOp(op)) return false;
     if (isContainerOp(op)) return true;
     const code = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor?.OP_CODE ?? -1;
-    if (code >= 200 && code <= 213) return true;
-    if (code === 230 || code === 233 || code === 234 || code === 239 || code === 240) return true;
+    if (code === 176 || code >= 200 && code <= 213 || code === 217 || code === 230 || code === 233 || code === 234 || code === 239 || code === 240) return true;
     if (name.includes("Layout") || name.includes("Component") || name === "CoreText" || name.endsWith("Box") || name.endsWith("Row") || name.endsWith("Column")) {
       return true;
     }
@@ -6269,7 +6332,7 @@
     if (!bits || bits.length === 0) return "";
     const stack = [];
     const OFFSET = 3211264;
-    function isNaNBits(b) {
+    function isNaNBits2(b) {
       return (b & 2139095040) === 2139095040 && (b & 8388607) !== 0;
     }
     function idFromBits(b) {
@@ -6283,7 +6346,7 @@
     for (let i = 0; i < bits.length; i++) {
       const raw = bits[i];
       const b = toRawBits(raw);
-      if (isNaNBits(b)) {
+      if (isNaNBits2(b)) {
         const id = idFromBits(b);
         if ((id & 7340032) === 2097152) {
           stack.push(`array_${id & 2097151}`);
@@ -7458,7 +7521,7 @@
     if (!data || data.length === 0) return null;
     const isTypedIntArray = data instanceof Int32Array || data instanceof Uint32Array;
     const isTypedFloatArray = data instanceof Float32Array;
-    function isNaNBits(bits) {
+    function isNaNBits2(bits) {
       return (bits & 2139095040) === 2139095040 && (bits & 8388607) !== 0;
     }
     function idFromBits(bits) {
@@ -7483,7 +7546,7 @@
       if (typeof val !== "number") return 0;
       if (isTypedFloatArray) return Number.isNaN(val) ? 0 : val;
       const bits = getBits(val);
-      if (isNaNBits(bits)) {
+      if (isNaNBits2(bits)) {
         const varId = idFromBits(bits);
         const resolved = typeof window !== "undefined" ? window.currentPlayer?.mRemoteComposeState?.getFloat(varId) : void 0;
         return typeof resolved === "number" && !Number.isNaN(resolved) ? resolved : 0;
@@ -7492,7 +7555,7 @@
     }
     function fmtCoord(val) {
       const bits = getBits(val);
-      if (isNaNBits(bits)) {
+      if (isNaNBits2(bits)) {
         const varId = idFromBits(bits);
         return getSystemVarName2(varId) || `var_${varId}`;
       }
@@ -7508,7 +7571,7 @@
     while (i < data.length) {
       const raw = data[i];
       const bits = getBits(raw);
-      let cmd = isNaNBits(bits) ? idFromBits(bits) : typeof raw === "number" && !isTypedIntArray && raw >= 10 && raw <= 16 ? raw : idFromBits(bits);
+      let cmd = isNaNBits2(bits) ? idFromBits(bits) : typeof raw === "number" && !isTypedIntArray && raw >= 10 && raw <= 16 ? raw : idFromBits(bits);
       if (cmd >= 3145728 && cmd <= 3145728 + 6) {
         cmd = 10 + (cmd - 3145728);
       }
@@ -7800,6 +7863,301 @@
     const id = op.mId ?? op.id ?? 0;
     return `PathExpression #${id}`;
   }
+  function getCoreTextParameters(op, doc) {
+    if (!op) return null;
+    const currentDocument2 = doc || (typeof window !== "undefined" ? window.currentDocument : null);
+    const textId = op.mTextId ?? op.textId ?? -1;
+    let text = op.mText ?? op.text ?? "";
+    if (!text && textId !== -1 && currentDocument2 && typeof currentDocument2.getText === "function") {
+      text = currentDocument2.getText(textId) || "";
+    }
+    let fontSize = 16;
+    if (op.mFontSizeValue !== void 0 && !isNaN(op.mFontSizeValue)) {
+      fontSize = op.mFontSizeValue;
+    } else if (op.mFontSize !== void 0) {
+      fontSize = isNaNBits(op.mFontSize) ? 16 : intBitsToFloat(op.mFontSize);
+    }
+    const minFontSize = op.mMinFontSize ?? -1;
+    const maxFontSize = op.mMaxFontSize ?? -1;
+    let fontWeight = 400;
+    if (op.mFontWeightValue !== void 0 && !isNaN(op.mFontWeightValue)) {
+      fontWeight = Math.round(op.mFontWeightValue);
+    } else if (op.mFontWeight !== void 0) {
+      fontWeight = isNaNBits(op.mFontWeight) ? 400 : Math.round(intBitsToFloat(op.mFontWeight));
+    }
+    let fontWeightName = "Regular (400)";
+    if (fontWeight <= 150) fontWeightName = `Thin (${fontWeight})`;
+    else if (fontWeight <= 250) fontWeightName = `Extra Light (${fontWeight})`;
+    else if (fontWeight <= 350) fontWeightName = `Light (${fontWeight})`;
+    else if (fontWeight <= 450) fontWeightName = `Regular (${fontWeight})`;
+    else if (fontWeight <= 550) fontWeightName = `Medium (${fontWeight})`;
+    else if (fontWeight <= 650) fontWeightName = `Semi Bold (${fontWeight})`;
+    else if (fontWeight <= 750) fontWeightName = `Bold (${fontWeight})`;
+    else if (fontWeight <= 850) fontWeightName = `Extra Bold (${fontWeight})`;
+    else fontWeightName = `Black (${fontWeight})`;
+    const fontStyle = op.mFontStyle ?? op.fontStyle ?? 0;
+    const fontStyleName = fontStyle === 1 ? "Italic" : "Normal";
+    const fontFamilyId = op.mFontFamilyId ?? op.fontFamilyId ?? -1;
+    let fontFamily = "Default";
+    if (fontFamilyId !== -1 && currentDocument2 && typeof currentDocument2.getText === "function") {
+      const resolvedFamily = currentDocument2.getText(fontFamilyId);
+      if (resolvedFamily) fontFamily = resolvedFamily;
+    } else if (op.mType !== void 0 && op.mType !== -1) {
+      const types = ["Default", "Sans-Serif", "Serif", "Monospace"];
+      if (types[op.mType]) fontFamily = types[op.mType];
+    }
+    const fontAxis = op.mFontAxis ?? null;
+    const fontAxisValues = op.mFontAxisValues ?? null;
+    const colorId = op.mColorId ?? op.colorId ?? -1;
+    const rawColor = op.mColorValue ?? op.mColor ?? op.color ?? 0;
+    const argb = rawColor >>> 0;
+    const a = (argb >>> 24 & 255) / 255;
+    const r = argb >>> 16 & 255;
+    const g = argb >>> 8 & 255;
+    const b = argb & 255;
+    const colorHex = "#" + argb.toString(16).padStart(8, "0").toUpperCase();
+    const cssColor = `rgba(${r}, ${g}, ${b}, ${a.toFixed(2)})`;
+    const isDynamicColor = colorId !== -1;
+    const textAlign = (op.mTextAlignValue ?? op.mTextAlign ?? op.textAlign ?? 1) & 65535;
+    const alignMap = { 1: "Left", 2: "Right", 3: "Center", 4: "Justify", 5: "Start", 6: "End" };
+    const textAlignName = alignMap[textAlign] || `Align (${textAlign})`;
+    const overflow = op.mOverflow ?? op.overflow ?? 1;
+    const overflowMap = { 1: "Clip", 2: "Visible", 3: "Ellipsis", 4: "Start Ellipsis", 5: "Middle Ellipsis" };
+    const overflowName = overflowMap[overflow] || `Overflow (${overflow})`;
+    const maxLines = op.mMaxLines ?? op.maxLines ?? 2147483647;
+    const maxLinesStr = maxLines >= 2147483647 ? "Unlimited (\u221E)" : `${maxLines}`;
+    const letterSpacing = op.mLetterSpacing ?? op.letterSpacing ?? 0;
+    const lineHeightAdd = op.mLineHeightAdd ?? op.lineHeightAdd ?? 0;
+    const lineHeightMultiplier = op.mLineHeightMultiplier ?? op.lineHeightMultiplier ?? 1;
+    const lineBreakStrategy = op.mLineBreakStrategy ?? op.lineBreakStrategy ?? 0;
+    const lbMap = { 0: "Simple", 1: "High Quality", 2: "Balanced" };
+    const lineBreakName = lbMap[lineBreakStrategy] || `Strategy (${lineBreakStrategy})`;
+    const hyphenationFrequency = op.mHyphenationFrequency ?? op.hyphenationFrequency ?? 0;
+    const hyMap = { 0: "None", 1: "Normal", 2: "Full", 3: "Normal Fast", 4: "Full Fast" };
+    const hyphenationName = hyMap[hyphenationFrequency] || `Hyphenation (${hyphenationFrequency})`;
+    const justificationMode = op.mJustificationMode ?? op.justificationMode ?? 0;
+    const justMap = { 0: "None", 1: "Inter-Word", 2: "Inter-Character" };
+    const justificationName = justMap[justificationMode] || `Mode (${justificationMode})`;
+    const underline = Boolean(op.mUnderline ?? op.underline);
+    const strikethrough = Boolean(op.mStrikethrough ?? op.strikethrough);
+    const autosize = Boolean(op.mAutosize ?? op.autosize);
+    const flags = op.mFlags ?? op.flags ?? 0;
+    const componentId = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
+    const animationId = op.mAnimationId ?? op.animationId ?? -1;
+    return {
+      text,
+      textId,
+      fontSize,
+      minFontSize,
+      maxFontSize,
+      fontWeight,
+      fontWeightName,
+      fontStyle,
+      fontStyleName,
+      fontFamily,
+      fontFamilyId,
+      fontAxis,
+      fontAxisValues,
+      colorHex,
+      cssColor,
+      isDynamicColor,
+      colorId,
+      textAlign,
+      textAlignName,
+      overflow,
+      overflowName,
+      maxLines,
+      maxLinesStr,
+      letterSpacing,
+      lineHeightAdd,
+      lineHeightMultiplier,
+      lineBreakStrategy,
+      lineBreakName,
+      hyphenationFrequency,
+      hyphenationName,
+      justificationMode,
+      justificationName,
+      underline,
+      strikethrough,
+      autosize,
+      flags,
+      componentId,
+      animationId
+    };
+  }
+  function prettyPrintCoreText(op, doc) {
+    if (!op) return "";
+    const currentDoc = doc || (typeof window !== "undefined" ? window.currentDocument : null);
+    const params = getCoreTextParameters(op, currentDoc);
+    if (!params) return "";
+    const parts = [];
+    if (params.text) parts.push(`"${params.text}"`);
+    parts.push(`${params.fontSize}sp`);
+    if (params.fontWeight !== 400) parts.push(`w${params.fontWeight}`);
+    if (params.fontStyle === 1) parts.push("italic");
+    if (params.textAlignName !== "Left" && params.textAlignName !== "Start") parts.push(params.textAlignName);
+    if (params.maxLines < 2147483647) parts.push(`max ${params.maxLines}L`);
+    return parts.join(", ");
+  }
+  function renderCoreTextDetailsHtml(op, idx, doc) {
+    if (!op) return "";
+    const currentDoc = doc || (typeof window !== "undefined" ? window.currentDocument : null);
+    const params = getCoreTextParameters(op, currentDoc);
+    if (!params) return "";
+    const escapeHtml7 = typeof window !== "undefined" && typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => String(s));
+    return `
+        <div style="margin-top:8px; background:rgba(0,0,0,0.25); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.06); padding-bottom:6px;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:1rem;">\u{1F524}</span>
+                    <strong style="color:var(--accent-blue); font-size:0.82rem;">CoreText Parameters</strong>
+                    ${params.componentId !== null ? `<span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent-blue); font-size:0.65rem;">CID: ${params.componentId}</span>` : ""}
+                    ${params.textId !== -1 ? `<span class="badge" style="background:rgba(234,179,8,0.15); color:var(--accent-amber); font-size:0.65rem;">TextID: ${params.textId}</span>` : ""}
+                </div>
+                <div style="display:flex; gap:4px; align-items:center;">
+                    ${params.autosize ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:var(--accent-emerald); font-size:0.65rem;">\u26A1 Autosize</span>` : ""}
+                    ${params.underline ? `<span class="badge" style="background:rgba(168,85,247,0.15); color:var(--accent-purple); font-size:0.65rem;"><u>U</u> Underline</span>` : ""}
+                    ${params.strikethrough ? `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-size:0.65rem;"><s>S</s> Strike</span>` : ""}
+                </div>
+            </div>
+
+            <!-- Text Content Preview -->
+            ${params.text ? `
+                <div style="background:rgba(0,0,0,0.3); border-radius:4px; padding:6px 10px; border-left:3px solid var(--accent-amber);">
+                    <div style="font-size:0.68rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:2px;">Text String (${params.text.length} chars)</div>
+                    <div style="font-size:0.85rem; color:var(--text-primary); font-family:var(--code-font); font-style:italic;">"${escapeHtml7(params.text)}"</div>
+                </div>
+            ` : ""}
+
+            <!-- 4-column Parameter Grid -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:6px; font-size:0.75rem;">
+                <!-- Font & Typography -->
+                <div style="background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:4px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:600; margin-bottom:4px;">\u{1F524} TYPOGRAPHY</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div><span style="color:var(--text-secondary);">Size:</span> <strong>${params.fontSize} sp</strong> ${params.minFontSize > 0 || params.maxFontSize > 0 ? `<span style="color:var(--text-muted); font-size:0.65rem;">(${params.minFontSize > 0 ? params.minFontSize : "min"}..${params.maxFontSize > 0 ? params.maxFontSize : "max"})</span>` : ""}</div>
+                        <div><span style="color:var(--text-secondary);">Weight:</span> <strong>${params.fontWeightName}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Style:</span> <strong>${params.fontStyleName}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Family:</span> <strong>${escapeHtml7(params.fontFamily)}</strong> ${params.fontFamilyId !== -1 ? `<span style="color:var(--text-muted); font-size:0.65rem;">(ID: ${params.fontFamilyId})</span>` : ""}</div>
+                    </div>
+                </div>
+
+                <!-- Color & Styling -->
+                <div style="background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:4px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:600; margin-bottom:4px;">\u{1F3A8} COLOR & APPEARANCE</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="color:var(--text-secondary);">Color:</span>
+                            <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background-color:${params.cssColor}; border:1px solid rgba(255,255,255,0.4);"></span>
+                            <strong style="font-family:var(--code-font);">${params.colorHex}</strong>
+                        </div>
+                        <div><span style="color:var(--text-secondary);">Dynamic Color:</span> <strong>${params.isDynamicColor ? `Yes (Var #${params.colorId})` : "No (Static)"}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Letter Spacing:</span> <strong>${params.letterSpacing !== 0 ? `${params.letterSpacing} sp` : "Default (0)"}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Line Height:</span> <strong>${params.lineHeightMultiplier}\xD7 ${params.lineHeightAdd !== 0 ? `+ ${params.lineHeightAdd} dp` : ""}</strong></div>
+                    </div>
+                </div>
+
+                <!-- Alignment & Layout -->
+                <div style="background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:4px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:600; margin-bottom:4px;">\u{1F4D0} ALIGNMENT & FLOW</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div><span style="color:var(--text-secondary);">Align:</span> <strong>${params.textAlignName}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Overflow:</span> <strong>${params.overflowName}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Max Lines:</span> <strong>${params.maxLinesStr}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Break Strategy:</span> <strong>${params.lineBreakName}</strong></div>
+                    </div>
+                </div>
+
+                <!-- Advanced & Hyphenation -->
+                <div style="background:rgba(255,255,255,0.03); padding:6px 8px; border-radius:4px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:600; margin-bottom:4px;">\u2699\uFE0F ADVANCED</div>
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <div><span style="color:var(--text-secondary);">Hyphenation:</span> <strong>${params.hyphenationName}</strong></div>
+                        <div><span style="color:var(--text-secondary);">Justification:</span> <strong>${params.justificationName}</strong></div>
+                        ${params.animationId !== -1 ? `<div><span style="color:var(--text-secondary);">Anim ID:</span> <strong>${params.animationId}</strong></div>` : ""}
+                        ${params.flags !== 0 ? `<div><span style="color:var(--text-secondary);">Flags:</span> <strong>0x${params.flags.toString(16)}</strong></div>` : ""}
+                        ${params.fontAxis && params.fontAxis.length > 0 ? `<div><span style="color:var(--text-secondary);">Font Axes:</span> <strong>${params.fontAxis.length} axes</strong></div>` : ""}
+                    </div>
+                </div>
+        </div>
+    `;
+  }
+  function getLayoutAlignmentInfo(op) {
+    if (!op) return null;
+    const hPos = op.mHorizontalPositioning ?? op.horizontalPositioning ?? op.mHorizontalAlignment ?? op.horizontalAlignment ?? null;
+    const vPos = op.mVerticalPositioning ?? op.verticalPositioning ?? op.mVerticalAlignment ?? op.verticalAlignment ?? null;
+    const spacedBy = op.mSpacedBy ?? op.spacedBy ?? op.mSpacing ?? op.spacing ?? op.mHorizontalSpacing ?? op.mVerticalSpacing ?? null;
+    if (hPos === null && vPos === null && spacedBy === null) {
+      if (op.mAlignment !== void 0) {
+        return {
+          hPos: null,
+          vPos: null,
+          hName: null,
+          vName: null,
+          alignment: op.mAlignment,
+          spacedBy: null
+        };
+      }
+      return null;
+    }
+    const posMap = {
+      1: "Start",
+      2: "Center",
+      3: "End",
+      4: "Top",
+      5: "Bottom",
+      6: "SpaceBetween",
+      7: "SpaceEvenly",
+      8: "SpaceAround"
+    };
+    const hName = typeof hPos === "number" ? posMap[hPos] || `H:${hPos}` : typeof hPos === "string" ? hPos : null;
+    const vName = typeof vPos === "number" ? posMap[vPos] || `V:${vPos}` : typeof vPos === "string" ? vPos : null;
+    return {
+      hPos,
+      vPos,
+      hName,
+      vName,
+      spacedBy: typeof spacedBy === "number" ? spacedBy : null
+    };
+  }
+  function prettyPrintLayoutAlignment(op) {
+    const align = getLayoutAlignmentInfo(op);
+    if (!align) return "";
+    const parts = [];
+    if (align.hName) parts.push(`H: ${align.hName}`);
+    if (align.vName) parts.push(`V: ${align.vName}`);
+    if (align.spacedBy !== null && align.spacedBy !== void 0) parts.push(`spacedBy: ${align.spacedBy}dp`);
+    return parts.join(", ");
+  }
+  function renderLayoutAlignmentDetailsHtml(op, idx) {
+    const align = getLayoutAlignmentInfo(op);
+    if (!align || !align.hName && !align.vName && align.spacedBy === null) return "";
+    return `
+        <div style="margin-top:6px; background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:700; font-size:0.75rem; color:var(--accent-blue); display:flex; align-items:center; gap:4px;">
+                    <span>\u{1F4D0}</span> Layout Alignment &amp; Positioning
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:0.75rem;">
+                <div style="background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;">
+                    <span style="color:var(--text-secondary);">Horizontal:</span>
+                    <strong style="color:var(--text-primary); margin-left:4px;">${align.hName || "Default"}</strong>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;">
+                    <span style="color:var(--text-secondary);">Vertical:</span>
+                    <strong style="color:var(--text-primary); margin-left:4px;">${align.vName || "Default"}</strong>
+                </div>
+                ${align.spacedBy !== null && align.spacedBy !== void 0 ? `
+                    <div style="background:rgba(0,0,0,0.2); padding:4px 8px; border-radius:4px;">
+                        <span style="color:var(--text-secondary);">Spacing:</span>
+                        <strong style="color:var(--text-primary); margin-left:4px;">${align.spacedBy} dp</strong>
+                    </div>
+                ` : ""}
+            </div>
+        </div>
+    `;
+  }
   function renderCommandsList(ops, u8) {
     const container = document.getElementById("commandsListContainer");
     const unusedBadge = document.getElementById("unusedVarBadge");
@@ -7929,6 +8287,10 @@
         exprPrettyStr = prettyPrintMatrixFromPath(op);
       } else if (opCode === 193 || opName.includes("PathExpression")) {
         exprPrettyStr = prettyPrintPathExpression(op);
+      } else if (opCode === 239 || opCode === 208 || opName === "CoreText" || opName === "TextLayout") {
+        exprPrettyStr = prettyPrintCoreText(op);
+      } else if (isContainerOp(op) || [200, 202, 203, 204, 217, 230, 233, 237, 238, 240].includes(opCode) || opName.includes("Layout") || opName.includes("Row") || opName.includes("Column") || opName.includes("Box")) {
+        exprPrettyStr = prettyPrintLayoutAlignment(op);
       }
       const textSnippet = op.mText || (op.mTextId ? currentDocument2?.getText(op.mTextId) : null);
       let unusedBadgeHtml = "";
@@ -7964,7 +8326,7 @@
                             ${opCode === 101 || opName === "BitmapData" ? `<span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:0.68rem;">\u{1F5BC}\uFE0F ${op.mWidth ?? op.width ?? "?"}\xD7${op.mHeight ?? op.height ?? "?"} px</span>` : ""}
                             ${([44, 48, 49, 66, 149, 190].includes(opCode) || opName.includes("Bitmap") && opCode !== 101) && (op.mImageId !== void 0 || op.imageId !== void 0 || op.mBitmapId !== void 0) ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.68rem;">\u{1F5BC}\uFE0F Bmp #${op.mImageId ?? op.imageId ?? op.mBitmapId}</span>` : ""}
                             ${exprPrettyStr ? `<span style="font-size:0.75rem; color:var(--accent-blue); font-family:var(--code-font); font-weight:500; display:inline-flex; align-items:center; gap:4px;">= ${exprPrettyStr}</span>` : ""}
-                            ${textSnippet ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml7(textSnippet)}"</span>` : ""}
+                            ${textSnippet && opCode !== 239 && opCode !== 208 && opName !== "CoreText" && opName !== "TextLayout" ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml7(textSnippet)}"</span>` : ""}
                             ${unusedBadgeHtml}
                         </div>
                         <span class="op-offset">Off ${startOff}\u2013${endOff} (${sizeB} B)</span>
@@ -7978,6 +8340,8 @@
                             ${desc ? `<div class="op-detail" style="font-family:var(--code-font); font-size:0.8rem; color:var(--text-primary); margin-bottom:6px; background:rgba(0,0,0,0.2); padding:6px 8px; border-radius:4px; white-space:pre-wrap; word-break:break-word;">${escapeHtml7(desc)}</div>` : ""}
                             ${opCode === 101 || opName === "BitmapData" ? renderBitmapDataPreviewHtml(op, idx) : ""}
                             ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
+                            ${opCode === 239 || opCode === 208 || opName === "CoreText" || opName === "TextLayout" || op.mTextId !== void 0 && op.mTextId !== -1 ? renderCoreTextDetailsHtml(op, idx) : ""}
+                            ${renderLayoutAlignmentDetailsHtml(op, idx)}
                             ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                             ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
                             ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-bottom:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font); display:flex; align-items:center; gap:6px;">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
@@ -8014,6 +8378,8 @@
                     ${desc ? `<div class="op-detail">${escapeHtml7(desc)}</div>` : ""}
                     ${opCode === 101 || opName === "BitmapData" ? renderBitmapDataPreviewHtml(op, idx) : ""}
                     ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
+                    ${opCode === 239 || opCode === 208 || opName === "CoreText" || opName === "TextLayout" || op.mTextId !== void 0 && op.mTextId !== -1 ? renderCoreTextDetailsHtml(op, idx) : ""}
+                    ${renderLayoutAlignmentDetailsHtml(op, idx)}
                     ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                     ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
                     ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-top:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font);">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
@@ -9741,11 +10107,17 @@ Click to inspect in Command List</title>
       gy += y;
       const parent = curr.mParent || (typeof curr.getParent === "function" ? curr.getParent() : null);
       if (parent) {
-        const pad = getComponentPadding(parent);
+        let pl = getSafeFloat(typeof parent.getPaddingLeft === "function" ? parent.getPaddingLeft() : parent.mPaddingLeft);
+        let pt = getSafeFloat(typeof parent.getPaddingTop === "function" ? parent.getPaddingTop() : parent.mPaddingTop);
+        if (pl === 0 && pt === 0) {
+          const pad = getComponentPadding(parent);
+          pl = pad.left;
+          pt = pad.top;
+        }
         const sx = getSafeFloat(typeof parent.getScrollX === "function" ? parent.getScrollX() : parent.mScrollX);
         const sy = getSafeFloat(typeof parent.getScrollY === "function" ? parent.getScrollY() : parent.mScrollY);
-        gx += pad.left + sx;
-        gy += pad.top + sy;
+        gx += pl + sx;
+        gy += pt + sy;
       }
       curr = parent;
     }
@@ -9760,10 +10132,11 @@ Click to inspect in Command List</title>
     function walk(op, depth, parentKey = null, parentX = 0, parentY = 0) {
       if (!op) return;
       const name = getOpName(op);
-      if (name === "ContainerEnd" || name === "Mi" || op.OP_CODE === 214) return;
+      if (name === "ContainerEnd" || name === "Mi" || op.OP_CODE === 214 || name === "LayoutComponentContent" || op.OP_CODE === 201 || name === "CanvasContent" || op.OP_CODE === 207) return;
       const isContainer = isContainerOp(op);
-      const hasLayoutProps = typeof op.getWidth === "function" || op.mWidth !== void 0 || isContainer;
-      if (hasLayoutProps || isContainer) {
+      const isComponent = isComponentOp(op);
+      const hasLayoutProps = typeof op.getWidth === "function" || op.mWidth !== void 0 || isContainer || isComponent;
+      if (hasLayoutProps || isContainer || isComponent) {
         const key = `comp_${++counter}`;
         const id = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
         const cid = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
@@ -9819,7 +10192,7 @@ Click to inspect in Command List</title>
             if (modName.includes("Scroll")) {
               isScrollable = true;
             }
-          } else if (isContainerOp(child)) {
+          } else if (isContainerOp(child) || isComponentOp(child)) {
             childComponents.push(child);
           } else {
             drawOps.push(child);
@@ -9830,6 +10203,10 @@ Click to inspect in Command List</title>
         const globalY = op.mParent || typeof op.getParent === "function" ? pos.gy : parentY + localY;
         const text = op.mText || (op.mTextId && doc.getText ? doc.getText(op.mTextId) : null);
         const imageId = op.mImageId ?? op.imageId ?? op.mBitmapId ?? null;
+        const alignInfo = getLayoutAlignmentInfo(op);
+        const horizontalAlignment = alignInfo ? alignInfo.hName : null;
+        const verticalAlignment = alignInfo ? alignInfo.vName : null;
+        const spacing = alignInfo ? alignInfo.spacedBy : null;
         const compData = {
           key,
           op,
@@ -9850,6 +10227,9 @@ Click to inspect in Command List</title>
           isClickable,
           isScrollable,
           alignment,
+          horizontalAlignment,
+          verticalAlignment,
+          spacing,
           modifiers,
           childCount: childComponents.length,
           drawOpCount: drawOps.length,
@@ -9869,7 +10249,7 @@ Click to inspect in Command List</title>
       walk(rootLayout, 0, null, 0, 0);
     } else {
       topOps.forEach((op) => {
-        if (isContainerOp(op)) walk(op, 0, null, 0, 0);
+        if (isContainerOp(op) || isComponentOp(op)) walk(op, 0, null, 0, 0);
       });
     }
     return list;
@@ -10045,6 +10425,200 @@ Click to inspect in Command List</title>
     html += `</div>`;
     return html;
   }
+  function renderCoreTextInspectorSection(selectedComp) {
+    if (!selectedComp || !selectedComp.op) return "";
+    const name = selectedComp.name;
+    const isTextOp = name === "CoreText" || name === "TextLayout" || selectedComp.op.mTextId !== void 0 || selectedComp.op.OP_CODE === 239 || selectedComp.op.OP_CODE === 208;
+    if (!isTextOp) return "";
+    const currentDoc = typeof window !== "undefined" ? window.currentDocument : null;
+    const params = getCoreTextParameters(selectedComp.op, currentDoc);
+    if (!params) return "";
+    return `
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:8px; padding:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F524}</span> CoreText Typography & Parameters
+                </div>
+                <div style="display:flex; gap:4px; align-items:center;">
+                    ${params.textId !== -1 ? `<span class="badge" style="font-size:0.65rem; background:rgba(234,179,8,0.15); color:var(--accent-amber);">Text ID: ${params.textId}</span>` : ""}
+                    ${params.autosize ? `<span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:var(--accent-emerald);">\u26A1 Autosize</span>` : ""}
+                </div>
+            </div>
+
+            <!-- Text Content Banner -->
+            ${params.text ? `
+                <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:8px 10px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Resolved Text Content</span>
+                        <span style="font-size:0.68rem; color:var(--text-muted);">${params.text.length} characters \u2022 ${params.text.trim().split(/\s+/).filter(Boolean).length} words</span>
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--text-primary); font-family:var(--code-font); word-break:break-word; line-height:1.4;">
+                        "${escapeHtml6(params.text)}"
+                    </div>
+                </div>
+            ` : ""}
+
+            <!-- 4 Structured Subsections Grid -->
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <!-- 1. Font & Typography -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-blue); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <span>\u{1F4D0}</span> Font & Typography
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-secondary);">Font Size:</span>
+                            <strong style="color:var(--text-primary);">${params.fontSize} sp</strong>
+                            ${params.minFontSize > 0 || params.maxFontSize > 0 ? `<span style="color:var(--text-muted); font-size:0.68rem;">(${params.minFontSize > 0 ? params.minFontSize : "min"}..${params.maxFontSize > 0 ? params.maxFontSize : "max"})</span>` : ""}
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Weight:</span>
+                            <strong style="color:var(--text-primary);">${params.fontWeightName}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Style:</span>
+                            <strong style="color:var(--text-primary);">${params.fontStyleName}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Family:</span>
+                            <strong style="color:var(--text-primary);">${escapeHtml6(params.fontFamily)}</strong>
+                            ${params.fontFamilyId !== -1 ? `<span style="color:var(--text-muted); font-size:0.68rem;">(ID: ${params.fontFamilyId})</span>` : ""}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Color & Appearance -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-purple); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <span>\u{1F3A8}</span> Color & Appearance
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span style="color:var(--text-secondary);">Color:</span>
+                            <span style="display:inline-block; width:14px; height:14px; border-radius:3px; background-color:${params.cssColor}; border:1px solid rgba(255,255,255,0.4); box-shadow:0 0 4px rgba(0,0,0,0.4);"></span>
+                            <strong style="font-family:var(--code-font); color:var(--text-primary);">${params.colorHex}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Dynamic Color:</span>
+                            <strong style="color:var(--text-primary);">${params.isDynamicColor ? `Yes (Var #${params.colorId})` : "No (Static)"}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Underline:</span>
+                            <strong style="color:var(--text-primary);">${params.underline ? "Yes" : "No"}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Strikethrough:</span>
+                            <strong style="color:var(--text-primary);">${params.strikethrough ? "Yes" : "No"}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Alignment & Flow -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-amber); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <span>\u23F8\uFE0F</span> Alignment & Flow
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-secondary);">Text Align:</span>
+                            <strong style="color:var(--text-primary);">${params.textAlignName}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Overflow:</span>
+                            <strong style="color:var(--text-primary);">${params.overflowName}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Max Lines:</span>
+                            <strong style="color:var(--text-primary);">${params.maxLinesStr}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Letter Spacing:</span>
+                            <strong style="color:var(--text-primary);">${params.letterSpacing !== 0 ? `${params.letterSpacing} sp` : "0 sp"}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Line Height:</span>
+                            <strong style="color:var(--text-primary);">${params.lineHeightMultiplier}\xD7 ${params.lineHeightAdd !== 0 ? `+ ${params.lineHeightAdd} dp` : ""}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Break Strategy:</span>
+                            <strong style="color:var(--text-primary);">${params.lineBreakName}</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Advanced Typography Options -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-emerald); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
+                        <span>\u2699\uFE0F</span> Advanced Options
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
+                        <div>
+                            <span style="color:var(--text-secondary);">Hyphenation:</span>
+                            <strong style="color:var(--text-primary);">${params.hyphenationName}</strong>
+                        </div>
+                        <div>
+                            <span style="color:var(--text-secondary);">Justification:</span>
+                            <strong style="color:var(--text-primary);">${params.justificationName}</strong>
+                        </div>
+                        ${params.animationId !== -1 ? `
+                            <div>
+                                <span style="color:var(--text-secondary);">Animation ID:</span>
+                                <strong style="color:var(--text-primary);">${params.animationId}</strong>
+                            </div>
+                        ` : ""}
+                        ${params.flags !== 0 ? `
+                            <div>
+                                <span style="color:var(--text-secondary);">Flags:</span>
+                                <strong style="font-family:var(--code-font); color:var(--text-primary);">0x${params.flags.toString(16)}</strong>
+                            </div>
+                        ` : ""}
+                        ${params.fontAxis && params.fontAxis.length > 0 ? `
+                            <div>
+                                <span style="color:var(--text-secondary);">Font Axes:</span>
+                                <strong style="color:var(--text-primary);">${params.fontAxis.length} custom axes</strong>
+                            </div>
+                        ` : ""}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+  }
+  function renderLayoutAlignmentInspectorSection(selectedComp) {
+    if (!selectedComp || !selectedComp.op) return "";
+    const align = getLayoutAlignmentInfo(selectedComp.op);
+    if (!align || !align.hName && !align.vName && align.spacedBy === null) return "";
+    return `
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:8px; padding:12px;">
+            <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F4D0}</span> Layout Alignment &amp; Distribution
+                </div>
+                ${align.spacedBy !== null && align.spacedBy !== void 0 ? `
+                    <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--accent-blue); font-size:0.68rem; font-family:var(--code-font);">spacedBy: ${align.spacedBy} dp</span>
+                ` : ""}
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px; font-size:0.75rem;">
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u2194 Horizontal Alignment</div>
+                    <strong style="color:var(--text-primary); font-size:0.85rem;">${align.hName || "Default"}</strong>
+                    ${align.hPos !== null && align.hPos !== void 0 ? `<span style="color:var(--text-muted); font-size:0.68rem; margin-left:4px;">(raw: ${align.hPos})</span>` : ""}
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u2195 Vertical Alignment</div>
+                    <strong style="color:var(--text-primary); font-size:0.85rem;">${align.vName || "Default"}</strong>
+                    ${align.vPos !== null && align.vPos !== void 0 ? `<span style="color:var(--text-muted); font-size:0.68rem; margin-left:4px;">(raw: ${align.vPos})</span>` : ""}
+                </div>
+                ${align.spacedBy !== null && align.spacedBy !== void 0 ? `
+                    <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                        <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u{1F4CF} Spaced By</div>
+                        <strong style="color:var(--text-primary); font-size:0.85rem;">${align.spacedBy} dp</strong>
+                    </div>
+                ` : ""}
+            </div>
+        </div>
+    `;
+  }
   function renderLayoutInspectorPanel(doc) {
     const container = document.getElementById("layoutInspectorContainer");
     if (!container) return;
@@ -10061,8 +10635,8 @@ Click to inspect in Command List</title>
     cachedLayoutComponents = extractLayoutComponents(doc);
     const diagnostics = runLayoutDiagnostics(cachedLayoutComponents);
     const density = currentDensity || 1;
-    if (!selectedComponentKey || !cachedLayoutComponents.find((c) => c.key === selectedComponentKey)) {
-      selectedComponentKey = cachedLayoutComponents.length > 0 ? cachedLayoutComponents[0].key : null;
+    if (selectedComponentKey && !cachedLayoutComponents.find((c) => c.key === selectedComponentKey)) {
+      selectedComponentKey = null;
     }
     const selectedComp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey) || null;
     let html = `
@@ -10072,16 +10646,19 @@ Click to inspect in Command List</title>
                 <div style="display:flex; align-items:center; gap:8px; min-width:0; flex:1;">
                     <span style="font-size:1.3rem;">${selectedComp ? getComponentIcon(selectedComp.name) : "\u{1F4D0}"}</span>
                     <div style="display:flex; flex-direction:column; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:6px;">
+                        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                             <strong style="color:var(--accent-blue); font-size:0.85rem; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
                                 ${selectedComp ? `${escapeHtml6(selectedComp.name)}` : "No Component Selected"}
                             </strong>
                             ${selectedComp && selectedComp.id !== null ? `
                                 <span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent-blue); font-size:0.65rem;">ID: ${selectedComp.id}</span>
                             ` : ""}
+                            ${selectedComp && (selectedComp.horizontalAlignment || selectedComp.verticalAlignment) ? `
+                                <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--accent-blue); font-size:0.65rem;">\u2194 H: ${selectedComp.horizontalAlignment || "\u2014"} \u2022 \u2195 V: ${selectedComp.verticalAlignment || "\u2014"}${selectedComp.spacing !== null && selectedComp.spacing !== void 0 ? ` \u2022 \u{1F4CF} ${selectedComp.spacing}dp` : ""}</span>
+                            ` : ""}
                         </div>
                         <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--code-font);">
-                            ${selectedComp ? `${Math.round(selectedComp.width)}\xD7${Math.round(selectedComp.height)} dp \u2022 Depth ${selectedComp.depth}` : "Select an element in the Component Tree panel to inspect"}
+                            ${selectedComp ? `${Math.round(selectedComp.width)}\xD7${Math.round(selectedComp.height)} dp \u2022 Depth ${selectedComp.depth}` : "Select an element in the Component Tree panel or Preview to inspect"}
                         </div>
                     </div>
                 </div>
@@ -10118,6 +10695,12 @@ Click to inspect in Command List</title>
                 </div>
             ` : ""}
 
+            <!-- Dedicated CoreText Typography & Parameters Section (when CoreText is selected) -->
+            ${selectedComp ? renderCoreTextInspectorSection(selectedComp) : ""}
+
+            <!-- Dedicated Layout Alignment & Distribution Section -->
+            ${selectedComp ? renderLayoutAlignmentInspectorSection(selectedComp) : ""}
+
             <!-- Section 1: Visual Box Model Diagram -->
             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
                 <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
@@ -10142,28 +10725,34 @@ Click to inspect in Command List</title>
                 <div style="font-weight:700; font-size:0.8rem; color:var(--accent-emerald); margin-bottom:10px; display:flex; align-items:center; gap:6px;">
                     <span>\u{1F39B}\uFE0F</span> Layout Sandbox & Tweaker
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.75rem;">
-                    <div>
-                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Width (dp)</label>
-                        <input id="tweakWidthInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? Math.round(selectedComp.width) : 100}" onchange="applyLayoutTweaks()" />
+                ${selectedComp ? `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.75rem;">
+                        <div>
+                            <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Width (dp)</label>
+                            <input id="tweakWidthInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${Math.round(selectedComp.width)}" onchange="applyLayoutTweaks()" />
+                        </div>
+                        <div>
+                            <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Height (dp)</label>
+                            <input id="tweakHeightInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${Math.round(selectedComp.height)}" onchange="applyLayoutTweaks()" />
+                        </div>
+                        <div>
+                            <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Padding (dp)</label>
+                            <input id="tweakPaddingInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp.padding.top}" onchange="applyLayoutTweaks()" />
+                        </div>
+                        <div>
+                            <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Corner Radius (dp)</label>
+                            <input id="tweakRadiusInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp.border.radius}" onchange="applyLayoutTweaks()" />
+                        </div>
                     </div>
-                    <div>
-                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Height (dp)</label>
-                        <input id="tweakHeightInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? Math.round(selectedComp.height) : 50}" onchange="applyLayoutTweaks()" />
+                    <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:10px;">
+                        <button class="btn btn-secondary btn-xs" onclick="resetLayoutTweaks()">\u27F3 Reset</button>
+                        <button class="btn btn-xs" onclick="applyLayoutTweaks()">\u26A1 Apply Live</button>
                     </div>
-                    <div>
-                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Padding (dp)</label>
-                        <input id="tweakPaddingInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? selectedComp.padding.top : 0}" onchange="applyLayoutTweaks()" />
+                ` : `
+                    <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">
+                        Select a component to adjust its layout properties live.
                     </div>
-                    <div>
-                        <label style="color:var(--text-secondary); display:block; margin-bottom:2px;">Corner Radius (dp)</label>
-                        <input id="tweakRadiusInput" type="number" class="dim-input" style="width:100%; padding:3px 6px;" value="${selectedComp ? selectedComp.border.radius : 0}" onchange="applyLayoutTweaks()" />
-                    </div>
-                </div>
-                <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:10px;">
-                    <button class="btn btn-secondary btn-xs" onclick="resetLayoutTweaks()">\u27F3 Reset</button>
-                    <button class="btn btn-xs" onclick="applyLayoutTweaks()">\u26A1 Apply Live</button>
-                </div>
+                `}
             </div>
         </div>
     `;
@@ -10171,38 +10760,96 @@ Click to inspect in Command List</title>
     drawLayoutBoundsOverlay();
   }
   function selectLayoutComponent(target) {
-    if (!target && target !== 0) return;
     const win = typeof window !== "undefined" ? window : globalThis;
+    if (!target && target !== 0) {
+      selectedComponentKey = null;
+      if (typeof document !== "undefined") {
+        document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
+        document.querySelectorAll(".running-node-content").forEach((n) => n.classList.remove("selected"));
+      }
+      const p132 = typeof document !== "undefined" ? document.getElementById("pane13") : null;
+      if (p132 && !p132.classList.contains("hidden-panel")) {
+        renderLayoutInspectorPanel(win.currentDocument);
+      }
+      drawLayoutBoundsOverlay();
+      return;
+    }
     if (win.currentDocument) {
       cachedLayoutComponents = extractLayoutComponents(win.currentDocument);
     }
+    let found = null;
     if (typeof target === "string" && target.startsWith("comp_")) {
-      selectedComponentKey = target;
+      found = cachedLayoutComponents.find((c) => c.key === target);
+      selectedComponentKey = found ? found.key : target;
     } else if (typeof target === "number") {
-      let found = cachedLayoutComponents.find((c) => c.cid !== null && c.cid !== void 0 && c.cid === target);
+      found = cachedLayoutComponents.find((c) => c.cid !== null && c.cid !== void 0 && c.cid === target);
       if (!found && target !== 0) {
         found = cachedLayoutComponents.find((c) => c.id !== null && c.id !== void 0 && c.id === target);
       }
-      if (found) selectedComponentKey = found.key;
+      selectedComponentKey = found ? found.key : null;
     } else if (typeof target === "object" && target !== null) {
       const targetId = typeof target.getId === "function" ? target.getId() : target.mId ?? null;
       const targetCid = typeof target.getComponentId === "function" ? target.getComponentId() : target.mComponentId ?? null;
-      let found = cachedLayoutComponents.find((c) => c.op === target);
+      found = cachedLayoutComponents.find((c) => c.op === target);
       if (!found && targetCid !== null && targetCid !== void 0) {
         found = cachedLayoutComponents.find((c) => c.cid === targetCid);
       }
       if (!found && targetId !== null && targetId !== 0) {
         found = cachedLayoutComponents.find((c) => c.id === targetId);
       }
-      if (found) selectedComponentKey = found.key;
+      selectedComponentKey = found ? found.key : null;
     }
-    const selectedComp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
-    if (selectedComp && typeof document !== "undefined") {
-      const matchId = selectedComp.cid ?? selectedComp.id;
-      const nodeEl = matchId !== null && matchId !== void 0 ? document.querySelector(`.tree-node-content[onclick*="${matchId}"]`) : null;
-      if (nodeEl) {
+    if (typeof document !== "undefined") {
+      const selectedComp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+      if (selectedComp) {
+        let matchedNodeId = null;
+        if (__componentTreeOpRegistry && selectedComp.op) {
+          for (const [nId, regOp] of __componentTreeOpRegistry.entries()) {
+            if (regOp === selectedComp.op) {
+              matchedNodeId = nId;
+              break;
+            }
+          }
+        }
+        let nodeEl = matchedNodeId ? document.getElementById(matchedNodeId) || document.querySelector(`.tree-node-content[data-node-id="${matchedNodeId}"], #${matchedNodeId}`) : null;
+        if (!nodeEl && (selectedComp.cid !== null || selectedComp.id !== null && selectedComp.id !== 0)) {
+          const matchId = selectedComp.cid ?? selectedComp.id;
+          nodeEl = document.querySelector(`.tree-node-content[onclick*="${matchId}"]`);
+        }
         document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
-        nodeEl.classList.add("selected");
+        if (nodeEl) {
+          nodeEl.classList.add("tree-node-content");
+          nodeEl.classList.add("selected");
+          if (typeof expandTreeAncestors === "function") {
+            expandTreeAncestors(nodeEl);
+          }
+          nodeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+        let matchedRtNodeId = null;
+        if (__rtOpRegistry && selectedComp.op) {
+          for (const [nId, regOp] of __rtOpRegistry.entries()) {
+            if (regOp === selectedComp.op) {
+              matchedRtNodeId = nId;
+              break;
+            }
+          }
+        }
+        let rtNodeEl = matchedRtNodeId ? document.getElementById(matchedRtNodeId) || document.querySelector(`.running-node-content[data-node-id="${matchedRtNodeId}"], #${matchedRtNodeId}`) : null;
+        if (!rtNodeEl && (selectedComp.cid !== null || selectedComp.id !== null && selectedComp.id !== 0)) {
+          const matchId = selectedComp.cid ?? selectedComp.id;
+          rtNodeEl = document.querySelector(`.running-node-content[onclick*="${matchId}"]`);
+        }
+        document.querySelectorAll(".running-node-content").forEach((n) => n.classList.remove("selected"));
+        if (rtNodeEl) {
+          rtNodeEl.classList.add("running-node-content");
+          rtNodeEl.classList.add("selected");
+          if (typeof expandTreeAncestors === "function") {
+            expandTreeAncestors(rtNodeEl);
+          }
+        }
+      } else {
+        document.querySelectorAll(".tree-node-content").forEach((n) => n.classList.remove("selected"));
+        document.querySelectorAll(".running-node-content").forEach((n) => n.classList.remove("selected"));
       }
     }
     const p13 = typeof document !== "undefined" ? document.getElementById("pane13") : null;
@@ -10283,19 +10930,26 @@ Click to inspect in Command List</title>
       const y = Math.round(livePos.gy * density);
       const w = Math.round(liveW * density);
       const h = Math.round(liveH * density);
-      if (w <= 0 || h <= 0) {
+      const visInfo = op ? getVisibilityInfo(op) : { status: "VISIBLE" };
+      const isGone = visInfo.status === "GONE";
+      if (isGone || w <= 0 || h <= 0) {
         if (isSelected) {
-          const label = `${comp.name} (0\xD70 - Inactive / GONE)`;
-          ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+          const label = `${comp.name} (${Math.max(0, Math.round(liveW))}\xD7${Math.max(0, Math.round(liveH))}dp - Inactive / GONE)`;
+          const drawW = w > 0 ? w : 40;
+          const drawH = h > 0 ? h : 20;
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.85)";
+          ctx.lineWidth = 1.5;
           ctx.setLineDash([4, 4]);
-          ctx.strokeRect(x, y, 40, 20);
+          ctx.strokeRect(x, y, drawW, drawH);
+          ctx.fillStyle = "rgba(245, 158, 11, 0.08)";
+          ctx.fillRect(x, y, drawW, drawH);
           ctx.setLineDash([]);
           ctx.font = "bold 11px monospace";
           const textW = ctx.measureText(label).width;
           const badgeY = Math.max(0, y - 18);
           ctx.fillStyle = "#0f172a";
           ctx.fillRect(x, badgeY, textW + 10, 16);
-          ctx.strokeStyle = "rgba(245, 158, 11, 0.7)";
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.85)";
           ctx.lineWidth = 1;
           ctx.strokeRect(x, badgeY, textW + 10, 16);
           ctx.fillStyle = "#f59e0b";
