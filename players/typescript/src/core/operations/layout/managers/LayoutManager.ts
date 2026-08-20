@@ -150,7 +150,9 @@ export abstract class LayoutManager extends LayoutComponent {
 
         // Measure children with fill sizing (skip if already done in scroll path)
         if (!scrollMod) {
-            this.computeSize(context, minWidth, w - padding_w, minHeight, h - padding_h, measure);
+            const childMaxW = Math.max(0, w - padding_w);
+            const childMaxH = Math.max(0, h - padding_h);
+            this.computeSize(context, 0, childMaxW, 0, childMaxH, measure);
         }
 
         // Re-assign final dimensions after computeSize() (matching Java lines 558-563).
