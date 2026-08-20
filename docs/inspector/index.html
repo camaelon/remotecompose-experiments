@@ -4618,13 +4618,14 @@
   }
   function highlightStepOperation(op, stepIndex, totalSteps) {
     if (!op) return;
+    const opId = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
+    const cid = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
     stepTargetOp = op;
     window.stepTargetOp = op;
     const stepStatusPill = document.getElementById("stepStatusPill");
     if (stepStatusPill) {
       const opName = getOpName(op);
-      const opId2 = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
-      const idText = opId2 !== null && opId2 !== void 0 ? ` #${opId2}` : "";
+      const idText = opId !== null && opId !== void 0 ? ` #${opId}` : "";
       const stepNumText = typeof stepIndex === "number" && typeof totalSteps === "number" ? `Step ${stepIndex + 1}/${totalSteps}: ` : "";
       stepStatusPill.innerHTML = `<span>\u23F8\uFE0F</span> <span>${stepNumText}<strong>${escapeHtml2(opName)}</strong>${idText}</span>`;
       stepStatusPill.style.display = "inline-flex";
@@ -4639,12 +4640,10 @@
         }
       }
       if (!foundNodeId) {
-        const opId2 = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
-        const cid = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
         for (const [nodeId, regOp] of rtRegistry.entries()) {
           const rOpId = typeof regOp.getId === "function" ? regOp.getId() : regOp.mId ?? null;
           const rCid = typeof regOp.getComponentId === "function" ? regOp.getComponentId() : regOp.mComponentId ?? null;
-          if (opId2 !== null && rOpId === opId2) {
+          if (opId !== null && rOpId === opId) {
             foundNodeId = nodeId;
             break;
           }
@@ -4678,11 +4677,14 @@
       }
     }
     const currentParsedOps2 = window.currentParsedOps;
-    const opId = typeof op?.getId === "function" ? op.getId() : op?.mId ?? null;
-    if (opId !== null && opId !== void 0 && currentParsedOps2) {
-      const targetIdx = currentParsedOps2.findIndex((o) => (typeof o.getId === "function" ? o.getId() : o.mId) === opId);
+    if (currentParsedOps2 && currentParsedOps2.length > 0) {
+      const targetIdx = findMatchingCommandIndex(op, opId, currentParsedOps2);
       if (targetIdx >= 0) {
-        if (typeof window.selectCommandCard === "function") window.selectCommandCard(targetIdx, opId);
+        const matchedOp = currentParsedOps2[targetIdx];
+        const matchedOpId = getOpId(matchedOp) ?? opId ?? null;
+        if (typeof window.selectCommandCard === "function") {
+          window.selectCommandCard(targetIdx, matchedOpId, { scrollTo: true });
+        }
         const cmdCard = document.getElementById(`cmdCard-${targetIdx}`);
         if (cmdCard) cmdCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
@@ -4984,6 +4986,8 @@
   function buildTreeNodeHtml(op, depth, parentOp = null) {
     const name = getOpName(op);
     const id = typeof op.getId === "function" ? op.getId() : op.mId ?? null;
+    const componentId = typeof op.getComponentId === "function" ? op.getComponentId() : op.mComponentId ?? null;
+    const displayId = componentId !== null && componentId !== void 0 ? componentId : id !== null && id !== void 0 ? id : null;
     const width = typeof op.getWidth === "function" ? op.getWidth() : op.mWidth ?? null;
     const height = typeof op.getHeight === "function" ? op.getHeight() : op.mHeight ?? null;
     const formattedW = formatDimensionNumber(width);
@@ -5017,12 +5021,12 @@
     const coreTextParams = isCoreText ? getCoreTextParameters(op, currentDocument2) : null;
     let html = `
         <div class="tree-node ${depth === 0 ? "tree-node-root" : ""}">
-            <div class="tree-node-content" id="${nodeId}" data-node-id="${nodeId}" onclick="selectTreeNode('${nodeId}', ${id})">
+            <div class="tree-node-content" id="${nodeId}" data-node-id="${nodeId}" onclick="selectTreeNode('${nodeId}', ${displayId !== null ? displayId : "null"})">
                 ${hasSubContent ? `<span class="caret ${startCollapsed ? "" : "caret-down"}" onclick="toggleTreeNode(event, '${nodeId}')">\u25B6</span>` : '<span style="width:10px;"></span>'}
                 <span id="ctVis-${nodeId}" class="tree-vis-icon ${visInfo.className}" title="${visInfo.title}">${visInfo.icon}</span>
                 <span class="tree-icon">${getComponentIcon(name)}</span>
                 <span class="tree-tag">${name}</span>
-                ${id !== null && id !== void 0 ? `<span class="tree-id">ID:${id}</span>` : ""}
+                ${displayId !== null && displayId !== void 0 ? `<span class="tree-id">ID:${displayId}</span>` : ""}
                 <span id="ctDim-${nodeId}" class="tree-dim" style="${formattedW !== "" && formattedH !== "" ? "" : "display:none;"}" title="Layout Dimensions: ${formattedW}x${formattedH}">(${formattedW}x${formattedH})</span>
                 ${minDims ? `<span class="badge" style="font-size:0.68rem; font-family:var(--code-font); background:rgba(245,158,11,0.14); color:var(--accent-amber); border:1px solid rgba(245,158,11,0.35); font-weight:600; padding:1px 5px;" title="FitBoxLayout Constraints: min width = ${formattedMinW}dp, min height = ${formattedMinH}dp">min: ${formattedMinW}\xD7${formattedMinH}</span>` : ""}
                 ${(() => {
@@ -5155,17 +5159,19 @@
     }
     const currentParsedOps2 = window.currentParsedOps;
     const currentBuffer2 = window.currentBuffer;
-    if (opId !== void 0 && opId !== null && currentParsedOps2) {
-      const targetIdx = currentParsedOps2.findIndex((op2) => (typeof op2.getId === "function" ? op2.getId() : op2.mId) === opId);
+    const op = __componentTreeOpRegistry.get(nodeId);
+    if (currentParsedOps2 && currentParsedOps2.length > 0) {
+      const targetIdx = findMatchingCommandIndex(op, opId, currentParsedOps2);
       if (targetIdx >= 0) {
         const u8 = currentBuffer2 ? new Uint8Array(currentBuffer2) : null;
         renderCommandsList(currentParsedOps2, u8);
-        selectCommandCard(targetIdx, opId);
+        const matchedOp = currentParsedOps2[targetIdx];
+        const matchedOpId = getOpId(matchedOp) ?? opId ?? null;
+        selectCommandCard(targetIdx, matchedOpId, { scrollTo: true });
         const cmdCard = document.getElementById(`cmdCard-${targetIdx}`);
         if (cmdCard) cmdCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
-    const op = __componentTreeOpRegistry.get(nodeId);
     if (typeof window !== "undefined" && typeof window.selectLayoutComponent === "function") {
       window.selectLayoutComponent(op || opId);
     }
@@ -5501,17 +5507,18 @@
       nodeEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
     const currentParsedOps2 = window.currentParsedOps;
-    const opId = typeof op?.getId === "function" ? op.getId() : op?.mId ?? null;
-    if (opId !== null && opId !== void 0 && currentParsedOps2) {
-      const targetIdx = currentParsedOps2.findIndex((o) => (typeof o.getId === "function" ? o.getId() : o.mId) === opId);
+    if (currentParsedOps2 && currentParsedOps2.length > 0) {
+      const targetIdx = findMatchingCommandIndex(op, null, currentParsedOps2);
       if (targetIdx >= 0) {
-        selectCommandCard(targetIdx, opId);
+        const matchedOp = currentParsedOps2[targetIdx];
+        const matchedOpId = getOpId(matchedOp) ?? null;
+        selectCommandCard(targetIdx, matchedOpId, { scrollTo: true });
         const cmdCard = document.getElementById(`cmdCard-${targetIdx}`);
         if (cmdCard) cmdCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     }
     if (typeof window !== "undefined" && typeof window.selectLayoutComponent === "function") {
-      window.selectLayoutComponent(op || opId);
+      window.selectLayoutComponent(op);
     }
   }
   function onRunningTreeSearchInput() {
@@ -8492,6 +8499,78 @@
       renderCommandsList(currentParsedOps2, u8);
     }
   }
+  function findMatchingCommandIndex(op, opId = null, allOps = null) {
+    const ops = allOps || (typeof window !== "undefined" ? window.currentParsedOps : null);
+    if (!ops || !Array.isArray(ops) || ops.length === 0) return -1;
+    if (!op && (opId === null || opId === void 0)) return -1;
+    if (op && typeof op === "object") {
+      const directIdx = ops.indexOf(op);
+      if (directIdx >= 0) return directIdx;
+      for (const prop of ["op", "mOp", "component", "mComponent", "sourceOp"]) {
+        if (op[prop] && typeof op[prop] === "object") {
+          const subIdx = ops.indexOf(op[prop]);
+          if (subIdx >= 0) return subIdx;
+        }
+      }
+    }
+    const cid = typeof op?.getComponentId === "function" ? op.getComponentId() : op?.mComponentId ?? op?.componentId ?? (typeof opId === "number" ? opId : null);
+    if (cid !== null && cid !== void 0) {
+      const targetName = op ? getOpName(op) : "";
+      const targetOpCode = op?.OP_CODE ?? op?.constructor?.OP_CODE ?? null;
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        const oCid = typeof o.getComponentId === "function" ? o.getComponentId() : o.mComponentId ?? o.componentId ?? null;
+        if (oCid === cid) {
+          if (targetOpCode !== null && (o.OP_CODE === targetOpCode || o.constructor?.OP_CODE === targetOpCode)) return i;
+          const oName = getOpName(o);
+          if (targetName && (oName === targetName || targetName.includes("Text") && oName.includes("Text") || targetName.includes("Box") && oName.includes("Box"))) return i;
+        }
+      }
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        const oCid = typeof o.getComponentId === "function" ? o.getComponentId() : o.mComponentId ?? o.componentId ?? null;
+        if (oCid === cid && (isContainerOp(o) || isComponentOp(o) || o.OP_CODE === 2 || o.OP_CODE === 200 || getOpName(o).includes("Layout") || getOpName(o).includes("Text"))) return i;
+      }
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        const oCid = typeof o.getComponentId === "function" ? o.getComponentId() : o.mComponentId ?? o.componentId ?? o.mCurrentId ?? null;
+        if (oCid === cid) return i;
+      }
+    }
+    const textId = op?.mTextId ?? op?.textId ?? null;
+    if (textId !== null && textId !== void 0 && textId !== -1) {
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        if ((o.mTextId === textId || o.textId === textId) && (getOpName(o).includes("Text") || o.OP_CODE === 239 || o.OP_CODE === 208 || o.OP_CODE === 43)) return i;
+      }
+    }
+    const bmpId = op?.mBitmapId ?? op?.bitmapId ?? op?.mImageId ?? op?.imageId ?? null;
+    if (bmpId !== null && bmpId !== void 0 && bmpId !== -1) {
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        if ((o.mBitmapId === bmpId || o.bitmapId === bmpId || o.mImageId === bmpId || o.imageId === bmpId) && (getOpName(o).includes("Image") || o.OP_CODE === 204 || o.OP_CODE === 44)) return i;
+      }
+    }
+    const rawId = typeof op?.getId === "function" ? op.getId() : op?.mId ?? op?.mVarId ?? op?.varId ?? (typeof opId === "number" ? opId : null);
+    if (rawId !== null && rawId !== void 0 && rawId !== 0) {
+      for (let i = 0; i < ops.length; i++) {
+        const o = ops[i];
+        if (getOpId(o) === rawId || o.mId === rawId || o.mVarId === rawId) return i;
+      }
+    }
+    if (op?._byteStart !== void 0) {
+      for (let i = 0; i < ops.length; i++) {
+        if (ops[i]._byteStart !== void 0 && ops[i]._byteStart === op._byteStart) return i;
+      }
+    }
+    if (typeof op?.deepToString === "function") {
+      const str = op.deepToString("");
+      for (let i = 0; i < ops.length; i++) {
+        if (typeof ops[i].deepToString === "function" && ops[i].deepToString("") === str) return i;
+      }
+    }
+    return -1;
+  }
   function selectCommandCard(idx, opId, options = {}) {
     const currentParsedOps2 = window.currentParsedOps;
     const currentDocument2 = window.currentDocument;
@@ -8502,7 +8581,12 @@
     });
     document.querySelectorAll(".command-card, .command-compact-row").forEach((c) => c.classList.remove("selected"));
     const card = document.getElementById(`cmdCard-${idx}`);
-    if (card) card.classList.add("selected");
+    if (card) {
+      card.classList.add("selected");
+      if (options.scrollTo !== false) {
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
     if (options.source !== "exprGraph" && currentParsedOps2 && currentParsedOps2[idx]) {
       const targetOp = currentParsedOps2[idx];
       let exprGraphData2 = window.exprGraphData;
@@ -8564,6 +8648,7 @@
   }
   window.getOpId = getOpId;
   window.getEffectiveChildren = getEffectiveChildren;
+  window.findMatchingCommandIndex = findMatchingCommandIndex;
   window.toggleCmdDisplayMode = toggleCmdDisplayMode;
   window.changeCmdSortMode = changeCmdSortMode;
   window.renderPathDataPreviewHtml = renderPathDataPreviewHtml;
@@ -11164,12 +11249,14 @@ Click to inspect in Command List</title>
     }
     drawLayoutBoundsOverlay();
   }
-  function jumpToCommandCard(opId) {
+  function jumpToCommandCard(opId, op = null) {
     const win = typeof window !== "undefined" ? window : globalThis;
     const allOps = win.currentParsedOps || [];
-    const idx = allOps.findIndex((o) => (typeof o.getId === "function" ? o.getId() : o.mId) === opId);
+    const idx = findMatchingCommandIndex(op, opId, allOps);
     if (idx >= 0) {
-      selectCommandCard(idx, opId);
+      const matchedOp = allOps[idx];
+      const matchedOpId = getOpId(matchedOp) ?? opId ?? null;
+      selectCommandCard(idx, matchedOpId, { scrollTo: true });
       const card = document.getElementById(`cmdCard-${idx}`);
       if (card) card.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
@@ -13337,6 +13424,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     window.renderCommandsList = renderCommandsList;
     window.toggleCommandExpand = toggleCommandExpand;
     window.selectCommandCard = selectCommandCard;
+    window.findMatchingCommandIndex = findMatchingCommandIndex;
     window.onCmdSearchInput = onCmdSearchInput;
     window.clearCmdSearch = clearCmdSearch;
     window.filterUnusedVarsOnly = filterUnusedVarsOnly;
@@ -13778,6 +13866,10 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.renderDimensionModifierDetailsHtml = renderDimensionModifierDetailsHtml;
+  } catch (e) {
+  }
+  try {
+    window.findMatchingCommandIndex = findMatchingCommandIndex;
   } catch (e) {
   }
   try {
