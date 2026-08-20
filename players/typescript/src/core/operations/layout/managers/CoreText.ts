@@ -322,7 +322,45 @@ export class CoreText extends LayoutManager implements VariableSupport {
             return;
         }
 
-        this.textLayout(context, maxWidth, maxHeight, bounds);
+        if (this.mAutosize) {
+            const stepSize = 0.5;
+            const minFontSize = this.mMinFontSize <= 0 ? 4 : this.mMinFontSize;
+            const maxFontSize = this.mMaxFontSize <= 0 ? 400 : this.mMaxFontSize;
+            let min = minFontSize;
+            let max = maxFontSize;
+            let current = (min + max) / 2;
+            while (max - min >= stepSize) {
+                this.mPaint.setTextSize(current);
+                context.replacePaint(this.mPaint);
+                this.textLayout(context, maxWidth, maxHeight, bounds, true, true);
+                const h = bounds[3] - bounds[1];
+                const w = bounds[2] - bounds[0];
+                if (h >= maxHeight || w > maxWidth) {
+                    max = current;
+                } else {
+                    min = current;
+                }
+                current = (min + max) / 2;
+            }
+            current = Math.floor((min - minFontSize) / stepSize) * stepSize + minFontSize;
+            if ((current + stepSize) < maxFontSize) {
+                this.mPaint.setTextSize(current + stepSize);
+                context.replacePaint(this.mPaint);
+                this.textLayout(context, maxWidth, maxHeight, bounds, true, true);
+                const h = bounds[3] - bounds[1];
+                const w = bounds[2] - bounds[0];
+                if (h < maxHeight && w <= maxWidth) {
+                    current += stepSize;
+                }
+            }
+            this.mFontSizeValue = current;
+            this.mMeasureFontSize = current;
+            this.mPaint.setTextSize(this.mFontSizeValue);
+            context.replacePaint(this.mPaint);
+            this.textLayout(context, maxWidth, maxHeight, bounds, true, false);
+        } else {
+            this.textLayout(context, maxWidth, maxHeight, bounds);
+        }
 
         context.restorePaint();
         const w = bounds[2] - bounds[0];
@@ -348,11 +386,11 @@ export class CoreText extends LayoutManager implements VariableSupport {
     }
 
     private textLayout(context: PaintContext, maxWidth: number, maxHeight: number,
-                       bounds: Float32Array): void {
+                       bounds: Float32Array, forceComplexParam = false, inAutosize = false): void {
         if (maxWidth < 0 || maxHeight < 0) return;
 
         let flags = PaintContext.TEXT_MEASURE_FONT_HEIGHT | PaintContext.TEXT_MEASURE_SPACES;
-        let forceComplex = false;
+        let forceComplex = forceComplexParam;
 
         if (this.mOverflow === OVERFLOW_START_ELLIPSIS
             || this.mOverflow === OVERFLOW_MIDDLE_ELLIPSIS
@@ -384,6 +422,9 @@ export class CoreText extends LayoutManager implements VariableSupport {
         }
 
         if (forceComplex || (bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0)) {
+            if (inAutosize) {
+                flags |= 0x01; // TEXT_MEASURE_AUTOSIZE
+            }
             this.mComputedTextLayout = context.layoutComplexText(
                 this.mTextId, 0, this.mCachedString!.length,
                 this.mTextAlign, this.mOverflow, this.mMaxLines,
@@ -437,26 +478,27 @@ export class CoreText extends LayoutManager implements VariableSupport {
         }
 
         const length = this.mCachedString.length;
+        const contentW = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+        const contentH = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
+
         if (this.mComputedTextLayout) {
             if (this.mOverflow !== OVERFLOW_VISIBLE) {
                 paintContext.save();
-                paintContext.clipRect(0, 0,
-                    this.mWidth - this.mPaddingLeft - this.mPaddingRight,
-                    this.mHeight - this.mPaddingTop - this.mPaddingBottom);
-                paintContext.drawComplexText(this.mComputedTextLayout);
+                paintContext.clipRect(0, 0, contentW, contentH);
+                paintContext.drawComplexText(this.mComputedTextLayout, contentW);
                 paintContext.restore();
             } else {
-                paintContext.drawComplexText(this.mComputedTextLayout);
+                paintContext.drawComplexText(this.mComputedTextLayout, contentW);
             }
         } else {
             let px = this.mTextX;
             switch (this.mTextAlignValue) {
                 case TEXT_ALIGN_CENTER:
-                    px = (this.mWidth - this.mPaddingLeft - this.mPaddingRight - this.mTextW) / 2;
+                    px = (contentW - this.mTextW) / 2;
                     break;
                 case TEXT_ALIGN_RIGHT:
                 case TEXT_ALIGN_END:
-                    px = this.mWidth - this.mPaddingLeft - this.mPaddingRight - this.mTextW;
+                    px = contentW - this.mTextW;
                     break;
                 case TEXT_ALIGN_LEFT:
                 case TEXT_ALIGN_START:
@@ -464,11 +506,9 @@ export class CoreText extends LayoutManager implements VariableSupport {
                     break;
             }
 
-            const contentW = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
             if (this.mOverflow !== OVERFLOW_VISIBLE || this.mTextW > contentW) {
                 paintContext.save();
-                paintContext.clipRect(0, 0, contentW,
-                    this.mHeight - this.mPaddingTop - this.mPaddingBottom);
+                paintContext.clipRect(0, 0, contentW, contentH);
                 paintContext.drawTextRun(this.mTextId, 0, length, 0, 0, px, this.mTextY, false);
                 paintContext.restore();
             } else {

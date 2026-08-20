@@ -83,7 +83,7 @@ export abstract class PaintContext {
                                useUnderline: boolean, strikethrough: boolean, flags: number): any;
     abstract drawTextRun(textId: number, start: number, end: number, contextStart: number, contextEnd: number,
                          x: number, y: number, rtl: boolean): void;
-    abstract drawComplexText(computedTextLayout: any): void;
+    abstract drawComplexText(computedTextLayout: any, targetWidth?: number): void;
     abstract drawTweenPath(path1Id: number, path2Id: number, tween: number, start: number, end: number): void;
     abstract tweenPath(out: number, path1: number, path2: number, tween: number): void;
     abstract combinePath(out: number, path1: number, path2: number, operation: number): void;

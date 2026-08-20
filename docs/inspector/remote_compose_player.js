@@ -2333,10 +2333,10 @@ var RC = (() => {
                 break;
               }
               case 39:
-                stack.push(Math.random());
+                stack.push(AnimatedFloatExpression.nextRandom());
                 break;
               case 40:
-                stack.pop();
+                AnimatedFloatExpression.seedRandom(stack.pop());
                 break;
               case 41: {
                 let x = floatToRawIntBits(stack.pop());
@@ -2348,7 +2348,7 @@ var RC = (() => {
               }
               case 42: {
                 const max = stack.pop(), min = stack.pop();
-                stack.push(min + Math.random() * (max - min));
+                stack.push(min + AnimatedFloatExpression.nextRandom() * (max - min));
                 break;
               }
               case 43: {
@@ -2669,6 +2669,21 @@ var RC = (() => {
       this.mR2 = 0;
       this.mR3 = 0;
     }
+    /** Seed the generator. A seed of 0 means "unseeded", as the reference has it. */
+    static seedRandom(seed) {
+      if (seed === 0) {
+        _AnimatedFloatExpression.rngState = null;
+        return;
+      }
+      const asLong = BigInt.asUintN(64, BigInt(floatToRawIntBits(seed)));
+      _AnimatedFloatExpression.rngState = (asLong ^ _AnimatedFloatExpression.RNG_MULT) & _AnimatedFloatExpression.RNG_MASK;
+    }
+    /** `Random.nextFloat()` when seeded; the platform generator when not. */
+    static nextRandom() {
+      if (_AnimatedFloatExpression.rngState === null) return Math.random();
+      _AnimatedFloatExpression.rngState = _AnimatedFloatExpression.rngState * _AnimatedFloatExpression.RNG_MULT + 0xbn & _AnimatedFloatExpression.RNG_MASK;
+      return Number(_AnimatedFloatExpression.rngState >> 24n) / 16777216;
+    }
     static isMathOperator(v) {
       if (!Number.isNaN(v)) return false;
       const id = idFromNan(v);
@@ -2909,9 +2924,10 @@ var RC = (() => {
           return sp - 1;
         }
         case OFFSET3 + 39:
-          s[++sp] = Math.random();
+          s[++sp] = _AnimatedFloatExpression.nextRandom();
           return sp;
         case OFFSET3 + 40:
+          _AnimatedFloatExpression.seedRandom(s[sp]);
           return sp - 1;
         case OFFSET3 + 41: {
           let x = Math.trunc(s[sp]);
@@ -3086,6 +3102,19 @@ var RC = (() => {
       return sp;
     }
   };
+  // ── seeded randomness ────────────────────────────────────────────────────────
+  //
+  // `RAND_SEED` used to be a no-op here ("ignore seed in JS"), so a document that seeded
+  // itself was reproducible on the device and different in the browser on every frame —
+  // which defeats the point of seeding. This is `java.util.Random`'s generator, so the
+  // sequence matches the reference: a 48-bit LCG, with `nextFloat()` being the top 24
+  // bits over 2^24.
+  //
+  // The state is a BigInt because the multiply overflows a double's 53 bits. At a few
+  // hundred draws a frame that cost is irrelevant beside being wrong.
+  _AnimatedFloatExpression.RNG_MULT = 0x5deece66dn;
+  _AnimatedFloatExpression.RNG_MASK = (1n << 48n) - 1n;
+  _AnimatedFloatExpression.rngState = null;
   _AnimatedFloatExpression.OFFSET = 3211264;
   _AnimatedFloatExpression.LAST_OP = _AnimatedFloatExpression.OFFSET + 79;
   _AnimatedFloatExpression.ID_REGION_MASK = 7340032;
@@ -14549,7 +14578,45 @@ var RC = (() => {
         context.restorePaint();
         return;
       }
-      this.textLayout(context, maxWidth, maxHeight, bounds);
+      if (this.mAutosize) {
+        const stepSize = 0.5;
+        const minFontSize = this.mMinFontSize <= 0 ? 4 : this.mMinFontSize;
+        const maxFontSize = this.mMaxFontSize <= 0 ? 400 : this.mMaxFontSize;
+        let min = minFontSize;
+        let max = maxFontSize;
+        let current = (min + max) / 2;
+        while (max - min >= stepSize) {
+          this.mPaint.setTextSize(current);
+          context.replacePaint(this.mPaint);
+          this.textLayout(context, maxWidth, maxHeight, bounds, true, true);
+          const h2 = bounds[3] - bounds[1];
+          const w2 = bounds[2] - bounds[0];
+          if (h2 >= maxHeight || w2 > maxWidth) {
+            max = current;
+          } else {
+            min = current;
+          }
+          current = (min + max) / 2;
+        }
+        current = Math.floor((min - minFontSize) / stepSize) * stepSize + minFontSize;
+        if (current + stepSize < maxFontSize) {
+          this.mPaint.setTextSize(current + stepSize);
+          context.replacePaint(this.mPaint);
+          this.textLayout(context, maxWidth, maxHeight, bounds, true, true);
+          const h2 = bounds[3] - bounds[1];
+          const w2 = bounds[2] - bounds[0];
+          if (h2 < maxHeight && w2 <= maxWidth) {
+            current += stepSize;
+          }
+        }
+        this.mFontSizeValue = current;
+        this.mMeasureFontSize = current;
+        this.mPaint.setTextSize(this.mFontSizeValue);
+        context.replacePaint(this.mPaint);
+        this.textLayout(context, maxWidth, maxHeight, bounds, true, false);
+      } else {
+        this.textLayout(context, maxWidth, maxHeight, bounds);
+      }
       context.restorePaint();
       const w = bounds[2] - bounds[0];
       const h = bounds[3] - bounds[1];
@@ -14579,10 +14646,10 @@ var RC = (() => {
       m.setW(tempSize.getWidth());
       m.setH(tempSize.getHeight());
     }
-    textLayout(context, maxWidth, maxHeight, bounds) {
+    textLayout(context, maxWidth, maxHeight, bounds, forceComplexParam = false, inAutosize = false) {
       if (maxWidth < 0 || maxHeight < 0) return;
       let flags = PaintContext.TEXT_MEASURE_FONT_HEIGHT | PaintContext.TEXT_MEASURE_SPACES;
-      let forceComplex = false;
+      let forceComplex = forceComplexParam;
       if (this.mOverflow === OVERFLOW_START_ELLIPSIS || this.mOverflow === OVERFLOW_MIDDLE_ELLIPSIS || this.mOverflow === OVERFLOW_ELLIPSIS) {
         flags |= PaintContext.TEXT_COMPLEX;
         forceComplex = true;
@@ -14606,6 +14673,9 @@ var RC = (() => {
         this.mBaseline = -bounds[1];
       }
       if (forceComplex || bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0) {
+        if (inAutosize) {
+          flags |= 1;
+        }
         this.mComputedTextLayout = context.layoutComplexText(
           this.mTextId,
           0,
@@ -14663,44 +14733,35 @@ var RC = (() => {
         return;
       }
       const length = this.mCachedString.length;
+      const contentW = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+      const contentH = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
       if (this.mComputedTextLayout) {
         if (this.mOverflow !== OVERFLOW_VISIBLE) {
           paintContext.save();
-          paintContext.clipRect(
-            0,
-            0,
-            this.mWidth - this.mPaddingLeft - this.mPaddingRight,
-            this.mHeight - this.mPaddingTop - this.mPaddingBottom
-          );
-          paintContext.drawComplexText(this.mComputedTextLayout);
+          paintContext.clipRect(0, 0, contentW, contentH);
+          paintContext.drawComplexText(this.mComputedTextLayout, contentW);
           paintContext.restore();
         } else {
-          paintContext.drawComplexText(this.mComputedTextLayout);
+          paintContext.drawComplexText(this.mComputedTextLayout, contentW);
         }
       } else {
         let px = this.mTextX;
         switch (this.mTextAlignValue) {
           case TEXT_ALIGN_CENTER:
-            px = (this.mWidth - this.mPaddingLeft - this.mPaddingRight - this.mTextW) / 2;
+            px = (contentW - this.mTextW) / 2;
             break;
           case TEXT_ALIGN_RIGHT:
           case TEXT_ALIGN_END:
-            px = this.mWidth - this.mPaddingLeft - this.mPaddingRight - this.mTextW;
+            px = contentW - this.mTextW;
             break;
           case TEXT_ALIGN_LEFT:
           case TEXT_ALIGN_START:
           default:
             break;
         }
-        const contentW = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
         if (this.mOverflow !== OVERFLOW_VISIBLE || this.mTextW > contentW) {
           paintContext.save();
-          paintContext.clipRect(
-            0,
-            0,
-            contentW,
-            this.mHeight - this.mPaddingTop - this.mPaddingBottom
-          );
+          paintContext.clipRect(0, 0, contentW, contentH);
           paintContext.drawTextRun(this.mTextId, 0, length, 0, 0, px, this.mTextY, false);
           paintContext.restore();
         } else {
@@ -18753,7 +18814,6 @@ void main() {
     applyPaint(paintData) {
       const arr = paintData.getArray();
       const len = paintData.getLength();
-      this.gradientStyle = null;
       let i = 0;
       while (i < len) {
         const cmd = arr[i++];
@@ -19454,22 +19514,27 @@ void main() {
         lines,
         alignment,
         lineHeight,
-        width: Math.min(totalWidth, maxWidth),
-        height: Math.min(totalHeight, maxHeight),
+        width: totalWidth,
+        height: totalHeight,
+        maxWidth,
+        maxHeight,
         visibleLines: lines.length
       };
     }
-    drawComplexText(computedTextLayout) {
+    drawComplexText(computedTextLayout, targetWidth) {
       if (!computedTextLayout) return;
       const { lines, alignment, lineHeight, width } = computedTextLayout;
+      const layoutWidth = typeof targetWidth === "number" && targetWidth > 0 ? targetWidth : width;
       this.setFont();
       this.ctx.textBaseline = "top";
+      const align = typeof alignment === "number" ? alignment & 65535 : 1;
       for (let i = 0; i < lines.length; i++) {
         let x = 0;
-        if (alignment === 2 || alignment === 4) {
-          x = width - this.ctx.measureText(lines[i]).width;
-        } else if (alignment === 1) {
-          x = (width - this.ctx.measureText(lines[i]).width) / 2;
+        const lineW = this.ctx.measureText(lines[i]).width;
+        if (align === 2 || align === 6) {
+          x = layoutWidth - lineW;
+        } else if (align === 3) {
+          x = (layoutWidth - lineW) / 2;
         }
         this.fillOrStroke(
           () => {

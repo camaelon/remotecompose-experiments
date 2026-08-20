@@ -1075,25 +1075,30 @@ export class CanvasPaintContext extends PaintContext {
 
         return {
             lines, alignment, lineHeight,
-            width: Math.min(totalWidth, maxWidth),
-            height: Math.min(totalHeight, maxHeight),
+            width: totalWidth,
+            height: totalHeight,
+            maxWidth,
+            maxHeight,
             visibleLines: lines.length
         };
     }
 
-    drawComplexText(computedTextLayout: any): void {
+    drawComplexText(computedTextLayout: any, targetWidth?: number): void {
         if (!computedTextLayout) return;
         const { lines, alignment, lineHeight, width } = computedTextLayout;
+        const layoutWidth = (typeof targetWidth === 'number' && targetWidth > 0) ? targetWidth : width;
         this.setFont();
         this.ctx.textBaseline = 'top';
+        const align = (typeof alignment === 'number') ? (alignment & 0xFFFF) : 1;
         for (let i = 0; i < lines.length; i++) {
             let x = 0;
-            if (alignment === 2 || alignment === 4) {
-                // RIGHT / END
-                x = width - this.ctx.measureText(lines[i]).width;
-            } else if (alignment === 1) {
-                // CENTER
-                x = (width - this.ctx.measureText(lines[i]).width) / 2;
+            const lineW = this.ctx.measureText(lines[i]).width;
+            if (align === 2 || align === 6) {
+                // RIGHT (2) / END (6)
+                x = layoutWidth - lineW;
+            } else if (align === 3) {
+                // CENTER (3)
+                x = (layoutWidth - lineW) / 2;
             }
             this.fillOrStroke(
                 () => { this.applyFillStyle(); this.ctx.fillText(lines[i], x, i * lineHeight); },
