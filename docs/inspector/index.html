@@ -7274,39 +7274,123 @@
     if (typeof v !== "number" || isNaN(v)) return "NaN";
     return Number.isInteger(v) ? v.toString() : v.toFixed(2);
   }
-  function prettyPrintWidthModifier(op) {
+  var DIMENSION_MODIFIER_TYPES = {
+    0: { name: "EXACT", label: "EXACT (0)", unit: "px", desc: "Fixed size in raw pixels / points" },
+    1: { name: "FILL", label: "FILL (1)", unit: "fraction", desc: "Fill available parent space (fillMaxWidth / fillMaxHeight, fraction in value)" },
+    2: { name: "WRAP", label: "WRAP (2)", unit: "", desc: "Wrap content to intrinsic child size (wrapContentWidth / wrapContentHeight)" },
+    3: { name: "WEIGHT", label: "WEIGHT (3)", unit: "weight", desc: "Proportional flex weight distribution in Row / Column (Modifier.weight)" },
+    4: { name: "INTRINSIC_MIN", label: "INTRINSIC_MIN (4)", unit: "", desc: "Minimum intrinsic size of child content" },
+    5: { name: "INTRINSIC_MAX", label: "INTRINSIC_MAX (5)", unit: "", desc: "Maximum intrinsic size of child content" },
+    6: { name: "EXACT_DP", label: "EXACT_DP (6)", unit: "dp", desc: "Fixed size in density-independent pixels (dp)" },
+    7: { name: "FILL_PARENT_MAX_WIDTH", label: "FILL_PARENT_MAX_WIDTH (7)", unit: "", desc: "Fill to parent container's maximum width constraint" },
+    8: { name: "FILL_PARENT_MAX_HEIGHT", label: "FILL_PARENT_MAX_HEIGHT (8)", unit: "", desc: "Fill to parent container's maximum height constraint" }
+  };
+  function getDimensionModifierInfo(op) {
+    if (!op) return null;
+    const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor?.OP_CODE ?? -1;
+    const opName = getOpName(op);
+    const isWidth = opCode === 16 || opName === "WidthModifier" || opName === "WidthModifierOperation";
+    const isHeight = opCode === 67 || opName === "HeightModifier" || opName === "HeightModifierOperation";
+    if (!isWidth && !isHeight) return null;
     const type = op.mType ?? op.type ?? 0;
-    const val = getFloatProp(op, "mOutValue", "outValue", "mValue", "value", "mWidth", "width");
-    if (type === 1 || val === "FILL" || typeof val === "number" && isNaN(val)) {
-      return "fillMaxWidth";
-    } else if (type === 2 || val === "WRAP") {
-      return "wrapContentWidth";
+    const rawVal = getFloatProp(op, "mOutValue", "outValue", "mValue", "value", "mWidth", "width", "mHeight", "height");
+    const val = typeof rawVal === "number" && !isNaN(rawVal) ? rawVal : type === 1 ? 1 : 0;
+    const typeInfo = DIMENSION_MODIFIER_TYPES[type] || { name: `TYPE_${type}`, label: `Type ${type}`, unit: "", desc: "Custom dimension constraint" };
+    return {
+      dimension: isWidth ? "Width" : "Height",
+      type,
+      typeName: typeInfo.name,
+      typeLabel: typeInfo.label,
+      typeDesc: typeInfo.desc,
+      unit: typeInfo.unit,
+      value: val,
+      rawVal
+    };
+  }
+  function prettyPrintWidthModifier(op) {
+    const info = getDimensionModifierInfo(op);
+    if (!info) return "WidthModifier";
+    const { type, typeName, value } = info;
+    if (type === 1) {
+      return value > 0 && value !== 1 && !isNaN(value) ? `fillMaxWidth(${formatNumber(value)}) [FILL: 1]` : "fillMaxWidth [FILL: 1]";
+    } else if (type === 2) {
+      return "wrapContentWidth [WRAP: 2]";
     } else if (type === 3) {
-      return `weight(${formatNumber(val)})`;
+      return `weight(${formatNumber(value)}) [WEIGHT: 3]`;
+    } else if (type === 4) {
+      return "minIntrinsicWidth [INTRINSIC_MIN: 4]";
+    } else if (type === 5) {
+      return "maxIntrinsicWidth [INTRINSIC_MAX: 5]";
+    } else if (type === 6) {
+      return `${formatNumber(value)} dp [EXACT_DP: 6]`;
+    } else if (type === 7) {
+      return "fillParentMaxWidth [7]";
+    } else if (type === 8) {
+      return "fillParentMaxHeight [8]";
     } else {
-      if (typeof val === "number" && val > 0 && val < 1073741824 && val % 1 === 0 && val >= 40) {
-        const varName = getSystemVarName2(val);
-        if (varName) return varName;
+      if (typeof value === "number" && value > 0 && value < 1073741824 && value % 1 === 0 && value >= 40) {
+        const varName = getSystemVarName2(value);
+        if (varName) return `${varName} [EXACT: 0]`;
       }
-      return `${formatNumber(val)} dp`;
+      return `${formatNumber(value)} px [EXACT: 0]`;
     }
   }
   function prettyPrintHeightModifier(op) {
-    const type = op.mType ?? op.type ?? 0;
-    const val = getFloatProp(op, "mOutValue", "outValue", "mValue", "value", "mHeight", "height");
-    if (type === 1 || val === "FILL" || typeof val === "number" && isNaN(val)) {
-      return "fillMaxHeight";
-    } else if (type === 2 || val === "WRAP") {
-      return "wrapContentHeight";
+    const info = getDimensionModifierInfo(op);
+    if (!info) return "HeightModifier";
+    const { type, typeName, value } = info;
+    if (type === 1) {
+      return value > 0 && value !== 1 && !isNaN(value) ? `fillMaxHeight(${formatNumber(value)}) [FILL: 1]` : "fillMaxHeight [FILL: 1]";
+    } else if (type === 2) {
+      return "wrapContentHeight [WRAP: 2]";
     } else if (type === 3) {
-      return `weight(${formatNumber(val)})`;
+      return `weight(${formatNumber(value)}) [WEIGHT: 3]`;
+    } else if (type === 4) {
+      return "minIntrinsicHeight [INTRINSIC_MIN: 4]";
+    } else if (type === 5) {
+      return "maxIntrinsicHeight [INTRINSIC_MAX: 5]";
+    } else if (type === 6) {
+      return `${formatNumber(value)} dp [EXACT_DP: 6]`;
+    } else if (type === 7) {
+      return "fillParentMaxWidth [7]";
+    } else if (type === 8) {
+      return "fillParentMaxHeight [8]";
     } else {
-      if (typeof val === "number" && val > 0 && val < 1073741824 && val % 1 === 0 && val >= 40) {
-        const varName = getSystemVarName2(val);
-        if (varName) return varName;
+      if (typeof value === "number" && value > 0 && value < 1073741824 && value % 1 === 0 && value >= 40) {
+        const varName = getSystemVarName2(value);
+        if (varName) return `${varName} [EXACT: 0]`;
       }
-      return `${formatNumber(val)} dp`;
+      return `${formatNumber(value)} px [EXACT: 0]`;
     }
+  }
+  function renderDimensionModifierDetailsHtml(op, idx) {
+    const info = getDimensionModifierInfo(op);
+    if (!info) return "";
+    return `
+        <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:6px; padding:8px 10px; margin-top:6px; font-size:0.75rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <div style="font-weight:700; color:var(--accent-blue); display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F4CF}</span> ${info.dimension}Modifier Constraint
+                </div>
+                <span class="badge" style="background:rgba(56,189,248,0.15); color:var(--accent-blue); font-size:0.65rem; font-family:var(--code-font);">
+                    ${info.typeName} (${info.type})
+                </span>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; margin-bottom:6px;">
+                <div>
+                    <span style="color:var(--text-secondary);">Constraint Mode:</span>
+                    <strong style="color:var(--text-primary);">${info.typeName} (Enum ${info.type})</strong>
+                </div>
+                <div>
+                    <span style="color:var(--text-secondary);">Value:</span>
+                    <strong style="color:var(--text-primary); font-family:var(--code-font);">${info.value}${info.unit ? ` ${info.unit}` : ""}</strong>
+                </div>
+            </div>
+            <div style="font-size:0.7rem; color:var(--text-muted); padding:4px 6px; background:rgba(255,255,255,0.02); border-radius:4px; border:1px solid rgba(255,255,255,0.04);">
+                \u{1F4A1} <strong>Meaning:</strong> ${info.typeDesc}
+            </div>
+        </div>
+    `;
   }
   function prettyPrintPaddingModifier(op) {
     const l = getFloatProp(op, "mLeftValue", "leftValue", "mLeft", "left");
@@ -7527,7 +7611,7 @@
     function idFromBits(bits) {
       return bits & 4194303;
     }
-    function floatToIntBits(f) {
+    function floatToIntBits2(f) {
       const buf = new ArrayBuffer(4);
       new Float32Array(buf)[0] = f;
       return new Int32Array(buf)[0];
@@ -7536,10 +7620,10 @@
       if (typeof val === "bigint") val = Number(val);
       if (typeof val !== "number") return 0;
       if (isTypedIntArray) return val | 0;
-      if (isTypedFloatArray) return floatToIntBits(val);
-      if (Number.isNaN(val)) return floatToIntBits(val);
+      if (isTypedFloatArray) return floatToIntBits2(val);
+      if (Number.isNaN(val)) return floatToIntBits2(val);
       if (Number.isInteger(val) && (val > 1e6 || val < -1e6)) return val | 0;
-      return floatToIntBits(val);
+      return floatToIntBits2(val);
     }
     function getFloat(val) {
       if (typeof val === "bigint") val = Number(val);
@@ -8342,6 +8426,7 @@
                             ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
                             ${opCode === 239 || opCode === 208 || opName === "CoreText" || opName === "TextLayout" || op.mTextId !== void 0 && op.mTextId !== -1 ? renderCoreTextDetailsHtml(op, idx) : ""}
                             ${renderLayoutAlignmentDetailsHtml(op, idx)}
+                            ${renderDimensionModifierDetailsHtml(op, idx)}
                             ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                             ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
                             ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-bottom:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font); display:flex; align-items:center; gap:6px;">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
@@ -8380,6 +8465,7 @@
                     ${[44, 48, 49, 66, 149, 190, 234].includes(opCode) || opName.includes("Bitmap") && opCode !== 101 || opName === "ImageLayout" || op.mBitmapId !== void 0 && op.mBitmapId !== -1 ? renderDrawBitmapReferenceHtml(op, idx) : ""}
                     ${opCode === 239 || opCode === 208 || opName === "CoreText" || opName === "TextLayout" || op.mTextId !== void 0 && op.mTextId !== -1 ? renderCoreTextDetailsHtml(op, idx) : ""}
                     ${renderLayoutAlignmentDetailsHtml(op, idx)}
+                    ${renderDimensionModifierDetailsHtml(op, idx)}
                     ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                     ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
                     ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-top:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font);">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
@@ -10372,6 +10458,17 @@ Click to inspect in Command List</title>
         </div>
     `;
   }
+  var DIMENSION_MODIFIER_TYPES2 = {
+    0: { name: "EXACT", label: "EXACT (0)", unit: "px", desc: "Fixed size in raw pixels / points" },
+    1: { name: "FILL", label: "FILL (1)", unit: "fraction", desc: "Fill available parent space (fillMaxWidth / fillMaxHeight, fraction in value)" },
+    2: { name: "WRAP", label: "WRAP (2)", unit: "", desc: "Wrap content to intrinsic child size (wrapContentWidth / wrapContentHeight)" },
+    3: { name: "WEIGHT", label: "WEIGHT (3)", unit: "weight", desc: "Proportional flex weight distribution in Row / Column (Modifier.weight)" },
+    4: { name: "INTRINSIC_MIN", label: "INTRINSIC_MIN (4)", unit: "", desc: "Minimum intrinsic size of child content" },
+    5: { name: "INTRINSIC_MAX", label: "INTRINSIC_MAX (5)", unit: "", desc: "Maximum intrinsic size of child content" },
+    6: { name: "EXACT_DP", label: "EXACT_DP (6)", unit: "dp", desc: "Fixed size in density-independent pixels (dp)" },
+    7: { name: "FILL_PARENT_MAX_WIDTH", label: "FILL_PARENT_MAX_WIDTH (7)", unit: "", desc: "Fill to parent container's maximum width constraint" },
+    8: { name: "FILL_PARENT_MAX_HEIGHT", label: "FILL_PARENT_MAX_HEIGHT (8)", unit: "", desc: "Fill to parent container's maximum height constraint" }
+  };
   function renderModifierChain(comp) {
     if (!comp || !comp.modifiers || comp.modifiers.length === 0) {
       return `
@@ -10387,11 +10484,12 @@ Click to inspect in Command List</title>
       let icon = "\u{1F3A8}";
       let badgeColor = "#94a3b8";
       let role = "Visual";
+      const isDimMod = m.name.includes("Width") || m.name.includes("Height") || m.name.includes("Size") || m.name.includes("Dimension") || m.name.includes("Weight") || m.op?.OP_CODE === 16 || m.op?.OP_CODE === 67;
       if (m.name.includes("Padding") || m.name.includes("Margin")) {
         icon = "\u{1F3F7}\uFE0F";
         badgeColor = "#34d399";
         role = "Spacing / Inset";
-      } else if (m.name.includes("Width") || m.name.includes("Height") || m.name.includes("Size") || m.name.includes("Dimension") || m.name.includes("Weight")) {
+      } else if (isDimMod) {
         icon = "\u{1F4CF}";
         badgeColor = "#38bdf8";
         role = "Constraints";
@@ -10408,22 +10506,168 @@ Click to inspect in Command List</title>
         badgeColor = "#c084fc";
         role = "Scrollable";
       }
-      html += `
-            <div style="display:flex; align-items:flex-start; gap:8px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; font-size:0.75rem;">
-                <span style="font-weight:700; color:var(--text-muted); font-family:var(--code-font); min-width:20px;">#${idx + 1}</span>
-                <span style="font-size:0.9rem;">${icon}</span>
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-                        <strong style="color:var(--text-primary);">${escapeHtml6(m.name)}</strong>
-                        <span class="badge" style="background:${badgeColor}20; color:${badgeColor}; font-size:0.65rem;">${role}</span>
+      const isWidthOrHeight = m.name === "WidthModifier" || m.name === "HeightModifier" || m.name === "WidthModifierOperation" || m.name === "HeightModifierOperation" || m.op?.OP_CODE === 16 || m.op?.OP_CODE === 67;
+      let interactiveEditorHtml = "";
+      if (isWidthOrHeight && m.op) {
+        const modType = m.op.mType ?? m.op.type ?? 0;
+        const modRawVal = typeof m.op.mOutValue === "number" ? m.op.mOutValue : typeof m.op.mValue === "number" ? m.op.mValue : 0;
+        const modVal = isNaN(modRawVal) ? modType === 1 ? 1 : 0 : modRawVal;
+        const typeInfo = DIMENSION_MODIFIER_TYPES2[modType] || { name: `TYPE_${modType}`, label: `Type ${modType}`, unit: "", desc: "" };
+        interactiveEditorHtml = `
+                <div style="margin-top:6px; padding:8px 10px; background:rgba(0,0,0,0.25); border-radius:6px; border:1px solid rgba(255,255,255,0.06); display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 10px;">
+                        <div>
+                            <label for="tweakModType_${idx}" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Constraint Mode (Enum)</label>
+                            <select id="tweakModType_${idx}" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyModifierTweaks(${idx})">
+                                ${Object.entries(DIMENSION_MODIFIER_TYPES2).map(([k, v]) => `
+                                    <option value="${k}" ${parseInt(k, 10) === modType ? "selected" : ""}>${v.label} - ${v.name}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tweakModValue_${idx}" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Value (${typeInfo.unit || "val"})</label>
+                            <input id="tweakModValue_${idx}" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.72rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${Math.round(modVal * 100) / 100}" step="${modType === 1 ? "0.05" : "1"}" oninput="applyModifierTweaks(${idx})" />
+                        </div>
                     </div>
-                    ${m.desc ? `<div style="font-family:var(--code-font); font-size:0.7rem; color:var(--text-secondary); word-break:break-all;">${escapeHtml6(m.desc)}</div>` : ""}
+                    <div style="font-size:0.68rem; color:var(--accent-blue); padding:3px 6px; background:rgba(56,189,248,0.06); border-radius:4px; border:1px solid rgba(56,189,248,0.12);">
+                        \u{1F4A1} <strong>${typeInfo.name}:</strong> ${typeInfo.desc}
+                    </div>
                 </div>
+            `;
+      }
+      html += `
+            <div style="display:flex; flex-direction:column; gap:4px; padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid var(--border-color); border-radius:6px; font-size:0.75rem;">
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <span style="font-weight:700; color:var(--text-muted); font-family:var(--code-font); min-width:20px;">#${idx + 1}</span>
+                    <span style="font-size:0.9rem;">${icon}</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                            <strong style="color:var(--text-primary);">${escapeHtml6(m.name)}</strong>
+                            <div style="display:flex; gap:4px; align-items:center;">
+                                ${isWidthOrHeight ? `<span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.15); color:var(--accent-blue);">\u26A1 Live</span>` : ""}
+                                <span class="badge" style="background:${badgeColor}20; color:${badgeColor}; font-size:0.65rem;">${role}</span>
+                            </div>
+                        </div>
+                        ${m.desc ? `<div style="font-family:var(--code-font); font-size:0.7rem; color:var(--text-secondary); word-break:break-all;">${escapeHtml6(m.desc)}</div>` : ""}
+                    </div>
+                </div>
+                ${interactiveEditorHtml}
             </div>
         `;
     });
     html += `</div>`;
     return html;
+  }
+  function floatToIntBits(f) {
+    const buf = new ArrayBuffer(4);
+    new Float32Array(buf)[0] = f;
+    return new Int32Array(buf)[0];
+  }
+  function argbHexToRgbHex(hex) {
+    if (!hex) return "#000000";
+    const clean = hex.replace(/^#/, "");
+    if (clean.length === 8) {
+      return "#" + clean.substring(2);
+    }
+    if (clean.length === 6) {
+      return "#" + clean;
+    }
+    return "#000000";
+  }
+  function renderDimensionModifiersInspectorSection(selectedComp) {
+    if (!selectedComp || !selectedComp.op) return "";
+    const widthMod = selectedComp.modifiers?.find((m) => m.name === "WidthModifier" || m.op?.OP_CODE === 16 || m.name === "WidthModifierOperation");
+    const heightMod = selectedComp.modifiers?.find((m) => m.name === "HeightModifier" || m.op?.OP_CODE === 67 || m.name === "HeightModifierOperation");
+    const wType = widthMod?.op ? widthMod.op.mType ?? widthMod.op.type ?? 6 : 6;
+    const wVal = widthMod?.op ? typeof widthMod.op.mOutValue === "number" ? widthMod.op.mOutValue : typeof widthMod.op.mValue === "number" ? widthMod.op.mValue : selectedComp.width : selectedComp.width;
+    const wInfo = DIMENSION_MODIFIER_TYPES2[wType] || DIMENSION_MODIFIER_TYPES2[6];
+    const hType = heightMod?.op ? heightMod.op.mType ?? heightMod.op.type ?? 6 : 6;
+    const hVal = heightMod?.op ? typeof heightMod.op.mOutValue === "number" ? heightMod.op.mOutValue : typeof heightMod.op.mValue === "number" ? heightMod.op.mValue : selectedComp.height : selectedComp.height;
+    const hInfo = DIMENSION_MODIFIER_TYPES2[hType] || DIMENSION_MODIFIER_TYPES2[6];
+    return `
+        <div style="background:var(--bg-card); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:8px; padding:12px;">
+            <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); margin-bottom:10px; display:flex; align-items:center; justify-content:space-between;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F4CF}</span> Dimension Modifiers (WidthModifier &amp; HeightModifier)
+                </div>
+                <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--accent-blue); font-size:0.68rem; font-family:var(--code-font);">\u26A1 Live Editable</span>
+            </div>
+
+            <!-- Width & Height Live Controls -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <!-- Width Modifier Card -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-blue); text-transform:uppercase; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>\u2194 WidthModifier (Op 16)</span>
+                        <span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.15); color:var(--accent-blue);">${wInfo.name} (${wType})</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <div>
+                            <label for="tweakDimType_width" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Constraint Mode</label>
+                            <select id="tweakDimType_width" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyDimensionTweaks('width')">
+                                ${Object.entries(DIMENSION_MODIFIER_TYPES2).map(([k, v]) => `
+                                    <option value="${k}" ${parseInt(k, 10) === wType ? "selected" : ""}>${v.label} - ${v.name}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tweakDimValue_width" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Value (${wInfo.unit || "value"})</label>
+                            <input id="tweakDimValue_width" type="number" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${Math.round(wVal * 100) / 100}" step="${wType === 1 ? "0.05" : "1"}" oninput="applyDimensionTweaks('width')" />
+                        </div>
+                        <div style="font-size:0.68rem; color:var(--accent-blue); padding:3px 6px; background:rgba(56,189,248,0.06); border-radius:4px; border:1px solid rgba(56,189,248,0.12);">
+                            \u{1F4A1} <strong>${wInfo.name}:</strong> ${wInfo.desc}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Height Modifier Card -->
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.04);">
+                    <div style="font-weight:700; font-size:0.72rem; color:var(--accent-purple); text-transform:uppercase; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>\u2195 HeightModifier (Op 67)</span>
+                        <span class="badge" style="font-size:0.65rem; background:rgba(168,85,247,0.15); color:var(--accent-purple);">${hInfo.name} (${hType})</span>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <div>
+                            <label for="tweakDimType_height" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Constraint Mode</label>
+                            <select id="tweakDimType_height" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyDimensionTweaks('height')">
+                                ${Object.entries(DIMENSION_MODIFIER_TYPES2).map(([k, v]) => `
+                                    <option value="${k}" ${parseInt(k, 10) === hType ? "selected" : ""}>${v.label} - ${v.name}</option>
+                                `).join("")}
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tweakDimValue_height" style="color:var(--text-secondary); font-size:0.68rem; font-weight:700; text-transform:uppercase; display:block; margin-bottom:2px;">Value (${hInfo.unit || "value"})</label>
+                            <input id="tweakDimValue_height" type="number" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${Math.round(hVal * 100) / 100}" step="${hType === 1 ? "0.05" : "1"}" oninput="applyDimensionTweaks('height')" />
+                        </div>
+                        <div style="font-size:0.68rem; color:var(--accent-purple); padding:3px 6px; background:rgba(168,85,247,0.06); border-radius:4px; border:1px solid rgba(168,85,247,0.12);">
+                            \u{1F4A1} <strong>${hInfo.name}:</strong> ${hInfo.desc}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Enum Reference Cheat-Sheet Guide -->
+            <details style="background:rgba(0,0,0,0.15); border-radius:6px; border:1px solid var(--border-color); font-size:0.72rem;">
+                <summary style="padding:6px 10px; cursor:pointer; font-weight:600; color:var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                    <span>\u{1F4D6}</span> Dimension Modifier Enum Values Reference (0\u20138)
+                </summary>
+                <div style="padding:8px 10px; display:flex; flex-direction:column; gap:4px; border-top:1px solid var(--border-color);">
+                    <div style="display:grid; grid-template-columns: 80px 140px 1fr; gap:6px; font-weight:700; color:var(--text-muted); padding-bottom:4px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                        <span>Value</span>
+                        <span>Name</span>
+                        <span>Description &amp; Compose Equivalent</span>
+                    </div>
+                    ${Object.entries(DIMENSION_MODIFIER_TYPES2).map(([k, v]) => `
+                        <div style="display:grid; grid-template-columns: 80px 140px 1fr; gap:6px; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.02);">
+                            <span class="badge" style="background:rgba(255,255,255,0.06); font-family:var(--code-font); font-size:0.65rem;">Enum ${k}</span>
+                            <strong style="color:var(--text-primary); font-family:var(--code-font); font-size:0.7rem;">${v.name}</strong>
+                            <span style="color:var(--text-secondary); font-size:0.7rem;">${v.desc}</span>
+                        </div>
+                    `).join("")}
+                </div>
+            </details>
+        </div>
+    `;
   }
   function renderCoreTextInspectorSection(selectedComp) {
     if (!selectedComp || !selectedComp.op) return "";
@@ -10433,56 +10677,69 @@ Click to inspect in Command List</title>
     const currentDoc = typeof window !== "undefined" ? window.currentDocument : null;
     const params = getCoreTextParameters(selectedComp.op, currentDoc);
     if (!params) return "";
+    const escapeHtml7 = typeof window !== "undefined" && typeof window.escapeHtml === "function" ? window.escapeHtml : ((s) => String(s));
     return `
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:8px; padding:12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); display:flex; align-items:center; gap:6px;">
-                    <span>\u{1F524}</span> CoreText Typography & Parameters
+                    <span>\u{1F524}</span> CoreText Typography &amp; Parameters
                 </div>
                 <div style="display:flex; gap:4px; align-items:center;">
                     ${params.textId !== -1 ? `<span class="badge" style="font-size:0.65rem; background:rgba(234,179,8,0.15); color:var(--accent-amber);">Text ID: ${params.textId}</span>` : ""}
-                    ${params.autosize ? `<span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:var(--accent-emerald);">\u26A1 Autosize</span>` : ""}
+                    <span class="badge" style="font-size:0.65rem; background:rgba(16,185,129,0.15); color:var(--accent-emerald);">\u26A1 Live Editable</span>
                 </div>
             </div>
 
-            <!-- Text Content Banner -->
-            ${params.text ? `
-                <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:8px 10px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.06);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Resolved Text Content</span>
-                        <span style="font-size:0.68rem; color:var(--text-muted);">${params.text.length} characters \u2022 ${params.text.trim().split(/\s+/).filter(Boolean).length} words</span>
-                    </div>
-                    <div style="font-size:0.85rem; color:var(--text-primary); font-family:var(--code-font); word-break:break-word; line-height:1.4;">
-                        "${escapeHtml6(params.text)}"
-                    </div>
+            <!-- Text Content Banner & Live Edit Input -->
+            <div style="background:rgba(0,0,0,0.3); border-radius:6px; padding:8px 10px; margin-bottom:10px; border:1px solid rgba(255,255,255,0.06);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span style="font-size:0.68rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Text String Content</span>
+                    <span style="font-size:0.68rem; color:var(--text-muted);">${(params.text || "").length} chars \u2022 ${(params.text || "").trim().split(/\s+/).filter(Boolean).length} words</span>
                 </div>
-            ` : ""}
+                <input id="tweakCoreTextString" type="text" class="dim-input" style="width:100%; padding:5px 8px; font-size:0.82rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; font-family:var(--code-font);" value="${escapeHtml7(params.text || "")}" placeholder="Type text here..." oninput="applyCoreTextTweaks()" />
+            </div>
 
             <!-- 4 Structured Subsections Grid -->
             <div style="display:flex; flex-direction:column; gap:8px;">
                 <!-- 1. Font & Typography -->
                 <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
                     <div style="font-weight:700; font-size:0.72rem; color:var(--accent-blue); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-                        <span>\u{1F4D0}</span> Font & Typography
+                        <span>\u{1F4D0}</span> Font &amp; Typography
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
                         <div>
-                            <span style="color:var(--text-secondary);">Font Size:</span>
-                            <strong style="color:var(--text-primary);">${params.fontSize} sp</strong>
-                            ${params.minFontSize > 0 || params.maxFontSize > 0 ? `<span style="color:var(--text-muted); font-size:0.68rem;">(${params.minFontSize > 0 ? params.minFontSize : "min"}..${params.maxFontSize > 0 ? params.maxFontSize : "max"})</span>` : ""}
+                            <label for="tweakCoreTextFontSize" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Font Size (sp):</label>
+                            <input id="tweakCoreTextFontSize" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${params.fontSize}" step="1" min="1" oninput="applyCoreTextTweaks()" />
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Weight:</span>
-                            <strong style="color:var(--text-primary);">${params.fontWeightName}</strong>
+                            <label for="tweakCoreTextFontWeight" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Font Weight:</label>
+                            <select id="tweakCoreTextFontWeight" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="100" ${params.fontWeight === 100 ? "selected" : ""}>Thin (100)</option>
+                                <option value="200" ${params.fontWeight === 200 ? "selected" : ""}>Extra Light (200)</option>
+                                <option value="300" ${params.fontWeight === 300 ? "selected" : ""}>Light (300)</option>
+                                <option value="400" ${params.fontWeight === 400 ? "selected" : ""}>Normal (400)</option>
+                                <option value="500" ${params.fontWeight === 500 ? "selected" : ""}>Medium (500)</option>
+                                <option value="600" ${params.fontWeight === 600 ? "selected" : ""}>Semi-Bold (600)</option>
+                                <option value="700" ${params.fontWeight === 700 ? "selected" : ""}>Bold (700)</option>
+                                <option value="800" ${params.fontWeight === 800 ? "selected" : ""}>Extra Bold (800)</option>
+                                <option value="900" ${params.fontWeight === 900 ? "selected" : ""}>Black (900)</option>
+                            </select>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Style:</span>
-                            <strong style="color:var(--text-primary);">${params.fontStyleName}</strong>
+                            <label for="tweakCoreTextFontStyle" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Font Style:</label>
+                            <select id="tweakCoreTextFontStyle" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="0" ${params.fontStyle === 0 ? "selected" : ""}>Normal</option>
+                                <option value="1" ${params.fontStyle === 1 ? "selected" : ""}>Italic</option>
+                            </select>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Family:</span>
-                            <strong style="color:var(--text-primary);">${escapeHtml6(params.fontFamily)}</strong>
-                            ${params.fontFamilyId !== -1 ? `<span style="color:var(--text-muted); font-size:0.68rem;">(ID: ${params.fontFamilyId})</span>` : ""}
+                            <label for="tweakCoreTextFontFamily" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Font Family:</label>
+                            <select id="tweakCoreTextFontFamily" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="0" ${String(params.fontFamily).toLowerCase() === "default" ? "selected" : ""}>Default</option>
+                                <option value="1" ${String(params.fontFamily).toLowerCase() === "sans-serif" ? "selected" : ""}>Sans-Serif</option>
+                                <option value="2" ${String(params.fontFamily).toLowerCase() === "serif" ? "selected" : ""}>Serif</option>
+                                <option value="3" ${String(params.fontFamily).toLowerCase() === "monospace" ? "selected" : ""}>Monospace</option>
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -10490,25 +10747,37 @@ Click to inspect in Command List</title>
                 <!-- 2. Color & Appearance -->
                 <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
                     <div style="font-weight:700; font-size:0.72rem; color:var(--accent-purple); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-                        <span>\u{1F3A8}</span> Color & Appearance
+                        <span>\u{1F3A8}</span> Color &amp; Appearance
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <span style="color:var(--text-secondary);">Color:</span>
-                            <span style="display:inline-block; width:14px; height:14px; border-radius:3px; background-color:${params.cssColor}; border:1px solid rgba(255,255,255,0.4); box-shadow:0 0 4px rgba(0,0,0,0.4);"></span>
-                            <strong style="font-family:var(--code-font); color:var(--text-primary);">${params.colorHex}</strong>
+                        <div>
+                            <label style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Text Color:</label>
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <input id="tweakCoreTextColorPicker" type="color" style="width:28px; height:24px; padding:0; border:none; background:none; cursor:pointer;" value="${argbHexToRgbHex(params.colorHex)}" oninput="handleCoreTextColorPicker(this.value)" />
+                                <input id="tweakCoreTextColorHex" type="text" class="dim-input" style="flex:1; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px; font-family:var(--code-font);" value="${params.colorHex}" oninput="applyCoreTextTweaks()" />
+                            </div>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Dynamic Color:</span>
-                            <strong style="color:var(--text-primary);">${params.isDynamicColor ? `Yes (Var #${params.colorId})` : "No (Static)"}</strong>
+                            <span style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Dynamic Color:</span>
+                            <div style="padding-top:4px; color:var(--text-primary); font-weight:600;">
+                                ${params.isDynamicColor ? `Yes (Var #${params.colorId})` : "No (Static)"}
+                            </div>
                         </div>
-                        <div>
-                            <span style="color:var(--text-secondary);">Underline:</span>
-                            <strong style="color:var(--text-primary);">${params.underline ? "Yes" : "No"}</strong>
+                        <div style="display:flex; align-items:center; gap:8px; padding-top:4px;">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-primary); font-size:0.75rem;">
+                                <input id="tweakCoreTextUnderline" type="checkbox" ${params.underline ? "checked" : ""} onchange="applyCoreTextTweaks()" />
+                                <u>Underline</u>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-primary); font-size:0.75rem;">
+                                <input id="tweakCoreTextStrikethrough" type="checkbox" ${params.strikethrough ? "checked" : ""} onchange="applyCoreTextTweaks()" />
+                                <s>Strikethrough</s>
+                            </label>
                         </div>
-                        <div>
-                            <span style="color:var(--text-secondary);">Strikethrough:</span>
-                            <strong style="color:var(--text-primary);">${params.strikethrough ? "Yes" : "No"}</strong>
+                        <div style="display:flex; align-items:center; gap:8px; padding-top:4px;">
+                            <label style="display:flex; align-items:center; gap:4px; cursor:pointer; color:var(--text-primary); font-size:0.75rem;">
+                                <input id="tweakCoreTextAutosize" type="checkbox" ${params.autosize ? "checked" : ""} onchange="applyCoreTextTweaks()" />
+                                <span>Autosize</span>
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -10516,32 +10785,45 @@ Click to inspect in Command List</title>
                 <!-- 3. Alignment & Flow -->
                 <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
                     <div style="font-weight:700; font-size:0.72rem; color:var(--accent-amber); text-transform:uppercase; margin-bottom:6px; display:flex; align-items:center; gap:4px;">
-                        <span>\u23F8\uFE0F</span> Alignment & Flow
+                        <span>\u23F8\uFE0F</span> Alignment &amp; Flow
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
                         <div>
-                            <span style="color:var(--text-secondary);">Text Align:</span>
-                            <strong style="color:var(--text-primary);">${params.textAlignName}</strong>
+                            <label for="tweakCoreTextTextAlign" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Text Align:</label>
+                            <select id="tweakCoreTextTextAlign" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="1" ${params.textAlign === 1 ? "selected" : ""}>Left (1)</option>
+                                <option value="2" ${params.textAlign === 2 ? "selected" : ""}>Right (2)</option>
+                                <option value="3" ${params.textAlign === 3 ? "selected" : ""}>Center (3)</option>
+                                <option value="4" ${params.textAlign === 4 ? "selected" : ""}>Justify (4)</option>
+                                <option value="5" ${params.textAlign === 5 ? "selected" : ""}>Start (5)</option>
+                                <option value="6" ${params.textAlign === 6 ? "selected" : ""}>End (6)</option>
+                            </select>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Overflow:</span>
-                            <strong style="color:var(--text-primary);">${params.overflowName}</strong>
+                            <label for="tweakCoreTextOverflow" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Overflow:</label>
+                            <select id="tweakCoreTextOverflow" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="1" ${params.overflow === 1 ? "selected" : ""}>Clip (1)</option>
+                                <option value="2" ${params.overflow === 2 ? "selected" : ""}>Visible (2)</option>
+                                <option value="3" ${params.overflow === 3 ? "selected" : ""}>Ellipsis (3)</option>
+                                <option value="4" ${params.overflow === 4 ? "selected" : ""}>Start Ellipsis (4)</option>
+                                <option value="5" ${params.overflow === 5 ? "selected" : ""}>Middle Ellipsis (5)</option>
+                            </select>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Max Lines:</span>
-                            <strong style="color:var(--text-primary);">${params.maxLinesStr}</strong>
+                            <label for="tweakCoreTextMaxLines" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Max Lines:</label>
+                            <input id="tweakCoreTextMaxLines" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${params.maxLines >= 1e4 ? "" : params.maxLines}" placeholder="\u221E (Unlimited)" min="0" oninput="applyCoreTextTweaks()" />
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Letter Spacing:</span>
-                            <strong style="color:var(--text-primary);">${params.letterSpacing !== 0 ? `${params.letterSpacing} sp` : "0 sp"}</strong>
+                            <label for="tweakCoreTextLetterSpacing" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Letter Spacing (sp):</label>
+                            <input id="tweakCoreTextLetterSpacing" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${params.letterSpacing}" step="0.1" oninput="applyCoreTextTweaks()" />
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Line Height:</span>
-                            <strong style="color:var(--text-primary);">${params.lineHeightMultiplier}\xD7 ${params.lineHeightAdd !== 0 ? `+ ${params.lineHeightAdd} dp` : ""}</strong>
+                            <label for="tweakCoreTextLineHeightMult" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Line Height Multiplier:</label>
+                            <input id="tweakCoreTextLineHeightMult" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${params.lineHeightMultiplier}" step="0.05" oninput="applyCoreTextTweaks()" />
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Break Strategy:</span>
-                            <strong style="color:var(--text-primary);">${params.lineBreakName}</strong>
+                            <label for="tweakCoreTextLineHeightAdd" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Line Height Add (dp):</label>
+                            <input id="tweakCoreTextLineHeightAdd" type="number" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${params.lineHeightAdd}" step="1" oninput="applyCoreTextTweaks()" />
                         </div>
                     </div>
                 </div>
@@ -10553,29 +10835,35 @@ Click to inspect in Command List</title>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px 12px; font-size:0.75rem;">
                         <div>
-                            <span style="color:var(--text-secondary);">Hyphenation:</span>
-                            <strong style="color:var(--text-primary);">${params.hyphenationName}</strong>
+                            <label for="tweakCoreTextLineBreak" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Break Strategy:</label>
+                            <select id="tweakCoreTextLineBreak" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="0" ${params.lineBreakStrategy === 0 ? "selected" : ""}>Simple (0)</option>
+                                <option value="1" ${params.lineBreakStrategy === 1 ? "selected" : ""}>High Quality (1)</option>
+                                <option value="2" ${params.lineBreakStrategy === 2 ? "selected" : ""}>Balanced (2)</option>
+                            </select>
                         </div>
                         <div>
-                            <span style="color:var(--text-secondary);">Justification:</span>
-                            <strong style="color:var(--text-primary);">${params.justificationName}</strong>
+                            <label for="tweakCoreTextHyphenation" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Hyphenation:</label>
+                            <select id="tweakCoreTextHyphenation" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="0" ${params.hyphenationFrequency === 0 ? "selected" : ""}>None (0)</option>
+                                <option value="1" ${params.hyphenationFrequency === 1 ? "selected" : ""}>Normal (1)</option>
+                                <option value="2" ${params.hyphenationFrequency === 2 ? "selected" : ""}>Full (2)</option>
+                                <option value="3" ${params.hyphenationFrequency === 3 ? "selected" : ""}>Normal Fast (3)</option>
+                                <option value="4" ${params.hyphenationFrequency === 4 ? "selected" : ""}>Full Fast (4)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="tweakCoreTextJustification" style="color:var(--text-secondary); display:block; margin-bottom:2px; font-size:0.7rem;">Justification:</label>
+                            <select id="tweakCoreTextJustification" class="dim-input" style="width:100%; padding:3px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyCoreTextTweaks()">
+                                <option value="0" ${params.justificationMode === 0 ? "selected" : ""}>None (0)</option>
+                                <option value="1" ${params.justificationMode === 1 ? "selected" : ""}>Inter-Word (1)</option>
+                                <option value="2" ${params.justificationMode === 2 ? "selected" : ""}>Inter-Character (2)</option>
+                            </select>
                         </div>
                         ${params.animationId !== -1 ? `
                             <div>
-                                <span style="color:var(--text-secondary);">Animation ID:</span>
-                                <strong style="color:var(--text-primary);">${params.animationId}</strong>
-                            </div>
-                        ` : ""}
-                        ${params.flags !== 0 ? `
-                            <div>
-                                <span style="color:var(--text-secondary);">Flags:</span>
-                                <strong style="font-family:var(--code-font); color:var(--text-primary);">0x${params.flags.toString(16)}</strong>
-                            </div>
-                        ` : ""}
-                        ${params.fontAxis && params.fontAxis.length > 0 ? `
-                            <div>
-                                <span style="color:var(--text-secondary);">Font Axes:</span>
-                                <strong style="color:var(--text-primary);">${params.fontAxis.length} custom axes</strong>
+                                <span style="color:var(--text-secondary); font-size:0.7rem;">Animation ID:</span>
+                                <strong style="color:var(--text-primary); margin-left:4px;">${params.animationId}</strong>
                             </div>
                         ` : ""}
                     </div>
@@ -10588,33 +10876,48 @@ Click to inspect in Command List</title>
     if (!selectedComp || !selectedComp.op) return "";
     const align = getLayoutAlignmentInfo(selectedComp.op);
     if (!align || !align.hName && !align.vName && align.spacedBy === null) return "";
+    const hPos = align.hPos ?? 1;
+    const vPos = align.vPos ?? 4;
+    const spacedBy = align.spacedBy ?? 0;
     return `
         <div style="background:var(--bg-card); border:1px solid var(--border-color); border-left:3px solid var(--accent-blue); border-radius:8px; padding:12px;">
             <div style="font-weight:700; font-size:0.8rem; color:var(--accent-blue); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
                 <div style="display:flex; align-items:center; gap:6px;">
                     <span>\u{1F4D0}</span> Layout Alignment &amp; Distribution
                 </div>
-                ${align.spacedBy !== null && align.spacedBy !== void 0 ? `
-                    <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--accent-blue); font-size:0.68rem; font-family:var(--code-font);">spacedBy: ${align.spacedBy} dp</span>
-                ` : ""}
+                <span class="badge" style="background:rgba(59,130,246,0.15); color:var(--accent-blue); font-size:0.68rem; font-family:var(--code-font);">\u26A1 Live Editable</span>
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:8px; font-size:0.75rem;">
                 <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
-                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u2194 Horizontal Alignment</div>
-                    <strong style="color:var(--text-primary); font-size:0.85rem;">${align.hName || "Default"}</strong>
-                    ${align.hPos !== null && align.hPos !== void 0 ? `<span style="color:var(--text-muted); font-size:0.68rem; margin-left:4px;">(raw: ${align.hPos})</span>` : ""}
+                    <label for="tweakHorizontalAlign" style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:4px; display:block;">\u2194 Horizontal Alignment</label>
+                    <select id="tweakHorizontalAlign" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyLayoutTweaks()">
+                        <option value="1" ${hPos === 1 ? "selected" : ""}>Start (1)</option>
+                        <option value="2" ${hPos === 2 ? "selected" : ""}>Center (2)</option>
+                        <option value="3" ${hPos === 3 ? "selected" : ""}>End (3)</option>
+                        <option value="4" ${hPos === 4 ? "selected" : ""}>Top (4)</option>
+                        <option value="5" ${hPos === 5 ? "selected" : ""}>Bottom (5)</option>
+                        <option value="6" ${hPos === 6 ? "selected" : ""}>Space Between (6)</option>
+                        <option value="7" ${hPos === 7 ? "selected" : ""}>Space Evenly (7)</option>
+                        <option value="8" ${hPos === 8 ? "selected" : ""}>Space Around (8)</option>
+                    </select>
                 </div>
                 <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
-                    <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u2195 Vertical Alignment</div>
-                    <strong style="color:var(--text-primary); font-size:0.85rem;">${align.vName || "Default"}</strong>
-                    ${align.vPos !== null && align.vPos !== void 0 ? `<span style="color:var(--text-muted); font-size:0.68rem; margin-left:4px;">(raw: ${align.vPos})</span>` : ""}
+                    <label for="tweakVerticalAlign" style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:4px; display:block;">\u2195 Vertical Alignment</label>
+                    <select id="tweakVerticalAlign" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" onchange="applyLayoutTweaks()">
+                        <option value="4" ${vPos === 4 ? "selected" : ""}>Top (4)</option>
+                        <option value="2" ${vPos === 2 ? "selected" : ""}>Center (2)</option>
+                        <option value="5" ${vPos === 5 ? "selected" : ""}>Bottom (5)</option>
+                        <option value="1" ${vPos === 1 ? "selected" : ""}>Start (1)</option>
+                        <option value="3" ${vPos === 3 ? "selected" : ""}>End (3)</option>
+                        <option value="6" ${vPos === 6 ? "selected" : ""}>Space Between (6)</option>
+                        <option value="7" ${vPos === 7 ? "selected" : ""}>Space Evenly (7)</option>
+                        <option value="8" ${vPos === 8 ? "selected" : ""}>Space Around (8)</option>
+                    </select>
                 </div>
-                ${align.spacedBy !== null && align.spacedBy !== void 0 ? `
-                    <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
-                        <div style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:3px;">\u{1F4CF} Spaced By</div>
-                        <strong style="color:var(--text-primary); font-size:0.85rem;">${align.spacedBy} dp</strong>
-                    </div>
-                ` : ""}
+                <div style="background:rgba(0,0,0,0.2); padding:8px 10px; border-radius:6px;">
+                    <label for="tweakSpacedBy" style="color:var(--text-muted); font-size:0.68rem; font-weight:700; text-transform:uppercase; margin-bottom:4px; display:block;">\u{1F4CF} Spaced By (dp)</label>
+                    <input id="tweakSpacedBy" type="number" class="dim-input" style="width:100%; padding:4px 6px; font-size:0.75rem; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border-color); border-radius:4px;" value="${spacedBy}" step="1" onchange="applyLayoutTweaks()" oninput="applyLayoutTweaks()" />
+                </div>
             </div>
         </div>
     `;
@@ -10700,6 +11003,9 @@ Click to inspect in Command List</title>
 
             <!-- Dedicated Layout Alignment & Distribution Section -->
             ${selectedComp ? renderLayoutAlignmentInspectorSection(selectedComp) : ""}
+
+            <!-- Dedicated Dimension Modifiers (Width & Height) Section -->
+            ${selectedComp ? renderDimensionModifiersInspectorSection(selectedComp) : ""}
 
             <!-- Section 1: Visual Box Model Diagram -->
             <div style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:8px; padding:12px;">
@@ -10998,7 +11304,7 @@ Click to inspect in Command List</title>
       }
     });
   }
-  function applyLayoutTweaks() {
+  function applyLayoutTweaks(fullRefresh = false) {
     const win = typeof window !== "undefined" ? window : globalThis;
     const doc = win.currentDocument;
     const player = win.currentPlayer;
@@ -11009,6 +11315,9 @@ Click to inspect in Command List</title>
     const hInput = document.getElementById("tweakHeightInput");
     const pInput = document.getElementById("tweakPaddingInput");
     const rInput = document.getElementById("tweakRadiusInput");
+    const hAlignInput = document.getElementById("tweakHorizontalAlign");
+    const vAlignInput = document.getElementById("tweakVerticalAlign");
+    const spaceInput = document.getElementById("tweakSpacedBy");
     if (wInput && !isNaN(parseFloat(wInput.value))) {
       const w = parseFloat(wInput.value);
       if (typeof comp.op.setWidth === "function") comp.op.setWidth(w);
@@ -11029,16 +11338,246 @@ Click to inspect in Command List</title>
     if (rInput && !isNaN(parseFloat(rInput.value))) {
       comp.op.mCornerRadius = parseFloat(rInput.value);
     }
+    if (hAlignInput && hAlignInput.value !== "") {
+      const hVal = parseInt(hAlignInput.value, 10);
+      comp.op.mHorizontalPositioning = hVal;
+      comp.op.mHorizontalAlignment = hVal;
+    }
+    if (vAlignInput && vAlignInput.value !== "") {
+      const vVal = parseInt(vAlignInput.value, 10);
+      comp.op.mVerticalPositioning = vVal;
+      comp.op.mVerticalAlignment = vVal;
+    }
+    if (spaceInput && !isNaN(parseFloat(spaceInput.value))) {
+      const sVal = parseFloat(spaceInput.value);
+      comp.op.mSpacedBy = sVal;
+      comp.op.mSpacing = sVal;
+      comp.op.mHorizontalSpacing = sVal;
+      comp.op.mVerticalSpacing = sVal;
+    }
     comp.op.mNeedsMeasure = true;
+    if (typeof comp.op.invalidateMeasure === "function") comp.op.invalidateMeasure();
     doc.mNeedsMeasure = true;
     if (player && typeof player.repaint === "function") {
       player.repaint();
     }
-    renderLayoutInspectorPanel(doc);
+    drawLayoutBoundsOverlay();
+    if (fullRefresh) {
+      renderLayoutInspectorPanel(doc);
+    }
+  }
+  function applyCoreTextTweaks(fullRefresh = false) {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    const doc = win.currentDocument;
+    const player = win.currentPlayer;
+    if (!doc || !selectedComponentKey) return;
+    const comp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+    if (!comp || !comp.op) return;
+    const textInput = document.getElementById("tweakCoreTextString");
+    const fontSizeInput = document.getElementById("tweakCoreTextFontSize");
+    const fontWeightInput = document.getElementById("tweakCoreTextFontWeight");
+    const fontStyleInput = document.getElementById("tweakCoreTextFontStyle");
+    const fontFamilyInput = document.getElementById("tweakCoreTextFontFamily");
+    const colorHexInput = document.getElementById("tweakCoreTextColorHex");
+    const textAlignInput = document.getElementById("tweakCoreTextTextAlign");
+    const overflowInput = document.getElementById("tweakCoreTextOverflow");
+    const maxLinesInput = document.getElementById("tweakCoreTextMaxLines");
+    const letterSpacingInput = document.getElementById("tweakCoreTextLetterSpacing");
+    const lineHeightMultInput = document.getElementById("tweakCoreTextLineHeightMult");
+    const lineHeightAddInput = document.getElementById("tweakCoreTextLineHeightAdd");
+    const lineBreakInput = document.getElementById("tweakCoreTextLineBreak");
+    const hyphenationInput = document.getElementById("tweakCoreTextHyphenation");
+    const justificationInput = document.getElementById("tweakCoreTextJustification");
+    const underlineInput = document.getElementById("tweakCoreTextUnderline");
+    const strikethroughInput = document.getElementById("tweakCoreTextStrikethrough");
+    const autosizeInput = document.getElementById("tweakCoreTextAutosize");
+    if (textInput) {
+      const newText = textInput.value;
+      comp.op.mText = newText;
+      comp.op.mCachedString = newText;
+      comp.op.mNewString = newText;
+      if (comp.op.mTextId !== void 0 && comp.op.mTextId !== -1) {
+        if (typeof doc.addText === "function") {
+          doc.addText(comp.op.mTextId, newText);
+        } else if (doc.mTextDatabase && typeof doc.mTextDatabase.put === "function") {
+          doc.mTextDatabase.put(comp.op.mTextId, newText);
+        }
+      }
+    }
+    if (fontSizeInput && !isNaN(parseFloat(fontSizeInput.value))) {
+      const fs = parseFloat(fontSizeInput.value);
+      comp.op.mFontSizeValue = fs;
+      comp.op.mFontSize = floatToIntBits(fs);
+      comp.op.mMeasureFontSize = fs;
+    }
+    if (fontWeightInput && !isNaN(parseFloat(fontWeightInput.value))) {
+      const fw = parseFloat(fontWeightInput.value);
+      comp.op.mFontWeightValue = fw;
+      comp.op.mFontWeight = floatToIntBits(fw);
+    }
+    if (fontStyleInput && fontStyleInput.value !== "") {
+      comp.op.mFontStyle = parseInt(fontStyleInput.value, 10);
+    }
+    if (fontFamilyInput && fontFamilyInput.value !== "") {
+      comp.op.mType = parseInt(fontFamilyInput.value, 10);
+    }
+    if (colorHexInput && colorHexInput.value) {
+      let hex = colorHexInput.value.trim().replace(/^#/, "");
+      if (hex.length === 6) hex = "FF" + hex;
+      if (hex.length === 8) {
+        const parsedColor = parseInt(hex, 16) >>> 0;
+        comp.op.mColor = parsedColor;
+        comp.op.mColorValue = parsedColor;
+      }
+    }
+    if (textAlignInput && textAlignInput.value !== "") {
+      const alignVal = parseInt(textAlignInput.value, 10);
+      comp.op.mTextAlign = alignVal;
+      comp.op.mTextAlignValue = alignVal & 65535;
+    }
+    if (overflowInput && overflowInput.value !== "") {
+      comp.op.mOverflow = parseInt(overflowInput.value, 10);
+    }
+    if (maxLinesInput) {
+      const ml = parseInt(maxLinesInput.value, 10);
+      comp.op.mMaxLines = !isNaN(ml) && ml > 0 ? ml : 2147483647;
+    }
+    if (letterSpacingInput && !isNaN(parseFloat(letterSpacingInput.value))) {
+      comp.op.mLetterSpacing = parseFloat(letterSpacingInput.value);
+    }
+    if (lineHeightMultInput && !isNaN(parseFloat(lineHeightMultInput.value))) {
+      comp.op.mLineHeightMultiplier = parseFloat(lineHeightMultInput.value);
+    }
+    if (lineHeightAddInput && !isNaN(parseFloat(lineHeightAddInput.value))) {
+      comp.op.mLineHeightAdd = parseFloat(lineHeightAddInput.value);
+    }
+    if (lineBreakInput && lineBreakInput.value !== "") {
+      comp.op.mLineBreakStrategy = parseInt(lineBreakInput.value, 10);
+    }
+    if (hyphenationInput && hyphenationInput.value !== "") {
+      comp.op.mHyphenationFrequency = parseInt(hyphenationInput.value, 10);
+    }
+    if (justificationInput && justificationInput.value !== "") {
+      comp.op.mJustificationMode = parseInt(justificationInput.value, 10);
+    }
+    if (underlineInput) comp.op.mUnderline = underlineInput.checked;
+    if (strikethroughInput) comp.op.mStrikethrough = strikethroughInput.checked;
+    if (autosizeInput) comp.op.mAutosize = autosizeInput.checked;
+    comp.op.mNeedsMeasure = true;
+    if (typeof comp.op.invalidateMeasure === "function") comp.op.invalidateMeasure();
+    doc.mNeedsMeasure = true;
+    if (player && typeof player.repaint === "function") {
+      player.repaint();
+    }
+    drawLayoutBoundsOverlay();
+    if (fullRefresh) {
+      renderLayoutInspectorPanel(doc);
+    }
+  }
+  function handleCoreTextColorPicker(rgbHex) {
+    const hexInput = document.getElementById("tweakCoreTextColorHex");
+    if (hexInput && rgbHex) {
+      let clean = rgbHex.replace(/^#/, "").toUpperCase();
+      hexInput.value = "#FF" + clean;
+    }
+    applyCoreTextTweaks();
+  }
+  function applyModifierTweaks(modIndex, fullRefresh = false) {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    const doc = win.currentDocument;
+    const player = win.currentPlayer;
+    if (!doc || !selectedComponentKey) return;
+    const comp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+    if (!comp || !comp.modifiers || !comp.modifiers[modIndex]) return;
+    const mod = comp.modifiers[modIndex];
+    if (!mod || !mod.op) return;
+    const typeSelect = document.getElementById(`tweakModType_${modIndex}`);
+    const valueInput = document.getElementById(`tweakModValue_${modIndex}`);
+    if (typeSelect && typeSelect.value !== "") {
+      const type = parseInt(typeSelect.value, 10);
+      mod.op.mType = type;
+      if (typeof mod.op.setType === "function") mod.op.setType(type);
+    }
+    if (valueInput && !isNaN(parseFloat(valueInput.value))) {
+      const val = parseFloat(valueInput.value);
+      mod.op.mOutValue = val;
+      mod.op.mValue = val;
+      mod.op.mValueBits = floatToIntBits(val);
+      if (typeof mod.op.setValue === "function") mod.op.setValue(val);
+    }
+    comp.op.mNeedsMeasure = true;
+    if (typeof comp.op.invalidateMeasure === "function") comp.op.invalidateMeasure();
+    doc.mNeedsMeasure = true;
+    if (player && typeof player.repaint === "function") {
+      player.repaint();
+    }
+    drawLayoutBoundsOverlay();
+    if (fullRefresh) {
+      renderLayoutInspectorPanel(doc);
+    }
+  }
+  function applyDimensionTweaks(kind, fullRefresh = false) {
+    const win = typeof window !== "undefined" ? window : globalThis;
+    const doc = win.currentDocument;
+    const player = win.currentPlayer;
+    if (!doc || !selectedComponentKey) return;
+    const comp = cachedLayoutComponents.find((c) => c.key === selectedComponentKey);
+    if (!comp || !comp.op) return;
+    const typeSelect = document.getElementById(`tweakDimType_${kind}`);
+    const valueInput = document.getElementById(`tweakDimValue_${kind}`);
+    if (!typeSelect || !valueInput) return;
+    const type = parseInt(typeSelect.value, 10);
+    const val = parseFloat(valueInput.value);
+    if (isNaN(type) || isNaN(val)) return;
+    const isWidth = kind === "width";
+    const modName = isWidth ? "WidthModifier" : "HeightModifier";
+    const opCode = isWidth ? 16 : 67;
+    let mod = comp.modifiers?.find((m) => m.name === modName || m.op?.OP_CODE === opCode || m.name === `${modName}Operation`);
+    if (!mod && isWidth && comp.op.mWidthMod) mod = { op: comp.op.mWidthMod };
+    if (!mod && !isWidth && comp.op.mHeightMod) mod = { op: comp.op.mHeightMod };
+    if (mod && mod.op) {
+      mod.op.mType = type;
+      mod.op.mOutValue = val;
+      mod.op.mValue = val;
+      mod.op.mValueBits = floatToIntBits(val);
+      if (typeof mod.op.setType === "function") mod.op.setType(type);
+      if (typeof mod.op.setValue === "function") mod.op.setValue(val);
+    } else {
+      if (isWidth) {
+        comp.op.mWidth = val;
+        if (typeof comp.op.setWidth === "function") comp.op.setWidth(val);
+      } else {
+        comp.op.mHeight = val;
+        if (typeof comp.op.setHeight === "function") comp.op.setHeight(val);
+      }
+    }
+    comp.op.mNeedsMeasure = true;
+    if (typeof comp.op.invalidateMeasure === "function") comp.op.invalidateMeasure();
+    doc.mNeedsMeasure = true;
+    if (player && typeof player.repaint === "function") {
+      player.repaint();
+    }
+    drawLayoutBoundsOverlay();
+    if (fullRefresh) {
+      renderLayoutInspectorPanel(doc);
+    }
   }
   function resetLayoutTweaks() {
     const win = typeof window !== "undefined" ? window : globalThis;
     renderLayoutInspectorPanel(win.currentDocument);
+  }
+  if (typeof window !== "undefined") {
+    window.selectLayoutComponent = selectLayoutComponent;
+    window.toggleLayoutBoundsOverlay = toggleLayoutBoundsOverlay;
+    window.jumpToCommandCard = jumpToCommandCard;
+    window.applyLayoutTweaks = applyLayoutTweaks;
+    window.resetLayoutTweaks = resetLayoutTweaks;
+    window.applyCoreTextTweaks = applyCoreTextTweaks;
+    window.handleCoreTextColorPicker = handleCoreTextColorPicker;
+    window.applyModifierTweaks = applyModifierTweaks;
+    window.applyDimensionTweaks = applyDimensionTweaks;
+    window.renderDimensionModifiersInspectorSection = renderDimensionModifiersInspectorSection;
+    window.renderLayoutInspectorPanel = renderLayoutInspectorPanel;
   }
 
   // src/panels/DocumentLoader.js
@@ -12724,6 +13263,13 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     window.getSafeFloat = getSafeFloat;
     window.getComponentPadding = getComponentPadding;
     window.getComponentGlobalPosition = getComponentGlobalPosition;
+    window.applyModifierTweaks = applyModifierTweaks;
+    window.applyDimensionTweaks = applyDimensionTweaks;
+    window.renderDimensionModifiersInspectorSection = renderDimensionModifiersInspectorSection;
+    window.renderLayoutAlignmentInspectorSection = renderLayoutAlignmentInspectorSection;
+    window.renderCoreTextInspectorSection = renderCoreTextInspectorSection;
+    window.applyCoreTextTweaks = applyCoreTextTweaks;
+    window.handleCoreTextColorPicker = handleCoreTextColorPicker;
     window.MATRIX_PRESETS = MATRIX_PRESETS;
     window.MATRIX_THEMES = MATRIX_THEMES;
     window.getMatrixPlayers = getMatrixPlayers;
@@ -13220,6 +13766,18 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.prettyPrintPathExpression = prettyPrintPathExpression;
+  } catch (e) {
+  }
+  try {
+    window.DIMENSION_MODIFIER_TYPES = DIMENSION_MODIFIER_TYPES;
+  } catch (e) {
+  }
+  try {
+    window.getDimensionModifierInfo = getDimensionModifierInfo;
+  } catch (e) {
+  }
+  try {
+    window.renderDimensionModifierDetailsHtml = renderDimensionModifierDetailsHtml;
   } catch (e) {
   }
   try {
@@ -13824,6 +14382,34 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.getComponentGlobalPosition = getComponentGlobalPosition;
+  } catch (e) {
+  }
+  try {
+    window.applyModifierTweaks = applyModifierTweaks;
+  } catch (e) {
+  }
+  try {
+    window.applyDimensionTweaks = applyDimensionTweaks;
+  } catch (e) {
+  }
+  try {
+    window.renderDimensionModifiersInspectorSection = renderDimensionModifiersInspectorSection;
+  } catch (e) {
+  }
+  try {
+    window.renderLayoutAlignmentInspectorSection = renderLayoutAlignmentInspectorSection;
+  } catch (e) {
+  }
+  try {
+    window.renderCoreTextInspectorSection = renderCoreTextInspectorSection;
+  } catch (e) {
+  }
+  try {
+    window.applyCoreTextTweaks = applyCoreTextTweaks;
+  } catch (e) {
+  }
+  try {
+    window.handleCoreTextColorPicker = handleCoreTextColorPicker;
   } catch (e) {
   }
 })();
