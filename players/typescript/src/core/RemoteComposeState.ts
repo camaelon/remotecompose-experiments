@@ -193,8 +193,6 @@ export class RemoteComposeState {
 
     getOpsToUpdate(context: RemoteContext, currentTime: number): number {
         if (this.mVarListeners.get(1) != null) return 1; // ID_CONTINUOUS_SEC
-        if (this.mVarListeners.get(30) != null) return 1; // ID_ANIMATION_TIME
-        if (this.mVarListeners.get(31) != null) return 1; // ID_ANIMATION_DELTA_TIME
         let repaintMs = Number.MAX_SAFE_INTEGER;
         if (!Number.isNaN(this.mRepaintSeconds)) {
             repaintMs = Math.trunc(this.mRepaintSeconds * 1000);
@@ -207,6 +205,9 @@ export class RemoteComposeState {
         if (this.mVarListeners.get(3) != null) { // ID_TIME_IN_MIN
             const sub = Math.trunc(currentTime % 60000);
             return Math.min(repaintMs, 2 + 60000 - sub);
+        }
+        if (!Number.isNaN(this.mRepaintSeconds)) {
+            return Math.trunc(this.mRepaintSeconds * 1000);
         }
         return -1;
     }
