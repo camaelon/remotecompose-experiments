@@ -570,8 +570,6 @@ var RC = (() => {
     }
     getOpsToUpdate(context, currentTime) {
       if (this.mVarListeners.get(1) != null) return 1;
-      if (this.mVarListeners.get(30) != null) return 1;
-      if (this.mVarListeners.get(31) != null) return 1;
       let repaintMs = Number.MAX_SAFE_INTEGER;
       if (!Number.isNaN(this.mRepaintSeconds)) {
         repaintMs = Math.trunc(this.mRepaintSeconds * 1e3);
@@ -584,6 +582,9 @@ var RC = (() => {
       if (this.mVarListeners.get(3) != null) {
         const sub = Math.trunc(currentTime % 6e4);
         return Math.min(repaintMs, 2 + 6e4 - sub);
+      }
+      if (!Number.isNaN(this.mRepaintSeconds)) {
+        return Math.trunc(this.mRepaintSeconds * 1e3);
       }
       return -1;
     }
