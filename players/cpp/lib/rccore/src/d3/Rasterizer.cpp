@@ -24,7 +24,15 @@ struct Setup {
     int minx, maxx, miny, maxy;
     int fdx12, fdx23, fdx31;
     int fdy12, fdy23, fdy31;
-    int cy1, cy2, cy3;
+    // 64-bit, because the textured path needs the exact value: a grazing triangle whose
+    // vertex sits just past the near-w epsilon projects to six-figure screen coordinates,
+    // and 28.4 fixed point squares that well past 2^31. The reference widens these to long
+    // in fillTriangleTextured for exactly that reason.
+    //
+    // The other four entry points are int in the reference and must stay int here, wrap
+    // included. They truncate: two's complement +,-,* agree modulo 2^32, so computing wide
+    // and casting down reproduces 32-bit arithmetic exactly.
+    long long cy1, cy2, cy3;
     bool swapped;
 };
 
@@ -74,16 +82,16 @@ Setup setup(int w, int h,
     if (maxy > h) maxy = h;
     s.minx = minx; s.maxx = maxx; s.miny = miny; s.maxy = maxy;
 
-    int c1 = dy12 * x1 - dx12 * y1;
-    int c2 = dy23 * x2 - dx23 * y2;
-    int c3 = dy31 * x3 - dx31 * y3;
+    long long c1 = (long long) dy12 * x1 - (long long) dx12 * y1;
+    long long c2 = (long long) dy23 * x2 - (long long) dx23 * y2;
+    long long c3 = (long long) dy31 * x3 - (long long) dx31 * y3;
     // Top-left fill rule: bias shared edges so adjacent triangles neither double-cover nor gap.
     if (dy12 < 0 || (dy12 == 0 && dx12 > 0)) c1++;
     if (dy23 < 0 || (dy23 == 0 && dx23 > 0)) c2++;
     if (dy31 < 0 || (dy31 == 0 && dx31 > 0)) c3++;
-    s.cy1 = c1 + dx12 * (miny << 4) - dy12 * (minx << 4);
-    s.cy2 = c2 + dx23 * (miny << 4) - dy23 * (minx << 4);
-    s.cy3 = c3 + dx31 * (miny << 4) - dy31 * (minx << 4);
+    s.cy1 = c1 + (long long) dx12 * (miny << 4) - (long long) dy12 * (minx << 4);
+    s.cy2 = c2 + (long long) dx23 * (miny << 4) - (long long) dy23 * (minx << 4);
+    s.cy3 = c3 + (long long) dx31 * (miny << 4) - (long long) dy31 * (minx << 4);
     s.ok = true;
     return s;
 }
@@ -100,7 +108,7 @@ void fillTriangle(float* zbuff, int32_t* img, int32_t color, int w, int h,
                   float fx1, float fy1, float fz1) {
     Setup s = setup(w, h, fx3, fy3, fz3, fx2, fy2, fz2, fx1, fy1, fz1);
     if (!s.ok) return;
-    int cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    int cy1 = (int) s.cy1, cy2 = (int) s.cy2, cy3 = (int) s.cy3;   // int in the reference
     int off = s.miny * w;
     for (int y = s.miny; y < s.maxy; y++) {
         int cx1 = cy1, cx2 = cy2, cx3 = cy3;
@@ -130,7 +138,7 @@ void fillTriangleGouraud(float* zbuff, int32_t* img, int32_t c3, int32_t c2, int
     if (!s.ok) return;
     if (s.swapped) std::swap(c1, c2);
 
-    int cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    int cy1 = (int) s.cy1, cy2 = (int) s.cy2, cy3 = (int) s.cy3;   // int in the reference
     // The edge sum is constant across the triangle and proportional to twice its area; it
     // normalizes the edge functions into barycentric weights.
     long long sum = (long long) cy1 + cy2 + cy3;
@@ -177,8 +185,8 @@ void fillTriangleTextured(float* zbuff, int32_t* img,
     if (s.swapped) {
         std::swap(c1, c2); std::swap(u1, u2); std::swap(v1, v2); std::swap(iw1, iw2);
     }
-    long long cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
-    long long sum = (long long) s.cy1 + s.cy2 + s.cy3;
+    long long cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;   // long in the reference
+    long long sum = s.cy1 + s.cy2 + s.cy3;
     if (sum == 0) return;
     float inv = 1.0f / sum;
 
@@ -235,7 +243,7 @@ void fillTriangleDepthOnly(float* zbuff, int w, int h,
                            float fx1, float fy1, float fz1) {
     Setup s = setup(w, h, fx3, fy3, fz3, fx2, fy2, fz2, fx1, fy1, fz1);
     if (!s.ok) return;
-    int cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    int cy1 = (int) s.cy1, cy2 = (int) s.cy2, cy3 = (int) s.cy3;   // int in the reference
     int off = s.miny * w;
     for (int y = s.miny; y < s.maxy; y++) {
         int cx1 = cy1, cx2 = cy2, cx3 = cy3;

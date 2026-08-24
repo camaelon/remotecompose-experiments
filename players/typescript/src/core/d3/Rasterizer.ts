@@ -168,19 +168,28 @@ function setup(w: number, h: number,
     if (maxy > h) { maxy = h; }
     s.minx = minx; s.maxx = maxx; s.miny = miny; s.maxy = maxy;
 
-    let c1 = (Math.imul(dy12, x1) - Math.imul(dx12, y1)) | 0;
-    let c2 = (Math.imul(dy23, x2) - Math.imul(dx23, y2)) | 0;
-    let c3 = (Math.imul(dy31, x3) - Math.imul(dx31, y3)) | 0;
+    // Exact, not 32-bit. The textured path needs the true value: a grazing triangle whose
+    // vertex sits just past the near-w epsilon projects to six-figure screen coordinates, and
+    // 28.4 fixed point squares that past 2^31. The reference widens these to long in
+    // fillTriangleTextured for exactly that reason, and Math.imul would wrap instead.
+    // A double holds these products exactly — the largest is well under 2^53.
+    //
+    // The other four entry points are int in the reference and must keep wrapping, so they
+    // apply `| 0` themselves: two's complement +,-,* agree modulo 2^32, so computing exactly
+    // and truncating afterwards reproduces 32-bit arithmetic.
+    let c1 = dy12 * x1 - dx12 * y1;
+    let c2 = dy23 * x2 - dx23 * y2;
+    let c3 = dy31 * x3 - dx31 * y3;
 
     // Top-left fill rule: bias the shared edges so adjacent triangles neither double-cover
     // nor leave a seam.
-    if (dy12 < 0 || (dy12 === 0 && dx12 > 0)) { c1 = (c1 + 1) | 0; }
-    if (dy23 < 0 || (dy23 === 0 && dx23 > 0)) { c2 = (c2 + 1) | 0; }
-    if (dy31 < 0 || (dy31 === 0 && dx31 > 0)) { c3 = (c3 + 1) | 0; }
+    if (dy12 < 0 || (dy12 === 0 && dx12 > 0)) { c1 = c1 + 1; }
+    if (dy23 < 0 || (dy23 === 0 && dx23 > 0)) { c2 = c2 + 1; }
+    if (dy31 < 0 || (dy31 === 0 && dx31 > 0)) { c3 = c3 + 1; }
 
-    s.cy1 = (c1 + Math.imul(dx12, miny << 4) - Math.imul(dy12, minx << 4)) | 0;
-    s.cy2 = (c2 + Math.imul(dx23, miny << 4) - Math.imul(dy23, minx << 4)) | 0;
-    s.cy3 = (c3 + Math.imul(dx31, miny << 4) - Math.imul(dy31, minx << 4)) | 0;
+    s.cy1 = c1 + dx12 * (miny << 4) - dy12 * (minx << 4);
+    s.cy2 = c2 + dx23 * (miny << 4) - dy23 * (minx << 4);
+    s.cy3 = c3 + dx31 * (miny << 4) - dy31 * (minx << 4);
 
     s.ok = true;
     return s;
@@ -197,7 +206,7 @@ export function fillTriangle(zbuff: Float32Array, img: Int32Array, color: number
         return;
     }
     const { dx, dy, zoff, minx, maxx, miny, maxy, fdx12, fdx23, fdx31, fdy12, fdy23, fdy31 } = s;
-    let cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    let cy1 = s.cy1 | 0, cy2 = s.cy2 | 0, cy3 = s.cy3 | 0;   // int in the reference
     let off = miny * w;
 
     for (let y = miny; y < maxy; y++) {
@@ -242,7 +251,7 @@ export function fillTriangleGouraud(zbuff: Float32Array, img: Int32Array,
         const t = c1; c1 = c2; c2 = t;
     }
     const { dx, dy, zoff, minx, maxx, miny, maxy, fdx12, fdx23, fdx31, fdy12, fdy23, fdy31 } = s;
-    let cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    let cy1 = s.cy1 | 0, cy2 = s.cy2 | 0, cy3 = s.cy3 | 0;   // int in the reference
 
     // The edge sum is constant across the triangle and proportional to twice its area; it
     // normalizes the edge functions into barycentric weights. CX1 <-> v3, CX2 <-> v1, CX3 <-> v2.
@@ -323,7 +332,7 @@ export function fillTriangleTextured(zbuff: Float32Array, img: Int32Array,
         t = iw1; iw1 = iw2; iw2 = t;
     }
     const { dx, dy, zoff, minx, maxx, miny, maxy, fdx12, fdx23, fdx31, fdy12, fdy23, fdy31 } = s;
-    let cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    let cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;   // long in the reference
 
     const sum = cy1 + cy2 + cy3;
     if (sum === 0) {
@@ -403,7 +412,7 @@ export function fillTriangleDepthOnly(zbuff: Float32Array, w: number, h: number,
         return;
     }
     const { dx, dy, zoff, minx, maxx, miny, maxy, fdx12, fdx23, fdx31, fdy12, fdy23, fdy31 } = s;
-    let cy1 = s.cy1, cy2 = s.cy2, cy3 = s.cy3;
+    let cy1 = s.cy1 | 0, cy2 = s.cy2 | 0, cy3 = s.cy3 | 0;   // int in the reference
     let off = miny * w;
 
     for (let y = miny; y < maxy; y++) {

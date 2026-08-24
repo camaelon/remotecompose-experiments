@@ -281,6 +281,20 @@ int main(int argc, char** argv) {
                     params[i * 4 + k] = std::strtof(t[base + 2 + k].c_str(), nullptr);
             }
             ctx.setLights3D(types, colors, params);
+        } else if (t[0] == "texture") {
+            // texture checker <w> <h> <cell> <argbA> <argbB> — procedural, so a scene stays
+            // short and the three harnesses generate byte-identical pixels.
+            if (t[1] != "checker") { std::cerr << "bad texture kind: " << t[1] << "\n"; return 2; }
+            int tw = std::stoi(t[2]), th = std::stoi(t[3]), cell = std::stoi(t[4]);
+            int32_t ca = (int32_t)(uint32_t) std::stoul(t[5], nullptr, 16);
+            int32_t cb = (int32_t)(uint32_t) std::stoul(t[6], nullptr, 16);
+            std::vector<int32_t> px((size_t) tw * th);
+            for (int y = 0; y < th; y++) {
+                for (int x = 0; x < tw; x++) {
+                    px[(size_t) y * tw + x] = (((x / cell) + (y / cell)) & 1) == 0 ? ca : cb;
+                }
+            }
+            ctx.setTextureData(px, tw, th);
         } else if (t[0] == "material") {
             ctx.setMaterial3D(std::strtof(t[1].c_str(), nullptr),
                               std::strtof(t[2].c_str(), nullptr));

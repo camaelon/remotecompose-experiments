@@ -86,6 +86,9 @@ public final class Oracle {
                 case "lights":
                     setLights(ctx, t);
                     break;
+                case "texture":
+                    texture(ctx, t);
+                    break;
                 case "material":
                     ctx.setMaterial3D(Float.parseFloat(t[1]), Float.parseFloat(t[2]));
                     break;
@@ -153,6 +156,31 @@ public final class Oracle {
             case "pow": return AnimatedFloatExpression.POW;
             default: return Float.parseFloat(s);
         }
+    }
+
+    /**
+     * {@code texture checker <w> <h> <cell> <argbA> <argbB>} — a procedural checkerboard.
+     *
+     * Generated rather than listed so a scene stays a few tokens long, and identical in all
+     * three harnesses. The alternating cells make UV distortion obvious: an affine or
+     * overflowed interpolation bends the squares instead of keeping them straight.
+     */
+    private static void texture(JavaPaint3DContext ctx, String[] t) {
+        if (!t[1].equals("checker")) {
+            throw new IllegalArgumentException("bad texture kind: " + t[1]);
+        }
+        int w = Integer.parseInt(t[2]);
+        int h = Integer.parseInt(t[3]);
+        int cell = Integer.parseInt(t[4]);
+        int a = (int) Long.parseLong(t[5], 16);
+        int b = (int) Long.parseLong(t[6], 16);
+        int[] px = new int[w * h];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                px[y * w + x] = (((x / cell) + (y / cell)) & 1) == 0 ? a : b;
+            }
+        }
+        ctx.setTextureData(px, w, h);
     }
 
     private static void meshExpr(JavaPaint3DContext engine, String[] t) {

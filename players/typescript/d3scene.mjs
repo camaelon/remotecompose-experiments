@@ -255,6 +255,22 @@ function main() {
                 ctx.setLights3D(types, colors, params);
                 break;
             }
+            case 'texture': {
+                // texture checker <w> <h> <cell> <argbA> <argbB> — procedural, so a scene
+                // stays short and the three harnesses generate byte-identical pixels.
+                if (t[1] !== 'checker') throw new Error(`bad texture kind: ${t[1]}`);
+                const tw = parseInt(t[2], 10), th = parseInt(t[3], 10);
+                const cell = parseInt(t[4], 10);
+                const ca = parseInt(t[5], 16) | 0, cb = parseInt(t[6], 16) | 0;
+                const px = new Int32Array(tw * th);
+                for (let y = 0; y < th; y++) {
+                    for (let x = 0; x < tw; x++) {
+                        px[y * tw + x] = (((x / cell) | 0) + ((y / cell) | 0)) % 2 === 0 ? ca : cb;
+                    }
+                }
+                ctx.setTextureData(px, tw, th);
+                break;
+            }
             case 'material':
                 ctx.setMaterial3D(parseFloat(t[1]), parseFloat(t[2]));
                 break;
