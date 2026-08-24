@@ -950,21 +950,30 @@ public:
     }
 };
 
-// ── HostActionList (210) ──────────────────────────────────────────────
-class HostActionListOp : public Operation {
+// ── HostNamedAction (210) ─────────────────────────────────────────────
+// Three ints: the name's text id, the value type, and the value's text id
+// (HostNamedActionOperation). This previously read an id followed by a count and that
+// many ints, which is not the wire format at all — the "count" was whatever byte
+// followed, so the reader ran off into the next ops and then sized a vector by garbage,
+// aborting with length_error on any document carrying a host action.
+class HostNamedActionOp : public Operation {
 public:
-    int id = 0;
-    std::vector<int> actionIds;
-    std::string name() const override { return "HostActionList"; }
+    int textId = 0;
+    int type = 0;
+    int valueId = 0;
+    std::string name() const override { return "HostNamedAction"; }
     int opcode() const override { return 210; }
-    std::vector<Field> fields() const override { return {}; }
+    std::vector<Field> fields() const override {
+        return {{"textId", "INT", std::to_string(textId)},
+                {"type", "INT", std::to_string(type)},
+                {"valueId", "INT", std::to_string(valueId)}};
+    }
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
-        auto op = std::make_unique<HostActionListOp>();
-        op->id = buf.readInt();
-        int count = buf.readInt();
-        op->actionIds.resize(count);
-        for (int i = 0; i < count; i++) op->actionIds[i] = buf.readInt();
+        auto op = std::make_unique<HostNamedActionOp>();
+        op->textId = buf.readInt();
+        op->type = buf.readInt();
+        op->valueId = buf.readInt();
         ops.push_back(std::move(op));
     }
 };

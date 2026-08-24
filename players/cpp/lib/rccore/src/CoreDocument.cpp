@@ -10,6 +10,8 @@
 #include <chrono>
 #include <ctime>
 #include <cmath>
+#include <cstdlib>
+#include <cstdio>
 
 namespace rccore {
 
@@ -25,8 +27,18 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
     // Stack of container operations being built
     std::vector<Operation*> containerStack;
 
+    // RC_TRACE=1 prints every opcode with the buffer position it started at.
+    // A desync shows up as the position jumping by the wrong number of bytes,
+    // which is otherwise invisible: the failure surfaces many ops later.
+    const bool trace = std::getenv("RC_TRACE") != nullptr;
+
     while (buffer.available()) {
+        int opStart = buffer.getIndex();
         int opcode = buffer.readByte();
+        if (trace) {
+            std::fprintf(stderr, "[rc] pos=%-6d op=%-4d %s\n", opStart, opcode,
+                         Operations::getName(opcode).c_str());
+        }
 
         // ContainerEnd pops the stack
         if (opcode == 214) { // CONTAINER_END
