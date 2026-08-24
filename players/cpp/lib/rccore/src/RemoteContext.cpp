@@ -348,23 +348,42 @@ void RemoteContext::notifyListeners(int variableId) {
     }
 }
 
-int RemoteContext::getRepaintDelay() const {
-    // If anything listens to continuous time → repaint every frame
-    if (hasListeners(ID_CONTINUOUS_SEC) || hasListeners(ID_ANIMATION_TIME)
-        || hasListeners(ID_ANIMATION_DELTA_TIME)) {
+void RemoteContext::wakeIn(float seconds) {
+    // The reference's rule verbatim. mLastRepaint being NaN means nothing has consumed a
+    // delay yet, so the first request of a cycle wins outright; after that only a sooner
+    // request narrows the schedule, and a NaN clears it.
+    if (std::isnan(seconds) || std::isnan(mLastRepaint) || mRepaintSeconds > seconds) {
+        mRepaintSeconds = seconds;
+    }
+}
+
+int RemoteContext::getRepaintDelay(int64_t currentTimeMillis) {
+    // Mirrors RemoteComposeState.getOpsToUpdate. Only ID_CONTINUOUS_SEC forces a repaint
+    // every frame — ID_ANIMATION_TIME and ID_ANIMATION_DELTA_TIME used to be in this
+    // test, which spun a document at full frame rate merely for reading animation time.
+    // The TypeScript player dropped them for the same reason.
+    if (hasListeners(ID_CONTINUOUS_SEC)) {
         return 1;
     }
-    // If listening to seconds → repaint ~every second
-    if (hasListeners(ID_TIME_IN_SEC) || hasListeners(ID_EPOCH_SECOND)) {
-        return 1000;
+
+    int repaintMs = std::numeric_limits<int>::max();
+    if (!std::isnan(mRepaintSeconds)) {
+        repaintMs = static_cast<int>(mRepaintSeconds * 1000);
+        mLastRepaint = mRepaintSeconds;
     }
-    // If listening to minutes → repaint ~every minute
+
+    // Wake just past the next boundary rather than a flat interval, so a clock ticks on
+    // the second instead of at whatever phase the first frame happened to land on.
+    if (hasListeners(ID_TIME_IN_SEC)) {
+        int sub = static_cast<int>(currentTimeMillis % 1000);
+        return std::min(repaintMs, 2 + 1000 - sub);
+    }
     if (hasListeners(ID_TIME_IN_MIN)) {
-        return 60000;
+        int sub = static_cast<int>(currentTimeMillis % 60000);
+        return std::min(repaintMs, 2 + 60000 - sub);
     }
-    // If listening to hours → repaint ~every hour
-    if (hasListeners(ID_TIME_IN_HR)) {
-        return 3600000;
+    if (!std::isnan(mRepaintSeconds)) {
+        return static_cast<int>(mRepaintSeconds * 1000);
     }
     return -1; // Static content, no repaint needed
 }
