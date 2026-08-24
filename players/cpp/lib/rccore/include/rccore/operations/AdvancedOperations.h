@@ -2325,14 +2325,17 @@ public:
 };
 
 // ── WakeIn (191) ──────────────────────────────────────────────────────
-// Parse-only stub — wake timer is a host-side scheduling effect.
+// Schedules the next repaint. This was a parse-only stub on the grounds that waking is a
+// host-side effect; it is not — the reference routes it into RemoteComposeState, where
+// getOpsToUpdate reads it, and with the stub in place nothing ever populated the
+// schedule, so a document whose only animation came from WakeIn or Impulse drew once.
 class WakeInOp : public Operation {
 public:
     float wake = 0;
     std::string name() const override { return "WAKE_IN"; }
     int opcode() const override { return 191; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override { context.wakeIn(wake); }
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<WakeInOp>();

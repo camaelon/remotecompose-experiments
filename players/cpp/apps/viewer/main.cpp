@@ -1348,7 +1348,9 @@ int main(int argc, char* argv[]) {
         g.lastFrameTime = elapsed;
 
         if (g.context) {
-            int delay = g.context->getRepaintDelay();
+            int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::system_clock::now().time_since_epoch()).count();
+            int delay = g.context->getRepaintDelay(nowMs);
             if (delay > 0) {
                 g.needsRedraw = true;
             }
