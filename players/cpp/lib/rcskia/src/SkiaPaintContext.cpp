@@ -920,8 +920,16 @@ void SkiaPaintContext::applyPaintBundle(const PaintBundle& bundle) {
     int i = 0;
     int len = bundle.size();
 
-    // Reset shader and color filter at start of new paint application
-    mPaint.setShader(nullptr);
+    // A paint bundle is a *delta*: it carries only the properties it changes, and
+    // everything else stays as the previous bundle left it. So nothing is cleared on
+    // entry — not the shader, not anything else. CoreDocument::paint calls reset() once
+    // per frame, and SkPaint::reset drops the shader, which is what stops state leaking
+    // from one frame into the next.
+    //
+    // This used to clear the shader here, which quietly broke that contract: a bundle
+    // setting only an alpha or only a stroke width dropped a shader an earlier bundle in
+    // the same frame had set. The reference's applyPaint is a bare applyPaintChange with
+    // no reset; replacePaint is the variant that resets first.
 
     while (i < len) {
         int32_t cmd = arr[i++];
