@@ -28,8 +28,10 @@ mkdir -p "$OUT" "$OUT/cppbuild"
 # The C++ engine. -ffp-contract=off is a correctness flag, not an optimisation preference:
 # clang contracts a*b+c into an FMA by default, which rounds once instead of twice and by itself
 # put 36 of 40 scenes wrong.
+# d3scene drives the real MeshExpression operation for `meshexpr`, so it needs the whole of
+# rccore rather than just the d3 renderer.
 c++ -std=c++17 -O2 -ffp-contract=off -I"$CPPDIR/lib/rccore/include" \
-    "$CPPDIR"/lib/rccore/src/d3/*.cpp "$CPPDIR"/tools/d3scene/main.cpp -lz \
+    $(find "$CPPDIR/lib/rccore/src" -name '*.cpp') "$CPPDIR"/tools/d3scene/main.cpp -lz \
     -o "$OUT/cppbuild/d3scene" || exit 1
 
 CORE=${RC_CORE:-/Users/john/code/androidx-main2/frameworks/support/compose/remote/remote-core/src/main/java}
@@ -53,17 +55,14 @@ for scene in "$ORACLE"/scenes/*.txt; do
 from PIL import Image
 im = Image.open('$OUT/${name}_java.png'); print(im.size[0]*im.size[1])")"
 
-    # The mesh-expression scenes drive a real operation, which only the Java oracle and the
-    # TypeScript player implement; the C++ port covers the renderer and the primitives.
-    case "$name" in
-        e_*) cn="n/a" ;;
-        *)
-            if "$OUT/cppbuild/d3scene" "$scene" "$OUT/${name}_cpp.png" >/dev/null 2>&1; then
-                cn=$(python3 pngdiff.py "$OUT/${name}_java.png" "$OUT/${name}_cpp.png")
-            else
-                cn="ERR"
-            fi ;;
-    esac
+    # Every scene runs through C++, mesh expressions included. Those used to be skipped on
+    # the grounds that only Java and TypeScript implemented the operation; C++ implements it
+    # too, and the real obstacle was that d3scene could not parse the `meshexpr` command.
+    if "$OUT/cppbuild/d3scene" "$scene" "$OUT/${name}_cpp.png" >/dev/null 2>&1; then
+        cn=$(python3 pngdiff.py "$OUT/${name}_java.png" "$OUT/${name}_cpp.png")
+    else
+        cn="ERR"
+    fi
     tsr="ok"; [ "$n" = "0" ] || tsr="DIFFERS($n)"
     cppr="$cn"; [ "$cn" = "0" ] && cppr="ok"
     printf "  %-16s %8s  %-12s %s\n" "$name" "$total" "$tsr" "$cppr"

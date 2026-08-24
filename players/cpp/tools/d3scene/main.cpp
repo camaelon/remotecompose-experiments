@@ -12,6 +12,10 @@
 #include "rccore/d3/Paint3DContext.h"
 #include "rccore/d3/Primitive3D.h"
 #include "rccore/d3/SoftwarePaint3DContext.h"
+#include "rccore/ExpressionEvaluator.h"
+#include "rccore/RemoteContext.h"
+#include "rccore/d3/HeadlessPaint3DContext.h"
+#include "rccore/operations/Operations3D.h"
 
 #include <cmath>
 #include <cstdint>
@@ -154,6 +158,52 @@ bool writePng(const std::string& path, const std::vector<int32_t>& argb, int w, 
     return f.good();
 }
 
+// ── mesh expressions ──────────────────────────────────────────────────────────────────
+//
+// `meshexpr` drives the real MeshExpression operation rather than re-implementing its
+// arithmetic here, exactly as the Java oracle and the TypeScript harness do. That means
+// this tool needs the operation layer — a RemoteContext in PAINT mode holding a
+// PaintContext whose asPaint3D() hands back the software renderer — which the other scene
+// commands, being direct calls onto the renderer, do not.
+
+/** RPN token names -> AnimatedFloatExpression opcodes. Must match Oracle.token and OPS. */
+int rpnOpcode(const std::string& s) {
+    if (s == "+") return 1;    if (s == "-") return 2;
+    if (s == "*") return 3;    if (s == "/") return 4;
+    if (s == "min") return 6;  if (s == "max") return 7;
+    if (s == "pow") return 8;  if (s == "sqrt") return 9;
+    if (s == "abs") return 10; if (s == "exp") return 13;
+    if (s == "sin") return 18; if (s == "cos") return 19;
+    if (s == "hypot") return 47;
+    if (s == "u") return 70;   if (s == "v") return 71;
+    return -1;
+}
+
+/**
+ * One scene-script RPN token: a plain number, or an operator/variable by name. Operators
+ * are NaN payloads, so they are looked up rather than parsed — writing them as decimals
+ * would lose the exact bit pattern the evaluator switches on.
+ */
+float rpnToken(const std::string& s) {
+    int op = rpnOpcode(s);
+    if (op >= 0) return rccore::ExpressionEvaluator::toNaN(rccore::EXPR_OFFSET + op);
+    return std::strtof(s.c_str(), nullptr);
+}
+
+/** One group: semicolon-separated expressions, each comma-separated RPN tokens; '-' is empty. */
+std::vector<std::vector<float>> exprGroup(const std::string& s) {
+    std::vector<std::vector<float>> g;
+    if (s == "-") return g;
+    for (const std::string& part : split(s, ';')) {
+        std::vector<float> e;
+        for (const std::string& tok : split(part, ',')) {
+            if (!tok.empty()) e.push_back(rpnToken(tok));
+        }
+        g.push_back(std::move(e));
+    }
+    return g;
+}
+
 int matrixSub(const std::string& n) {
     if (n == "identity") return M3_IDENTITY;
     if (n == "translate") return M3_TRANSLATE;
@@ -170,9 +220,20 @@ int main(int argc, char** argv) {
         std::cerr << "usage: d3scene <scene.txt> <out.png>\n";
         return 2;
     }
-    SoftwarePaint3DContext ctx;
+    // Only `meshexpr` needs the context layer: it runs a real Operation, and an Operation
+    // reaches the renderer through RemoteContext -> PaintContext -> asPaint3D(). PAINT mode
+    // is required because p3d() returns null in any other mode, which would silently define
+    // no mesh and leave the scene to draw nothing while still "passing".
+    //
+    // Every other scene command drives the renderer directly, so both paths must land on the
+    // same SoftwarePaint3DContext — hence taking it from the headless context rather than
+    // holding a second one.
     int w = 256, h = 256;
-    ctx.setSize(w, h);
+    rccore::RemoteContext remote;
+    rccore::d3::HeadlessPaint3DContext paintCtx(remote, w, h);
+    remote.setMode(rccore::ContextMode::PAINT);
+    remote.setPaintContext(&paintCtx);
+    SoftwarePaint3DContext& ctx = paintCtx.engine();
 
     std::ifstream in(argv[1]);
     if (!in) { std::cerr << "cannot open " << argv[1] << "\n"; return 2; }
@@ -228,6 +289,22 @@ int main(int argc, char** argv) {
                                std::strtof(t[2].c_str(), nullptr));
         } else if (t[0] == "draw") {
             ctx.drawMesh3D(std::stoi(t[1]), std::stoi(t[2]));
+        } else if (t[0] == "meshexpr") {
+            // meshexpr <id> <type> <flags> <params> <pos> <normal> <uv>
+            rccore::MeshExpression op;
+            op.id = std::stoi(t[1]);
+            op.type = std::stoi(t[2]);
+            op.flags = std::stoi(t[3]);
+            std::vector<std::vector<float>> p = exprGroup(t[4]);
+            op.params = p.empty() ? std::vector<float>() : p[0];
+            op.pos = exprGroup(t[5]);
+            op.normal = exprGroup(t[6]);
+            op.uv = exprGroup(t[7]);
+            // A scene script has no host variables, so the resolved copies come out equal
+            // to the originals; going through updateVariables anyway keeps the operation
+            // on its normal path rather than a special one that only this tool exercises.
+            op.updateVariables(remote);
+            op.apply(remote);
         } else if (t[0] == "mesh") {
             int id = std::stoi(t[1]);
             if (t[2] == "cube") {
