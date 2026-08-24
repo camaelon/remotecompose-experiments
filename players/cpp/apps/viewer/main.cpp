@@ -298,6 +298,11 @@ struct ViewerState {
     bool mouseDown = false;
     float lastMouseX = 0, lastMouseY = 0;
     double lastMouseTime = 0.0;
+    // A second sample, kept deliberately behind the newest one. Release velocity has to be
+    // measured over a window; measuring against the newest sample gives zero, because the
+    // pointer does not move between the final move event and the button coming up.
+    float prevMouseX = 0, prevMouseY = 0;
+    double prevMouseTime = 0.0;
 
     // Debug
     int debug = 0;
@@ -686,6 +691,10 @@ static void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int actio
     }
 }
 
+// How far back the release-velocity baseline is kept. Long enough that a real flick
+// registers, short enough that stopping before release still reads as a stop.
+static constexpr double kVelocityWindow = 0.03;
+
 static void cursorCallback(GLFWwindow* /*window*/, double x, double y) {
     g.mouseX = static_cast<float>(x);
     g.mouseY = static_cast<float>(y);
@@ -696,9 +705,19 @@ static void cursorCallback(GLFWwindow* /*window*/, double x, double y) {
         g.context->loadFloat(rccore::RemoteContext::ID_TOUCH_POS_Y, ty);
         g.doc->touchDrag(*g.context, tx, ty);
 
-        g.lastMouseX = g.mouseX;
-        g.lastMouseY = g.mouseY;
-        g.lastMouseTime = glfwGetTime();
+        // Roll the samples forward only once the newest is old enough to be a useful
+        // baseline. That keeps prev* between kVelocityWindow and 2x that behind the cursor,
+        // so the release below always divides by a sane interval instead of by whatever
+        // fraction of a millisecond separated the last two events.
+        double now = glfwGetTime();
+        if (now - g.lastMouseTime >= kVelocityWindow) {
+            g.prevMouseX = g.lastMouseX;
+            g.prevMouseY = g.lastMouseY;
+            g.prevMouseTime = g.lastMouseTime;
+            g.lastMouseX = g.mouseX;
+            g.lastMouseY = g.mouseY;
+            g.lastMouseTime = now;
+        }
     }
 
     g.needsRedraw = true;
@@ -708,9 +727,9 @@ static void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, 
     if (button == GLFW_MOUSE_BUTTON_LEFT) {
         if (action == GLFW_PRESS) {
             g.mouseDown = true;
-            g.lastMouseX = g.mouseX;
-            g.lastMouseY = g.mouseY;
-            g.lastMouseTime = glfwGetTime();
+            g.lastMouseX = g.prevMouseX = g.mouseX;
+            g.lastMouseY = g.prevMouseY = g.mouseY;
+            g.lastMouseTime = g.prevMouseTime = glfwGetTime();
 
             if (g.doc && g.context) {
                 g.doc->touchDown(*g.context, touchX(g.mouseX), touchY(g.mouseY));
@@ -719,12 +738,17 @@ static void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, 
             g.mouseDown = false;
 
             if (g.doc && g.context) {
+                // Measure against the *older* sample. TouchExpression turns this velocity into
+                // the fling: a zero here makes getStopPosition return the current value, which
+                // makes the easing curve zero-length, which looks exactly like the fling being
+                // unimplemented. It is in pixels per second, matching what the platform
+                // reports to touchUp.
                 double now = glfwGetTime();
-                double dt = now - g.lastMouseTime;
+                double dt = now - g.prevMouseTime;
                 float dx = 0, dy = 0;
                 if (dt > 0.0001) {
-                    dx = static_cast<float>((g.mouseX - g.lastMouseX) / dt);
-                    dy = static_cast<float>((g.mouseY - g.lastMouseY) / dt);
+                    dx = static_cast<float>((g.mouseX - g.prevMouseX) / dt);
+                    dy = static_cast<float>((g.mouseY - g.prevMouseY) / dt);
                 }
                 g.doc->touchUp(*g.context, touchX(g.mouseX), touchY(g.mouseY), dx, dy);
                 g.doc->onClick(*g.context, g.mouseX, g.mouseY);
