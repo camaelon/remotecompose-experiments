@@ -29,6 +29,34 @@ public:
     virtual const std::vector<float>* getFloats(int id) const = 0;
 };
 
+// java.util.Random, because that is what the reference's RAND ops are and a document
+// that seeds itself has to draw the same sequence on every player. A 48-bit LCG, with
+// nextFloat() being the top 24 bits over 2^24.
+//
+// The state is process-wide static deliberately. The reference holds a single
+// `static Random sRandom`, and this player builds *five* ExpressionEvaluator instances —
+// three members in AdvancedOperations, one per-call local, and a function-static. With
+// per-instance state, seeding inside one expression would leave the other four unseeded,
+// which is the same defect the TypeScript player hit with only two evaluators.
+class JavaRandom {
+public:
+    /** Seed from the float's raw bits, as `new Random(Float.floatToRawIntBits(v))`. */
+    static void seedFromBits(int32_t bits);
+
+    /** The reference's lazy `new Random()` — an arbitrary seed, not a fixed one. */
+    static void seedArbitrary();
+
+    static float nextFloat();
+
+private:
+    static uint32_t next(int bits);
+
+    static constexpr uint64_t kMult = 0x5DEECE66DULL;
+    static constexpr uint64_t kMask = (1ULL << 48) - 1;
+    static uint64_t sState;
+    static bool sSeeded;
+};
+
 class ExpressionEvaluator {
 public:
     ExpressionEvaluator() {
@@ -162,7 +190,6 @@ private:
     std::vector<float> mStack;
     std::vector<float> mRegisters;
     const CollectionsAccess* mCollections = nullptr;
-    std::mt19937 mRng{42};
     float mVar1 = 0.0f, mVar2 = 0.0f, mVar3 = 0.0f;
 };
 
