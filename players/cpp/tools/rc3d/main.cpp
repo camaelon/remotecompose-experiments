@@ -99,12 +99,21 @@ bool writePng(const std::string& path, const std::vector<int32_t>& argb, int w, 
 
 int main(int argc, char** argv) {
     if (argc < 3) {
-        std::cerr << "usage: rc3d <doc.rc> <out.png> [--width N] [--height N] [--frames N]\n";
+        std::cerr << "usage: rc3d <doc.rc> <out.png> [--width N] [--height N] [--frames N]"
+                     " [--time SECONDS] [--epoch MILLIS]\n";
         return 2;
     }
     auto flag = [&](const char* name, int dflt) {
         for (int i = 3; i + 1 < argc; i++)
             if (std::string(argv[i]) == std::string("--") + name) return std::atoi(argv[i + 1]);
+        return dflt;
+    };
+    // Epoch milliseconds overflow an int: 1.7e12 against a 2.1e9 ceiling. atoi would saturate
+    // and pin the clock to a different instant than the Java side, silently.
+    auto flagLong = [&](const char* name, long long dflt) {
+        for (int i = 3; i + 1 < argc; i++)
+            if (std::string(argv[i]) == std::string("--") + name)
+                return std::strtoll(argv[i + 1], nullptr, 10);
         return dflt;
     };
     std::ifstream in(argv[1], std::ios::binary);
@@ -126,8 +135,13 @@ int main(int argc, char** argv) {
     context.setPaintContext(&pc);
     doc.registerListeners(context);
     doc.applyDataOperations(context);
-    // Pin the clock so a render is reproducible and comparable across players. Without this
-    // continuousSec() reads wall time and two players never agree on anything animated.
+    // Pin the clock at the source. Loading the time variables before paint() does not hold:
+    // paint() calls updateTimeVariables(), which overwrites them from the system clock. That
+    // failure is silent — the render looks fine and simply is not reproducible.
+    long long epochMs = flagLong("epoch", 0);
+    if (epochMs > 0) {
+        doc.setFixedTimeMs(epochMs);
+    }
     float at = (float) flag("time", 0);
     for (int f = 0; f < frames; f++) {
         context.loadFloat(RemoteContext::ID_ANIMATION_TIME, at);

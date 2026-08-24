@@ -84,7 +84,10 @@ public final class OracleBridge {
             m3d.setCamera3D(p, pp, vp);
         }
         @Override public void matrix3Op(int sub, float[] args) { m3d.matrix3Op(sub, args); }
-        @Override public void drawMesh3D(int meshId, int mode) { m3d.drawMesh3D(meshId, mode); }
+        @Override public void drawMesh3D(int meshId, int mode) {
+            m3d.setBaseColorArgb(mColorArgb);
+            m3d.drawMesh3D(meshId, mode);
+        }
         @Override public void clearDepth3D() { m3d.clearDepth3D(); }
         @Override public void setLights3D(int[] t, int[] c, float[] p) { m3d.setLights3D(t, c, p); }
         @Override public void setTexture3D(int bitmapId) { m3d.setTexture3D(bitmapId); }
@@ -104,7 +107,6 @@ public final class OracleBridge {
     @Override public void drawRect(float left, float top, float right, float bottom) { }
     @Override public void savePaint() { }
     @Override public void restorePaint() { }
-    @Override public void replacePaint(PaintBundle paintBundle) { }
     @Override public void drawRoundRect(float left, float top, float right, float bottom, float radiusX, float radiusY) { }
     @Override public void drawTextOnPath(int textId, int pathId, float hOffset, float vOffset) { }
     @Override public void getTextBounds(int textId, int start, int end, int flags, float[] bounds) { }
@@ -114,7 +116,51 @@ public final class OracleBridge {
     @Override public void drawTweenPath(int path1Id, int path2Id, float tween, float start, float end) { }
     @Override public void tweenPath(int out, int path1, int path2, float tween) { }
     @Override public void combinePath(int out, int path1, int path2, byte operation) { }
-    @Override public void applyPaint(PaintBundle mPaintData) { }
+    /**
+     * The only 2D state the 3D surface needs: drawMesh3D shades with the current paint colour.
+     *
+     * Walked through PaintChanges rather than by reading the bundle's array, which is
+     * package-private — and this is how the Android host consumes it too, so the tag decoding
+     * is the reference's own rather than a second implementation of it here.
+     */
+    @Override public void applyPaint(PaintBundle mPaintData) {
+        mPaintData.applyPaintChange(this, mChanges);
+    }
+
+    @Override public void replacePaint(PaintBundle paintBundle) {
+        mColorArgb = 0xFFFFFFFF;
+        applyPaint(paintBundle);
+    }
+
+    private int mColorArgb = 0xFFFFFFFF;
+
+    private final PaintChanges mChanges = new PaintChanges() {
+        @Override public void setTextSize(float size) { }
+        @Override public void setStrokeWidth(float width) { }
+        @Override public void setColor(int color) { mColorArgb = color; }
+        @Override public void setStrokeCap(int cap) { }
+        @Override public void setStyle(int style) { }
+        @Override public void setShader(int shader) { }
+        @Override public void setImageFilterQuality(int quality) { }
+        @Override public void setAlpha(float a) { }
+        @Override public void setStrokeMiter(float miter) { }
+        @Override public void setStrokeJoin(int join) { }
+        @Override public void setFilterBitmap(boolean filter) { }
+        @Override public void setBlendMode(int mode) { }
+        @Override public void setAntiAlias(boolean aa) { }
+        @Override public void clear(long mask) { }
+        @Override public void setLinearGradient(int [] colorsArray, float [] stopsArray, float startX, float startY, float endX, float endY, int tileMode) { }
+        @Override public void setRadialGradient(int [] colorsArray, float [] stopsArray, float centerX, float centerY, float radius, int tileMode) { }
+        @Override public void setSweepGradient(int [] colorsArray, float [] stopsArray, float centerX, float centerY) { }
+        @Override public void setColorFilter(int color, int mode) { }
+        @Override public void setTypeFace(int fontType, int weight, boolean italic) { }
+        @Override public void setFallbackTypeFace(int fontType, int weight, boolean italic) { }
+        @Override public void setShaderMatrix(float matrixId) { }
+        @Override public void setTypeFace(String fontType, int weight, boolean italic) { }
+        @Override public void setFontVariationAxes(String[] tags, float [] values) { }
+        @Override public void setTextureShader(int bitmapId, short tileX, short tileY, short filterMode, short maxAnisotropy) { }
+        @Override public void setPathEffect(float [] pathEffect) { }
+    };
     @Override public void matrixScale(float scaleX, float scaleY, float centerX, float centerY) { }
     @Override public void matrixTranslate(float translateX, float translateY) { }
     @Override public void matrixSkew(float skewX, float skewY) { }
