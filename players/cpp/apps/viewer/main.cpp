@@ -1354,6 +1354,21 @@ int main(int argc, char* argv[]) {
             if (delay > 0) {
                 g.needsRedraw = true;
             }
+            // A document can also ask for the next frame itself, and that request is the only
+            // thing driving an animation the schedule knows nothing about. TouchExpression's
+            // fling is the case that matters: on touch-up it configures an easing curve and
+            // then calls needsRepaint() on every frame until the curve runs out. Ignore it and
+            // the fling dies the instant the finger lifts — the value simply stops where it
+            // was, with no error and no visible cause.
+            //
+            // This went unnoticed while getRepaintDelay() treated ID_ANIMATION_TIME as
+            // continuous: everything repainted every frame regardless, so nothing needed the
+            // request to be honoured. Matching the reference's schedule removed that cover.
+            if (rccore::PaintContext* pc = g.context->getPaintContext()) {
+                if (pc->doesNeedsRepaint()) {
+                    g.needsRedraw = true;
+                }
+            }
         }
 
         if (g.needsRedraw) {
