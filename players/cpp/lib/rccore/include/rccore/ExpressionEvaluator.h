@@ -34,10 +34,11 @@ public:
 // nextFloat() being the top 24 bits over 2^24.
 //
 // The state is process-wide static deliberately. The reference holds a single
-// `static Random sRandom`, and this player builds *five* ExpressionEvaluator instances —
-// three members in AdvancedOperations, one per-call local, and a function-static. With
-// per-instance state, seeding inside one expression would leave the other four unseeded,
-// which is the same defect the TypeScript player hit with only two evaluators.
+// `static Random sRandom`, and this player builds *six* ExpressionEvaluator instances —
+// three members in AdvancedOperations, one per-call local, a thread_local in
+// Operations3D and a function-static. With per-instance state, seeding inside one
+// expression would leave the other five unseeded, which is the same defect the
+// TypeScript player hit with only two evaluators.
 class JavaRandom {
 public:
     /** Seed from the float's raw bits, as `new Random(Float.floatToRawIntBits(v))`. */
