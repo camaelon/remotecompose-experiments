@@ -3,8 +3,36 @@
 #include <cmath>
 #include <algorithm>
 #include <numeric>
+#include <random>
 
 namespace rccore {
+
+uint64_t JavaRandom::sState = 0;
+bool JavaRandom::sSeeded = false;
+
+void JavaRandom::seedFromBits(int32_t bits) {
+    // Java widens the int to long before scrambling, so a negative float's bits
+    // sign-extend. Casting through int64_t reproduces that.
+    sState = (static_cast<uint64_t>(static_cast<int64_t>(bits)) ^ kMult) & kMask;
+    sSeeded = true;
+}
+
+void JavaRandom::seedArbitrary() {
+    std::random_device rd;
+    uint64_t s = (static_cast<uint64_t>(rd()) << 32) ^ rd();
+    sState = (s ^ kMult) & kMask;
+    sSeeded = true;
+}
+
+uint32_t JavaRandom::next(int bits) {
+    sState = (sState * kMult + 0xBULL) & kMask;
+    return static_cast<uint32_t>(sState >> (48 - bits));
+}
+
+float JavaRandom::nextFloat() {
+    if (!sSeeded) seedArbitrary();   // the reference's lazy `new Random()`
+    return static_cast<float>(next(24)) / static_cast<float>(1 << 24);
+}
 
 float ExpressionEvaluator::eval(const RemoteContext& context,
                                  const CollectionsAccess* ca,
@@ -175,27 +203,36 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
 
         // Random
         case RAND_OP: {
-            std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-            mStack[++sp] = dist(mRng);
+            mStack[++sp] = JavaRandom::nextFloat();
             break;
         }
         case RAND_SEED: {
-            mRng.seed(static_cast<unsigned>(mStack[sp--]));
+            float seed = mStack[sp--];
+            if (seed == 0.0f) {
+                JavaRandom::seedArbitrary();   // reference: seed 0 means `new Random()`
+            } else {
+                int32_t bits;
+                memcpy(&bits, &seed, sizeof(bits));
+                JavaRandom::seedFromBits(bits);
+            }
             break;
         }
         case NOISE_FROM: {
-            // Deterministic hash-based noise
-            int32_t bits;
-            memcpy(&bits, &mStack[sp], sizeof(bits));
-            uint32_t h = static_cast<uint32_t>(bits);
-            h ^= h >> 16; h *= 0x45d9f3b; h ^= h >> 16; h *= 0x45d9f3b; h ^= h >> 16;
-            mStack[sp] = static_cast<float>(h & 0x7FFFFFFF) / 2147483647.0f;
+            // The reference's hash, which ranges over roughly -1..1 — not a 0..1 hash.
+            // Everything is int32 with wrapping, so the arithmetic runs unsigned and is
+            // reinterpreted, signed overflow being UB.
+            int32_t x;
+            memcpy(&x, &mStack[sp], sizeof(x));
+            uint32_t u = static_cast<uint32_t>(x);
+            u = (u << 13) ^ u;
+            uint32_t h = u * (u * u * 15731u + 789221u) + 1376312589u;
+            mStack[sp] = 1.0f
+                - static_cast<float>(static_cast<int32_t>(h) & 0x7FFFFFFF) / 1.0737418E+9f;
             break;
         }
         case RAND_IN_RANGE: {
-            float b = mStack[sp--]; float a = mStack[sp];
-            std::uniform_real_distribution<float> dist(a, b);
-            mStack[sp] = dist(mRng);
+            float max = mStack[sp--]; float min = mStack[sp];
+            mStack[sp] = JavaRandom::nextFloat() * (max - min) + min;
             break;
         }
 
