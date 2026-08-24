@@ -1,6 +1,7 @@
 #pragma once
 #include "rccore/PaintContext.h"
 #include "rccore/PaintBundle.h"
+#include "rccore/d3/SoftwarePaint3DContext.h"
 
 #include "include/core/SkCanvas.h"
 #include "include/core/SkPaint.h"
@@ -111,7 +112,53 @@ public:
     // Reset
     void reset() override;
 
+    /**
+     * 3D is rendered by the pure-software rasterizer and blitted onto the canvas, which is
+     * what the reference AndroidPaintContext does for the software backends. Returning a
+     * non-null Paint3D here is the whole reason 3D documents draw anything at all: every
+     * 3D op begins with this downcast and silently no-ops when it yields null.
+     */
+    rccore::Paint3D* asPaint3D() override { return &m3D; }
+
 private:
+    /**
+     * Adapter from the Paint3D op surface to SoftwarePaint3DContext. Mirrors the
+     * reference's ensure3D()/blit3D() pair: the buffer is sized to the canvas lazily, and
+     * the blit happens after each drawMesh3D so 2D and 3D draws keep their interleaved
+     * order rather than 3D landing on top of everything.
+     */
+    class Skia3D : public rccore::Paint3D {
+    public:
+        explicit Skia3D(SkiaPaintContext& owner) : mOwner(owner) {}
+        void defineMesh3D(int id, const std::vector<int32_t>& indices,
+                          const std::vector<float>& verts,
+                          const std::vector<float>& normals,
+                          const std::vector<float>& uv) override;
+        void setCamera3D(int projection, const std::vector<float>& projParams,
+                         const std::vector<float>& viewParams) override;
+        void matrix3Op(int sub, const std::vector<float>& args) override;
+        void drawMesh3D(int meshId, int mode) override;
+        void clearDepth3D() override;
+        void setLights3D(const std::vector<int>& types,
+                         const std::vector<int32_t>& colors,
+                         const std::vector<float>& params) override;
+        void setTexture3D(int bitmapId) override;
+        void setMaterial3D(float specStrength, float shininess) override;
+        void setDepthBias3D(float constant, float slope) override;
+
+    private:
+        /** Size the software buffer to the canvas. Null if the canvas has no area yet. */
+        rccore::d3::SoftwarePaint3DContext* ensure();
+        void blit();
+
+        SkiaPaintContext& mOwner;
+        rccore::d3::SoftwarePaint3DContext mCtx;
+        bool mSized = false;
+    };
+
+    Skia3D m3D{*this};
+
+
     void applyPaintBundle(const rccore::PaintBundle& bundle);
     SkBlendMode toSkBlendMode(int mode);
     void buildPathFromFloats(SkPath& path, const std::vector<float>& data, int winding);
