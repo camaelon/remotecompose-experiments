@@ -101,8 +101,20 @@ int main(int argc, char* argv[]) {
     // Execute data operations (loads text, expressions, etc.)
     doc.applyDataOperations(context, -2);  // THEME_DARK
 
-    // Paint (includes DATA re-eval + PAINT)
-    doc.paint(context, -2);  // THEME_DARK
+    // Paint (includes DATA re-eval + PAINT).
+    // RC_FRAMES paints repeatedly before capturing. One frame is not enough for anything
+    // driven by an Impulse: its first pass runs only the initialisation block, and the
+    // process block that does the per-frame work (particle loops, and the mesh draws
+    // nested inside them) starts on the second. A single-frame capture of a particle
+    // document is therefore legitimately empty rather than broken.
+    int frames = 1;
+    if (const char* f = std::getenv("RC_FRAMES")) {
+        frames = std::atoi(f);
+        if (frames < 1) frames = 1;
+    }
+    for (int i = 0; i < frames; i++) {
+        doc.paint(context, -2);  // THEME_DARK
+    }
 
     // Encode to PNG
     SkPixmap pixmap;

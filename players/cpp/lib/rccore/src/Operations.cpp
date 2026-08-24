@@ -189,7 +189,7 @@ void Operations::init() {
 
     // ── Actions ────────────────────────────────────────────────────────
     registerReader(HOST_ACTION, "HOST_ACTION", HostActionOp::read);
-    registerReader(HOST_ACTION_LIST, "HostActionList", HostActionListOp::read);
+    registerReader(HOST_ACTION_LIST, "HostNamedAction", HostNamedActionOp::read);
     registerReader(HOST_SCROLL_ACTION, "HostActionMetadataOperation", HostActionMetadataOp::read);
     registerReader(VALUE_FLOAT_CHANGE, "ValueFloatExpressionChangeActionOperation", ValueFloatChangeOp::read);
     registerReader(VALUE_INTEGER_CHANGE, "VALUE_INTEGER_CHANGE_ACTION", ValueIntChangeOp::read);

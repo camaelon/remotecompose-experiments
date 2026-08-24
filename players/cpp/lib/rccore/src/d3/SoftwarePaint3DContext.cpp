@@ -1,4 +1,6 @@
 #include "rccore/d3/SoftwarePaint3DContext.h"
+#include <cstdio>
+#include <cstdlib>
 
 #include "rccore/d3/Matrix4.h"
 #include "rccore/d3/Paint3DContext.h"
@@ -383,8 +385,14 @@ void SoftwarePaint3DContext::drawMesh3D(int meshId, int mode) {
     bool interpolate = smooth || mSpecStrength > 0.f;
 
     int n = (int) m.indices.size();
+    // RC_TRACE reports triangles submitted vs. surviving projection+culling. "0 kept" out of
+    // a non-zero submission is the signature of a wholly back-facing or off-frustum mesh,
+    // which is otherwise indistinguishable from the op never running.
+    const bool trace = std::getenv("RC_TRACE") != nullptr;
+    int kept = 0;
     for (int t = 0; t < n; t += 3) {
         if (!projectTriangle(m, smooth, textured, t, baseColor, w, h)) continue;
+        kept++;
         if (textured) {
             int q0 = m.indices[t] * 2, q1 = m.indices[t + 1] * 2, q2 = m.indices[t + 2] * 2;
             fillTriangleTextured(mZbuf.data(), mColor.data(), mTexPixels.data(), mTexW, mTexH,
@@ -404,6 +412,11 @@ void SoftwarePaint3DContext::drawMesh3D(int meshId, int mode) {
                 mTriScreen[3], mTriScreen[4], mTriScreen[5],
                 mTriScreen[0], mTriScreen[1], mTriScreen[2]);
         }
+    }
+    if (trace) {
+        std::fprintf(stderr, "[rc3d] mesh=%d mode=0x%x tris=%d kept=%d verts=%zu "
+                     "normals=%zu uv=%zu\n", meshId, mode, n / 3, kept,
+                     m.verts.size() / 3, m.normals.size() / 3, m.uv.size() / 2);
     }
 }
 

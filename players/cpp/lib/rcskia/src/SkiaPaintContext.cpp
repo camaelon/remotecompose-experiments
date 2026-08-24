@@ -1465,4 +1465,110 @@ void SkiaPaintContext::buildPathFromFloats(SkPath& path,
     path = builder.detach();
 }
 
+
+// ── 3D ─────────────────────────────────────────────────────────────────
+//
+// The 3D ops reach the software rasterizer through this adapter. The reference
+// AndroidPaintContext does the same thing with a Bitmap: render into an ARGB buffer, then
+// blit it onto the canvas after each mesh.
+
+namespace {
+/** Canvas dimensions in device pixels, or {0,0} if there is no canvas. */
+inline SkISize canvasSize(SkCanvas* c) {
+    return c ? c->getBaseLayerSize() : SkISize::MakeEmpty();
+}
+}  // namespace
+
+rccore::d3::SoftwarePaint3DContext* SkiaPaintContext::Skia3D::ensure() {
+    SkISize sz = canvasSize(mOwner.mCanvas);
+    if (sz.width() <= 0 || sz.height() <= 0) return nullptr;
+    if (!mSized || mCtx.width() != sz.width() || mCtx.height() != sz.height()) {
+        mCtx.setSize(sz.width(), sz.height());
+        // setSize does not clear; the depth buffer must start far or the first mesh is
+        // rejected against whatever happened to be in memory.
+        mCtx.clearDepth3D();
+        mSized = true;
+    }
+    return &mCtx;
+}
+
+void SkiaPaintContext::Skia3D::blit() {
+    if (!mSized || !mOwner.mCanvas) return;
+    const std::vector<int32_t>& px = mCtx.colorBuffer();
+    int w = mCtx.width(), h = mCtx.height();
+    if (w <= 0 || h <= 0 || static_cast<int>(px.size()) < w * h) return;
+
+    SkImageInfo info = SkImageInfo::Make(w, h, kBGRA_8888_SkColorType, kUnpremul_SkAlphaType);
+    SkPixmap pm(info, px.data(), static_cast<size_t>(w) * 4);
+    SkBitmap bm;
+    if (!bm.installPixels(pm)) return;
+    mOwner.mCanvas->drawImage(bm.asImage(), 0, 0);
+}
+
+void SkiaPaintContext::Skia3D::defineMesh3D(int id, const std::vector<int32_t>& indices,
+                                            const std::vector<float>& verts,
+                                            const std::vector<float>& normals,
+                                            const std::vector<float>& uv) {
+    if (auto* c = ensure()) c->defineMesh3D(id, indices, verts, normals, uv);
+}
+
+void SkiaPaintContext::Skia3D::setCamera3D(int projection,
+                                           const std::vector<float>& projParams,
+                                           const std::vector<float>& viewParams) {
+    if (auto* c = ensure()) c->setCamera3D(projection, projParams, viewParams);
+}
+
+void SkiaPaintContext::Skia3D::matrix3Op(int sub, const std::vector<float>& args) {
+    if (auto* c = ensure()) c->matrix3Op(sub, args);
+}
+
+void SkiaPaintContext::Skia3D::drawMesh3D(int meshId, int mode) {
+    auto* c = ensure();
+    if (!c) return;
+    // Base colour comes from the live paint, exactly as the reference reads mPaint.getColor().
+    c->setBaseColorArgb(static_cast<int32_t>(mOwner.mPaint.getColor()));
+    // Every backend other than software falls back to software here: the canvas/drawMesh/GL
+    // paths are Android-specific, and a wrong-looking image beats a missing one.
+    c->drawMesh3D(meshId, mode);
+    blit();
+}
+
+void SkiaPaintContext::Skia3D::clearDepth3D() {
+    if (auto* c = ensure()) c->clearDepth3D();
+}
+
+void SkiaPaintContext::Skia3D::setLights3D(const std::vector<int>& types,
+                                           const std::vector<int32_t>& colors,
+                                           const std::vector<float>& params) {
+    if (auto* c = ensure()) c->setLights3D(types, colors, params);
+}
+
+void SkiaPaintContext::Skia3D::setTexture3D(int bitmapId) {
+    auto* c = ensure();
+    if (!c) return;
+    auto it = mOwner.mImages.find(bitmapId);
+    if (it == mOwner.mImages.end() || !it->second) {
+        c->setTextureData({}, 0, 0);
+        return;
+    }
+    SkImage* img = it->second.get();
+    int w = img->width(), h = img->height();
+    if (w <= 0 || h <= 0) { c->setTextureData({}, 0, 0); return; }
+    std::vector<int32_t> pixels(static_cast<size_t>(w) * h);
+    SkImageInfo info = SkImageInfo::Make(w, h, kBGRA_8888_SkColorType, kUnpremul_SkAlphaType);
+    if (!img->readPixels(nullptr, info, pixels.data(), static_cast<size_t>(w) * 4, 0, 0)) {
+        c->setTextureData({}, 0, 0);
+        return;
+    }
+    c->setTextureData(pixels, w, h);
+}
+
+void SkiaPaintContext::Skia3D::setMaterial3D(float specStrength, float shininess) {
+    if (auto* c = ensure()) c->setMaterial3D(specStrength, shininess);
+}
+
+void SkiaPaintContext::Skia3D::setDepthBias3D(float constant, float slope) {
+    if (auto* c = ensure()) c->setDepthBias3D(constant, slope);
+}
+
 } // namespace rcskia
