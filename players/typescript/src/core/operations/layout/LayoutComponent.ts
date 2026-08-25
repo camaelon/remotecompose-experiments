@@ -512,14 +512,20 @@ export class LayoutComponent extends Component {
         if (childW <= 0 && childH <= 0) return true;
 
         if (scrollMod.isVertical()) {
-            const viewportTop = -this.getScrollY();
-            const viewportBottom = viewportTop + (this.mHeight - this.mPaddingTop - this.mPaddingBottom);
+            const hostHeight = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
+            if (hostHeight <= 0) return true;
+            const scrollY = scrollMod.getScrollY();
+            const viewportTop = -scrollY;
+            const viewportBottom = viewportTop + hostHeight;
             if (childY + childH < viewportTop || childY > viewportBottom) {
                 return false;
             }
         } else {
-            const viewportLeft = -this.getScrollX();
-            const viewportRight = viewportLeft + (this.mWidth - this.mPaddingLeft - this.mPaddingRight);
+            const hostWidth = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+            if (hostWidth <= 0) return true;
+            const scrollX = scrollMod.getScrollX();
+            const viewportLeft = -scrollX;
+            const viewportRight = viewportLeft + hostWidth;
             if (childX + childW < viewportLeft || childX > viewportRight) {
                 return false;
             }
@@ -541,8 +547,12 @@ export class LayoutComponent extends Component {
 
     // --- Scroll ---
 
-    getScrollX(): number { return 0; }
-    getScrollY(): number { return 0; }
+    getScrollX(): number {
+        return this.mScrollModifier ? this.mScrollModifier.getScrollX() : 0;
+    }
+    getScrollY(): number {
+        return this.mScrollModifier ? this.mScrollModifier.getScrollY() : 0;
+    }
 
     onClick(context: RemoteContext, doc: any, x: number, y: number): boolean {
         // Check children first
