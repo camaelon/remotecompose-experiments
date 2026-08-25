@@ -31,6 +31,12 @@ import {
     FloatConstant, ColorConstant, Theme, ClickArea,
     NamedVariable, RootContentDescription, RootContentBehavior
 } from './operations/DataOperations';
+import {
+    DefineMesh3D, SetCamera3D, Matrix3DOp, DrawMesh3D,
+    Paint3DState, SetLights3D, SetTexture3D, MeshPrimitive,
+} from './operations/d3/Operations3D';
+import { MeshExpression } from './operations/d3/MeshExpression';
+import { VectorExpression } from './operations/VectorExpression';
 import { FloatExpression } from './operations/FloatExpression';
 import { ColorExpression } from './operations/ColorExpression';
 import { IntegerExpression } from './operations/IntegerExpression';
@@ -272,6 +278,19 @@ export class Operations {
         m.set(ValueFloatExpressionChangeAction.OP_CODE, ValueFloatExpressionChangeAction.read);
         m.set(ParticlesCompareOp.OP_CODE, ParticlesCompareOp.read);
         m.set(ParticlesLoopOp.OP_CODE, ParticlesLoopOp.read);
+
+        // 3D operations. The reference registers these in the experimental profiles only; they
+        // dispatch through Paint3DContext and no-op on a paint context without 3D capability.
+        m.set(DefineMesh3D.OP_CODE, DefineMesh3D.read);
+        m.set(SetCamera3D.OP_CODE, SetCamera3D.read);
+        m.set(Matrix3DOp.OP_CODE, Matrix3DOp.read);
+        m.set(DrawMesh3D.OP_CODE, DrawMesh3D.read);
+        m.set(Paint3DState.OP_CODE, Paint3DState.read);
+        m.set(SetLights3D.OP_CODE, SetLights3D.read);
+        m.set(SetTexture3D.OP_CODE, SetTexture3D.read);
+        m.set(MeshPrimitive.OP_CODE, MeshPrimitive.read);
+        m.set(MeshExpression.OP_CODE, MeshExpression.read);
+        m.set(VectorExpression.OP_CODE, VectorExpression.read);
 
         // Loop
         m.set(LoopOperation.OP_CODE, LoopOperation.read);

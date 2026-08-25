@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <memory>
 #include <unordered_map>
@@ -273,7 +274,18 @@ public:
 
     // Returns milliseconds until next repaint is needed, or -1 for no repaint.
     // 1 = repaint every frame (continuous animation).
-    int getRepaintDelay() const;
+    //
+    // Not const: the reference latches mLastRepaint inside this call, and that latch is
+    // what makes wakeIn's narrowing rule work across frames.
+    //
+    // currentTimeMillis is passed in rather than read from the system clock, as the
+    // reference does, so a deterministic clock can drive it in tests.
+    int getRepaintDelay(int64_t currentTimeMillis);
+
+    // Ask for a repaint in `seconds`. Mirrors RemoteComposeState.wakeIn, including its
+    // narrowing rule: once a delay has been consumed, a later request only takes effect
+    // if it is sooner. A NaN clears the schedule.
+    void wakeIn(float seconds);
 
     // Op count (safety)
     void incrementOpCount() { mOpCount++; }
@@ -288,6 +300,9 @@ private:
     int mTheme = 0;
     int mPaintTheme = -3;  // Default LIGHT (matches Java/TS)
     int mOpCount = 0;
+    // NaN means "nothing scheduled". mLastRepaint latches once a delay has been read.
+    float mRepaintSeconds = std::numeric_limits<float>::quiet_NaN();
+    float mLastRepaint = std::numeric_limits<float>::quiet_NaN();
     int64_t mDocLoadTime = 0;
 
     std::unordered_map<int, float> mFloats;

@@ -5,6 +5,7 @@
 #include "rccore/ExpressionEvaluator.h"
 #include "rccore/IntegerExpressionEvaluator.h"
 #include "rccore/Utils.h"
+#include "rccore/d3/VectorRpn.h"
 #include "rccore/easing/FloatAnimation.h"
 #include "rccore/easing/SpringStopEngine.h"
 #include "rccore/easing/VelocityEasing.h"
@@ -950,21 +951,30 @@ public:
     }
 };
 
-// ── HostActionList (210) ──────────────────────────────────────────────
-class HostActionListOp : public Operation {
+// ── HostNamedAction (210) ─────────────────────────────────────────────
+// Three ints: the name's text id, the value type, and the value's text id
+// (HostNamedActionOperation). This previously read an id followed by a count and that
+// many ints, which is not the wire format at all — the "count" was whatever byte
+// followed, so the reader ran off into the next ops and then sized a vector by garbage,
+// aborting with length_error on any document carrying a host action.
+class HostNamedActionOp : public Operation {
 public:
-    int id = 0;
-    std::vector<int> actionIds;
-    std::string name() const override { return "HostActionList"; }
+    int textId = 0;
+    int type = 0;
+    int valueId = 0;
+    std::string name() const override { return "HostNamedAction"; }
     int opcode() const override { return 210; }
-    std::vector<Field> fields() const override { return {}; }
+    std::vector<Field> fields() const override {
+        return {{"textId", "INT", std::to_string(textId)},
+                {"type", "INT", std::to_string(type)},
+                {"valueId", "INT", std::to_string(valueId)}};
+    }
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
-        auto op = std::make_unique<HostActionListOp>();
-        op->id = buf.readInt();
-        int count = buf.readInt();
-        op->actionIds.resize(count);
-        for (int i = 0; i < count; i++) op->actionIds[i] = buf.readInt();
+        auto op = std::make_unique<HostNamedActionOp>();
+        op->textId = buf.readInt();
+        op->type = buf.readInt();
+        op->valueId = buf.readInt();
         ops.push_back(std::move(op));
     }
 };
@@ -1385,12 +1395,36 @@ public:
                 updateVariables(context);
             }
 
-            // Evaluate update equations
-            for (int j = 0; j < varCount; j++) {
-                particles[i][j] = mExp.eval(context, &ca,
-                    mOutEquations[j].data(),
-                    static_cast<int>(mOutEquations[j].size()));
-                context.loadFloat(varId[j], particles[i][j]);
+            // Evaluate update equations. A scalar equation fills one slot; a vector
+            // equation of dim d evaluates one VectorRpn program and fills d consecutive
+            // slots — so the equation index and the slot index are not the same thing.
+            int slot = 0;
+            for (size_t g = 0; g < mOutEquations.size() && slot < varCount; g++) {
+                int d = (g < mEquDim.size()) ? mEquDim[g] : 1;
+                if (d == 1) {
+                    particles[i][slot] = mExp.eval(context, &ca,
+                        mOutEquations[g].data(),
+                        static_cast<int>(mOutEquations[g].size()));
+                    context.loadFloat(varId[slot], particles[i][slot]);
+                    slot++;
+                } else {
+                    int len = static_cast<int>(mOutEquations[g].size());
+                    int lanes = mVecRpn.apply(mOutEquations[g].data(), len, mVecOut);
+                    if (!allFinite(mVecOut, lanes)) {
+                        mVecRpn.mSoftDomain = true;
+                        lanes = mVecRpn.apply(mOutEquations[g].data(), len, mVecOut);
+                        mVecRpn.mSoftDomain = false;
+                    }
+                    for (int k = 0; k < d && slot + k < varCount; k++) {
+                        float val = (k < lanes) ? mVecOut[k] : 0.0f;
+                        // A non-finite value stored here is re-read as an opcode next
+                        // frame, so it must never reach the particle array.
+                        if (!std::isfinite(val)) val = 0.0f;
+                        particles[i][slot + k] = val;
+                        context.loadFloat(varId[slot + k], val);
+                    }
+                    slot += d;
+                }
             }
 
             // Test for restart
@@ -1439,8 +1473,21 @@ public:
         int varLen = buf.readInt();
         op->mEquations.resize(varLen);
         op->mOutEquations.resize(varLen);
+        op->mEquDim.assign(varLen, 1);
         for (int i = 0; i < varLen; i++) {
-            int equLen = buf.readInt();
+            // The length word is packed: low short = length, high short = vector flag.
+            // A vector equation additionally writes {byte dim, byte flags} before its
+            // floats. Reading this as a plain int makes equLen astronomically large for
+            // any vector equation and runs the cursor off the end of the buffer.
+            int equLen32 = buf.readInt();
+            int equLen = equLen32 & 0xFFFF;
+            int vectorFlag = (equLen32 >> 16) & 0xFFFF;
+            int dim = 1;
+            if (vectorFlag != 0) {
+                dim = buf.readByte();
+                buf.readByte();  // flags (reserved)
+            }
+            op->mEquDim[i] = dim;
             op->mEquations[i].resize(equLen);
             op->mOutEquations[i].resize(equLen);
             for (int j = 0; j < equLen; j++) {
@@ -1462,12 +1509,21 @@ private:
         }
     };
 
+    static bool allFinite(const float* v, int n) {
+        for (int i = 0; i < n; i++) if (!std::isfinite(v[i])) return false;
+        return true;
+    }
+
     ExpressionEvaluator mExp;
+    d3::VectorRpn mVecRpn;
+    float mVecOut[d3::VEC_MAX_DIM] = {0};
     int mId = 0;
     std::vector<float> mRestart;
     std::vector<float> mOutRestart;
     std::vector<std::vector<float>> mEquations;
     std::vector<std::vector<float>> mOutEquations;
+    /// Dimensionality per equation (1 = scalar). A dim-d equation fills d consecutive slots.
+    std::vector<int> mEquDim;
     ParticlesCreateOp* mSource = nullptr;
     std::vector<std::vector<float>>* mParticles = nullptr;
     const std::vector<int>* mVarId = nullptr;
@@ -1551,22 +1607,86 @@ public:
         int r1Len = buf.readInt();
         op->mEquations1.resize(r1Len);
         op->mOutEquations1.resize(r1Len);
+        op->mDims1.assign(r1Len, 1);
         for (int i = 0; i < r1Len; i++) {
-            op->mEquations1[i] = readFloatsVec(buf);
+            op->mEquations1[i] = readEquVec(buf, op->mDims1[i]);
             op->mOutEquations1[i] = op->mEquations1[i];
         }
 
         int r2Len = buf.readInt();
         op->mEquations2.resize(r2Len);
         op->mOutEquations2.resize(r2Len);
+        op->mDims2.assign(r2Len, 1);
         for (int i = 0; i < r2Len; i++) {
-            op->mEquations2[i] = readFloatsVec(buf);
+            op->mEquations2[i] = readEquVec(buf, op->mDims2[i]);
             op->mOutEquations2[i] = op->mEquations2[i];
         }
         ops.push_back(std::move(op));
     }
 
 private:
+    static bool allFiniteVec(const float* v, int n) {
+        for (int i = 0; i < n; i++) if (!std::isfinite(v[i])) return false;
+        return true;
+    }
+
+    /**
+     * Evaluate a result-equation list into a particle's slots, dispatching scalar vs
+     * vector. A vector equation of dim d runs one VectorRpn program and fills d
+     * consecutive slots, so equation index and slot index diverge once any dim > 1.
+     */
+    void evalIntoSlots(RemoteContext& ctx, CollectionsAccess* ca,
+                       const std::vector<std::vector<float>>& outEqns,
+                       const std::vector<int>& dims,
+                       std::vector<float>& particle,
+                       const std::vector<int>& varId) {
+        int slots = static_cast<int>(particle.size());
+        int slot = 0;
+        for (size_t g = 0; g < outEqns.size() && slot < slots; g++) {
+            int d = (g < dims.size()) ? dims[g] : 1;
+            int len = static_cast<int>(outEqns[g].size());
+            if (d == 1) {
+                float r = mExp.eval(ctx, ca, outEqns[g].data(), len);
+                particle[slot] = r;
+                ctx.loadFloat(varId[slot], r);
+                slot++;
+            } else {
+                int lanes = mVecRpn.apply(outEqns[g].data(), len, mVecOut);
+                if (!allFiniteVec(mVecOut, lanes)) {
+                    mVecRpn.mSoftDomain = true;
+                    lanes = mVecRpn.apply(outEqns[g].data(), len, mVecOut);
+                    mVecRpn.mSoftDomain = false;
+                }
+                for (int c = 0; c < d && slot + c < slots; c++) {
+                    float val = (c < lanes) ? mVecOut[c] : 0.0f;
+                    if (!std::isfinite(val)) val = 0.0f;
+                    particle[slot + c] = val;
+                    ctx.loadFloat(varId[slot + c], val);
+                }
+                slot += d;
+            }
+        }
+    }
+
+    /**
+     * Equation reader for the particle ops: the length word packs the length in the low
+     * short and a vector flag in the high short, and a vector equation writes
+     * {byte dim, byte flags} before its floats. Plain readFloatsVec desyncs on those.
+     */
+    static std::vector<float> readEquVec(WireBuffer& buf, int& dimOut) {
+        int len32 = buf.readInt();
+        int len = len32 & 0xFFFF;
+        int vectorFlag = (len32 >> 16) & 0xFFFF;
+        dimOut = 1;
+        if (vectorFlag != 0) {
+            dimOut = buf.readByte();
+            buf.readByte();  // flags (reserved)
+        }
+        std::vector<float> ret(len);
+        for (int j = 0; j < len; j++) ret[j] = buf.readFloat();
+        return ret;
+    }
+
     struct ContextCollectionsLocal : public CollectionsAccess {
         const RemoteContext& ctx;
         explicit ContextCollectionsLocal(const RemoteContext& c) : ctx(c) {}
@@ -1620,11 +1740,7 @@ private:
                                     static_cast<int>(mOutExpression.size()));
             if (value > 0) {
                 resolveArr2D(ctx, mEquations1, mOutEquations1);
-                for (size_t j = 0; j < particles[i].size(); j++) {
-                    particles[i][j] = mExp.eval(ctx, &ca, mOutEquations1[j].data(),
-                        static_cast<int>(mOutEquations1[j].size()));
-                    ctx.loadFloat(varId[j], particles[i][j]);
-                }
+                evalIntoSlots(ctx, &ca, mOutEquations1, mDims1, particles[i], varId);
                 runChildren(ctx);
                 needsRepaint = true;
                 ctx.incrementOpCount();
@@ -1729,18 +1845,10 @@ private:
                     resolve2Body2D(ctx, mEquations2, mOutEquations2,
                                    particles[i], particles[k], true);
 
-                    for (size_t j = 0; j < particles[i].size(); j++) {
-                        particles[i][j] = mExp.eval(ctx, &ca, mOutEquations1[j].data(),
-                            static_cast<int>(mOutEquations1[j].size()));
-                        ctx.loadFloat(varId[j], particles[i][j]);
-                    }
+                    evalIntoSlots(ctx, &ca, mOutEquations1, mDims1, particles[i], varId);
                     runChildren(ctx);
 
-                    for (size_t j = 0; j < particles[k].size(); j++) {
-                        particles[k][j] = mExp.eval(ctx, &ca, mOutEquations2[j].data(),
-                            static_cast<int>(mOutEquations2[j].size()));
-                        ctx.loadFloat(varId[j], particles[k][j]);
-                    }
+                    evalIntoSlots(ctx, &ca, mOutEquations2, mDims2, particles[k], varId);
                     runChildren(ctx);
                     needsRepaint = true;
                 }
@@ -1758,6 +1866,10 @@ private:
     std::vector<float> mOutExpression;
     std::vector<std::vector<float>> mEquations1, mOutEquations1;
     std::vector<std::vector<float>> mEquations2, mOutEquations2;
+    /// Dimensionality per equation (1 = scalar); a dim-d equation fills d consecutive slots.
+    std::vector<int> mDims1, mDims2;
+    d3::VectorRpn mVecRpn;
+    float mVecOut[d3::VEC_MAX_DIM] = {0};
     ParticlesCreateOp* mSource = nullptr;
     std::vector<std::vector<float>>* mParticles = nullptr;
     const std::vector<int>* mVarId = nullptr;
@@ -2213,14 +2325,17 @@ public:
 };
 
 // ── WakeIn (191) ──────────────────────────────────────────────────────
-// Parse-only stub — wake timer is a host-side scheduling effect.
+// Schedules the next repaint. This was a parse-only stub on the grounds that waking is a
+// host-side effect; it is not — the reference routes it into RemoteComposeState, where
+// getOpsToUpdate reads it, and with the stub in place nothing ever populated the
+// schedule, so a document whose only animation came from WakeIn or Impulse drew once.
 class WakeInOp : public Operation {
 public:
     float wake = 0;
     std::string name() const override { return "WAKE_IN"; }
     int opcode() const override { return 191; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override { context.wakeIn(wake); }
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<WakeInOp>();
