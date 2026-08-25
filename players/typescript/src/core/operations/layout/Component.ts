@@ -188,12 +188,12 @@ export class Component extends PaintOperation implements Container {
 
     layout(context: RemoteContext, measure: MeasurePass): void {
         const m = measure.get(this);
-        if (
-            !this.mFirstLayout &&
+        const allowAnimation = !this.mFirstLayout &&
             context.isAnimationEnabled() &&
             this.mAnimationSpec.isAnimationEnabled() &&
-            m.getAllowsAnimation()
-        ) {
+            m.getAllowsAnimation();
+
+        if (allowAnimation) {
             if (this.mAnimateMeasure === null) {
                 const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mVisibility);
                 const target = new ComponentMeasure(this.mComponentId, m.getX(), m.getY(), m.getW(), m.getH(), m.getVisibility());
@@ -216,6 +216,8 @@ export class Component extends PaintOperation implements Container {
                 const now = context.mClock?.millis() ?? Date.now();
                 this.mAnimateMeasure.updateTarget(context, m, now);
             }
+        } else {
+            this.mAnimateMeasure = null;
         }
 
         if (this.mAnimateMeasure === null) {
@@ -235,7 +237,12 @@ export class Component extends PaintOperation implements Container {
     }
 
     animatingBounds(context: RemoteContext): void {
-        if (this.mAnimateMeasure !== null) {
+        if (!context.isAnimationEnabled()) {
+            this.mAnimateMeasure = null;
+            if (this.mParent) {
+                this.clearNeedsBoundsAnimation();
+            }
+        } else if (this.mAnimateMeasure !== null) {
             this.mAnimateMeasure.apply(context);
             if (this.mAnimateMeasure.isDone()) {
                 this.mAnimateMeasure = null;
@@ -260,7 +267,16 @@ export class Component extends PaintOperation implements Container {
     // --- Paint ---
 
     applyAnimationAsNeeded(paintContext: PaintContext): boolean {
-        if (paintContext.isAnimationEnabled() && this.mAnimateMeasure !== null) {
+        if (!paintContext.isAnimationEnabled()) {
+            if (this.mAnimateMeasure !== null) {
+                this.mAnimateMeasure = null;
+                if (this.mParent) {
+                    this.clearNeedsBoundsAnimation();
+                }
+            }
+            return false;
+        }
+        if (this.mAnimateMeasure !== null) {
             this.mAnimateMeasure.paint(paintContext);
             if (this.mAnimateMeasure.isDone()) {
                 this.mAnimateMeasure = null;

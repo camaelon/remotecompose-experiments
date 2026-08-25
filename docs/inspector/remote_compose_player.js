@@ -3808,7 +3808,7 @@ var RC = (() => {
       this.mY = y;
       this.mW = w;
       this.mH = h;
-      this.mVisibility = visibility & 15;
+      this.mVisibility = visibility;
     }
     getX() {
       return this.mX;
@@ -4884,7 +4884,8 @@ var RC = (() => {
     }
     layout(context, measure) {
       const m = measure.get(this);
-      if (!this.mFirstLayout && context.isAnimationEnabled() && this.mAnimationSpec.isAnimationEnabled() && m.getAllowsAnimation()) {
+      const allowAnimation = !this.mFirstLayout && context.isAnimationEnabled() && this.mAnimationSpec.isAnimationEnabled() && m.getAllowsAnimation();
+      if (allowAnimation) {
         if (this.mAnimateMeasure === null) {
           const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mVisibility);
           const target = new ComponentMeasure(this.mComponentId, m.getX(), m.getY(), m.getW(), m.getH(), m.getVisibility());
@@ -4907,6 +4908,8 @@ var RC = (() => {
           const now = context.mClock?.millis() ?? Date.now();
           this.mAnimateMeasure.updateTarget(context, m, now);
         }
+      } else {
+        this.mAnimateMeasure = null;
       }
       if (this.mAnimateMeasure === null) {
         this.mVisibility = m.getVisibility();
@@ -4924,7 +4927,12 @@ var RC = (() => {
       this.mFirstLayout = false;
     }
     animatingBounds(context) {
-      if (this.mAnimateMeasure !== null) {
+      if (!context.isAnimationEnabled()) {
+        this.mAnimateMeasure = null;
+        if (this.mParent) {
+          this.clearNeedsBoundsAnimation();
+        }
+      } else if (this.mAnimateMeasure !== null) {
         this.mAnimateMeasure.apply(context);
         if (this.mAnimateMeasure.isDone()) {
           this.mAnimateMeasure = null;
@@ -4947,7 +4955,16 @@ var RC = (() => {
     }
     // --- Paint ---
     applyAnimationAsNeeded(paintContext) {
-      if (paintContext.isAnimationEnabled() && this.mAnimateMeasure !== null) {
+      if (!paintContext.isAnimationEnabled()) {
+        if (this.mAnimateMeasure !== null) {
+          this.mAnimateMeasure = null;
+          if (this.mParent) {
+            this.clearNeedsBoundsAnimation();
+          }
+        }
+        return false;
+      }
+      if (this.mAnimateMeasure !== null) {
         this.mAnimateMeasure.paint(paintContext);
         if (this.mAnimateMeasure.isDone()) {
           this.mAnimateMeasure = null;
@@ -26181,6 +26198,80 @@ void main() {
       this.mContentOffsetX = 0;
       this.mContentOffsetY = 0;
       this.isPaused = false;
+      this.onPointerDown = (e) => {
+        if (!this.document || !this.remoteContext) return;
+        this.pointerIsDown = true;
+        try {
+          this.canvas.setPointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        const { x, y } = this.canvasCoords(e);
+        this.pointerDownX = x;
+        this.pointerDownY = y;
+        this.pointerHasMoved = false;
+        this.pointerHistory = [{ x, y, t: performance.now() }];
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDown(this.remoteContext, x, y);
+        this.scheduleRepaint();
+        window.addEventListener("pointermove", this.onPointerMove, { passive: false });
+        window.addEventListener("pointerup", this.onPointerUp, { passive: false });
+        window.addEventListener("pointercancel", this.onPointerCancel, { passive: false });
+      };
+      this.onPointerMove = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        const { x, y } = this.canvasCoords(e);
+        if (!this.pointerHasMoved) {
+          const dx = x - this.pointerDownX;
+          const dy = y - this.pointerDownY;
+          const slop = TOUCH_SLOP / (this.mContentScale || 1);
+          if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
+        }
+        this.pointerHistory.push({ x, y, t: performance.now() });
+        if (this.pointerHistory.length > 5) this.pointerHistory.shift();
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDrag(this.remoteContext, x, y);
+        this.scheduleRepaint();
+      };
+      this.onPointerUp = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+          this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        if (!this.pointerHasMoved) {
+          this.document.onClick(this.remoteContext, x, y);
+        }
+        this.document.touchUp(this.remoteContext, x, y, dx, dy);
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+      };
+      this.onPointerCancel = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+          this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchCancel(this.remoteContext, x, y, dx, dy);
+        this.pointerHasMoved = false;
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+      };
+      this.naturalWidth = 0;
+      this.naturalHeight = 0;
       this.renderFrame = (timestamp) => {
         this.animationFrameId = null;
         if (!this.document || !this.remoteContext || !this.paintContext) return;
@@ -26226,51 +26317,7 @@ void main() {
       this.setupPointerEvents();
     }
     setupPointerEvents() {
-      this.canvas.addEventListener("pointerdown", (e) => {
-        if (!this.document || !this.remoteContext) return;
-        this.pointerIsDown = true;
-        const { x, y } = this.canvasCoords(e);
-        this.pointerDownX = x;
-        this.pointerDownY = y;
-        this.pointerHasMoved = false;
-        this.pointerHistory = [{ x, y, t: performance.now() }];
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        this.document.touchDown(this.remoteContext, x, y);
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointermove", (e) => {
-        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-        const { x, y } = this.canvasCoords(e);
-        if (!this.pointerHasMoved) {
-          const dx = x - this.pointerDownX;
-          const dy = y - this.pointerDownY;
-          const slop = TOUCH_SLOP / (this.mContentScale || 1);
-          if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
-        }
-        this.pointerHistory.push({ x, y, t: performance.now() });
-        if (this.pointerHistory.length > 5) this.pointerHistory.shift();
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        this.document.touchDrag(this.remoteContext, x, y);
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointerup", (e) => {
-        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-        this.pointerIsDown = false;
-        const { x, y } = this.canvasCoords(e);
-        const { dx, dy } = this.computeVelocity(x, y);
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        if (!this.pointerHasMoved) {
-          this.document.onClick(this.remoteContext, x, y);
-        }
-        this.document.touchUp(this.remoteContext, x, y, dx, dy);
-        this.pointerHistory = [];
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointercancel", () => {
-        this.pointerIsDown = false;
-        this.pointerHasMoved = false;
-        this.pointerHistory = [];
-      });
+      this.canvas.addEventListener("pointerdown", this.onPointerDown);
     }
     canvasCoords(e) {
       const rect = this.canvas.getBoundingClientRect();
@@ -26346,6 +26393,11 @@ void main() {
     getDensity() {
       return this.density;
     }
+    /** The size the document declares in its header, or null if nothing is loaded. */
+    getNaturalSize() {
+      if (!this.document) return null;
+      return { width: this.naturalWidth, height: this.naturalHeight };
+    }
     /** Operations executed in the last painted frame — available with measurement off. */
     getOpsPerFrame() {
       return this.document?.getOpsPerFrame() ?? 0;
@@ -26356,6 +26408,8 @@ void main() {
       const doc = new CoreDocument();
       doc.initFromBuffer(buffer);
       this.document = doc;
+      this.naturalWidth = doc.getWidth();
+      this.naturalHeight = doc.getHeight();
       const density = this.density || doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) || 1;
       const docWidth = this.canvas.width;
       const docHeight = this.canvas.height;
@@ -26387,6 +26441,12 @@ void main() {
         cancelAnimationFrame(this.animationFrameId);
         this.animationFrameId = null;
       }
+      if (this.pointerIsDown) {
+        this.pointerIsDown = false;
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+      }
     }
     /**
      * Stop, and release the WebGL context.
@@ -26398,11 +26458,16 @@ void main() {
      */
     destroy() {
       this.stop();
+      this.canvas.removeEventListener("pointerdown", this.onPointerDown);
       if (this.paintContext) {
         this.paintContext.destroy();
       }
     }
     repaint() {
+      if (this.animationFrameId !== null) {
+        cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
+      }
       if (this.document) {
         this.renderFrame(performance.now());
       }
@@ -26410,8 +26475,9 @@ void main() {
     resize(newWidth, newHeight) {
       this.canvas.width = newWidth;
       this.canvas.height = newHeight;
-      this.canvas.style.width = newWidth + "px";
-      this.canvas.style.height = newHeight + "px";
+      const d = this.remoteContext?.getDensity() || this.density || 1;
+      this.canvas.style.width = newWidth / d + "px";
+      this.canvas.style.height = newHeight / d + "px";
       if (this.remoteContext) {
         this.remoteContext.mWidth = newWidth;
         this.remoteContext.mHeight = newHeight;
@@ -26421,7 +26487,7 @@ void main() {
         this.document.setHeight(newHeight);
         this.document.invalidateMeasure();
       }
-      this.scheduleRepaint();
+      this.repaint();
     }
     getDocument() {
       return this.document;

@@ -6,5 +6,5 @@ export { CanvasPaintContext } from './web/CanvasPaintContext';
 export { WebRemoteContext } from './web/WebRemoteContext';
 export { ContextMode } from './core/RemoteContext';
 export { Operations } from './core/Operations';
-export { FloatExpression } from './core/operations/FloatExpression';
+export { RcdPlayer } from './web/main';
 export { rc2json } from './rc2json';
