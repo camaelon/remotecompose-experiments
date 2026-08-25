@@ -475,14 +475,14 @@ export class LayoutComponent extends Component {
             if (needsSort) {
                 const sorted = [...children].sort((a, b) => a.mZIndex - b.mZIndex);
                 for (const child of sorted) {
-                    if (!Visibility.isGone(child.mVisibility)) {
+                    if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
                         context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
                 }
             } else {
                 for (const child of children) {
-                    if (!Visibility.isGone(child.mVisibility)) {
+                    if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
                         context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
@@ -490,7 +490,7 @@ export class LayoutComponent extends Component {
             }
         } else {
             for (const child of children) {
-                if (!Visibility.isGone(child.mVisibility)) {
+                if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
                     context.incrementOpCount(child);
                     child.paint(paintContext);
                 }
@@ -498,6 +498,34 @@ export class LayoutComponent extends Component {
         }
 
         paintContext.matrixRestore();
+    }
+
+    protected isChildVisibleInViewport(child: Component): boolean {
+        const scrollMod = this.mScrollModifier;
+        if (!scrollMod) return true;
+
+        const childX = child.getX();
+        const childY = child.getY();
+        const childW = child.getWidth();
+        const childH = child.getHeight();
+
+        if (childW <= 0 && childH <= 0) return true;
+
+        if (scrollMod.isVertical()) {
+            const viewportTop = -this.getScrollY();
+            const viewportBottom = viewportTop + (this.mHeight - this.mPaddingTop - this.mPaddingBottom);
+            if (childY + childH < viewportTop || childY > viewportBottom) {
+                return false;
+            }
+        } else {
+            const viewportLeft = -this.getScrollX();
+            const viewportRight = viewportLeft + (this.mWidth - this.mPaddingLeft - this.mPaddingRight);
+            if (childX + childW < viewportLeft || childX > viewportRight) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** Matches Java Component.updateVariables — re-push dimension/position values
