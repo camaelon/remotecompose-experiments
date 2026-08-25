@@ -133,7 +133,10 @@ input:focus { outline: none; border-color: var(--accent); }
   let natural = { w: 0, h: 0 };
 
   const say = (m) => { status.textContent = m || ''; };
-  const fail = (m) => { err.textContent = m; setTimeout(() => (err.textContent = ''), 6000); };
+  // Errors persist until the next load attempt. They used to clear themselves after six
+  // seconds, which meant a CORS failure could vanish before it was read — leaving a page
+  // that simply sat there having apparently done nothing.
+  const fail = (m) => { err.textContent = m; say(''); };
 
   function setSize(w, h) {
     w = Math.max(16, Math.min(8192, Math.round(w) || 0));
@@ -156,6 +159,7 @@ input:focus { outline: none; border-color: var(--accent); }
   }
 
   async function loadBuffer(buf, label) {
+    err.textContent = '';
     try {
       afterLoad(await handle.loadFromArrayBuffer(buf), label);
     } catch (e) {
@@ -165,6 +169,7 @@ input:focus { outline: none; border-color: var(--accent); }
 
   async function loadUrl(u) {
     if (!u) return;
+    err.textContent = '';
     say('Loading ' + u + ' …');
     try {
       // Fetched here rather than through loadFromUrl so a network or CORS failure can be
@@ -178,7 +183,10 @@ input:focus { outline: none; border-color: var(--accent); }
       fail(location.protocol === 'file:'
         ? 'Fetch blocked: this page was opened from a file:// URL, so the browser refuses '
           + 'cross-origin requests. Serve it over http, or drop the file in.'
-        : 'Could not load that URL: ' + (e && e.message ? e.message : e));
+        : 'Could not load ' + u + ' — ' + (e && e.message ? e.message : e)
+          + '. If the document is on another origin, it has to send '
+          + 'Access-Control-Allow-Origin; the browser blocks the read otherwise and reports '
+          + 'nothing more specific than this.');
     }
   }
 
