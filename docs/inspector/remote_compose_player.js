@@ -6689,10 +6689,13 @@ var RC = (() => {
     write(_buffer) {
     }
     apply(context) {
-      if (context.mMode !== "PAINT" /* PAINT */) return;
+      if (context.mMode === "DATA" /* DATA */) return;
       const document2 = context.getDocument();
       if (!document2) return;
       document2.evaluateFloatExpression(this.mValueExpressionId, this.mTargetValueId, context);
+    }
+    runAction(context, document2, _component, _x, _y) {
+      document2?.evaluateFloatExpression(this.mValueExpressionId, this.mTargetValueId, context);
     }
     deepToString(indent) {
       return `${indent}ValueFloatExpressionChangeAction(${this.mTargetValueId} <- ${this.mValueExpressionId})`;
@@ -21078,6 +21081,16 @@ var RC = (() => {
       this.mRemoteComposeState.setContext(context);
       this.mClickAreas.clear();
       this.mTimeVariables.updateTime(context);
+      for (const operation of this.mOperations) {
+        if (operation.isDirty() && typeof operation.updateVariables === "function") {
+          operation.markNotDirty();
+          operation.updateVariables(context);
+          operation.apply(context);
+        }
+        if (operation === this.mRootLayoutComponent) {
+          break;
+        }
+      }
       if (this.mRootLayoutComponent && this.mLayoutComputeOps.size > 0) {
         let needsEvaluate = true;
         for (let round = 0; needsEvaluate && round < 2; round++) {

@@ -560,6 +560,19 @@ export class CoreDocument implements ExpansionDocument {
         this.mClickAreas.clear();
         this.mTimeVariables.updateTime(context);
 
+        // Ensure that variables that are dirty are updated before we do the layout pass
+        // (matches Java CoreDocument.java lines 2210-2220)
+        for (const operation of this.mOperations) {
+            if (operation.isDirty() && typeof (operation as any).updateVariables === 'function') {
+                operation.markNotDirty();
+                (operation as any).updateVariables(context);
+                operation.apply(context);
+            }
+            if (operation === this.mRootLayoutComponent) {
+                break;
+            }
+        }
+
         // Resolve layout-affecting operations (visibility, layout compute) before
         // measuring. The reference bounds this at two rounds because one evaluation can
         // dirty another; matching that bound keeps a cyclic document from spinning.
