@@ -89,6 +89,8 @@ export class CanvasPaintContext extends PaintContext {
     // Bitmap cache: id -> ImageBitmap or HTMLImageElement
     private bitmapCache = new Map<number, HTMLImageElement | ImageBitmap>();
     private bitmapPromises = new Map<number, Promise<void>>();
+    /** Bitmaps converted to ARGB for 3D texturing, kept so the readback happens once. */
+    private texturePixels = new Map<number, { argb: Int32Array; width: number; height: number }>();
 
     // Text cache: id -> string
     private textCache = new Map<number, string>();
@@ -1653,20 +1655,47 @@ export class CanvasPaintContext extends PaintContext {
             ctx3d.setTextureData(null, 0, 0);
             return;
         }
-        // The engine has no bitmap store of its own; the host decodes and hands over pixels.
-        const bmp = this.mContext.mRemoteComposeState.getFromId(bitmapId) as
-            { width: number; height: number; data?: Uint8ClampedArray } | null;
-        if (!bmp || !bmp.data) {
+        // Decoded bitmaps live in bitmapCache, not in RemoteComposeState — this used to ask
+        // the state and always got null, so every textured mesh rendered untextured in both
+        // the software and WebGL paths while the document itself was fine.
+        const img = this.bitmapCache.get(bitmapId);
+        if (!img) {
+            // loadBitmap decodes asynchronously, so a texture can legitimately be missing on
+            // the first frame and present on the next. Drawing untextured now is right;
+            // caching the miss would make it permanent.
             ctx3d.setTextureData(null, 0, 0);
             return;
         }
-        const n = bmp.width * bmp.height;
-        const argb = new Int32Array(n);
-        for (let i = 0; i < n; i++) {
-            argb[i] = ((bmp.data[i * 4 + 3] << 24) | (bmp.data[i * 4] << 16)
-                | (bmp.data[i * 4 + 1] << 8) | bmp.data[i * 4 + 2]) | 0;
+        const cached = this.texturePixels.get(bitmapId);
+        if (cached) {
+            ctx3d.setTextureData(cached.argb, cached.width, cached.height);
+            return;
         }
-        ctx3d.setTextureData(argb, bmp.width, bmp.height);
+        const w = (img as HTMLImageElement).naturalWidth || img.width;
+        const h = (img as HTMLImageElement).naturalHeight || img.height;
+        if (!w || !h) {
+            ctx3d.setTextureData(null, 0, 0);
+            return;
+        }
+        // Extracted once per bitmap and kept: setTexture3D runs per mesh per frame, and
+        // getImageData is a readback that would otherwise dominate a textured 3D document.
+        const scratch = document.createElement('canvas');
+        scratch.width = w;
+        scratch.height = h;
+        const sctx = scratch.getContext('2d', { willReadFrequently: true });
+        if (!sctx) {
+            ctx3d.setTextureData(null, 0, 0);
+            return;
+        }
+        sctx.drawImage(img as CanvasImageSource, 0, 0);
+        const data = sctx.getImageData(0, 0, w, h).data;
+        const argb = new Int32Array(w * h);
+        for (let i = 0; i < w * h; i++) {
+            argb[i] = ((data[i * 4 + 3] << 24) | (data[i * 4] << 16)
+                | (data[i * 4 + 1] << 8) | data[i * 4 + 2]) | 0;
+        }
+        this.texturePixels.set(bitmapId, { argb, width: w, height: h });
+        ctx3d.setTextureData(argb, w, h);
     }
 
     setMaterial3D(specStrength: number, shininess: number): void {

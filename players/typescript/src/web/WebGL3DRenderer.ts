@@ -78,6 +78,10 @@ export class WebGL3DRenderer {
     private texture: WebGLTexture | null = null;
     private texW = 0;
     private texH = 0;
+    /** The pixel array last uploaded. The host caches its conversion, so an unchanged texture
+     *  arrives as the same array and the upload can be skipped — otherwise every mesh in
+     *  every frame re-uploads the whole image. */
+    private texSource: Int32Array | null = null;
     /** Interleaved x,y,r,g,b,a,u,v,depth — 9 floats per vertex. */
     private interleaved = new Float32Array(0);
     private uViewport: WebGLUniformLocation | null = null;
@@ -167,8 +171,10 @@ export class WebGL3DRenderer {
         if (!pixels || w <= 0 || h <= 0) {
             this.texW = 0;
             this.texH = 0;
+            this.texSource = null;
             return;
         }
+        if (pixels === this.texSource && this.texW === w && this.texH === h) return;
         if (!this.texture) this.texture = gl.createTexture();
         // ARGB ints to RGBA bytes. Done here rather than in the shader so the sampler sees a
         // normal texture and filtering behaves.
@@ -188,6 +194,7 @@ export class WebGL3DRenderer {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         this.texW = w;
         this.texH = h;
+        this.texSource = pixels;
     }
 
     /** Discard everything drawn so far and resize if needed. Call once per 3D pass. */
