@@ -294,10 +294,26 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.invalidateMeasure();
     }
 
+    private mLastMeasurePass: MeasurePass | null = null;
+    private mLastMaxW = -1;
+    private mLastMaxH = -1;
+    private mLastSizeW = 0;
+    private mLastSizeH = 0;
+
     computeWrapSize(context: PaintContext, _minWidth: number, maxWidth: number,
                     _minHeight: number, maxHeight: number,
                     _horizontalWrap: boolean, _verticalWrap: boolean,
                     measure: MeasurePass, size: Size): void {
+        if (this.mLastMeasurePass === measure &&
+            this.mLastMaxW === maxWidth &&
+            this.mLastMaxH === maxHeight &&
+            !this.mNeedsMeasure &&
+            this.mNewString === null) {
+            size.setWidth(this.mLastSizeW);
+            size.setHeight(this.mLastSizeH);
+            return;
+        }
+
         this.mMeasureFontSize = this.mFontSizeValue;
         context.savePaint();
         this.mPaint.reset();
@@ -371,6 +387,12 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.mTextY = -bounds[1];
         this.mTextW = w;
         this.mTextH = h;
+
+        this.mLastMeasurePass = measure;
+        this.mLastMaxW = maxWidth;
+        this.mLastMaxH = maxHeight;
+        this.mLastSizeW = size.getWidth();
+        this.mLastSizeH = size.getHeight();
     }
 
     computeSize(context: PaintContext, minWidth: number, maxWidth: number,

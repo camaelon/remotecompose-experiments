@@ -11,9 +11,26 @@ import { isNaNBits, idFromBits } from '../../Utils';
 
 export abstract class LayoutManager extends LayoutComponent {
     protected mCachedWrapSize = new Size();
+    protected mLastMeasurePass: MeasurePass | null = null;
+    protected mLastMinW = -1;
+    protected mLastMaxW = -1;
+    protected mLastMinH = -1;
+    protected mLastMaxH = -1;
 
     measure(context: PaintContext, minWidth: number, maxWidth: number,
             minHeight: number, maxHeight: number, measure: MeasurePass): void {
+        if (this.mLastMeasurePass === measure &&
+            this.mLastMinW === minWidth && this.mLastMaxW === maxWidth &&
+            this.mLastMinH === minHeight && this.mLastMaxH === maxHeight &&
+            !this.mNeedsMeasure) {
+            return;
+        }
+        this.mLastMeasurePass = measure;
+        this.mLastMinW = minWidth;
+        this.mLastMaxW = maxWidth;
+        this.mLastMinH = minHeight;
+        this.mLastMaxH = maxHeight;
+
         const selfMeasure = measure.get(this);
         const padding_w = this.mPaddingLeft + this.mPaddingRight;
         const padding_h = this.mPaddingTop + this.mPaddingBottom;

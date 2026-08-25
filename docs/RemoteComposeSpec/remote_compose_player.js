@@ -14295,8 +14295,21 @@ var RC = (() => {
     constructor() {
       super(...arguments);
       this.mCachedWrapSize = new Size();
+      this.mLastMeasurePass = null;
+      this.mLastMinW = -1;
+      this.mLastMaxW = -1;
+      this.mLastMinH = -1;
+      this.mLastMaxH = -1;
     }
     measure(context, minWidth, maxWidth, minHeight, maxHeight, measure) {
+      if (this.mLastMeasurePass === measure && this.mLastMinW === minWidth && this.mLastMaxW === maxWidth && this.mLastMinH === minHeight && this.mLastMaxH === maxHeight && !this.mNeedsMeasure) {
+        return;
+      }
+      this.mLastMeasurePass = measure;
+      this.mLastMinW = minWidth;
+      this.mLastMaxW = maxWidth;
+      this.mLastMinH = minHeight;
+      this.mLastMaxH = maxHeight;
       const selfMeasure = measure.get(this);
       const padding_w = this.mPaddingLeft + this.mPaddingRight;
       const padding_h = this.mPaddingTop + this.mPaddingBottom;
@@ -18046,6 +18059,11 @@ var RC = (() => {
       this.mNewString = null;
       this.mComputedTextLayout = null;
       this.mPaint = new PaintBundle();
+      this.mLastMeasurePass = null;
+      this.mLastMaxW = -1;
+      this.mLastMaxH = -1;
+      this.mLastSizeW = 0;
+      this.mLastSizeH = 0;
       this.mTextId = textId;
       this.mColor = color;
       this.mColorId = colorId;
@@ -18121,6 +18139,11 @@ var RC = (() => {
       this.invalidateMeasure();
     }
     computeWrapSize(context, _minWidth, maxWidth, _minHeight, maxHeight, _horizontalWrap, _verticalWrap, measure, size) {
+      if (this.mLastMeasurePass === measure && this.mLastMaxW === maxWidth && this.mLastMaxH === maxHeight && !this.mNeedsMeasure && this.mNewString === null) {
+        size.setWidth(this.mLastSizeW);
+        size.setHeight(this.mLastSizeH);
+        return;
+      }
       this.mMeasureFontSize = this.mFontSizeValue;
       context.savePaint();
       this.mPaint.reset();
@@ -18192,6 +18215,11 @@ var RC = (() => {
       this.mTextY = -bounds[1];
       this.mTextW = w;
       this.mTextH = h;
+      this.mLastMeasurePass = measure;
+      this.mLastMaxW = maxWidth;
+      this.mLastMaxH = maxHeight;
+      this.mLastSizeW = size.getWidth();
+      this.mLastSizeH = size.getHeight();
     }
     computeSize(context, minWidth, maxWidth, minHeight, maxHeight, measure) {
       super.computeSize(context, minWidth, maxWidth, minHeight, maxHeight, measure);
@@ -23389,6 +23417,7 @@ void main() {
         }
         throw new Error("No canvas factory available for graphics layers");
       };
+      this.mTextMeasureCache = /* @__PURE__ */ new Map();
       this.mainCanvas = null;
       this.bitmapCanvasCache = /* @__PURE__ */ new Map();
       // ---- 3D (Paint3DContext) -----------------------------------------------
@@ -24302,6 +24331,19 @@ void main() {
         progress += charWidth;
       }
     }
+    measureTextCached(text) {
+      const key = `${this.ctx.font}:::${text}`;
+      let res = this.mTextMeasureCache.get(key);
+      if (!res) {
+        res = this.ctx.measureText(text);
+        this.mTextMeasureCache.set(key, res);
+        if (this.mTextMeasureCache.size > 2e3) {
+          this.mTextMeasureCache.clear();
+          this.mTextMeasureCache.set(key, res);
+        }
+      }
+      return res;
+    }
     getTextBounds(textId, start, end, flags, bounds) {
       const text = this.textCache.get(textId);
       if (!text) {
@@ -24312,7 +24354,7 @@ void main() {
       const e = end >= 0 ? Math.min(end, text.length) : text.length;
       const substr = text.substring(s, e);
       this.setFont();
-      const metrics = this.ctx.measureText(substr);
+      const metrics = this.measureTextCached(substr);
       const size = this.textSize > 0 ? this.textSize : DEFAULT_TEXT_SIZE;
       const wantFontBox = (flags & 2) !== 0;
       const pick = (...vals) => {
@@ -24339,6 +24381,29 @@ void main() {
       this.setFont();
       const size = this.textSize > 0 ? this.textSize : DEFAULT_TEXT_SIZE;
       const lineHeight = size * (lineHeightMultiplier || 1.2);
+      if (!text.includes("\n")) {
+        const metrics = this.measureTextCached(text);
+        if (metrics.width <= maxWidth || maxWidth <= 0 || maxLines === 1) {
+          let lines2 = [text];
+          if (overflow === 1 && maxLines === 1 && maxWidth > 0 && metrics.width > maxWidth) {
+            let lastLine = text;
+            while (this.measureTextCached(lastLine + "...").width > maxWidth && lastLine.length > 0) {
+              lastLine = lastLine.substring(0, lastLine.length - 1);
+            }
+            lines2 = [lastLine + "..."];
+          }
+          return {
+            lines: lines2,
+            alignment,
+            lineHeight,
+            width: metrics.width,
+            height: lineHeight,
+            maxWidth,
+            maxHeight,
+            visibleLines: lines2.length
+          };
+        }
+      }
       const lines = [];
       const paragraphs = text.split("\n");
       for (let pi = 0; pi < paragraphs.length; pi++) {
@@ -24348,7 +24413,7 @@ void main() {
         let currentLine = "";
         for (const word of words) {
           const testLine = currentLine + word;
-          const metrics = this.ctx.measureText(testLine);
+          const metrics = this.measureTextCached(testLine);
           if (metrics.width > maxWidth && currentLine.length > 0) {
             lines.push(currentLine);
             currentLine = word.trimStart();
@@ -24366,7 +24431,7 @@ void main() {
       if (overflow === 1 && maxLines > 0 && lines.length >= maxLines) {
         const lastIdx = maxLines - 1;
         let lastLine = lines[lastIdx];
-        while (this.ctx.measureText(lastLine + "...").width > maxWidth && lastLine.length > 0) {
+        while (this.measureTextCached(lastLine + "...").width > maxWidth && lastLine.length > 0) {
           lastLine = lastLine.substring(0, lastLine.length - 1);
         }
         lines[lastIdx] = lastLine + "...";
@@ -24374,7 +24439,7 @@ void main() {
       }
       let totalWidth = 0;
       for (const line of lines) {
-        const w = this.ctx.measureText(line).width;
+        const w = this.measureTextCached(line).width;
         if (w > totalWidth) totalWidth = w;
       }
       const totalHeight = lines.length * lineHeight;
@@ -24398,7 +24463,7 @@ void main() {
       const align = typeof alignment === "number" ? alignment & 65535 : 1;
       for (let i = 0; i < lines.length; i++) {
         let x = 0;
-        const lineW = this.ctx.measureText(lines[i]).width;
+        const lineW = this.measureTextCached(lines[i]).width;
         if (align === 2 || align === 6) {
           x = layoutWidth - lineW;
         } else if (align === 3) {

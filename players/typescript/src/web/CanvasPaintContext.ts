@@ -965,6 +965,22 @@ export class CanvasPaintContext extends PaintContext {
         }
     }
 
+    private mTextMeasureCache = new Map<string, any>();
+
+    private measureTextCached(text: string): any {
+        const key = `${this.ctx.font}:::${text}`;
+        let res = this.mTextMeasureCache.get(key);
+        if (!res) {
+            res = this.ctx.measureText(text);
+            this.mTextMeasureCache.set(key, res);
+            if (this.mTextMeasureCache.size > 2000) {
+                this.mTextMeasureCache.clear();
+                this.mTextMeasureCache.set(key, res);
+            }
+        }
+        return res;
+    }
+
     getTextBounds(textId: number, start: number, end: number, flags: number, bounds: Float32Array): void {
         const text = this.textCache.get(textId);
         if (!text) { bounds.fill(0); return; }
@@ -972,7 +988,7 @@ export class CanvasPaintContext extends PaintContext {
         const e = end >= 0 ? Math.min(end, text.length) : text.length;
         const substr = text.substring(s, e);
         this.setFont();
-        const metrics: any = this.ctx.measureText(substr);
+        const metrics: any = this.measureTextCached(substr);
 
         // Vertical extent, in order of preference:
         //   1. the font box, which is what TEXT_MEASURE_FONT_HEIGHT asks for and what
@@ -1030,6 +1046,31 @@ export class CanvasPaintContext extends PaintContext {
         const size = this.textSize > 0 ? this.textSize : DEFAULT_TEXT_SIZE;
         const lineHeight = size * (lineHeightMultiplier || 1.2);
 
+        // Fast-path: single paragraph that fits within maxWidth on one line
+        if (!text.includes('\n')) {
+            const metrics = this.measureTextCached(text);
+            if (metrics.width <= maxWidth || maxWidth <= 0 || maxLines === 1) {
+                let lines = [text];
+                if (overflow === 1 && maxLines === 1 && maxWidth > 0 && metrics.width > maxWidth) {
+                    let lastLine = text;
+                    while (this.measureTextCached(lastLine + '...').width > maxWidth && lastLine.length > 0) {
+                        lastLine = lastLine.substring(0, lastLine.length - 1);
+                    }
+                    lines = [lastLine + '...'];
+                }
+                return {
+                    lines,
+                    alignment,
+                    lineHeight,
+                    width: metrics.width,
+                    height: lineHeight,
+                    maxWidth,
+                    maxHeight,
+                    visibleLines: lines.length
+                };
+            }
+        }
+
         // Word-wrap text to fit maxWidth, honoring embedded newlines as hard breaks
         const lines: string[] = [];
         // First split on hard newlines, then word-wrap each paragraph
@@ -1041,7 +1082,7 @@ export class CanvasPaintContext extends PaintContext {
             let currentLine = '';
             for (const word of words) {
                 const testLine = currentLine + word;
-                const metrics = this.ctx.measureText(testLine);
+                const metrics = this.measureTextCached(testLine);
                 if (metrics.width > maxWidth && currentLine.length > 0) {
                     lines.push(currentLine);
                     currentLine = word.trimStart();
@@ -1062,7 +1103,7 @@ export class CanvasPaintContext extends PaintContext {
         if (overflow === 1 && maxLines > 0 && lines.length >= maxLines) {
             const lastIdx = maxLines - 1;
             let lastLine = lines[lastIdx];
-            while (this.ctx.measureText(lastLine + '...').width > maxWidth && lastLine.length > 0) {
+            while (this.measureTextCached(lastLine + '...').width > maxWidth && lastLine.length > 0) {
                 lastLine = lastLine.substring(0, lastLine.length - 1);
             }
             lines[lastIdx] = lastLine + '...';
@@ -1072,7 +1113,7 @@ export class CanvasPaintContext extends PaintContext {
         // Compute total dimensions
         let totalWidth = 0;
         for (const line of lines) {
-            const w = this.ctx.measureText(line).width;
+            const w = this.measureTextCached(line).width;
             if (w > totalWidth) totalWidth = w;
         }
         const totalHeight = lines.length * lineHeight;
@@ -1096,7 +1137,7 @@ export class CanvasPaintContext extends PaintContext {
         const align = (typeof alignment === 'number') ? (alignment & 0xFFFF) : 1;
         for (let i = 0; i < lines.length; i++) {
             let x = 0;
-            const lineW = this.ctx.measureText(lines[i]).width;
+            const lineW = this.measureTextCached(lines[i]).width;
             if (align === 2 || align === 6) {
                 // RIGHT (2) / END (6)
                 x = layoutWidth - lineW;
