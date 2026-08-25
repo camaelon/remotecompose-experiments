@@ -223,6 +223,15 @@ export class RcdPlayer {
 
     getDensity(): number { return this.density; }
 
+    private naturalWidth = 0;
+    private naturalHeight = 0;
+
+    /** The size the document declares in its header, or null if nothing is loaded. */
+    getNaturalSize(): { width: number; height: number } | null {
+        if (!this.document) return null;
+        return { width: this.naturalWidth, height: this.naturalHeight };
+    }
+
     /** Operations executed in the last painted frame — available with measurement off. */
     getOpsPerFrame(): number {
         return this.document?.getOpsPerFrame() ?? 0;
@@ -236,6 +245,13 @@ export class RcdPlayer {
         doc.initFromBuffer(buffer);
 
         this.document = doc;
+
+        // The header's declared size, captured before the override below replaces it with
+        // the canvas size. It survives nowhere else: setWidth/setHeight overwrite the same
+        // fields, so a host that wants to offer "show this at its natural size" has no way
+        // to ask afterwards.
+        this.naturalWidth = doc.getWidth();
+        this.naturalHeight = doc.getHeight();
 
         // Use the current canvas size — don't resize to document dimensions.
         // The document's own generation density is only a hint about how it was authored;

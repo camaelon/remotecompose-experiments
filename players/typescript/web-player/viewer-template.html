@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RemoteCompose Viewer</title>
+<style>
+:root {
+  --bg: #14171c; --panel: #1c2027; --edge: #2a3038; --fg: #e6eaf0;
+  --muted: #8b95a3; --accent: #6aa9ff;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font: 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--fg);
+  height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+}
+header {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--edge);
+  flex-shrink: 0;
+}
+h1 { font-size: 13px; font-weight: 600; letter-spacing: .3px; margin-right: 4px; }
+button, .filebtn {
+  font: inherit; color: var(--fg); background: #262c35; border: 1px solid var(--edge);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer;
+}
+button:hover, .filebtn:hover { background: #303845; }
+button:disabled { opacity: .45; cursor: default; }
+input[type=file] { display: none; }
+input[type=text], input[type=number] {
+  font: inherit; color: var(--fg); background: #11141a;
+  border: 1px solid var(--edge); border-radius: 6px; padding: 5px 8px;
+}
+input[type=number] { width: 68px; }
+input[type=text] { min-width: 210px; flex: 1; }
+input:focus { outline: none; border-color: var(--accent); }
+.sep { width: 1px; align-self: stretch; background: var(--edge); }
+.muted { color: var(--muted); }
+#status { margin-left: auto; font-size: 12px; color: var(--muted);
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42ch; }
+
+/* The stage: a neutral backdrop the viewport floats on. */
+#stage {
+  flex: 1; overflow: auto; display: grid; place-items: center; padding: 24px;
+  background-color: #0f1115;
+  background-image: linear-gradient(45deg, #171a20 25%, transparent 25%),
+                    linear-gradient(-45deg, #171a20 25%, transparent 25%),
+                    linear-gradient(45deg, transparent 75%, #171a20 75%),
+                    linear-gradient(-45deg, transparent 75%, #171a20 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+/* The viewport: the player's canvas plus a corner grip that resizes it. */
+#viewport { position: relative; display: none; box-shadow: 0 6px 26px #0008; }
+#viewport canvas { display: block; }
+#grip {
+  position: absolute; right: -7px; bottom: -7px; width: 16px; height: 16px;
+  background: var(--accent); border: 2px solid var(--bg); border-radius: 4px;
+  cursor: nwse-resize;
+}
+#dims {
+  position: absolute; left: 0; top: -22px; font-size: 11px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty state — also the drop target. */
+#empty {
+  width: min(560px, 90vw); padding: 44px 32px; text-align: center;
+  border: 2px dashed var(--edge); border-radius: 14px; background: #11141a99;
+}
+#empty.hot { border-color: var(--accent); background: #16203099; }
+#empty svg { width: 46px; height: 46px; stroke: var(--muted); fill: none;
+             stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+#empty.hot svg { stroke: var(--accent); }
+#empty h2 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; }
+#empty p { color: var(--muted); margin-bottom: 18px; }
+#empty .row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+#err { color: #ff8b8b; margin-top: 14px; min-height: 1em; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>RemoteCompose</h1>
+  <label class="filebtn">Open…<input type="file" id="file" accept=".rc,.rcd"></label>
+  <input type="text" id="url" placeholder="https://…/document.rc" spellcheck="false">
+  <button id="go">Load URL</button>
+  <div class="sep"></div>
+  <span class="muted">Size</span>
+  <input type="number" id="w" min="16" max="8192" step="1">
+  <span class="muted">×</span>
+  <input type="number" id="h" min="16" max="8192" step="1">
+  <button id="fitDoc" title="Resize to the document's declared size">Natural</button>
+  <button id="fitWin" title="Resize to fill the stage">Fit</button>
+  <div class="sep"></div>
+  <button id="theme">Theme: auto</button>
+  <span id="status"></span>
+</header>
+
+<div id="stage">
+  <div id="empty">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 16V4m0 0L8 8m4-4 4 4"/>
+      <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
+    </svg>
+    <h2>Drop a .rc document here</h2>
+    <p>or open one from disk, or load it from a URL</p>
+    <div class="row">
+      <label class="filebtn">Choose file…<input type="file" id="file2" accept=".rc,.rcd"></label>
+      <button id="go2">Load from URL</button>
+    </div>
+    <div id="err"></div>
+  </div>
+  <div id="viewport"><div id="dims"></div><div id="grip"></div></div>
+</div>
+
+<script>
+%%BUNDLE_JS%%
+</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const stage = $('stage'), empty = $('empty'), viewport = $('viewport');
+  const wIn = $('w'), hIn = $('h'), status = $('status'), err = $('err');
+
+  // The player is created once, up front, and simply has nothing loaded until it does.
+  // Creating it lazily on first load meant the canvas was not in the DOM yet and the
+  // first resize measured zero.
+  const handle = RC.createPlayer(viewport, { theme: 'auto' });
+  let loaded = false;
+  let natural = { w: 0, h: 0 };
+
+  const say = (m) => { status.textContent = m || ''; };
+  const fail = (m) => { err.textContent = m; setTimeout(() => (err.textContent = ''), 6000); };
+
+  function setSize(w, h) {
+    w = Math.max(16, Math.min(8192, Math.round(w) || 0));
+    h = Math.max(16, Math.min(8192, Math.round(h) || 0));
+    handle.resize(w, h);
+    wIn.value = w; hIn.value = h;
+    $('dims').textContent = w + ' × ' + h;
+  }
+
+  function afterLoad(doc, label) {
+    loaded = true;
+    empty.style.display = 'none';
+    viewport.style.display = 'block';
+    // Not doc.getWidth(): the player overwrites the document's size with the canvas size
+    // during load, so by now it reads back as whatever the canvas happened to be.
+    const n = handle.player.getNaturalSize?.();
+    natural = { w: (n && n.width) || 400, h: (n && n.height) || 400 };
+    setSize(natural.w, natural.h);
+    say(label + '  ·  ' + natural.w + '×' + natural.h);
+  }
+
+  async function loadBuffer(buf, label) {
+    try {
+      afterLoad(await handle.loadFromArrayBuffer(buf), label);
+    } catch (e) {
+      fail('Could not read that document: ' + (e && e.message ? e.message : e));
+    }
+  }
+
+  async function loadUrl(u) {
+    if (!u) return;
+    say('Loading ' + u + ' …');
+    try {
+      // Fetched here rather than through loadFromUrl so a network or CORS failure can be
+      // reported as itself. Opened from file://, a cross-origin fetch is blocked by the
+      // browser and there is nothing the page can do about it — say so plainly.
+      const res = await fetch(u);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await loadBuffer(await res.arrayBuffer(), u.split('/').pop() || u);
+    } catch (e) {
+      say('');
+      fail(location.protocol === 'file:'
+        ? 'Fetch blocked: this page was opened from a file:// URL, so the browser refuses '
+          + 'cross-origin requests. Serve it over http, or drop the file in.'
+        : 'Could not load that URL: ' + (e && e.message ? e.message : e));
+    }
+  }
+
+  function pickFile(input) {
+    const f = input.files && input.files[0];
+    if (f) f.arrayBuffer().then((b) => loadBuffer(b, f.name));
+    input.value = '';
+  }
+  $('file').onchange = () => pickFile($('file'));
+  $('file2').onchange = () => pickFile($('file2'));
+  $('go').onclick = () => loadUrl($('url').value.trim());
+  $('go2').onclick = () => { $('url').focus(); };
+  $('url').onkeydown = (e) => { if (e.key === 'Enter') loadUrl($('url').value.trim()); };
+
+  wIn.onchange = hIn.onchange = () => setSize(+wIn.value, +hIn.value);
+  $('fitDoc').onclick = () => { if (loaded) setSize(natural.w, natural.h); };
+  $('fitWin').onclick = () => {
+    if (loaded) setSize(stage.clientWidth - 48, stage.clientHeight - 48);
+  };
+
+  const THEMES = ['auto', 'light', 'dark'];
+  let ti = 0;
+  $('theme').onclick = () => {
+    ti = (ti + 1) % THEMES.length;
+    handle.player.setTheme(THEMES[ti]);
+    $('theme').textContent = 'Theme: ' + THEMES[ti];
+  };
+
+  // Corner grip. Pointer events rather than mouse so a trackpad drag or a touch works,
+  // and capture so the drag survives the pointer leaving the little grip.
+  let drag = null;
+  $('grip').addEventListener('pointerdown', (e) => {
+    drag = { x: e.clientX, y: e.clientY, w: +wIn.value, h: +hIn.value };
+    $('grip').setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  $('grip').addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    setSize(drag.w + (e.clientX - drag.x), drag.h + (e.clientY - drag.y));
+  });
+  $('grip').addEventListener('pointerup', () => { drag = null; });
+
+  // Drag and drop, accepted anywhere on the page so the target is not a small box.
+  // dragover must be cancelled or the browser navigates to the file instead.
+  ['dragenter', 'dragover'].forEach((t) => document.addEventListener(t, (e) => {
+    e.preventDefault();
+    if (!loaded) empty.classList.add('hot');
+  }));
+  document.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null) empty.classList.remove('hot');
+  });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    empty.classList.remove('hot');
+    const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) f.arrayBuffer().then((b) => loadBuffer(b, f.name));
+  });
+
+  // Startup: ?url= loads a document, ?w=&h= override the size afterwards. A document
+  // baked in at build time is the fallback when no url is given.
+  const q = new URLSearchParams(location.search);
+  const baked = '%%RC_DATA_BASE64%%';
+  const start = async () => {
+    if (q.get('url')) await loadUrl(q.get('url'));
+    else if (baked && baked.indexOf('%%') !== 0) {
+      await loadBuffer(RC.base64ToArrayBuffer(baked), q.get('name') || 'embedded document');
+    }
+    if (loaded && (q.get('w') || q.get('h'))) {
+      setSize(+q.get('w') || natural.w, +q.get('h') || natural.h);
+    }
+  };
+  start();
+})();
+</script>
+</body>
+</html>
