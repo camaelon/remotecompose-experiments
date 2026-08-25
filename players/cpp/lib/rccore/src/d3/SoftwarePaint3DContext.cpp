@@ -362,6 +362,117 @@ void SoftwarePaint3DContext::drawMeshWireframe(const Mesh& m, int32_t lineColor,
     }
 }
 
+// ── Canvas backend front half ─────────────────────────────────────────────────────────
+//
+// Port of the reference's buildCanvasVertices. It reuses projectTriangle, so the
+// transform, backface cull, lighting and depth bias are literally the same code the
+// software rasterizer runs — the two backends can only disagree about rasterization,
+// which is the point.
+
+namespace {
+/**
+ * Order triangles back to front by mean depth.
+ *
+ * Insertion sort, matching the reference: a painter's sort has to be stable for coplanar
+ * triangles or a mesh with shared-depth faces flickers between frames as equal keys swap.
+ * std::sort is not stable and std::stable_sort would allocate; at these counts the
+ * insertion sort is also simply faster.
+ */
+void sortBackToFront(std::vector<int>& order, const std::vector<float>& depth, int count) {
+    for (int i = 0; i < count; i++) order[i] = i;
+    for (int i = 1; i < count; i++) {
+        int cur = order[i];
+        float key = depth[cur];
+        int j = i - 1;
+        while (j >= 0 && depth[order[j]] < key) {   // larger depth = farther = drawn first
+            order[j + 1] = order[j];
+            j--;
+        }
+        order[j + 1] = cur;
+    }
+}
+} // namespace
+
+int SoftwarePaint3DContext::buildCanvasVertices(int meshId, CanvasMesh& out, bool smooth) {
+    out.vertexCount = 0;
+    auto it = mMeshes.find(meshId);
+    if (it == mMeshes.end()) return 0;
+    const Mesh& m = it->second;
+
+    int w = mWidth, h = mHeight;
+    multiply(mPV, mProj, mView);
+    multiply(mMV, mView, mModel);
+    multiply(mMVP, mPV, mModel);
+    prepareLightsEyeSpace();
+
+    const bool useSmooth = smooth && !m.normals.empty();
+    out.hasUv = !m.uv.empty();
+
+    const int n = (int) m.indices.size();
+    const int triCount = n / 3;
+    if (triCount <= 0) return 0;
+    out.triXY.resize((size_t) triCount * 6);
+    out.triUv.resize((size_t) triCount * 6);
+    out.triColor.resize((size_t) triCount * 3);
+    out.triDepth.resize(triCount);
+    out.triZ.resize((size_t) triCount * 3);
+    out.order.resize(triCount);
+
+    int kept = 0;
+    for (int t = 0; t < n; t += 3) {
+        // computeInvW is false: the perspective-correct UV term is only needed by the
+        // software textured rasterizer. A host doing its own rasterization interpolates
+        // UV itself.
+        if (!projectTriangle(m, useSmooth, false, t, mBaseColorArgb, w, h)) continue;
+
+        int p = kept * 6;
+        out.triXY[p]     = mTriScreen[0]; out.triXY[p + 1] = mTriScreen[1];
+        out.triXY[p + 2] = mTriScreen[3]; out.triXY[p + 3] = mTriScreen[4];
+        out.triXY[p + 4] = mTriScreen[6]; out.triXY[p + 5] = mTriScreen[7];
+
+        int c = kept * 3;
+        out.triColor[c] = mTriColor[0];
+        out.triColor[c + 1] = mTriColor[1];
+        out.triColor[c + 2] = mTriColor[2];
+
+        if (out.hasUv) {
+            int u0 = m.indices[t] * 2, u1 = m.indices[t + 1] * 2, u2 = m.indices[t + 2] * 2;
+            out.triUv[p]     = m.uv[u0];     out.triUv[p + 1] = m.uv[u0 + 1];
+            out.triUv[p + 2] = m.uv[u1];     out.triUv[p + 3] = m.uv[u1 + 1];
+            out.triUv[p + 4] = m.uv[u2];     out.triUv[p + 5] = m.uv[u2 + 1];
+        }
+
+        // Painter's key: mean window depth, larger being farther.
+        out.triDepth[kept] = (mTriScreen[2] + mTriScreen[5] + mTriScreen[8]) * (1.f / 3.f);
+        int zi = kept * 3;
+        out.triZ[zi] = mTriScreen[2];
+        out.triZ[zi + 1] = mTriScreen[5];
+        out.triZ[zi + 2] = mTriScreen[8];
+        kept++;
+    }
+
+    sortBackToFront(out.order, out.triDepth, kept);
+
+    const int verts = kept * 3;
+    out.positions.resize((size_t) verts * 2);
+    out.uvs.resize((size_t) verts * 2);
+    out.colors.resize(verts);
+    out.depths.resize(verts);
+    for (int k = 0; k < kept; k++) {
+        int tri = out.order[k];
+        int src = tri * 6, dst = k * 6;
+        for (int i = 0; i < 6; i++) out.positions[dst + i] = out.triXY[src + i];
+        if (out.hasUv) for (int i = 0; i < 6; i++) out.uvs[dst + i] = out.triUv[src + i];
+        int srcC = tri * 3, v = k * 3;
+        for (int i = 0; i < 3; i++) {
+            out.colors[v + i] = out.triColor[srcC + i];
+            out.depths[v + i] = out.triZ[srcC + i];
+        }
+    }
+    out.vertexCount = verts;
+    return verts;
+}
+
 void SoftwarePaint3DContext::drawMesh3D(int meshId, int mode) {
     auto it = mMeshes.find(meshId);
     if (it == mMeshes.end() || mColor.empty()) return;

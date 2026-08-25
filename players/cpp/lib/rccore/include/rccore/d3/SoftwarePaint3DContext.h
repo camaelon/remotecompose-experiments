@@ -45,6 +45,39 @@ public:
     /** Host-supplied texture pixels (ARGB); empty clears the texture. */
     void setTextureData(const std::vector<int32_t>& pixels, int w, int h);
 
+    /**
+     * Screen-space triangles for a host that rasterizes them itself.
+     *
+     * Positions are window pixels, colours are per-vertex ARGB with lighting already applied,
+     * and the triangles are ordered back to front. Vertices are emitted as a flat triangle
+     * list (three per triangle, no sharing) because neighbouring faces disagree about colour
+     * under flat shading and about UV along a seam.
+     */
+    struct CanvasMesh {
+        std::vector<float> positions;   // x,y per vertex
+        std::vector<int32_t> colors;    // ARGB per vertex
+        std::vector<float> uvs;         // u,v per vertex; valid only when hasUv
+        std::vector<float> depths;      // window z per vertex, for a host with a depth buffer
+        bool hasUv = false;
+        int vertexCount = 0;
+
+        // Per-triangle working storage, kept across calls so a per-frame rebuild does not
+        // reallocate.
+        std::vector<float> triXY, triUv, triDepth, triZ;
+        std::vector<int32_t> triColor;
+        std::vector<int> order;
+    };
+
+    /**
+     * Project, light and cull a mesh into `out`, returning the vertex count.
+     *
+     * This is the shared front half of every accelerated backend: transform and lighting stay
+     * on the CPU and only rasterization moves. Ordering is a painter's sort on mean depth, so
+     * a host without a depth buffer still gets a plausible image; `depths` is filled for one
+     * that has.
+     */
+    int buildCanvasVertices(int meshId, CanvasMesh& out, bool smooth);
+
 private:
     struct Light {
         int type;

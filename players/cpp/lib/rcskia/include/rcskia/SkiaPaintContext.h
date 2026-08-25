@@ -151,9 +151,16 @@ private:
         rccore::d3::SoftwarePaint3DContext* ensure();
         void blit();
 
+        /** MODE_BACKEND_CANVAS: Skia rasterizes the triangles instead of the software path. */
+        void drawMesh3DCanvas(int meshId, bool smooth);
+
         SkiaPaintContext& mOwner;
         rccore::d3::SoftwarePaint3DContext mCtx;
         bool mSized = false;
+        /** Reused across frames so a per-frame rebuild does not reallocate. */
+        rccore::d3::SoftwarePaint3DContext::CanvasMesh mCanvasMesh;
+        /** The active texture as an image, for the canvas path's shader. */
+        sk_sp<SkImage> mTexture;
     };
 
     Skia3D m3D{*this};

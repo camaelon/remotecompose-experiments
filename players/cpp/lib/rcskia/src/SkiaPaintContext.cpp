@@ -6,6 +6,8 @@
 #include "include/core/SkRRect.h"
 #include "include/core/SkPathBuilder.h"
 #include "include/core/SkBitmap.h"
+#include "include/core/SkVertices.h"
+#include "rccore/d3/Paint3DContext.h"
 #include "include/core/SkFontMgr.h"
 #include "include/core/SkFontMetrics.h"
 #include "include/core/SkColorFilter.h"
@@ -1535,8 +1537,16 @@ void SkiaPaintContext::Skia3D::drawMesh3D(int meshId, int mode) {
     if (!c) return;
     // Base colour comes from the live paint, exactly as the reference reads mPaint.getColor().
     c->setBaseColorArgb(static_cast<int32_t>(mOwner.mPaint.getColor()));
-    // Every backend other than software falls back to software here: the canvas/drawMesh/GL
-    // paths are Android-specific, and a wrong-looking image beats a missing one.
+    // Wireframe is depth-buffer based and so software-only, whatever the backend bits say —
+    // the contract is explicit that MODE_WIREFRAME forces software.
+    const int backend = mode >> 1;
+    const bool smooth = (mode & rccore::d3::MODE_SMOOTH_MASK) != 0;
+    if (backend == rccore::d3::MODE_BACKEND_CANVAS
+            && (mode & rccore::d3::MODE_WIREFRAME) == 0) {
+        drawMesh3DCanvas(meshId, smooth);
+        return;
+    }
+    // Software, and the fallback for backends this player does not implement (drawMesh, GL).
     c->drawMesh3D(meshId, mode);
     blit();
 }
@@ -1551,14 +1561,58 @@ void SkiaPaintContext::Skia3D::setLights3D(const std::vector<int>& types,
     if (auto* c = ensure()) c->setLights3D(types, colors, params);
 }
 
+void SkiaPaintContext::Skia3D::drawMesh3DCanvas(int meshId, bool smooth) {
+    auto* c = ensure();
+    if (!c) return;
+    auto& cm = mCanvasMesh;
+    const int n = c->buildCanvasVertices(meshId, cm, smooth);
+    if (n < 3) return;
+
+    // No blit: these triangles go straight onto the Skia canvas, so they composite with the
+    // 2D content by Skia's own rules rather than through the software buffer. That is the
+    // whole point of the backend, and it is also why it has no depth buffer — ordering comes
+    // from the painter's sort buildCanvasVertices already applied.
+    std::vector<SkPoint> pos(n);
+    for (int i = 0; i < n; i++) pos[i] = SkPoint{cm.positions[i * 2], cm.positions[i * 2 + 1]};
+
+    // ARGB in an int32 is exactly SkColor's layout, so the lit colours transfer as they are.
+    const SkColor* colors = reinterpret_cast<const SkColor*>(cm.colors.data());
+
+    SkPaint paint(mOwner.mPaint);
+    paint.setStyle(SkPaint::kFill_Style);
+    paint.setShader(nullptr);
+
+    std::vector<SkPoint> texs;
+    SkBlendMode blend = SkBlendMode::kDst;   // colours only: take the vertex colours
+    if (cm.hasUv && mTexture) {
+        // Skia samples an image shader in pixels, and v runs bottom-up while rows are
+        // top-down — the same two adjustments the reference makes.
+        const float tw = (float) mTexture->width(), th = (float) mTexture->height();
+        texs.resize(n);
+        for (int i = 0; i < n; i++) {
+            texs[i] = SkPoint{cm.uvs[i * 2] * tw, (1.f - cm.uvs[i * 2 + 1]) * th};
+        }
+        paint.setShader(mTexture->makeShader(SkTileMode::kClamp, SkTileMode::kClamp,
+                                             SkSamplingOptions(SkFilterMode::kLinear),
+                                             nullptr));
+        blend = SkBlendMode::kModulate;      // lighting modulates the sampled texel
+    }
+
+    auto verts = SkVertices::MakeCopy(SkVertices::kTriangles_VertexMode, n, pos.data(),
+                                      texs.empty() ? nullptr : texs.data(), colors);
+    if (verts) mOwner.mCanvas->drawVertices(verts, blend, paint);
+}
+
 void SkiaPaintContext::Skia3D::setTexture3D(int bitmapId) {
     auto* c = ensure();
     if (!c) return;
     auto it = mOwner.mImages.find(bitmapId);
     if (it == mOwner.mImages.end() || !it->second) {
         c->setTextureData({}, 0, 0);
+        mTexture.reset();
         return;
     }
+    mTexture = it->second;   // the canvas path samples this directly rather than a pixel copy
     SkImage* img = it->second.get();
     int w = img->width(), h = img->height();
     if (w <= 0 || h <= 0) { c->setTextureData({}, 0, 0); return; }

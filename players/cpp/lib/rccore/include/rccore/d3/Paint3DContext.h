@@ -26,6 +26,16 @@ enum : int {
 
 enum : int { MODE_SMOOTH_MASK = 0x1 };
 
+/** Backend selector, i.e. `mode >> 1`. A backend a player does not implement falls back to
+ *  software; only SOFTWARE and CANVAS are implemented here. */
+enum : int {
+    MODE_BACKEND_SOFTWARE = 0,
+    MODE_BACKEND_CANVAS = 1,
+    MODE_BACKEND_DRAWMESH = 2,
+    MODE_BACKEND_GL = 3,
+    MODE_BACKEND_DRAWMESH_ZBUF = 4,
+};
+
 /** Hidden-line wireframe; depth-buffer based, so it forces the software backend. */
 enum : int { MODE_WIREFRAME = 0x100 };
 enum : int { WIRE_EDGE0 = 0x200, WIRE_EDGE1 = 0x400, WIRE_EDGE2 = 0x800,
