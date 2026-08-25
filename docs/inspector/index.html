@@ -4274,6 +4274,7 @@
   var currentDensity = 1;
   var canvasBgWhite = true;
   var isPlayerPaused = false;
+  var isResizing = false;
   var stepTargetOp = null;
   var executionTrace = [];
   var currentStepIndex = -1;
@@ -4305,8 +4306,8 @@
     if (w === "doc") {
       customStageWidth = null;
       customStageHeight = null;
-      const docW = currentDocument2 ? currentDocument2.getWidth() : 300;
-      const docH = currentDocument2 ? currentDocument2.getHeight() : 300;
+      const docW = currentDocument2 ? typeof currentDocument2.getAuthorWidth === "function" ? currentDocument2.getAuthorWidth() : currentDocument2.mHeader ? currentDocument2.mHeader.mWidth : currentDocument2.getWidth() : 300;
+      const docH = currentDocument2 ? typeof currentDocument2.getAuthorHeight === "function" ? currentDocument2.getAuthorHeight() : currentDocument2.mHeader ? currentDocument2.mHeader.mHeight : currentDocument2.getHeight() : 300;
       applyStageDimensions(docW, docH);
       return;
     }
@@ -4409,7 +4410,6 @@
     const tooltip = document.getElementById("stageResizeTooltip");
     const canvas = document.getElementById("previewCanvas");
     if (!wrapper || !canvas) return;
-    let isResizing = false;
     let resizeMode = "both";
     let startX = 0, startY = 0, startW = 300, startH = 300, startAspect = 1;
     let rafId = null;
@@ -4417,9 +4417,9 @@
     function updateTooltip(w, h) {
       if (!tooltip) return;
       const d = currentDensity || 1;
-      const dpW = Math.round(w / d);
-      const dpH = Math.round(h / d);
-      tooltip.textContent = `${Math.round(w)} \xD7 ${Math.round(h)} px (${dpW} \xD7 ${dpH} dp @ ${d}x)`;
+      const pixelW = Math.round(w * d);
+      const pixelH = Math.round(h * d);
+      tooltip.textContent = `${Math.round(w)} \xD7 ${Math.round(h)} dp (${pixelW} \xD7 ${pixelH} px @ ${d}x)`;
       tooltip.style.display = "block";
     }
     function startDrag(e, mode) {
@@ -4429,14 +4429,26 @@
       resizeMode = mode;
       startX = e.clientX;
       startY = e.clientY;
-      startW = canvas.width || 300;
-      startH = canvas.height || 300;
+      const d = currentDensity || 1;
+      startW = customStageWidth !== null ? customStageWidth : canvas ? parseFloat(canvas.style.width) || Math.round((canvas.width || 300) / d) : 300;
+      startH = customStageHeight !== null ? customStageHeight : canvas ? parseFloat(canvas.style.height) || Math.round((canvas.height || 300) / d) : 300;
       startAspect = startH > 0 ? startW / startH : 1;
       targetW = startW;
       targetH = startH;
+      const currentPlayer2 = window.currentPlayer;
+      const rContext = currentPlayer2?.getRemoteContext?.();
+      if (rContext && typeof rContext.setAnimationEnabled === "function") {
+        rContext.setAnimationEnabled(false);
+      }
       wrapper.classList.add("resizing");
       document.body.style.cursor = mode === "w" ? "ew-resize" : mode === "h" ? "ns-resize" : "nwse-resize";
       document.body.style.userSelect = "none";
+      if (e.target && typeof e.target.setPointerCapture === "function") {
+        try {
+          e.target.setPointerCapture(e.pointerId);
+        } catch (_) {
+        }
+      }
       updateTooltip(startW, startH);
       window.addEventListener("pointermove", onPointerMove, { passive: false });
       window.addEventListener("pointerup", onPointerUp, { passive: false });
@@ -4477,6 +4489,17 @@
         cancelAnimationFrame(rafId);
         rafId = null;
       }
+      if (e.target && typeof e.target.releasePointerCapture === "function") {
+        try {
+          e.target.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+      }
+      const currentPlayer2 = window.currentPlayer;
+      const rContext = currentPlayer2?.getRemoteContext?.();
+      if (rContext && typeof rContext.setAnimationEnabled === "function") {
+        rContext.setAnimationEnabled(true);
+      }
       customStageWidth = targetW;
       customStageHeight = targetH;
       applyStageDimensions(targetW, targetH);
@@ -4493,9 +4516,11 @@
       handleE.addEventListener("dblclick", (e) => {
         e.stopPropagation();
         const currentDocument2 = window.currentDocument;
-        const docW = currentDocument2 ? currentDocument2.getWidth() : 300;
+        const docW = currentDocument2 ? typeof currentDocument2.getAuthorWidth === "function" ? currentDocument2.getAuthorWidth() : currentDocument2.mHeader ? currentDocument2.mHeader.mWidth : currentDocument2.getWidth() : 300;
         customStageWidth = docW;
-        applyStageDimensions(docW, canvas.height || 300);
+        const d = currentDensity || 1;
+        const curH = customStageHeight !== null ? customStageHeight : canvas ? parseFloat(canvas.style.height) || Math.round((canvas.height || 300) / d) : 300;
+        applyStageDimensions(docW, curH);
       });
     }
     if (handleS) {
@@ -4503,9 +4528,11 @@
       handleS.addEventListener("dblclick", (e) => {
         e.stopPropagation();
         const currentDocument2 = window.currentDocument;
-        const docH = currentDocument2 ? currentDocument2.getHeight() : 300;
+        const docH = currentDocument2 ? typeof currentDocument2.getAuthorHeight === "function" ? currentDocument2.getAuthorHeight() : currentDocument2.mHeader ? currentDocument2.mHeader.mHeight : currentDocument2.getHeight() : 300;
         customStageHeight = docH;
-        applyStageDimensions(canvas.width || 300, docH);
+        const d = currentDensity || 1;
+        const curW = customStageWidth !== null ? customStageWidth : canvas ? parseFloat(canvas.style.width) || Math.round((canvas.width || 300) / d) : 300;
+        applyStageDimensions(curW, docH);
       });
     }
     if (handleSE) {
@@ -4561,10 +4588,6 @@
       if (typeof currentDocument2.setHeight === "function") currentDocument2.setHeight(pixelH);
       currentDocument2.mWidth = pixelW;
       currentDocument2.mHeight = pixelH;
-      if (currentDocument2.mHeader) {
-        currentDocument2.mHeader.mWidth = pixelW;
-        currentDocument2.mHeader.mHeight = pixelH;
-      }
       currentDocument2.mNeedsMeasure = true;
       const rootComp = typeof currentDocument2.getRootLayoutComponent === "function" ? currentDocument2.getRootLayoutComponent() : currentDocument2.mRootLayoutComponent;
       if (rootComp) {
@@ -4574,14 +4597,6 @@
         rootComp.mHeight = pixelH;
         rootComp.mNeedsMeasure = true;
         if (typeof rootComp.invalidateMeasure === "function") rootComp.invalidateMeasure();
-      }
-      if (typeof currentDocument2.getOperations === "function") {
-        const ops = currentDocument2.getOperations() || [];
-        const headerOp = ops.find((op) => op && (op.OP_CODE === 0 || op.constructor && op.constructor.name === "Header"));
-        if (headerOp) {
-          headerOp.mWidth = pixelW;
-          headerOp.mHeight = pixelH;
-        }
       }
       const state = typeof currentDocument2.getRemoteComposeState === "function" ? currentDocument2.getRemoteComposeState() : currentDocument2.mRemoteComposeState;
       if (state) {
@@ -4621,23 +4636,25 @@
         }
       }
     }
-    try {
-      if (typeof window.getJsonInputValue === "function" && typeof window.setJsonInputValue === "function") {
-        const rawJson = window.getJsonInputValue();
-        if (rawJson && rawJson.trim()) {
-          const parsed = JSON.parse(rawJson);
-          if (parsed && parsed.header) {
-            const targetW = Math.round(w);
-            const targetH = Math.round(h);
-            if (parsed.header.width !== targetW || parsed.header.height !== targetH) {
-              parsed.header.width = targetW;
-              parsed.header.height = targetH;
-              window.setJsonInputValue(JSON.stringify(parsed, null, 2));
+    if (!isResizing) {
+      try {
+        if (typeof window.getJsonInputValue === "function" && typeof window.setJsonInputValue === "function") {
+          const rawJson = window.getJsonInputValue();
+          if (rawJson && rawJson.trim()) {
+            const parsed = JSON.parse(rawJson);
+            if (parsed && parsed.header) {
+              const targetW = Math.round(w);
+              const targetH = Math.round(h);
+              if (parsed.header.width !== targetW || parsed.header.height !== targetH) {
+                parsed.header.width = targetW;
+                parsed.header.height = targetH;
+                window.setJsonInputValue(JSON.stringify(parsed, null, 2));
+              }
             }
           }
         }
+      } catch (e) {
       }
-    } catch (e) {
     }
     if (typeof window.updateRunningTreeLive === "function") {
       window.updateRunningTreeLive();
@@ -13477,8 +13494,8 @@ ${esc(b.topCombos)}">
       drawProfiler();
     }
     applyDensity(currentDensity, false);
-    const docWidth = currentDocument && typeof currentDocument.getWidth === "function" ? currentDocument.getWidth() : 300;
-    const docHeight = currentDocument && typeof currentDocument.getHeight === "function" ? currentDocument.getHeight() : 300;
+    const docWidth = currentDocument ? typeof currentDocument.getAuthorWidth === "function" ? currentDocument.getAuthorWidth() : currentDocument.mHeader ? currentDocument.mHeader.mWidth : currentDocument.getWidth() : 300;
+    const docHeight = currentDocument ? typeof currentDocument.getAuthorHeight === "function" ? currentDocument.getAuthorHeight() : currentDocument.mHeader ? currentDocument.mHeader.mHeight : currentDocument.getHeight() : 300;
     const finalW = customStageWidth !== null ? customStageWidth : docWidth;
     const finalH = customStageHeight !== null ? customStageHeight : docHeight;
     applyStageDimensions(finalW, finalH);

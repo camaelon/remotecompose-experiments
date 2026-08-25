@@ -122,9 +122,9 @@ import {
     PatternArgument, PatternDefine
 } from './operations/loom/PatternOperations';
 import { Custom } from './operations/layout/managers/Custom';
+import { AnimationSpec } from './operations/layout/animation/AnimationSpec';
 import {
     ComponentStartStub,
-    AnimationSpecStub,
     DrawBitmapFontTextStub,
     DrawBitmapFontTextOnPathStub,
     BitmapTextMeasureStub,
@@ -352,11 +352,13 @@ export class Operations {
         // Custom layout component (parse-only)
         m.set(Custom.OP_CODE, Custom.read);
 
+        // Animation
+        m.set(AnimationSpec.OP_CODE, AnimationSpec.read);
+
         // Parsed-but-unimplemented operations. Registered so the reader stays
         // aligned: the wire format has no length prefix, so an unregistered opcode
         // truncates the rest of the document. See operations/UnsupportedOperations.ts.
         m.set(ComponentStartStub.OP_CODE, ComponentStartStub.read);
-        m.set(AnimationSpecStub.OP_CODE, AnimationSpecStub.read);
         m.set(DrawBitmapFontTextStub.OP_CODE, DrawBitmapFontTextStub.read);
         m.set(DrawBitmapFontTextOnPathStub.OP_CODE, DrawBitmapFontTextOnPathStub.read);
         m.set(BitmapTextMeasureStub.OP_CODE, BitmapTextMeasureStub.read);

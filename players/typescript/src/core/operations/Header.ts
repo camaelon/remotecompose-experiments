@@ -85,6 +85,7 @@ export class Header extends Operation {
         doc.setVersion(this.mMajorVersion, this.mMinorVersion, this.mPatchVersion);
         doc.setWidth(this.mWidth);
         doc.setHeight(this.mHeight);
+        doc.setAuthorDimensions(this.mWidth, this.mHeight);
         doc.setRequiredCapabilities(this.mCapabilities);
         doc.setProperties(this.mProperties);
     }

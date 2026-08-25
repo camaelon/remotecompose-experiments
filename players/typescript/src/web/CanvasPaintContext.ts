@@ -1,6 +1,7 @@
 // CanvasPaintContext: concrete PaintContext that renders to an HTML5 Canvas 2D.
 
 import { PaintContext } from '../core/PaintContext';
+import type { RemoteContext } from '../core/RemoteContext';
 import { SoftwarePaint3DContext } from '../core/d3/SoftwarePaint3DContext';
 import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundle';
 import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
@@ -710,6 +711,7 @@ export class CanvasPaintContext extends PaintContext {
         if (state) {
             Object.assign(this, state);
             this.setFont();
+            this.ctx.globalAlpha = this.alpha;
         }
     }
 
@@ -1258,6 +1260,16 @@ export class CanvasPaintContext extends PaintContext {
 
     matrixSave(): void { this.ctx.save(); }
     matrixRestore(): void { this.ctx.restore(); }
+
+    override saveLayer(x: number, y: number, w: number, h: number): void {
+        this.ctx.save();
+        this.ctx.beginPath();
+        this.ctx.rect(x, y, w, h);
+        this.ctx.clip();
+        if (this.alpha < 1) {
+            this.ctx.globalAlpha *= this.alpha;
+        }
+    }
 
     matrixTranslate(tx: number, ty: number): void { this.ctx.translate(tx, ty); }
     matrixScale(sx: number, sy: number, cx: number, cy: number): void {
