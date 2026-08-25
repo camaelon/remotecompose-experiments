@@ -1,7 +1,12 @@
 // CanvasPaintContext: concrete PaintContext that renders to an HTML5 Canvas 2D.
 
 import { PaintContext } from '../core/PaintContext';
-import { SoftwarePaint3DContext } from '../core/d3/SoftwarePaint3DContext';
+import { SoftwarePaint3DContext, createCanvasMesh } from '../core/d3/SoftwarePaint3DContext';
+import type { CanvasMesh } from '../core/d3/SoftwarePaint3DContext';
+import { WebGL3DRenderer } from './WebGL3DRenderer';
+import {
+    MODE_BACKEND_CANVAS, MODE_BACKEND_CANVAS_ZBUF, MODE_SMOOTH_MASK, MODE_WIREFRAME,
+} from '../core/d3/Paint3DContext';
 import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundle';
 import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
@@ -1596,6 +1601,13 @@ export class CanvasPaintContext extends PaintContext {
     // rather than silently drawing nothing.
 
     private d3: SoftwarePaint3DContext | null = null;
+    /** GPU rasterizer for the canvas backends; created on first use, null if WebGL2 is absent. */
+    private d3gl: WebGL3DRenderer | null = null;
+    private d3glMesh: CanvasMesh = createCanvasMesh();
+    /** Whether anything has been drawn into the GL canvas this 3D pass. */
+    private d3glDirty = false;
+    /** Texture generation last uploaded to GL, so an unchanged texture is not re-uploaded. */
+    private d3glTexGen = -1;
     private d3Blit: CanvasRenderingContext2D | null = null;
 
     private ensure3D(): SoftwarePaint3DContext {
@@ -1668,8 +1680,50 @@ export class CanvasPaintContext extends PaintContext {
     drawMesh3D(meshId: number, mode: number): void {
         const ctx3d = this.ensure3D();
         ctx3d.setBaseColorArgb(this.colorArgb);
+
+        // Wireframe is hidden-line and needs the depth buffer the software path owns, so the
+        // contract forces software regardless of the backend bits.
+        const backend = mode >> 1;
+        const wire = (mode & MODE_WIREFRAME) !== 0;
+        if (!wire && (backend === MODE_BACKEND_CANVAS || backend === MODE_BACKEND_CANVAS_ZBUF)) {
+            if (this.drawMesh3DGl(ctx3d, meshId, (mode & MODE_SMOOTH_MASK) !== 0,
+                                  backend === MODE_BACKEND_CANVAS_ZBUF)) {
+                return;
+            }
+            // WebGL2 unavailable — fall through to software rather than draw nothing.
+        }
         ctx3d.drawMesh3D(meshId, mode);
         this.blit3D();
+    }
+
+    /**
+     * Canvas backend: rasterize on the GPU and composite the result.
+     *
+     * Returns false if WebGL2 is not available, so the caller can fall back to software. Each
+     * mesh composites immediately rather than batching to the end of the pass, because the 3D
+     * content has to interleave correctly with the 2D drawing around it — a document that
+     * draws a mesh, then a label, then another mesh expects that order.
+     */
+    private drawMesh3DGl(ctx3d: SoftwarePaint3DContext, meshId: number,
+                         smooth: boolean, useDepth: boolean): boolean {
+        if (this.d3gl === null) this.d3gl = new WebGL3DRenderer();
+        const gl = this.d3gl;
+        if (!gl.isAvailable()) return false;
+
+        const n = ctx3d.buildCanvasVertices(meshId, this.d3glMesh, smooth);
+        if (n < 3) return true;   // nothing survived culling; not a failure
+
+        const w = ctx3d.getWidth(), h = ctx3d.getHeight();
+        gl.beginFrame(w, h);
+        const tex = ctx3d.getTextureData();
+        gl.setTexture(tex.pixels, tex.width, tex.height);
+        gl.draw(this.d3glMesh, useDepth);
+        this.ctx.drawImage(gl.getCanvas(), 0, 0, w, h);
+        this.d3glDirty = true;
+        // Published so a harness can assert the GPU path ran. A silent fall back to software
+        // produces a correct-looking image, so "it rendered" proves nothing on its own.
+        (globalThis as unknown as { __rcGl3dDraws?: number }).__rcGl3dDraws = gl.drawCount;
+        return true;
     }
 
     /**

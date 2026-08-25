@@ -70,6 +70,31 @@ interface Light {
     intensity: number;
 }
 
+/**
+ * Screen-space triangles for a host that rasterizes them itself.
+ *
+ * Positions are window pixels, colours are per-vertex ARGB with lighting already applied,
+ * and triangles are ordered back to front. Vertices are a flat triangle list — three per
+ * triangle, nothing shared — because neighbouring faces disagree about colour under flat
+ * shading and about UV across a seam.
+ */
+export interface CanvasMesh {
+    positions: Float32Array;   // x,y per vertex
+    colors: Int32Array;        // ARGB per vertex
+    uvs: Float32Array;         // u,v per vertex; meaningful only when hasUv
+    depths: Float32Array;      // window z per vertex, for a host with a depth buffer
+    hasUv: boolean;
+    vertexCount: number;
+}
+
+export function createCanvasMesh(): CanvasMesh {
+    return {
+        positions: new Float32Array(0), colors: new Int32Array(0),
+        uvs: new Float32Array(0), depths: new Float32Array(0),
+        hasUv: false, vertexCount: 0,
+    };
+}
+
 export class SoftwarePaint3DContext {
     private mProj: Mat4 = mat4();
     private mView: Mat4 = mat4();
@@ -547,6 +572,126 @@ export class SoftwarePaint3DContext {
      * the scratch untouched — when the triangle is degenerate, crosses the near plane, or is
      * back-facing.
      */
+    // ── Canvas backend front half ─────────────────────────────────────────────────────
+    //
+    // Port of the reference's buildCanvasVertices, and the same code as the C++ one. It
+    // reuses projectTriangle, so transform, backface cull, lighting and depth bias are
+    // literally what the software rasterizer runs — the backends can only disagree about
+    // rasterization, which is the point of having both.
+
+    private cvTriXY = new Float32Array(0);
+    private cvTriUv = new Float32Array(0);
+    private cvTriColor = new Int32Array(0);
+    private cvTriDepth = new Float32Array(0);
+    private cvTriZ = new Float32Array(0);
+    private cvOrder = new Int32Array(0);
+
+    /**
+     * Project, light and cull a mesh into `out`, returning the vertex count.
+     *
+     * Triangles come out ordered back to front so a host with no depth buffer still gets a
+     * plausible image; `depths` is filled for one that has.
+     */
+    /** The active texture, for a host that rasterizes textured triangles itself. */
+    getTextureData(): { pixels: Int32Array | null; width: number; height: number } {
+        return { pixels: this.mTexPixels, width: this.mTexW, height: this.mTexH };
+    }
+
+    buildCanvasVertices(meshId: number, out: CanvasMesh, smooth: boolean): number {
+        out.vertexCount = 0;
+        const m = this.mMeshes.get(meshId);
+        if (m === undefined) return 0;
+
+        const w = this.mWidth, h = this.mHeight;
+        multiply(this.mPV, this.mProj, this.mView);
+        multiply(this.mMV, this.mView, this.mModel);
+        multiply(this.mMVP, this.mPV, this.mModel);
+        this.prepareLightsEyeSpace();
+
+        const idx = m.indices, verts = m.verts, normals = m.normals, uv = m.uv;
+        const useSmooth = smooth && normals !== null;
+        out.hasUv = uv !== null;
+
+        const triCount = (idx.length / 3) | 0;
+        if (triCount <= 0) return 0;
+        if (this.cvTriXY.length < triCount * 6) {
+            this.cvTriXY = new Float32Array(triCount * 6);
+            this.cvTriUv = new Float32Array(triCount * 6);
+            this.cvTriColor = new Int32Array(triCount * 3);
+            this.cvTriZ = new Float32Array(triCount * 3);
+            this.cvTriDepth = new Float32Array(triCount);
+            this.cvOrder = new Int32Array(triCount);
+        }
+        const ts = this.mTriScreen, tc = this.mTriColor;
+
+        let kept = 0;
+        for (let t = 0; t < idx.length; t += 3) {
+            // computeInvW is false: the perspective term is only used by the software
+            // textured rasterizer. See COMPONENTS.md C10 — a host interpolating UV affinely
+            // inherits the same limitation the Skia canvas backend has.
+            if (!this.projectTriangle(idx, verts, normals, useSmooth, false, t,
+                                      this.mBaseColorArgb, w, h)) {
+                continue;
+            }
+            const p = kept * 6;
+            this.cvTriXY[p] = ts[0]; this.cvTriXY[p + 1] = ts[1];
+            this.cvTriXY[p + 2] = ts[3]; this.cvTriXY[p + 3] = ts[4];
+            this.cvTriXY[p + 4] = ts[6]; this.cvTriXY[p + 5] = ts[7];
+
+            const c = kept * 3;
+            this.cvTriColor[c] = tc[0];
+            this.cvTriColor[c + 1] = tc[1];
+            this.cvTriColor[c + 2] = tc[2];
+
+            if (uv !== null) {
+                const u0 = idx[t] * 2, u1 = idx[t + 1] * 2, u2 = idx[t + 2] * 2;
+                this.cvTriUv[p] = uv[u0]; this.cvTriUv[p + 1] = uv[u0 + 1];
+                this.cvTriUv[p + 2] = uv[u1]; this.cvTriUv[p + 3] = uv[u1 + 1];
+                this.cvTriUv[p + 4] = uv[u2]; this.cvTriUv[p + 5] = uv[u2 + 1];
+            }
+            this.cvTriDepth[kept] = (ts[2] + ts[5] + ts[8]) * (1 / 3);
+            const zi = kept * 3;
+            this.cvTriZ[zi] = ts[2]; this.cvTriZ[zi + 1] = ts[5]; this.cvTriZ[zi + 2] = ts[8];
+            kept++;
+        }
+
+        // Insertion sort, farther first. Stable, which matters: coplanar triangles with equal
+        // keys would otherwise swap between frames and flicker. Array.sort is not stable
+        // across engines for this and would allocate.
+        const order = this.cvOrder, depth = this.cvTriDepth;
+        for (let i = 0; i < kept; i++) order[i] = i;
+        for (let i = 1; i < kept; i++) {
+            const cur = order[i];
+            const key = depth[cur];
+            let j = i - 1;
+            while (j >= 0 && depth[order[j]] < key) { order[j + 1] = order[j]; j--; }
+            order[j + 1] = cur;
+        }
+
+        const vertexCount = kept * 3;
+        if (out.positions.length < vertexCount * 2) {
+            out.positions = new Float32Array(vertexCount * 2);
+            out.uvs = new Float32Array(vertexCount * 2);
+            out.colors = new Int32Array(vertexCount);
+            out.depths = new Float32Array(vertexCount);
+        }
+        for (let k = 0; k < kept; k++) {
+            const tri = order[k];
+            const src = tri * 6, dst = k * 6;
+            for (let i = 0; i < 6; i++) out.positions[dst + i] = this.cvTriXY[src + i];
+            if (uv !== null) {
+                for (let i = 0; i < 6; i++) out.uvs[dst + i] = this.cvTriUv[src + i];
+            }
+            const srcC = tri * 3, v = k * 3;
+            for (let i = 0; i < 3; i++) {
+                out.colors[v + i] = this.cvTriColor[srcC + i];
+                out.depths[v + i] = this.cvTriZ[srcC + i];
+            }
+        }
+        out.vertexCount = vertexCount;
+        return vertexCount;
+    }
+
     private projectTriangle(idx: Int32Array, verts: Float32Array,
                             normals: Float32Array | null, smooth: boolean,
                             computeInvW: boolean, t: number, baseColor: number,
