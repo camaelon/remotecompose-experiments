@@ -10618,12 +10618,10 @@ var RC = (() => {
           handled = true;
         } else if (phase === "drag") {
           if (this.mScrollModifier.onTouchDrag(context, lx, ly)) {
-            this.invalidateMeasure();
             handled = true;
           }
         } else if (phase === "up") {
           if (this.mScrollModifier.onTouchUp(context, lx, ly, dx, dy)) {
-            this.invalidateMeasure();
             handled = true;
           }
         } else if (this.mScrollModifier.onTouchCancel(context, lx, ly)) {
