@@ -109,29 +109,32 @@ function setup(w: number, h: number,
 
     // Plane equation z = dx*x + dy*y + zoff solved at the three triangle vertices.
     //
-    // `d` is declared `double` in the reference, but its initializer is an all-float expression,
-    // so Java evaluates it in float and only widens on assignment. Computing it in float64 here
-    // is a different number — and since the numerators below are also float, getting one right
-    // and not the other is worse than getting both wrong: the two errors had been partly
-    // cancelling.
-    const d = fa(fa(fround(fm(fx1, fround(fy3 - fy2)) - fm(fx2, fy3)), fm(fx3, fy2)),
-        fm(fround(fx2 - fx3), fy1));
+    // Solved in full float64. This used to emulate the reference's float arithmetic step for
+    // step, because `d` was declared double there but initialised from an all-float
+    // expression — evaluated in float, widened only on assignment — and the numerators were
+    // float too, so matching one and not the other was worse than matching neither: the two
+    // errors partly cancelled.
+    //
+    // The reference has since been corrected to solve the plane in double (see the note in
+    // Rasterizer.java), which removes the reason for the emulation. It also removes a real
+    // defect: this determinant is twice the projected signed area, and it cancels
+    // catastrophically for the sliver triangles along a grazing silhouette. Dividing the
+    // numerators by a `d` that has lost most of its significant bits gave those triangles a
+    // depth plane missing their own vertices by a large multiple of the entire [0,1] depth
+    // range, so they rasterised at a nonsense depth and lost the depth test to whatever was
+    // behind them — scattered triangles simply vanishing from a surface.
+    //
+    // fround stays on the three results, which the reference stores as float.
+    const d = fx1 * (fy3 - fy2) - fx2 * fy3 + fx3 * fy2 + (fx2 - fx3) * fy1;
     if (d === 0) {
         s.ok = false;
         return s;
     }
-    // The divisor `d` is declared double in the reference, but each *numerator* is an
-    // all-float expression evaluated in float and only then widened for the division. Computing
-    // the numerators in float64 leaves residue that survives the divide, which shifts the
-    // interpolated z on thin triangles — invisible on a cube, five pixels wrong on a tube.
-    const nx = fa(fround(fm(fy1, fround(fz3 - fz2)) - fm(fy2, fz3)), fm(fy3, fz2));
-    const numDx = -fa(nx, fm(fround(fy2 - fy3), fz1));
-    const ny = fa(fround(fm(fx1, fround(fz3 - fz2)) - fm(fx2, fz3)), fm(fx3, fz2));
-    const numDy = fa(ny, fm(fround(fx2 - fx3), fz1));
-    const numZ = fa(fa(
-        fm(fx1, fround(fm(fy3, fz2) - fm(fy2, fz3))),
-        fm(fy1, fround(fm(fx2, fz3) - fm(fx3, fz2)))),
-        fm(fround(fm(fx3, fy2) - fm(fx2, fy3)), fz1));
+    const numDx = -(fy1 * (fz3 - fz2) - fy2 * fz3 + fy3 * fz2 + (fy2 - fy3) * fz1);
+    const numDy = fx1 * (fz3 - fz2) - fx2 * fz3 + fx3 * fz2 + (fx2 - fx3) * fz1;
+    const numZ = fx1 * (fy3 * fz2 - fy2 * fz3)
+        + fy1 * (fx2 * fz3 - fx3 * fz2)
+        + (fx3 * fy2 - fx2 * fy3) * fz1;
     s.dx = fround(numDx / d);
     s.dy = fround(numDy / d);
     s.zoff = fround(numZ / d);

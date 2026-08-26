@@ -50,14 +50,24 @@ Setup setup(int w, int h,
     }
     // Declared double, initialised from an all-float expression: evaluated in float, widened on
     // assignment. Matching the declaration matches the reference's arithmetic.
-    double d = (fx1 * (fy3 - fy2) - fx2 * fy3 + fx3 * fy2 + (fx2 - fx3) * fy1);
+    // Widen BEFORE the arithmetic, not after. Declaring `d` double and initialising it
+    // from an all-float expression evaluates in float and widens the already-rounded
+    // result — and this expression is twice the projected signed area, which cancels
+    // catastrophically for the sliver triangles along a grazing silhouette. `d` then
+    // divides dx/dy/zoff, so a triangle gets a depth plane that misses its own vertices
+    // by up to 12 in a [0,1] depth range, rasterises at a nonsense depth, loses to
+    // whatever is behind it, and disappears. That is the notched rim in
+    // device-docs/surface_plot3d.rc.
+    double D1 = fx1, D2 = fx2, D3 = fx3, E1 = fy1, E2 = fy2, E3 = fy3;
+    double G1 = fz1, G2 = fz2, G3 = fz3;
+    double d = (D1 * (E3 - E2) - D2 * E3 + D3 * E2 + (D2 - D3) * E1);
     if (d == 0) { s.ok = false; return s; }
 
-    s.dx = (float) (-(fy1 * (fz3 - fz2) - fy2 * fz3 + fy3 * fz2 + (fy2 - fy3) * fz1) / d);
-    s.dy = (float) ((fx1 * (fz3 - fz2) - fx2 * fz3 + fx3 * fz2 + (fx2 - fx3) * fz1) / d);
-    s.zoff = (float) ((fx1 * (fy3 * fz2 - fy2 * fz3)
-                     + fy1 * (fx2 * fz3 - fx3 * fz2)
-                     + (fx3 * fy2 - fx2 * fy3) * fz1) / d);
+    s.dx = (float) (-(E1 * (G3 - G2) - E2 * G3 + E3 * G2 + (E2 - E3) * G1) / d);
+    s.dy = (float) ((D1 * (G3 - G2) - D2 * G3 + D3 * G2 + (D2 - D3) * G1) / d);
+    s.zoff = (float) ((D1 * (E3 * G2 - E2 * G3)
+                     + E1 * (D2 * G3 - D3 * G2)
+                     + (D3 * E2 - D2 * E3) * G1) / d);
 
     int y1 = (int) (16.0f * fy1 + .5f);
     int y2 = (int) (16.0f * fy2 + .5f);
