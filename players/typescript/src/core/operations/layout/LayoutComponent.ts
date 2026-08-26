@@ -378,6 +378,15 @@ export class LayoutComponent extends Component {
         this.mNeedsMeasure = false;
     }
 
+    override animatingBounds(context: RemoteContext): void {
+        super.animatingBounds(context);
+        this.updateComponentValues(context, this.mWidth, this.mHeight);
+        this.layoutModifiers(this.mWidth, this.mHeight);
+        for (const child of this.mChildrenComponents) {
+            child.animatingBounds(context);
+        }
+    }
+
     /** Walk modifiers reducing dimensions by padding and passing to decorators.
      *  Matches Java ComponentModifiers.layout(). */
     layoutModifiers(w: number, h: number): void {
@@ -404,7 +413,13 @@ export class LayoutComponent extends Component {
         paintContext.matrixRestore();
     }
 
-    paint(paintContext: PaintContext): void {
+    override paint(paintContext: PaintContext): void {
+        if (this.applyAnimationAsNeeded(paintContext)) {
+            return;
+        }
+        if (Visibility.isGone(this.mVisibility)) return;
+        if (Visibility.isInvisible(this.mVisibility)) return;
+
         if (this.mDrawContentOperations !== null && this.mDrawContentOperations.length > 0) {
             // Draw content operations handle their own painting
             paintContext.matrixSave();
@@ -419,13 +434,22 @@ export class LayoutComponent extends Component {
                 op.apply(context);
             }
             paintContext.matrixRestore();
+        } else if (this.mGraphicsLayerMod) {
+            // GraphicsLayer wraps the entire painting (modifiers + content + children)
+            paintContext.matrixSave();
+            this.mGraphicsLayerMod.apply(paintContext.getContext());
+            this.paintingComponent(paintContext);
+            if (typeof (this.mGraphicsLayerMod as any).applyPostPaint === 'function') {
+                (this.mGraphicsLayerMod as any).applyPostPaint(paintContext);
+            }
+            paintContext.matrixRestore();
         } else {
             super.paint(paintContext);
         }
     }
 
     paintingComponent(paintContext: PaintContext): void {
-        if (Visibility.isGone(this.mVisibility)) return;
+        if (Visibility.isGone(this.mVisibility) && this.mAnimateMeasure === null) return;
         const context = paintContext.getContext();
 
         paintContext.matrixSave();
@@ -466,6 +490,10 @@ export class LayoutComponent extends Component {
 
         // Paint children sorted by z-index
         const children = this.mChildrenComponents;
+        const shouldPaintChild = (child: Component) => {
+            return (child.mAnimateMeasure !== null || !Visibility.isGone(child.mVisibility)) && this.isChildVisibleInViewport(child);
+        };
+
         if (children.length > 1) {
             // Check if z-index sorting is needed
             let needsSort = false;
@@ -475,14 +503,14 @@ export class LayoutComponent extends Component {
             if (needsSort) {
                 const sorted = [...children].sort((a, b) => a.mZIndex - b.mZIndex);
                 for (const child of sorted) {
-                    if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+                    if (shouldPaintChild(child)) {
                         context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
                 }
             } else {
                 for (const child of children) {
-                    if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+                    if (shouldPaintChild(child)) {
                         context.incrementOpCount(child);
                         child.paint(paintContext);
                     }
@@ -490,7 +518,7 @@ export class LayoutComponent extends Component {
             }
         } else {
             for (const child of children) {
-                if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+                if (shouldPaintChild(child)) {
                     context.incrementOpCount(child);
                     child.paint(paintContext);
                 }

@@ -78,63 +78,92 @@ export class RcdPlayer {
     }
 
     private setupPointerEvents(): void {
-        this.canvas.addEventListener('pointerdown', (e: PointerEvent) => {
-            if (!this.document || !this.remoteContext) return;
-            this.pointerIsDown = true;
-            const { x, y } = this.canvasCoords(e);
-            this.pointerDownX = x;
-            this.pointerDownY = y;
-            this.pointerHasMoved = false;
-            this.pointerHistory = [{ x, y, t: performance.now() }];
-            this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-            this.document.touchDown(this.remoteContext, x, y);
-            this.scheduleRepaint();
-        });
-
-        this.canvas.addEventListener('pointermove', (e: PointerEvent) => {
-            if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-            const { x, y } = this.canvasCoords(e);
-            if (!this.pointerHasMoved) {
-                const dx = x - this.pointerDownX;
-                const dy = y - this.pointerDownY;
-                const slop = TOUCH_SLOP / (this.mContentScale || 1);
-                if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
-            }
-            this.pointerHistory.push({ x, y, t: performance.now() });
-            if (this.pointerHistory.length > 5) this.pointerHistory.shift();
-            this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-            this.document.touchDrag(this.remoteContext, x, y);
-            this.scheduleRepaint();
-        });
-
-        this.canvas.addEventListener('pointerup', (e: PointerEvent) => {
-            if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-            this.pointerIsDown = false;
-            const { x, y } = this.canvasCoords(e);
-            const { dx, dy } = this.computeVelocity(x, y);
-            this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-            // Taps and touches are two separate dispatch channels, and a document can use
-            // either. `touchUp` drives touch listeners and touch modifiers; `onClick` is
-            // what reaches ClickModifier — a button does nothing without it. Only the
-            // touch channel was wired here, so no clickable document responded at all.
-            //
-            // Order and the slop test both follow RemoteComposeView.onTouchEvent: the
-            // click fires first, and only when the press did not travel far enough to be
-            // a drag (otherwise scrolling a list would also press whatever it started on).
-            if (!this.pointerHasMoved) {
-                this.document.onClick(this.remoteContext, x, y);
-            }
-            this.document.touchUp(this.remoteContext, x, y, dx, dy);
-            this.pointerHistory = [];
-            this.scheduleRepaint();
-        });
-
-        this.canvas.addEventListener('pointercancel', () => {
-            this.pointerIsDown = false;
-            this.pointerHasMoved = false;
-            this.pointerHistory = [];
-        });
+        this.canvas.addEventListener('pointerdown', this.onPointerDown);
     }
+
+    private onPointerDown = (e: PointerEvent): void => {
+        if (!this.document || !this.remoteContext) return;
+        this.pointerIsDown = true;
+        try {
+            this.canvas.setPointerCapture(e.pointerId);
+        } catch (_) {}
+        const { x, y } = this.canvasCoords(e);
+        this.pointerDownX = x;
+        this.pointerDownY = y;
+        this.pointerHasMoved = false;
+        this.pointerHistory = [{ x, y, t: performance.now() }];
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDown(this.remoteContext, x, y);
+        this.scheduleRepaint();
+
+        window.addEventListener('pointermove', this.onPointerMove, { passive: false });
+        window.addEventListener('pointerup', this.onPointerUp, { passive: false });
+        window.addEventListener('pointercancel', this.onPointerCancel, { passive: false });
+    };
+
+    private onPointerMove = (e: PointerEvent): void => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        const { x, y } = this.canvasCoords(e);
+        if (!this.pointerHasMoved) {
+            const dx = x - this.pointerDownX;
+            const dy = y - this.pointerDownY;
+            const slop = TOUCH_SLOP / (this.mContentScale || 1);
+            if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
+        }
+        this.pointerHistory.push({ x, y, t: performance.now() });
+        if (this.pointerHistory.length > 5) this.pointerHistory.shift();
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDrag(this.remoteContext, x, y);
+        this.scheduleRepaint();
+    };
+
+    private onPointerUp = (e: PointerEvent): void => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+            this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        window.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener('pointerup', this.onPointerUp);
+        window.removeEventListener('pointercancel', this.onPointerCancel);
+
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        // Taps and touches are two separate dispatch channels, and a document can use
+        // either. `touchUp` drives touch listeners and touch modifiers; `onClick` is
+        // what reaches ClickModifier — a button does nothing without it. Only the
+        // touch channel was wired here, so no clickable document responded at all.
+        //
+        // Order and the slop test both follow RemoteComposeView.onTouchEvent: the
+        // click fires first, and only when the press did not travel far enough to be
+        // a drag (otherwise scrolling a list would also press whatever it started on).
+        if (!this.pointerHasMoved) {
+            this.document.onClick(this.remoteContext, x, y);
+        }
+        this.document.touchUp(this.remoteContext, x, y, dx, dy);
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+    };
+
+    private onPointerCancel = (e: PointerEvent): void => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+            this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {}
+        window.removeEventListener('pointermove', this.onPointerMove);
+        window.removeEventListener('pointerup', this.onPointerUp);
+        window.removeEventListener('pointercancel', this.onPointerCancel);
+
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchCancel(this.remoteContext, x, y, dx, dy);
+        this.pointerHasMoved = false;
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+    };
 
     private canvasCoords(e: PointerEvent): { x: number; y: number } {
         const rect = this.canvas.getBoundingClientRect();
@@ -370,6 +399,12 @@ export class RcdPlayer {
             cancelAnimationFrame(this.animationFrameId);
             this.animationFrameId = null;
         }
+        if (this.pointerIsDown) {
+            this.pointerIsDown = false;
+            window.removeEventListener('pointermove', this.onPointerMove);
+            window.removeEventListener('pointerup', this.onPointerUp);
+            window.removeEventListener('pointercancel', this.onPointerCancel);
+        }
     }
 
     /**
@@ -382,12 +417,17 @@ export class RcdPlayer {
      */
     destroy(): void {
         this.stop();
+        this.canvas.removeEventListener('pointerdown', this.onPointerDown);
         if (this.paintContext) {
             this.paintContext.destroy();
         }
     }
 
     repaint(): void {
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
         if (this.document) {
             this.renderFrame(performance.now());
         }
@@ -396,8 +436,9 @@ export class RcdPlayer {
     resize(newWidth: number, newHeight: number): void {
         this.canvas.width = newWidth;
         this.canvas.height = newHeight;
-        this.canvas.style.width = newWidth + 'px';
-        this.canvas.style.height = newHeight + 'px';
+        const d = this.remoteContext?.getDensity() || this.density || 1;
+        this.canvas.style.width = (newWidth / d) + 'px';
+        this.canvas.style.height = (newHeight / d) + 'px';
         // Keep the engine's RemoteContext in sync with the new canvas
         // size so non-SIZING_SCALE documents re-flow into it on next
         // paint.  Without this the content would keep drawing at the
@@ -416,7 +457,7 @@ export class RcdPlayer {
             this.document.setHeight(newHeight);
             this.document.invalidateMeasure();
         }
-        this.scheduleRepaint();
+        this.repaint();
     }
 
     getDocument(): CoreDocument | null { return this.document; }

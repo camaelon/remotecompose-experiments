@@ -107,12 +107,14 @@ export function createPlayer(
     return handle;
 }
 
+const BaseElement = typeof HTMLElement !== 'undefined' ? HTMLElement : (class {} as any);
+
 /**
  * <rc-player> Custom Element.
  *
  * Attributes: src, data, width, height, theme, background
  */
-export class RcPlayerElement extends HTMLElement {
+export class RcPlayerElement extends BaseElement {
     static observedAttributes = ['src', 'data', 'width', 'height', 'theme', 'background'];
 
     private _handle: RcPlayerHandle | null = null;

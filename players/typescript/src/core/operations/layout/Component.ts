@@ -10,6 +10,9 @@ import { ContextMode } from '../../RemoteContext';
 import type { WireBuffer } from '../../WireBuffer';
 import type { MeasurePass } from './measure/MeasurePass';
 import { TouchExpression } from '../TouchExpression';
+import { ComponentMeasure } from './measure/ComponentMeasure';
+import { AnimationSpec, ANIMATION } from './animation/AnimationSpec';
+import { AnimateMeasure } from './animation/AnimateMeasure';
 
 export class Visibility {
     // Matches Java Component.Visibility encoding
@@ -45,10 +48,10 @@ export class Visibility {
 }
 
 export class Component extends PaintOperation implements Container {
-    private mComponentId: number;
-    private mAnimationId = -1;
-    private mParent: Component | null = null;
-    private mChildren: Operation[] = [];
+    mComponentId: number;
+    mAnimationId = -1;
+    mParent: Component | null = null;
+    mChildren: Operation[] = [];
 
     // Position & dimensions
     mX = 0;
@@ -59,7 +62,11 @@ export class Component extends PaintOperation implements Container {
     mVisibility = Visibility.VISIBLE;
     mNeedsMeasure = true;
     mNeedsRepaint = true;
-    private mFirstLayout = true;
+    mFirstLayout = true;
+
+    mAnimationSpec: AnimationSpec = AnimationSpec.DEFAULT;
+    mAnimateMeasure: AnimateMeasure | null = null;
+    mNeedsBoundsAnimation = false;
 
     constructor(componentId: number, animationId = -1,
                 x = 0, y = 0, width = 0, height = 0) {
@@ -99,6 +106,25 @@ export class Component extends PaintOperation implements Container {
     }
     clearNeedsMeasure(): void { this.mNeedsMeasure = false; }
 
+    needsRepaint(): boolean { return this.mNeedsRepaint; }
+    doesNeedsRepaint(): boolean { return this.mNeedsRepaint; }
+    setNeedsRepaint(v: boolean): void { this.mNeedsRepaint = v; }
+
+    needsBoundsAnimation(): boolean {
+        return this.mNeedsBoundsAnimation;
+    }
+
+    markNeedsBoundsAnimation(): void {
+        this.mNeedsBoundsAnimation = true;
+        if (this.mParent) {
+            this.mParent.markNeedsBoundsAnimation();
+        }
+    }
+
+    clearNeedsBoundsAnimation(): void {
+        this.mNeedsBoundsAnimation = false;
+    }
+
     isVisible(): boolean {
         if (Visibility.isGone(this.mVisibility)) return false;
         if (this.mParent) return this.mParent.isVisible();
@@ -117,8 +143,12 @@ export class Component extends PaintOperation implements Container {
     }
 
     inflate(): void {
-        // Set parent references for child components
+        // Set parent references for child components & extract AnimationSpec
         for (const op of this.mChildren) {
+            if (op instanceof AnimationSpec) {
+                this.mAnimationSpec = op;
+                this.mAnimationId = op.getAnimationId();
+            }
             if (op instanceof Component) {
                 op.setParent(this);
             }
@@ -158,23 +188,115 @@ export class Component extends PaintOperation implements Container {
 
     layout(context: RemoteContext, measure: MeasurePass): void {
         const m = measure.get(this);
-        // Propagate ComponentMeasure visibility (including overrides from
-        // FitBoxLayout/CollapsibleRow/Column) to component — matches Java Component.layout()
-        this.mVisibility = m.getVisibility();
-        if (m.isGone()) return;
+        const allowAnimation = !this.mFirstLayout &&
+            context.isAnimationEnabled() &&
+            this.mAnimationSpec.isAnimationEnabled() &&
+            m.getAllowsAnimation();
 
-        this.mX = m.getX();
-        this.mY = m.getY();
-        this.mWidth = m.getW();
-        this.mHeight = m.getH();
+        if (allowAnimation) {
+            if (this.mAnimateMeasure === null) {
+                const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mVisibility);
+                const target = new ComponentMeasure(this.mComponentId, m.getX(), m.getY(), m.getW(), m.getH(), m.getVisibility());
+                if (!target.same(origin)) {
+                    const now = context.mClock?.millis() ?? Date.now();
+                    this.mAnimateMeasure = new AnimateMeasure(
+                        now,
+                        this,
+                        origin,
+                        target,
+                        this.mAnimationSpec.getMotionDuration(),
+                        this.mAnimationSpec.getVisibilityDuration(),
+                        this.mAnimationSpec.getEnterAnimation(),
+                        this.mAnimationSpec.getExitAnimation(),
+                        this.mAnimationSpec.getMotionEasingType(),
+                        this.mAnimationSpec.getVisibilityEasingType()
+                    );
+                }
+            } else {
+                const now = context.mClock?.millis() ?? Date.now();
+                this.mAnimateMeasure.updateTarget(context, m, now);
+            }
+        } else {
+            this.mAnimateMeasure = null;
+        }
+
+        if (this.mAnimateMeasure === null) {
+            this.mVisibility = m.getVisibility();
+            this.mX = m.getX();
+            this.mY = m.getY();
+            this.mWidth = m.getW();
+            this.mHeight = m.getH();
+            if (this.mParent) {
+                this.clearNeedsBoundsAnimation();
+            }
+        } else {
+            this.mAnimateMeasure.apply(context);
+            this.markNeedsBoundsAnimation();
+        }
         this.mFirstLayout = false;
     }
 
-    animatingBounds(_context: RemoteContext): void { /* override in subclasses */ }
+    animatingBounds(context: RemoteContext): void {
+        if (!context.isAnimationEnabled()) {
+            this.mAnimateMeasure = null;
+            if (this.mParent) {
+                this.clearNeedsBoundsAnimation();
+            }
+        } else if (this.mAnimateMeasure !== null) {
+            this.mAnimateMeasure.apply(context);
+            if (this.mAnimateMeasure.isDone()) {
+                this.mAnimateMeasure = null;
+                if (this.mParent) {
+                    this.clearNeedsBoundsAnimation();
+                }
+            } else {
+                this.markNeedsBoundsAnimation();
+            }
+        } else {
+            if (this.mParent) {
+                this.clearNeedsBoundsAnimation();
+            }
+        }
+        for (const op of this.mChildren) {
+            if (op instanceof Component) {
+                op.animatingBounds(context);
+            }
+        }
+    }
 
     // --- Paint ---
 
+    applyAnimationAsNeeded(paintContext: PaintContext): boolean {
+        if (!paintContext.isAnimationEnabled()) {
+            if (this.mAnimateMeasure !== null) {
+                this.mAnimateMeasure = null;
+                if (this.mParent) {
+                    this.clearNeedsBoundsAnimation();
+                }
+            }
+            return false;
+        }
+        if (this.mAnimateMeasure !== null) {
+            this.mAnimateMeasure.paint(paintContext);
+            if (this.mAnimateMeasure.isDone()) {
+                this.mAnimateMeasure = null;
+                if (this.mParent) {
+                    this.clearNeedsBoundsAnimation();
+                }
+                paintContext.needsRepaint();
+            } else {
+                this.markNeedsBoundsAnimation();
+                paintContext.needsRepaint();
+            }
+            return true;
+        }
+        return false;
+    }
+
     paint(paintContext: PaintContext): void {
+        if (this.applyAnimationAsNeeded(paintContext)) {
+            return;
+        }
         if (Visibility.isGone(this.mVisibility)) return;
         if (Visibility.isInvisible(this.mVisibility)) return;
         this.paintingComponent(paintContext);

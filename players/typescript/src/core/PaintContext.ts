@@ -25,6 +25,7 @@ export abstract class PaintContext {
     doesNeedsRepaint(): boolean { return this.mNeedsRepaint; }
     clearNeedsRepaint(): void { this.mNeedsRepaint = false; }
     needsRepaint(): void { this.mNeedsRepaint = true; }
+    setNeedsRepaint(v: boolean): void { this.mNeedsRepaint = v; }
 
     setMeasureVersion(v: number): void { this.mMeasureVersion = v; }
     getMeasureVersion(): number { return this.mMeasureVersion; }

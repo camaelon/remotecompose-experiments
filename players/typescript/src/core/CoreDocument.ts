@@ -83,6 +83,8 @@ export class CoreDocument implements ExpansionDocument {
     mVersion: Version | null = null;
     mWidth = 256;
     mHeight = 256;
+    mAuthorWidth: number | null = null;
+    mAuthorHeight: number | null = null;
     private mCapabilities = 0;
     private mProperties: IntMap<any> | null = null;
     private mContentDescription = '';
@@ -195,6 +197,19 @@ export class CoreDocument implements ExpansionDocument {
     setHeight(h: number): void {
         this.mHeight = h;
         this.mRemoteComposeState?.setWindowHeight(h);
+    }
+
+    getAuthorWidth(): number {
+        return this.mAuthorWidth ?? this.mHeader?.mWidth ?? this.mWidth;
+    }
+
+    getAuthorHeight(): number {
+        return this.mAuthorHeight ?? this.mHeader?.mHeight ?? this.mHeight;
+    }
+
+    setAuthorDimensions(w: number, h: number): void {
+        this.mAuthorWidth = w;
+        this.mAuthorHeight = h;
     }
 
     setProperties(properties: IntMap<any> | null): void { this.mProperties = properties; }
@@ -591,6 +606,12 @@ export class CoreDocument implements ExpansionDocument {
             this.mRootLayoutComponent.layoutTree(context);
         }
 
+        if (this.mRootLayoutComponent && this.mRootLayoutComponent.needsBoundsAnimation()) {
+            this.mNeedsRepaintFlag = 1;
+            this.mRootLayoutComponent.clearNeedsBoundsAnimation();
+            this.mRootLayoutComponent.animatingBounds(context);
+        }
+
         context.setMode(ContextMode.PAINT);
         context.clearLastOpCount();
         // Measurement's frame window is exactly the window the op counter already used, so
@@ -679,7 +700,7 @@ export class CoreDocument implements ExpansionDocument {
 
         // Check if we need repaint
         const pc2 = context.getPaintContext();
-        if (pc && pc.doesNeedsRepaint()) {
+        if ((pc2 && pc2.doesNeedsRepaint()) || (this.mRootLayoutComponent && (this.mRootLayoutComponent.needsRepaint() || this.mRootLayoutComponent.needsBoundsAnimation()))) {
             this.mNeedsRepaintFlag = 1;
         } else {
             this.mNeedsRepaintFlag = this.mRemoteComposeState.getOpsToUpdate(context, this.mClock.millis());

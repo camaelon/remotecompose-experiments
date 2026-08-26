@@ -1254,6 +1254,7 @@ var RC = (() => {
       doc.setVersion(this.mMajorVersion, this.mMinorVersion, this.mPatchVersion);
       doc.setWidth(this.mWidth);
       doc.setHeight(this.mHeight);
+      doc.setAuthorDimensions(this.mWidth, this.mHeight);
       doc.setRequiredCapabilities(this.mCapabilities);
       doc.setProperties(this.mProperties);
     }
@@ -3798,371 +3799,6 @@ var RC = (() => {
   _TouchExpression.STOP_NOTCHES_SINGLE_EVEN = 7;
   var TouchExpression = _TouchExpression;
 
-  // src/core/operations/layout/Component.ts
-  var _Visibility = class _Visibility {
-    static isGone(v) {
-      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_GONE) === _Visibility.OVERRIDE_GONE;
-      return v === _Visibility.GONE;
-    }
-    static isVisible(v) {
-      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_VISIBLE) === _Visibility.OVERRIDE_VISIBLE;
-      return v === _Visibility.VISIBLE;
-    }
-    static isInvisible(v) {
-      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_INVISIBLE) === _Visibility.OVERRIDE_INVISIBLE;
-      return v === _Visibility.INVISIBLE;
-    }
-    static hasOverride(v) {
-      return v >> 4 > 0;
-    }
-    static clearOverride(v) {
-      return v & 15;
-    }
-    static add(v, override) {
-      let result = (v & 15) + override;
-      if ((result & _Visibility.CLEAR_OVERRIDE) === _Visibility.CLEAR_OVERRIDE) {
-        result = result & 15;
-      }
-      return result;
-    }
-  };
-  // Matches Java Component.Visibility encoding
-  _Visibility.GONE = 0;
-  _Visibility.VISIBLE = 1;
-  _Visibility.INVISIBLE = 2;
-  _Visibility.OVERRIDE_GONE = 16;
-  _Visibility.OVERRIDE_VISIBLE = 32;
-  _Visibility.OVERRIDE_INVISIBLE = 64;
-  _Visibility.CLEAR_OVERRIDE = 128;
-  var Visibility = _Visibility;
-  var Component = class _Component extends PaintOperation {
-    constructor(componentId, animationId = -1, x = 0, y = 0, width = 0, height = 0) {
-      super();
-      this.mAnimationId = -1;
-      this.mParent = null;
-      this.mChildren = [];
-      // Position & dimensions
-      this.mX = 0;
-      this.mY = 0;
-      this.mWidth = 0;
-      this.mHeight = 0;
-      this.mZIndex = 0;
-      this.mVisibility = Visibility.VISIBLE;
-      this.mNeedsMeasure = true;
-      this.mNeedsRepaint = true;
-      this.mFirstLayout = true;
-      this.mComponentId = componentId;
-      this.mAnimationId = animationId;
-      this.mX = x;
-      this.mY = y;
-      this.mWidth = width;
-      this.mHeight = height;
-    }
-    getComponentId() {
-      return this.mComponentId;
-    }
-    setComponentId(id) {
-      this.mComponentId = id;
-    }
-    getAnimationId() {
-      return this.mAnimationId;
-    }
-    setAnimationId(id) {
-      this.mAnimationId = id;
-    }
-    getParent() {
-      return this.mParent;
-    }
-    setParent(parent) {
-      this.mParent = parent;
-    }
-    getList() {
-      return this.mChildren;
-    }
-    getX() {
-      return this.mX;
-    }
-    setX(v) {
-      this.mX = v;
-    }
-    getY() {
-      return this.mY;
-    }
-    setY(v) {
-      this.mY = v;
-    }
-    getWidth() {
-      return this.mWidth;
-    }
-    setWidth(v) {
-      this.mWidth = v;
-    }
-    getHeight() {
-      return this.mHeight;
-    }
-    setHeight(v) {
-      this.mHeight = v;
-    }
-    getZIndex() {
-      return this.mZIndex;
-    }
-    getScrollX() {
-      return 0;
-    }
-    getScrollY() {
-      return 0;
-    }
-    needsMeasure() {
-      return this.mNeedsMeasure;
-    }
-    invalidateMeasure() {
-      this.mNeedsMeasure = true;
-      if (this.mParent) this.mParent.invalidateMeasure();
-    }
-    clearNeedsMeasure() {
-      this.mNeedsMeasure = false;
-    }
-    isVisible() {
-      if (Visibility.isGone(this.mVisibility)) return false;
-      if (this.mParent) return this.mParent.isVisible();
-      return true;
-    }
-    isGone() {
-      return Visibility.isGone(this.mVisibility);
-    }
-    getVisibility() {
-      return this.mVisibility;
-    }
-    setVisibility(v) {
-      if (v === this.mVisibility) return;
-      this.mVisibility = v;
-      this.invalidateMeasure();
-      if (this.mParent) this.mParent.invalidateMeasure();
-    }
-    inflate() {
-      for (const op of this.mChildren) {
-        if (op instanceof _Component) {
-          op.setParent(this);
-        }
-      }
-    }
-    // --- Intrinsic size (matches Java Component.minIntrinsicHeight/Width) ---
-    minIntrinsicHeight() {
-      let height = 0;
-      for (const op of this.mChildren) {
-        if (op instanceof _Component) {
-          height = Math.max(height, op.minIntrinsicHeight());
-        }
-      }
-      return height;
-    }
-    minIntrinsicWidth() {
-      let width = 0;
-      for (const op of this.mChildren) {
-        if (op instanceof _Component) {
-          width = Math.max(width, op.minIntrinsicWidth());
-        }
-      }
-      return width;
-    }
-    // --- Measure/Layout ---
-    measure(_context, _minWidth, _maxWidth, _minHeight, _maxHeight, measure) {
-      const m = measure.get(this);
-      m.setW(this.mWidth);
-      m.setH(this.mHeight);
-    }
-    layout(context, measure) {
-      const m = measure.get(this);
-      this.mVisibility = m.getVisibility();
-      if (m.isGone()) return;
-      this.mX = m.getX();
-      this.mY = m.getY();
-      this.mWidth = m.getW();
-      this.mHeight = m.getH();
-      this.mFirstLayout = false;
-    }
-    animatingBounds(_context) {
-    }
-    // --- Paint ---
-    paint(paintContext) {
-      if (Visibility.isGone(this.mVisibility)) return;
-      if (Visibility.isInvisible(this.mVisibility)) return;
-      this.paintingComponent(paintContext);
-    }
-    paintingComponent(paintContext) {
-      const context = paintContext.getContext();
-      paintContext.matrixSave();
-      paintContext.matrixTranslate(this.mX, this.mY);
-      for (const op of this.mChildren) {
-        context.incrementOpCount(op);
-        if (op.isDirty() && typeof op.updateVariables === "function") {
-          op.markNotDirty();
-          op.updateVariables(context);
-        }
-        op.apply(context);
-      }
-      paintContext.matrixRestore();
-    }
-    apply(context) {
-      for (const op of this.mChildren) {
-        if (op.isDirty() && typeof op.updateVariables === "function") {
-          op.markNotDirty();
-          op.updateVariables(context);
-        }
-      }
-      super.apply(context);
-    }
-    // --- Touch/Input ---
-    onClick(context, doc, x, y) {
-      for (let i = this.mChildren.length - 1; i >= 0; i--) {
-        const child = this.mChildren[i];
-        if (child instanceof _Component) {
-          if (child.onClick(context, doc, x, y)) return true;
-        }
-      }
-      return false;
-    }
-    onTouchDown(context, doc, x, y) {
-      if (!this.contains(x, y)) return false;
-      const loc = this.getLocationInWindow();
-      const lx = x - loc[0];
-      const ly = y - loc[1];
-      let handled = false;
-      let componentHandled = false;
-      for (let i = this.mChildren.length - 1; i >= 0; i--) {
-        const op = this.mChildren[i];
-        if (op instanceof _Component) {
-          if (!componentHandled && op.onTouchDown(context, doc, x, y)) {
-            componentHandled = true;
-          }
-        } else if (op instanceof TouchExpression) {
-          op.updateVariables(context);
-          op.touchDown(context, lx, ly);
-          doc.appliedTouchOperation(this);
-          handled = true;
-        }
-      }
-      return componentHandled || handled;
-    }
-    onTouchDrag(context, doc, x, y, force) {
-      if (!force && !this.contains(x, y)) return false;
-      const loc = this.getLocationInWindow();
-      const lx = x - loc[0];
-      const ly = y - loc[1];
-      let handled = false;
-      let componentHandled = false;
-      for (let i = this.mChildren.length - 1; i >= 0; i--) {
-        const op = this.mChildren[i];
-        if (op instanceof _Component) {
-          if (!componentHandled && op.onTouchDrag(context, doc, x, y, force)) {
-            componentHandled = true;
-          }
-        } else if (op instanceof TouchExpression) {
-          op.updateVariables(context);
-          op.touchDrag(context, lx, ly);
-          handled = true;
-        }
-      }
-      return componentHandled || handled;
-    }
-    onTouchUp(context, doc, x, y, dx, dy, force) {
-      if (!force && !this.contains(x, y)) return false;
-      const loc = this.getLocationInWindow();
-      const lx = x - loc[0];
-      const ly = y - loc[1];
-      let handled = false;
-      let componentHandled = false;
-      for (let i = this.mChildren.length - 1; i >= 0; i--) {
-        const op = this.mChildren[i];
-        if (op instanceof _Component) {
-          if (!componentHandled && op.onTouchUp(context, doc, x, y, dx, dy, force)) {
-            componentHandled = true;
-          }
-        } else if (op instanceof TouchExpression) {
-          op.updateVariables(context);
-          op.touchUp(context, lx, ly, dx, dy);
-          handled = true;
-        }
-      }
-      return componentHandled || handled;
-    }
-    onTouchCancel(context, doc, x, y, force) {
-      if (!force && !this.contains(x, y)) return false;
-      const loc = this.getLocationInWindow();
-      const lx = x - loc[0];
-      const ly = y - loc[1];
-      let handled = false;
-      let componentHandled = false;
-      for (let i = this.mChildren.length - 1; i >= 0; i--) {
-        const op = this.mChildren[i];
-        if (op instanceof _Component) {
-          if (!componentHandled && op.onTouchCancel(context, doc, x, y, force)) {
-            componentHandled = true;
-          }
-        } else if (op instanceof TouchExpression) {
-          op.updateVariables(context);
-          op.touchUp(context, lx, ly, 0, 0);
-          handled = true;
-        }
-      }
-      return componentHandled || handled;
-    }
-    // --- Utility ---
-    contains(x, y) {
-      const loc = this.getLocationInWindow();
-      return x >= loc[0] && x <= loc[0] + this.mWidth && y >= loc[1] && y <= loc[1] + this.mHeight;
-    }
-    getLocationInWindow() {
-      let x = this.mX;
-      let y = this.mY;
-      let parent = this.mParent;
-      while (parent) {
-        x += parent.mX;
-        y += parent.mY;
-        parent = parent.getParent();
-      }
-      return [x, y];
-    }
-    getRoot() {
-      let c = this;
-      while (c.mParent) c = c.mParent;
-      return c;
-    }
-    getComponent(id) {
-      if (this.mComponentId === id) return this;
-      for (const child of this.mChildren) {
-        if (child instanceof _Component) {
-          const found = child.getComponent(id);
-          if (found) return found;
-        }
-      }
-      return null;
-    }
-    addComponentValue(_v) {
-    }
-    registerVariables(_context) {
-    }
-    updateVariables(_context) {
-    }
-    selfOrModifier(cls) {
-      for (const op of this.mChildren) {
-        if (op instanceof cls) return op;
-      }
-      return null;
-    }
-    hasComputedLayout() {
-      return false;
-    }
-    applyComputedLayout(_type, _context, _m, _parent) {
-      return false;
-    }
-    write(_buffer) {
-    }
-    deepToString(indent) {
-      return `${indent}Component(${this.mComponentId})`;
-    }
-  };
-
   // src/core/operations/layout/measure/ComponentMeasure.ts
   var _ComponentMeasure = class _ComponentMeasure {
     constructor(id, x, y, w, h, visibility = _ComponentMeasure.VISIBLE) {
@@ -4172,7 +3808,7 @@ var RC = (() => {
       this.mY = y;
       this.mW = w;
       this.mH = h;
-      this.mVisibility = visibility & 15;
+      this.mVisibility = visibility;
     }
     getX() {
       return this.mX;
@@ -4256,224 +3892,103 @@ var RC = (() => {
   _ComponentMeasure.INVISIBLE = 2;
   var ComponentMeasure = _ComponentMeasure;
 
-  // src/core/operations/layout/measure/MeasurePass.ts
-  var MeasurePass = class {
-    constructor() {
-      this.mList = /* @__PURE__ */ new Map();
+  // src/core/operations/layout/animation/AnimationSpec.ts
+  function intToAnimation(v) {
+    switch (v) {
+      case 0:
+        return 0 /* FADE_IN */;
+      case 1:
+        return 1 /* FADE_OUT */;
+      case 2:
+        return 2 /* SLIDE_LEFT */;
+      case 3:
+        return 3 /* SLIDE_RIGHT */;
+      case 4:
+        return 4 /* SLIDE_TOP */;
+      case 5:
+        return 5 /* SLIDE_BOTTOM */;
+      case 6:
+        return 6 /* ROTATE */;
+      case 7:
+        return 7 /* PARTICLE */;
+      default:
+        return 0 /* FADE_IN */;
     }
-    clear() {
-      this.mList.clear();
+  }
+  var _AnimationSpec = class _AnimationSpec extends Operation {
+    constructor(animationId = -1, motionDuration = 300, motionEasingType = Easing.CUBIC_STANDARD, visibilityDuration = 300, visibilityEasingType = Easing.CUBIC_STANDARD, enterAnimation = 0 /* FADE_IN */, exitAnimation = 1 /* FADE_OUT */) {
+      super();
+      this.mAnimationId = animationId;
+      this.mMotionDuration = motionDuration;
+      this.mMotionEasingType = motionEasingType;
+      this.mVisibilityDuration = visibilityDuration;
+      this.mVisibilityEasingType = visibilityEasingType;
+      this.mEnterAnimation = enterAnimation;
+      this.mExitAnimation = exitAnimation;
     }
-    add(measure) {
-      if (measure.mId === -1) throw new Error("Component has no id!");
-      this.mList.set(measure.mId, measure);
+    isAnimationEnabled() {
+      return this.mAnimationId !== 0;
     }
-    contains(id) {
-      return this.mList.has(id);
+    getAnimationId() {
+      return this.mAnimationId;
     }
-    get(arg) {
-      if (typeof arg === "number") {
-        let m2 = this.mList.get(arg);
-        if (!m2) {
-          m2 = new ComponentMeasure(arg, 0, 0, 0, 0, ComponentMeasure.GONE);
-          this.mList.set(arg, m2);
-        }
-        return m2;
-      }
-      const c = arg;
-      const id = c.getComponentId();
-      let m = this.mList.get(id);
-      if (!m) {
-        m = new ComponentMeasure(
-          id,
-          c.getX(),
-          c.getY(),
-          c.getWidth(),
-          c.getHeight(),
-          c.getVisibility() & 15
-        );
-        this.mList.set(id, m);
-      }
-      return m;
+    getMotionDuration() {
+      return this.mMotionDuration;
     }
-  };
-
-  // src/core/operations/layout/RootLayoutComponent.ts
-  var _RootLayoutComponent = class _RootLayoutComponent extends Component {
-    constructor(componentId = -1) {
-      super(componentId);
-      this.mCurrentId = -1;
-      this.mHasTouchListeners = false;
+    getMotionEasingType() {
+      return this.mMotionEasingType;
     }
-    getHasTouchListeners() {
-      return this.mHasTouchListeners;
+    getVisibilityDuration() {
+      return this.mVisibilityDuration;
     }
-    setHasTouchListeners(v) {
-      this.mHasTouchListeners = v;
+    getVisibilityEasingType() {
+      return this.mVisibilityEasingType;
     }
-    assignIds(lastId) {
-      this.mCurrentId = lastId;
-      this.assignId(this);
+    getEnterAnimation() {
+      return this.mEnterAnimation;
     }
-    assignId(component) {
-      if (component.getComponentId() === -1) {
-        this.mCurrentId--;
-        component.mComponentId = this.mCurrentId;
-      }
-      for (const op of component.getList()) {
-        if (op instanceof Component) {
-          this.assignId(op);
-        }
-      }
-    }
-    /** Measure then layout the tree of components */
-    layoutTree(context) {
-      if (!this.mNeedsMeasure) return;
-      this.mNeedsMeasure = false;
-      this.setWidth(context.mWidth);
-      this.setHeight(context.mHeight);
-      context.mViewportWidth = context.mWidth;
-      context.mViewportHeight = context.mHeight;
-      const measurePass = new MeasurePass();
-      for (const op of this.getList()) {
-        if (typeof op.measure === "function") {
-          const paintContext = context.getPaintContext();
-          if (paintContext) {
-            op.measure(paintContext, 0, this.mWidth, 0, this.mHeight, measurePass);
-            if (typeof op.layout === "function") {
-              op.layout(context, measurePass);
-            }
-          }
-        }
-      }
-    }
-    /** Measure the document and layout components, returning first child size */
-    measureDoc(context, minWidth, maxWidth, minHeight, maxHeight) {
-      this.mNeedsMeasure = false;
-      this.setWidth(context.mWidth);
-      this.setHeight(context.mHeight);
-      context.mViewportWidth = context.mWidth;
-      context.mViewportHeight = context.mHeight;
-      const measurePass = new MeasurePass();
-      let firstComponent = null;
-      for (const op of this.getList()) {
-        if (typeof op.measure === "function") {
-          if (firstComponent === null && op instanceof Component) {
-            firstComponent = op;
-          }
-          const paintContext = context.getPaintContext();
-          if (paintContext) {
-            op.measure(paintContext, minWidth, maxWidth, minHeight, maxHeight, measurePass);
-            if (typeof op.layout === "function") {
-              op.layout(context, measurePass);
-            }
-          }
-        }
-      }
-      if (firstComponent) {
-        this.setWidth(firstComponent.getWidth());
-        this.setHeight(firstComponent.getHeight());
-      }
-    }
-    paint(paintContext) {
-      this.mNeedsRepaint = false;
-      const remoteContext = paintContext.getContext();
-      paintContext.save();
-      if (!this.getParent()) {
-        paintContext.clipRect(0, 0, this.mWidth, this.mHeight);
-      }
-      for (const op of this.getList()) {
-        if (op instanceof PaintOperation) {
-          op.paint(paintContext);
-          remoteContext.incrementOpCount(op);
-        }
-      }
-      paintContext.restore();
-    }
-    getComponent(id) {
-      const queue = [this];
-      while (queue.length > 0) {
-        const c = queue.shift();
-        if (c.getComponentId() === id) return c;
-        for (const child of c.getList()) {
-          if (child instanceof Component) {
-            queue.push(child);
-          }
-        }
-      }
-      return null;
-    }
-    displayHierarchy() {
-      return `RootLayout(${this.getWidth()}x${this.getHeight()})`;
-    }
-    onClick(context, doc, x, y) {
-      for (const child of this.getList()) {
-        if (typeof child.onClick === "function") {
-          if (child.onClick(context, doc, x, y)) return true;
-        }
-      }
-      return false;
-    }
-    onTouchDown(context, doc, x, y) {
-      for (const child of this.getList()) {
-        if (typeof child.onTouchDown === "function") {
-          if (child.onTouchDown(context, doc, x, y)) return true;
-        }
-      }
-      return false;
+    getExitAnimation() {
+      return this.mExitAnimation;
     }
     write(buffer) {
-      buffer.start(_RootLayoutComponent.OP_CODE);
-      buffer.writeInt(this.getComponentId());
+      buffer.start(_AnimationSpec.OP_CODE);
+      buffer.writeInt(this.mAnimationId);
+      buffer.writeFloat(this.mMotionDuration);
+      buffer.writeInt(this.mMotionEasingType);
+      buffer.writeFloat(this.mVisibilityDuration);
+      buffer.writeInt(this.mVisibilityEasingType);
+      buffer.writeInt(this.mEnterAnimation);
+      buffer.writeInt(this.mExitAnimation);
+    }
+    apply(_context) {
     }
     deepToString(indent) {
-      return `${indent}RootLayoutComponent(${this.getComponentId()})`;
+      return `${indent}AnimationSpec(id=${this.mAnimationId}, motion=${this.mMotionDuration}ms, vis=${this.mVisibilityDuration}ms)`;
     }
     static read(buffer, operations) {
-      const componentId = buffer.readInt();
-      const component = new _RootLayoutComponent(componentId);
-      operations.push(component);
+      const animationId = buffer.readInt();
+      const motionDuration = buffer.readFloat();
+      const motionEasingType = buffer.readInt();
+      const visibilityDuration = buffer.readFloat();
+      const visibilityEasingType = buffer.readInt();
+      const enterAnimation = intToAnimation(buffer.readInt());
+      const exitAnimation = intToAnimation(buffer.readInt());
+      const op = new _AnimationSpec(
+        animationId,
+        motionDuration,
+        motionEasingType,
+        visibilityDuration,
+        visibilityEasingType,
+        enterAnimation,
+        exitAnimation
+      );
+      operations.push(op);
     }
   };
-  _RootLayoutComponent.OP_CODE = 200;
-  var RootLayoutComponent = _RootLayoutComponent;
-
-  // src/core/TimeVariables.ts
-  var TimeVariables = class {
-    constructor(clock) {
-      this.mLastAnimationTime = -1;
-      this.mClock = clock;
-      this.mStartTime = performance.now() / 1e3;
-    }
-    getClock() {
-      return this.mClock;
-    }
-    /** Seconds elapsed since this TimeVariables was created. */
-    getElapsedSeconds() {
-      return performance.now() / 1e3 - this.mStartTime;
-    }
-    updateTime(context) {
-      const snapshot = this.mClock.snapshot();
-      context.loadFloat(RemoteContext.ID_OFFSET_TO_UTC, snapshot.getOffsetSeconds());
-      context.loadFloat(RemoteContext.ID_CONTINUOUS_SEC, snapshot.getContinuousSeconds());
-      context.loadInteger(RemoteContext.ID_EPOCH_SECOND, snapshot.getEpochSeconds());
-      context.loadFloat(RemoteContext.ID_TIME_IN_SEC, snapshot.getTimeInSec());
-      context.loadFloat(RemoteContext.ID_TIME_IN_MIN, snapshot.getTimeInMin());
-      context.loadFloat(RemoteContext.ID_TIME_IN_HR, snapshot.getHour());
-      context.loadFloat(RemoteContext.ID_CALENDAR_MONTH, snapshot.getMonth());
-      context.loadFloat(RemoteContext.ID_DAY_OF_MONTH, snapshot.getDayOfMonth());
-      context.loadFloat(RemoteContext.ID_WEEK_DAY, snapshot.getDayOfWeek());
-      context.loadFloat(RemoteContext.ID_DAY_OF_YEAR, snapshot.getDayOfYear());
-      context.loadFloat(RemoteContext.ID_YEAR, snapshot.getYear());
-      const animTime = this.getElapsedSeconds();
-      const deltaTime = this.mLastAnimationTime >= 0 ? animTime - this.mLastAnimationTime : 0;
-      this.mLastAnimationTime = animTime;
-      context.loadFloat(RemoteContext.ID_ANIMATION_TIME, animTime);
-      context.setAnimationTime(animTime);
-      context.loadFloat(RemoteContext.ID_ANIMATION_DELTA_TIME, deltaTime);
-      context.loadFloat(RemoteContext.ID_API_LEVEL, CoreDocument.DOCUMENT_API_LEVEL);
-    }
-  };
+  _AnimationSpec.OP_CODE = 14;
+  _AnimationSpec.DEFAULT = new _AnimationSpec(-1, 300, Easing.CUBIC_STANDARD, 300, Easing.CUBIC_STANDARD, 0 /* FADE_IN */, 1 /* FADE_OUT */);
+  _AnimationSpec.DISABLED = new _AnimationSpec(0, 0, Easing.CUBIC_STANDARD, 0, Easing.CUBIC_STANDARD, 0 /* FADE_IN */, 1 /* FADE_OUT */);
+  var AnimationSpec = _AnimationSpec;
 
   // src/core/operations/paint/PaintBundle.ts
   var _f32dv = new DataView(new ArrayBuffer(4));
@@ -4845,6 +4360,1026 @@ var RC = (() => {
   _PaintBundle.STROKE = 1;
   _PaintBundle.FILL_AND_STROKE = 2;
   var PaintBundle = _PaintBundle;
+
+  // src/core/operations/layout/animation/AnimateMeasure.ts
+  var AnimateMeasure = class {
+    constructor(startTime, component, original, target, duration, durationVisibilityChange, enterAnimation = 0 /* FADE_IN */, exitAnimation = 1 /* FADE_OUT */, motionEasingType = Easing.CUBIC_STANDARD, visibilityEasingType = Easing.CUBIC_ACCELERATE) {
+      this.mP = 0;
+      this.mVp = 0;
+      this.paintBundle = new PaintBundle();
+      this.mStartTime = startTime;
+      this.mComponent = component;
+      this.mOriginal = original;
+      this.mTarget = target;
+      this.mDuration = duration;
+      this.mDurationVisibilityChange = durationVisibilityChange;
+      this.mEnterAnimation = enterAnimation;
+      this.mExitAnimation = exitAnimation;
+      this.mMotionEasingType = motionEasingType;
+      this.mVisibilityEasingType = visibilityEasingType;
+      this.mMotionEasing = new CubicEasing(motionEasingType);
+      this.mVisibilityEasing = new CubicEasing(visibilityEasingType);
+      component.mVisibility = target.getVisibility();
+    }
+    update(currentTime) {
+      const elapsed = Math.max(0, currentTime - this.mStartTime);
+      const motionProgress = this.mDuration > 0 ? Math.min(1, elapsed / this.mDuration) : 1;
+      const visProgress = this.mDurationVisibilityChange > 0 ? Math.min(1, elapsed / this.mDurationVisibilityChange) : 1;
+      this.mP = this.mMotionEasing.get(motionProgress);
+      this.mVp = this.mVisibilityEasing.get(visProgress);
+    }
+    apply(context) {
+      const time = context.mClock?.millis() ?? Date.now();
+      this.update(time);
+      this.mComponent.setX(this.getX());
+      this.mComponent.setY(this.getY());
+      this.mComponent.setWidth(this.getWidth());
+      this.mComponent.setHeight(this.getHeight());
+      if (typeof this.mComponent.updateVariables === "function") {
+        this.mComponent.updateVariables(context);
+      }
+    }
+    paint(context) {
+      this.apply(context.getContext());
+      const origVis = this.mOriginal.getVisibility();
+      const targetVis = this.mTarget.getVisibility();
+      if (origVis !== targetVis) {
+        if (this.mTarget.isGone()) {
+          switch (this.mExitAnimation) {
+            case 1 /* FADE_OUT */: {
+              context.save();
+              context.savePaint();
+              this.paintBundle.reset();
+              this.paintBundle.setColor(Math.max(0, Math.min(1, 1 - this.mVp)), 0, 0, 0);
+              context.applyPaint(this.paintBundle);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restorePaint();
+              context.restore();
+              break;
+            }
+            case 2 /* SLIDE_LEFT */: {
+              const parentW = this.mComponent.getParent()?.getWidth() ?? context.getContext().mWidth;
+              context.save();
+              context.translate(-this.mVp * parentW, 0);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 3 /* SLIDE_RIGHT */: {
+              const parentW = this.mComponent.getParent()?.getWidth() ?? context.getContext().mWidth;
+              context.save();
+              context.translate(this.mVp * parentW, 0);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 4 /* SLIDE_TOP */: {
+              const parentH = this.mComponent.getParent()?.getHeight() ?? context.getContext().mHeight;
+              context.save();
+              context.translate(0, -this.mVp * parentH);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 5 /* SLIDE_BOTTOM */: {
+              const parentH = this.mComponent.getParent()?.getHeight() ?? context.getContext().mHeight;
+              context.save();
+              context.translate(0, this.mVp * parentH);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            default: {
+              context.save();
+              context.savePaint();
+              this.paintBundle.reset();
+              this.paintBundle.setColor(Math.max(0, Math.min(1, 1 - this.mVp)), 0, 0, 0);
+              context.applyPaint(this.paintBundle);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restorePaint();
+              context.restore();
+              break;
+            }
+          }
+        } else if (this.mOriginal.isGone() && !this.mTarget.isGone()) {
+          switch (this.mEnterAnimation) {
+            case 6 /* ROTATE */: {
+              const px = this.mTarget.getX() + this.mTarget.getW() / 2;
+              const py = this.mTarget.getY() + this.mTarget.getH() / 2;
+              context.save();
+              context.savePaint();
+              context.matrixRotate(this.mVp * 360, px, py);
+              context.matrixScale(this.mVp, this.mVp, px, py);
+              this.paintBundle.reset();
+              this.paintBundle.setColor(Math.max(0, Math.min(1, this.mVp)), 0, 0, 0);
+              context.applyPaint(this.paintBundle);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restorePaint();
+              context.restore();
+              break;
+            }
+            case 0 /* FADE_IN */: {
+              context.save();
+              context.savePaint();
+              this.paintBundle.reset();
+              this.paintBundle.setColor(Math.max(0, Math.min(1, this.mVp)), 0, 0, 0);
+              context.applyPaint(this.paintBundle);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restorePaint();
+              context.restore();
+              break;
+            }
+            case 2 /* SLIDE_LEFT */: {
+              const parentW = this.mComponent.getParent()?.getWidth() ?? context.getContext().mWidth;
+              context.save();
+              context.translate((1 - this.mVp) * parentW, 0);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 3 /* SLIDE_RIGHT */: {
+              const parentW = this.mComponent.getParent()?.getWidth() ?? context.getContext().mWidth;
+              context.save();
+              context.translate(-(1 - this.mVp) * parentW, 0);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 4 /* SLIDE_TOP */: {
+              const parentH = this.mComponent.getParent()?.getHeight() ?? context.getContext().mHeight;
+              context.save();
+              context.translate(0, (1 - this.mVp) * parentH);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            case 5 /* SLIDE_BOTTOM */: {
+              const parentH = this.mComponent.getParent()?.getHeight() ?? context.getContext().mHeight;
+              context.save();
+              context.translate(0, -(1 - this.mVp) * parentH);
+              context.saveLayer(
+                this.mComponent.getX(),
+                this.mComponent.getY(),
+                this.mComponent.getWidth(),
+                this.mComponent.getHeight()
+              );
+              this.mComponent.paintingComponent(context);
+              context.restore();
+              context.restore();
+              break;
+            }
+            default: {
+              this.mComponent.paintingComponent(context);
+              break;
+            }
+          }
+        } else {
+          this.mComponent.paintingComponent(context);
+        }
+      } else if (!this.mTarget.isGone()) {
+        this.mComponent.paintingComponent(context);
+      }
+      if (this.mP >= 1 && this.mVp >= 1) {
+        this.mComponent.mVisibility = this.mTarget.getVisibility();
+        this.mComponent.setX(this.mTarget.getX());
+        this.mComponent.setY(this.mTarget.getY());
+        this.mComponent.setWidth(this.mTarget.getW());
+        this.mComponent.setHeight(this.mTarget.getH());
+      }
+    }
+    isDone() {
+      return this.mP >= 1 && this.mVp >= 1;
+    }
+    getX() {
+      return this.mOriginal.getX() * (1 - this.mP) + this.mTarget.getX() * this.mP;
+    }
+    getY() {
+      return this.mOriginal.getY() * (1 - this.mP) + this.mTarget.getY() * this.mP;
+    }
+    getWidth() {
+      return this.mOriginal.getW() * (1 - this.mP) + this.mTarget.getW() * this.mP;
+    }
+    getHeight() {
+      return this.mOriginal.getH() * (1 - this.mP) + this.mTarget.getH() * this.mP;
+    }
+    getVisibility() {
+      if (this.mOriginal.getVisibility() === this.mTarget.getVisibility()) {
+        return 1;
+      } else if (!this.mTarget.isGone()) {
+        return this.mVp;
+      } else {
+        return 1 - this.mVp;
+      }
+    }
+    updateTarget(context, measure, currentTime) {
+      const currentX = this.getX();
+      const currentY = this.getY();
+      const currentW = this.getWidth();
+      const currentH = this.getHeight();
+      this.mOriginal.setX(currentX);
+      this.mOriginal.setY(currentY);
+      this.mOriginal.setW(currentW);
+      this.mOriginal.setH(currentH);
+      const targetX = measure.getX();
+      const targetY = measure.getY();
+      const targetW = measure.getW();
+      const targetH = measure.getH();
+      const targetVisibility = measure.getVisibility();
+      if (this.mTarget.getX() !== targetX || this.mTarget.getY() !== targetY || this.mTarget.getW() !== targetW || this.mTarget.getH() !== targetH || this.mTarget.getVisibility() !== targetVisibility) {
+        this.mTarget.setX(targetX);
+        this.mTarget.setY(targetY);
+        this.mTarget.setW(targetW);
+        this.mTarget.setH(targetH);
+        this.mTarget.setVisibility(targetVisibility);
+        this.mStartTime = currentTime;
+        this.mP = 0;
+        this.mVp = 0;
+      }
+    }
+    getOriginal() {
+      return this.mOriginal;
+    }
+    getTarget() {
+      return this.mTarget;
+    }
+  };
+
+  // src/core/operations/layout/Component.ts
+  var _Visibility = class _Visibility {
+    static isGone(v) {
+      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_GONE) === _Visibility.OVERRIDE_GONE;
+      return v === _Visibility.GONE;
+    }
+    static isVisible(v) {
+      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_VISIBLE) === _Visibility.OVERRIDE_VISIBLE;
+      return v === _Visibility.VISIBLE;
+    }
+    static isInvisible(v) {
+      if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_INVISIBLE) === _Visibility.OVERRIDE_INVISIBLE;
+      return v === _Visibility.INVISIBLE;
+    }
+    static hasOverride(v) {
+      return v >> 4 > 0;
+    }
+    static clearOverride(v) {
+      return v & 15;
+    }
+    static add(v, override) {
+      let result = (v & 15) + override;
+      if ((result & _Visibility.CLEAR_OVERRIDE) === _Visibility.CLEAR_OVERRIDE) {
+        result = result & 15;
+      }
+      return result;
+    }
+  };
+  // Matches Java Component.Visibility encoding
+  _Visibility.GONE = 0;
+  _Visibility.VISIBLE = 1;
+  _Visibility.INVISIBLE = 2;
+  _Visibility.OVERRIDE_GONE = 16;
+  _Visibility.OVERRIDE_VISIBLE = 32;
+  _Visibility.OVERRIDE_INVISIBLE = 64;
+  _Visibility.CLEAR_OVERRIDE = 128;
+  var Visibility = _Visibility;
+  var Component = class _Component extends PaintOperation {
+    constructor(componentId, animationId = -1, x = 0, y = 0, width = 0, height = 0) {
+      super();
+      this.mAnimationId = -1;
+      this.mParent = null;
+      this.mChildren = [];
+      // Position & dimensions
+      this.mX = 0;
+      this.mY = 0;
+      this.mWidth = 0;
+      this.mHeight = 0;
+      this.mZIndex = 0;
+      this.mVisibility = Visibility.VISIBLE;
+      this.mNeedsMeasure = true;
+      this.mNeedsRepaint = true;
+      this.mFirstLayout = true;
+      this.mAnimationSpec = AnimationSpec.DEFAULT;
+      this.mAnimateMeasure = null;
+      this.mNeedsBoundsAnimation = false;
+      this.mComponentId = componentId;
+      this.mAnimationId = animationId;
+      this.mX = x;
+      this.mY = y;
+      this.mWidth = width;
+      this.mHeight = height;
+    }
+    getComponentId() {
+      return this.mComponentId;
+    }
+    setComponentId(id) {
+      this.mComponentId = id;
+    }
+    getAnimationId() {
+      return this.mAnimationId;
+    }
+    setAnimationId(id) {
+      this.mAnimationId = id;
+    }
+    getParent() {
+      return this.mParent;
+    }
+    setParent(parent) {
+      this.mParent = parent;
+    }
+    getList() {
+      return this.mChildren;
+    }
+    getX() {
+      return this.mX;
+    }
+    setX(v) {
+      this.mX = v;
+    }
+    getY() {
+      return this.mY;
+    }
+    setY(v) {
+      this.mY = v;
+    }
+    getWidth() {
+      return this.mWidth;
+    }
+    setWidth(v) {
+      this.mWidth = v;
+    }
+    getHeight() {
+      return this.mHeight;
+    }
+    setHeight(v) {
+      this.mHeight = v;
+    }
+    getZIndex() {
+      return this.mZIndex;
+    }
+    getScrollX() {
+      return 0;
+    }
+    getScrollY() {
+      return 0;
+    }
+    needsMeasure() {
+      return this.mNeedsMeasure;
+    }
+    invalidateMeasure() {
+      this.mNeedsMeasure = true;
+      if (this.mParent) this.mParent.invalidateMeasure();
+    }
+    clearNeedsMeasure() {
+      this.mNeedsMeasure = false;
+    }
+    needsRepaint() {
+      return this.mNeedsRepaint;
+    }
+    doesNeedsRepaint() {
+      return this.mNeedsRepaint;
+    }
+    setNeedsRepaint(v) {
+      this.mNeedsRepaint = v;
+    }
+    needsBoundsAnimation() {
+      return this.mNeedsBoundsAnimation;
+    }
+    markNeedsBoundsAnimation() {
+      this.mNeedsBoundsAnimation = true;
+      if (this.mParent) {
+        this.mParent.markNeedsBoundsAnimation();
+      }
+    }
+    clearNeedsBoundsAnimation() {
+      this.mNeedsBoundsAnimation = false;
+    }
+    isVisible() {
+      if (Visibility.isGone(this.mVisibility)) return false;
+      if (this.mParent) return this.mParent.isVisible();
+      return true;
+    }
+    isGone() {
+      return Visibility.isGone(this.mVisibility);
+    }
+    getVisibility() {
+      return this.mVisibility;
+    }
+    setVisibility(v) {
+      if (v === this.mVisibility) return;
+      this.mVisibility = v;
+      this.invalidateMeasure();
+      if (this.mParent) this.mParent.invalidateMeasure();
+    }
+    inflate() {
+      for (const op of this.mChildren) {
+        if (op instanceof AnimationSpec) {
+          this.mAnimationSpec = op;
+          this.mAnimationId = op.getAnimationId();
+        }
+        if (op instanceof _Component) {
+          op.setParent(this);
+        }
+      }
+    }
+    // --- Intrinsic size (matches Java Component.minIntrinsicHeight/Width) ---
+    minIntrinsicHeight() {
+      let height = 0;
+      for (const op of this.mChildren) {
+        if (op instanceof _Component) {
+          height = Math.max(height, op.minIntrinsicHeight());
+        }
+      }
+      return height;
+    }
+    minIntrinsicWidth() {
+      let width = 0;
+      for (const op of this.mChildren) {
+        if (op instanceof _Component) {
+          width = Math.max(width, op.minIntrinsicWidth());
+        }
+      }
+      return width;
+    }
+    // --- Measure/Layout ---
+    measure(_context, _minWidth, _maxWidth, _minHeight, _maxHeight, measure) {
+      const m = measure.get(this);
+      m.setW(this.mWidth);
+      m.setH(this.mHeight);
+    }
+    layout(context, measure) {
+      const m = measure.get(this);
+      const allowAnimation = !this.mFirstLayout && context.isAnimationEnabled() && this.mAnimationSpec.isAnimationEnabled() && m.getAllowsAnimation();
+      if (allowAnimation) {
+        if (this.mAnimateMeasure === null) {
+          const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mVisibility);
+          const target = new ComponentMeasure(this.mComponentId, m.getX(), m.getY(), m.getW(), m.getH(), m.getVisibility());
+          if (!target.same(origin)) {
+            const now = context.mClock?.millis() ?? Date.now();
+            this.mAnimateMeasure = new AnimateMeasure(
+              now,
+              this,
+              origin,
+              target,
+              this.mAnimationSpec.getMotionDuration(),
+              this.mAnimationSpec.getVisibilityDuration(),
+              this.mAnimationSpec.getEnterAnimation(),
+              this.mAnimationSpec.getExitAnimation(),
+              this.mAnimationSpec.getMotionEasingType(),
+              this.mAnimationSpec.getVisibilityEasingType()
+            );
+          }
+        } else {
+          const now = context.mClock?.millis() ?? Date.now();
+          this.mAnimateMeasure.updateTarget(context, m, now);
+        }
+      } else {
+        this.mAnimateMeasure = null;
+      }
+      if (this.mAnimateMeasure === null) {
+        this.mVisibility = m.getVisibility();
+        this.mX = m.getX();
+        this.mY = m.getY();
+        this.mWidth = m.getW();
+        this.mHeight = m.getH();
+        if (this.mParent) {
+          this.clearNeedsBoundsAnimation();
+        }
+      } else {
+        this.mAnimateMeasure.apply(context);
+        this.markNeedsBoundsAnimation();
+      }
+      this.mFirstLayout = false;
+    }
+    animatingBounds(context) {
+      if (!context.isAnimationEnabled()) {
+        this.mAnimateMeasure = null;
+        if (this.mParent) {
+          this.clearNeedsBoundsAnimation();
+        }
+      } else if (this.mAnimateMeasure !== null) {
+        this.mAnimateMeasure.apply(context);
+        if (this.mAnimateMeasure.isDone()) {
+          this.mAnimateMeasure = null;
+          if (this.mParent) {
+            this.clearNeedsBoundsAnimation();
+          }
+        } else {
+          this.markNeedsBoundsAnimation();
+        }
+      } else {
+        if (this.mParent) {
+          this.clearNeedsBoundsAnimation();
+        }
+      }
+      for (const op of this.mChildren) {
+        if (op instanceof _Component) {
+          op.animatingBounds(context);
+        }
+      }
+    }
+    // --- Paint ---
+    applyAnimationAsNeeded(paintContext) {
+      if (!paintContext.isAnimationEnabled()) {
+        if (this.mAnimateMeasure !== null) {
+          this.mAnimateMeasure = null;
+          if (this.mParent) {
+            this.clearNeedsBoundsAnimation();
+          }
+        }
+        return false;
+      }
+      if (this.mAnimateMeasure !== null) {
+        this.mAnimateMeasure.paint(paintContext);
+        if (this.mAnimateMeasure.isDone()) {
+          this.mAnimateMeasure = null;
+          if (this.mParent) {
+            this.clearNeedsBoundsAnimation();
+          }
+          paintContext.needsRepaint();
+        } else {
+          this.markNeedsBoundsAnimation();
+          paintContext.needsRepaint();
+        }
+        return true;
+      }
+      return false;
+    }
+    paint(paintContext) {
+      if (this.applyAnimationAsNeeded(paintContext)) {
+        return;
+      }
+      if (Visibility.isGone(this.mVisibility)) return;
+      if (Visibility.isInvisible(this.mVisibility)) return;
+      this.paintingComponent(paintContext);
+    }
+    paintingComponent(paintContext) {
+      const context = paintContext.getContext();
+      paintContext.matrixSave();
+      paintContext.matrixTranslate(this.mX, this.mY);
+      for (const op of this.mChildren) {
+        context.incrementOpCount(op);
+        if (op.isDirty() && typeof op.updateVariables === "function") {
+          op.markNotDirty();
+          op.updateVariables(context);
+        }
+        op.apply(context);
+      }
+      paintContext.matrixRestore();
+    }
+    apply(context) {
+      for (const op of this.mChildren) {
+        if (op.isDirty() && typeof op.updateVariables === "function") {
+          op.markNotDirty();
+          op.updateVariables(context);
+        }
+      }
+      super.apply(context);
+    }
+    // --- Touch/Input ---
+    onClick(context, doc, x, y) {
+      for (let i = this.mChildren.length - 1; i >= 0; i--) {
+        const child = this.mChildren[i];
+        if (child instanceof _Component) {
+          if (child.onClick(context, doc, x, y)) return true;
+        }
+      }
+      return false;
+    }
+    onTouchDown(context, doc, x, y) {
+      if (!this.contains(x, y)) return false;
+      const loc = this.getLocationInWindow();
+      const lx = x - loc[0];
+      const ly = y - loc[1];
+      let handled = false;
+      let componentHandled = false;
+      for (let i = this.mChildren.length - 1; i >= 0; i--) {
+        const op = this.mChildren[i];
+        if (op instanceof _Component) {
+          if (!componentHandled && op.onTouchDown(context, doc, x, y)) {
+            componentHandled = true;
+          }
+        } else if (op instanceof TouchExpression) {
+          op.updateVariables(context);
+          op.touchDown(context, lx, ly);
+          doc.appliedTouchOperation(this);
+          handled = true;
+        }
+      }
+      return componentHandled || handled;
+    }
+    onTouchDrag(context, doc, x, y, force) {
+      if (!force && !this.contains(x, y)) return false;
+      const loc = this.getLocationInWindow();
+      const lx = x - loc[0];
+      const ly = y - loc[1];
+      let handled = false;
+      let componentHandled = false;
+      for (let i = this.mChildren.length - 1; i >= 0; i--) {
+        const op = this.mChildren[i];
+        if (op instanceof _Component) {
+          if (!componentHandled && op.onTouchDrag(context, doc, x, y, force)) {
+            componentHandled = true;
+          }
+        } else if (op instanceof TouchExpression) {
+          op.updateVariables(context);
+          op.touchDrag(context, lx, ly);
+          handled = true;
+        }
+      }
+      return componentHandled || handled;
+    }
+    onTouchUp(context, doc, x, y, dx, dy, force) {
+      if (!force && !this.contains(x, y)) return false;
+      const loc = this.getLocationInWindow();
+      const lx = x - loc[0];
+      const ly = y - loc[1];
+      let handled = false;
+      let componentHandled = false;
+      for (let i = this.mChildren.length - 1; i >= 0; i--) {
+        const op = this.mChildren[i];
+        if (op instanceof _Component) {
+          if (!componentHandled && op.onTouchUp(context, doc, x, y, dx, dy, force)) {
+            componentHandled = true;
+          }
+        } else if (op instanceof TouchExpression) {
+          op.updateVariables(context);
+          op.touchUp(context, lx, ly, dx, dy);
+          handled = true;
+        }
+      }
+      return componentHandled || handled;
+    }
+    onTouchCancel(context, doc, x, y, force) {
+      if (!force && !this.contains(x, y)) return false;
+      const loc = this.getLocationInWindow();
+      const lx = x - loc[0];
+      const ly = y - loc[1];
+      let handled = false;
+      let componentHandled = false;
+      for (let i = this.mChildren.length - 1; i >= 0; i--) {
+        const op = this.mChildren[i];
+        if (op instanceof _Component) {
+          if (!componentHandled && op.onTouchCancel(context, doc, x, y, force)) {
+            componentHandled = true;
+          }
+        } else if (op instanceof TouchExpression) {
+          op.updateVariables(context);
+          op.touchUp(context, lx, ly, 0, 0);
+          handled = true;
+        }
+      }
+      return componentHandled || handled;
+    }
+    // --- Utility ---
+    contains(x, y) {
+      const loc = this.getLocationInWindow();
+      return x >= loc[0] && x <= loc[0] + this.mWidth && y >= loc[1] && y <= loc[1] + this.mHeight;
+    }
+    getLocationInWindow() {
+      let x = this.mX;
+      let y = this.mY;
+      let parent = this.mParent;
+      while (parent) {
+        x += parent.mX;
+        y += parent.mY;
+        parent = parent.getParent();
+      }
+      return [x, y];
+    }
+    getRoot() {
+      let c = this;
+      while (c.mParent) c = c.mParent;
+      return c;
+    }
+    getComponent(id) {
+      if (this.mComponentId === id) return this;
+      for (const child of this.mChildren) {
+        if (child instanceof _Component) {
+          const found = child.getComponent(id);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    addComponentValue(_v) {
+    }
+    registerVariables(_context) {
+    }
+    updateVariables(_context) {
+    }
+    selfOrModifier(cls) {
+      for (const op of this.mChildren) {
+        if (op instanceof cls) return op;
+      }
+      return null;
+    }
+    hasComputedLayout() {
+      return false;
+    }
+    applyComputedLayout(_type, _context, _m, _parent) {
+      return false;
+    }
+    write(_buffer) {
+    }
+    deepToString(indent) {
+      return `${indent}Component(${this.mComponentId})`;
+    }
+  };
+
+  // src/core/operations/layout/measure/MeasurePass.ts
+  var MeasurePass = class {
+    constructor() {
+      this.mList = /* @__PURE__ */ new Map();
+    }
+    clear() {
+      this.mList.clear();
+    }
+    add(measure) {
+      if (measure.mId === -1) throw new Error("Component has no id!");
+      this.mList.set(measure.mId, measure);
+    }
+    contains(id) {
+      return this.mList.has(id);
+    }
+    get(arg) {
+      if (typeof arg === "number") {
+        let m2 = this.mList.get(arg);
+        if (!m2) {
+          m2 = new ComponentMeasure(arg, 0, 0, 0, 0, ComponentMeasure.GONE);
+          this.mList.set(arg, m2);
+        }
+        return m2;
+      }
+      const c = arg;
+      const id = c.getComponentId();
+      let m = this.mList.get(id);
+      if (!m) {
+        m = new ComponentMeasure(
+          id,
+          c.getX(),
+          c.getY(),
+          c.getWidth(),
+          c.getHeight(),
+          c.getVisibility() & 15
+        );
+        this.mList.set(id, m);
+      }
+      return m;
+    }
+  };
+
+  // src/core/operations/layout/RootLayoutComponent.ts
+  var _RootLayoutComponent = class _RootLayoutComponent extends Component {
+    constructor(componentId = -1) {
+      super(componentId);
+      this.mCurrentId = -1;
+      this.mHasTouchListeners = false;
+    }
+    getHasTouchListeners() {
+      return this.mHasTouchListeners;
+    }
+    setHasTouchListeners(v) {
+      this.mHasTouchListeners = v;
+    }
+    assignIds(lastId) {
+      this.mCurrentId = lastId;
+      this.assignId(this);
+    }
+    assignId(component) {
+      if (component.getComponentId() === -1) {
+        this.mCurrentId--;
+        component.mComponentId = this.mCurrentId;
+      }
+      for (const op of component.getList()) {
+        if (op instanceof Component) {
+          this.assignId(op);
+        }
+      }
+    }
+    /** Measure then layout the tree of components */
+    layoutTree(context) {
+      if (!this.mNeedsMeasure) return;
+      this.mNeedsMeasure = false;
+      this.setWidth(context.mWidth);
+      this.setHeight(context.mHeight);
+      context.mViewportWidth = context.mWidth;
+      context.mViewportHeight = context.mHeight;
+      const measurePass = new MeasurePass();
+      for (const op of this.getList()) {
+        if (typeof op.measure === "function") {
+          const paintContext = context.getPaintContext();
+          if (paintContext) {
+            op.measure(paintContext, 0, this.mWidth, 0, this.mHeight, measurePass);
+            if (typeof op.layout === "function") {
+              op.layout(context, measurePass);
+            }
+          }
+        }
+      }
+    }
+    /** Measure the document and layout components, returning first child size */
+    measureDoc(context, minWidth, maxWidth, minHeight, maxHeight) {
+      this.mNeedsMeasure = false;
+      this.setWidth(context.mWidth);
+      this.setHeight(context.mHeight);
+      context.mViewportWidth = context.mWidth;
+      context.mViewportHeight = context.mHeight;
+      const measurePass = new MeasurePass();
+      let firstComponent = null;
+      for (const op of this.getList()) {
+        if (typeof op.measure === "function") {
+          if (firstComponent === null && op instanceof Component) {
+            firstComponent = op;
+          }
+          const paintContext = context.getPaintContext();
+          if (paintContext) {
+            op.measure(paintContext, minWidth, maxWidth, minHeight, maxHeight, measurePass);
+            if (typeof op.layout === "function") {
+              op.layout(context, measurePass);
+            }
+          }
+        }
+      }
+      if (firstComponent) {
+        this.setWidth(firstComponent.getWidth());
+        this.setHeight(firstComponent.getHeight());
+      }
+    }
+    paint(paintContext) {
+      this.mNeedsRepaint = false;
+      const remoteContext = paintContext.getContext();
+      paintContext.save();
+      if (!this.getParent()) {
+        paintContext.clipRect(0, 0, this.mWidth, this.mHeight);
+      }
+      for (const op of this.getList()) {
+        if (op instanceof PaintOperation) {
+          op.paint(paintContext);
+          remoteContext.incrementOpCount(op);
+        }
+      }
+      paintContext.restore();
+    }
+    getComponent(id) {
+      const queue = [this];
+      while (queue.length > 0) {
+        const c = queue.shift();
+        if (c.getComponentId() === id) return c;
+        for (const child of c.getList()) {
+          if (child instanceof Component) {
+            queue.push(child);
+          }
+        }
+      }
+      return null;
+    }
+    displayHierarchy() {
+      return `RootLayout(${this.getWidth()}x${this.getHeight()})`;
+    }
+    onClick(context, doc, x, y) {
+      for (const child of this.getList()) {
+        if (typeof child.onClick === "function") {
+          if (child.onClick(context, doc, x, y)) return true;
+        }
+      }
+      return false;
+    }
+    onTouchDown(context, doc, x, y) {
+      for (const child of this.getList()) {
+        if (typeof child.onTouchDown === "function") {
+          if (child.onTouchDown(context, doc, x, y)) return true;
+        }
+      }
+      return false;
+    }
+    write(buffer) {
+      buffer.start(_RootLayoutComponent.OP_CODE);
+      buffer.writeInt(this.getComponentId());
+    }
+    deepToString(indent) {
+      return `${indent}RootLayoutComponent(${this.getComponentId()})`;
+    }
+    static read(buffer, operations) {
+      const componentId = buffer.readInt();
+      const component = new _RootLayoutComponent(componentId);
+      operations.push(component);
+    }
+  };
+  _RootLayoutComponent.OP_CODE = 200;
+  var RootLayoutComponent = _RootLayoutComponent;
+
+  // src/core/TimeVariables.ts
+  var TimeVariables = class {
+    constructor(clock) {
+      this.mLastAnimationTime = -1;
+      this.mClock = clock;
+      this.mStartTime = performance.now() / 1e3;
+    }
+    getClock() {
+      return this.mClock;
+    }
+    /** Seconds elapsed since this TimeVariables was created. */
+    getElapsedSeconds() {
+      return performance.now() / 1e3 - this.mStartTime;
+    }
+    updateTime(context) {
+      const snapshot = this.mClock.snapshot();
+      context.loadFloat(RemoteContext.ID_OFFSET_TO_UTC, snapshot.getOffsetSeconds());
+      context.loadFloat(RemoteContext.ID_CONTINUOUS_SEC, snapshot.getContinuousSeconds());
+      context.loadInteger(RemoteContext.ID_EPOCH_SECOND, snapshot.getEpochSeconds());
+      context.loadFloat(RemoteContext.ID_TIME_IN_SEC, snapshot.getTimeInSec());
+      context.loadFloat(RemoteContext.ID_TIME_IN_MIN, snapshot.getTimeInMin());
+      context.loadFloat(RemoteContext.ID_TIME_IN_HR, snapshot.getHour());
+      context.loadFloat(RemoteContext.ID_CALENDAR_MONTH, snapshot.getMonth());
+      context.loadFloat(RemoteContext.ID_DAY_OF_MONTH, snapshot.getDayOfMonth());
+      context.loadFloat(RemoteContext.ID_WEEK_DAY, snapshot.getDayOfWeek());
+      context.loadFloat(RemoteContext.ID_DAY_OF_YEAR, snapshot.getDayOfYear());
+      context.loadFloat(RemoteContext.ID_YEAR, snapshot.getYear());
+      const animTime = this.getElapsedSeconds();
+      const deltaTime = this.mLastAnimationTime >= 0 ? animTime - this.mLastAnimationTime : 0;
+      this.mLastAnimationTime = animTime;
+      context.loadFloat(RemoteContext.ID_ANIMATION_TIME, animTime);
+      context.setAnimationTime(animTime);
+      context.loadFloat(RemoteContext.ID_ANIMATION_DELTA_TIME, deltaTime);
+      context.loadFloat(RemoteContext.ID_API_LEVEL, CoreDocument.DOCUMENT_API_LEVEL);
+    }
+  };
 
   // src/core/operations/layout/modifiers/ModifierOperations.ts
   var _WidthModifier = class _WidthModifier extends Operation {
@@ -8287,6 +8822,9 @@ var RC = (() => {
     }
     needsRepaint() {
       this.mNeedsRepaint = true;
+    }
+    setNeedsRepaint(v) {
+      this.mNeedsRepaint = v;
     }
     setMeasureVersion(v) {
       this.mMeasureVersion = v;
@@ -13916,6 +14454,14 @@ var RC = (() => {
       }
       this.mNeedsMeasure = false;
     }
+    animatingBounds(context) {
+      super.animatingBounds(context);
+      this.updateComponentValues(context, this.mWidth, this.mHeight);
+      this.layoutModifiers(this.mWidth, this.mHeight);
+      for (const child of this.mChildrenComponents) {
+        child.animatingBounds(context);
+      }
+    }
     /** Walk modifiers reducing dimensions by padding and passing to decorators.
      *  Matches Java ComponentModifiers.layout(). */
     layoutModifiers(w, h) {
@@ -13939,6 +14485,11 @@ var RC = (() => {
       paintContext.matrixRestore();
     }
     paint(paintContext) {
+      if (this.applyAnimationAsNeeded(paintContext)) {
+        return;
+      }
+      if (Visibility.isGone(this.mVisibility)) return;
+      if (Visibility.isInvisible(this.mVisibility)) return;
       if (this.mDrawContentOperations !== null && this.mDrawContentOperations.length > 0) {
         paintContext.matrixSave();
         paintContext.matrixTranslate(this.mX, this.mY);
@@ -13952,12 +14503,20 @@ var RC = (() => {
           op.apply(context);
         }
         paintContext.matrixRestore();
+      } else if (this.mGraphicsLayerMod) {
+        paintContext.matrixSave();
+        this.mGraphicsLayerMod.apply(paintContext.getContext());
+        this.paintingComponent(paintContext);
+        if (typeof this.mGraphicsLayerMod.applyPostPaint === "function") {
+          this.mGraphicsLayerMod.applyPostPaint(paintContext);
+        }
+        paintContext.matrixRestore();
       } else {
         super.paint(paintContext);
       }
     }
     paintingComponent(paintContext) {
-      if (Visibility.isGone(this.mVisibility)) return;
+      if (Visibility.isGone(this.mVisibility) && this.mAnimateMeasure === null) return;
       const context = paintContext.getContext();
       paintContext.matrixSave();
       paintContext.matrixTranslate(this.mX, this.mY);
@@ -13988,6 +14547,9 @@ var RC = (() => {
         op.apply(context);
       }
       const children = this.mChildrenComponents;
+      const shouldPaintChild = (child) => {
+        return (child.mAnimateMeasure !== null || !Visibility.isGone(child.mVisibility)) && this.isChildVisibleInViewport(child);
+      };
       if (children.length > 1) {
         let needsSort = false;
         for (const c of children) {
@@ -13999,14 +14561,14 @@ var RC = (() => {
         if (needsSort) {
           const sorted = [...children].sort((a, b) => a.mZIndex - b.mZIndex);
           for (const child of sorted) {
-            if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+            if (shouldPaintChild(child)) {
               context.incrementOpCount(child);
               child.paint(paintContext);
             }
           }
         } else {
           for (const child of children) {
-            if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+            if (shouldPaintChild(child)) {
               context.incrementOpCount(child);
               child.paint(paintContext);
             }
@@ -14014,7 +14576,7 @@ var RC = (() => {
         }
       } else {
         for (const child of children) {
-          if (!Visibility.isGone(child.mVisibility) && this.isChildVisibleInViewport(child)) {
+          if (shouldPaintChild(child)) {
             context.incrementOpCount(child);
             child.paint(paintContext);
           }
@@ -20127,8 +20689,8 @@ var RC = (() => {
       m.set(PatternArgument.OP_CODE, PatternArgument.read);
       m.set(PatternDefine.OP_CODE, PatternDefine.read);
       m.set(Custom.OP_CODE, Custom.read);
+      m.set(AnimationSpec.OP_CODE, AnimationSpec.read);
       m.set(ComponentStartStub.OP_CODE, ComponentStartStub.read);
-      m.set(AnimationSpecStub.OP_CODE, AnimationSpecStub.read);
       m.set(DrawBitmapFontTextStub.OP_CODE, DrawBitmapFontTextStub.read);
       m.set(DrawBitmapFontTextOnPathStub.OP_CODE, DrawBitmapFontTextOnPathStub.read);
       m.set(BitmapTextMeasureStub.OP_CODE, BitmapTextMeasureStub.read);
@@ -20695,6 +21257,8 @@ var RC = (() => {
       this.mVersion = null;
       this.mWidth = 256;
       this.mHeight = 256;
+      this.mAuthorWidth = null;
+      this.mAuthorHeight = null;
       this.mCapabilities = 0;
       this.mProperties = null;
       this.mContentDescription = "";
@@ -20801,6 +21365,16 @@ var RC = (() => {
     setHeight(h) {
       this.mHeight = h;
       this.mRemoteComposeState?.setWindowHeight(h);
+    }
+    getAuthorWidth() {
+      return this.mAuthorWidth ?? this.mHeader?.mWidth ?? this.mWidth;
+    }
+    getAuthorHeight() {
+      return this.mAuthorHeight ?? this.mHeader?.mHeight ?? this.mHeight;
+    }
+    setAuthorDimensions(w, h) {
+      this.mAuthorWidth = w;
+      this.mAuthorHeight = h;
     }
     setProperties(properties) {
       this.mProperties = properties;
@@ -21131,6 +21705,11 @@ var RC = (() => {
       if (this.mRootLayoutComponent && this.mRootLayoutComponent.needsMeasure()) {
         this.mRootLayoutComponent.layoutTree(context);
       }
+      if (this.mRootLayoutComponent && this.mRootLayoutComponent.needsBoundsAnimation()) {
+        this.mNeedsRepaintFlag = 1;
+        this.mRootLayoutComponent.clearNeedsBoundsAnimation();
+        this.mRootLayoutComponent.animatingBounds(context);
+      }
       context.setMode("PAINT" /* PAINT */);
       context.clearLastOpCount();
       context.beginMeasuredFrame();
@@ -21192,7 +21771,7 @@ var RC = (() => {
       if (pc) pc.restore();
       context.setMode("UNSET" /* UNSET */);
       const pc2 = context.getPaintContext();
-      if (pc && pc.doesNeedsRepaint()) {
+      if (pc2 && pc2.doesNeedsRepaint() || this.mRootLayoutComponent && (this.mRootLayoutComponent.needsRepaint() || this.mRootLayoutComponent.needsBoundsAnimation())) {
         this.mNeedsRepaintFlag = 1;
       } else {
         this.mNeedsRepaintFlag = this.mRemoteComposeState.getOpsToUpdate(context, this.mClock.millis());
@@ -24070,6 +24649,7 @@ void main() {
       if (state) {
         Object.assign(this, state);
         this.setFont();
+        this.ctx.globalAlpha = this.alpha;
       }
     }
     /**
@@ -24578,6 +25158,15 @@ void main() {
     }
     matrixRestore() {
       this.ctx.restore();
+    }
+    saveLayer(x, y, w, h) {
+      this.ctx.save();
+      this.ctx.beginPath();
+      this.ctx.rect(x, y, w, h);
+      this.ctx.clip();
+      if (this.alpha < 1) {
+        this.ctx.globalAlpha *= this.alpha;
+      }
     }
     matrixTranslate(tx, ty) {
       this.ctx.translate(tx, ty);
@@ -25609,6 +26198,80 @@ void main() {
       this.mContentOffsetX = 0;
       this.mContentOffsetY = 0;
       this.isPaused = false;
+      this.onPointerDown = (e) => {
+        if (!this.document || !this.remoteContext) return;
+        this.pointerIsDown = true;
+        try {
+          this.canvas.setPointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        const { x, y } = this.canvasCoords(e);
+        this.pointerDownX = x;
+        this.pointerDownY = y;
+        this.pointerHasMoved = false;
+        this.pointerHistory = [{ x, y, t: performance.now() }];
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDown(this.remoteContext, x, y);
+        this.scheduleRepaint();
+        window.addEventListener("pointermove", this.onPointerMove, { passive: false });
+        window.addEventListener("pointerup", this.onPointerUp, { passive: false });
+        window.addEventListener("pointercancel", this.onPointerCancel, { passive: false });
+      };
+      this.onPointerMove = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        const { x, y } = this.canvasCoords(e);
+        if (!this.pointerHasMoved) {
+          const dx = x - this.pointerDownX;
+          const dy = y - this.pointerDownY;
+          const slop = TOUCH_SLOP / (this.mContentScale || 1);
+          if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
+        }
+        this.pointerHistory.push({ x, y, t: performance.now() });
+        if (this.pointerHistory.length > 5) this.pointerHistory.shift();
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchDrag(this.remoteContext, x, y);
+        this.scheduleRepaint();
+      };
+      this.onPointerUp = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+          this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        if (!this.pointerHasMoved) {
+          this.document.onClick(this.remoteContext, x, y);
+        }
+        this.document.touchUp(this.remoteContext, x, y, dx, dy);
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+      };
+      this.onPointerCancel = (e) => {
+        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
+        this.pointerIsDown = false;
+        try {
+          this.canvas.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+        const { x, y } = this.canvasCoords(e);
+        const { dx, dy } = this.computeVelocity(x, y);
+        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
+        this.document.touchCancel(this.remoteContext, x, y, dx, dy);
+        this.pointerHasMoved = false;
+        this.pointerHistory = [];
+        this.scheduleRepaint();
+      };
+      this.naturalWidth = 0;
+      this.naturalHeight = 0;
       this.renderFrame = (timestamp) => {
         this.animationFrameId = null;
         if (!this.document || !this.remoteContext || !this.paintContext) return;
@@ -25654,51 +26317,7 @@ void main() {
       this.setupPointerEvents();
     }
     setupPointerEvents() {
-      this.canvas.addEventListener("pointerdown", (e) => {
-        if (!this.document || !this.remoteContext) return;
-        this.pointerIsDown = true;
-        const { x, y } = this.canvasCoords(e);
-        this.pointerDownX = x;
-        this.pointerDownY = y;
-        this.pointerHasMoved = false;
-        this.pointerHistory = [{ x, y, t: performance.now() }];
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        this.document.touchDown(this.remoteContext, x, y);
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointermove", (e) => {
-        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-        const { x, y } = this.canvasCoords(e);
-        if (!this.pointerHasMoved) {
-          const dx = x - this.pointerDownX;
-          const dy = y - this.pointerDownY;
-          const slop = TOUCH_SLOP / (this.mContentScale || 1);
-          if (dx * dx + dy * dy > slop * slop) this.pointerHasMoved = true;
-        }
-        this.pointerHistory.push({ x, y, t: performance.now() });
-        if (this.pointerHistory.length > 5) this.pointerHistory.shift();
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        this.document.touchDrag(this.remoteContext, x, y);
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointerup", (e) => {
-        if (!this.pointerIsDown || !this.document || !this.remoteContext) return;
-        this.pointerIsDown = false;
-        const { x, y } = this.canvasCoords(e);
-        const { dx, dy } = this.computeVelocity(x, y);
-        this.remoteContext.loadFloat(RemoteContext.ID_TOUCH_EVENT_TIME, this.remoteContext.getAnimationTime());
-        if (!this.pointerHasMoved) {
-          this.document.onClick(this.remoteContext, x, y);
-        }
-        this.document.touchUp(this.remoteContext, x, y, dx, dy);
-        this.pointerHistory = [];
-        this.scheduleRepaint();
-      });
-      this.canvas.addEventListener("pointercancel", () => {
-        this.pointerIsDown = false;
-        this.pointerHasMoved = false;
-        this.pointerHistory = [];
-      });
+      this.canvas.addEventListener("pointerdown", this.onPointerDown);
     }
     canvasCoords(e) {
       const rect = this.canvas.getBoundingClientRect();
@@ -25774,6 +26393,11 @@ void main() {
     getDensity() {
       return this.density;
     }
+    /** The size the document declares in its header, or null if nothing is loaded. */
+    getNaturalSize() {
+      if (!this.document) return null;
+      return { width: this.naturalWidth, height: this.naturalHeight };
+    }
     /** Operations executed in the last painted frame — available with measurement off. */
     getOpsPerFrame() {
       return this.document?.getOpsPerFrame() ?? 0;
@@ -25784,6 +26408,8 @@ void main() {
       const doc = new CoreDocument();
       doc.initFromBuffer(buffer);
       this.document = doc;
+      this.naturalWidth = doc.getWidth();
+      this.naturalHeight = doc.getHeight();
       const density = this.density || doc.getProperty(Header.DOC_DENSITY_AT_GENERATION) || 1;
       const docWidth = this.canvas.width;
       const docHeight = this.canvas.height;
@@ -25815,6 +26441,12 @@ void main() {
         cancelAnimationFrame(this.animationFrameId);
         this.animationFrameId = null;
       }
+      if (this.pointerIsDown) {
+        this.pointerIsDown = false;
+        window.removeEventListener("pointermove", this.onPointerMove);
+        window.removeEventListener("pointerup", this.onPointerUp);
+        window.removeEventListener("pointercancel", this.onPointerCancel);
+      }
     }
     /**
      * Stop, and release the WebGL context.
@@ -25826,11 +26458,16 @@ void main() {
      */
     destroy() {
       this.stop();
+      this.canvas.removeEventListener("pointerdown", this.onPointerDown);
       if (this.paintContext) {
         this.paintContext.destroy();
       }
     }
     repaint() {
+      if (this.animationFrameId !== null) {
+        cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
+      }
       if (this.document) {
         this.renderFrame(performance.now());
       }
@@ -25838,8 +26475,9 @@ void main() {
     resize(newWidth, newHeight) {
       this.canvas.width = newWidth;
       this.canvas.height = newHeight;
-      this.canvas.style.width = newWidth + "px";
-      this.canvas.style.height = newHeight + "px";
+      const d = this.remoteContext?.getDensity() || this.density || 1;
+      this.canvas.style.width = newWidth / d + "px";
+      this.canvas.style.height = newHeight / d + "px";
       if (this.remoteContext) {
         this.remoteContext.mWidth = newWidth;
         this.remoteContext.mHeight = newHeight;
@@ -25849,7 +26487,7 @@ void main() {
         this.document.setHeight(newHeight);
         this.document.invalidateMeasure();
       }
-      this.scheduleRepaint();
+      this.repaint();
     }
     getDocument() {
       return this.document;
