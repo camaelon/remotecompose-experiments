@@ -419,14 +419,25 @@ export class CanvasPaintContext extends PaintContext {
                     this.textSize = intBitsToFloat(arr[i++]);
                     this.setFont();
                     break;
-                case PaintBundle.COLOR:
+                case PaintBundle.COLOR: {
                     // Does NOT clear the gradient: colour and shader are independent
                     // properties of a Paint, and the shader wins when filling. This
                     // document sets COLOR *after* its GRADIENT, and clearing here painted
                     // the chart in the default opaque black.
-                    this.colorArgb = arr[i] | 0;
-                    this.color = argbToRgba(arr[i++]);
+                    const argb = arr[i++] | 0;
+                    this.colorArgb = argb;
+                    // A paint bundle is a *delta*, so state carries from one bundle to the
+                    // next — but Paint.setColor takes a whole ARGB, alpha included, and so
+                    // replaces whatever alpha a previous setAlpha established. Without this
+                    // line one translucent fill tinted everything drawn after it, and the
+                    // player disagreed with both the Android reference and the C++ port.
+                    this.alpha = ((argb >>> 24) & 0xFF) / 255;
+                    // The alpha now lives in `alpha`, which is applied as globalAlpha.
+                    // Leaving it in the colour string as well would apply it twice.
+                    this.color = `rgb(${(argb >>> 16) & 0xFF},${(argb >>> 8) & 0xFF},`
+                               + `${argb & 0xFF})`;
                     break;
+                }
                 case PaintBundle.STROKE_WIDTH:
                     this.strokeWidth = intBitsToFloat(arr[i++]);
                     break;
