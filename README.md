@@ -34,7 +34,9 @@ remotecompose-experiments/
 │                     and a VS Code custom-editor extension.
 │                     See players/typescript/README.md.
 └── samples/          Hand-picked .rc documents used for smoke testing
-                      and demos (canvas, pie chart, ball animation, …).
+    │                 and demos (canvas, pie chart, ball animation, …).
+    └── 3d/           Ten 3D charts, JSON + .rc, one per opcode area.
+                      See samples/3d/README.md.
 ```
 
 ## Samples
@@ -45,6 +47,13 @@ The `samples/` directory contains representative `.rc` binary documents:
 - `canvas.rc` — canvas drawing primitives
 - `pie_chart.rc` — chart rendering
 - `balls_animation_example.rc` — animated particles
+
+`samples/3d/` holds ten 3D charts as both the JSON that authored them and the `.rc` the
+players read. Each leans on a different part of the 3D opcode surface — height-field
+expressions, primitive instancing, wireframe hidden-line removal, procedural density — so
+when one stops rendering, the file that broke narrows down what broke. All ten drag to
+orbit, via `TouchExpression`. See [samples/3d/README.md](samples/3d/README.md).
+
 
 Any of these can be played with the C++ viewer or rendered headlessly:
 

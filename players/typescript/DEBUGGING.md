@@ -6,6 +6,39 @@ a no-op, so a one-time `setValue` ran every frame — was found in the end by as
 that was slower, and several steps were actively misleading. The tools below are chosen
 to make the fast path the default one.
 
+## First: is `build-node/` current?
+
+Every `.mjs` tool here imports `build-node/node-entry.js`, and **nothing rebuilds it
+automatically**. A stale bundle does not announce itself — the tools run, report success,
+and quietly exercise whatever the player looked like the day the bundle was built.
+
+This cost a wrong diagnosis. `surface_plot3d.rc` rendered completely untextured under
+`render.mjs` while the C++ player showed it fully textured, which reads as a TypeScript 3D
+texture bug and is a plausible one. The player was fine; `build-node/node-entry.js` was
+five weeks old and predated the `setTexture3D` fix.
+
+```sh
+find src -name '*.ts' -newer build-node/node-entry.js | head   # any output => stale
+npx esbuild src/node-entry.ts --bundle --outfile=build-node/node-entry.js \
+    --format=esm --target=es2020 --platform=node
+```
+
+Check this **before** believing any headless result that disagrees with a device or with
+the C++ player.
+
+## Browser APIs the headless harnesses have to shim
+
+`render.mjs` sets `paint.loadBitmap = () => {}` because the real one needs `Blob`,
+`URL.createObjectURL` and an async `Image.onload`. That stub is invisible until a document
+uses a texture, and then every textured surface renders flat grey — the same symptom as a
+stale bundle, from a different cause. `setTexture3D` then needs
+`document.createElement('canvas')` for its `getImageData` readback, which node also lacks.
+
+`render-tex.mjs` shims both: the `canvas` package's `Image` decodes a `Buffer`
+synchronously (`img.src = buf` leaves `complete === true`), so the cache is filled directly
+and the async path is skipped. **Use `render-tex.mjs`, not `render.mjs`, for any document
+with a texture.**
+
 ## What already exists
 
 | tool | what it answers |
@@ -14,6 +47,8 @@ to make the fast path the default one.
 | `trace.mjs --ops` | which operation classes ran, and how many times |
 | `trace.mjs --hold` | the same with touch held from frame 2 |
 | `sweep.mjs DIR` | the above across a whole corpus |
+| `render-tex.mjs DOC.rc OUT.png` | a still **with bitmaps decoded** — see above |
+| `dragtest.mjs DOC.rc OUTDIR` | does a drag do anything, and does it accumulate |
 | `RcTraceTest` (remote-core) | the same trace from the reference engine |
 | `RcFixtureTest` (remote-core) | minimal single-feature documents |
 | `NoOpPaintContext` | lets the reference run headless without drawing |
