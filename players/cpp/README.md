@@ -68,6 +68,32 @@ On Linux, install CMake, git, pkg-config, GLFW, OpenGL, FontConfig, FreeType,
 and X11 development packages first. The Linux viewer uses the CPU backend;
 `--metal` and AVFoundation video formats remain macOS-only.
 
+## Profiling the 3D path
+
+`RC_PROF=1` splits a render into its CPU geometry front-half and its fill, and reports the
+painter's sort separately. Silent unless the variable is set, and the rendered output is
+byte-identical either way.
+
+```sh
+RC_PROF=1 ./build/tools/rc2image/rc2image doc.rc out.png 800 800
+```
+
+```
+RC_PROF  triangles submitted=6060 kept=4908
+RC_PROF  software   transform     0.99 ms (  8.2%)   fill    11.14 ms ( 91.8%)
+RC_PROF  accelerated front-half (buildCanvasVertices)     0.00 ms   of which sort     0.00 ms
+```
+
+Reading it: transform scales with triangle count and is flat in resolution; fill scales
+with covered pixels. Which dominates is a property of the document, not of the engine —
+`city3d` is 98% fill at 1,728 triangles, while `hydrogen_orbitals3d` at 33k triangles is
+70% transform. The crossover sits near 15–20k triangles at 800px. Measure before optimising;
+the intuition here has been wrong more than once.
+
+The transform figure includes two clock reads per triangle, on the order of 0.3 ms per 6k
+triangles, so read small absolute values as an upper bound. Ratios and scaling are sound —
+for per-triangle cost, vary the input and take the slope.
+
 ## iOS build
 
 ```sh

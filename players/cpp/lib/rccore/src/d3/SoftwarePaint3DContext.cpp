@@ -12,6 +12,62 @@
 #include <cmath>
 
 namespace rccore::d3 {
+
+// ── Frame-time split, gated on RC_PROF ───────────────────────────────────────────────
+//
+// Separates the CPU geometry front-half from the fill, because the two scale with
+// different things — geometry with triangle count, fill with covered pixels — and which
+// one dominates depends on the document. Both regimes occur in the corpus: `city3d` is 98%
+// fill, `hydrogen_orbitals3d` at 33k triangles is 70% transform. Guessing produced the
+// wrong answer twice, which is why this exists rather than a rule of thumb.
+//
+// It also reports the sort separately. That is how the accelerated path was found to be
+// quadratic: 215 ms of a 222 ms front-half on a 28k-triangle mesh, all of it in what was
+// then a hand-written insertion sort.
+//
+// Timings are accumulated in locals and published once per call, so the hot loops pay a
+// predictable branch rather than an atomic per triangle. The transform figure still
+// carries two clock reads per triangle — on the order of 0.3 ms per 6k triangles — so
+// treat small absolute transform numbers as an upper bound. Ratios and scaling are what
+// this is for; for absolute per-triangle cost, vary the input and look at the slope.
+namespace prof {
+
+bool enabled() {
+    static const bool on = std::getenv("RC_PROF") != nullptr;
+    return on;
+}
+
+std::atomic<long long> nsTransform{0}, nsFill{0}, nsBuildCanvas{0}, nsSort{0};
+std::atomic<long long> triSubmitted{0}, triKept{0};
+
+inline long long now() {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
+struct Report {
+    ~Report() {
+        if (!enabled()) return;
+        const double t = nsTransform.load() / 1e6;
+        const double f = nsFill.load() / 1e6;
+        const double b = nsBuildCanvas.load() / 1e6;
+        const double sortMs = nsSort.load() / 1e6;
+        const double swTotal = t + f;
+        std::fprintf(stderr,
+            "RC_PROF  triangles submitted=%lld kept=%lld\n"
+            "RC_PROF  software   transform %8.2f ms (%5.1f%%)   fill %8.2f ms (%5.1f%%)\n"
+            "RC_PROF  accelerated front-half (buildCanvasVertices) %8.2f ms"
+            "   of which sort %8.2f ms\n",
+            triSubmitted.load(), triKept.load(),
+            t, swTotal > 0 ? 100 * t / swTotal : 0.0,
+            f, swTotal > 0 ? 100 * f / swTotal : 0.0,
+            b, sortMs);
+    }
+};
+Report gReport;
+
+} // namespace prof
+
 namespace {
 
 /** Near-plane rejection: a vertex with clip w below this is behind or on the eye. */
@@ -380,20 +436,28 @@ namespace {
  */
 void sortBackToFront(std::vector<int>& order, const std::vector<float>& depth, int count) {
     for (int i = 0; i < count; i++) order[i] = i;
-    for (int i = 1; i < count; i++) {
-        int cur = order[i];
-        float key = depth[cur];
-        int j = i - 1;
-        while (j >= 0 && depth[order[j]] < key) {   // larger depth = farther = drawn first
-            order[j + 1] = order[j];
-            j--;
-        }
-        order[j + 1] = cur;
-    }
+    // stable_sort, not insertion sort. The stability is what matters and is preserved: an
+    // unstable sort lets coplanar or equal-depth triangles swap between frames and flicker.
+    // The previous hand-written insertion sort had the same guarantee but was quadratic,
+    // and it dominated the accelerated path completely — 215 ms of a 222 ms front-half on a
+    // 28k-triangle mesh, against 2.5 ms here. Same comparator and same stability, so the
+    // permutation is unchanged: both parity suites stay bit-exact across it.
+    std::stable_sort(order.begin(), order.begin() + count,
+                     [&depth](int a, int b) { return depth[a] > depth[b]; });
 }
 } // namespace
 
 int SoftwarePaint3DContext::buildCanvasVertices(int meshId, CanvasMesh& out, bool smooth) {
+    const bool prof = prof::enabled();
+    const long long profStart = prof ? prof::now() : 0;
+    struct Publish {
+        bool on;
+        long long start;
+        ~Publish() {
+            if (on) prof::nsBuildCanvas.fetch_add(prof::now() - start,
+                                                  std::memory_order_relaxed);
+        }
+    } publish{prof, profStart};
     out.vertexCount = 0;
     auto it = mMeshes.find(meshId);
     if (it == mMeshes.end()) return 0;
@@ -451,7 +515,11 @@ int SoftwarePaint3DContext::buildCanvasVertices(int meshId, CanvasMesh& out, boo
         kept++;
     }
 
-    sortBackToFront(out.order, out.triDepth, kept);
+    {
+        const long long s0 = prof ? prof::now() : 0;
+        sortBackToFront(out.order, out.triDepth, kept);
+        if (prof) prof::nsSort.fetch_add(prof::now() - s0, std::memory_order_relaxed);
+    }
 
     const int verts = kept * 3;
     out.positions.resize((size_t) verts * 2);
@@ -500,10 +568,16 @@ void SoftwarePaint3DContext::drawMesh3D(int meshId, int mode) {
     // a non-zero submission is the signature of a wholly back-facing or off-frustum mesh,
     // which is otherwise indistinguishable from the op never running.
     const bool trace = std::getenv("RC_TRACE") != nullptr;
+    const bool prof = prof::enabled();
+    long long profTransform = 0, profFill = 0;
     int kept = 0;
     for (int t = 0; t < n; t += 3) {
-        if (!projectTriangle(m, smooth, textured, t, baseColor, w, h)) continue;
+        const long long tt0 = prof ? prof::now() : 0;
+        const bool visible = projectTriangle(m, smooth, textured, t, baseColor, w, h);
+        if (prof) profTransform += prof::now() - tt0;
+        if (!visible) continue;
         kept++;
+        const long long tf0 = prof ? prof::now() : 0;
         if (textured) {
             int q0 = m.indices[t] * 2, q1 = m.indices[t + 1] * 2, q2 = m.indices[t + 2] * 2;
             fillTriangleTextured(mZbuf.data(), mColor.data(), mTexPixels.data(), mTexW, mTexH,
@@ -523,6 +597,13 @@ void SoftwarePaint3DContext::drawMesh3D(int meshId, int mode) {
                 mTriScreen[3], mTriScreen[4], mTriScreen[5],
                 mTriScreen[0], mTriScreen[1], mTriScreen[2]);
         }
+        if (prof) profFill += prof::now() - tf0;
+    }
+    if (prof) {
+        prof::nsTransform.fetch_add(profTransform, std::memory_order_relaxed);
+        prof::nsFill.fetch_add(profFill, std::memory_order_relaxed);
+        prof::triSubmitted.fetch_add(n / 3, std::memory_order_relaxed);
+        prof::triKept.fetch_add(kept, std::memory_order_relaxed);
     }
     if (trace) {
         std::fprintf(stderr, "[rc3d] mesh=%d mode=0x%x tris=%d kept=%d verts=%zu "
