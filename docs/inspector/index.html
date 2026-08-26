@@ -64,6 +64,8 @@
             flex-direction: column;
             gap: 7px;
             flex-shrink: 0;
+            position: relative;
+            z-index: 100;
         }
 
         .header-top-row {
@@ -2209,7 +2211,7 @@
                     <option value="binary">📦 Binary (Disasm + Stats)</option>
                     <option value="performance">⏱️ Performance (Profiler)</option>
                 </select>
-                <button class="btn btn-secondary btn-sm" onclick="promptSaveCustomWorkspace()" title="Save current panel configuration as a custom workspace">💾 Save</button>
+                <button class="btn btn-secondary btn-sm" id="saveWorkspaceBtn" onclick="promptSaveCustomWorkspace()" title="Save current panel configuration as a custom workspace">💾 Save</button>
                 <button class="btn btn-secondary btn-sm" id="setupsMenuBtn" onclick="toggleSetupsDropdown(event)" title="Manage custom saved setups">⚙️</button>
                 <div class="setups-dropdown-popover" id="setupsDropdownPopover" style="display:none;"></div>
             </div>
@@ -2346,7 +2348,7 @@
         <div class="resizer" id="resizer1" title="Drag to resize Pane 1 (Double click to reset)"></div>
 
         <!-- Panel 14: Document Statistics & Component Metrics (Immediately after Canvas Player) -->
-        <div class="panel panel-p14" id="pane14">
+        <div class="panel panel-p14 hidden-panel" id="pane14">
             <div class="panel-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="panel-hide-btn" onclick="hidePanel(event, 'pane14')" title="Hide Document Statistics panel">✕</button>
@@ -2686,7 +2688,7 @@
         <div class="resizer" id="resizer14" title="Drag to resize Pane 14 (Double click to reset)"></div>
 
         <!-- Panel 2: Commands Disassembly -->
-        <div class="panel panel-p2" id="pane2">
+        <div class="panel panel-p2 hidden-panel" id="pane2">
             <div class="panel-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="panel-hide-btn" onclick="hidePanel(event, 'pane2')" title="Hide Commands List panel (Frees horizontal space)">✕</button>
@@ -2749,7 +2751,7 @@
         <div class="resizer" id="resizer6" title="Drag to resize Pane 7 & 3 (Double click to reset)"></div>
 
         <!-- Panel 3: Component Tree -->
-        <div class="panel panel-p3 hidden-panel" id="pane3">
+        <div class="panel panel-p3" id="pane3">
             <div class="panel-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="panel-hide-btn" onclick="hidePanel(event, 'pane3')" title="Hide Component Tree panel (Frees horizontal space)">✕</button>
@@ -3190,7 +3192,7 @@
         <div class="resizer" id="resizer12_13" title="Drag to resize Pane 12 & 13 (Double click to reset)"></div>
 
         <!-- Panel 13: Layout & Box Model Inspector -->
-        <div class="panel panel-p13 hidden-panel" id="pane13">
+        <div class="panel panel-p13" id="pane13">
             <div class="panel-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <button class="panel-hide-btn" onclick="hidePanel(event, 'pane13')" title="Hide Layout & Box Model panel">✕</button>
@@ -14658,10 +14660,55 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (r11_12) r11_12.style.display = p11Vis && anyAfter11 ? "flex" : "none";
     if (r12_13) r12_13.style.display = p12Vis && anyAfter12 ? "flex" : "none";
   }
-  function getCustomSetups() {
+  var _storageChecked = false;
+  var _hasLocalStorage = false;
+  function checkLocalStorageAvailable() {
+    if (_storageChecked) return _hasLocalStorage;
+    _storageChecked = true;
+    _hasLocalStorage = false;
     try {
-      if (typeof localStorage === "undefined") return {};
-      const raw = localStorage.getItem("rc_custom_setups");
+      if (typeof window !== "undefined" && "localStorage" in window && window.localStorage !== null) {
+        const probe = "__rc_probe_storage__";
+        window.localStorage.setItem(probe, probe);
+        window.localStorage.removeItem(probe);
+        _hasLocalStorage = true;
+      }
+    } catch (_) {
+      _hasLocalStorage = false;
+    }
+    return _hasLocalStorage;
+  }
+  function isLocalStorageAvailable() {
+    return _storageChecked ? _hasLocalStorage : checkLocalStorageAvailable();
+  }
+  var SafeStorage = {
+    getItem(key) {
+      if (!isLocalStorageAvailable()) return null;
+      try {
+        return window.localStorage.getItem(key);
+      } catch (_) {
+        return null;
+      }
+    },
+    setItem(key, value) {
+      if (!isLocalStorageAvailable()) return;
+      try {
+        window.localStorage.setItem(key, String(value));
+      } catch (_) {
+      }
+    },
+    removeItem(key) {
+      if (!isLocalStorageAvailable()) return;
+      try {
+        window.localStorage.removeItem(key);
+      } catch (_) {
+      }
+    }
+  };
+  function getCustomSetups() {
+    if (!isLocalStorageAvailable()) return {};
+    try {
+      const raw = SafeStorage.getItem("rc_custom_setups");
       if (raw) {
         const parsed = JSON.parse(raw);
         if (typeof parsed === "object" && parsed !== null) {
@@ -14694,11 +14741,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     updateHeaderCollapsedBar();
     updateResizersVisibility();
     updatePanelPucks();
-    if (activeKey && typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem("rc_active_workspace", activeKey);
-      } catch (_) {
-      }
+    if (activeKey) {
+      SafeStorage.setItem("rc_active_workspace", activeKey);
     }
   }
   function applyWorkspacePreset(presetId) {
@@ -14708,6 +14752,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     renderSetupsMenu();
   }
   function applyCustomSetup(setupName) {
+    if (!isLocalStorageAvailable()) return;
     const setups = getCustomSetups();
     const setup = setups[setupName];
     if (!setup) return;
@@ -14715,6 +14760,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     renderSetupsMenu();
   }
   function saveCustomSetup(name) {
+    if (!isLocalStorageAvailable()) return;
     if (!name || !name.trim()) return;
     const cleanName = name.trim();
     const setups = getCustomSetups();
@@ -14740,30 +14786,20 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       widths,
       updatedAt: Date.now()
     };
-    if (typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem("rc_custom_setups", JSON.stringify(setups));
-        localStorage.setItem("rc_active_workspace", `custom:${cleanName}`);
-      } catch (_) {
-      }
-    }
+    SafeStorage.setItem("rc_custom_setups", JSON.stringify(setups));
+    SafeStorage.setItem("rc_active_workspace", `custom:${cleanName}`);
     updatePanelPucks();
     renderSetupsMenu();
   }
   function deleteCustomSetup(name) {
-    if (!name) return;
+    if (!isLocalStorageAvailable() || !name) return;
     const setups = getCustomSetups();
     delete setups[name];
-    if (typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem("rc_custom_setups", JSON.stringify(setups));
-        const active = localStorage.getItem("rc_active_workspace");
-        if (active === `custom:${name}`) {
-          localStorage.setItem("rc_active_workspace", "layout");
-          applyWorkspacePreset("layout");
-        }
-      } catch (_) {
-      }
+    SafeStorage.setItem("rc_custom_setups", JSON.stringify(setups));
+    const active = SafeStorage.getItem("rc_active_workspace");
+    if (active === `custom:${name}`) {
+      SafeStorage.setItem("rc_active_workspace", "layout");
+      applyWorkspacePreset("layout");
     }
     updatePanelPucks();
     renderSetupsMenu();
@@ -14791,11 +14827,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       hidePanel(null, paneId);
     }
     const activePreset = detectMatchingPreset();
-    if (activePreset && typeof localStorage !== "undefined") {
-      try {
-        localStorage.setItem("rc_active_workspace", activePreset);
-      } catch (_) {
-      }
+    if (activePreset) {
+      SafeStorage.setItem("rc_active_workspace", activePreset);
     }
     updatePanelPucks();
     renderSetupsMenu();
@@ -14839,6 +14872,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     updateWorkspaceSelectUI();
   }
   function togglePanelPuck(paneId) {
+    if (paneId === "pane1") return;
     const pane = document.getElementById(paneId);
     if (!pane) return;
     if (pane.classList.contains("hidden-panel")) {
@@ -14846,17 +14880,29 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     } else {
       hidePanel(null, paneId);
     }
+    const activePreset = detectMatchingPreset();
+    if (activePreset) {
+      SafeStorage.setItem("rc_active_workspace", activePreset);
+    }
     updatePanelPucks();
+    renderSetupsMenu();
   }
   function onWorkspaceSelectChange(value) {
     if (!value) return;
     if (value.startsWith("custom:")) {
-      applyCustomSetup(value.substring(7));
+      const setupName = value.substring(7);
+      applyCustomSetup(setupName);
     } else if (WORKSPACE_PRESETS[value]) {
       applyWorkspacePreset(value);
     }
   }
   function promptSaveCustomWorkspace() {
+    if (!isLocalStorageAvailable()) {
+      if (typeof window !== "undefined" && typeof window.alert === "function") {
+        window.alert("Custom workspace saving is unavailable in sandboxed environments without storage access.");
+      }
+      return;
+    }
     const defaultName = `Setup ${Object.keys(getCustomSetups()).length + 1}`;
     const name = typeof window !== "undefined" && typeof window.prompt === "function" ? window.prompt("Enter a name for this custom setup:", defaultName) : defaultName;
     if (!name || !name.trim()) return;
@@ -14865,6 +14911,10 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   function updateWorkspaceSelectUI() {
     const select = document.getElementById("workspaceSelect");
     if (!select) return;
+    const saveBtn = document.getElementById("saveWorkspaceBtn");
+    if (saveBtn) {
+      saveBtn.style.display = isLocalStorageAvailable() ? "inline-flex" : "none";
+    }
     const customSetups = getCustomSetups();
     const customNames = Object.keys(customSetups);
     let html = `
@@ -14875,7 +14925,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
         <option value="binary">\u{1F4E6} Binary (Disasm + Stats)</option>
         <option value="performance">\u23F1\uFE0F Performance (Profiler)</option>
     `;
-    if (customNames.length > 0) {
+    if (isLocalStorageAvailable() && customNames.length > 0) {
       html += `<optgroup label="\u2B50 Custom Setups">`;
       customNames.forEach((name) => {
         html += `<option value="custom:${name}">\u2B50 ${name} (${customSetups[name].panels.length}p)</option>`;
@@ -14884,13 +14934,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     }
     select.innerHTML = html;
     const matched = detectMatchingPreset();
-    let saved = null;
-    if (typeof localStorage !== "undefined") {
-      try {
-        saved = localStorage.getItem("rc_active_workspace");
-      } catch (_) {
-      }
-    }
+    const saved = SafeStorage.getItem("rc_active_workspace");
     if (matched) {
       select.value = matched;
     } else if (saved && saved.startsWith("custom:") && customSetups[saved.substring(7)]) {
@@ -14900,12 +14944,27 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     }
   }
   function toggleSetupsDropdown(event2) {
-    if (event2) event2.stopPropagation();
+    if (event2) {
+      if (typeof event2.stopPropagation === "function") event2.stopPropagation();
+      if (typeof event2.preventDefault === "function") event2.preventDefault();
+    }
     const dropdown = document.getElementById("setupsDropdownPopover");
+    const btn = document.getElementById("setupsMenuBtn");
     if (!dropdown) return;
     if (dropdown.style.display === "none" || !dropdown.style.display) {
       renderSetupsMenu();
-      dropdown.style.display = "block";
+      dropdown.style.display = "flex";
+      if (btn && typeof window !== "undefined") {
+        const btnRect = btn.getBoundingClientRect();
+        const popoverWidth = Math.min(480, (window.innerWidth || 1e3) - 32);
+        if (btnRect.right < popoverWidth) {
+          dropdown.style.left = "0";
+          dropdown.style.right = "auto";
+        } else {
+          dropdown.style.left = "auto";
+          dropdown.style.right = "0";
+        }
+      }
     } else {
       dropdown.style.display = "none";
     }
@@ -14915,11 +14974,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (!dropdown) return;
     const customSetups = getCustomSetups();
     const customNames = Object.keys(customSetups);
-    let activeKey = null;
-    if (typeof localStorage !== "undefined") {
-      activeKey = localStorage.getItem("rc_active_workspace");
-    }
-    if (!activeKey) activeKey = detectMatchingPreset() || "player";
+    let activeKey = SafeStorage.getItem("rc_active_workspace");
+    if (!activeKey) activeKey = detectMatchingPreset() || "layout";
     let html = `
         <div class="setups-popover-header">
             <span class="setups-popover-title">\u2699\uFE0F Workspace Setups & Panels</span>
@@ -14927,36 +14983,46 @@ Check network, CORS headers, or file path. Click to browse local files.`;
         </div>
         <div class="setups-popover-body">
     `;
-    html += `
-        <div class="setups-section">
-            <div class="setups-section-title">\u2B50 Saved Custom Setups</div>
-            <div class="setups-custom-list">
-    `;
-    if (customNames.length === 0) {
-      html += `<div style="font-size:0.75rem; color:var(--text-muted); padding:4px 0;">No custom setups saved yet. Configure panels below and click "Save View".</div>`;
-    } else {
-      customNames.forEach((name) => {
-        const isCurrent = activeKey === `custom:${name}`;
-        html += `
-                <div class="custom-setup-item ${isCurrent ? "active" : ""}">
-                    <button class="custom-setup-select-btn" onclick="applyCustomSetup('${name}')" title="Load '${name}' setup">
-                        <span>${isCurrent ? "\u25CF" : "\u25CB"}</span>
-                        <span style="font-weight:${isCurrent ? "600" : "400"};">${name}</span>
-                        <span style="font-size:0.7rem; color:var(--text-muted);">(${customSetups[name].panels.length} panels)</span>
-                    </button>
-                    <button class="custom-setup-del-btn" onclick="deleteCustomSetup('${name}')" title="Delete setup '${name}'">\u{1F5D1}\uFE0F</button>
+    if (!isLocalStorageAvailable()) {
+      html += `
+            <div class="setups-section">
+                <div style="font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.25); border:1px dashed var(--border-color); border-radius:6px; padding:8px 10px; line-height:1.4;">
+                    \u{1F512} <strong>Sandboxed Mode:</strong> Local storage access is disabled in this environment. Custom setup saving is unavailable.
                 </div>
-            `;
-      });
+            </div>
+        `;
+    } else {
+      html += `
+            <div class="setups-section">
+                <div class="setups-section-title">\u2B50 Saved Custom Setups</div>
+                <div class="setups-custom-list">
+        `;
+      if (customNames.length === 0) {
+        html += `<div style="font-size:0.75rem; color:var(--text-muted); padding:4px 0;">No custom setups saved yet. Configure panels below and click "Save View".</div>`;
+      } else {
+        customNames.forEach((name) => {
+          const isCurrent = activeKey === `custom:${name}`;
+          html += `
+                    <div class="custom-setup-item ${isCurrent ? "active" : ""}">
+                        <button class="custom-setup-select-btn" onclick="applyCustomSetup('${name}')" title="Load '${name}' setup">
+                            <span>${isCurrent ? "\u25CF" : "\u25CB"}</span>
+                            <span style="font-weight:${isCurrent ? "600" : "400"};">${name}</span>
+                            <span style="font-size:0.7rem; color:var(--text-muted);">(${customSetups[name].panels.length} panels)</span>
+                        </button>
+                        <button class="custom-setup-del-btn" onclick="deleteCustomSetup('${name}')" title="Delete setup '${name}'">\u{1F5D1}\uFE0F</button>
+                    </div>
+                `;
+        });
+      }
+      html += `
+                </div>
+                <div class="setups-save-bar">
+                    <input type="text" id="customSetupNameInput" class="dim-input" placeholder="New setup name..." style="flex:1; font-size:0.75rem; padding:4px 8px;" onkeydown="if(event.key==='Enter'){saveCurrentCustomSetupFromInput();}">
+                    <button class="btn btn-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="saveCurrentCustomSetupFromInput()">\u{1F4BE} Save View</button>
+                </div>
+            </div>
+        `;
     }
-    html += `
-            </div>
-            <div class="setups-save-bar">
-                <input type="text" id="customSetupNameInput" class="dim-input" placeholder="New setup name..." style="flex:1; font-size:0.75rem; padding:4px 8px;" onkeydown="if(event.key==='Enter'){saveCurrentCustomSetupFromInput();}">
-                <button class="btn btn-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="saveCurrentCustomSetupFromInput()">\u{1F4BE} Save View</button>
-            </div>
-        </div>
-    `;
     html += `
         <div class="setups-section" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
             <div class="setups-section-title">\u{1F39B}\uFE0F Panels Visibility by Cluster</div>
@@ -15010,6 +15076,12 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     if (typeof window === "undefined") return;
     renderPanelPucks();
     updateWorkspaceSelectUI();
+    const dropdownEl = document.getElementById("setupsDropdownPopover");
+    if (dropdownEl) {
+      dropdownEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+    }
     window.addEventListener("click", (e) => {
       const dropdown = document.getElementById("setupsDropdownPopover");
       const btn = document.getElementById("setupsMenuBtn");
@@ -15019,11 +15091,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
         }
       }
     });
-    let saved = null;
-    try {
-      saved = localStorage.getItem("rc_active_workspace");
-    } catch (_) {
-    }
+    const saved = SafeStorage.getItem("rc_active_workspace");
     if (saved) {
       if (saved.startsWith("custom:")) {
         const setupName = saved.substring(7);
@@ -15983,6 +16051,30 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     window.updateResizersVisibility = updateResizersVisibility;
     window.toggleSectionCollapse = toggleSectionCollapse;
     window.findOperationByInstanceId = findOperationByInstanceId;
+    window.applyWorkspace = applyWorkspace;
+    window.applyWorkspacePreset = applyWorkspacePreset;
+    window.applyCustomSetup = applyCustomSetup;
+    window.saveCustomSetup = saveCustomSetup;
+    window.deleteCustomSetup = deleteCustomSetup;
+    window.getCustomSetups = getCustomSetups;
+    window.detectMatchingPreset = detectMatchingPreset;
+    window.togglePanelCheckbox = togglePanelCheckbox;
+    window.toggleSetupsDropdown = toggleSetupsDropdown;
+    window.renderSetupsMenu = renderSetupsMenu;
+    window.saveCurrentCustomSetupFromInput = saveCurrentCustomSetupFromInput;
+    window.initWorkspaces = initWorkspaces;
+    window.renderPanelPucks = renderPanelPucks;
+    window.updatePanelPucks = updatePanelPucks;
+    window.togglePanelPuck = togglePanelPuck;
+    window.onWorkspaceSelectChange = onWorkspaceSelectChange;
+    window.updateWorkspaceSelectUI = updateWorkspaceSelectUI;
+    window.promptSaveCustomWorkspace = promptSaveCustomWorkspace;
+    window.SafeStorage = SafeStorage;
+    window.checkLocalStorageAvailable = checkLocalStorageAvailable;
+    window.isLocalStorageAvailable = isLocalStorageAvailable;
+    window.CLUSTERS = CLUSTERS;
+    window.PANEL_PUCKS = PANEL_PUCKS;
+    window.WORKSPACE_PRESETS = WORKSPACE_PRESETS;
     window.processFile = processFile;
     window.handleFileSelect = handleFileSelect;
     window.loadRcArrayBuffer = loadRcArrayBuffer;
@@ -16685,6 +16777,18 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   } catch (e) {
   }
   try {
+    window.CLUSTERS = CLUSTERS;
+  } catch (e) {
+  }
+  try {
+    window.PANEL_PUCKS = PANEL_PUCKS;
+  } catch (e) {
+  }
+  try {
+    window.WORKSPACE_PRESETS = WORKSPACE_PRESETS;
+  } catch (e) {
+  }
+  try {
     window.hidePanel = hidePanel;
   } catch (e) {
   }
@@ -16713,7 +16817,87 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   } catch (e) {
   }
   try {
+    window.applyWorkspace = applyWorkspace;
+  } catch (e) {
+  }
+  try {
+    window.applyWorkspacePreset = applyWorkspacePreset;
+  } catch (e) {
+  }
+  try {
+    window.applyCustomSetup = applyCustomSetup;
+  } catch (e) {
+  }
+  try {
+    window.saveCustomSetup = saveCustomSetup;
+  } catch (e) {
+  }
+  try {
+    window.deleteCustomSetup = deleteCustomSetup;
+  } catch (e) {
+  }
+  try {
+    window.getCustomSetups = getCustomSetups;
+  } catch (e) {
+  }
+  try {
+    window.detectMatchingPreset = detectMatchingPreset;
+  } catch (e) {
+  }
+  try {
+    window.togglePanelCheckbox = togglePanelCheckbox;
+  } catch (e) {
+  }
+  try {
+    window.toggleSetupsDropdown = toggleSetupsDropdown;
+  } catch (e) {
+  }
+  try {
+    window.renderSetupsMenu = renderSetupsMenu;
+  } catch (e) {
+  }
+  try {
+    window.saveCurrentCustomSetupFromInput = saveCurrentCustomSetupFromInput;
+  } catch (e) {
+  }
+  try {
     window.initWorkspaces = initWorkspaces;
+  } catch (e) {
+  }
+  try {
+    window.renderPanelPucks = renderPanelPucks;
+  } catch (e) {
+  }
+  try {
+    window.updatePanelPucks = updatePanelPucks;
+  } catch (e) {
+  }
+  try {
+    window.togglePanelPuck = togglePanelPuck;
+  } catch (e) {
+  }
+  try {
+    window.onWorkspaceSelectChange = onWorkspaceSelectChange;
+  } catch (e) {
+  }
+  try {
+    window.updateWorkspaceSelectUI = updateWorkspaceSelectUI;
+  } catch (e) {
+  }
+  try {
+    window.promptSaveCustomWorkspace = promptSaveCustomWorkspace;
+  } catch (e) {
+  }
+  try {
+    window.SafeStorage = SafeStorage;
+  } catch (e) {
+  }
+  try {
+    window.checkLocalStorageAvailable = checkLocalStorageAvailable;
+  } catch (e) {
+  }
+  try {
+    window.isLocalStorageAvailable = isLocalStorageAvailable;
   } catch (e) {
   }
   try {
