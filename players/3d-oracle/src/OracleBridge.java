@@ -142,7 +142,26 @@ public final class OracleBridge {
         @Override public void setStyle(int style) { }
         @Override public void setShader(int shader) { }
         @Override public void setImageFilterQuality(int quality) { }
-        @Override public void setAlpha(float a) { }
+        /**
+         * Alpha is part of the paint colour, exactly as Paint.setAlpha is: it replaces the
+         * alpha channel and leaves RGB alone, so a later setColor (which carries a whole
+         * ARGB) overrides it again.
+         *
+         * This was an empty method. That made the oracle report every document as fully
+         * opaque, so the parity suites could not see an alpha difference at all — and when
+         * the TypeScript player got alpha wrong, the oracle looked like a third opinion
+         * rather than the arbiter. A harness that silently cannot observe a property is
+         * worse than one that fails on it.
+         *
+         * The reference computes (int) (255 * a); the clamp guards a malformed document
+         * rather than changing that result for any value in range.
+         */
+        @Override public void setAlpha(float a) {
+            int v = (int) (255 * a);
+            if (v < 0) v = 0;
+            if (v > 255) v = 255;
+            mColorArgb = (mColorArgb & 0x00FFFFFF) | (v << 24);
+        }
         @Override public void setStrokeMiter(float miter) { }
         @Override public void setStrokeJoin(int join) { }
         @Override public void setFilterBitmap(boolean filter) { }

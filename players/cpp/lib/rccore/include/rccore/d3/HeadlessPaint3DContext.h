@@ -16,6 +16,7 @@
 #include "rccore/d3/SoftwarePaint3DContext.h"
 
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -95,10 +96,68 @@ public:
      */
     void applyPaint(const PaintBundle& bundle) override {
         const std::vector<int32_t>& a = bundle.getData();
-        if (a.empty()) return;
-        int tag = a[0] & 0xFFFF;
-        if ((tag == PaintBundle::COLOR || tag == PaintBundle::COLOR_ID) && a.size() >= 2) {
-            mColorArgb = a[1];
+        size_t i = 0;
+        const size_t n = a.size();
+        while (i < n) {
+            const int tag = a[i] & 0xFFFF;
+            switch (tag) {
+                case PaintBundle::COLOR:
+                case PaintBundle::COLOR_ID:
+                    if (i + 1 >= n) return;
+                    // A whole ARGB, alpha included, so this also replaces any alpha a
+                    // previous ALPHA op established — the same rule Paint.setColor follows.
+                    mColorArgb = a[i + 1];
+                    i += 2;
+                    break;
+
+                case PaintBundle::ALPHA: {
+                    if (i + 1 >= n) return;
+                    float av;
+                    std::memcpy(&av, &a[i + 1], sizeof(av));
+                    int v = (int) (255 * av);          // as the reference computes it
+                    if (v < 0) v = 0;
+                    if (v > 255) v = 255;
+                    mColorArgb = (mColorArgb & 0x00FFFFFF) | (v << 24);
+                    i += 2;
+                    break;
+                }
+
+                // Carry one int of payload. Skipped, but skipped *correctly*, so an op
+                // after them is still seen — reading only the first op meant a bundle like
+                // {colour, style, alpha} never reached the alpha at all.
+                case PaintBundle::STROKE_WIDTH:
+                case PaintBundle::STROKE_MITER:
+                case PaintBundle::TEXT_SIZE:
+                case PaintBundle::COLOR_FILTER:
+                case PaintBundle::COLOR_FILTER_ID:
+                case PaintBundle::SHADER:
+                case PaintBundle::SHADER_MATRIX:
+                case PaintBundle::TYPEFACE:
+                case PaintBundle::FALLBACK_TYPEFACE:
+                    i += 2;
+                    break;
+
+                case PaintBundle::TEXTURE:
+                    i += 4;                            // bitmapId, tileModes, filter
+                    break;
+
+                // Value packed into the command word's upper half; no payload int.
+                case PaintBundle::STYLE:
+                case PaintBundle::STROKE_CAP:
+                case PaintBundle::STROKE_JOIN:
+                case PaintBundle::ANTI_ALIAS:
+                case PaintBundle::BLEND_MODE:
+                case PaintBundle::IMAGE_FILTER_QUALITY:
+                case PaintBundle::FILTER_BITMAP:
+                    i += 1;
+                    break;
+
+                // Variable length (gradients, path effects, font axes). This harness shades
+                // a mesh from a flat colour and has no use for them, and guessing their
+                // length would misread everything after. Stop instead.
+                default:
+                    return;
+            }
         }
     }
 
