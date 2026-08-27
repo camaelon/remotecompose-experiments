@@ -299,6 +299,59 @@ static void initAdvanceReaders() {
         }
     };
 
+    // ── Operations the player stubs rather than implements ──────────────────────────
+    // The disassembler still has to walk past them, and for the same reason the player
+    // does: there is no per-op length, so an opcode with no advance rule stops the walk
+    // dead. These mirror rccore/operations/StubOperations.h field for field.
+    auto adv = [](WireBuffer& buf, int n) { for (int i = 0; i < n; i++) buf.readInt(); };
+    // The bitmap-font ops hide a glyph-spacing flag in the top bit of their first int.
+    auto advGlyph = [](WireBuffer& buf) {
+        if ((buf.readInt() & 0x80000000) != 0) buf.readInt();
+    };
+    sAdvanceNames[2] = "COMPONENT_START";
+    sAdvanceReaders[2] = [adv](WireBuffer& buf) { adv(buf, 4); };
+    sAdvanceNames[49] = "DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH";
+    sAdvanceReaders[49] = [adv, advGlyph](WireBuffer& buf) { advGlyph(buf); adv(buf, 5); };
+    sAdvanceNames[57] = "DRAW_TEXT_ON_CIRCLE";
+    sAdvanceReaders[57] = [adv](WireBuffer& buf) {
+        adv(buf, 6); buf.readByte(); buf.readByte();
+    };
+    sAdvanceNames[93] = "LAYOUT_CUSTOM";
+    sAdvanceReaders[93] = [adv](WireBuffer& buf) {
+        adv(buf, 3);
+        int propCount = buf.readInt();
+        for (int i = 0; i < propCount; i++) {
+            buf.readShort(); buf.readShort(); buf.readInt();
+        }
+    };
+    sAdvanceNames[141] = "PLAY_SOUND";
+    sAdvanceReaders[141] = [adv](WireBuffer& buf) { adv(buf, 1); };
+    sAdvanceNames[153] = "TEXT_LOOKUP_INT";
+    // Three fields: declareId() consumes a word too.
+    sAdvanceReaders[153] = [adv](WireBuffer& buf) { adv(buf, 3); };
+    sAdvanceNames[166] = "FUNCTION_CALL";
+    sAdvanceReaders[166] = [adv](WireBuffer& buf) {
+        buf.readInt(); adv(buf, buf.readInt());
+    };
+    sAdvanceNames[168] = "FUNCTION_DEFINE";
+    sAdvanceReaders[168] = [adv](WireBuffer& buf) {
+        buf.readInt(); adv(buf, buf.readInt());
+    };
+    sAdvanceNames[169] = "DATA_SOUND";
+    sAdvanceReaders[169] = [](WireBuffer& buf) { buf.readInt(); buf.readBuffer(); };
+    sAdvanceNames[183] = "BITMAP_TEXT_MEASURE";
+    sAdvanceReaders[183] = [adv, advGlyph](WireBuffer& buf) { advGlyph(buf); adv(buf, 3); };
+    sAdvanceNames[184] = "DRAW_BITMAP_TEXT_ANCHORED";
+    sAdvanceReaders[184] = [adv, advGlyph](WireBuffer& buf) { advGlyph(buf); adv(buf, 7); };
+    sAdvanceNames[185] = "REM";
+    sAdvanceReaders[185] = [](WireBuffer& buf) { buf.readBuffer(); };
+    sAdvanceNames[189] = "DATA_FONT";
+    sAdvanceReaders[189] = [adv](WireBuffer& buf) { adv(buf, 2); buf.readBuffer(); };
+    sAdvanceNames[206] = "SOUND_EXPRESSION";
+    sAdvanceReaders[206] = [adv](WireBuffer& buf) {
+        adv(buf, 4); adv(buf, buf.readInt());
+    };
+
     // PAINT_VALUES (40): INT(length) + length * INT
     sAdvanceReaders[40] = [](WireBuffer& buf) {
         int len = buf.readInt();

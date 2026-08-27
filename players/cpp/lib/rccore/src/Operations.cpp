@@ -4,6 +4,7 @@
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/operations/LayoutOperations.h"
 #include "rccore/operations/Operations3D.h"
+#include "rccore/operations/StubOperations.h"
 
 namespace rccore {
 
@@ -37,6 +38,27 @@ std::string Operations::getName(int opcode) {
 void Operations::init() {
     if (sInitialized) return;
     sInitialized = true;
+
+    // ── Stubs: parsed and discarded ────────────────────────────────────
+    // Not implemented, but registered so the byte stream stays aligned. Without these an
+    // unknown opcode desyncs the reader and the whole document fails, not just the feature.
+    // See StubOperations.h.
+    registerReader(COMPONENT_START, "COMPONENT_START", Stub::componentStart);
+    registerReader(LAYOUT_CUSTOM, "LAYOUT_CUSTOM", Stub::layoutCustom);
+    registerReader(PLAY_SOUND, "PLAY_SOUND", Stub::playSound);
+    registerReader(DATA_SOUND, "DATA_SOUND", Stub::soundData);
+    registerReader(SOUND_EXPRESSION, "SOUND_EXPRESSION", Stub::soundExpression);
+    registerReader(DRAW_TEXT_ON_CIRCLE, "DRAW_TEXT_ON_CIRCLE", Stub::drawTextOnCircle);
+    registerReader(TEXT_LOOKUP_INT, "TEXT_LOOKUP_INT", Stub::textLookupInt);
+    registerReader(DATA_FONT, "DATA_FONT", Stub::fontData);
+    registerReader(BITMAP_TEXT_MEASURE, "BITMAP_TEXT_MEASURE", Stub::bitmapTextMeasure);
+    registerReader(DRAW_BITMAP_TEXT_ANCHORED, "DRAW_BITMAP_TEXT_ANCHORED",
+                   Stub::drawBitmapTextAnchored);
+    registerReader(DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH, "DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH",
+                   Stub::drawBitmapFontTextRunOnPath);
+    registerReader(FUNCTION_CALL, "FUNCTION_CALL", Stub::functionCall);
+    registerReader(FUNCTION_DEFINE, "FUNCTION_DEFINE", Stub::functionDefine);
+    registerReader(REM, "REM", Stub::rem);
 
     // ── Protocol & data ────────────────────────────────────────────────
     registerReader(HEADER, "HEADER", Header::read);

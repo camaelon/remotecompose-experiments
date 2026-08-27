@@ -85,6 +85,19 @@ public:
     static constexpr int TEXT_LOOKUP = 151;
     static constexpr int DRAW_ARC = 152;
     static constexpr int TEXT_LOOKUP_INT = 153;
+
+    // Declared so the stub readers can be registered: see StubOperations.h.
+    static constexpr int DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH = 49;
+    static constexpr int LAYOUT_CUSTOM = 93;
+    static constexpr int PLAY_SOUND = 141;
+    static constexpr int FUNCTION_CALL = 166;
+    static constexpr int FUNCTION_DEFINE = 168;
+    static constexpr int DATA_SOUND = 169;
+    static constexpr int BITMAP_TEXT_MEASURE = 183;
+    static constexpr int DRAW_BITMAP_TEXT_ANCHORED = 184;
+    static constexpr int DATA_FONT = 189;
+    static constexpr int SOUND_EXPRESSION = 206;
+    static constexpr int REM = 185;
     static constexpr int DATA_MAP_LOOKUP = 154;
     static constexpr int TEXT_MEASURE = 155;
     static constexpr int TEXT_LENGTH = 156;

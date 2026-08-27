@@ -133,6 +133,7 @@ import {
     FontDataStub,
     FloatFunctionCallStub,
     FloatFunctionDefineStub,
+    DrawTextOnCircleStub,
     TextLookupIntStub,
     ImageAttributeStub,
     PathCombineStub,
@@ -367,6 +368,7 @@ export class Operations {
         m.set(FontDataStub.OP_CODE, FontDataStub.read);
         m.set(FloatFunctionCallStub.OP_CODE, FloatFunctionCallStub.read);
         m.set(FloatFunctionDefineStub.OP_CODE, FloatFunctionDefineStub.read);
+        m.set(DrawTextOnCircleStub.OP_CODE, DrawTextOnCircleStub.read);
         m.set(TextLookupIntStub.OP_CODE, TextLookupIntStub.read);
         m.set(ImageAttributeStub.OP_CODE, ImageAttributeStub.read);
         m.set(PathCombineStub.OP_CODE, PathCombineStub.read);

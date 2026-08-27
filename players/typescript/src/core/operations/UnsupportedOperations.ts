@@ -233,6 +233,28 @@ export class FloatFunctionDefineStub extends UnsupportedOperation {
 
 // ── Data, images, paths ──────────────────────────────────────────────────────
 
+/**
+ * DRAW_TEXT_ON_CIRCLE (57) — `DrawTextOnCircle`: textId, five NaN-boxed floats, two bytes.
+ *
+ * The last opcode the reference registers that this player did not, so a document using it
+ * desynced the reader and took every operation after it with it.
+ */
+export class DrawTextOnCircleStub extends UnsupportedOperation {
+    static readonly OP_CODE = 57;
+    protected readonly opName = 'DrawTextOnCircle';
+    static read(buffer: WireBuffer, operations: Operation[]): void {
+        buffer.readInt();   // textId
+        buffer.readInt();   // centerX
+        buffer.readInt();   // centerY
+        buffer.readInt();   // radius
+        buffer.readInt();   // startAngle
+        buffer.readInt();   // sweep
+        buffer.readByte();  // anchor
+        buffer.readByte();  // flags
+        operations.push(new DrawTextOnCircleStub());
+    }
+}
+
 /** TEXT_LOOKUP_INT (153) — `TextLookupInt`: textId, dataSetId, indexId. */
 export class TextLookupIntStub extends UnsupportedOperation {
     static readonly OP_CODE = 153;
