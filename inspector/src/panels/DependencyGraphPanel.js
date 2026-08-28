@@ -12,6 +12,29 @@ let exprGraphDragStart = { x: 0, y: 0 };
 let exprGraphData = { nodes: [], edges: [], nodeMap: new Map() };
 let exprGraphNodePositions = new Map();
 
+import { getOpVarReferences, getOpVarOutputs, formatOpParameters } from './OpParameters.js';
+
+// Operations that define a variable without being a FloatExpression/Constant. They are the
+// sources of "derived" values such as componentWidth() or a measured text length. Without
+// them the draw operations that read their output resolve to no known producer and were
+// dropped from the graph entirely.
+const COMPONENT_VALUE_TYPES = ['componentWidth', 'componentHeight', 'componentX', 'componentY',
+    'componentRootX', 'componentRootY', 'contentWidth', 'contentHeight'];
+
+const DERIVED_VALUE_PRODUCERS = {
+    150: { idField: 'mValueId', label: (op) => `${COMPONENT_VALUE_TYPES[op.mType ?? 0] || 'componentValue'}(${op.mComponentId})` },
+    155: { idField: 'mId', label: () => 'textMeasure()' },
+    156: { idField: 'mLengthId', label: () => 'textLength()' },
+    157: { idField: 'mId', label: () => 'touchExpression()' },
+    170: { idField: 'mId', label: () => 'textAttribute()' },
+    180: { idField: 'mOutputId', label: () => 'colorAttribute()' },
+    154: { idField: 'mId', label: () => 'dataMapLookup()' },
+    192: { idField: 'mTextId', label: () => 'idLookup()' },
+    116: { idField: 'mId', label: () => 'vectorExpression()' },
+    187: { idField: 'mMatrixId', label: () => 'matrixExpression()' },
+    196: { idField: 'mId', label: () => 'colorTheme()' }
+};
+
 function toRawBitsHelper(raw) {
     return typeof window.toRawBits === 'function' ? window.toRawBits(raw) : (raw >>> 0);
 }
@@ -380,6 +403,7 @@ function updateExprGraphMinimap() {
             else if (node.type === 'int_expr') color = '#9333ea';
             else if (node.type === 'sys_var') color = '#d97706';
             else if (node.type === 'constant') color = '#059669';
+            else if (node.type === 'derived') color = '#0d9488';
             else if (node.type === 'consumer') color = '#e11d48';
 
             svgContent += `<rect x="${nx.toFixed(1)}" y="${ny.toFixed(1)}" width="${nw.toFixed(1)}" height="${nh.toFixed(1)}" rx="1" fill="${color}" opacity="0.85" />`;
@@ -633,6 +657,42 @@ export function buildExpressionGraphModel(doc) {
                     });
                 }
 
+            } else if (getOpVarOutputs(op).length > 0) {
+                // Any operation that declares an output variable is a producer: componentWidth(),
+                // a loop index, a measured text length, a particle attribute. Each output becomes
+                // a node so that draw operations reading it are no longer orphaned.
+                const spec = DERIVED_VALUE_PRODUCERS[opCode];
+                const inputIds = getOpVarReferences(op);
+                getOpVarOutputs(op).forEach(outId => {
+                    if (outId === null || outId === undefined || outId <= 0) return;
+                    const nodeId = `var_${outId}`;
+                    const liveVal = state ? (state.getFloat(outId) ?? state.getInteger(outId)) : null;
+                    const shownVal = (liveVal === null || liveVal === undefined || Number.isNaN(liveVal))
+                        ? '0'
+                        : (Number.isInteger(liveVal) ? String(liveVal) : liveVal.toFixed(2));
+                    const node = getOrCreateNode(nodeId, {
+                        varId: outId,
+                        label: getSystemVarName(outId) || `var_${outId}`,
+                        type: 'derived',
+                        formula: spec ? spec.label(op) : `${opName}()`,
+                        value: shownVal,
+                        op: op
+                    });
+                    inputIds.forEach(inId => {
+                        const inNodeId = (inId <= 40 || getSystemVarName(inId)) ? `sys_${inId}` : `var_${inId}`;
+                        const inNode = getOrCreateNode(inNodeId, {
+                            varId: inId,
+                            label: getSystemVarName(inId) || `var_${inId}`,
+                            type: inId <= 40 ? 'sys_var' : 'constant',
+                            formula: `ID ${inId}`,
+                            value: state ? String(state.getFloat(inId) ?? state.getInteger(inId) ?? 0) : '0'
+                        });
+                        if (!node.inputs.includes(inNodeId)) node.inputs.push(inNodeId);
+                        if (!inNode.outputs.includes(nodeId)) inNode.outputs.push(nodeId);
+                        edges.push({ from: inNodeId, to: nodeId });
+                    });
+                });
+
             } else if (opCode === 85 || opName === 'ColorExpression') {
                 if (varId !== null && varId !== undefined) {
                     const nodeId = `var_${varId}`;
@@ -655,9 +715,15 @@ export function buildExpressionGraphModel(doc) {
             const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
 
             // Skip variable definition operations, metadata headers, and UI layout container operations
-            if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || opName === 'Header' || opName === 'ContainerEnd' || opName.includes('Layout') || isContainerOp(op)) return;
+            if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || getOpVarOutputs(op).length > 0 || opName === 'Header' || opName === 'ContainerEnd' || opName.includes('Layout') || isContainerOp(op)) return;
 
             const referencedIds = new Set();
+
+            // Structural decode first: this understands each operation's parameter layout,
+            // including nested payloads such as a PaintData's PaintBundle, which the property
+            // scan below cannot see. It also avoids reading a literal ARGB color as a variable
+            // reference just because the color happens to match the NaN bit pattern.
+            getOpVarReferences(op).forEach(id => referencedIds.add(id));
 
             // Check explicit bit/expression arrays
             const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression;
@@ -853,6 +919,7 @@ export function renderExpressionDependencyGraph() {
         else if (typeFilter === 'int') filteredNodes = filteredNodes.filter(n => n.type === 'int_expr');
         else if (typeFilter === 'sys') filteredNodes = filteredNodes.filter(n => n.type === 'sys_var');
         else if (typeFilter === 'constant') filteredNodes = filteredNodes.filter(n => n.type === 'constant');
+        else if (typeFilter === 'derived') filteredNodes = filteredNodes.filter(n => n.type === 'derived');
         else if (typeFilter === 'consumer') filteredNodes = filteredNodes.filter(n => n.type === 'consumer');
         else if (typeFilter === 'unused') {
             filteredNodes = filteredNodes.filter(n => unusedIslandSet.has(n.id));
@@ -1133,6 +1200,7 @@ function renderExprGraphSvg(nodesToRender, query) {
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#9333ea; display:inline-block;"></span> IntExpr</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#d97706; display:inline-block;"></span> SysVar</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#059669; display:inline-block;"></span> Constant</span>
+                <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#0d9488; display:inline-block;"></span> LayoutValue</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#e11d48; display:inline-block;"></span> Consumer</span>
                 ${unusedBadgeHtml}
                 <span style="margin-left:auto; color:var(--text-muted); font-size:0.68rem;">Visible: ${visibleNodeSet.size}/${nodesToRender.length} nodes | Zoom: ${Math.round(exprGraphZoom * 100)}% (${lodMode.toUpperCase()} LOD)</span>
@@ -1297,6 +1365,8 @@ function renderExprGraphSvg(nodesToRender, query) {
             fillBg = '#451a03'; strokeColor = '#d97706'; badgeBg = '#d97706'; typeIcon = '🟨';
         } else if (node.type === 'constant') {
             fillBg = '#064e3b'; strokeColor = '#059669'; badgeBg = '#059669'; typeIcon = '🟩';
+        } else if (node.type === 'derived') {
+            fillBg = '#042f2e'; strokeColor = '#0d9488'; badgeBg = '#0d9488'; typeIcon = '📐';
         } else if (node.type === 'consumer') {
             fillBg = '#4c0519'; strokeColor = '#e11d48'; badgeBg = '#e11d48'; typeIcon = '🎨';
         }
@@ -1390,6 +1460,7 @@ function renderExprGraphTree(nodesToRender, query) {
         if (node.type === 'int_expr') typeBadge = `<span class="badge" style="background:#9333ea;">IntExpr</span>`;
         else if (node.type === 'sys_var') typeBadge = `<span class="badge" style="background:#d97706;">SysVar</span>`;
         else if (node.type === 'constant') typeBadge = `<span class="badge" style="background:#059669;">Constant</span>`;
+        else if (node.type === 'derived') typeBadge = `<span class="badge" style="background:#0d9488;">LayoutValue</span>`;
         else if (node.type === 'consumer') typeBadge = `<span class="badge" style="background:#e11d48;">Consumer</span>`;
 
         html += `

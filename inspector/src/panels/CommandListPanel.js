@@ -10,6 +10,8 @@ let cmdDisplayCompact = true; // Default: Compact (Indented by Container Depth)
 let cmdSortMode = 'position'; // 'position', 'sizeDesc', 'sizeAsc'
 const expandedCmdIndices = new Set();
 
+import { getOpParameters, getOpVarOutputs, formatScalar } from './OpParameters.js';
+
 function getOpId(op) {
     if (!op) return null;
     let rawId = null;
@@ -840,6 +842,12 @@ export function getVariableUsageInfo(doc, ops) {
                 }
             }
         }
+
+        // Operations such as ComponentValue define a variable that is not their op id.
+        getOpVarOutputs(op).forEach(outId => {
+            usageInfo.definedVarIds.add(outId);
+            if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
+        });
     });
 
     if (usageInfo.definedVarIds.size === 0) return usageInfo;
@@ -2183,6 +2191,125 @@ export function renderLayoutAlignmentDetailsHtml(op, idx) {
     `;
 }
 
+// ---------------------------------------------------------------------------
+// Operation parameters
+// ---------------------------------------------------------------------------
+
+// varId -> { idx, opName } for the operation that defines each variable, so a parameter that
+// reads an expression can link straight to where that expression is computed.
+let varDefIndex = new Map();
+
+function buildVarDefIndex(ops) {
+    const index = new Map();
+    if (!Array.isArray(ops)) return index;
+    ops.forEach((op, idx) => {
+        if (!op) return;
+        const opName = getOpName(op);
+        const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
+        const isDef = [80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) ||
+            opName.includes('Constant') || opName.includes('Expression') || opName.includes('Variable') || opName.includes('Attribute');
+        if (isDef) {
+            const id = getOpId(op);
+            if (id !== null && id !== undefined && !index.has(id)) index.set(id, { idx, opName });
+        }
+        getOpVarOutputs(op).forEach(outId => {
+            if (!index.has(outId)) index.set(outId, { idx, opName });
+        });
+    });
+    return index;
+}
+
+function varRefChipHtml(param, { compact = false } = {}) {
+    const escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : (v => String(v));
+    const prefix = param.kind === 'colorId' ? 'color_' : 'var_';
+    const name = `${prefix}${param.varId}`;
+    const def = varDefIndex.get(param.varId);
+    const resolved = (typeof param.value === 'number' && Number.isFinite(param.value))
+        ? `<span style="color:var(--text-muted);"> (${escapeHtml(formatScalar(param.value))})</span>` : '';
+    const jump = def
+        ? `event.stopPropagation(); toggleCommandExpand(${def.idx}, ${param.varId}); const el = document.getElementById('cmdCard-${def.idx}'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'});`
+        : '';
+    const title = def
+        ? `${name} is defined by ${def.opName} at operation #${def.idx + 1} — click to jump there`
+        : `${name} is referenced here but no defining operation was found`;
+    const cursor = def ? 'pointer' : 'help';
+    const color = def ? 'var(--accent-blue)' : 'var(--accent-amber)';
+    const bg = def ? 'rgba(56,189,248,0.14)' : 'rgba(251,191,36,0.14)';
+    return `<span onclick="${jump}" title="${escapeHtml(title)}" style="cursor:${cursor}; color:${color}; background:${bg}; border-radius:3px; padding:0 3px;">${name}</span>${compact ? '' : resolved}`;
+}
+
+/** Compact `label=value` list shown on the command row itself. */
+export function renderOpParamsInlineHtml(op) {
+    const escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : (v => String(v));
+    const params = getOpParameters(op);
+    if (!params.length) return '';
+    const MAX = 6;
+    const shown = params.slice(0, MAX).map(p => {
+        const label = `<span style="color:var(--text-muted);">${escapeHtml(p.label)}=</span>`;
+        if (p.varId !== undefined && p.varId !== null) {
+            if (p.kind === 'output') {
+                return `${label}<span style="color:var(--accent-emerald);">var_${p.varId}</span>`;
+            }
+            return `${label}${varRefChipHtml(p)}`;
+        }
+        const v = typeof p.value === 'number' ? formatScalar(p.value) : String(p.value ?? '');
+        const color = p.kind === 'color' ? '#f472b6'
+            : p.kind === 'enum' ? 'var(--accent-amber)'
+            : p.kind === 'measured' ? 'var(--text-muted)' : 'var(--text-secondary)';
+        const style = p.kind === 'measured' ? `color:${color}; font-style:italic;` : `color:${color};`;
+        return `${label}<span style="${style}">${escapeHtml(v)}</span>`;
+    });
+    const more = params.length > MAX ? `<span style="color:var(--text-muted);"> +${params.length - MAX}</span>` : '';
+    const title = escapeHtml(params.map(p => `${p.label}=${p.varId != null && p.kind !== 'output' ? `var_${p.varId}` : (typeof p.value === 'number' ? formatScalar(p.value) : p.value)}`).join(', '));
+    return `<span class="cmd-params" title="${title}">${shown.join('<span class="cmd-param-sep">·</span>')}${more}</span>`;
+}
+
+/** Full parameter table shown when a command is expanded. */
+export function renderOpParamsDetailHtml(op) {
+    const escapeHtml = typeof window.escapeHtml === 'function' ? window.escapeHtml : (v => String(v));
+    const params = getOpParameters(op);
+    if (!params.length) return '';
+
+    const rows = params.map(p => {
+        let valueCell;
+        if (p.kind === 'output') {
+            valueCell = `<span style="color:var(--accent-emerald);">var_${p.varId}</span> <span style="color:var(--text-muted);">(defined here)</span>`;
+        } else if (p.varId !== undefined && p.varId !== null) {
+            valueCell = varRefChipHtml(p);
+        } else if (p.kind === 'color') {
+            const swatch = typeof p.raw === 'number'
+                ? `<span style="display:inline-block; width:10px; height:10px; border-radius:2px; border:1px solid var(--border-color); vertical-align:middle; background:#${((p.raw >>> 0) & 0xffffff).toString(16).padStart(6, '0')};"></span> ` : '';
+            valueCell = `${swatch}<span style="color:#f472b6;">${escapeHtml(String(p.value))}</span>`;
+        } else {
+            const v = typeof p.value === 'number' ? formatScalar(p.value) : String(p.value ?? '');
+            valueCell = `<span style="color:var(--text-primary);">${escapeHtml(v)}</span>`;
+        }
+        const raw = typeof p.raw === 'number'
+            ? `0x${(p.raw >>> 0).toString(16).toUpperCase().padStart(8, '0')}` : '';
+        const labelSuffix = p.kind === 'measured'
+            ? ` <span style="color:var(--text-muted); font-size:0.65rem;" title="Computed during layout, not stored in the binary payload">📐</span>` : '';
+        return `
+            <tr>
+                <td style="padding:2px 10px 2px 0; color:var(--text-secondary); white-space:nowrap;">${escapeHtml(p.label)}${labelSuffix}</td>
+                <td style="padding:2px 10px 2px 0; white-space:nowrap;">${valueCell}</td>
+                <td style="padding:2px 0; color:var(--text-muted); font-size:0.68rem; white-space:nowrap;">${raw}</td>
+            </tr>`;
+    }).join('');
+
+    const refCount = params.filter(p => p.kind !== 'output' && p.varId !== undefined && p.varId !== null).length;
+    const refNote = refCount > 0
+        ? `<span style="color:var(--accent-blue); font-weight:500;"> — ${refCount} driven by ${refCount === 1 ? 'an expression' : 'expressions'}</span>` : '';
+    const measuredNote = params.some(p => p.kind === 'measured')
+        ? `<div style="color:var(--text-muted); font-size:0.68rem; margin-top:4px;">📐 measured during layout — not part of the binary payload</div>` : '';
+
+    return `
+        <div style="font-size:0.75rem; margin-bottom:6px; padding:6px 10px; background:rgba(148,163,184,0.06); border:1px solid var(--border-color); border-radius:4px;">
+            <div style="font-weight:600; color:var(--text-secondary); margin-bottom:4px;">⚙️ Parameters${refNote}</div>
+            <table style="font-family:var(--code-font); font-size:0.74rem; border-collapse:collapse;">${rows}</table>
+            ${measuredNote}
+        </div>`;
+}
+
 export function renderCommandsList(ops, u8) {
     const container = document.getElementById('commandsListContainer');
     const unusedBadge = document.getElementById('unusedVarBadge');
@@ -2196,6 +2323,7 @@ export function renderCommandsList(ops, u8) {
     }
 
     window.currentParsedOps = ops;
+    varDefIndex = buildVarDefIndex(ops);
     const analysis = getUnusedIslandsAnalysis(currentDocument);
     const { unusedIslandSet, removableOpSet, removableOpsCount, graphData } = analysis;
 
@@ -2330,6 +2458,11 @@ export function renderCommandsList(ops, u8) {
             exprPrettyStr = prettyPrintLayoutAlignment(op);
         }
 
+        // Operations with a dedicated pretty-printer already show their payload; for everything
+        // else the raw parameters (and which expression drives each one) were previously invisible.
+        const paramsInlineHtml = exprPrettyStr ? '' : renderOpParamsInlineHtml(op);
+        const paramsDetailHtml = renderOpParamsDetailHtml(op);
+
         const textSnippet = op.mText || (op.mTextId ? currentDocument?.getText(op.mTextId) : null);
         let unusedBadgeHtml = '';
         if (isIslandUnused) {
@@ -2368,6 +2501,7 @@ export function renderCommandsList(ops, u8) {
                             ${(opCode === 101 || opName === 'BitmapData') ? `<span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:0.68rem;">🖼️ ${op.mWidth ?? op.width ?? '?'}×${op.mHeight ?? op.height ?? '?'} px</span>` : ''}
                             ${([44, 48, 49, 66, 149, 190].includes(opCode) || (opName.includes('Bitmap') && opCode !== 101)) && (op.mImageId !== undefined || op.imageId !== undefined || op.mBitmapId !== undefined) ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.68rem;">🖼️ Bmp #${op.mImageId ?? op.imageId ?? op.mBitmapId}</span>` : ''}
                             ${exprPrettyStr ? `<span style="font-size:0.75rem; color:var(--accent-blue); font-family:var(--code-font); font-weight:500; display:inline-flex; align-items:center; gap:4px;">= ${exprPrettyStr}</span>` : ''}
+                            ${paramsInlineHtml}
                             ${textSnippet && opCode !== 239 && opCode !== 208 && opName !== 'CoreText' && opName !== 'TextLayout' ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml(textSnippet)}"</span>` : ''}
                             ${unusedBadgeHtml}
                         </div>
@@ -2387,6 +2521,7 @@ export function renderCommandsList(ops, u8) {
                             ${renderDimensionModifierDetailsHtml(op, idx)}
                             ${opCode === 123 || opName === 'PathData' ? renderPathDataPreviewHtml(op, idx) : ''}
                             ${opCode === 175 || opName === 'PathCombine' ? renderPathCombinePreviewHtml(op, idx) : ''}
+                            ${paramsDetailHtml}
                             ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-bottom:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font); display:flex; align-items:center; gap:6px;">🧮 <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ''}
                             ${isVarDef && opId !== null ? renderReferencingOpsHtml(opId) : ''}
                             ${bytesHex ? `<div class="op-bytes" style="font-family:var(--code-font); font-size:0.72rem; color:var(--text-muted); word-break:break-all;"><span>HEX:</span> ${bytesHex}</div>` : ''}
@@ -2427,6 +2562,7 @@ export function renderCommandsList(ops, u8) {
                     ${renderDimensionModifierDetailsHtml(op, idx)}
                     ${opCode === 123 || opName === 'PathData' ? renderPathDataPreviewHtml(op, idx) : ''}
                     ${opCode === 175 || opName === 'PathCombine' ? renderPathCombinePreviewHtml(op, idx) : ''}
+                    ${paramsDetailHtml ? `<div style="margin-top:6px;">${paramsDetailHtml}</div>` : ''}
                     ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-top:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font);">🧮 <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ''}
                     ${isVarDef && opId !== null ? `<div style="margin-top:6px;">${renderReferencingOpsHtml(opId)}</div>` : ''}
                     ${bytesHex ? `<div class="op-bytes"><span>HEX:</span> ${bytesHex}</div>` : ''}

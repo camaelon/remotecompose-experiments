@@ -1129,6 +1129,8 @@
             font-family: var(--code-font);
             font-size: 0.72rem;
             color: var(--text-muted);
+            white-space: nowrap;
+            flex: 0 0 auto;
         }
 
         .op-detail {
@@ -1183,6 +1185,29 @@
             align-items: center;
             gap: 8px;
             overflow: hidden;
+            min-width: 0;
+        }
+
+        /* Inline operation parameters: keep them on the row, truncating rather than
+           wrapping into a column when the panel is narrow. */
+        .cmd-params {
+            font-size: 0.72rem;
+            font-family: var(--code-font);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 3ch;
+            flex: 1 1 auto;
+        }
+
+        /* The op name is the anchor of the row: never let the parameters squeeze it away. */
+        .cmd-compact-left > .op-name {
+            flex: 0 0 auto;
+        }
+
+        .cmd-params .cmd-param-sep {
+            color: var(--border-color);
+            padding: 0 2px;
         }
 
         .cmd-indent-guide {
@@ -3039,6 +3064,7 @@
                         <option value="int">Integer Expressions</option>
                         <option value="sys">System Vars</option>
                         <option value="constant">Constants</option>
+                        <option value="derived">Layout Values</option>
                         <option value="consumer">Consumers</option>
                     </select>
                 </div>
@@ -3259,6 +3285,352 @@
     <!-- Inspector Application Runtime -->
     <script>
 (() => {
+  // src/panels/OpParameters.js
+  var NAN_MASK = 2139095040;
+  function isVarRefBits(bits) {
+    if (!Number.isInteger(bits)) return false;
+    const b = bits | 0;
+    return (b & NAN_MASK) === NAN_MASK && (b & 8388607) !== 0;
+  }
+  function varIdFromBits(bits) {
+    return (bits | 0) & 8388607;
+  }
+  var _dv = new DataView(new ArrayBuffer(4));
+  function bitsToFloat(bits) {
+    _dv.setInt32(0, bits | 0);
+    return _dv.getFloat32(0);
+  }
+  function formatColorInt(v) {
+    return "#" + (v >>> 0).toString(16).padStart(8, "0").toUpperCase();
+  }
+  function formatScalar(v) {
+    if (typeof v !== "number") return String(v);
+    if (Number.isInteger(v)) return String(v);
+    if (!Number.isFinite(v)) return String(v);
+    const abs = Math.abs(v);
+    if (abs !== 0 && (abs < 1e-3 || abs >= 1e7)) return v.toExponential(3);
+    return String(Math.round(v * 1e3) / 1e3);
+  }
+  var PAINT = {
+    TEXT_SIZE: 1,
+    COLOR: 4,
+    STROKE_WIDTH: 5,
+    STROKE_MITER: 6,
+    STROKE_CAP: 7,
+    STYLE: 8,
+    SHADER: 9,
+    IMAGE_FILTER_QUALITY: 10,
+    GRADIENT: 11,
+    ALPHA: 12,
+    COLOR_FILTER: 13,
+    ANTI_ALIAS: 14,
+    STROKE_JOIN: 15,
+    TYPEFACE: 16,
+    FILTER_BITMAP: 17,
+    BLEND_MODE: 18,
+    COLOR_ID: 19,
+    COLOR_FILTER_ID: 20,
+    CLEAR_COLOR_FILTER: 21,
+    SHADER_MATRIX: 22,
+    FONT_AXIS: 23,
+    TEXTURE: 24,
+    PATH_EFFECT: 25,
+    FALLBACK_TYPEFACE: 26
+  };
+  var PAINT_TAG_NAMES = {
+    1: "textSize",
+    4: "color",
+    5: "strokeWidth",
+    6: "strokeMiter",
+    7: "strokeCap",
+    8: "style",
+    9: "shader",
+    10: "filterQuality",
+    11: "gradient",
+    12: "alpha",
+    13: "colorFilter",
+    14: "antiAlias",
+    15: "strokeJoin",
+    16: "typeface",
+    17: "filterBitmap",
+    18: "blendMode",
+    19: "colorId",
+    20: "colorFilterId",
+    21: "clearColorFilter",
+    22: "shaderMatrix",
+    23: "fontAxis",
+    24: "texture",
+    25: "pathEffect",
+    26: "fallbackTypeface"
+  };
+  var STYLE_NAMES = ["fill", "stroke", "fillAndStroke"];
+  var CAP_NAMES = ["butt", "round", "square"];
+  var JOIN_NAMES = ["miter", "round", "bevel"];
+  var GRADIENT_NAMES = ["linear", "radial", "sweep"];
+  function floatParam(label, raw) {
+    if (isVarRefBits(raw)) {
+      return { label, raw, varId: varIdFromBits(raw), kind: "float" };
+    }
+    return { label, raw, value: bitsToFloat(raw), kind: "float" };
+  }
+  function walkPaintBundle(bundle) {
+    const params = [];
+    if (!bundle) return params;
+    const arr = bundle.mArray || bundle.array;
+    const end = bundle.mPos ?? (arr ? arr.length : 0);
+    if (!arr) return params;
+    let i = 0;
+    let guard = 0;
+    while (i < end && guard++ < 4096) {
+      const cmd = arr[i++];
+      const tag = cmd & 65535;
+      const high = cmd >> 16 & 65535;
+      const name = PAINT_TAG_NAMES[tag] || `tag${tag}`;
+      switch (tag) {
+        case PAINT.STROKE_MITER:
+        case PAINT.STROKE_WIDTH:
+        case PAINT.ALPHA:
+        case PAINT.TEXT_SIZE:
+          params.push(floatParam(name, arr[i++]));
+          break;
+        case PAINT.COLOR_ID:
+        case PAINT.COLOR_FILTER_ID:
+          params.push({ label: name, raw: arr[i], varId: arr[i], kind: "colorId" });
+          i++;
+          break;
+        case PAINT.COLOR:
+          params.push({ label: name, raw: arr[i], value: formatColorInt(arr[i]), kind: "color" });
+          i++;
+          break;
+        case PAINT.TYPEFACE:
+        case PAINT.SHADER:
+        case PAINT.COLOR_FILTER:
+        case PAINT.FALLBACK_TYPEFACE:
+          params.push({ label: name, raw: arr[i], value: arr[i], kind: "int" });
+          i++;
+          break;
+        // Enum-style tags carry their value packed in the command's high half.
+        case PAINT.STYLE:
+          params.push({ label: name, value: STYLE_NAMES[high] ?? high, kind: "enum" });
+          break;
+        case PAINT.STROKE_CAP:
+          params.push({ label: name, value: CAP_NAMES[high] ?? high, kind: "enum" });
+          break;
+        case PAINT.STROKE_JOIN:
+          params.push({ label: name, value: JOIN_NAMES[high] ?? high, kind: "enum" });
+          break;
+        case PAINT.ANTI_ALIAS:
+        case PAINT.FILTER_BITMAP:
+          params.push({ label: name, value: high ? "true" : "false", kind: "enum" });
+          break;
+        case PAINT.IMAGE_FILTER_QUALITY:
+        case PAINT.BLEND_MODE:
+        case PAINT.CLEAR_COLOR_FILTER:
+          params.push({ label: name, value: high, kind: "enum" });
+          break;
+        case PAINT.FONT_AXIS:
+          for (let j = 0; j < high; j++) {
+            const axisTag = arr[i++];
+            params.push(floatParam(`fontAxis[${axisTag}]`, arr[i++]));
+          }
+          break;
+        case PAINT.TEXTURE:
+          params.push({ label: name, value: `${arr[i]}, ${arr[i + 1]}, ${arr[i + 2]}`, kind: "int" });
+          i += 3;
+          break;
+        case PAINT.SHADER_MATRIX:
+          params.push({ label: name, raw: arr[i], value: arr[i], kind: "int" });
+          i++;
+          break;
+        case PAINT.PATH_EFFECT:
+          for (let j = 0; j < high; j++) params.push(floatParam(`pathEffect[${j}]`, arr[i++]));
+          params.push(floatParam("pathEffectPhase", arr[i++]));
+          break;
+        case PAINT.GRADIENT: {
+          const meta = arr[i++];
+          const numColors = meta & 255;
+          const register = meta >> 16 & 65535;
+          params.push({ label: "gradient", value: GRADIENT_NAMES[high] ?? high, kind: "enum" });
+          for (let j = 0; j < numColors; j++) {
+            if ((register & 1 << j) !== 0) {
+              params.push({ label: `gradColor[${j}]`, raw: arr[i], varId: arr[i], kind: "colorId" });
+            } else {
+              params.push({ label: `gradColor[${j}]`, raw: arr[i], value: formatColorInt(arr[i]), kind: "color" });
+            }
+            i++;
+          }
+          const numStops = arr[i++];
+          for (let j = 0; j < numStops; j++) params.push(floatParam(`gradStop[${j}]`, arr[i++]));
+          const geometry = high === 0 ? ["x0", "y0", "x1", "y1"] : high === 1 ? ["cx", "cy", "radius"] : high === 2 ? ["cx", "cy"] : [];
+          geometry.forEach((g) => params.push(floatParam(`grad.${g}`, arr[i++])));
+          if (high === 0 || high === 1) i++;
+          break;
+        }
+        default:
+          return params;
+      }
+    }
+    return params;
+  }
+  var OP_PARAM_SCHEMAS = {
+    42: { fields: [["mX1", "left"], ["mY1", "top"], ["mX2", "right"], ["mY2", "bottom"]] },
+    // DrawRect
+    46: { fields: [["mV1", "cx"], ["mV2", "cy"], ["mV3", "radius"]] },
+    // DrawCircle
+    47: { fields: [["mX1", "x1"], ["mY1", "y1"], ["mX2", "x2"], ["mY2", "y2"]] },
+    // DrawLine
+    56: { fields: [["mX1", "left"], ["mY1", "top"], ["mX2", "right"], ["mY2", "bottom"]] },
+    // DrawOval
+    51: { fields: [["mV1", "left"], ["mV2", "top"], ["mV3", "right"], ["mV4", "bottom"], ["mV5", "rx"], ["mV6", "ry"]] },
+    152: { fields: [["mV1", "left"], ["mV2", "top"], ["mV3", "right"], ["mV4", "bottom"], ["mV5", "startAngle"], ["mV6", "sweepAngle"]] },
+    52: { fields: [["mV1", "left"], ["mV2", "top"], ["mV3", "right"], ["mV4", "bottom"], ["mV5", "startAngle"], ["mV6", "sweepAngle"]] },
+    43: { fields: [["mV1", "left"], ["mV2", "top"], ["mV3", "right"], ["mV4", "bottom"], ["mV5", "srcLeft"], ["mV6", "srcTop"]] },
+    // Matrix ops keep raw NaN-boxed bits directly in their named fields.
+    129: { rawFields: [["mAngle", "angle"], ["mPivotX", "pivotX"], ["mPivotY", "pivotY"]] },
+    126: { rawFields: [["mScaleX", "scaleX"], ["mScaleY", "scaleY"], ["mCenterX", "centerX"], ["mCenterY", "centerY"]] },
+    127: { rawFields: [["mTranslateX", "translateX"], ["mTranslateY", "translateY"]] },
+    128: { rawFields: [["mSkewX", "skewX"], ["mSkewY", "skewY"]] },
+    181: { plain: [["mPathId", "pathId"]], rawFields: [["mFraction", "fraction"], ["mVOffset", "vOffset"]] },
+    133: { fields: [["mX", "x"], ["mY", "y"], ["mPanX", "panX"], ["mPanY", "panY"]], plain: [["mTextID", "textId"], ["mFlags", "flags"]] },
+    150: { componentValue: true },
+    215: { loop: true },
+    // LoopOperation defines the loop index variable
+    161: { particles: true }
+    // ParticlesCreate defines one variable per particle attribute
+  };
+  var COMPONENT_VALUE_TYPES = ["width", "height", "posX", "posY", "posRootX", "posRootY", "contentWidth", "contentHeight"];
+  var SKIP_FIELDS = /* @__PURE__ */ new Set([
+    "mDirty",
+    "OP_CODE",
+    "mOpCode",
+    "_byteStart",
+    "_byteEnd",
+    "mLastChange",
+    "mLastCalculatedValue",
+    "mLastAnimatedValue",
+    "mOutArray",
+    "mOutBits",
+    "mOutInputs",
+    "mTempOut",
+    "mR0",
+    "mR1",
+    "mR2",
+    "mR3",
+    "mPos",
+    "mList",
+    "mOps",
+    "mOperations",
+    "operations",
+    "mParent",
+    "mComponent",
+    "mPaintBundle",
+    "mBuffer"
+  ]);
+  var MEASURED_FIELDS = /* @__PURE__ */ new Set(["mX", "mY", "mWidth", "mHeight", "mZIndex", "mVisibility", "mCurrentId"]);
+  function labelFor(prop) {
+    return prop.replace(/^m(?=[A-Z])/, "").replace(/^./, (c) => c.toLowerCase());
+  }
+  function getOpParameters(op) {
+    if (!op) return [];
+    const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : -1;
+    const params = [];
+    if (opCode === 40 || op.mPaintBundle && op.mPaintBundle.mArray) {
+      return walkPaintBundle(op.mPaintBundle);
+    }
+    const schema = OP_PARAM_SCHEMAS[opCode];
+    if (schema && schema.componentValue) {
+      const type = op.mType ?? 0;
+      params.push({ label: "value", value: COMPONENT_VALUE_TYPES[type] ?? `type${type}`, kind: "enum" });
+      params.push({ label: "of", value: `component ${op.mComponentId}`, kind: "ref" });
+      params.push({ label: "into", value: op.mValueId, varId: op.mValueId, kind: "output" });
+      return params;
+    }
+    if (schema && schema.loop) {
+      if (op.mIndexId !== void 0) {
+        params.push({ label: "index", value: op.mIndexId, varId: op.mIndexId, kind: "output" });
+      }
+      [["mFromBits", "from"], ["mStepBits", "step"], ["mUntilBits", "until"]].forEach(([prop, label]) => {
+        if (op[prop] !== void 0) params.push(floatParam(label, op[prop]));
+      });
+      return params;
+    }
+    if (schema && schema.particles) {
+      if (op.mParticleCount !== void 0) {
+        params.push({ label: "count", value: op.mParticleCount, kind: "int" });
+      }
+      const varIds = op.mVarId || [];
+      for (let i = 0; i < varIds.length; i++) {
+        params.push({ label: `particleVar[${i}]`, value: varIds[i], varId: varIds[i], kind: "output" });
+      }
+      return params;
+    }
+    if (schema) {
+      (schema.fields || []).forEach(([prop, label]) => {
+        const bits = op[`${prop}Bits`];
+        if (bits === void 0) return;
+        if (isVarRefBits(bits)) {
+          params.push({ label, raw: bits, varId: varIdFromBits(bits), value: op[prop], kind: "float" });
+        } else {
+          params.push({ label, raw: bits, value: op[prop] ?? bitsToFloat(bits), kind: "float" });
+        }
+      });
+      (schema.rawFields || []).forEach(([prop, label]) => {
+        const bits = op[prop];
+        if (bits === void 0) return;
+        if (isVarRefBits(bits)) {
+          params.push({ label, raw: bits, varId: varIdFromBits(bits), kind: "float" });
+        } else {
+          params.push({ label, raw: bits, value: bitsToFloat(bits), kind: "float" });
+        }
+      });
+      (schema.plain || []).forEach(([prop, label]) => {
+        if (op[prop] !== void 0) params.push({ label, value: op[prop], kind: "int" });
+      });
+      if (params.length) return params;
+    }
+    const seen = /* @__PURE__ */ new Set();
+    for (const key in op) {
+      if (SKIP_FIELDS.has(key) || key.startsWith("_")) continue;
+      const val = op[key];
+      if (typeof val !== "number") continue;
+      const base = key.endsWith("Bits") ? key.slice(0, -4) : key;
+      if (seen.has(base)) continue;
+      const bitsKey = `${base}Bits`;
+      const hasBits = typeof op[bitsKey] === "number";
+      const bits = hasBits ? op[bitsKey] : val;
+      seen.add(base);
+      if (isVarRefBits(bits) && (hasBits || key.endsWith("Bits"))) {
+        params.push({ label: labelFor(base), raw: bits, varId: varIdFromBits(bits), value: op[base], kind: "float" });
+      } else if (isVarRefBits(bits) && !Number.isInteger(op[base])) {
+        params.push({ label: labelFor(base), raw: bits, varId: varIdFromBits(bits), value: op[base], kind: "float" });
+      } else {
+        const isMeasured = MEASURED_FIELDS.has(base) && op.mComponentId !== void 0;
+        params.push({
+          label: labelFor(base),
+          raw: bits,
+          value: hasBits ? op[base] : val,
+          kind: isMeasured ? "measured" : "int"
+        });
+      }
+    }
+    return params;
+  }
+  function getOpVarReferences(op) {
+    const ids = /* @__PURE__ */ new Set();
+    getOpParameters(op).forEach((p) => {
+      if (p.kind === "output") return;
+      if (p.varId !== void 0 && p.varId !== null && p.varId > 0) ids.add(p.varId);
+    });
+    return Array.from(ids);
+  }
+  function getOpVarOutputs(op) {
+    const ids = [];
+    getOpParameters(op).forEach((p) => {
+      if (p.kind === "output" && p.varId !== void 0 && p.varId !== null) ids.push(p.varId);
+    });
+    return ids;
+  }
+
   // src/panels/DependencyGraphPanel.js
   var exprGraphMode = "graph";
   var selectedExprNodeId = null;
@@ -3268,6 +3640,29 @@
   var exprGraphDragStart = { x: 0, y: 0 };
   var exprGraphData = { nodes: [], edges: [], nodeMap: /* @__PURE__ */ new Map() };
   var exprGraphNodePositions = /* @__PURE__ */ new Map();
+  var COMPONENT_VALUE_TYPES2 = [
+    "componentWidth",
+    "componentHeight",
+    "componentX",
+    "componentY",
+    "componentRootX",
+    "componentRootY",
+    "contentWidth",
+    "contentHeight"
+  ];
+  var DERIVED_VALUE_PRODUCERS = {
+    150: { idField: "mValueId", label: (op) => `${COMPONENT_VALUE_TYPES2[op.mType ?? 0] || "componentValue"}(${op.mComponentId})` },
+    155: { idField: "mId", label: () => "textMeasure()" },
+    156: { idField: "mLengthId", label: () => "textLength()" },
+    157: { idField: "mId", label: () => "touchExpression()" },
+    170: { idField: "mId", label: () => "textAttribute()" },
+    180: { idField: "mOutputId", label: () => "colorAttribute()" },
+    154: { idField: "mId", label: () => "dataMapLookup()" },
+    192: { idField: "mTextId", label: () => "idLookup()" },
+    116: { idField: "mId", label: () => "vectorExpression()" },
+    187: { idField: "mMatrixId", label: () => "matrixExpression()" },
+    196: { idField: "mId", label: () => "colorTheme()" }
+  };
   function toRawBitsHelper(raw) {
     return typeof window.toRawBits === "function" ? window.toRawBits(raw) : raw >>> 0;
   }
@@ -3614,6 +4009,7 @@
         else if (node.type === "int_expr") color = "#9333ea";
         else if (node.type === "sys_var") color = "#d97706";
         else if (node.type === "constant") color = "#059669";
+        else if (node.type === "derived") color = "#0d9488";
         else if (node.type === "consumer") color = "#e11d48";
         svgContent += `<rect x="${nx.toFixed(1)}" y="${ny.toFixed(1)}" width="${nw.toFixed(1)}" height="${nh.toFixed(1)}" rx="1" fill="${color}" opacity="0.85" />`;
       });
@@ -3829,6 +4225,36 @@
               op
             });
           }
+        } else if (getOpVarOutputs(op).length > 0) {
+          const spec = DERIVED_VALUE_PRODUCERS[opCode];
+          const inputIds = getOpVarReferences(op);
+          getOpVarOutputs(op).forEach((outId) => {
+            if (outId === null || outId === void 0 || outId <= 0) return;
+            const nodeId = `var_${outId}`;
+            const liveVal = state ? state.getFloat(outId) ?? state.getInteger(outId) : null;
+            const shownVal = liveVal === null || liveVal === void 0 || Number.isNaN(liveVal) ? "0" : Number.isInteger(liveVal) ? String(liveVal) : liveVal.toFixed(2);
+            const node = getOrCreateNode(nodeId, {
+              varId: outId,
+              label: getSystemVarName(outId) || `var_${outId}`,
+              type: "derived",
+              formula: spec ? spec.label(op) : `${opName}()`,
+              value: shownVal,
+              op
+            });
+            inputIds.forEach((inId) => {
+              const inNodeId = inId <= 40 || getSystemVarName(inId) ? `sys_${inId}` : `var_${inId}`;
+              const inNode = getOrCreateNode(inNodeId, {
+                varId: inId,
+                label: getSystemVarName(inId) || `var_${inId}`,
+                type: inId <= 40 ? "sys_var" : "constant",
+                formula: `ID ${inId}`,
+                value: state ? String(state.getFloat(inId) ?? state.getInteger(inId) ?? 0) : "0"
+              });
+              if (!node.inputs.includes(inNodeId)) node.inputs.push(inNodeId);
+              if (!inNode.outputs.includes(nodeId)) inNode.outputs.push(nodeId);
+              edges.push({ from: inNodeId, to: nodeId });
+            });
+          });
         } else if (opCode === 85 || opName === "ColorExpression") {
           if (varId !== null && varId !== void 0) {
             const nodeId = `var_${varId}`;
@@ -3847,8 +4273,9 @@
         if (!op) return;
         const opName = getOpName2(op);
         const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
-        if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || opName === "Header" || opName === "ContainerEnd" || opName.includes("Layout") || isContainerOp2(op)) return;
+        if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || getOpVarOutputs(op).length > 0 || opName === "Header" || opName === "ContainerEnd" || opName.includes("Layout") || isContainerOp2(op)) return;
         const referencedIds = /* @__PURE__ */ new Set();
+        getOpVarReferences(op).forEach((id) => referencedIds.add(id));
         const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression;
         if (bits && Array.isArray(bits)) {
           getFloatExprVarDependencies(bits).forEach((id) => referencedIds.add(id));
@@ -4015,6 +4442,7 @@
       else if (typeFilter === "int") filteredNodes = filteredNodes.filter((n) => n.type === "int_expr");
       else if (typeFilter === "sys") filteredNodes = filteredNodes.filter((n) => n.type === "sys_var");
       else if (typeFilter === "constant") filteredNodes = filteredNodes.filter((n) => n.type === "constant");
+      else if (typeFilter === "derived") filteredNodes = filteredNodes.filter((n) => n.type === "derived");
       else if (typeFilter === "consumer") filteredNodes = filteredNodes.filter((n) => n.type === "consumer");
       else if (typeFilter === "unused") {
         filteredNodes = filteredNodes.filter((n) => unusedIslandSet.has(n.id));
@@ -4261,6 +4689,7 @@
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#9333ea; display:inline-block;"></span> IntExpr</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#d97706; display:inline-block;"></span> SysVar</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#059669; display:inline-block;"></span> Constant</span>
+                <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#0d9488; display:inline-block;"></span> LayoutValue</span>
                 <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#e11d48; display:inline-block;"></span> Consumer</span>
                 ${unusedBadgeHtml}
                 <span style="margin-left:auto; color:var(--text-muted); font-size:0.68rem;">Visible: ${visibleNodeSet.size}/${nodesToRender.length} nodes | Zoom: ${Math.round(exprGraphZoom * 100)}% (${lodMode.toUpperCase()} LOD)</span>
@@ -4419,6 +4848,11 @@
         strokeColor = "#059669";
         badgeBg = "#059669";
         typeIcon = "\u{1F7E9}";
+      } else if (node.type === "derived") {
+        fillBg = "#042f2e";
+        strokeColor = "#0d9488";
+        badgeBg = "#0d9488";
+        typeIcon = "\u{1F4D0}";
       } else if (node.type === "consumer") {
         fillBg = "#4c0519";
         strokeColor = "#e11d48";
@@ -4504,6 +4938,7 @@
       if (node.type === "int_expr") typeBadge = `<span class="badge" style="background:#9333ea;">IntExpr</span>`;
       else if (node.type === "sys_var") typeBadge = `<span class="badge" style="background:#d97706;">SysVar</span>`;
       else if (node.type === "constant") typeBadge = `<span class="badge" style="background:#059669;">Constant</span>`;
+      else if (node.type === "derived") typeBadge = `<span class="badge" style="background:#0d9488;">LayoutValue</span>`;
       else if (node.type === "consumer") typeBadge = `<span class="badge" style="background:#e11d48;">Consumer</span>`;
       html += `
             <div style="padding:8px 10px; background:${isSelected ? "rgba(56,189,248,0.12)" : "var(--bg-card)"}; border:1px solid ${isSelected ? "var(--accent-blue)" : "var(--border-color)"}; border-radius:6px; cursor:pointer;" onclick="selectExprGraphNode('${node.id}')">
@@ -5172,9 +5607,9 @@
         const varId = bits & 4194303;
         return rContext ? rContext.getFloat(varId) : 0;
       }
-      const _dv = new DataView(new ArrayBuffer(4));
-      _dv.setInt32(0, bits, false);
-      return _dv.getFloat32(0, false);
+      const _dv2 = new DataView(new ArrayBuffer(4));
+      _dv2.setInt32(0, bits, false);
+      return _dv2.getFloat32(0, false);
     }
     const from = loopOp.mFromBits !== void 0 ? resolveBits(loopOp.mFromBits) : loopOp.mFrom ?? 0;
     const step = loopOp.mStepBits !== void 0 ? resolveBits(loopOp.mStepBits) : loopOp.mStep ?? 1;
@@ -7869,6 +8304,10 @@
           }
         }
       }
+      getOpVarOutputs(op).forEach((outId) => {
+        usageInfo.definedVarIds.add(outId);
+        if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
+      });
     });
     if (usageInfo.definedVarIds.size === 0) return usageInfo;
     function extractReferencedVarIds(op) {
@@ -9093,6 +9532,96 @@
         </div>
     `;
   }
+  var varDefIndex = /* @__PURE__ */ new Map();
+  function buildVarDefIndex(ops) {
+    const index = /* @__PURE__ */ new Map();
+    if (!Array.isArray(ops)) return index;
+    ops.forEach((op, idx) => {
+      if (!op) return;
+      const opName = getOpName(op);
+      const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : 0;
+      const isDef = [80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) || opName.includes("Constant") || opName.includes("Expression") || opName.includes("Variable") || opName.includes("Attribute");
+      if (isDef) {
+        const id = getOpId(op);
+        if (id !== null && id !== void 0 && !index.has(id)) index.set(id, { idx, opName });
+      }
+      getOpVarOutputs(op).forEach((outId) => {
+        if (!index.has(outId)) index.set(outId, { idx, opName });
+      });
+    });
+    return index;
+  }
+  function varRefChipHtml(param, { compact = false } = {}) {
+    const escapeHtml7 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((v) => String(v));
+    const prefix = param.kind === "colorId" ? "color_" : "var_";
+    const name = `${prefix}${param.varId}`;
+    const def = varDefIndex.get(param.varId);
+    const resolved = typeof param.value === "number" && Number.isFinite(param.value) ? `<span style="color:var(--text-muted);"> (${escapeHtml7(formatScalar(param.value))})</span>` : "";
+    const jump = def ? `event.stopPropagation(); toggleCommandExpand(${def.idx}, ${param.varId}); const el = document.getElementById('cmdCard-${def.idx}'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'});` : "";
+    const title = def ? `${name} is defined by ${def.opName} at operation #${def.idx + 1} \u2014 click to jump there` : `${name} is referenced here but no defining operation was found`;
+    const cursor = def ? "pointer" : "help";
+    const color = def ? "var(--accent-blue)" : "var(--accent-amber)";
+    const bg = def ? "rgba(56,189,248,0.14)" : "rgba(251,191,36,0.14)";
+    return `<span onclick="${jump}" title="${escapeHtml7(title)}" style="cursor:${cursor}; color:${color}; background:${bg}; border-radius:3px; padding:0 3px;">${name}</span>${compact ? "" : resolved}`;
+  }
+  function renderOpParamsInlineHtml(op) {
+    const escapeHtml7 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((v) => String(v));
+    const params = getOpParameters(op);
+    if (!params.length) return "";
+    const MAX = 6;
+    const shown = params.slice(0, MAX).map((p) => {
+      const label = `<span style="color:var(--text-muted);">${escapeHtml7(p.label)}=</span>`;
+      if (p.varId !== void 0 && p.varId !== null) {
+        if (p.kind === "output") {
+          return `${label}<span style="color:var(--accent-emerald);">var_${p.varId}</span>`;
+        }
+        return `${label}${varRefChipHtml(p)}`;
+      }
+      const v = typeof p.value === "number" ? formatScalar(p.value) : String(p.value ?? "");
+      const color = p.kind === "color" ? "#f472b6" : p.kind === "enum" ? "var(--accent-amber)" : p.kind === "measured" ? "var(--text-muted)" : "var(--text-secondary)";
+      const style = p.kind === "measured" ? `color:${color}; font-style:italic;` : `color:${color};`;
+      return `${label}<span style="${style}">${escapeHtml7(v)}</span>`;
+    });
+    const more = params.length > MAX ? `<span style="color:var(--text-muted);"> +${params.length - MAX}</span>` : "";
+    const title = escapeHtml7(params.map((p) => `${p.label}=${p.varId != null && p.kind !== "output" ? `var_${p.varId}` : typeof p.value === "number" ? formatScalar(p.value) : p.value}`).join(", "));
+    return `<span class="cmd-params" title="${title}">${shown.join('<span class="cmd-param-sep">\xB7</span>')}${more}</span>`;
+  }
+  function renderOpParamsDetailHtml(op) {
+    const escapeHtml7 = typeof window.escapeHtml === "function" ? window.escapeHtml : ((v) => String(v));
+    const params = getOpParameters(op);
+    if (!params.length) return "";
+    const rows = params.map((p) => {
+      let valueCell;
+      if (p.kind === "output") {
+        valueCell = `<span style="color:var(--accent-emerald);">var_${p.varId}</span> <span style="color:var(--text-muted);">(defined here)</span>`;
+      } else if (p.varId !== void 0 && p.varId !== null) {
+        valueCell = varRefChipHtml(p);
+      } else if (p.kind === "color") {
+        const swatch = typeof p.raw === "number" ? `<span style="display:inline-block; width:10px; height:10px; border-radius:2px; border:1px solid var(--border-color); vertical-align:middle; background:#${(p.raw >>> 0 & 16777215).toString(16).padStart(6, "0")};"></span> ` : "";
+        valueCell = `${swatch}<span style="color:#f472b6;">${escapeHtml7(String(p.value))}</span>`;
+      } else {
+        const v = typeof p.value === "number" ? formatScalar(p.value) : String(p.value ?? "");
+        valueCell = `<span style="color:var(--text-primary);">${escapeHtml7(v)}</span>`;
+      }
+      const raw = typeof p.raw === "number" ? `0x${(p.raw >>> 0).toString(16).toUpperCase().padStart(8, "0")}` : "";
+      const labelSuffix = p.kind === "measured" ? ` <span style="color:var(--text-muted); font-size:0.65rem;" title="Computed during layout, not stored in the binary payload">\u{1F4D0}</span>` : "";
+      return `
+            <tr>
+                <td style="padding:2px 10px 2px 0; color:var(--text-secondary); white-space:nowrap;">${escapeHtml7(p.label)}${labelSuffix}</td>
+                <td style="padding:2px 10px 2px 0; white-space:nowrap;">${valueCell}</td>
+                <td style="padding:2px 0; color:var(--text-muted); font-size:0.68rem; white-space:nowrap;">${raw}</td>
+            </tr>`;
+    }).join("");
+    const refCount = params.filter((p) => p.kind !== "output" && p.varId !== void 0 && p.varId !== null).length;
+    const refNote = refCount > 0 ? `<span style="color:var(--accent-blue); font-weight:500;"> \u2014 ${refCount} driven by ${refCount === 1 ? "an expression" : "expressions"}</span>` : "";
+    const measuredNote = params.some((p) => p.kind === "measured") ? `<div style="color:var(--text-muted); font-size:0.68rem; margin-top:4px;">\u{1F4D0} measured during layout \u2014 not part of the binary payload</div>` : "";
+    return `
+        <div style="font-size:0.75rem; margin-bottom:6px; padding:6px 10px; background:rgba(148,163,184,0.06); border:1px solid var(--border-color); border-radius:4px;">
+            <div style="font-weight:600; color:var(--text-secondary); margin-bottom:4px;">\u2699\uFE0F Parameters${refNote}</div>
+            <table style="font-family:var(--code-font); font-size:0.74rem; border-collapse:collapse;">${rows}</table>
+            ${measuredNote}
+        </div>`;
+  }
   function renderCommandsList(ops, u8) {
     const container = document.getElementById("commandsListContainer");
     const unusedBadge = document.getElementById("unusedVarBadge");
@@ -9104,6 +9633,7 @@
       return;
     }
     window.currentParsedOps = ops;
+    varDefIndex = buildVarDefIndex(ops);
     const analysis = getUnusedIslandsAnalysis(currentDocument2);
     const { unusedIslandSet, removableOpSet, removableOpsCount, graphData } = analysis;
     if (unusedBadge) {
@@ -9227,6 +9757,8 @@
       } else if (isContainerOp(op) || [200, 202, 203, 204, 217, 230, 233, 237, 238, 240].includes(opCode) || opName.includes("Layout") || opName.includes("Row") || opName.includes("Column") || opName.includes("Box")) {
         exprPrettyStr = prettyPrintLayoutAlignment(op);
       }
+      const paramsInlineHtml = exprPrettyStr ? "" : renderOpParamsInlineHtml(op);
+      const paramsDetailHtml = renderOpParamsDetailHtml(op);
       const textSnippet = op.mText || (op.mTextId ? currentDocument2?.getText(op.mTextId) : null);
       let unusedBadgeHtml = "";
       if (isIslandUnused) {
@@ -9261,6 +9793,7 @@
                             ${opCode === 101 || opName === "BitmapData" ? `<span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; font-size:0.68rem;">\u{1F5BC}\uFE0F ${op.mWidth ?? op.width ?? "?"}\xD7${op.mHeight ?? op.height ?? "?"} px</span>` : ""}
                             ${([44, 48, 49, 66, 149, 190].includes(opCode) || opName.includes("Bitmap") && opCode !== 101) && (op.mImageId !== void 0 || op.imageId !== void 0 || op.mBitmapId !== void 0) ? `<span class="badge" style="background:rgba(16,185,129,0.15); color:#10b981; font-size:0.68rem;">\u{1F5BC}\uFE0F Bmp #${op.mImageId ?? op.imageId ?? op.mBitmapId}</span>` : ""}
                             ${exprPrettyStr ? `<span style="font-size:0.75rem; color:var(--accent-blue); font-family:var(--code-font); font-weight:500; display:inline-flex; align-items:center; gap:4px;">= ${exprPrettyStr}</span>` : ""}
+                            ${paramsInlineHtml}
                             ${textSnippet && opCode !== 239 && opCode !== 208 && opName !== "CoreText" && opName !== "TextLayout" ? `<span style="font-size:0.75rem; color:var(--accent-amber); font-style:italic;">"${escapeHtml7(textSnippet)}"</span>` : ""}
                             ${unusedBadgeHtml}
                         </div>
@@ -9280,6 +9813,7 @@
                             ${renderDimensionModifierDetailsHtml(op, idx)}
                             ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                             ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
+                            ${paramsDetailHtml}
                             ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-bottom:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font); display:flex; align-items:center; gap:6px;">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
                             ${isVarDef && opId !== null ? renderReferencingOpsHtml(opId) : ""}
                             ${bytesHex ? `<div class="op-bytes" style="font-family:var(--code-font); font-size:0.72rem; color:var(--text-muted); word-break:break-all;"><span>HEX:</span> ${bytesHex}</div>` : ""}
@@ -9319,6 +9853,7 @@
                     ${renderDimensionModifierDetailsHtml(op, idx)}
                     ${opCode === 123 || opName === "PathData" ? renderPathDataPreviewHtml(op, idx) : ""}
                     ${opCode === 175 || opName === "PathCombine" ? renderPathCombinePreviewHtml(op, idx) : ""}
+                    ${paramsDetailHtml ? `<div style="margin-top:6px;">${paramsDetailHtml}</div>` : ""}
                     ${exprPrettyStr ? `<div style="font-size:0.78rem; color:var(--accent-blue); margin-top:6px; padding:4px 8px; background:rgba(56,189,248,0.08); border-radius:4px; border:1px solid rgba(56,189,248,0.25); font-family:var(--code-font);">\u{1F9EE} <strong>Expression:</strong> = ${exprPrettyStr}</div>` : ""}
                     ${isVarDef && opId !== null ? `<div style="margin-top:6px;">${renderReferencingOpsHtml(opId)}</div>` : ""}
                     ${bytesHex ? `<div class="op-bytes"><span>HEX:</span> ${bytesHex}</div>` : ""}
