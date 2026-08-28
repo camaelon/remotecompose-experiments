@@ -81,7 +81,7 @@ The inspector source code is structured as follows:
 inspector/
 ├── build.mjs                      # Production bundler (esbuild IIFE + single-file injection)
 ├── mcp-server.mjs                 # Headless Chrome CDP Model Context Protocol server
-├── remote_compose_player.js       # Core TypeScript RemoteCompose player runtime
+├── remote_compose_player.js       # Generated: player engine bundled from players/typescript/
 ├── RemoteComposeSerializer.js     # Binary encoder & decompiler engine
 ├── dist/                          # Generated distribution bundle
 │   └── index.html                 # Self-contained single-file inspector (243 KB)
@@ -134,14 +134,30 @@ The MCP server (`mcp-server.mjs`) exposes the following tool suite to LLMs:
 
 ## 6. Build Workflow
 
-To build the optimized single-file distribution bundle:
+`build.mjs` runs three stages, from sources to the published distribution:
+
+1. **Compile the player engine.** `players/typescript/src/web/main.ts` is bundled with esbuild
+   (IIFE, `--global-name=RC`, ES2020) into `inspector/remote_compose_player.js`. The engine is
+   never hand-edited here — it is always a build product of the TypeScript player.
+2. **Bundle the inspector UI.** `src/main.js` and `src/panels/*.js` are bundled, then injected
+   together with `src/styles/main.css` into the `src/index.html` shell to produce a
+   self-contained `index.html` (written to both `inspector/` and `inspector/dist/`).
+3. **Publish.** The three distribution files — `index.html`, `remote_compose_player.js` and
+   `RemoteComposeSerializer.js` — are copied to `docs/inspector/`, which is what ships.
+
+esbuild is resolved from the nearest local `node_modules/.bin` (repo root, `inspector/`, or
+`players/typescript/`), falling back to `npx`. Each stage pins its esbuild working directory so
+the module paths embedded in the bundles stay stable and the build is byte-for-byte reproducible.
 
 ```bash
-export PATH=/Users/nicolasroard/.gradle/nodejs/node-v22.0.0-darwin-arm64/bin:$PATH
-node build.mjs
+npm install          # once, from the repo root — provides esbuild
+npm run build        # full pipeline: player + inspector + publish to docs/inspector/
 ```
 
-To run watch mode during active development:
+Equivalent invocations, and the variants:
+
 ```bash
-node build.mjs --watch
+node inspector/build.mjs               # same as npm run build
+node inspector/build.mjs --no-player   # skip stage 1, reuse the existing player bundle
+node inspector/build.mjs --watch       # rebuild on changes in src/ and players/typescript/src/
 ```
