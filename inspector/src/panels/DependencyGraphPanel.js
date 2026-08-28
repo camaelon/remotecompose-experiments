@@ -12,7 +12,7 @@ let exprGraphDragStart = { x: 0, y: 0 };
 let exprGraphData = { nodes: [], edges: [], nodeMap: new Map() };
 let exprGraphNodePositions = new Map();
 
-import { getOpVarReferences, getOpVarOutputs, formatOpParameters } from './OpParameters.js';
+import { getOpVarReferences, getOpVarOutputs, formatOpParameters, isTerminalOp } from './OpParameters.js';
 
 // Operations that define a variable without being a FloatExpression/Constant. They are the
 // sources of "derived" values such as componentWidth() or a measured text length. Without
@@ -543,7 +543,8 @@ export function buildExpressionGraphModel(doc) {
             value: defaultObj.value || '0',
             inputs: [],
             outputs: [],
-            op: defaultObj.op || null
+            op: defaultObj.op || null,
+            terminal: defaultObj.terminal === true
         };
         nodeMap.set(idKey, node);
         nodes.push(node);
@@ -676,7 +677,8 @@ export function buildExpressionGraphModel(doc) {
                         type: 'derived',
                         formula: spec ? spec.label(op) : `${opName}()`,
                         value: shownVal,
-                        op: op
+                        op: op,
+                        terminal: isTerminalOp(op)
                     });
                     inputIds.forEach(inId => {
                         const inNodeId = (inId <= 40 || getSystemVarName(inId)) ? `sys_${inId}` : `var_${inId}`;
@@ -832,9 +834,10 @@ export function getUnusedIslandsAnalysis(doc) {
     const reachesConsumerSet = new Set();
     const queue = [];
 
-    // Find all consumer nodes
+    // Roots of the reachability search: drawing/modifier consumers, plus values produced by a
+    // terminal operation such as ParticlesCreate, whose work counts even when nothing reads it.
     graphData.nodes.forEach(node => {
-        if (node.type === 'consumer') {
+        if (node.type === 'consumer' || node.terminal) {
             reachesConsumerSet.add(node.id);
             queue.push(node.id);
         }

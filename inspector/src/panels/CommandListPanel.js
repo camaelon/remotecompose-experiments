@@ -10,7 +10,7 @@ let cmdDisplayCompact = true; // Default: Compact (Indented by Container Depth)
 let cmdSortMode = 'position'; // 'position', 'sizeDesc', 'sizeAsc'
 const expandedCmdIndices = new Set();
 
-import { getOpParameters, getOpVarOutputs, formatScalar } from './OpParameters.js';
+import { getOpParameters, getOpVarOutputs, formatScalar, isTerminalOp } from './OpParameters.js';
 
 function getOpId(op) {
     if (!op) return null;
@@ -843,11 +843,15 @@ export function getVariableUsageInfo(doc, ops) {
             }
         }
 
-        // Operations such as ComponentValue define a variable that is not their op id.
-        getOpVarOutputs(op).forEach(outId => {
-            usageInfo.definedVarIds.add(outId);
-            if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
-        });
+        // Operations such as ComponentValue define a variable that is not their op id. A terminal
+        // operation is excluded: its outputs are simulation state, so leaving one unread does not
+        // make the operation a removable definition.
+        if (!isTerminalOp(op)) {
+            getOpVarOutputs(op).forEach(outId => {
+                usageInfo.definedVarIds.add(outId);
+                if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
+            });
+        }
     });
 
     if (usageInfo.definedVarIds.size === 0) return usageInfo;

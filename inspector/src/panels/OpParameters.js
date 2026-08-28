@@ -342,6 +342,24 @@ export function getOpParameters(op) {
     return params;
 }
 
+// Terminal operations do work that matters on its own — they are not a variable definition
+// waiting for a reader. The particle family runs a simulation every frame and advances its own
+// state, so an attribute variable that no draw operation happens to read does not make the
+// operation dead code: it cannot be removed, and none of its five attributes can be removed
+// individually. Reachability analysis must therefore treat these as roots, exactly like a
+// drawing operation, rather than requiring them to reach a consumer.
+const TERMINAL_OP_CODES = new Set([
+    161, // ParticlesCreate
+    163, // ParticlesLoop
+    194  // ParticlesCompare
+]);
+
+export function isTerminalOp(op) {
+    if (!op) return false;
+    const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : -1);
+    return TERMINAL_OP_CODES.has(opCode);
+}
+
 /**
  * Variable ids this operation reads, decoded structurally. `output` slots are excluded:
  * they are what the operation writes, not what it consumes.

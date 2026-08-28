@@ -3615,6 +3615,19 @@
     }
     return params;
   }
+  var TERMINAL_OP_CODES = /* @__PURE__ */ new Set([
+    161,
+    // ParticlesCreate
+    163,
+    // ParticlesLoop
+    194
+    // ParticlesCompare
+  ]);
+  function isTerminalOp(op) {
+    if (!op) return false;
+    const opCode = op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : -1;
+    return TERMINAL_OP_CODES.has(opCode);
+  }
   function getOpVarReferences(op) {
     const ids = /* @__PURE__ */ new Set();
     getOpParameters(op).forEach((p) => {
@@ -4123,7 +4136,8 @@
         value: defaultObj.value || "0",
         inputs: [],
         outputs: [],
-        op: defaultObj.op || null
+        op: defaultObj.op || null,
+        terminal: defaultObj.terminal === true
       };
       nodeMap.set(idKey, node);
       nodes.push(node);
@@ -4239,7 +4253,8 @@
               type: "derived",
               formula: spec ? spec.label(op) : `${opName}()`,
               value: shownVal,
-              op
+              op,
+              terminal: isTerminalOp(op)
             });
             inputIds.forEach((inId) => {
               const inNodeId = inId <= 40 || getSystemVarName(inId) ? `sys_${inId}` : `var_${inId}`;
@@ -4369,7 +4384,7 @@
     const reachesConsumerSet = /* @__PURE__ */ new Set();
     const queue = [];
     graphData.nodes.forEach((node) => {
-      if (node.type === "consumer") {
+      if (node.type === "consumer" || node.terminal) {
         reachesConsumerSet.add(node.id);
         queue.push(node.id);
       }
@@ -8304,10 +8319,12 @@
           }
         }
       }
-      getOpVarOutputs(op).forEach((outId) => {
-        usageInfo.definedVarIds.add(outId);
-        if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
-      });
+      if (!isTerminalOp(op)) {
+        getOpVarOutputs(op).forEach((outId) => {
+          usageInfo.definedVarIds.add(outId);
+          if (!usageInfo.refMap.has(outId)) usageInfo.refMap.set(outId, []);
+        });
+      }
     });
     if (usageInfo.definedVarIds.size === 0) return usageInfo;
     function extractReferencedVarIds(op) {
