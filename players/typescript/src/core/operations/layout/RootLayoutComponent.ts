@@ -39,6 +39,20 @@ export class RootLayoutComponent extends Component {
         }
     }
 
+    override invalidateMeasure(): void {
+        this.mNeedsMeasure = true;
+        this.invalidateMeasureChildren(this);
+    }
+
+    private invalidateMeasureChildren(component: Component): void {
+        component.mNeedsMeasure = true;
+        for (const op of component.getList()) {
+            if (op instanceof Component) {
+                this.invalidateMeasureChildren(op);
+            }
+        }
+    }
+
     /** Measure then layout the tree of components */
     layoutTree(context: RemoteContext): void {
         if (!this.mNeedsMeasure) return;

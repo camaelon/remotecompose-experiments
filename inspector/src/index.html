@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RemoteCompose Binary Inspector & Player (.rc)</title>
+    <!-- Load RemoteCompose Standalone Player & Serializer Runtimes -->
+    <script src="remote_compose_player.js"></script>
+    <script src="RemoteComposeSerializer.js"></script>
+    <!-- CodeMirror 5 Editor Assets for JSON Editor & Viewer -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldgutter.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/foldgutter.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/fold/brace-fold.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/edit/closebrackets.min.js"></script>
+    <!-- %%INJECT_STYLES%% -->
+</head>
+<body>
+    <header>
+        <div class="header-top-row">
+            <div class="header-title">
+                <h1>⚡ RemoteCompose Binary Inspector</h1>
+            </div>
+            <div class="header-file-actions">
+                <div id="headerDropZone" class="header-file-zone" onclick="document.getElementById('fileInput').click()" title="Click to browse or drop a .rc binary / .json file">
+                    <span class="header-file-icon">📁</span>
+                    <span id="fileStatusBadge" class="header-file-name">Open or Drop .rc / .json</span>
+                    <input type="file" id="fileInput" accept=".rc,.json" style="display:none" onchange="handleFileSelect(event)">
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="exportRcFile()" title="Download binary .rc file" style="display:inline-flex; align-items:center; gap:5px;">
+                    <span>💾</span>
+                    <span>Download .rc</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="header-bottom-row">
+            <!-- Panel Pucks Bar in cluster order immediately below title at start of line -->
+            <div class="panel-pucks-bar" id="panelPucksBar">
+                <!-- Dynamically populated by LayoutManager.renderPanelPucks() -->
+            </div>
+
+            <!-- Workspace Selector on the right of the pucks -->
+            <div class="workspace-selector-wrapper">
+                <select id="workspaceSelect" class="dim-input ws-select" onchange="onWorkspaceSelectChange(this.value)" title="Preselect workspace panel layout">
+                    <option value="">📂 Workspace Presets...</option>
+                    <option value="layout">📐 Layout (Tree + Inspector)</option>
+                    <option value="adaptive">📐 Adaptive (Matrix)</option>
+                    <option value="reactivity">⚡ Reactivity (Vars + Graphs)</option>
+                    <option value="binary">📦 Binary (Disasm + Stats)</option>
+                    <option value="performance">⏱️ Performance (Profiler)</option>
+                </select>
+                <button class="btn btn-secondary btn-sm" id="saveWorkspaceBtn" onclick="promptSaveCustomWorkspace()" title="Save current panel configuration as a custom workspace">💾 Save</button>
+                <button class="btn btn-secondary btn-sm" id="setupsMenuBtn" onclick="toggleSetupsDropdown(event)" title="Manage custom saved setups">⚙️</button>
+                <div class="setups-dropdown-popover" id="setupsDropdownPopover" style="display:none;"></div>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- Panel 1: Player & Controls -->
+        <!-- Panel 1: Canvas Render & Player -->
+        <div class="panel panel-p1" id="pane1">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane1')" title="Hide Canvas Player panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">🎨 Canvas Render & Player</div>
+                </div>
+                <div id="docDimBadge" style="font-size:0.75rem; color:var(--text-muted); font-family:var(--code-font);">---</div>
+            </div>
+            <div class="panel-body" style="display:flex; flex-direction:column; padding:10px; gap:10px; height:100%; overflow:hidden;">
+                
+                <!-- Subpanel 1: Live Preview (Expands as much as possible by default) -->
+                <div class="stats-container" id="canvasPreviewSection" style="margin-top:0; margin-bottom:0; flex:1; display:flex; flex-direction:column; min-height:0;">
+                    <div class="stats-header" onclick="toggleSectionCollapse('canvasPreviewBody', 'canvasPreviewToggleBtn')" style="cursor:pointer; user-select:none; flex-shrink:0;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="canvasPreviewToggleBtn" title="Toggle Canvas Preview">▼</button>
+                            <span class="stats-title">🖼️ Live Preview & Stage</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button id="playPauseBtn" class="btn" style="padding:2px 8px; font-size:0.72rem; display:flex; align-items:center; gap:4px;" onclick="togglePlayPause()" title="Play / Pause document execution and live animation">
+                                <span>⏸️</span> <span>Pause</span>
+                            </button>
+                            <span id="stepStatusPill" class="badge" style="display:none; font-size:0.68rem; background:rgba(239,68,68,0.15); color:var(--accent-rose); border:1px solid rgba(239,68,68,0.35);">⏸️ Paused</span>
+                        </div>
+                    </div>
+                    <div id="canvasPreviewBody" style="margin-top:6px; flex:1; display:flex; flex-direction:column; min-height:0;">
+                        <div class="canvas-container" style="flex:1; display:flex; flex-direction:column; min-height:0; padding:8px;">
+                            <!-- Play / Pause & Operation Stepper Bar -->
+                            <div class="canvas-controls-bar" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; padding:4px 8px; flex-shrink:0;">
+                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                                    <div id="stepControlsGroup" style="display:none; align-items:center; gap:4px;">
+                                        <button class="dim-btn" onclick="resetStepToStart()" title="Step to first operation">⏮️</button>
+                                        <button class="dim-btn" onclick="stepOpBackward()" title="Step backward one operation">◀</button>
+                                        <button class="dim-btn" onclick="stepOpForward()" title="Step forward one operation">▶</button>
+                                        <button class="dim-btn" onclick="stepOpToEnd()" title="Step to end of frame">⏭️</button>
+                                    </div>
+                                    <button id="stageAutoScaleBtn" class="dim-btn active" onclick="toggleStageAutoScale()" title="Toggle Auto-Scale to fit preview within available viewport">
+                                        <span id="stageAutoScaleIcon">📐</span> <span id="stageAutoScaleLabel">Fit</span>
+                                    </button>
+                                    <select id="stageScaleSelect" class="dim-input" style="width:auto; padding:2px 6px; font-size:0.75rem; cursor:pointer;" onchange="onStageScaleSelectChange()" title="Preview Zoom / Scale mode">
+                                        <option value="fit" selected>Auto Fit (Scale down)</option>
+                                        <option value="fill">Fit & Fill (Zoom to fit)</option>
+                                        <option value="1">100% (1:1)</option>
+                                        <option value="0.75">75%</option>
+                                        <option value="0.5">50%</option>
+                                        <option value="0.33">33%</option>
+                                        <option value="1.25">125%</option>
+                                        <option value="1.5">150%</option>
+                                        <option value="2">200%</option>
+                                    </select>
+                                    <span id="stageScaleFactorBadge" class="badge" style="font-size:0.65rem; font-family:var(--code-font); display:inline-block;">100%</span>
+                                    <span style="font-size:0.7rem; color:var(--text-muted);">↔️ ↕️ ↘ Drag handles to resize</span>
+                                </div>
+                                <div class="canvas-meta" style="margin:0; padding:0; border:none; background:transparent;">
+                                    <span id="metaFps" style="font-weight:600;">FPS: 60</span>
+                                </div>
+                            </div>
+
+                            <!-- Live Canvas Stage Viewport (Expands vertically to maximum window height) -->
+                            <div class="stage-workspace-container" id="stageWorkspaceContainer" style="flex:1; min-height:180px; height:100%;">
+                                <div class="canvas-stage-scaler" id="canvasStageScaler">
+                                    <div class="canvas-stage-wrapper" id="canvasStageWrapper" title="Drag the right, bottom, or corner handle to resize the document viewport">
+                                        <canvas id="previewCanvas" width="300" height="300"></canvas>
+                                        <div class="stage-resize-handle handle-e" id="stageResizeHandleE" title="Drag right handle to resize document width (Double-click to reset width)"></div>
+                                        <div class="stage-resize-handle handle-s" id="stageResizeHandleS" title="Drag bottom handle to resize document height (Double-click to reset height)"></div>
+                                        <div class="stage-resize-handle handle-se" id="stageResizeHandleSE" title="Drag corner handle to resize document width & height (Shift for aspect ratio)">↘</div>
+                                        <div class="stage-resize-tooltip" id="stageResizeTooltip">300 × 300 px</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="canvas-meta" style="flex-shrink:0; margin-top:6px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between;">
+                                <div style="display:flex; gap:10px;">
+                                    <span id="metaSize">Size: 0 B</span>
+                                    <span id="metaOps">Ops: 0</span>
+                                </div>
+                                <span style="font-size:0.68rem; color:var(--text-muted); font-family:var(--code-font);">Interactive RemoteCanvas</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subpanel 2: Player & Stage Setup (Dedicated configuration subpanel) -->
+                <div class="stats-container" id="playerSetupSection" style="margin-top:0; margin-bottom:0; flex-shrink:0;">
+                    <div class="stats-header" onclick="toggleSectionCollapse('playerSetupBody', 'playerSetupToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="playerSetupToggleBtn" title="Toggle Player & Stage Setup">▼</button>
+                            <span class="stats-title">⚙️ Player & Stage Setup</span>
+                        </div>
+                        <span id="stageSetupBadge" class="badge" style="font-size:0.68rem; font-family:var(--code-font);">300×300 • 1.0x</span>
+                    </div>
+                    <div id="playerSetupBody" style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                        <!-- Dimension, Density & Theme Controls -->
+                        <div class="canvas-controls-bar" style="margin-bottom:0; gap:8px; padding:6px 10px;">
+                            <div class="dim-inputs-group">
+                                <span style="font-weight:600;">Stage:</span>
+                                <label style="color:var(--text-muted);">W:</label>
+                                <input type="number" id="stageWidthInput" class="dim-input" value="300" min="50" max="3000" step="10" oninput="setCustomStageSize()" title="Stage Width in pixels">
+                                <label style="color:var(--text-muted);">H:</label>
+                                <input type="number" id="stageHeightInput" class="dim-input" value="300" min="50" max="3000" step="10" oninput="setCustomStageSize()" title="Stage Height in pixels">
+                                <span style="font-size:0.75rem; color:var(--text-muted);">px</span>
+                            </div>
+                            <div class="dim-inputs-group" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+                                <span style="font-weight:600;">Density:</span>
+                                <select id="densitySelect" class="dim-input" style="width: auto; padding: 3px 6px; cursor: pointer;" onchange="onDensitySelectChange()" title="Screen pixel density (dp scale factor)">
+                                    <option value="1" selected>1.0x (mdpi / 160dpi)</option>
+                                    <option value="1.5">1.5x (hdpi / 240dpi)</option>
+                                    <option value="2.0">2.0x (xhdpi / 320dpi)</option>
+                                    <option value="2.625">2.625x (Pixel / 420dpi)</option>
+                                    <option value="3.0">3.0x (xxhdpi / 480dpi)</option>
+                                    <option value="3.5">3.5x (qhd / 560dpi)</option>
+                                    <option value="4.0">4.0x (xxxhdpi / 640dpi)</option>
+                                    <option value="custom">Custom...</option>
+                                </select>
+                                <input type="number" id="customDensityInput" class="dim-input" style="width: 52px; display: none;" value="1.0" min="0.2" max="10" step="0.1" oninput="onCustomDensityInput()" title="Custom density factor">
+                            </div>
+                            <div class="dim-inputs-group" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+                                <span style="font-weight:600;">Zoom:</span>
+                                <select id="stageSetupScaleSelect" class="dim-input" style="width: auto; padding: 3px 6px; cursor: pointer;" onchange="onStageSetupScaleSelectChange()" title="Preview Zoom / Scale mode">
+                                    <option value="fit" selected>Auto Fit (Scale down)</option>
+                                    <option value="fill">Fit & Fill (Zoom to fit)</option>
+                                    <option value="1">100% (Actual size)</option>
+                                    <option value="0.75">75%</option>
+                                    <option value="0.5">50%</option>
+                                    <option value="0.33">33%</option>
+                                    <option value="1.25">125%</option>
+                                    <option value="1.5">150%</option>
+                                    <option value="2">200%</option>
+                                </select>
+                            </div>
+                            <div class="dim-inputs-group" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+                                <span style="font-weight:600;">Theme:</span>
+                                <button class="dim-btn" onclick="setDocumentTheme(-3)" title="Switch to Light Theme (-3)">☀️ Light</button>
+                                <button class="dim-btn" onclick="setDocumentTheme(-2)" title="Switch to Dark Theme (-2)">🌙 Dark</button>
+                                <button class="dim-btn" onclick="setDocumentTheme(-1)" title="Switch to System Default (-1)">⚙️ Default</button>
+                            </div>
+                        </div>
+
+                        <!-- Dimension Presets Bar -->
+                        <div class="canvas-controls-bar" style="margin-bottom:0; padding:6px 10px;">
+                            <div class="dim-presets-group">
+                                <span style="font-weight:600; font-size:0.75rem; color:var(--text-secondary);">Presets:</span>
+                                <button class="dim-btn" onclick="applyStagePreset('doc')" title="Reset to Document Native Dimensions">📄 Native</button>
+                                <button class="dim-btn" onclick="applyStagePreset(300, 300)">300×300</button>
+                                <button class="dim-btn" onclick="applyStagePreset(400, 400)">400×400</button>
+                                <button class="dim-btn" onclick="applyStagePreset(800, 800)">800×800</button>
+                                <button class="dim-btn" onclick="applyStagePreset(360, 640)">360×640</button>
+                                <button class="dim-btn" onclick="applyStagePreset(640, 360)">640×360</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Resizer Handle 1 -->
+        <div class="resizer" id="resizer1" title="Drag to resize Pane 1 (Double click to reset)"></div>
+
+        <!-- Panel 14: Document Statistics & Component Metrics (Immediately after Canvas Player) -->
+        <div class="panel panel-p14 hidden-panel" id="pane14">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane14')" title="Hide Document Statistics panel">✕</button>
+                    <div class="panel-title">📊 Document Statistics & Metrics</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="statsTotalSizeBadge" class="badge">0 B</span>
+                    <span id="statsTotalOpsBadge" class="badge">0 Ops</span>
+                </div>
+            </div>
+            <div class="panel-body" style="padding:12px; display:flex; flex-direction:column; gap:12px; overflow-y:auto;">
+                
+                <!-- Section 1: Document Structure & Size Breakdown -->
+                <div class="stats-container" id="statsContainer" style="margin-top:0;">
+                    <div class="stats-header" onclick="toggleSectionCollapse('statsBody', 'statsToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="statsToggleBtn" title="Toggle Document Structure & Size Breakdown">▼</button>
+                            <span class="stats-title">📊 Document Structure & Byte Distribution</span>
+                        </div>
+                    </div>
+
+                    <div id="statsBody">
+                        <!-- Visual Byte Distribution Bar -->
+                        <div class="byte-bar-wrapper" id="byteBarWrapper" title="Byte Distribution across Operation Categories">
+                            <div class="byte-bar-segment" id="segHeader" style="width:0%; background:#64748b;" title="Header"></div>
+                            <div class="byte-bar-segment" id="segLayout" style="width:0%; background:#10b981;" title="Layout"></div>
+                            <div class="byte-bar-segment" id="segData" style="width:0%; background:#fbbf24;" title="Data & Vars"></div>
+                            <div class="byte-bar-segment" id="segDraw" style="width:0%; background:#c084fc;" title="Draw & Paint"></div>
+                            <div class="byte-bar-segment" id="segModifier" style="width:0%; background:#f43f5e;" title="Modifiers"></div>
+                        </div>
+
+                        <!-- Category Legend -->
+                        <div class="byte-legend">
+                            <div class="legend-item"><span class="legend-dot" style="background:#64748b;"></span> Header</div>
+                            <div class="legend-item"><span class="legend-dot" style="background:#10b981;"></span> Layout</div>
+                            <div class="legend-item"><span class="legend-dot" style="background:#fbbf24;"></span> Data & Vars</div>
+                            <div class="legend-item"><span class="legend-dot" style="background:#c084fc;"></span> Draw</div>
+                            <div class="legend-item"><span class="legend-dot" style="background:#f43f5e;"></span> Modifiers</div>
+                        </div>
+
+                        <!-- KPI Tiles Grid -->
+                        <div class="kpi-grid">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Total Size</div>
+                                <div class="kpi-value" id="kpiTotalSize" style="color:var(--accent-blue);">0 B</div>
+                                <div class="kpi-sub" id="kpiTotalSub">0 ops total</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Data & Vars</div>
+                                <div class="kpi-value" id="kpiDataSize" style="color:var(--accent-amber);">0 B</div>
+                                <div class="kpi-sub" id="kpiDataSub">0 ops (0%)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Layout Structure</div>
+                                <div class="kpi-value" id="kpiLayoutSize" style="color:var(--accent-emerald);">0 B</div>
+                                <div class="kpi-sub" id="kpiLayoutSub">0 ops (0%)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Draw Cmds</div>
+                                <div class="kpi-value" id="kpiDrawSize" style="color:var(--accent-purple);">0 B</div>
+                                <div class="kpi-sub" id="kpiDrawSub">0 ops (0%)</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Modifiers</div>
+                                <div class="kpi-value" id="kpiModifierSize" style="color:var(--accent-rose);">0 B</div>
+                                <div class="kpi-sub" id="kpiModifierSub">0 ops (0%)</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Components Breakdown & Hierarchy Analysis -->
+                <div class="stats-container" id="componentsAnalysisContainer">
+                    <div class="stats-header" onclick="toggleSectionCollapse('componentsBody', 'componentsToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="componentsToggleBtn" title="Toggle Components Breakdown">▼</button>
+                            <span class="stats-title">🧱 Components Hierarchy & Payload Breakdown</span>
+                        </div>
+                        <span id="compTotalBadge" class="badge">0 Components</span>
+                    </div>
+
+                    <div id="componentsBody">
+                        <!-- Component KPI Grid -->
+                        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Total Components</div>
+                                <div class="kpi-value" id="kpiCompTotal" style="color:var(--accent-blue);">0</div>
+                                <div class="kpi-sub" id="kpiCompMaxDepth">Depth 0</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Total Wire Payload</div>
+                                <div class="kpi-value" id="kpiCompPayload" style="color:var(--accent-emerald);">0 B (0%)</div>
+                                <div class="kpi-sub" id="kpiCompAvgPayload">0 B/comp</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Attached Modifiers</div>
+                                <div class="kpi-value" id="kpiCompModifiers" style="color:var(--accent-rose);">0 (0/comp)</div>
+                                <div class="kpi-sub" id="kpiCompContainersLeaves" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">0 cont / 0 leaf</div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Distribution Charts Grid -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+                            <!-- Depth Histogram -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.3px;">Hierarchy Depth</div>
+                                <div id="componentDepthHistogram"></div>
+                            </div>
+                            <!-- Global Component Size Distribution -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <span style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">Size Spectrum</span>
+                                    <span id="globalSizeSpectrumRange" style="font-size:0.6rem; color:var(--text-muted); font-family:var(--code-font);">0 B – 0 B</span>
+                                </div>
+                                <div id="componentGlobalSizeHistogram"></div>
+                            </div>
+                        </div>
+
+                        <!-- Component Kinds Header & Filter Hint -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Component Kinds & Payloads:</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);">Click kind to filter disassembly</span>
+                        </div>
+
+                        <!-- Component Kinds List -->
+                        <div id="componentKindsList" style="max-height: 360px; overflow-y: auto; display:flex; flex-direction:column; gap:6px;">
+                            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">No components analyzed.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Modifiers Analysis & Payload Breakdown -->
+                <div class="stats-container" id="modifiersAnalysisContainer">
+                    <div class="stats-header" onclick="toggleSectionCollapse('modifiersBody', 'modifiersToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="modifiersToggleBtn" title="Toggle Modifiers Breakdown">▼</button>
+                            <span class="stats-title">🏷️ Attached Modifiers & Styling Breakdown</span>
+                        </div>
+                        <span id="modTotalBadge" class="badge">0 Modifiers</span>
+                    </div>
+
+                    <div id="modifiersBody">
+                        <!-- Modifier KPI Grid -->
+                        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Total Modifiers</div>
+                                <div class="kpi-value" id="kpiModTotal" style="color:var(--accent-rose);">0</div>
+                                <div class="kpi-sub" id="kpiModDistinctTypes">0 types</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Modifier Payload</div>
+                                <div class="kpi-value" id="kpiModPayload" style="color:var(--accent-amber);">0 B (0%)</div>
+                                <div class="kpi-sub" id="kpiModAvgPayload">0 B/mod</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Attachment Rate</div>
+                                <div class="kpi-value" id="kpiModDensity" style="color:var(--accent-blue);">0.0 / comp</div>
+                                <div class="kpi-sub" id="kpiModStyledPercent">0% styled</div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Distribution Charts Grid for Modifiers -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+                            <!-- Modifiers per Component Histogram -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.3px;">Mods per Component</div>
+                                <div id="modifierCountHistogram"></div>
+                            </div>
+                            <!-- Global Modifier Size Spectrum -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <span style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">Mod Size Spectrum</span>
+                                    <span id="globalModSizeRange" style="font-size:0.6rem; color:var(--text-muted); font-family:var(--code-font);">0 B – 0 B</span>
+                                </div>
+                                <div id="modifierGlobalSizeHistogram"></div>
+                            </div>
+                        </div>
+
+                        <!-- Modifier Kinds Header & Filter Hint -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Modifier Types & Payloads:</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);">Click modifier to filter disassembly</span>
+                        </div>
+
+                        <!-- Modifier Kinds List -->
+                        <div id="modifierKindsList" style="max-height: 360px; overflow-y: auto; display:flex; flex-direction:column; gap:6px;">
+                            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">No modifiers analyzed.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Variables & Float Expressions Analysis -->
+                <div class="stats-container" id="variablesAnalysisContainer">
+                    <div class="stats-header" onclick="toggleSectionCollapse('variablesBody', 'variablesToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="variablesToggleBtn" title="Toggle Variables & Expressions Breakdown">▼</button>
+                            <span class="stats-title">⚡ Variables & Float Expressions Analysis</span>
+                        </div>
+                        <span id="varExprTotalBadge" class="badge">0 Vars • 0 Exprs</span>
+                    </div>
+
+                    <div id="variablesBody">
+                        <!-- Variables & Expressions KPI Grid (6 cards, 3x2) -->
+                        <div class="kpi-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 10px;">
+                            <div class="kpi-card">
+                                <div class="kpi-label">Variables Defined</div>
+                                <div class="kpi-value" id="kpiVarTotal" style="color:var(--accent-purple);">0</div>
+                                <div class="kpi-sub" id="kpiVarSub">0 named, 0 const</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Float Expressions</div>
+                                <div class="kpi-value" id="kpiExprTotal" style="color:var(--accent-blue);">0</div>
+                                <div class="kpi-sub" id="kpiExprSub">0% active</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Max Chain Depth</div>
+                                <div class="kpi-value" id="kpiChainMaxDepth" style="color:var(--accent-rose);">Depth 0</div>
+                                <div class="kpi-sub" id="kpiChainDepthSub">0 at max depth</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Root Drivers</div>
+                                <div class="kpi-value" id="kpiRootDrivers" style="color:var(--accent-emerald);">0 sources</div>
+                                <div class="kpi-sub" id="kpiRootDriversSub">0 driving outputs</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Terminal UI Sinks</div>
+                                <div class="kpi-value" id="kpiTerminalSinks" style="color:var(--accent-amber);">0 sinks</div>
+                                <div class="kpi-sub" id="kpiTerminalSinksSub">0% of expressions</div>
+                            </div>
+                            <div class="kpi-card">
+                                <div class="kpi-label">Expression Payload</div>
+                                <div class="kpi-value" id="kpiExprPayload" style="color:var(--text-primary);">0 B (0%)</div>
+                                <div class="kpi-sub" id="kpiExprAvgPayload">0 B/expr</div>
+                            </div>
+                        </div>
+
+                        <!-- Dual Distribution Charts Grid for Variables & Expressions -->
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:10px;">
+                            <!-- Expression Chain Depth Histogram -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); margin-bottom:2px; text-transform:uppercase; letter-spacing:0.3px;">Dependency Chain Depth</div>
+                                <div id="exprChainDepthHistogram"></div>
+                            </div>
+                            <!-- Variable Fan-Out Distribution -->
+                            <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:6px 10px;">
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+                                    <span style="font-size:0.65rem; font-weight:600; color:var(--text-secondary); text-transform:uppercase; letter-spacing:0.3px;">Variable Fan-Out (Dependents)</span>
+                                    <span id="varFanoutRange" style="font-size:0.6rem; color:var(--text-muted); font-family:var(--code-font);">0 – 0 deps</span>
+                                </div>
+                                <div id="varFanoutHistogram"></div>
+                            </div>
+                        </div>
+
+                        <!-- Top Critical Dependency Paths (Longest Chains) -->
+                        <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">🔗 Longest Reactive Dependency Chains:</span>
+                                <span id="exprCriticalPathsCount" style="font-size:0.65rem; color:var(--text-muted);">0 paths</span>
+                            </div>
+                            <div id="exprCriticalPathsList" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto;">
+                                <div style="text-align:center; padding:8px; color:var(--text-muted); font-size:0.75rem;">No dependency chains detected.</div>
+                            </div>
+                        </div>
+
+                        <!-- Mathematical & Logical Operators Used -->
+                        <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; padding:8px 10px; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">🧮 RPN Math & Logic Operators Used:</span>
+                                <span id="exprOperatorsTotal" style="font-size:0.65rem; color:var(--text-muted);">0 ops</span>
+                            </div>
+                            <div id="exprOperatorsList" style="display:flex; flex-wrap:wrap; gap:5px;">
+                                <div style="color:var(--text-muted); font-size:0.75rem;">No operators analyzed.</div>
+                            </div>
+                        </div>
+
+                        <!-- Detailed Expressions & Variables Header & Filter Hint -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Expressions & Dynamic Variables:</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);">Click row to filter disassembly</span>
+                        </div>
+
+                        <!-- Expressions & Variables List -->
+                        <div id="exprVariablesList" style="max-height: 360px; overflow-y: auto; display:flex; flex-direction:column; gap:6px;">
+                            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">No variables or expressions analyzed.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 5: Operation Types & Deep Analysis Card -->
+                <div class="stats-container" id="opTypesAnalysisContainer">
+                    <div class="stats-header" onclick="toggleSectionCollapse('opTypesBody', 'opTypesToggleBtn')" style="cursor:pointer; user-select:none;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <button class="section-toggle-btn" id="opTypesToggleBtn" title="Toggle Operation Types & Metrics">▼</button>
+                            <span class="stats-title">📋 Operation Types & Metrics</span>
+                        </div>
+                        <span id="opTypeTotalBadge" class="badge">0 Types</span>
+                    </div>
+
+                    <div id="opTypesBody">
+                        <!-- Quick Insights & Complexity Metrics -->
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin-bottom: 10px; margin-top: 8px;">
+                            <div class="insight-pill" title="Average Size per Operation">
+                                <span style="font-size:0.65rem; color:var(--text-muted); display:block; text-transform:uppercase;">AVG OP SIZE</span>
+                                <strong id="insightAvgOpSize" style="font-size:0.85rem; color:var(--accent-blue);">0 B/op</strong>
+                            </div>
+                            <div class="insight-pill" title="String & Text Data Operations">
+                                <span style="font-size:0.65rem; color:var(--text-muted); display:block; text-transform:uppercase;">STRINGS & TEXT</span>
+                                <strong id="insightStringCount" style="font-size:0.85rem; color:var(--accent-amber);">0</strong>
+                            </div>
+                            <div class="insight-pill" title="State & Dynamic Expressions">
+                                <span style="font-size:0.65rem; color:var(--text-muted); display:block; text-transform:uppercase;">STATE VARS</span>
+                                <strong id="insightVarCount" style="font-size:0.85rem; color:var(--accent-purple);">0</strong>
+                            </div>
+                            <div class="insight-pill" title="Interactive Click & Touch Handlers">
+                                <span style="font-size:0.65rem; color:var(--text-muted); display:block; text-transform:uppercase;">INTERACTIONS</span>
+                                <strong id="insightClickCount" style="font-size:0.85rem; color:var(--accent-rose);">0</strong>
+                            </div>
+                        </div>
+
+                        <!-- Filter hint -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px;">
+                            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">Opcodes Frequency:</span>
+                            <span style="font-size:0.68rem; color:var(--text-muted);">Click row to filter disassembly</span>
+                        </div>
+
+                        <!-- Operation Types List -->
+                        <div id="opTypesList" class="op-types-list">
+                            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:0.8rem;">No operations analyzed.</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Resizer Handle 14 -->
+        <div class="resizer" id="resizer14" title="Drag to resize Pane 14 (Double click to reset)"></div>
+
+        <!-- Panel 2: Commands Disassembly -->
+        <div class="panel panel-p2 hidden-panel" id="pane2">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane2')" title="Hide Commands List panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">📜 Commands List (Disassembly)</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span id="unusedVarBadge" class="badge" style="background:rgba(251,191,36,0.15); color:var(--accent-amber); border:1px solid rgba(251,191,36,0.4); display:none; cursor:pointer; user-select:none;" title="Click to filter unused variable definitions" onclick="filterUnusedVarsOnly()">⚠️ 0 Unused Vars</span>
+                    <button id="toggleCmdModeBtn" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleCmdDisplayMode()" title="Toggle Compact (Indented) vs Detailed Mode">📋 Compact</button>
+                    <select id="cmdSortSelect" class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem; background:var(--bg-card); color:var(--text-primary); border:1px solid var(--border-color); cursor:pointer;" onchange="changeCmdSortMode(this.value)" title="Sort Commands List by Position or Size">
+                        <option value="position">↕️ Order: Default</option>
+                        <option value="sizeDesc">📊 Size: Largest First</option>
+                        <option value="sizeAsc">📊 Size: Smallest First</option>
+                    </select>
+                    <span id="cmdCountBadge" class="badge">0 Ops</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="search-box-wrapper">
+                    <input type="text" class="search-box" id="cmdSearchInput" placeholder="🔍 Search opcode, name, or offset..." style="padding-right:32px;" oninput="onCmdSearchInput()">
+                    <button class="search-clear-btn" id="cmdSearchClearBtn" style="display:none;" onclick="clearCmdSearch()" title="Clear search">✕</button>
+                </div>
+                <div id="commandsListContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No commands loaded yet. Drop a .rc file or select a sample demo to inspect binary operations.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 2 -->
+        <div class="resizer" id="resizer2" title="Drag to resize Pane 2 & 7 (Double click to reset)"></div>
+
+        <!-- Panel 7: Running Operations Tree (Post-Inflation) -->
+        <div class="panel panel-p7 hidden-panel" id="pane7">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane7')" title="Hide Running Tree panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">🌿 Running Operations Tree</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllRunningTree(true)" title="Expand All Running Tree Nodes">Expand</button>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllRunningTree(false)" title="Collapse All Running Tree Nodes">Collapse</button>
+                    <span id="runningTreeCountBadge" class="badge">0 Running Ops</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="search-box-wrapper">
+                    <input type="text" class="search-box" id="runningTreeSearchInput" placeholder="🔍 Search running ops, IDs, bounds, text..." style="padding-right:32px;" oninput="onRunningTreeSearchInput()">
+                    <button class="search-clear-btn" id="runningTreeSearchClearBtn" style="display:none;" onclick="clearRunningTreeSearch()" title="Clear search">✕</button>
+                </div>
+                <div id="runningTreeContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No running operations inflated yet. Drop a .rc file to inspect post-inflation runtime tree.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 6 -->
+        <div class="resizer" id="resizer6" title="Drag to resize Pane 7 & 3 (Double click to reset)"></div>
+
+        <!-- Panel 3: Component Tree -->
+        <div class="panel panel-p3" id="pane3">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane3')" title="Hide Component Tree panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">🌳 Component Hierarchy Tree</div>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllTree(true)">Expand All</button>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="expandAllTree(false)">Collapse All</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="componentTreeContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No component tree available. Load a .rc file with layout components.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 3 -->
+        <div class="resizer" id="resizer3" title="Drag to resize Pane 3 & 4 (Double click to reset)"></div>
+
+        <!-- Panel 4: JSON Source (Experimental) -->
+        <div class="panel panel-p4 hidden-panel" id="pane4">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane4')" title="Hide JSON Source (Experimental) panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">⚙️ JSON Source (Experimental)</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="formatJsonInput()" title="Format / Beautify JSON">🧹 Format</button>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="copyJsonInput()" title="Copy JSON to Clipboard">📋 Copy</button>
+                    <button class="btn" style="padding:2px 10px; font-size:0.75rem;" onclick="recompileJsonInput()">⚡ Recompile JSON</button>
+                </div>
+            </div>
+            <div class="panel-body">
+                <textarea id="jsonTextarea" placeholder="JSON RemoteCompose document representation will appear here..."></textarea>
+                <div class="status-msg" id="compileStatusMsg"></div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 4 -->
+        <div class="resizer" id="resizer4" title="Drag to resize Pane 4 & 5 (Double click to reset)"></div>
+
+        <!-- Panel 5: Variables & State -->
+        <div class="panel panel-p5 hidden-panel" id="pane5">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane5')" title="Hide Variables panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">🎛️ Variables & State</div>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <label style="font-size:0.72rem; color:var(--text-secondary); cursor:pointer; display:flex; align-items:center; gap:4px; user-select:none;" title="Show only variables referenced or used in the document">
+                        <input type="checkbox" id="showReferencedVarsOnly" checked onchange="updateVariablesPanel()">
+                        <span>Referenced Only</span>
+                    </label>
+                    <span id="varCountBadge" class="badge">0 Vars</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <div id="variablesListContainer">
+                    <div style="text-align:center; padding:32px; color:var(--text-muted); font-size:0.85rem;">
+                        No document loaded yet. Drop a .rc file or json to inspect variables.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 5 -->
+        <div class="resizer" id="resizer5" title="Drag to resize Pane 5 & 6 (Double click to reset)"></div>
+
+        <!-- Panel 6: Variable Graph Plotter -->
+        <div class="panel panel-p6 hidden-panel" id="pane6">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane6')" title="Hide Graph panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">📈 Variable Graphs</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <select id="graphWindowSecSelect" class="dim-input" style="padding:2px 6px; font-size:0.75rem;" onchange="setGraphWindowDuration(this.value)" title="History Window">
+                        <option value="5">5s Window</option>
+                        <option value="10" selected>10s Window</option>
+                        <option value="30">30s Window</option>
+                        <option value="60">1m Window</option>
+                        <option value="300">5m Window</option>
+                        <option value="600">10m Window</option>
+                    </select>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="clearGraphData()" title="Clear Graph History">🧹 Clear</button>
+                </div>
+            </div>
+            <div class="panel-body" style="padding:8px; display:flex; flex-direction:column; gap:8px;">
+                <div id="graphLegendBar" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; min-height:24px; padding:4px 8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); font-size:0.75rem;">
+                    <span style="color:var(--text-muted);">Select variables in Panel 🎛️ to plot</span>
+                </div>
+                <div style="flex:1; min-height:200px; position:relative; background:#0f172a; border-radius:6px; border:1px solid var(--border-color); overflow:hidden;">
+                    <canvas id="varGraphCanvas" style="width:100%; height:100%; display:block;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 6 -->
+        <div class="resizer" id="resizer6_7" title="Drag to resize Pane 6 & 8 (Double click to reset)"></div>
+
+        <!-- Panel 8: Profiler & Op Measurement -->
+        <div class="panel panel-p8 hidden-panel" id="pane8">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane8')" title="Hide Profiler panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">⏱️ Profiler & Op Measurement</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <button id="profMeasureBtn" class="btn" style="padding:2px 8px; font-size:0.75rem;" onclick="toggleProfilerMeasurement()">Measurement: ON</button>
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="resetProfilerTotals()" title="Reset Totals">🧹 Reset</button>
+                    <select id="profRankSelect" class="dim-input" style="padding:2px 6px; font-size:0.75rem;" onchange="setProfilerRank(this.value)" title="Rank Mode">
+                        <option value="last" selected>Rank: This Frame</option>
+                        <option value="total">Rank: Total (Cumulative)</option>
+                        <option value="peak">Rank: Peak Frame</option>
+                    </select>
+                </div>
+            </div>
+            <div class="panel-body" style="padding:10px; display:flex; flex-direction:column; gap:10px; overflow-y:auto;">
+                <!-- Summary Metrics Cards Grid -->
+                <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;">
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">This Frame</span>
+                        <strong id="prof-last" style="font-size:1.25rem; font-family:var(--code-font); color:var(--accent-emerald); line-height:1.2;">0</strong>
+                    </div>
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">Peak Frame</span>
+                        <strong id="prof-peak" style="font-size:1.25rem; font-family:var(--code-font); color:var(--accent-amber); line-height:1.2;">0</strong>
+                    </div>
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">Mean Ops/Fr</span>
+                        <strong id="prof-mean" style="font-size:1.25rem; font-family:var(--code-font); color:var(--text-primary); line-height:1.2;">0</strong>
+                    </div>
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">Total Frames</span>
+                        <strong id="prof-frames" style="font-size:1.05rem; font-family:var(--code-font); color:var(--text-secondary); line-height:1.2;">0</strong>
+                    </div>
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">Active Types</span>
+                        <strong id="prof-types" style="font-size:1.05rem; font-family:var(--code-font); color:var(--accent-blue); line-height:1.2;">0</strong>
+                    </div>
+                    <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column;">
+                        <span style="font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; font-weight:600; letter-spacing:0.04em;">Active Insts</span>
+                        <strong id="prof-inst" style="font-size:1.05rem; font-family:var(--code-font); color:var(--accent-purple); line-height:1.2;">0</strong>
+                    </div>
+                </div>
+
+                <!-- Sparkline History Chart -->
+                <div style="padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.68rem; color:var(--text-secondary); font-weight:600; text-transform:uppercase; letter-spacing:0.04em;">Execution History (Last 600 Frames)</span>
+                        <span id="prof-spark-status" style="font-size:0.65rem; color:var(--accent-emerald); font-family:var(--code-font);">Live Hook</span>
+                    </div>
+                    <canvas id="profSparkCanvas" width="600" height="56" style="width:100%; height:56px; background:#0b111a; border-radius:4px; border:1px solid rgba(255,255,255,0.06); display:block;"></canvas>
+                </div>
+
+                <!-- Invariant Verification Live Banner -->
+                <div id="profInvariantStatus" style="padding:6px 10px; background:rgba(61,220,132,0.1); border:1px solid rgba(61,220,132,0.3); border-radius:6px; font-size:0.72rem; color:var(--accent-emerald); font-family:var(--code-font); display:flex; align-items:center; gap:6px;">
+                    <span>✓</span>
+                    <span id="profInvariantText">Invariants hold: byType and byInstance both sum to total = getOpsPerFrame()</span>
+                </div>
+
+                <!-- Operations by Type Table -->
+                <div style="padding:10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+                    <div style="font-size:0.72rem; color:var(--text-primary); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">By Operation Type</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem; font-family:var(--code-font);">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); text-transform:uppercase; font-size:0.65rem;">
+                                <th style="text-align:left; padding:4px 0;">Operation</th>
+                                <th style="text-align:center; padding:4px 4px;">Op</th>
+                                <th style="text-align:right; padding:4px 6px;">Frame</th>
+                                <th style="text-align:right; padding:4px 6px;">Peak</th>
+                                <th style="text-align:right; padding:4px 6px;">Total</th>
+                                <th style="width:70px; padding:4px 0 4px 6px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="profTypesTbody">
+                            <tr><td colspan="6" style="text-align:center; padding:16px; color:var(--text-muted);">No measurement data yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Operations by Instance Table (Top 25) -->
+                <div style="padding:10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.72rem; color:var(--text-primary); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;">By Operation Instance</span>
+                        <span style="font-size:0.65rem; color:var(--text-muted);">Top 25 hottest instances</span>
+                    </div>
+                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem; font-family:var(--code-font);">
+                        <thead>
+                            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); text-transform:uppercase; font-size:0.65rem;">
+                                <th style="text-align:left; padding:4px 0;">#ID</th>
+                                <th style="text-align:left; padding:4px 6px;">Operation</th>
+                                <th style="text-align:right; padding:4px 6px;">Frame</th>
+                                <th style="text-align:right; padding:4px 6px;">Peak</th>
+                                <th style="text-align:right; padding:4px 6px;">Total</th>
+                                <th style="width:70px; padding:4px 0 4px 6px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="profInstsTbody">
+                            <tr><td colspan="6" style="text-align:center; padding:16px; color:var(--text-muted);">No measurement data yet.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 7 -->
+        <div class="resizer" id="resizer8_9" title="Drag to resize Pane 8 & 9 (Double click to reset)"></div>
+
+        <!-- Panel 9: Expression Dependency Graph -->
+        <div class="panel panel-p9 hidden-panel" id="pane9">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane9')" title="Hide Expression Dependency Graph panel">✕</button>
+                    <div class="panel-title">🧬 Expression Dependency Graph</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <button id="exprGraphViewBtn" class="btn active" style="padding:2px 8px; font-size:0.75rem;" onclick="setExprGraphDisplayMode('graph')" title="Switch to Visual Graph view">🌐 Graph</button>
+                    <button id="exprListViewBtn" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="setExprGraphDisplayMode('tree')" title="Switch to Tree / Dependency List view">📋 Tree</button>
+                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="resetExprGraphZoom()" title="Reset graph zoom and view">🎯 Fit</button>
+                    <button id="exprSortUnusedBtn" class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="toggleExprGraphSortUnused()" title="Sort unused island nodes to the top of graph columns">⚠️ Unused First</button>
+                    <button id="exprCriticalPathBtn" class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="toggleExprCriticalPathTrace()" title="Highlight the deepest critical calculation path and formula evaluation steps">🔥 Critical Path</button>
+                    <button id="exprSimulatorToggleBtn" class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="toggleExprVariableSimulator()" title="Toggle Live Variable Value Simulator & Range Sliders">🎛️ Live Simulator</button>
+                    <span id="exprNodeCountBadge" class="badge">0 Expressions</span>
+                </div>
+            </div>
+            <div class="panel-body" style="padding:8px; display:flex; flex-direction:column; gap:8px; height:100%; overflow:hidden;">
+                <!-- Filter Bar & Search Box -->
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="text" class="search-box" id="exprGraphSearchInput" placeholder="🔍 Search expressions, var IDs, formulas..." style="flex:1; padding:4px 8px; font-size:0.75rem;" oninput="renderExpressionDependencyGraph()">
+                    <select id="exprTypeFilterSelect" class="dim-input" style="padding:2px 6px; font-size:0.75rem;" onchange="renderExpressionDependencyGraph()">
+                        <option value="all" selected>All Types</option>
+                        <option value="float">Float Expressions</option>
+                        <option value="int">Integer Expressions</option>
+                        <option value="sys">System Vars</option>
+                        <option value="constant">Constants</option>
+                        <option value="consumer">Consumers</option>
+                    </select>
+                </div>
+
+                <!-- Legend Bar -->
+                <div id="exprGraphLegendBar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:4px 8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); font-size:0.7rem;">
+                    <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#0284c7; display:inline-block;"></span> FloatExpr</span>
+                    <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#9333ea; display:inline-block;"></span> IntExpr</span>
+                    <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#d97706; display:inline-block;"></span> SysVar</span>
+                    <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#059669; display:inline-block;"></span> Constant</span>
+                    <span style="display:flex; align-items:center; gap:3px;"><span style="width:8px; height:8px; border-radius:50%; background:#e11d48; display:inline-block;"></span> Consumer</span>
+                </div>
+
+                <!-- Live Variable Value Simulator & Range Sliders Tray -->
+                <div id="exprVariableSimulatorTray" style="display:none; padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); flex-direction:column; gap:6px; font-size:0.75rem; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border-color); padding-bottom:4px;">
+                        <div style="font-weight:600; color:var(--accent-amber); display:flex; align-items:center; gap:4px;">🎛️ Live Variable Value Simulator & Sliders</div>
+                        <button onclick="toggleExprVariableSimulator()" class="search-clear-btn" style="position:static;">✕</button>
+                    </div>
+                    <div id="exprSimulatorList" style="display:flex; flex-direction:column; gap:6px; max-height:160px; overflow-y:auto; padding-right:4px;">
+                        <!-- Dynamically populated variable sliders -->
+                    </div>
+                </div>
+
+                <!-- Graph Canvas/SVG Container -->
+                <div id="exprGraphCanvasContainer" style="flex:1; min-height:220px; position:relative; background:#0f172a; border-radius:6px; border:1px solid var(--border-color); overflow:hidden; cursor:grab;">
+                    <svg id="exprGraphSvg" style="width:100%; height:100%; display:block; min-height:220px;"></svg>
+                    <div id="exprTreeContainer" style="display:none; width:100%; height:100%; overflow-y:auto; padding:8px; font-family:var(--code-font); font-size:0.75rem;"></div>
+
+                    <!-- Floating Minimap Overlay -->
+                    <div id="exprGraphMinimapContainer" style="position:absolute; bottom:12px; right:12px; width:160px; height:110px; background:rgba(15,23,42,0.88); border:1px solid var(--border-color); border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.5); backdrop-filter:blur(6px); z-index:10; display:flex; flex-direction:column; overflow:hidden; transition:height 0.2s;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 8px; background:rgba(255,255,255,0.06); font-size:0.65rem; color:var(--text-secondary); user-select:none; font-weight:600;">
+                            <span>🗺️ Minimap</span>
+                            <span onclick="toggleExprMinimapCollapse(event)" id="exprMinimapToggleBtn" style="cursor:pointer; padding:0 4px; color:var(--text-muted);" title="Toggle Minimap">−</span>
+                        </div>
+                        <div id="exprGraphMinimapBody" style="flex:1; position:relative; width:100%; height:100%; cursor:pointer;">
+                            <svg id="exprGraphMinimapSvg" style="width:100%; height:100%; display:block;"></svg>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selected Node Inspector Card -->
+                <div id="exprNodeDetailCard" style="display:none; padding:8px 10px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); font-size:0.75rem; flex-direction:column; gap:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            <span id="exprCardBadge" class="badge" style="background:var(--accent-blue);">FloatExpression</span>
+                            <strong id="exprCardTitle" style="font-family:var(--code-font);">var_101</strong>
+                        </div>
+                        <button class="search-clear-btn" style="position:static;" onclick="deselectExprGraphNode()" title="Close node details">✕</button>
+                    </div>
+                    <div style="font-family:var(--code-font); color:var(--accent-emerald); font-weight:600;" id="exprCardValue">Value: 0.00</div>
+                    <div style="font-family:var(--code-font); color:var(--text-secondary); word-break:break-all;" id="exprCardFormula">Formula: --</div>
+                    <div style="display:flex; gap:8px; margin-top:4px; font-size:0.7rem;" id="exprCardLinks">
+                        <!-- Inputs & Outputs badges -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 8 -->
+        <div class="resizer" id="resizer9_10" title="Drag to resize Pane 9 & 10 (Double click to reset)"></div>
+
+        <!-- Panel 10: Binary Treemap & Byte Allocation Visualizer -->
+        <div class="panel panel-p10 hidden-panel" id="pane10">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane10')" title="Hide Binary Treemap panel">✕</button>
+                    <div class="panel-title">📦 Binary Treemap & Allocation</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <button id="treemapModeVisualBtn" class="btn active" style="padding:2px 8px; font-size:0.75rem;" onclick="setTreemapViewMode('treemap')" title="Switch to Visual 2D Squarified Treemap">🗺️ Treemap</button>
+                    <button id="treemapModeTableBtn" class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="setTreemapViewMode('table')" title="Switch to Ranked Byte Allocation Table">📊 Table</button>
+                    <button class="btn btn-secondary" style="padding:2px 6px; font-size:0.75rem;" onclick="resetTreemapFilters()" title="Reset zoom and filters">🎯 Reset</button>
+                    <span id="treemapTotalSizeBadge" class="badge">0 B</span>
+                </div>
+            </div>
+            <div class="panel-body">
+                <!-- Navigation & Breadcrumb Bar -->
+                <div id="treemapBreadcrumbs" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center; padding:4px 8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); font-size:0.72rem; min-height:28px;">
+                    <!-- Dynamically populated breadcrumb chips -->
+                </div>
+
+                <!-- Filter & Search Bar -->
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <div class="search-box-wrapper" style="flex:1; margin-bottom:0;">
+                        <input type="text" class="search-box" id="treemapSearchInput" placeholder="🔍 Search categories, opcodes, IDs..." style="padding-right:32px; font-size:0.75rem;" oninput="onTreemapSearchInput(this.value)">
+                        <button class="search-clear-btn" id="treemapSearchClearBtn" style="display:none;" onclick="clearTreemapSearch()" title="Clear search">✕</button>
+                    </div>
+                    <select id="treemapMinSizeSelect" class="dim-input" style="padding:2px 6px; font-size:0.75rem; width:auto;" onchange="onTreemapMinSizeChange(this.value)" title="Minimum byte size filter">
+                        <option value="0" selected>All Sizes</option>
+                        <option value="10">≥ 10 B</option>
+                        <option value="30">≥ 30 B</option>
+                        <option value="50">≥ 50 B</option>
+                        <option value="100">≥ 100 B</option>
+                        <option value="250">≥ 250 B</option>
+                    </select>
+                </div>
+
+                <!-- Top Space Consumers Summary Card -->
+                <div style="padding:6px 8px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); display:flex; flex-direction:column; gap:4px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:0.65rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">Top Space Consumers (Largest Ops)</span>
+                        <span style="font-size:0.65rem; color:var(--text-muted);">Click to jump</span>
+                    </div>
+                    <div id="treemapTopHogsContainer" style="display:flex; flex-wrap:wrap; gap:4px;">
+                        <!-- Dynamically populated top 5 pills -->
+                    </div>
+                </div>
+
+                <!-- Squarified Treemap Visual SVG Container -->
+                <div id="treemapVisualContainer" style="flex:1; min-height:220px; position:relative; background:#0b111a; border-radius:6px; border:1px solid var(--border-color); overflow:hidden;">
+                    <!-- SVG Treemap injected here -->
+                </div>
+
+                <!-- Ranked Allocation Table Container (Hidden in treemap mode) -->
+                <div id="treemapTableContainer" style="display:none; flex:1; min-height:220px; background:var(--bg-card); border-radius:6px; border:1px solid var(--border-color); overflow-y:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+                        <thead style="position:sticky; top:0; background:var(--bg-surface); z-index:2;">
+                            <tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); text-transform:uppercase; font-size:0.65rem;">
+                                <th style="text-align:left; padding:6px 8px;">#</th>
+                                <th style="text-align:left; padding:6px 8px;">Operation</th>
+                                <th style="text-align:center; padding:6px 8px;">OpCode</th>
+                                <th style="text-align:center; padding:6px 8px;">Offset</th>
+                                <th style="text-align:right; padding:6px 8px;">Size</th>
+                                <th style="text-align:right; padding:6px 8px;">Share</th>
+                            </tr>
+                        </thead>
+                        <tbody id="treemapTableTbody">
+                            <!-- Dynamically populated rows -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resizer Handle 9 -->
+        <div class="resizer" id="resizer10_11" title="Drag to resize Pane 10 & 11 (Double click to reset)"></div>
+
+        <!-- Panel 11: System Theme & Environment Matrix Switcher -->
+        <div class="panel panel-p11 hidden-panel" id="pane11">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane11')" title="Hide Theme & Environment panel">✕</button>
+                    <div class="panel-title">🎨 System Theme & Environment</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <button class="btn btn-secondary btn-xs" onclick="resetAllThemeOverrides()" title="Reset all theme and color overrides">⟳ Reset</button>
+                </div>
+            </div>
+            <div class="panel-body" id="themeEnvContainer" style="overflow-y:auto;">
+                <!-- Dynamically populated Theme & Environment Switcher -->
+            </div>
+        </div>
+
+        <!-- Resizer Handle 10 -->
+        <div class="resizer" id="resizer11_12" title="Drag to resize Pane 11 & 12 (Double click to reset)"></div>
+
+        <!-- Panel 12: Responsive Matrix (Size Buckets Multi-Player Grid) -->
+        <div class="panel panel-p12 hidden-panel" id="pane12">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane12')" title="Hide Responsive Matrix panel">✕</button>
+                    <div class="panel-title">📐 Responsive Matrix (Buckets)</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+                    <select id="matrixPresetSelect" class="dim-input" style="font-size:0.75rem; padding:2px 6px;" onchange="loadMatrixPreset(this.value)" title="Choose matrix dimensions preset">
+                        <option value="fitness_matrix" selected>🏃 Fitness Matrix (4×5)</option>
+                        <option value="square_grid">⏹️ Square Grid (3×3)</option>
+                        <option value="wearable_mobile">⌚ Wearable / Widget (3×3)</option>
+                    </select>
+                    <select id="matrixThemeSelect" class="dim-input" style="font-size:0.75rem; padding:2px 6px;" onchange="setMatrixTheme(this.value)" title="Matrix background theme">
+                        <option value="dark_slate" selected>🌙 Panel Default (Dark Slate)</option>
+                        <option value="calendar_light">📅 Light / Calendar</option>
+                        <option value="sleep_lavender">😴 Lavender / Sleep</option>
+                        <option value="dark_gray">⬛ Dark Gray</option>
+                        <option value="light_gray">⬜ Light Gray</option>
+                        <option value="checkerboard">🏁 Checkerboard</option>
+                        <option value="khaki">🫒 Khaki Olive</option>
+                    </select>
+                    <select id="matrixDensitySelect" class="dim-input" style="font-size:0.75rem; padding:2px 6px;" onchange="setMatrixDensity(this.value)" title="Density scale factor for matrix players">
+                        <option value="1" selected>1.0x (mdpi)</option>
+                        <option value="1.5">1.5x (hdpi)</option>
+                        <option value="2">2.0x (xhdpi)</option>
+                        <option value="2.625">2.625x (Pixel)</option>
+                        <option value="3">3.0x (xxhdpi)</option>
+                    </select>
+                    <button id="matrixPlayPauseBtn" class="btn btn-secondary btn-xs" onclick="toggleMatrixPlayPause()" title="Play / Pause animations across all matrix players">
+                        <span>⏸️</span> <span>Pause</span>
+                    </button>
+                    <button class="btn btn-secondary btn-xs" onclick="renderResponsiveMatrixPanel(window.currentBuffer || window.currentDocument)" title="Re-render all matrix players">⟳</button>
+                </div>
+            </div>
+            <div class="panel-body" id="responsiveMatrixBoard" style="overflow:auto; padding:24px 20px 40px 20px;">
+                <!-- Dynamically populated Responsive Matrix Multi-Player Grid -->
+            </div>
+        </div>
+
+        <!-- Resizer Handle 12 -->
+        <div class="resizer" id="resizer12_13" title="Drag to resize Pane 12 & 13 (Double click to reset)"></div>
+
+        <!-- Panel 13: Layout & Box Model Inspector -->
+        <div class="panel panel-p13" id="pane13">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane13')" title="Hide Layout & Box Model panel">✕</button>
+                    <div class="panel-title">📐 Layout & Box Model</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn btn-secondary btn-xs" onclick="renderLayoutInspectorPanel(window.currentDocument)" title="Refresh layout measurements">⟳</button>
+                </div>
+            </div>
+            <div class="panel-body" id="layoutInspectorContainer" style="overflow-y:auto;">
+                <!-- Dynamically populated Layout & Box Model Inspector -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Inspector Application Runtime -->
+    <!-- %%INJECT_SCRIPTS%% -->
+</body>
+</html>
