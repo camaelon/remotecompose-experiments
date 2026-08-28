@@ -9255,6 +9255,8 @@ var RC = (() => {
   var WIRE_EDGE2 = 2048;
   var WIRE_EDGE_MASK = WIRE_EDGE0 | WIRE_EDGE1 | WIRE_EDGE2;
   var MODE_SOFTWARE_WIREFRAME = MODE_SOFTWARE_FLAT | MODE_WIREFRAME;
+  var MODE_BACKEND_CANVAS = 1;
+  var MODE_BACKEND_CANVAS_ZBUF = 5;
   function isPaint3DContext(ctx) {
     return !!ctx && typeof ctx.drawMesh3D === "function";
   }
@@ -20461,6 +20463,25 @@ var RC = (() => {
   };
   _FloatFunctionDefineStub.OP_CODE = 168;
   var FloatFunctionDefineStub = _FloatFunctionDefineStub;
+  var _DrawTextOnCircleStub = class _DrawTextOnCircleStub extends UnsupportedOperation {
+    constructor() {
+      super(...arguments);
+      this.opName = "DrawTextOnCircle";
+    }
+    static read(buffer, operations) {
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readInt();
+      buffer.readByte();
+      buffer.readByte();
+      operations.push(new _DrawTextOnCircleStub());
+    }
+  };
+  _DrawTextOnCircleStub.OP_CODE = 57;
+  var DrawTextOnCircleStub = _DrawTextOnCircleStub;
   var _TextLookupIntStub = class _TextLookupIntStub extends UnsupportedOperation {
     constructor() {
       super(...arguments);
@@ -20699,6 +20720,7 @@ var RC = (() => {
       m.set(FontDataStub.OP_CODE, FontDataStub.read);
       m.set(FloatFunctionCallStub.OP_CODE, FloatFunctionCallStub.read);
       m.set(FloatFunctionDefineStub.OP_CODE, FloatFunctionDefineStub.read);
+      m.set(DrawTextOnCircleStub.OP_CODE, DrawTextOnCircleStub.read);
       m.set(TextLookupIntStub.OP_CODE, TextLookupIntStub.read);
       m.set(ImageAttributeStub.OP_CODE, ImageAttributeStub.read);
       m.set(PathCombineStub.OP_CODE, PathCombineStub.read);
@@ -22302,12 +22324,6 @@ var RC = (() => {
 
   // src/core/d3/Rasterizer.ts
   var fround4 = Math.fround;
-  function fm4(a, b) {
-    return fround4(a * b);
-  }
-  function fa4(a, b) {
-    return fround4(a + b);
-  }
   function f2i(v) {
     if (Number.isNaN(v)) {
       return 0;
@@ -22375,25 +22391,14 @@ var RC = (() => {
     V[6] = fx1;
     V[7] = fy1;
     V[8] = fz1;
-    const d = fa4(
-      fa4(fround4(fm4(fx1, fround4(fy3 - fy2)) - fm4(fx2, fy3)), fm4(fx3, fy2)),
-      fm4(fround4(fx2 - fx3), fy1)
-    );
+    const d = fx1 * (fy3 - fy2) - fx2 * fy3 + fx3 * fy2 + (fx2 - fx3) * fy1;
     if (d === 0) {
       s.ok = false;
       return s;
     }
-    const nx = fa4(fround4(fm4(fy1, fround4(fz3 - fz2)) - fm4(fy2, fz3)), fm4(fy3, fz2));
-    const numDx = -fa4(nx, fm4(fround4(fy2 - fy3), fz1));
-    const ny = fa4(fround4(fm4(fx1, fround4(fz3 - fz2)) - fm4(fx2, fz3)), fm4(fx3, fz2));
-    const numDy = fa4(ny, fm4(fround4(fx2 - fx3), fz1));
-    const numZ = fa4(
-      fa4(
-        fm4(fx1, fround4(fm4(fy3, fz2) - fm4(fy2, fz3))),
-        fm4(fy1, fround4(fm4(fx2, fz3) - fm4(fx3, fz2)))
-      ),
-      fm4(fround4(fm4(fx3, fy2) - fm4(fx2, fy3)), fz1)
-    );
+    const numDx = -(fy1 * (fz3 - fz2) - fy2 * fz3 + fy3 * fz2 + (fy2 - fy3) * fz1);
+    const numDy = fx1 * (fz3 - fz2) - fx2 * fz3 + fx3 * fz2 + (fx2 - fx3) * fz1;
+    const numZ = fx1 * (fy3 * fz2 - fy2 * fz3) + fy1 * (fx2 * fz3 - fx3 * fz2) + (fx3 * fy2 - fx2 * fy3) * fz1;
     s.dx = fround4(numDx / d);
     s.dy = fround4(numDy / d);
     s.zoff = fround4(numZ / d);
@@ -22675,10 +22680,10 @@ var RC = (() => {
 
   // src/core/d3/SoftwarePaint3DContext.ts
   var fround5 = Math.fround;
-  function fm5(a, b) {
+  function fm4(a, b) {
     return fround5(a * b);
   }
-  function fa5(a, b) {
+  function fa4(a, b) {
     return fround5(a + b);
   }
   var INV_255 = Math.fround(1 / 255);
@@ -22686,6 +22691,16 @@ var RC = (() => {
   var AMBIENT = Math.fround(0.2);
   var MAX_LIGHTS2 = 32;
   var WIRE_DEPTH_BIAS = 6e-4;
+  function createCanvasMesh() {
+    return {
+      positions: new Float32Array(0),
+      colors: new Int32Array(0),
+      uvs: new Float32Array(0),
+      depths: new Float32Array(0),
+      hasUv: false,
+      vertexCount: 0
+    };
+  }
   var SoftwarePaint3DContext = class {
     constructor() {
       this.mProj = mat4();
@@ -22732,6 +22747,25 @@ var RC = (() => {
       this.mTriColor = new Int32Array(3);
       /** Per-vertex 1/clipW, for perspective-correct attribute interpolation. */
       this.mTriInvW = new Float32Array(3);
+      /**
+       * Project, near-reject, backface-cull and Lambert shade one triangle. On acceptance fills
+       * mTriScreen with the three screen-space vertices (Y already flipped for a top-down buffer)
+       * and mTriColor with the per-vertex shaded ARGB, and returns true. Returns false — leaving
+       * the scratch untouched — when the triangle is degenerate, crosses the near plane, or is
+       * back-facing.
+       */
+      // ── Canvas backend front half ─────────────────────────────────────────────────────
+      //
+      // Port of the reference's buildCanvasVertices, and the same code as the C++ one. It
+      // reuses projectTriangle, so transform, backface cull, lighting and depth bias are
+      // literally what the software rasterizer runs — the backends can only disagree about
+      // rasterization, which is the point of having both.
+      this.cvTriXY = new Float32Array(0);
+      this.cvTriUv = new Float32Array(0);
+      this.cvTriColor = new Int32Array(0);
+      this.cvTriDepth = new Float32Array(0);
+      this.cvTriZ = new Float32Array(0);
+      this.cvOrder = new Int32Array(0);
     }
     // ----- Buffers ----------------------------------------------------------
     /**
@@ -22928,7 +22962,7 @@ var RC = (() => {
           let x = -this.mLightScratch3[0];
           let y = -this.mLightScratch3[1];
           let z = -this.mLightScratch3[2];
-          const len = fround5(Math.sqrt(fa5(fa5(fm5(x, x), fm5(y, y)), fm5(z, z))));
+          const len = fround5(Math.sqrt(fa4(fa4(fm4(x, x), fm4(y, y)), fm4(z, z))));
           if (len > 0) {
             x = fround5(x / len);
             y = fround5(y / len);
@@ -22949,7 +22983,7 @@ var RC = (() => {
      * (nx,ny,nz) is the eye-space normal (need not be unit); (px,py,pz) the eye-space position.
      */
     litColor(base, nx, ny, nz, px, py, pz) {
-      const nlen = fround5(Math.sqrt(fa5(fa5(fm5(nx, nx), fm5(ny, ny)), fm5(nz, nz))));
+      const nlen = fround5(Math.sqrt(fa4(fa4(fm4(nx, nx), fm4(ny, ny)), fm4(nz, nz))));
       const inv = nlen === 0 ? 0 : fround5(1 / nlen);
       if (this.mSpecStrength > 0) {
         return this.litColorSpecular(base, nx * inv, ny * inv, nz * inv, px, py, pz);
@@ -22961,7 +22995,7 @@ var RC = (() => {
           lx = this.mElx[i] - px;
           ly = this.mEly[i] - py;
           lz = this.mElz[i] - pz;
-          const ll = fround5(Math.sqrt(fa5(fa5(fm5(lx, lx), fm5(ly, ly)), fm5(lz, lz))));
+          const ll = fround5(Math.sqrt(fa4(fa4(fm4(lx, lx), fm4(ly, ly)), fm4(lz, lz))));
           if (ll > 0) {
             lx = fround5(lx / ll);
             ly = fround5(ly / ll);
@@ -22972,7 +23006,7 @@ var RC = (() => {
           ly = this.mEly[i];
           lz = this.mElz[i];
         }
-        let d = fm5(fa5(fa5(fm5(nx, lx), fm5(ny, ly)), fm5(nz, lz)), inv);
+        let d = fm4(fa4(fa4(fm4(nx, lx), fm4(ny, ly)), fm4(nz, lz)), inv);
         if (d < 0) {
           d = -d;
         }
@@ -22981,9 +23015,9 @@ var RC = (() => {
         lb = fround5(lb + fround5(this.mElb[i] * d));
       }
       const a = base >>> 24 & 255;
-      let r = Math.trunc(fm5(base >>> 16 & 255, lr));
-      let g = Math.trunc(fm5(base >>> 8 & 255, lg));
-      let b = Math.trunc(fm5(base & 255, lb));
+      let r = Math.trunc(fm4(base >>> 16 & 255, lr));
+      let g = Math.trunc(fm4(base >>> 8 & 255, lg));
+      let b = Math.trunc(fm4(base & 255, lb));
       if (r > 255) {
         r = 255;
       }
@@ -23001,14 +23035,14 @@ var RC = (() => {
      * the viewer, so highlights land on the lit side only.
      */
     litColorSpecular(base, nfx, nfy, nfz, px, py, pz) {
-      const vlen = fround5(Math.sqrt(fa5(fa5(fm5(px, px), fm5(py, py)), fm5(pz, pz))));
+      const vlen = fround5(Math.sqrt(fa4(fa4(fm4(px, px), fm4(py, py)), fm4(pz, pz))));
       let vx = 0, vy = 0, vz = 1;
       if (vlen > 0) {
         vx = fround5(-px / vlen);
         vy = fround5(-py / vlen);
         vz = fround5(-pz / vlen);
       }
-      if (fa5(fa5(fm5(nfx, vx), fm5(nfy, vy)), fm5(nfz, vz)) < 0) {
+      if (fa4(fa4(fm4(nfx, vx), fm4(nfy, vy)), fm4(nfz, vz)) < 0) {
         nfx = -nfx;
         nfy = -nfy;
         nfz = -nfz;
@@ -23032,26 +23066,26 @@ var RC = (() => {
           ly = this.mEly[i];
           lz = this.mElz[i];
         }
-        const ndl = fa5(fa5(fm5(nfx, lx), fm5(nfy, ly)), fm5(nfz, lz));
+        const ndl = fa4(fa4(fm4(nfx, lx), fm4(nfy, ly)), fm4(nfz, lz));
         if (ndl <= 0) {
           continue;
         }
-        lr = fa5(lr, fm5(this.mElr[i], ndl));
-        lg = fa5(lg, fm5(this.mElg[i], ndl));
-        lb = fa5(lb, fm5(this.mElb[i], ndl));
+        lr = fa4(lr, fm4(this.mElr[i], ndl));
+        lg = fa4(lg, fm4(this.mElg[i], ndl));
+        lb = fa4(lb, fm4(this.mElb[i], ndl));
         const hx = lx + vx, hy = ly + vy, hz = lz + vz;
-        const hlen = fround5(Math.sqrt(fa5(fa5(fm5(hx, hx), fm5(hy, hy)), fm5(hz, hz))));
+        const hlen = fround5(Math.sqrt(fa4(fa4(fm4(hx, hx), fm4(hy, hy)), fm4(hz, hz))));
         if (hlen <= 0) {
           continue;
         }
-        const ndh = fround5(fa5(fa5(fm5(nfx, hx), fm5(nfy, hy)), fm5(nfz, hz)) / hlen);
+        const ndh = fround5(fa4(fa4(fm4(nfx, hx), fm4(nfy, hy)), fm4(nfz, hz)) / hlen);
         if (ndh <= 0) {
           continue;
         }
-        const spec = fm5(fround5(Math.pow(ndh, this.mShininess)), this.mSpecStrength);
-        sr = fa5(sr, fm5(this.mElr[i], spec));
-        sg = fa5(sg, fm5(this.mElg[i], spec));
-        sb = fa5(sb, fm5(this.mElb[i], spec));
+        const spec = fm4(fround5(Math.pow(ndh, this.mShininess)), this.mSpecStrength);
+        sr = fa4(sr, fm4(this.mElr[i], spec));
+        sg = fa4(sg, fm4(this.mElg[i], spec));
+        sb = fa4(sb, fm4(this.mElb[i], spec));
       }
       const a = base >>> 24 & 255;
       let r = Math.trunc((base >>> 16 & 255) * lr + sr * 255);
@@ -23261,12 +23295,115 @@ var RC = (() => {
       }
     }
     /**
-     * Project, near-reject, backface-cull and Lambert shade one triangle. On acceptance fills
-     * mTriScreen with the three screen-space vertices (Y already flipped for a top-down buffer)
-     * and mTriColor with the per-vertex shaded ARGB, and returns true. Returns false — leaving
-     * the scratch untouched — when the triangle is degenerate, crosses the near plane, or is
-     * back-facing.
+     * Project, light and cull a mesh into `out`, returning the vertex count.
+     *
+     * Triangles come out ordered back to front so a host with no depth buffer still gets a
+     * plausible image; `depths` is filled for one that has.
      */
+    /** The active texture, for a host that rasterizes textured triangles itself. */
+    getTextureData() {
+      return { pixels: this.mTexPixels, width: this.mTexW, height: this.mTexH };
+    }
+    buildCanvasVertices(meshId, out, smooth) {
+      out.vertexCount = 0;
+      const m = this.mMeshes.get(meshId);
+      if (m === void 0) return 0;
+      const w = this.mWidth, h = this.mHeight;
+      multiply(this.mPV, this.mProj, this.mView);
+      multiply(this.mMV, this.mView, this.mModel);
+      multiply(this.mMVP, this.mPV, this.mModel);
+      this.prepareLightsEyeSpace();
+      const idx = m.indices, verts = m.verts, normals = m.normals, uv = m.uv;
+      const useSmooth = smooth && normals !== null;
+      out.hasUv = uv !== null;
+      const triCount = idx.length / 3 | 0;
+      if (triCount <= 0) return 0;
+      if (this.cvTriXY.length < triCount * 6) {
+        this.cvTriXY = new Float32Array(triCount * 6);
+        this.cvTriUv = new Float32Array(triCount * 6);
+        this.cvTriColor = new Int32Array(triCount * 3);
+        this.cvTriZ = new Float32Array(triCount * 3);
+        this.cvTriDepth = new Float32Array(triCount);
+        this.cvOrder = new Int32Array(triCount);
+      }
+      const ts = this.mTriScreen, tc = this.mTriColor;
+      let kept = 0;
+      for (let t = 0; t < idx.length; t += 3) {
+        if (!this.projectTriangle(
+          idx,
+          verts,
+          normals,
+          useSmooth,
+          false,
+          t,
+          this.mBaseColorArgb,
+          w,
+          h
+        )) {
+          continue;
+        }
+        const p = kept * 6;
+        this.cvTriXY[p] = ts[0];
+        this.cvTriXY[p + 1] = ts[1];
+        this.cvTriXY[p + 2] = ts[3];
+        this.cvTriXY[p + 3] = ts[4];
+        this.cvTriXY[p + 4] = ts[6];
+        this.cvTriXY[p + 5] = ts[7];
+        const c = kept * 3;
+        this.cvTriColor[c] = tc[0];
+        this.cvTriColor[c + 1] = tc[1];
+        this.cvTriColor[c + 2] = tc[2];
+        if (uv !== null) {
+          const u0 = idx[t] * 2, u1 = idx[t + 1] * 2, u2 = idx[t + 2] * 2;
+          this.cvTriUv[p] = uv[u0];
+          this.cvTriUv[p + 1] = uv[u0 + 1];
+          this.cvTriUv[p + 2] = uv[u1];
+          this.cvTriUv[p + 3] = uv[u1 + 1];
+          this.cvTriUv[p + 4] = uv[u2];
+          this.cvTriUv[p + 5] = uv[u2 + 1];
+        }
+        this.cvTriDepth[kept] = (ts[2] + ts[5] + ts[8]) * (1 / 3);
+        const zi = kept * 3;
+        this.cvTriZ[zi] = ts[2];
+        this.cvTriZ[zi + 1] = ts[5];
+        this.cvTriZ[zi + 2] = ts[8];
+        kept++;
+      }
+      const order = this.cvOrder, depth = this.cvTriDepth;
+      for (let i = 0; i < kept; i++) order[i] = i;
+      for (let i = 1; i < kept; i++) {
+        const cur = order[i];
+        const key = depth[cur];
+        let j = i - 1;
+        while (j >= 0 && depth[order[j]] < key) {
+          order[j + 1] = order[j];
+          j--;
+        }
+        order[j + 1] = cur;
+      }
+      const vertexCount = kept * 3;
+      if (out.positions.length < vertexCount * 2) {
+        out.positions = new Float32Array(vertexCount * 2);
+        out.uvs = new Float32Array(vertexCount * 2);
+        out.colors = new Int32Array(vertexCount);
+        out.depths = new Float32Array(vertexCount);
+      }
+      for (let k = 0; k < kept; k++) {
+        const tri = order[k];
+        const src = tri * 6, dst = k * 6;
+        for (let i = 0; i < 6; i++) out.positions[dst + i] = this.cvTriXY[src + i];
+        if (uv !== null) {
+          for (let i = 0; i < 6; i++) out.uvs[dst + i] = this.cvTriUv[src + i];
+        }
+        const srcC = tri * 3, v = k * 3;
+        for (let i = 0; i < 3; i++) {
+          out.colors[v + i] = this.cvTriColor[srcC + i];
+          out.depths[v + i] = this.cvTriZ[srcC + i];
+        }
+      }
+      out.vertexCount = vertexCount;
+      return vertexCount;
+    }
     projectTriangle(idx, verts, normals, smooth, computeInvW, t, baseColor, w, h) {
       const i0 = idx[t] * 3;
       const i1 = idx[t + 1] * 3;
@@ -23292,28 +23429,28 @@ var RC = (() => {
       const nx0 = fround5(cx0 / cw0), ny0 = fround5(cy0 / cw0), nz0 = fround5(cz0 / cw0);
       const nx1 = fround5(cx1 / cw1), ny1 = fround5(cy1 / cw1), nz1 = fround5(cz1 / cw1);
       const nx2 = fround5(cx2 / cw2), ny2 = fround5(cy2 / cw2), nz2 = fround5(cz2 / cw2);
-      const sx0 = fm5(fa5(fm5(nx0, 0.5), 0.5), w);
-      const sy0 = fm5(fround5(1 - fa5(fm5(ny0, 0.5), 0.5)), h);
-      let sz0 = fa5(fm5(nz0, 0.5), 0.5);
-      const sx1 = fm5(fa5(fm5(nx1, 0.5), 0.5), w);
-      const sy1 = fm5(fround5(1 - fa5(fm5(ny1, 0.5), 0.5)), h);
-      let sz1 = fa5(fm5(nz1, 0.5), 0.5);
-      const sx2 = fm5(fa5(fm5(nx2, 0.5), 0.5), w);
-      const sy2 = fm5(fround5(1 - fa5(fm5(ny2, 0.5), 0.5)), h);
-      let sz2 = fa5(fm5(nz2, 0.5), 0.5);
-      const signedArea2 = fround5(fm5(fround5(sx1 - sx0), fround5(sy2 - sy0)) - fm5(fround5(sx2 - sx0), fround5(sy1 - sy0)));
+      const sx0 = fm4(fa4(fm4(nx0, 0.5), 0.5), w);
+      const sy0 = fm4(fround5(1 - fa4(fm4(ny0, 0.5), 0.5)), h);
+      let sz0 = fa4(fm4(nz0, 0.5), 0.5);
+      const sx1 = fm4(fa4(fm4(nx1, 0.5), 0.5), w);
+      const sy1 = fm4(fround5(1 - fa4(fm4(ny1, 0.5), 0.5)), h);
+      let sz1 = fa4(fm4(nz1, 0.5), 0.5);
+      const sx2 = fm4(fa4(fm4(nx2, 0.5), 0.5), w);
+      const sy2 = fm4(fround5(1 - fa4(fm4(ny2, 0.5), 0.5)), h);
+      let sz2 = fa4(fm4(nz2, 0.5), 0.5);
+      const signedArea2 = fround5(fm4(fround5(sx1 - sx0), fround5(sy2 - sy0)) - fm4(fround5(sx2 - sx0), fround5(sy1 - sy0)));
       if (signedArea2 > 0) {
         return false;
       }
       if ((this.mDepthBiasC !== 0 || this.mDepthBiasS !== 0) && signedArea2 !== 0) {
         const invA = fround5(1 / signedArea2);
-        const dzdx = fm5(fround5(fm5(fround5(sz1 - sz0), fround5(sy2 - sy0)) - fm5(fround5(sz2 - sz0), fround5(sy1 - sy0))), invA);
-        const dzdy = fm5(fround5(fm5(fround5(sz2 - sz0), fround5(sx1 - sx0)) - fm5(fround5(sz1 - sz0), fround5(sx2 - sx0))), invA);
+        const dzdx = fm4(fround5(fm4(fround5(sz1 - sz0), fround5(sy2 - sy0)) - fm4(fround5(sz2 - sz0), fround5(sy1 - sy0))), invA);
+        const dzdy = fm4(fround5(fm4(fround5(sz2 - sz0), fround5(sx1 - sx0)) - fm4(fround5(sz1 - sz0), fround5(sx2 - sx0))), invA);
         const slope = Math.max(Math.abs(dzdx), Math.abs(dzdy));
-        const bias = fa5(this.mDepthBiasC, fm5(this.mDepthBiasS, slope));
-        sz0 = fa5(sz0, bias);
-        sz1 = fa5(sz1, bias);
-        sz2 = fa5(sz2, bias);
+        const bias = fa4(this.mDepthBiasC, fm4(this.mDepthBiasS, slope));
+        sz0 = fa4(sz0, bias);
+        sz1 = fa4(sz1, bias);
+        sz2 = fa4(sz2, bias);
       }
       const ts = this.mTriScreen;
       ts[0] = sx0;
@@ -23343,18 +23480,18 @@ var RC = (() => {
       } else {
         const ax = fround5(ev1x - ev0x), ay = fround5(ev1y - ev0y), az = fround5(ev1z - ev0z);
         const bx = fround5(ev2x - ev0x), by = fround5(ev2y - ev0y), bz = fround5(ev2z - ev0z);
-        const nxn = fround5(fm5(ay, bz) - fm5(az, by));
-        const nyn = fround5(fm5(az, bx) - fm5(ax, bz));
-        const nzn = fround5(fm5(ax, by) - fm5(ay, bx));
+        const nxn = fround5(fm4(ay, bz) - fm4(az, by));
+        const nyn = fround5(fm4(az, bx) - fm4(ax, bz));
+        const nzn = fround5(fm4(ax, by) - fm4(ay, bx));
         if (this.mSpecStrength > 0) {
           tc[0] = this.litColor(baseColor, nxn, nyn, nzn, ev0x, ev0y, ev0z);
           tc[1] = this.litColor(baseColor, nxn, nyn, nzn, ev1x, ev1y, ev1z);
           tc[2] = this.litColor(baseColor, nxn, nyn, nzn, ev2x, ev2y, ev2z);
         } else {
           const third = fround5(1 / 3);
-          const cx = fm5(fa5(fa5(ev0x, ev1x), ev2x), third);
-          const cy = fm5(fa5(fa5(ev0y, ev1y), ev2y), third);
-          const cz = fm5(fa5(fa5(ev0z, ev1z), ev2z), third);
+          const cx = fm4(fa4(fa4(ev0x, ev1x), ev2x), third);
+          const cy = fm4(fa4(fa4(ev0y, ev1y), ev2y), third);
+          const cz = fm4(fa4(fa4(ev0z, ev1z), ev2z), third);
           const shaded = this.litColor(baseColor, nxn, nyn, nzn, cx, cy, cz);
           tc[0] = shaded;
           tc[1] = shaded;
@@ -23362,6 +23499,228 @@ var RC = (() => {
         }
       }
       return true;
+    }
+  };
+
+  // src/web/WebGL3DRenderer.ts
+  var VERT = `#version 300 es
+precision highp float;
+layout(location = 0) in vec2 aPos;      // window pixels, y down
+layout(location = 1) in vec4 aColor;    // straight (non-premultiplied) RGBA
+layout(location = 2) in vec2 aUv;
+layout(location = 3) in float aDepth;   // window z in [0,1], smaller = closer
+uniform vec2 uViewport;
+out vec4 vColor;
+out vec2 vUv;
+void main() {
+    // Window pixels to clip space. The y flip is the whole conversion: our window origin is
+    // top-left with y increasing downward, clip space is centre-origin with y up.
+    vec2 clip = vec2(aPos.x / uViewport.x * 2.0 - 1.0,
+                     1.0 - aPos.y / uViewport.y * 2.0);
+    // Depth [0,1] to clip [-1,1], matching the default depth range so gl.LESS means the
+    // same thing here as the software rasterizer's "smaller z wins".
+    gl_Position = vec4(clip, aDepth * 2.0 - 1.0, 1.0);
+    vColor = aColor;
+    vUv = aUv;
+}`;
+  var FRAG = `#version 300 es
+precision highp float;
+in vec4 vColor;
+in vec2 vUv;
+uniform sampler2D uTex;
+uniform bool uUseTex;
+out vec4 fragColor;
+void main() {
+    vec4 c = vColor;
+    if (uUseTex) {
+        // Lighting modulates the sampled texel, as the reference does with a BitmapShader.
+        c *= texture(uTex, vUv);
+    }
+    if (c.a <= 0.0) discard;
+    // Premultiplied out, because the canvas is created with premultipliedAlpha and
+    // compositing it with drawImage otherwise darkens every antialiased edge.
+    fragColor = vec4(c.rgb * c.a, c.a);
+}`;
+  var WebGL3DRenderer = class {
+    constructor() {
+      this.gl = null;
+      this.program = null;
+      this.vao = null;
+      this.buffer = null;
+      this.texture = null;
+      this.texW = 0;
+      this.texH = 0;
+      /** The pixel array last uploaded. The host caches its conversion, so an unchanged texture
+       *  arrives as the same array and the upload can be skipped — otherwise every mesh in
+       *  every frame re-uploads the whole image. */
+      this.texSource = null;
+      /** Interleaved x,y,r,g,b,a,u,v,depth — 9 floats per vertex. */
+      this.interleaved = new Float32Array(0);
+      this.uViewport = null;
+      this.uUseTex = null;
+      /** Batches drawn since construction. Lets a harness prove the GPU path was taken rather
+       *  than the software fallback, which is otherwise invisible in the output. */
+      this.drawCount = 0;
+      this.canvas = document.createElement("canvas");
+    }
+    /** The offscreen canvas — use as a drawImage source after `draw`. */
+    getCanvas() {
+      return this.canvas;
+    }
+    isAvailable() {
+      return this.ensureGl() !== null;
+    }
+    ensureGl() {
+      if (this.gl) return this.gl;
+      const gl = this.canvas.getContext("webgl2", {
+        alpha: true,
+        depth: true,
+        antialias: true,
+        premultipliedAlpha: true,
+        // Without this the drawing buffer is cleared after every composite, so reading it
+        // back with drawImage gets an empty image on some drivers.
+        preserveDrawingBuffer: true
+      });
+      if (!gl) return null;
+      this.gl = gl;
+      const compile = (type, src) => {
+        const sh = gl.createShader(type);
+        if (!sh) return null;
+        gl.shaderSource(sh, src);
+        gl.compileShader(sh);
+        if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
+          console.error("rc 3d shader:", gl.getShaderInfoLog(sh));
+          gl.deleteShader(sh);
+          return null;
+        }
+        return sh;
+      };
+      const vs = compile(gl.VERTEX_SHADER, VERT);
+      const fs = compile(gl.FRAGMENT_SHADER, FRAG);
+      if (!vs || !fs) return null;
+      const prog = gl.createProgram();
+      if (!prog) return null;
+      gl.attachShader(prog, vs);
+      gl.attachShader(prog, fs);
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
+        console.error("rc 3d link:", gl.getProgramInfoLog(prog));
+        return null;
+      }
+      this.program = prog;
+      this.uViewport = gl.getUniformLocation(prog, "uViewport");
+      this.uUseTex = gl.getUniformLocation(prog, "uUseTex");
+      gl.useProgram(prog);
+      gl.uniform1i(gl.getUniformLocation(prog, "uTex"), 0);
+      this.buffer = gl.createBuffer();
+      this.vao = gl.createVertexArray();
+      gl.bindVertexArray(this.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      const stride = 9 * 4;
+      gl.enableVertexAttribArray(0);
+      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0);
+      gl.enableVertexAttribArray(1);
+      gl.vertexAttribPointer(1, 4, gl.FLOAT, false, stride, 8);
+      gl.enableVertexAttribArray(2);
+      gl.vertexAttribPointer(2, 2, gl.FLOAT, false, stride, 24);
+      gl.enableVertexAttribArray(3);
+      gl.vertexAttribPointer(3, 1, gl.FLOAT, false, stride, 32);
+      gl.bindVertexArray(null);
+      return gl;
+    }
+    /** Upload the active texture. `pixels` is ARGB, as the 3D context stores it. */
+    setTexture(pixels, w, h) {
+      const gl = this.ensureGl();
+      if (!gl) return;
+      if (!pixels || w <= 0 || h <= 0) {
+        this.texW = 0;
+        this.texH = 0;
+        this.texSource = null;
+        return;
+      }
+      if (pixels === this.texSource && this.texW === w && this.texH === h) return;
+      if (!this.texture) this.texture = gl.createTexture();
+      const rgba = new Uint8Array(w * h * 4);
+      for (let i = 0; i < w * h; i++) {
+        const p = pixels[i];
+        rgba[i * 4] = p >>> 16 & 255;
+        rgba[i * 4 + 1] = p >>> 8 & 255;
+        rgba[i * 4 + 2] = p & 255;
+        rgba[i * 4 + 3] = p >>> 24 & 255;
+      }
+      gl.bindTexture(gl.TEXTURE_2D, this.texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, rgba);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      this.texW = w;
+      this.texH = h;
+      this.texSource = pixels;
+    }
+    /** Discard everything drawn so far and resize if needed. Call once per 3D pass. */
+    beginFrame(width, height) {
+      const gl = this.ensureGl();
+      if (!gl) return;
+      if (this.canvas.width !== width || this.canvas.height !== height) {
+        this.canvas.width = width;
+        this.canvas.height = height;
+      }
+      gl.viewport(0, 0, width, height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clearDepth(1);
+      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    }
+    /**
+     * Draw one batch.
+     *
+     * `useDepth` picks the ordering rule. False reproduces the reference's canvas backend:
+     * depth test off, correctness resting entirely on the painter's sort the caller already
+     * applied. True uses the depth buffer, which is what the ZBUF modes ask for and is the
+     * only way interpenetrating geometry comes out right.
+     */
+    draw(batch, useDepth) {
+      const gl = this.ensureGl();
+      if (!gl || !this.program || batch.vertexCount < 3) return;
+      const n = batch.vertexCount;
+      if (this.interleaved.length < n * 9) this.interleaved = new Float32Array(n * 9);
+      const v = this.interleaved;
+      const useTex = batch.hasUv && this.texW > 0;
+      for (let i = 0; i < n; i++) {
+        const o = i * 9;
+        v[o] = batch.positions[i * 2];
+        v[o + 1] = batch.positions[i * 2 + 1];
+        const c = batch.colors[i];
+        v[o + 2] = (c >>> 16 & 255) / 255;
+        v[o + 3] = (c >>> 8 & 255) / 255;
+        v[o + 4] = (c & 255) / 255;
+        v[o + 5] = (c >>> 24 & 255) / 255;
+        v[o + 6] = useTex ? batch.uvs[i * 2] : 0;
+        v[o + 7] = useTex ? 1 - batch.uvs[i * 2 + 1] : 0;
+        v[o + 8] = batch.depths[i];
+      }
+      gl.useProgram(this.program);
+      gl.bindVertexArray(this.vao);
+      gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, v.subarray(0, n * 9), gl.DYNAMIC_DRAW);
+      gl.uniform2f(this.uViewport, this.canvas.width, this.canvas.height);
+      gl.uniform1i(this.uUseTex, useTex ? 1 : 0);
+      if (useTex) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, this.texture);
+      }
+      if (useDepth) {
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthFunc(gl.LESS);
+      } else {
+        gl.disable(gl.DEPTH_TEST);
+      }
+      gl.disable(gl.CULL_FACE);
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+      gl.drawArrays(gl.TRIANGLES, 0, n);
+      this.drawCount++;
+      gl.bindVertexArray(null);
     }
   };
 
@@ -23978,6 +24337,8 @@ void main() {
       // Bitmap cache: id -> ImageBitmap or HTMLImageElement
       this.bitmapCache = /* @__PURE__ */ new Map();
       this.bitmapPromises = /* @__PURE__ */ new Map();
+      /** Bitmaps converted to ARGB for 3D texturing, kept so the readback happens once. */
+      this.texturePixels = /* @__PURE__ */ new Map();
       // Text cache: id -> string
       this.textCache = /* @__PURE__ */ new Map();
       // Graphics layer stack for offscreen compositing
@@ -24006,6 +24367,13 @@ void main() {
       // reference does on a platform that lacks them — so a document renders the same picture
       // rather than silently drawing nothing.
       this.d3 = null;
+      /** GPU rasterizer for the canvas backends; created on first use, null if WebGL2 is absent. */
+      this.d3gl = null;
+      this.d3glMesh = createCanvasMesh();
+      /** Whether anything has been drawn into the GL canvas this 3D pass. */
+      this.d3glDirty = false;
+      /** Texture generation last uploaded to GL, so an unchanged texture is not re-uploaded. */
+      this.d3glTexGen = -1;
       this.d3Blit = null;
       if (!canvas) {
         throw new Error("CanvasPaintContext: canvas rendering context is null or undefined");
@@ -24299,10 +24667,13 @@ void main() {
             this.textSize = intBitsToFloat2(arr[i++]);
             this.setFont();
             break;
-          case PaintBundle.COLOR:
-            this.colorArgb = arr[i] | 0;
-            this.color = argbToRgba(arr[i++]);
+          case PaintBundle.COLOR: {
+            const argb = arr[i++] | 0;
+            this.colorArgb = argb;
+            this.alpha = (argb >>> 24 & 255) / 255;
+            this.color = `rgb(${argb >>> 16 & 255},${argb >>> 8 & 255},${argb & 255})`;
             break;
+          }
           case PaintBundle.STROKE_WIDTH:
             this.strokeWidth = intBitsToFloat2(arr[i++]);
             break;
@@ -25474,17 +25845,38 @@ void main() {
         ctx3d.setTextureData(null, 0, 0);
         return;
       }
-      const bmp = this.mContext.mRemoteComposeState.getFromId(bitmapId);
-      if (!bmp || !bmp.data) {
+      const img = this.bitmapCache.get(bitmapId);
+      if (!img) {
         ctx3d.setTextureData(null, 0, 0);
         return;
       }
-      const n = bmp.width * bmp.height;
-      const argb = new Int32Array(n);
-      for (let i = 0; i < n; i++) {
-        argb[i] = bmp.data[i * 4 + 3] << 24 | bmp.data[i * 4] << 16 | bmp.data[i * 4 + 1] << 8 | bmp.data[i * 4 + 2] | 0;
+      const cached = this.texturePixels.get(bitmapId);
+      if (cached) {
+        ctx3d.setTextureData(cached.argb, cached.width, cached.height);
+        return;
       }
-      ctx3d.setTextureData(argb, bmp.width, bmp.height);
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      if (!w || !h) {
+        ctx3d.setTextureData(null, 0, 0);
+        return;
+      }
+      const scratch = document.createElement("canvas");
+      scratch.width = w;
+      scratch.height = h;
+      const sctx = scratch.getContext("2d", { willReadFrequently: true });
+      if (!sctx) {
+        ctx3d.setTextureData(null, 0, 0);
+        return;
+      }
+      sctx.drawImage(img, 0, 0);
+      const data = sctx.getImageData(0, 0, w, h).data;
+      const argb = new Int32Array(w * h);
+      for (let i = 0; i < w * h; i++) {
+        argb[i] = data[i * 4 + 3] << 24 | data[i * 4] << 16 | data[i * 4 + 1] << 8 | data[i * 4 + 2] | 0;
+      }
+      this.texturePixels.set(bitmapId, { argb, width: w, height: h });
+      ctx3d.setTextureData(argb, w, h);
     }
     setMaterial3D(specStrength, shininess) {
       this.ensure3D().setMaterial3D(specStrength, shininess);
@@ -25495,8 +25887,44 @@ void main() {
     drawMesh3D(meshId, mode) {
       const ctx3d = this.ensure3D();
       ctx3d.setBaseColorArgb(this.colorArgb);
+      const backend = mode >> 1;
+      const wire = (mode & MODE_WIREFRAME) !== 0;
+      if (!wire && (backend === MODE_BACKEND_CANVAS || backend === MODE_BACKEND_CANVAS_ZBUF)) {
+        if (this.drawMesh3DGl(
+          ctx3d,
+          meshId,
+          (mode & MODE_SMOOTH_MASK) !== 0,
+          backend === MODE_BACKEND_CANVAS_ZBUF
+        )) {
+          return;
+        }
+      }
       ctx3d.drawMesh3D(meshId, mode);
       this.blit3D();
+    }
+    /**
+     * Canvas backend: rasterize on the GPU and composite the result.
+     *
+     * Returns false if WebGL2 is not available, so the caller can fall back to software. Each
+     * mesh composites immediately rather than batching to the end of the pass, because the 3D
+     * content has to interleave correctly with the 2D drawing around it — a document that
+     * draws a mesh, then a label, then another mesh expects that order.
+     */
+    drawMesh3DGl(ctx3d, meshId, smooth, useDepth) {
+      if (this.d3gl === null) this.d3gl = new WebGL3DRenderer();
+      const gl = this.d3gl;
+      if (!gl.isAvailable()) return false;
+      const n = ctx3d.buildCanvasVertices(meshId, this.d3glMesh, smooth);
+      if (n < 3) return true;
+      const w = ctx3d.getWidth(), h = ctx3d.getHeight();
+      gl.beginFrame(w, h);
+      const tex = ctx3d.getTextureData();
+      gl.setTexture(tex.pixels, tex.width, tex.height);
+      gl.draw(this.d3glMesh, useDepth);
+      this.ctx.drawImage(gl.getCanvas(), 0, 0, w, h);
+      this.d3glDirty = true;
+      globalThis.__rcGl3dDraws = gl.drawCount;
+      return true;
     }
     /**
      * Composite the software color buffer onto the canvas. The reference blits after every
@@ -26093,7 +26521,9 @@ void main() {
     };
     return handle;
   }
-  var RcPlayerElement = class extends HTMLElement {
+  var BaseElement = typeof HTMLElement !== "undefined" ? HTMLElement : class {
+  };
+  var RcPlayerElement = class extends BaseElement {
     constructor() {
       super();
       this._handle = null;
