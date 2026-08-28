@@ -76,6 +76,8 @@ public:
     // Transform
     void matrixSave() override;
     void matrixRestore() override;
+    void saveLayerAlpha(float alpha, float left, float top, float right, float bottom) override;
+    void restoreLayer() override;
     void matrixScale(float sx, float sy, float cx, float cy) override;
     void matrixTranslate(float dx, float dy) override;
     void matrixRotate(float degrees, float cx, float cy) override;

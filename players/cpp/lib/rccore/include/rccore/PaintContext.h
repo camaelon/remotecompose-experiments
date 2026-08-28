@@ -90,6 +90,14 @@ public:
     virtual void matrixRotate(float degrees, float cx, float cy) = 0;
     virtual void matrixSkew(float sx, float sy) = 0;
 
+    // Alpha compositing layer (for layout enter/exit fades). Default falls back to a
+    // plain matrix save/restore (no alpha) so non-Skia backends stay balanced.
+    virtual void saveLayerAlpha(float alpha, float left, float top, float right, float bottom) {
+        (void)alpha; (void)left; (void)top; (void)right; (void)bottom;
+        matrixSave();
+    }
+    virtual void restoreLayer() { matrixRestore(); }
+
     // Clipping
     virtual void clipRect(float left, float top, float right, float bottom) = 0;
     virtual void clipPath(int pathId, int regionOp) = 0;

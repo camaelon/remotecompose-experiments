@@ -6,6 +6,7 @@
 #include "rccore/operations/DrawOperations.h"
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/operations/LayoutOperations.h"
+#include "rccore/animation/LayoutAnimation.h"
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
@@ -23,6 +24,9 @@ static constexpr int THEME_LIGHT = -3;
 bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
     Operations::init();
     mOperations.clear();
+    // New document: drop any layout-animation state from the previous one so
+    // component ids can't carry stale bounds and trigger spurious transitions.
+    resetAnimStore();
 
     // Stack of container operations being built
     std::vector<Operation*> containerStack;
