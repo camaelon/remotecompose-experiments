@@ -8,6 +8,7 @@ import { jsonEditor } from './JsonEditorPanel.js';
 import { updateVariablesPanel, renderGraphCanvas, updateGraphLegend } from './VariablesPanel.js';
 import { drawProfiler } from './ProfilerPanel.js';
 import { renderExpressionDependencyGraph } from './DependencyGraphPanel.js';
+import { renderRepaintPanel } from './RepaintPanel.js';
 import {
     stepOpForward,
     stepOpBackward,
@@ -37,7 +38,8 @@ export const lastPaneWidths = {
     pane11: '400px',
     pane12: '640px',
     pane13: '440px',
-    pane14: '480px'
+    pane14: '480px',
+    pane15: '420px'
 };
 
 export const PANEL_META = {
@@ -54,7 +56,8 @@ export const PANEL_META = {
     pane11: { name: 'System Theme & Environment', icon: '🎨' },
     pane12: { name: 'Responsive Matrix (Buckets)', icon: '📐' },
     pane13: { name: 'Layout & Box Model', icon: '📐' },
-    pane14: { name: 'Document Statistics & Metrics', icon: '📊' }
+    pane14: { name: 'Document Statistics & Metrics', icon: '📊' },
+    pane15: { name: 'Repaint Scheduling', icon: '🔁' }
 };
 
 export const CLUSTERS = {
@@ -74,7 +77,7 @@ export const CLUSTERS = {
         id: 'reactivity',
         name: 'Reactivity & Logic',
         icon: '⚡',
-        panels: ['pane5', 'pane6', 'pane9']
+        panels: ['pane5', 'pane6', 'pane9', 'pane15']
     },
     binary: {
         id: 'binary',
@@ -97,6 +100,7 @@ export const PANEL_PUCKS = [
     { id: 'pane5', cluster: 'reactivity', name: 'Variables', icon: '🎛️' },
     { id: 'pane6', cluster: 'reactivity', name: 'Graphs', icon: '📈' },
     { id: 'pane9', cluster: 'reactivity', name: 'DAG', icon: '🧬' },
+    { id: 'pane15', cluster: 'reactivity', name: 'Repaint', icon: '🔁' },
     // Cluster 4: Binary & Performance
     { id: 'pane2', cluster: 'binary', name: 'Disassembly', icon: '📜' },
     { id: 'pane14', cluster: 'binary', name: 'Stats', icon: '📊' },
@@ -183,6 +187,9 @@ export function restorePanel(paneId) {
     }
     if (paneId === 'pane9') {
         renderExpressionDependencyGraph();
+    }
+    if (paneId === 'pane15') {
+        renderRepaintPanel();
     }
     if (paneId === 'pane10') {
         updateTreemapUI();

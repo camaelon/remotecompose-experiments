@@ -30,6 +30,7 @@ import {
     toggleExprMinimapCollapse,
     updateExprGraphLiveValues
 } from './panels/DependencyGraphPanel.js';
+import { renderRepaintPanel, updateRepaintPanelLive, resetRepaintHistory } from './panels/RepaintPanel.js';
 
 // 3. Command List, Disassembly & Variable Usage Engine
 import {
@@ -493,6 +494,9 @@ if (typeof window !== 'undefined') {
     // Profiler
     window.armProfiler = armProfiler;
     window.drawProfiler = drawProfiler;
+    window.renderRepaintPanel = renderRepaintPanel;
+    window.updateRepaintPanelLive = updateRepaintPanelLive;
+    window.resetRepaintHistory = resetRepaintHistory;
     window.toggleProfilerMeasurement = toggleProfilerMeasurement;
     window.resetProfilerTotals = resetProfilerTotals;
     window.setProfilerRank = setProfilerRank;

@@ -3037,6 +3037,25 @@
         <!-- Resizer Handle 7 -->
         <div class="resizer" id="resizer8_9" title="Drag to resize Pane 8 & 9 (Double click to reset)"></div>
 
+        <!-- Panel 15: Repaint Scheduling -->
+        <div class="panel panel-p15 hidden-panel" id="pane15">
+            <div class="panel-header">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <button class="panel-hide-btn" onclick="hidePanel(event, 'pane15')" title="Hide Repaint panel (Frees horizontal space)">✕</button>
+                    <div class="panel-title">🔁 Repaint Scheduling</div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem;" onclick="renderRepaintPanel()" title="Re-read the engine's repaint decision">↻ Refresh</button>
+                </div>
+            </div>
+            <div class="panel-content" style="padding:10px;">
+                <div style="font-size:0.7rem; color:var(--text-muted); margin-bottom:8px; line-height:1.5;">
+                    Why the next paint happens, and which operation asks for it. A document that repaints
+                    every frame is doing so for one of the reasons listed below.
+                </div>
+                <div id="repaintPanelBody"></div>
+            </div>
+        </div>
         <!-- Panel 9: Expression Dependency Graph -->
         <div class="panel panel-p9 hidden-panel" id="pane9">
             <div class="panel-header">
@@ -7157,8 +7176,8 @@
     selectedGraphVarIds.forEach((id) => {
       const color = getVarColor(id);
       const name = getSystemVarName2(id) || `var_${id}`;
-      const history = graphHistory[id] || [];
-      const lastVal = history.length > 0 ? history[history.length - 1].val : NaN;
+      const history2 = graphHistory[id] || [];
+      const lastVal = history2.length > 0 ? history2[history2.length - 1].val : NaN;
       const formattedVal = !isNaN(lastVal) ? Number.isInteger(lastVal) ? lastVal : lastVal.toFixed(2) : "--";
       html += `
             <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.05); padding:2px 8px; border-radius:12px; border:1px solid rgba(255,255,255,0.1);">
@@ -7199,8 +7218,8 @@
     let globalMin = Infinity;
     let globalMax = -Infinity;
     selectedGraphVarIds.forEach((id) => {
-      const history = graphHistory[id] || [];
-      history.forEach((sample) => {
+      const history2 = graphHistory[id] || [];
+      history2.forEach((sample) => {
         if (sample.t >= startTime) {
           if (sample.val < globalMin) globalMin = sample.val;
           if (sample.val > globalMax) globalMax = sample.val;
@@ -7269,14 +7288,14 @@
       ctx.setLineDash([]);
     }
     selectedGraphVarIds.forEach((id) => {
-      const history = graphHistory[id];
-      if (!history || history.length === 0) return;
+      const history2 = graphHistory[id];
+      if (!history2 || history2.length === 0) return;
       const color = getVarColor(id);
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.beginPath();
       let started = false;
-      history.forEach((sample) => {
+      history2.forEach((sample) => {
         if (sample.t < startTime) return;
         const tNorm = (sample.t - startTime) / windowMs;
         const x = padLeft + tNorm * plotW;
@@ -10266,6 +10285,304 @@
   window.compileAndLoadJson = compileAndLoadJson;
   window.showCompileStatus = showCompileStatus;
 
+  // src/panels/RepaintPanel.js
+  var ID_CONTINUOUS_SEC = 1;
+  var ID_TIME_IN_SEC = 2;
+  var ID_TIME_IN_MIN = 3;
+  var SYS_VAR_NAMES = {
+    [ID_CONTINUOUS_SEC]: "CONTINUOUS_SEC",
+    [ID_TIME_IN_SEC]: "TIME_IN_SEC",
+    [ID_TIME_IN_MIN]: "TIME_IN_MIN"
+  };
+  var TIME_ATTR_CONTINUOUS = {
+    0: "timeFromNowSec",
+    1: "timeFromNowMin",
+    3: "timeFromArgSec",
+    4: "timeFromArgMin",
+    14: "timeFromLoadSec"
+  };
+  var PARTICLE_REPAINT_OPS = { 163: "ParticlesLoop", 194: "ParticlesCompare" };
+  var OP_TOUCH_EXPRESSION = 157;
+  var OP_FLOAT_EXPRESSION = 81;
+  var OP_TIME_ATTRIBUTE = 172;
+  function opCodeOf(op) {
+    if (!op) return -1;
+    return op.OP_CODE !== void 0 ? op.OP_CODE : op.constructor ? op.constructor.OP_CODE : -1;
+  }
+  function opNameOf(op) {
+    if (typeof window.getOpName === "function") return window.getOpName(op);
+    return (op && op.constructor && op.constructor.name || "Operation").replace(/^_/, "");
+  }
+  function opIndexOf(op) {
+    const ops = window.currentParsedOps;
+    if (!Array.isArray(ops)) return -1;
+    return ops.indexOf(op);
+  }
+  function describeOp(op, note) {
+    return { op, idx: opIndexOf(op), name: opNameOf(op), varId: op && op.mId !== void 0 ? op.mId : null, note };
+  }
+  function getState(doc) {
+    if (!doc) return null;
+    return typeof doc.getRemoteComposeState === "function" ? doc.getRemoteComposeState() : doc.mRemoteComposeState;
+  }
+  function listenersOn(state, id) {
+    if (!state) return [];
+    const l = typeof state.getListeners === "function" ? state.getListeners(id) : null;
+    return Array.isArray(l) ? l : [];
+  }
+  function findImmediateRequesters(doc, animationTime) {
+    const ops = window.currentParsedOps;
+    if (!Array.isArray(ops)) return [];
+    const found = [];
+    ops.forEach((op) => {
+      const code = opCodeOf(op);
+      if (code === OP_TIME_ATTRIBUTE) {
+        const mode = (op.mType ?? 0) & 255;
+        const modeName = TIME_ATTR_CONTINUOUS[mode];
+        if (modeName) {
+          found.push({ ...describeOp(op, `${modeName} \u2014 re-reads the clock every frame`), active: true });
+        }
+        return;
+      }
+      if (PARTICLE_REPAINT_OPS[code]) {
+        found.push({ ...describeOp(op, `${PARTICLE_REPAINT_OPS[code]} advances the simulation every frame`), active: true });
+        return;
+      }
+      if (code === OP_TOUCH_EXPRESSION) {
+        found.push({ ...describeOp(op, "while a touch gesture is settling"), active: false });
+        return;
+      }
+      if (code === OP_FLOAT_EXPRESSION) {
+        if (op.mFloatAnimation) {
+          const duration = typeof op.mFloatAnimation.getDuration === "function" ? op.mFloatAnimation.getDuration() : NaN;
+          const elapsed = animationTime - op.mLastChange;
+          const running = Number.isFinite(duration) && Number.isFinite(elapsed) && elapsed <= duration;
+          const remaining = running ? Math.max(0, duration - elapsed) : 0;
+          found.push({
+            ...describeOp(op, running ? `animating \u2014 ${(remaining * 1e3).toFixed(0)} ms left of ${(duration * 1e3).toFixed(0)} ms` : "animated, currently settled"),
+            active: running
+          });
+        } else if (op.mSpring) {
+          const target = typeof op.mSpring.getTargetValue === "function" ? op.mSpring.getTargetValue() : NaN;
+          const settling = Number.isFinite(target) && Math.abs(target - op.mLastAnimatedValue) > 0.01;
+          found.push({
+            ...describeOp(op, settling ? "spring still settling" : "spring, currently settled"),
+            active: settling
+          });
+        }
+      }
+    });
+    return found;
+  }
+  function analyzeRepaintSchedule(doc, player) {
+    const empty = { available: false, delayMs: -1, verdict: "idle", causes: [], requesters: [] };
+    if (!doc || typeof doc.needsRepaint !== "function") return empty;
+    const state = getState(doc);
+    const delayMs = doc.needsRepaint();
+    const now = Date.now();
+    const animationTime = player && player.remoteContext && typeof player.remoteContext.getAnimationTime === "function" ? player.remoteContext.getAnimationTime() : NaN;
+    const paintCtx = player ? player.paintContext : null;
+    const immediateFlag = !!(paintCtx && typeof paintCtx.doesNeedsRepaint === "function" && paintCtx.doesNeedsRepaint());
+    const root = doc.mRootLayoutComponent;
+    const layoutRepaint = !!(root && typeof root.needsRepaint === "function" && root.needsRepaint());
+    const boundsAnimation = !!(root && typeof root.needsBoundsAnimation === "function" && root.needsBoundsAnimation());
+    const contSec = listenersOn(state, ID_CONTINUOUS_SEC);
+    const timeSec = listenersOn(state, ID_TIME_IN_SEC);
+    const timeMin = listenersOn(state, ID_TIME_IN_MIN);
+    const wakeSeconds = state ? state.mRepaintSeconds : NaN;
+    const hasWake = typeof wakeSeconds === "number" && !Number.isNaN(wakeSeconds);
+    const requesters = findImmediateRequesters(doc, animationTime);
+    let winner = null;
+    if (immediateFlag) winner = "immediate";
+    else if (layoutRepaint || boundsAnimation) winner = "layout";
+    else if (contSec.length) winner = "continuousSec";
+    else {
+      const wakeMs = hasWake ? Math.trunc(wakeSeconds * 1e3) : Number.MAX_SAFE_INTEGER;
+      if (timeSec.length) winner = 2 + 1e3 - now % 1e3 <= wakeMs ? "timeInSec" : "wakeIn";
+      else if (timeMin.length) winner = 2 + 6e4 - now % 6e4 <= wakeMs ? "timeInMin" : "wakeIn";
+      else if (hasWake) winner = "wakeIn";
+    }
+    const causes = [];
+    const push = (kind, present, label, value, ops, detail) => {
+      if (!present) return;
+      causes.push({ kind, label, value, ops, detail, winning: winner === kind });
+    };
+    push(
+      "immediate",
+      immediateFlag,
+      "An operation requested an immediate repaint",
+      "every frame",
+      requesters.filter((r) => r.active),
+      "PaintContext records only a flag, so the operations below are resolved from the document rather than observed at the call site."
+    );
+    push(
+      "layout",
+      layoutRepaint || boundsAnimation,
+      boundsAnimation ? "Layout bounds animation in progress" : "Layout requested a repaint",
+      "every frame",
+      []
+    );
+    push(
+      "continuousSec",
+      contSec.length > 0,
+      `${contSec.length} operation${contSec.length === 1 ? " listens" : "s listen"} to $CONTINUOUS_SEC`,
+      "every frame",
+      contSec.map((op) => describeOp(op, "reads continuousSec()")),
+      "A listener on CONTINUOUS_SEC makes getOpsToUpdate() return 1 before it considers anything else \u2014 this is the usual cause of an unexplained constant repaint."
+    );
+    push(
+      "timeInSec",
+      timeSec.length > 0,
+      `${timeSec.length} operation${timeSec.length === 1 ? " listens" : "s listen"} to $TIME_IN_SEC`,
+      `in ${2 + 1e3 - now % 1e3} ms \u2014 the next second boundary, so at most 1002 ms apart`,
+      timeSec.map((op) => describeOp(op, "reads timeInSec()"))
+    );
+    push(
+      "timeInMin",
+      timeMin.length > 0,
+      `${timeMin.length} operation${timeMin.length === 1 ? " listens" : "s listen"} to $TIME_IN_MIN`,
+      `in ${2 + 6e4 - now % 6e4} ms \u2014 the next minute boundary, so at most 60002 ms apart`,
+      timeMin.map((op) => describeOp(op, "reads timeInMin()"))
+    );
+    push(
+      "wakeIn",
+      hasWake,
+      "An operation scheduled an explicit wake",
+      `${(wakeSeconds * 1e3).toFixed(0)} ms (wakeIn ${wakeSeconds}s)`,
+      [],
+      "wakeIn() is recorded on the state, not against the operation that called it."
+    );
+    const verdict = delayMs === 1 || delayMs === 0 ? "continuous" : delayMs < 0 ? "idle" : "scheduled";
+    const requested = winner === null ? "never \u2014 nothing schedules a repaint" : delayMs >= 0 && delayMs <= 1 ? "every frame" : delayMs < 0 ? "never \u2014 nothing schedules a repaint" : `every ~${delayMs} ms`;
+    return {
+      available: true,
+      delayMs,
+      verdict,
+      winner,
+      causes,
+      requesters,
+      requested,
+      idleCandidates: requesters.filter((r) => !r.active)
+    };
+  }
+  var HISTORY_LIMIT = 600;
+  var SUMMARY_WINDOW_MS = 5e3;
+  var history = [];
+  var lastVerdict = null;
+  function resetRepaintHistory() {
+    history = [];
+    lastVerdict = null;
+    renderRepaintPanel();
+  }
+  function recordRepaintSample(delayMs) {
+    history.push({ t: Date.now(), delayMs });
+    if (history.length > HISTORY_LIMIT) history.shift();
+  }
+  function historySummary() {
+    if (!history.length) return null;
+    const cutoff = Date.now() - SUMMARY_WINDOW_MS;
+    const recent = history.filter((h) => h.t >= cutoff);
+    if (!recent.length) return { paints: 0, rate: 0, continuous: 0, scheduled: 0, idle: 0, quiet: true };
+    const span = Math.max(1, Date.now() - Math.min(recent[0].t, cutoff));
+    return {
+      paints: recent.length,
+      rate: recent.length / (span / 1e3),
+      continuous: recent.filter((h) => h.delayMs >= 0 && h.delayMs <= 1).length,
+      scheduled: recent.filter((h) => h.delayMs > 1).length,
+      idle: recent.filter((h) => h.delayMs < 0).length,
+      quiet: false
+    };
+  }
+  function esc(s) {
+    return typeof window.escapeHtml === "function" ? window.escapeHtml(String(s)) : String(s);
+  }
+  function opChipHtml(entry) {
+    const label = entry.varId !== null && entry.varId !== void 0 && entry.varId !== -1 ? `${entry.name} [${entry.varId}]` : entry.name;
+    const jump = entry.idx >= 0 ? `event.stopPropagation(); toggleCommandExpand(${entry.idx}, ${entry.varId ?? "null"}); const el=document.getElementById('cmdCard-${entry.idx}'); if (el) el.scrollIntoView({behavior:'smooth', block:'center'});` : "";
+    const title = entry.idx >= 0 ? `Operation #${entry.idx + 1} \u2014 click to show it in the Commands List` : "Not present in the flat command list";
+    return `
+        <div style="display:flex; align-items:baseline; gap:6px; padding:2px 0;">
+            <span onclick="${jump}" title="${esc(title)}" style="cursor:${entry.idx >= 0 ? "pointer" : "default"}; color:var(--accent-blue); background:rgba(56,189,248,0.14); border-radius:3px; padding:0 4px; font-family:var(--code-font); font-size:0.72rem; white-space:nowrap;">
+                ${entry.idx >= 0 ? `#${entry.idx + 1} ` : ""}${esc(label)}
+            </span>
+            ${entry.note ? `<span style="color:var(--text-muted); font-size:0.7rem;">${esc(entry.note)}</span>` : ""}
+        </div>`;
+  }
+  function causeCardHtml(cause) {
+    const accent = cause.winning ? "var(--accent-blue)" : "var(--border-color)";
+    const badge = cause.winning ? `<span class="badge" style="background:var(--accent-blue); color:#06202e;">determines next paint</span>` : `<span class="badge" style="background:rgba(148,163,184,0.18); color:var(--text-muted);">subsumed</span>`;
+    return `
+        <div style="border:1px solid ${accent}; border-left:3px solid ${accent}; border-radius:5px; padding:7px 10px; margin-bottom:6px; background:${cause.winning ? "rgba(56,189,248,0.06)" : "transparent"};">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:3px;">
+                <span style="font-size:0.78rem; color:var(--text-primary); font-weight:600;">${esc(cause.label)}</span>
+                ${badge}
+            </div>
+            <div style="font-family:var(--code-font); font-size:0.75rem; color:var(--accent-amber); margin-bottom:${cause.ops.length || cause.detail ? "5px" : "0"};">${esc(cause.value)}</div>
+            ${cause.ops.length ? `<div style="margin-bottom:4px;">${cause.ops.map(opChipHtml).join("")}</div>` : ""}
+            ${cause.detail ? `<div style="font-size:0.69rem; color:var(--text-muted); line-height:1.45;">${esc(cause.detail)}</div>` : ""}
+        </div>`;
+  }
+  function renderRepaintPanel() {
+    const container = document.getElementById("repaintPanelBody");
+    if (!container) return;
+    const doc = window.currentDocument;
+    const player = window.currentPlayer;
+    const a = analyzeRepaintSchedule(doc, player);
+    if (!a.available) {
+      container.innerHTML = `<div style="text-align:center; padding:28px; color:var(--text-muted);">No document loaded yet.</div>`;
+      return;
+    }
+    const verdictStyles = {
+      continuous: { color: "#f43f5e", bg: "rgba(244,63,94,0.12)", icon: "\u{1F534}", text: "Repainting every frame" },
+      scheduled: { color: "var(--accent-amber)", bg: "rgba(251,191,36,0.12)", icon: "\u{1F7E1}", text: `Next repaint in ${a.delayMs} ms` },
+      idle: { color: "var(--accent-emerald)", bg: "rgba(16,185,129,0.12)", icon: "\u{1F7E2}", text: "Idle \u2014 no repaint scheduled" }
+    };
+    const v = verdictStyles[a.verdict];
+    const hist = historySummary();
+    const rateColor = !hist ? "var(--text-muted)" : hist.rate >= 20 ? "#f43f5e" : hist.rate >= 2 ? "var(--accent-amber)" : "var(--accent-emerald)";
+    const histHtml = hist ? `
+        <div style="display:flex; gap:10px; align-items:center; font-size:0.72rem; color:var(--text-secondary); margin-bottom:8px; flex-wrap:wrap;">
+            <span title="Frames this inspector actually painted over the last 5 seconds of wall clock. This can exceed what the document asks for: the player arms a fresh timer chain on every repaint() call, and those chains each re-arm, so several can run at once.">Observed here, last 5 s:</span>
+            <span style="color:${rateColor}; font-weight:600; font-family:var(--code-font);">${hist.paints} paints (${hist.rate.toFixed(1)}/s)</span>
+            ${hist.continuous ? `<span style="color:#f43f5e;">${hist.continuous} continuous</span>` : ""}
+            ${hist.scheduled ? `<span style="color:var(--accent-amber);">${hist.scheduled} scheduled</span>` : ""}
+            ${hist.idle ? `<span style="color:var(--accent-emerald);">${hist.idle} idle</span>` : ""}
+            <button class="btn btn-secondary" style="padding:1px 7px; font-size:0.68rem; margin-left:auto;" onclick="resetRepaintHistory()">\u{1F9F9} Reset</button>
+        </div>` : "";
+    const idleHtml = a.idleCandidates.length ? `
+        <div style="margin-top:10px; padding:7px 10px; border:1px dashed var(--border-color); border-radius:5px;">
+            <div style="font-size:0.74rem; color:var(--text-secondary); font-weight:600; margin-bottom:4px;">Can request an immediate repaint, but is not right now</div>
+            ${a.idleCandidates.map(opChipHtml).join("")}
+        </div>` : "";
+    const noCause = a.causes.length === 0 ? `<div style="font-size:0.75rem; color:var(--text-muted); padding:8px 0;">Nothing in this document asks to be repainted. It paints once and stays put until an input or a variable changes.</div>` : "";
+    container.innerHTML = `
+        <div style="padding:8px 10px; border-radius:6px; background:${v.bg}; border:1px solid ${v.color}; margin-bottom:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1rem;">${v.icon}</span>
+                <span style="font-weight:600; color:${v.color}; font-size:0.86rem;">${esc(v.text)}</span>
+                <span style="margin-left:auto; font-family:var(--code-font); font-size:0.72rem; color:var(--text-muted);" title="The value the engine returned when it last painted. Delays below are recomputed against the clock now, so they count down between paints.">needsRepaint() = ${a.delayMs} at last paint</span>
+            </div>
+            <div style="font-size:0.71rem; color:var(--text-secondary); margin-top:4px;">The document asks to be painted <strong style="color:${v.color};">${esc(a.requested)}</strong>.</div>
+        </div>
+        ${histHtml}
+        ${noCause}
+        ${a.causes.map(causeCardHtml).join("")}
+        ${idleHtml}`;
+  }
+  function updateRepaintPanelLive() {
+    const doc = window.currentDocument;
+    if (!doc || typeof doc.needsRepaint !== "function") return;
+    const delay = doc.needsRepaint();
+    recordRepaintSample(delay);
+    const pane = document.getElementById("pane15");
+    if (!pane || pane.classList.contains("hidden-panel")) return;
+    const bucket = delay <= 1 ? "c" : delay < 0 ? "i" : "s";
+    const key = `${bucket}:${Math.floor(Date.now() / 500)}`;
+    if (key === lastVerdict) return;
+    lastVerdict = key;
+    renderRepaintPanel();
+  }
+
   // src/panels/BinaryTreemapPanel.js
   var CATEGORY_COLORS = {
     header: { bg: "#475569", border: "#64748b", text: "#f1f5f9", name: "Header & Metadata", icon: "\u{1F3F7}\uFE0F" },
@@ -11867,7 +12184,7 @@ Click to inspect in Command List</title>
     if (kpiAvgPayloadEl) kpiAvgPayloadEl.textContent = `${avgPayload} B/comp`;
     if (kpiModsEl) kpiModsEl.textContent = `${totalModifiersAttached} (${avgMods}/comp)`;
     if (kpiContainersLeavesEl) kpiContainersLeavesEl.textContent = `${containerCount} cont (${contPct}%) / ${leafCount} leaf (${leafPct}%)`;
-    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     if (depthContainer) {
       let depthHtml = `<div style="display:flex; align-items:flex-end; gap:4px; height:46px; padding-top:2px;">`;
       const maxComponentsAtAnyDepth = Math.max(...Array.from(depthDistribution.values()), 1);
@@ -11901,7 +12218,7 @@ Click to inspect in Command List</title>
         const barHeightPct = Math.max(12, Math.round(b.count / maxBinCount * 100));
         globalSizeHtml += `
                 <div style="flex:1; display:flex; flex-direction:column; height:100%; justify-content:flex-end; align-items:center; min-width:20px; position:relative;" title="Payload ${b.label}: ${b.count} components (${b.exactPct}%)
-Typical config: ${esc(b.topCombos)}">
+Typical config: ${esc2(b.topCombos)}">
                     <div style="height:12px; display:flex; align-items:center; justify-content:center; margin-bottom:2px;">
                         <span style="font-size:0.56rem; font-family:var(--code-font); color:var(--text-muted); line-height:1;">${b.count}</span>
                     </div>
@@ -11932,8 +12249,8 @@ Typical config: ${esc(b.topCombos)}">
           const maxBinCount = Math.max(...k.histogram.map((b) => b.count), 1);
           k.histogram.forEach((b) => {
             const barHeightPct = Math.max(18, Math.round(b.count / maxBinCount * 100));
-            const tooltip = `${esc(k.name)} payload ${b.label}: ${b.count} components (${b.exactPct}%)
-Modifiers: ${esc(b.topCombos)}`;
+            const tooltip = `${esc2(k.name)} payload ${b.label}: ${b.count} components (${b.exactPct}%)
+Modifiers: ${esc2(b.topCombos)}`;
             histogramBarsHtml += `
                         <div style="flex:1; display:flex; flex-direction:column; height:100%; position:relative; cursor:pointer; min-width:26px;" title="${tooltip}">
                             <div style="height:12px; display:flex; align-items:center; justify-content:center; margin-bottom:2px;">
@@ -11950,12 +12267,12 @@ Modifiers: ${esc(b.topCombos)}`;
           });
         }
         html += `
-                <div class="comp-type-row" onclick="filterCommandsByType('${esc(k.name)}')" title="Click to filter disassembly for ${esc(k.name)}">
+                <div class="comp-type-row" onclick="filterCommandsByType('${esc2(k.name)}')" title="Click to filter disassembly for ${esc2(k.name)}">
                     <!-- Top Line: Icon, Name, Category, Count, Total Bytes -->
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                         <div style="display:flex; align-items:center; gap:6px;">
                             <span style="font-size:0.95rem;">${k.icon}</span>
-                            <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">${esc(k.name)}</span>
+                            <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">${esc2(k.name)}</span>
                             <span class="badge" style="font-size:0.65rem; background:${k.isContainer ? "rgba(16,185,129,0.15); color:#10b981;" : "rgba(56,189,248,0.15); color:#38bdf8;"}">${k.isContainer ? "Container" : "Leaf"}</span>
                             <span class="op-type-count">\xD7${k.count}</span>
                         </div>
@@ -11973,7 +12290,7 @@ Modifiers: ${esc(b.topCombos)}`;
                             <span>Avg: <strong style="color:var(--accent-amber); font-family:var(--code-font);">${k.avgSize} B</strong></span>
                             <span>Max: <strong style="color:var(--text-primary); font-family:var(--code-font);">${k.maxSize} B</strong></span>
                         </div>
-                        ${topModsStr ? `<div style="font-size:0.65rem; color:var(--text-muted); max-width:160px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="Attached Modifiers: ${esc(topModsStr)}">\u{1F3F7}\uFE0F ${esc(topModsStr)}</div>` : ""}
+                        ${topModsStr ? `<div style="font-size:0.65rem; color:var(--text-muted); max-width:160px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="Attached Modifiers: ${esc2(topModsStr)}">\u{1F3F7}\uFE0F ${esc2(topModsStr)}</div>` : ""}
                     </div>
 
                     <!-- Granular Size Distribution Histogram -->
@@ -12036,7 +12353,7 @@ Modifiers: ${esc(b.topCombos)}`;
     if (kpiAvgPayloadEl) kpiAvgPayloadEl.textContent = `${avgModPayload} B/mod`;
     if (kpiDensityEl) kpiDensityEl.textContent = `${modDensity} / comp`;
     if (kpiStyledEl) kpiStyledEl.textContent = `${styledPct}% styled (${styledComponentsCount}/${totalComponentsCount})`;
-    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     if (countContainer && compModCountDist) {
       let countHtml = `<div style="display:flex; align-items:flex-end; gap:4px; height:46px; padding-top:2px;">`;
       const sortedCounts = Array.from(compModCountDist.entries()).sort((a, b) => a[0] - b[0]);
@@ -12072,7 +12389,7 @@ Modifiers: ${esc(b.topCombos)}`;
         const barHeightPct = Math.max(12, Math.round(b.count / maxBinCount * 100));
         globalSizeHtml += `
                 <div style="flex:1; display:flex; flex-direction:column; height:100%; justify-content:flex-end; align-items:center; min-width:20px; position:relative;" title="Modifier payload ${b.label}: ${b.count} modifiers (${b.exactPct}%)
-${esc(b.topCombos)}">
+${esc2(b.topCombos)}">
                     <div style="height:12px; display:flex; align-items:center; justify-content:center; margin-bottom:2px;">
                         <span style="font-size:0.56rem; font-family:var(--code-font); color:var(--text-muted); line-height:1;">${b.count}</span>
                     </div>
@@ -12102,12 +12419,12 @@ ${esc(b.topCombos)}">
         const isUniform = m.minSize === m.maxSize;
         const sizeSpreadStr = isUniform ? `Uniform (${m.minSize} B)` : `${m.minSize} B \u2013 ${m.maxSize} B (Avg: ${m.avgSize} B)`;
         html += `
-                <div class="comp-type-row" onclick="filterCommandsByType('${esc(filterTarget)}')" title="Click to filter disassembly for ${esc(filterTarget)}">
+                <div class="comp-type-row" onclick="filterCommandsByType('${esc2(filterTarget)}')" title="Click to filter disassembly for ${esc2(filterTarget)}">
                     <!-- Top Line: Icon, Name, Category Badge, Count, Total Bytes -->
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                         <div style="display:flex; align-items:center; gap:6px;">
                             <span style="font-size:0.95rem;">${m.icon}</span>
-                            <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">${esc(m.name)}</span>
+                            <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary);">${esc2(m.name)}</span>
                             <span class="badge" style="font-size:0.65rem; background:rgba(244,63,94,0.15); color:#f43f5e;">Modifier</span>
                             <span class="op-type-count">\xD7${m.count}</span>
                         </div>
@@ -12122,7 +12439,7 @@ ${esc(b.topCombos)}">
                         <div style="display:flex; gap:6px; align-items:center;">
                             <span>Size: <strong style="color:var(--text-primary); font-family:var(--code-font);">${sizeSpreadStr}</strong></span>
                         </div>
-                        ${targetsStr ? `<div style="font-size:0.65rem; color:var(--text-muted); max-width:200px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="Attached To: ${esc(targetsStr)}">\u{1F3AF} ${esc(targetsStr)}</div>` : ""}
+                        ${targetsStr ? `<div style="font-size:0.65rem; color:var(--text-muted); max-width:200px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="Attached To: ${esc2(targetsStr)}">\u{1F3AF} ${esc2(targetsStr)}</div>` : ""}
                     </div>
 
                     <!-- Overall Modifier Payload Share Bar -->
@@ -12537,7 +12854,7 @@ ${esc(b.topCombos)}">
     if (kpiTerminalSinksSubEl) kpiTerminalSinksSubEl.textContent = `${sinksPct}% of expressions`;
     if (kpiExprPayloadEl) kpiExprPayloadEl.textContent = `${totalVarBytes} B (${varPayloadPct}%)`;
     if (kpiExprAvgPayloadEl) kpiExprAvgPayloadEl.textContent = `${avgExprPayload} B/expr`;
-    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     if (chainContainer && depthHistogram) {
       let depthHtml = `<div style="display:flex; align-items:flex-end; gap:4px; height:46px; padding-top:2px;">`;
       if (depthHistogram.length === 0) {
@@ -12597,9 +12914,9 @@ ${esc(b.topCombos)}">
           const stepsHtml = cp.steps.map((st, idx) => {
             const isLast = idx === cp.steps.length - 1;
             return `
-                        <span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.15); color:var(--accent-blue); cursor:pointer;" onclick="filterCommandsByType('${esc(st.name)}')" title="Variable ID ${st.id} (${esc(st.name)})">${esc(st.name)}</span>
+                        <span class="badge" style="font-size:0.65rem; background:rgba(56,189,248,0.15); color:var(--accent-blue); cursor:pointer;" onclick="filterCommandsByType('${esc2(st.name)}')" title="Variable ID ${st.id} (${esc2(st.name)})">${esc2(st.name)}</span>
                         ${!isLast ? `<span style="color:var(--text-muted); font-size:0.7rem;">\u2794</span>` : ""}
-                        ${st.uiTarget ? `<span style="font-size:0.65rem; color:var(--accent-emerald);">\u{1F3AF} ${esc(st.uiTarget)}</span>` : ""}
+                        ${st.uiTarget ? `<span style="font-size:0.65rem; color:var(--accent-emerald);">\u{1F3AF} ${esc2(st.uiTarget)}</span>` : ""}
                     `;
           }).join(" ");
           cpHtml += `
@@ -12623,7 +12940,7 @@ ${esc(b.topCombos)}">
         operatorStats.forEach((op) => {
           opHtml += `
                     <span class="badge" style="font-size:0.7rem; padding:3px 8px; background:rgba(251,191,36,0.12); color:var(--accent-amber); border:1px solid rgba(251,191,36,0.3);" title="${op.count} times used (${op.pct}%)">
-                        <strong>${esc(op.name)}</strong> \xD7${op.count} <span style="opacity:0.7; font-size:0.62rem;">(${op.pct}%)</span>
+                        <strong>${esc2(op.name)}</strong> \xD7${op.count} <span style="opacity:0.7; font-size:0.62rem;">(${op.pct}%)</span>
                     </span>
                 `;
         });
@@ -12636,15 +12953,15 @@ ${esc(b.topCombos)}">
       } else {
         let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
         detailedItems.forEach((item) => {
-          const inputsStr = item.inputs.length > 0 ? item.inputs.map((inp) => `<span class="badge" style="font-size:0.6rem; background:rgba(255,255,255,0.06); color:var(--text-secondary);">${esc(inp.name)}</span>`).join(" ") : "";
-          const uiTargetsStr = item.uiTargets.length > 0 ? item.uiTargets.map((t) => `<span style="color:var(--accent-emerald);">\u{1F3AF} ${esc(t)}</span>`).join(", ") : "";
+          const inputsStr = item.inputs.length > 0 ? item.inputs.map((inp) => `<span class="badge" style="font-size:0.6rem; background:rgba(255,255,255,0.06); color:var(--text-secondary);">${esc2(inp.name)}</span>`).join(" ") : "";
+          const uiTargetsStr = item.uiTargets.length > 0 ? item.uiTargets.map((t) => `<span style="color:var(--accent-emerald);">\u{1F3AF} ${esc2(t)}</span>`).join(", ") : "";
           html += `
-                    <div class="comp-type-row" onclick="filterCommandsByType('${esc(item.name)}')" title="Click to filter disassembly for ${esc(item.name)}" style="padding:6px 10px;">
+                    <div class="comp-type-row" onclick="filterCommandsByType('${esc2(item.name)}')" title="Click to filter disassembly for ${esc2(item.name)}" style="padding:6px 10px;">
                         <!-- Top Line: Name, Kind, ID, Depth, Size -->
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:3px;">
                             <div style="display:flex; align-items:center; gap:6px;">
-                                <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary); font-family:var(--code-font);">${esc(item.name)}</span>
-                                <span class="badge" style="font-size:0.62rem; background:rgba(56,189,248,0.12); color:${item.badgeColor};">${esc(item.kind)}</span>
+                                <span style="font-weight:600; font-size:0.82rem; color:var(--text-primary); font-family:var(--code-font);">${esc2(item.name)}</span>
+                                <span class="badge" style="font-size:0.62rem; background:rgba(56,189,248,0.12); color:${item.badgeColor};">${esc2(item.kind)}</span>
                                 <span style="font-size:0.65rem; color:var(--text-muted); font-family:var(--code-font);">#${item.id}</span>
                                 ${item.isExpr ? `<span class="badge" style="font-size:0.62rem; background:rgba(244,63,94,0.12); color:var(--accent-rose);">Depth ${item.depth}</span>` : ""}
                             </div>
@@ -12655,8 +12972,8 @@ ${esc(b.topCombos)}">
                         </div>
 
                         <!-- Formula / Expression string -->
-                        <div style="font-family:var(--code-font); font-size:0.72rem; color:var(--accent-amber); margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(item.formula)}">
-                            ${esc(item.formula)}
+                        <div style="font-family:var(--code-font); font-size:0.72rem; color:var(--accent-amber); margin-bottom:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc2(item.formula)}">
+                            ${esc2(item.formula)}
                         </div>
 
                         <!-- Footer line: Inputs & Target UI refs -->
@@ -12730,7 +13047,7 @@ ${esc(b.topCombos)}">
     if (clickCountEl) clickCountEl.textContent = clickCount;
     const typeArray = Object.values(typeMap).sort((a, b) => b.totalBytes - a.totalBytes);
     if (totalBadge) totalBadge.textContent = `${typeArray.length} Types`;
-    const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     let html = "";
     typeArray.forEach((item) => {
       const pct = totalBytes ? (item.totalBytes / totalBytes * 100).toFixed(1) : 0;
@@ -12740,10 +13057,10 @@ ${esc(b.topCombos)}">
       else if (item.name.includes("Modifier")) color = "#f43f5e";
       else if (item.name.includes("Draw") || item.name.includes("Paint") || item.name.includes("Path")) color = "#c084fc";
       html += `
-            <div class="op-type-row" onclick="filterCommandsByType('${esc(item.name)}')" title="Click to filter disassembly for ${esc(item.name)}">
+            <div class="op-type-row" onclick="filterCommandsByType('${esc2(item.name)}')" title="Click to filter disassembly for ${esc2(item.name)}">
                 <div class="op-type-left">
                     <span class="op-type-badge">${item.hexCode}</span>
-                    <span class="op-type-name">${esc(item.name)}</span>
+                    <span class="op-type-name">${esc2(item.name)}</span>
                     <span class="op-type-count">\xD7${item.count}</span>
                 </div>
                 <div class="op-type-right">
@@ -14531,9 +14848,11 @@ ${esc(b.topCombos)}">
           if (typeof window.updateVariableValuesLive === "function") window.updateVariableValuesLive();
           if (typeof window.updateComponentTreeLive === "function") window.updateComponentTreeLive();
           if (typeof window.updateRunningTreeLive === "function") window.updateRunningTreeLive();
+          if (typeof window.updateRepaintPanelLive === "function") window.updateRepaintPanelLive();
         });
       }
       drawProfiler();
+      if (typeof window.resetRepaintHistory === "function") window.resetRepaintHistory();
     }
     applyDensity(currentDensity, false);
     const docWidth = currentDocument ? typeof currentDocument.getAuthorWidth === "function" ? currentDocument.getAuthorWidth() : currentDocument.mHeader ? currentDocument.mHeader.mWidth : currentDocument.getWidth() : 300;
@@ -14687,15 +15006,15 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       const dropZoneBody = document.getElementById("dropZoneBody") || document.getElementById("dropZone");
       if (dropZoneBody && targetUrl) {
         const isCors = errMsg.toLowerCase().includes("failed to fetch") || errMsg.toLowerCase().includes("network") || errMsg.toLowerCase().includes("cors");
-        const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
         const bannerHtml = `
                 <div id="urlErrorBanner" style="margin: 8px 0; padding: 12px 14px; background: rgba(239,68,68,0.12); border: 1px solid var(--accent-rose); border-radius: 6px; color: var(--accent-rose); font-size: 0.8rem; text-align: left;">
                     <div style="font-weight: 600; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                         <span>\u26A0\uFE0F Failed to fetch RemoteCompose document</span>
                         <button onclick="document.getElementById('urlErrorBanner')?.remove()" style="background:none; border:none; color:var(--accent-rose); cursor:pointer; font-size:1rem; padding:0 4px;">\u2715</button>
                     </div>
-                    <div style="word-break: break-all; margin-bottom: 4px; color: var(--text-primary);"><strong>Requested URL:</strong> <code style="color:var(--accent-blue);">${esc(targetUrl)}</code></div>
-                    <div style="margin-bottom: 6px;"><strong>Error Detail:</strong> <span style="font-family:var(--code-font);">${esc(errMsg)}</span></div>
+                    <div style="word-break: break-all; margin-bottom: 4px; color: var(--text-primary);"><strong>Requested URL:</strong> <code style="color:var(--accent-blue);">${esc2(targetUrl)}</code></div>
+                    <div style="margin-bottom: 6px;"><strong>Error Detail:</strong> <span style="font-family:var(--code-font);">${esc2(errMsg)}</span></div>
                     <div style="font-size: 0.72rem; color: var(--text-muted); line-height: 1.4; border-top: 1px dashed rgba(239,68,68,0.3); padding-top: 6px;">
                         ${isCors ? "\u{1F4A1} <strong>CORS / Network restriction:</strong> If fetching across domains, the server must provide <code>Access-Control-Allow-Origin: *</code> headers. If opening locally via <code>file://</code>, local cross-file requests may be restricted by your browser. You can drag and drop the file directly into this drop box." : "\u{1F4A1} Please check that the URL is accessible and points to a valid <code>.rc</code> binary or <code>.json</code> file."}
                     </div>
@@ -15105,7 +15424,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     pane11: "400px",
     pane12: "640px",
     pane13: "440px",
-    pane14: "480px"
+    pane14: "480px",
+    pane15: "420px"
   };
   var PANEL_META = {
     pane1: { name: "Player & Controls", icon: "\u{1F3A8}" },
@@ -15121,7 +15441,8 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     pane11: { name: "System Theme & Environment", icon: "\u{1F3A8}" },
     pane12: { name: "Responsive Matrix (Buckets)", icon: "\u{1F4D0}" },
     pane13: { name: "Layout & Box Model", icon: "\u{1F4D0}" },
-    pane14: { name: "Document Statistics & Metrics", icon: "\u{1F4CA}" }
+    pane14: { name: "Document Statistics & Metrics", icon: "\u{1F4CA}" },
+    pane15: { name: "Repaint Scheduling", icon: "\u{1F501}" }
   };
   var CLUSTERS = {
     canvas: {
@@ -15140,7 +15461,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
       id: "reactivity",
       name: "Reactivity & Logic",
       icon: "\u26A1",
-      panels: ["pane5", "pane6", "pane9"]
+      panels: ["pane5", "pane6", "pane9", "pane15"]
     },
     binary: {
       id: "binary",
@@ -15162,6 +15483,7 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     { id: "pane5", cluster: "reactivity", name: "Variables", icon: "\u{1F39B}\uFE0F" },
     { id: "pane6", cluster: "reactivity", name: "Graphs", icon: "\u{1F4C8}" },
     { id: "pane9", cluster: "reactivity", name: "DAG", icon: "\u{1F9EC}" },
+    { id: "pane15", cluster: "reactivity", name: "Repaint", icon: "\u{1F501}" },
     // Cluster 4: Binary & Performance
     { id: "pane2", cluster: "binary", name: "Disassembly", icon: "\u{1F4DC}" },
     { id: "pane14", cluster: "binary", name: "Stats", icon: "\u{1F4CA}" },
@@ -15243,6 +15565,9 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     }
     if (paneId === "pane9") {
       renderExpressionDependencyGraph();
+    }
+    if (paneId === "pane15") {
+      renderRepaintPanel();
     }
     if (paneId === "pane10") {
       updateTreemapUI();
@@ -16756,6 +17081,9 @@ Check network, CORS headers, or file path. Click to browse local files.`;
     window.updateExprGraphLiveValues = updateExprGraphLiveValues;
     window.armProfiler = armProfiler;
     window.drawProfiler = drawProfiler;
+    window.renderRepaintPanel = renderRepaintPanel;
+    window.updateRepaintPanelLive = updateRepaintPanelLive;
+    window.resetRepaintHistory = resetRepaintHistory;
     window.toggleProfilerMeasurement = toggleProfilerMeasurement;
     window.resetProfilerTotals = resetProfilerTotals;
     window.setProfilerRank = setProfilerRank;
@@ -16929,6 +17257,18 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.updateExprGraphLiveValues = updateExprGraphLiveValues;
+  } catch (e) {
+  }
+  try {
+    window.renderRepaintPanel = renderRepaintPanel;
+  } catch (e) {
+  }
+  try {
+    window.updateRepaintPanelLive = updateRepaintPanelLive;
+  } catch (e) {
+  }
+  try {
+    window.resetRepaintHistory = resetRepaintHistory;
   } catch (e) {
   }
   try {

@@ -35,7 +35,7 @@ describe("LayoutManager Tests", () => {
         assert.ok(!panel.classList.contains("hidden-panel"), "Panel should no longer be hidden");
     });
 
-    test("CLUSTERS structure contains all 4 functional groups with all 14 panels", () => {
+    test("CLUSTERS structure contains all 4 functional groups with all 15 panels", () => {
         const { CLUSTERS, PANEL_META } = layoutModule;
         assert.ok(CLUSTERS.canvas, "Canvas cluster should exist");
         assert.ok(CLUSTERS.layout, "Layout cluster should exist");
@@ -53,15 +53,15 @@ describe("LayoutManager Tests", () => {
             ...CLUSTERS.reactivity.panels,
             ...CLUSTERS.binary.panels
         ];
-        assert.strictEqual(allClusteredPanels.length, 14, "All 14 panels should be in clusters");
+        assert.strictEqual(allClusteredPanels.length, 15, "All 15 panels should be in clusters");
         Object.keys(PANEL_META).forEach(paneId => {
             assert.ok(allClusteredPanels.includes(paneId), `Panel ${paneId} should be in a cluster`);
         });
     });
 
-    test("PANEL_PUCKS orders all 14 panels strictly according to the 4 clusters", () => {
+    test("PANEL_PUCKS orders all 15 panels strictly according to the 4 clusters", () => {
         const { PANEL_PUCKS, CLUSTERS } = layoutModule;
-        assert.strictEqual(PANEL_PUCKS.length, 14, "Should contain all 14 panel pucks");
+        assert.strictEqual(PANEL_PUCKS.length, 15, "Should contain all 15 panel pucks");
 
         // Verify cluster order
         const clusterSequence = PANEL_PUCKS.map(p => p.cluster);
@@ -77,7 +77,7 @@ describe("LayoutManager Tests", () => {
 
         // Verify specific puck IDs in cluster 3 (Reactivity)
         const reactivityPuckIds = PANEL_PUCKS.filter(p => p.cluster === 'reactivity').map(p => p.id);
-        assert.deepStrictEqual(reactivityPuckIds, ['pane5', 'pane6', 'pane9']);
+        assert.deepStrictEqual(reactivityPuckIds, ['pane5', 'pane6', 'pane9', 'pane15']);
 
         // Verify specific puck IDs in cluster 4 (Binary)
         const binaryPuckIds = PANEL_PUCKS.filter(p => p.cluster === 'binary').map(p => p.id);

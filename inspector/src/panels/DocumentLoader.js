@@ -214,9 +214,11 @@ export async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
                 if (typeof window.updateVariableValuesLive === 'function') window.updateVariableValuesLive();
                 if (typeof window.updateComponentTreeLive === 'function') window.updateComponentTreeLive();
                 if (typeof window.updateRunningTreeLive === 'function') window.updateRunningTreeLive();
+                if (typeof window.updateRepaintPanelLive === 'function') window.updateRepaintPanelLive();
             });
         }
         drawProfiler();
+        if (typeof window.resetRepaintHistory === 'function') window.resetRepaintHistory();
     }
 
     // Maintain selected preview density (default 1.0) on document load
