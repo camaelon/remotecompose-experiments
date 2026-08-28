@@ -808,8 +808,8 @@
 
         .stage-workspace-container {
             display: flex;
-            justify-content: flex-start;
-            align-items: flex-start;
+            justify-content: center;
+            align-items: center;
             width: 100%;
             flex: 1;
             min-height: 180px;
@@ -830,6 +830,16 @@
             box-sizing: border-box;
         }
 
+        .canvas-stage-scaler {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            margin: auto;
+            flex-shrink: 0;
+            box-sizing: border-box;
+        }
+
         .canvas-stage-wrapper {
             position: relative;
             display: inline-block;
@@ -840,7 +850,14 @@
             padding: 0;
             margin: 0;
             touch-action: none;
+            transform-origin: 0 0;
             transition: box-shadow 0.15s ease;
+        }
+
+        #stageAutoScaleBtn.active {
+            background: var(--accent-purple);
+            color: #ffffff;
+            border-color: var(--accent-purple);
         }
 
         .canvas-stage-wrapper.resizing {
@@ -2249,14 +2266,29 @@
                         <div class="canvas-container" style="flex:1; display:flex; flex-direction:column; min-height:0; padding:8px;">
                             <!-- Play / Pause & Operation Stepper Bar -->
                             <div class="canvas-controls-bar" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; padding:4px 8px; flex-shrink:0;">
-                                <div style="display:flex; align-items:center; gap:6px;">
+                                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
                                     <div id="stepControlsGroup" style="display:none; align-items:center; gap:4px;">
                                         <button class="dim-btn" onclick="resetStepToStart()" title="Step to first operation">⏮️</button>
                                         <button class="dim-btn" onclick="stepOpBackward()" title="Step backward one operation">◀</button>
                                         <button class="dim-btn" onclick="stepOpForward()" title="Step forward one operation">▶</button>
                                         <button class="dim-btn" onclick="stepOpToEnd()" title="Step to end of frame">⏭️</button>
                                     </div>
-                                    <span style="font-size:0.7rem; color:var(--text-muted);">↔️ ↕️ ↘ Drag stage handles to resize</span>
+                                    <button id="stageAutoScaleBtn" class="dim-btn active" onclick="toggleStageAutoScale()" title="Toggle Auto-Scale to fit preview within available viewport">
+                                        <span id="stageAutoScaleIcon">📐</span> <span id="stageAutoScaleLabel">Fit</span>
+                                    </button>
+                                    <select id="stageScaleSelect" class="dim-input" style="width:auto; padding:2px 6px; font-size:0.75rem; cursor:pointer;" onchange="onStageScaleSelectChange()" title="Preview Zoom / Scale mode">
+                                        <option value="fit" selected>Auto Fit (Scale down)</option>
+                                        <option value="fill">Fit & Fill (Zoom to fit)</option>
+                                        <option value="1">100% (1:1)</option>
+                                        <option value="0.75">75%</option>
+                                        <option value="0.5">50%</option>
+                                        <option value="0.33">33%</option>
+                                        <option value="1.25">125%</option>
+                                        <option value="1.5">150%</option>
+                                        <option value="2">200%</option>
+                                    </select>
+                                    <span id="stageScaleFactorBadge" class="badge" style="font-size:0.65rem; font-family:var(--code-font); display:inline-block;">100%</span>
+                                    <span style="font-size:0.7rem; color:var(--text-muted);">↔️ ↕️ ↘ Drag handles to resize</span>
                                 </div>
                                 <div class="canvas-meta" style="margin:0; padding:0; border:none; background:transparent;">
                                     <span id="metaFps" style="font-weight:600;">FPS: 60</span>
@@ -2265,12 +2297,14 @@
 
                             <!-- Live Canvas Stage Viewport (Expands vertically to maximum window height) -->
                             <div class="stage-workspace-container" id="stageWorkspaceContainer" style="flex:1; min-height:180px; height:100%;">
-                                <div class="canvas-stage-wrapper" id="canvasStageWrapper" title="Drag the right, bottom, or corner handle to resize the document viewport">
-                                    <canvas id="previewCanvas" width="300" height="300"></canvas>
-                                    <div class="stage-resize-handle handle-e" id="stageResizeHandleE" title="Drag right handle to resize document width (Double-click to reset width)"></div>
-                                    <div class="stage-resize-handle handle-s" id="stageResizeHandleS" title="Drag bottom handle to resize document height (Double-click to reset height)"></div>
-                                    <div class="stage-resize-handle handle-se" id="stageResizeHandleSE" title="Drag corner handle to resize document width & height (Shift for aspect ratio)">↘</div>
-                                    <div class="stage-resize-tooltip" id="stageResizeTooltip">300 × 300 px</div>
+                                <div class="canvas-stage-scaler" id="canvasStageScaler">
+                                    <div class="canvas-stage-wrapper" id="canvasStageWrapper" title="Drag the right, bottom, or corner handle to resize the document viewport">
+                                        <canvas id="previewCanvas" width="300" height="300"></canvas>
+                                        <div class="stage-resize-handle handle-e" id="stageResizeHandleE" title="Drag right handle to resize document width (Double-click to reset width)"></div>
+                                        <div class="stage-resize-handle handle-s" id="stageResizeHandleS" title="Drag bottom handle to resize document height (Double-click to reset height)"></div>
+                                        <div class="stage-resize-handle handle-se" id="stageResizeHandleSE" title="Drag corner handle to resize document width & height (Shift for aspect ratio)">↘</div>
+                                        <div class="stage-resize-tooltip" id="stageResizeTooltip">300 × 300 px</div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="canvas-meta" style="flex-shrink:0; margin-top:6px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between;">
@@ -2317,6 +2351,20 @@
                                     <option value="custom">Custom...</option>
                                 </select>
                                 <input type="number" id="customDensityInput" class="dim-input" style="width: 52px; display: none;" value="1.0" min="0.2" max="10" step="0.1" oninput="onCustomDensityInput()" title="Custom density factor">
+                            </div>
+                            <div class="dim-inputs-group" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
+                                <span style="font-weight:600;">Zoom:</span>
+                                <select id="stageSetupScaleSelect" class="dim-input" style="width: auto; padding: 3px 6px; cursor: pointer;" onchange="onStageSetupScaleSelectChange()" title="Preview Zoom / Scale mode">
+                                    <option value="fit" selected>Auto Fit (Scale down)</option>
+                                    <option value="fill">Fit & Fill (Zoom to fit)</option>
+                                    <option value="1">100% (Actual size)</option>
+                                    <option value="0.75">75%</option>
+                                    <option value="0.5">50%</option>
+                                    <option value="0.33">33%</option>
+                                    <option value="1.25">125%</option>
+                                    <option value="1.5">150%</option>
+                                    <option value="2">200%</option>
+                                </select>
                             </div>
                             <div class="dim-inputs-group" style="border-left: 1px solid var(--border-color); padding-left: 10px;">
                                 <span style="font-weight:600;">Theme:</span>
@@ -4605,6 +4653,9 @@
   var customStageWidth = null;
   var customStageHeight = null;
   var currentDensity = 1;
+  var stageScaleMode = "fit";
+  var currentStageScale = 1;
+  var isStageAutoScale = true;
   var canvasBgWhite = true;
   var isPlayerPaused = false;
   var isResizing = false;
@@ -4735,6 +4786,98 @@
       applyDensity(val);
     }
   }
+  function updateStageScale() {
+    const workspace = document.getElementById("stageWorkspaceContainer");
+    const wrapper = document.getElementById("canvasStageWrapper");
+    const scaler = document.getElementById("canvasStageScaler");
+    const canvas = document.getElementById("previewCanvas");
+    if (!workspace || !wrapper) return;
+    const w = customStageWidth !== null ? customStageWidth : canvas && canvas.style.width ? parseFloat(canvas.style.width) || 300 : 300;
+    const h = customStageHeight !== null ? customStageHeight : canvas && canvas.style.height ? parseFloat(canvas.style.height) || 300 : 300;
+    const padding = 32;
+    const availW = Math.max(50, (workspace.clientWidth || 300) - padding);
+    const availH = Math.max(50, (workspace.clientHeight || 300) - padding);
+    let scale = 1;
+    if (stageScaleMode === "fit") {
+      if (w > availW || h > availH) {
+        scale = Math.max(0.05, Math.min(1, availW / w, availH / h));
+      } else {
+        scale = 1;
+      }
+    } else if (stageScaleMode === "fill") {
+      scale = Math.max(0.05, Math.min(availW / w, availH / h));
+    } else {
+      const num = parseFloat(stageScaleMode);
+      scale = !isNaN(num) && num > 0 ? num : 1;
+    }
+    currentStageScale = scale;
+    isStageAutoScale = stageScaleMode === "fit";
+    wrapper.style.transformOrigin = "0 0";
+    if (scale !== 1) {
+      wrapper.style.transform = `scale(${scale})`;
+    } else {
+      wrapper.style.transform = "";
+    }
+    const scaledW = Math.round(w * scale);
+    const scaledH = Math.round(h * scale);
+    if (scaler) {
+      scaler.style.width = `${scaledW}px`;
+      scaler.style.height = `${scaledH}px`;
+    }
+    const autoScaleBtn = document.getElementById("stageAutoScaleBtn");
+    if (autoScaleBtn) {
+      if (stageScaleMode === "fit") {
+        autoScaleBtn.classList.add("active");
+      } else {
+        autoScaleBtn.classList.remove("active");
+      }
+    }
+    const scaleSelect = document.getElementById("stageScaleSelect");
+    if (scaleSelect && scaleSelect.value !== stageScaleMode) {
+      scaleSelect.value = stageScaleMode;
+    }
+    const setupScaleSelect = document.getElementById("stageSetupScaleSelect");
+    if (setupScaleSelect && setupScaleSelect.value !== stageScaleMode) {
+      setupScaleSelect.value = stageScaleMode;
+    }
+    const badge = document.getElementById("stageScaleFactorBadge");
+    if (badge) {
+      const pct = Math.round(scale * 100);
+      badge.textContent = `${pct}%${stageScaleMode === "fit" && scale < 1 ? " (Fit)" : ""}`;
+      badge.style.display = "inline-block";
+    }
+    const stageSetupBadge = document.getElementById("stageSetupBadge");
+    if (stageSetupBadge) {
+      const d = currentDensity || 1;
+      const curW = customStageWidth !== null ? customStageWidth : canvas ? parseFloat(canvas.style.width) || 300 : 300;
+      const curH = customStageHeight !== null ? customStageHeight : canvas ? parseFloat(canvas.style.height) || 300 : 300;
+      const scaleStr = scale !== 1 ? ` \u2022 ${Math.round(scale * 100)}%` : "";
+      stageSetupBadge.textContent = `${Math.round(curW)}\xD7${Math.round(curH)} \u2022 ${d}x${scaleStr}`;
+    }
+  }
+  function setStageScaleMode(mode) {
+    if (!mode) return;
+    stageScaleMode = mode;
+    isStageAutoScale = mode === "fit";
+    updateStageScale();
+  }
+  function toggleStageAutoScale() {
+    if (stageScaleMode === "fit") {
+      setStageScaleMode("1");
+    } else {
+      setStageScaleMode("fit");
+    }
+  }
+  function onStageScaleSelectChange() {
+    const select = document.getElementById("stageScaleSelect");
+    if (!select) return;
+    setStageScaleMode(select.value);
+  }
+  function onStageSetupScaleSelectChange() {
+    const select = document.getElementById("stageSetupScaleSelect");
+    if (!select) return;
+    setStageScaleMode(select.value);
+  }
   function initStageLiveResize() {
     const handleE = document.getElementById("stageResizeHandleE");
     const handleS = document.getElementById("stageResizeHandleS");
@@ -4790,8 +4933,9 @@
     function onPointerMove(e) {
       if (!isResizing) return;
       e.preventDefault();
-      const deltaX = e.clientX - startX;
-      const deltaY = e.clientY - startY;
+      const scale = currentStageScale || 1;
+      const deltaX = (e.clientX - startX) / scale;
+      const deltaY = (e.clientY - startY) / scale;
       let newW = startW;
       let newH = startH;
       if (resizeMode === "w" || resizeMode === "both") {
@@ -4877,6 +5021,24 @@
           if (typeof window.selectLayoutComponent === "function") {
             window.selectLayoutComponent(null);
           }
+        }
+      });
+      if (typeof ResizeObserver !== "undefined") {
+        try {
+          const ro = new ResizeObserver(() => {
+            if (!isResizing) {
+              updateStageScale();
+            }
+          });
+          ro.observe(workspace);
+        } catch (_) {
+        }
+      }
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("resize", () => {
+        if (!isResizing) {
+          updateStageScale();
         }
       });
     }
@@ -4987,6 +5149,7 @@
     if (typeof window.updateRunningTreeLive === "function") {
       window.updateRunningTreeLive();
     }
+    updateStageScale();
   }
   function toggleCanvasBg() {
     const canvasEl = document.getElementById("previewCanvas");
@@ -16542,6 +16705,26 @@ Check network, CORS headers, or file path. Click to browse local files.`;
   }
   try {
     window.applyStagePreset = applyStagePreset;
+  } catch (e) {
+  }
+  try {
+    window.updateStageScale = updateStageScale;
+  } catch (e) {
+  }
+  try {
+    window.setStageScaleMode = setStageScaleMode;
+  } catch (e) {
+  }
+  try {
+    window.toggleStageAutoScale = toggleStageAutoScale;
+  } catch (e) {
+  }
+  try {
+    window.onStageScaleSelectChange = onStageScaleSelectChange;
+  } catch (e) {
+  }
+  try {
+    window.onStageSetupScaleSelectChange = onStageSetupScaleSelectChange;
   } catch (e) {
   }
   try {
