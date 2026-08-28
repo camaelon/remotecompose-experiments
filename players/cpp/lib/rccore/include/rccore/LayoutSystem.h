@@ -43,9 +43,16 @@ struct ComponentMeasure {
     int id = -1;
     float x = 0, y = 0, w = 0, h = 0;
     int visibility = VIS_VISIBLE;
+    // Opacity applied at paint time. Driven by the layout-animation subsystem
+    // (enter/exit fades); 1.0 for everything not currently fading.
+    float alpha = 1.0f;
 
     bool isGone() const { return visibility == VIS_GONE; }
     bool isVisible() const { return visibility == VIS_VISIBLE; }
+
+    bool sameBounds(const ComponentMeasure& o) const {
+        return x == o.x && y == o.y && w == o.w && h == o.h && visibility == o.visibility;
+    }
 };
 
 // ── MeasurePass ──────────────────────────────────────────────────────

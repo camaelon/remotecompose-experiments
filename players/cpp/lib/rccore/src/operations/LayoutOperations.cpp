@@ -5,6 +5,7 @@
 #include "rccore/PaintContext.h"
 #include "rccore/PaintBundle.h"
 #include "rccore/Utils.h"
+#include "rccore/animation/LayoutAnimation.h"
 
 #include <algorithm>
 #include <cmath>
@@ -1790,12 +1791,24 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     auto& m = measure.get(cid);
     auto& ls = getLS(op);
 
+    // GONE components are not rendered. During a StateLayout transition the exiting
+    // state is kept VISIBLE (with a fading alpha) by the animation pass, so only a
+    // settled-GONE component is skipped here.
+    if (m.isGone()) return;
+
     LTRACE("  paint cid=%d opcode=%d pos=(%.1f,%.1f) size=(%.1f,%.1f) bg=%d children=%d\n",
            cid, op->opcode(), m.x, m.y, m.w, m.h, ls.hasBg, (int)ls.layoutChildren.size());
 
     // Save transform state
     pc->matrixSave();
     pc->savePaint();
+
+    // Layout-animation opacity: wrap the component in an alpha layer while it is
+    // fading in/out. Bounds are in the parent's (current) coordinate space.
+    bool animLayer = m.isVisible() && m.alpha < 0.999f;
+    if (animLayer) {
+        pc->saveLayerAlpha(m.alpha, m.x, m.y, m.x + m.w, m.y + m.h);
+    }
 
     // Translate to component position
     pc->matrixTranslate(m.x, m.y);
@@ -1937,9 +1950,48 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 
     ctx.popCanvasBounds();
     pc->restorePaint();
+    if (animLayer) pc->restoreLayer();
     pc->matrixRestore();
     if (ls.hasOffset) ctx.popTranslate();
     ctx.popTranslate();
+}
+
+// ── Layout animation pass ────────────────────────────────────────────
+// After layout has produced target bounds in `measure`, walk the tree and blend
+// each component toward its target (position/size/opacity) over time, rewriting
+// the measure with the values to actually paint this frame. Static content
+// measures identically every frame, so this is a no-op there.
+static bool gLayoutAnimationEnabled = true;
+
+static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& measure,
+                              double timeSec) {
+    int cid = getComponentId(op);
+    if (cid != -1 && measure.contains(cid)) {
+        AnimSpecParams spec;  // default 300ms standard/fade; per-component spec: TODO
+        ComponentMeasure& m = measure.get(cid);
+        animUpdate(cid, m, timeSec, gLayoutAnimationEnabled, spec);
+    }
+    auto& ls = getLS(op);
+
+    // StateLayout: mark only the current-index state visible. When the index flips,
+    // the previous state's target becomes GONE (exit fade) and the new one's becomes
+    // VISIBLE (enter fade); the general animation turns that into a crossfade. This
+    // target visibility is set before recursing so each state's animUpdate sees it.
+    if (op->opcode() == 217) {
+        int indexId = static_cast<StateLayout*>(op)->indexId;
+        int currentIndex = (indexId != 0) ? ctx.getInteger(indexId) : 0;
+        for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
+            int childCid = getComponentId(ls.layoutChildren[i]);
+            if (childCid != -1 && measure.contains(childCid)) {
+                measure.get(childCid).visibility =
+                    ((int)i == currentIndex) ? VIS_VISIBLE : VIS_GONE;
+            }
+        }
+    }
+
+    for (auto* child : ls.layoutChildren) {
+        animateLayoutTree(child, ctx, measure, timeSec);
+    }
 }
 
 // ── Run data operations for a layout tree ────────────────────────────
@@ -2092,6 +2144,12 @@ void LayoutRoot::apply(RemoteContext& context) {
         // This allows LayoutCompute expressions that reference COMPONENT_VALUE to work.
         layoutComponent(layoutChild, context, measure);
         storeMeasuredDimensions(layoutChild, context, measure);
+    }
+
+    // Layout-animation pass: blend measured bounds toward targets over time.
+    double animTime = context.getAnimationTime();
+    for (auto* layoutChild : layoutChildren) {
+        animateLayoutTree(layoutChild, context, measure, animTime);
     }
 
     // Paint all layout children

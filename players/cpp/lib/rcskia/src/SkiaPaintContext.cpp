@@ -580,6 +580,18 @@ void SkiaPaintContext::matrixRestore() {
     mCanvas->restore();
 }
 
+void SkiaPaintContext::saveLayerAlpha(float alpha, float left, float top,
+                                      float right, float bottom) {
+    if (alpha < 0.0f) alpha = 0.0f;
+    if (alpha > 1.0f) alpha = 1.0f;
+    SkRect bounds = SkRect::MakeLTRB(left, top, right, bottom);
+    mCanvas->saveLayerAlpha(&bounds, static_cast<U8CPU>(alpha * 255.0f + 0.5f));
+}
+
+void SkiaPaintContext::restoreLayer() {
+    mCanvas->restore();
+}
+
 void SkiaPaintContext::matrixScale(float sx, float sy, float cx, float cy) {
     if (std::isnan(sx) || std::isnan(sy) || std::isinf(sx) || std::isinf(sy)) return;
     mCanvas->translate(cx, cy);
