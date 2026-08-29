@@ -1549,7 +1549,8 @@ export function renderOpTypesBreakdown(ops, totalBytes) {
                     <div class="op-type-bar-mini">
                         <div class="op-type-bar-fill" style="width: ${pct}%; background: ${color};"></div>
                     </div>
-                    <span class="op-type-size">${item.totalBytes} B (${pct}%)</span>
+                    <span class="op-type-size" title="${item.totalBytes} B total across ${item.count} operation${item.count === 1 ? '' : 's'}">${item.totalBytes} B (${pct}%)</span>
+                    <span class="op-type-avg" title="Average bytes per operation of this type — a small op repeated often costs differently from one large op">⌀ ${(item.totalBytes / item.count).toFixed(1)} B</span>
                 </div>
             </div>
         `;

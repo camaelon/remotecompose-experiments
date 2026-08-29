@@ -575,7 +575,7 @@
         }
 
         .panel-p3 {
-            width: 320px;
+            width: 620px;
             min-width: 220px;
             flex-shrink: 0;
         }
@@ -621,7 +621,7 @@
         }
 
         .panel-p5 {
-            width: 360px;
+            width: 640px;
             min-width: 260px;
             flex-shrink: 0;
         }
@@ -690,6 +690,142 @@
             justify-content: space-between;
             align-items: center;
             background-color: rgba(15, 23, 42, 0.4);
+        }
+
+        /* Merged panels: tabbed sub-views sharing one column. */
+        .panel-tabs {
+            display: flex;
+            gap: 2px;
+            flex-wrap: wrap;
+        }
+
+        .panel-tab {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.74rem;
+            padding: 3px 9px;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.12s ease, color 0.12s ease;
+        }
+
+        .panel-tab:hover {
+            background: var(--bg-hover);
+            color: var(--text-secondary);
+        }
+
+        .panel-tab.active {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: rgba(56, 189, 248, 0.45);
+            color: var(--accent-blue);
+            font-weight: 600;
+        }
+
+        .panel-split-toggle {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 0.72rem;
+            padding: 3px 8px;
+            border-radius: 5px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .panel-split-toggle:hover { background: var(--bg-hover); color: var(--text-secondary); }
+
+        .panel-split-toggle.active {
+            background: rgba(16, 185, 129, 0.14);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: var(--accent-emerald);
+        }
+
+        .panel-tab-sep {
+            width: 1px;
+            align-self: stretch;
+            margin: 2px 4px;
+            background: var(--border-color);
+        }
+
+        .split-divider.hidden-panel { display: none; }
+
+        .panel-subview.split-secondary.hidden-panel { display: none; }
+
+        /* A sub-view fills the host panel below the header; the inactive ones are hidden by
+           `hidden-panel`, the same class the panel machinery already uses. */
+        .panel-subview {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .panel-subview.hidden-panel {
+            display: none;
+        }
+
+        /* A split host shows two views side by side: pick a node on the left, read it on the
+           right. Splitting vertically keeps both at full height, which is what these pairs
+           need — a tree and a variable list are both long. */
+        .panel-split {
+            display: flex;
+            flex-direction: row;
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+        }
+
+        .split-primary {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 50%;
+            min-width: 140px;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        .panel-subview.split-secondary {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 50%;
+            min-width: 140px;
+            min-height: 0;
+            overflow: auto;
+            border-left: 1px solid var(--border-color);
+        }
+
+        .split-divider {
+            width: 6px;
+            flex: 0 0 auto;
+            cursor: col-resize;
+            background: transparent;
+            border-left: 1px solid var(--border-color);
+            transition: background 0.12s ease;
+        }
+
+        .split-divider:hover,
+        .split-divider.dragging {
+            background: var(--accent-blue);
+            opacity: 0.55;
+        }
+
+        .subview-toolbar {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 6px 16px;
+            border-bottom: 1px solid var(--border-color);
+            background-color: rgba(15, 23, 42, 0.25);
+        }
+
+        .subview-toolbar:empty {
+            display: none;
         }
 
         .panel-title {
@@ -787,8 +923,8 @@
 
         .stage-workspace-container {
             display: flex;
-            justify-content: center;
-            align-items: center;
+            justify-content: flex-start;
+            align-items: flex-start;
             width: 100%;
             flex: 1;
             min-height: 180px;
@@ -811,10 +947,10 @@
 
         .canvas-stage-scaler {
             display: flex;
-            justify-content: center;
-            align-items: center;
+            justify-content: flex-start;
+            align-items: flex-start;
             position: relative;
-            margin: auto;
+            margin: 0;
             flex-shrink: 0;
             box-sizing: border-box;
         }
@@ -1641,6 +1777,14 @@
             font-size: 0.7rem;
             color: var(--text-muted);
             min-width: 60px;
+            text-align: right;
+        }
+
+        .op-type-avg {
+            font-family: var(--code-font);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            min-width: 62px;
             text-align: right;
         }
 

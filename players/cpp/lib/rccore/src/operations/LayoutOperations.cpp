@@ -657,24 +657,49 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     float fsize = 16;
     int col = 0;
     int maxLines = INT32_MAX;
+    int mWeight = 400, mStyle = 0, mFamilyId = 0;
     if (op->opcode() == 208) {
         auto* lt = static_cast<LayoutText*>(op);
         tid = lt->textId;
         fsize = lt->oFontSize;
         col = lt->color;
         maxLines = lt->maxLines;
+        mWeight = (int)lt->fontWeight; mStyle = lt->fontStyle; mFamilyId = lt->fontFamilyId;
     } else {
         auto* ct = static_cast<CoreTextOp*>(op);
         tid = ct->textId;
         fsize = ct->oFontSize;
         col = ct->color;
         maxLines = ct->maxLines;
+        mWeight = (int)ct->fontWeight; mStyle = ct->fontStyle; mFamilyId = ct->fontFamilyId;
     }
     if (maxLines <= 0) maxLines = INT32_MAX;
 
     // Resolve NaN-encoded variable references (fallback for unresolved)
     fsize = resolveVar(fsize, ctx);
     if (fsize <= 0 || std::isnan(fsize)) fsize = 16;
+
+    // Measure with the same typeface used for painting (weight/italic/family) so
+    // bold/italic/monospace spans get the right widths. Restored via a paint guard.
+    bool styledMeasure = false;
+    if (pc && (mWeight != 400 || mStyle == 1 || mFamilyId > 0)) {
+        int fType = 0;
+        if (mFamilyId > 0) {
+            std::string fam = ctx.getText(mFamilyId);
+            if (fam == "monospace") fType = 3;
+            else if (fam == "serif") fType = 2;
+            else if (fam == "sans-serif" || fam == "sans") fType = 1;
+        }
+        PaintBundle tf;
+        tf.addTypeface(mWeight > 0 ? mWeight : 400, mStyle == 1, fType != 0 ? fType : 1);
+        pc->savePaint();
+        pc->applyPaint(tf);
+        styledMeasure = true;
+    }
+    struct MeasureGuard {
+        PaintContext* pc; bool on;
+        ~MeasureGuard() { if (on) pc->restorePaint(); }
+    } guard{pc, styledMeasure};
 
     std::string text = ctx.getText(tid);
     float textW = pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size();
@@ -1861,15 +1886,29 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         int col = 0;
         int colId = -1;
         int tAlign = 1; // TEXT_ALIGN_LEFT
+        int fWeight = 400, fStyle = 0, fFamilyId = 0;
         if (oc == 208) {
             auto* lt = static_cast<LayoutText*>(op);
             tid = lt->textId; fsize = lt->fontSize; col = lt->color;
             tAlign = lt->textAlign & 0xFFFF;
+            fWeight = (int)resolveVar(lt->fontWeight, ctx); fStyle = lt->fontStyle;
+            fFamilyId = lt->fontFamilyId;
         } else {
             auto* ct = static_cast<CoreTextOp*>(op);
             tid = ct->textId; fsize = ct->fontSize; col = ct->color;
             colId = ct->colorId;
             tAlign = ct->textAlign & 0xFFFF;
+            fWeight = (int)resolveVar(ct->fontWeight, ctx); fStyle = ct->fontStyle;
+            fFamilyId = ct->fontFamilyId;
+        }
+        // Font family is stored as a string id ("monospace"/"serif"/…). Map it to a
+        // FONT_TYPE (0 default / 1 sans / 2 serif / 3 mono).
+        int fFamily = 0;
+        if (fFamilyId > 0) {
+            std::string fam = ctx.getText(fFamilyId);
+            if (fam == "monospace") fFamily = 3;
+            else if (fam == "serif") fFamily = 2;
+            else if (fam == "sans-serif" || fam == "sans") fFamily = 1;
         }
 
         // Resolve NaN-encoded variable references
@@ -1888,6 +1927,12 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             PaintBundle textPaint;
             textPaint.addTagFloat(PaintBundle::TEXT_SIZE, fsize);
             textPaint.addTag(PaintBundle::COLOR, resolvedColor);
+            // Apply weight / italic / family. For default-family styled text use the
+            // sans-serif family list — CoreText ignores weight/slant for a null family.
+            if (fWeight != 400 || fStyle == 1 || fFamily != 0) {
+                int effType = fFamily != 0 ? fFamily : 1;
+                textPaint.addTypeface(fWeight > 0 ? fWeight : 400, fStyle == 1, effType);
+            }
             pc->applyPaint(textPaint);
 
             float contentW = m.w - ls.paddingLeft - ls.paddingRight;

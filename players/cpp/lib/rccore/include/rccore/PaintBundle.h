@@ -126,6 +126,12 @@ public:
         mArray.push_back(tag);
         mArray.push_back(floatToIntBits(value));
     }
+    // TYPEFACE: weight+italic packed in the upper 16 bits, fontType in a second word.
+    void addTypeface(int weight, bool italic, int fontType) {
+        int v = (weight & 0x3FF) | (italic ? (1 << 10) : 0);
+        mArray.push_back(TYPEFACE | (v << 16));
+        mArray.push_back(fontType);
+    }
     void reset() { mArray.clear(); mOutArray.clear(); }
 
     static float intBitsToFloat(int32_t bits) {

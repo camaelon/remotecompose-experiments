@@ -320,7 +320,7 @@ export function updateGraphLegend() {
     if (!legendContainer) return;
 
     if (selectedGraphVarIds.size === 0) {
-        legendContainer.innerHTML = `<span style="color:var(--text-muted);">Select variables in Panel 🎛️ to plot</span>`;
+        legendContainer.innerHTML = `<span style="color:var(--text-muted);">Select variables in the Values tab to plot</span>`;
         return;
     }
 
@@ -371,7 +371,7 @@ export function renderGraphCanvas() {
         ctx.fillStyle = '#64748b';
         ctx.font = '12px system-ui, sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('No variables selected for graphing. Check boxes in Panel 🎛️', w / 2, h / 2);
+        ctx.fillText('No variables selected for graphing. Tick them in the Values tab', w / 2, h / 2);
         return;
     }
 

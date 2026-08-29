@@ -80,11 +80,12 @@ export function accumulateProfiler(a, m, opsPerFrame) {
         for (const item of m.byInstance) {
             let entry = a.insts.get(item.id);
             if (!entry) {
-                entry = { id: item.id, name: item.name, key: item.key, total: 0, peak: 0, last: 0 };
+                entry = { id: item.id, name: item.name, key: item.key, total: 0, peak: 0, last: 0, lastFrame: 0 };
                 a.insts.set(item.id, entry);
             }
             entry.last = item.count;
             entry.total += item.count;
+            entry.lastFrame = a.frames;
             if (item.count > entry.peak) entry.peak = item.count;
         }
     }
@@ -106,6 +107,158 @@ export function scheduleProfilerDraw() {
             drawProfiler();
         }, 100 - elapsed);
     }
+}
+
+// ---------------------------------------------------------------------------
+// Coverage — which operations has measurement never seen?
+//
+// The profiler answers "what executed and how often". It has no way to say what *didn't*,
+// and the dead-code analysis cannot either: that one is static over the expression graph, so
+// it never sees a conditional branch not taken, a state-layout variant never shown, or a loop
+// body that ran zero times.
+//
+// No engine change is needed to answer it. OperationMeasurement stamps an operation with a
+// symbol-keyed instance id the first time it counts one, and only then. An operation carrying
+// no such symbol has never been counted for the life of this document — so walking the whole
+// operation tree and testing for the symbol is an exact record of what never ran.
+// ---------------------------------------------------------------------------
+
+const MEASURE_SYMBOL_NAME = 'rcMeasureId';
+
+function measurementIdOf(op) {
+    if (!op || typeof op !== 'object') return undefined;
+    const symbols = Object.getOwnPropertySymbols(op);
+    for (let i = 0; i < symbols.length; i++) {
+        if (symbols[i].description === MEASURE_SYMBOL_NAME) return op[symbols[i]];
+    }
+    return undefined;
+}
+
+/**
+ * Coverage over the same operation universe the rest of the inspector uses — the flat
+ * command list — so the numbers here line up with the Disassembly panel and every row can
+ * deep-link to it. Falling back to a tree walk would report a different total than the
+ * panel next to it, which is worse than no number at all.
+ *
+ * "Never ran" means measurement never counted the operation. The engine counts an operation
+ * where it executes it, which includes modifiers applied during layout — so a click action
+ * that the layout pass walks is counted even before anyone taps. What this reliably finds is
+ * the opposite case: operations the engine never reached at all.
+ */
+// Wire framing, not work: ContainerEnd closes a container for the reader and its apply() is
+// empty, so the engine never executes one. Counting them would bury the signal — a document
+// with a thousand containers reports a thousand operations that "never ran" and nothing else.
+const NON_EXECUTABLE_OPCODES = new Set([214]);
+
+export function computeCoverage(doc) {
+    const ops = window.currentParsedOps;
+    if (!Array.isArray(ops) || !ops.length) return { executed: [], never: [], total: 0 };
+    const executed = [];
+    const never = [];
+    ops.forEach((op, idx) => {
+        if (!op || typeof op !== 'object') return;
+        const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : -1);
+        if (NON_EXECUTABLE_OPCODES.has(opCode)) return;
+        const name = typeof window.getOpName === 'function' ? window.getOpName(op)
+            : (op.constructor?.name || 'Operation').replace(/^_/, '');
+        const entry = { op, idx, name, id: measurementIdOf(op) };
+        if (entry.id === undefined) never.push(entry); else executed.push(entry);
+    });
+    return { executed, never, total: executed.length + never.length };
+}
+
+function renderCoverage() {
+    const el = document.getElementById('profCoverageBody');
+    if (!el) return;
+    const doc = window.currentDocument;
+    if (!doc) { el.innerHTML = ''; return; }
+
+    if (profilerAcc.frames === 0) {
+        el.innerHTML = `<div style="font-size:0.72rem; color:var(--text-muted);">No frames measured yet — coverage needs at least one painted frame.</div>`;
+        return;
+    }
+
+    const { never, total } = computeCoverage(doc);
+    const ran = total - never.length;
+    const pct = total ? Math.round((ran / total) * 100) : 0;
+
+    if (!total) { el.innerHTML = ''; return; }
+
+    // Two different questions, and the second is the one that usually has an answer.
+    //
+    // "Never counted" catches an operation the engine never reached at all. It is rare,
+    // because the layout walk counts almost everything a document contains — including a
+    // click action nobody has tapped.
+    //
+    // "Ran before, but not in the last frame" is what actually moves: the inactive side of
+    // a state layout, a branch whose condition just went false, a component scrolled out of
+    // the tree. That is the coverage question worth watching while you drive the document.
+    // Measured against a window of frames, not the single last one. Layout operations only
+    // run on a measure pass, so "missing from the last frame" flags most of a document every
+    // time it paints without re-measuring — which buries the branch that genuinely stopped.
+    const STALE_FRAMES = 30;
+    const idle = [];
+    profilerAcc.insts.forEach(v => {
+        if (v.total > 0 && (profilerAcc.frames - v.lastFrame) > STALE_FRAMES) idle.push(v);
+    });
+    idle.sort((a, b) => (b.total - a.total) || (a.lastFrame - b.lastFrame));
+
+    const idleHtml = idle.length ? `
+        <div style="margin-top:${never.length ? '8px' : '0'};">
+            <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:4px;">
+                <strong style="color:var(--accent-amber);">${idle.length}</strong>
+                operation${idle.length === 1 ? '' : 's'} ran earlier but not in the last ${STALE_FRAMES} frames
+            </div>
+            <div style="display:flex; flex-wrap:wrap; gap:3px;">
+                ${idle.slice(0, 24).map(v => `
+                    <span onclick="selectRunningTreeNodeFromInstance(${v.id})"
+                          title="Instance #${v.id} — ran ${v.total} times, last seen at frame ${v.lastFrame} of ${profilerAcc.frames}"
+                          style="cursor:pointer; font-family:var(--code-font); font-size:0.68rem; padding:1px 5px; border-radius:3px; background:rgba(251,191,36,0.14); color:var(--accent-amber);">${escapeHtml(v.name)}</span>`).join('')}
+                ${idle.length > 24 ? `<span style="font-size:0.68rem; color:var(--text-muted);">+${idle.length - 24}</span>` : ''}
+            </div>
+        </div>` : '';
+
+    if (!never.length) {
+        el.innerHTML = `<div style="font-size:0.74rem; color:var(--accent-emerald);">✓ All ${total} operations were counted at least once over ${profilerAcc.frames} frames.</div>${idleHtml}`;
+        return;
+    }
+
+    const byName = new Map();
+    never.forEach(e => {
+        let g = byName.get(e.name);
+        if (!g) { g = { name: e.name, count: 0, idxs: [] }; byName.set(e.name, g); }
+        g.count++;
+        if (g.idxs.length < 6) g.idxs.push(e.idx);
+    });
+    const groups = Array.from(byName.values()).sort((a, b) => b.count - a.count);
+
+    el.innerHTML = `
+        <div style="font-size:0.74rem; color:var(--text-secondary); margin-bottom:6px;">
+            <strong style="color:${pct === 100 ? 'var(--accent-emerald)' : 'var(--accent-amber)'};">${ran}/${total}</strong>
+            operations counted (${pct}%) over ${profilerAcc.frames} frames —
+            <strong style="color:var(--accent-amber);">${never.length}</strong> never ran.
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:0.73rem; font-family:var(--code-font);">
+            <thead><tr style="border-bottom:1px solid var(--border-color); color:var(--text-muted); text-transform:uppercase; font-size:0.63rem;">
+                <th style="text-align:left; padding:3px 0;">Operation</th>
+                <th style="text-align:right; padding:3px 6px;">Never ran</th>
+                <th style="text-align:left; padding:3px 0 3px 8px;">Where</th>
+            </tr></thead>
+            <tbody>${groups.map(g => `
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
+                    <td style="padding:3px 0; color:var(--text-primary);">${escapeHtml(g.name)}</td>
+                    <td style="padding:3px 6px; text-align:right; color:var(--accent-amber);">${g.count}</td>
+                    <td style="padding:3px 0 3px 8px;">${g.idxs.map(i => `
+                        <span onclick="toggleCommandExpand(${i}, null); const el=document.getElementById('cmdCard-${i}'); if(el) el.scrollIntoView({behavior:'smooth', block:'center'});"
+                              title="Operation #${i + 1} — click to show it in the Commands List"
+                              style="cursor:pointer; color:var(--accent-blue); font-size:0.68rem; margin-right:4px;">#${i + 1}</span>`).join('')}${g.count > g.idxs.length ? `<span style="color:var(--text-muted); font-size:0.66rem;">+${g.count - g.idxs.length}</span>` : ''}</td>
+                </tr>`).join('')}</tbody>
+        </table>
+        <div style="font-size:0.68rem; color:var(--text-muted); margin-top:5px; line-height:1.45;">
+            Counted since the document loaded. A branch only taken on interaction stays here until you exercise it —
+            fire it from the Interaction panel and watch this list shrink.
+        </div>
+        ${idleHtml}`;
 }
 
 export function drawProfiler() {
@@ -373,6 +526,8 @@ function renderProfilerTables(a) {
         });
     }
     instsTbody.innerHTML = instsHtml;
+
+    renderCoverage();
 }
 
 export function selectRunningTreeNodeFromInstance(instanceId) {

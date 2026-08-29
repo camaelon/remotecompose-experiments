@@ -219,6 +219,8 @@ export async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
         }
         drawProfiler();
         if (typeof window.resetRepaintHistory === 'function') window.resetRepaintHistory();
+        if (typeof window.renderInteractionPanel === 'function') window.renderInteractionPanel();
+        if (typeof window.renderAccessibilityPanel === 'function') window.renderAccessibilityPanel();
     }
 
     // Maintain selected preview density (default 1.0) on document load

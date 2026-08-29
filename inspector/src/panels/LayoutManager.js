@@ -9,6 +9,8 @@ import { updateVariablesPanel, renderGraphCanvas, updateGraphLegend } from './Va
 import { drawProfiler } from './ProfilerPanel.js';
 import { renderExpressionDependencyGraph } from './DependencyGraphPanel.js';
 import { renderRepaintPanel } from './RepaintPanel.js';
+import { renderInteractionPanel } from './InteractionPanel.js';
+import { renderAccessibilityPanel } from './AccessibilityPanel.js';
 import {
     stepOpForward,
     stepOpBackward,
@@ -24,128 +26,247 @@ import { renderResponsiveMatrixPanel } from './ResponsiveMatrixPanel.js';
 import { renderLayoutInspectorPanel } from './LayoutInspectorPanel.js';
 import { renderDocumentStatistics } from './DocumentStatsPanel.js';
 
-export const lastPaneWidths = {
+export const DEFAULT_PANE_WIDTHS = {
     pane1: '480px',
-    pane2: '400px',
-    pane7: '380px',
-    pane3: '320px',
+    pane2: '760px',
+    pane3: '620px',
     pane4: '440px',
-    pane5: '360px',
-    pane6: '440px',
+    pane5: '640px',
     pane8: '480px',
     pane9: '480px',
-    pane10: '480px',
-    pane11: '400px',
-    pane12: '640px',
-    pane13: '440px',
-    pane14: '480px',
-    pane15: '420px'
+    pane11: '640px',
+    pane14: '480px'
 };
+
+// Live widths, updated as panels are dragged.
+export const lastPaneWidths = { ...DEFAULT_PANE_WIDTHS };
 
 export const PANEL_META = {
     pane1: { name: 'Player & Controls', icon: '🎨' },
     pane2: { name: 'Commands List (Document Wire)', icon: '📜' },
-    pane7: { name: 'Running Tree (Post-Inflation)', icon: '🌿' },
-    pane3: { name: 'Component Tree', icon: '🌳' },
+    pane3: { name: 'Structure (Trees, Layout, Accessibility)', icon: '🌳' },
     pane4: { name: 'JSON Source (Experimental)', icon: '⚙️' },
-    pane5: { name: 'Variables & State', icon: '🎛️' },
-    pane6: { name: 'Variable Graphs', icon: '📈' },
-    pane8: { name: 'Profiler & Op Measurement', icon: '⏱️' },
+    pane5: { name: 'Variables (Values & Graphs)', icon: '🎛️' },
+    pane8: { name: 'Runtime (Profiler, Repaint, Interaction)', icon: '⚡' },
     pane9: { name: 'Expression Dependency Graph', icon: '🧬' },
-    pane10: { name: 'Binary Treemap & Allocation', icon: '📦' },
-    pane11: { name: 'System Theme & Environment', icon: '🎨' },
-    pane12: { name: 'Responsive Matrix (Buckets)', icon: '📐' },
-    pane13: { name: 'Layout & Box Model', icon: '📐' },
-    pane14: { name: 'Document Statistics & Metrics', icon: '📊' },
-    pane15: { name: 'Repaint Scheduling', icon: '🔁' }
+    pane11: { name: 'Environment (Theme & Size Matrix)', icon: '🌗' },
+    pane14: { name: 'Statistics (Overview & Treemap)', icon: '📊' }
 };
 
 export const CLUSTERS = {
-    canvas: {
-        id: 'canvas',
-        name: 'Canvas Viewport',
-        icon: '🎬',
-        panels: ['pane1']
+    document: {
+        id: 'document',
+        name: 'Document',
+        icon: '📄',
+        panels: ['pane1', 'pane2', 'pane3']
     },
-    layout: {
-        id: 'layout',
-        name: 'Layout, Structure & UI',
-        icon: '📐',
-        panels: ['pane3', 'pane13', 'pane12', 'pane11', 'pane7']
-    },
-    reactivity: {
-        id: 'reactivity',
-        name: 'Reactivity & Logic',
+    runtime: {
+        id: 'runtime',
+        name: 'Runtime & Logic',
         icon: '⚡',
-        panels: ['pane5', 'pane6', 'pane9', 'pane15']
+        panels: ['pane8', 'pane5', 'pane9']
     },
-    binary: {
-        id: 'binary',
-        name: 'Binary & Performance',
+    output: {
+        id: 'output',
+        name: 'Environment & Output',
         icon: '📦',
-        panels: ['pane2', 'pane14', 'pane10', 'pane8', 'pane4']
+        panels: ['pane11', 'pane14', 'pane4']
     }
 };
 
+// The panel bar reads left to right in the order you work: what the document is, then what
+// it does when it runs, then what it renders to and compiles into.
 export const PANEL_PUCKS = [
-    // Cluster 1: Canvas / Player
-    { id: 'pane1', cluster: 'canvas', name: 'Player', icon: '🎨' },
-    // Cluster 2: Layout & Structure
-    { id: 'pane3', cluster: 'layout', name: 'Components', icon: '🌳' },
-    { id: 'pane13', cluster: 'layout', name: 'Layout', icon: '📐' },
-    { id: 'pane12', cluster: 'layout', name: 'Matrix', icon: '📐' },
-    { id: 'pane11', cluster: 'layout', name: 'Theme', icon: '🎨' },
-    { id: 'pane7', cluster: 'layout', name: 'Ops Tree', icon: '🌿' },
-    // Cluster 3: Reactivity & Logic
-    { id: 'pane5', cluster: 'reactivity', name: 'Variables', icon: '🎛️' },
-    { id: 'pane6', cluster: 'reactivity', name: 'Graphs', icon: '📈' },
-    { id: 'pane9', cluster: 'reactivity', name: 'DAG', icon: '🧬' },
-    { id: 'pane15', cluster: 'reactivity', name: 'Repaint', icon: '🔁' },
-    // Cluster 4: Binary & Performance
-    { id: 'pane2', cluster: 'binary', name: 'Disassembly', icon: '📜' },
-    { id: 'pane14', cluster: 'binary', name: 'Stats', icon: '📊' },
-    { id: 'pane10', cluster: 'binary', name: 'Treemap', icon: '📦' },
-    { id: 'pane8', cluster: 'binary', name: 'Profiler', icon: '⏱️' },
-    { id: 'pane4', cluster: 'binary', name: 'JSON', icon: '⚙️' }
+    { id: 'pane1', cluster: 'document', name: 'Player', icon: '🎨' },
+    { id: 'pane2', cluster: 'document', name: 'Disassembly', icon: '📜' },
+    { id: 'pane3', cluster: 'document', name: 'Structure', icon: '🌳' },
+    { id: 'pane8', cluster: 'runtime', name: 'Runtime', icon: '⚡' },
+    { id: 'pane5', cluster: 'runtime', name: 'Variables', icon: '🎛️' },
+    { id: 'pane9', cluster: 'runtime', name: 'DAG', icon: '🧬' },
+    { id: 'pane11', cluster: 'output', name: 'Environment', icon: '🌗' },
+    { id: 'pane14', cluster: 'output', name: 'Statistics', icon: '📊' },
+    { id: 'pane4', cluster: 'output', name: 'JSON', icon: '⚙️' }
 ];
 
-export const WORKSPACE_PRESETS = {
-    layout: {
-        id: 'layout',
-        name: 'Layout',
-        icon: '📐',
-        description: 'Player + Component Tree + Layout Inspector',
-        panels: ['pane1', 'pane3', 'pane13']
-    },
-    adaptive: {
-        id: 'adaptive',
-        name: 'Adaptive',
-        icon: '📐',
-        description: 'Player + Responsive Matrix',
-        panels: ['pane1', 'pane12']
-    },
-    reactivity: {
-        id: 'reactivity',
-        name: 'Reactivity',
-        icon: '⚡',
-        description: 'Variables & State + Variable Graphs',
-        panels: ['pane1', 'pane5', 'pane6']
-    },
-    binary: {
-        id: 'binary',
-        name: 'Binary',
-        icon: '📦',
-        description: 'Commands Disassembly + Stats',
-        panels: ['pane1', 'pane2', 'pane14']
-    },
-    performance: {
-        id: 'performance',
-        name: 'Performance',
-        icon: '⏱️',
-        description: 'Frame Profiler',
-        panels: ['pane1', 'pane8']
-    }
+// Panels a fresh session opens with.
+export const DEFAULT_PANELS = ['pane1', 'pane2'];
+
+
+// =========================================================================
+// Merged panels
+//
+// Several panels answered one question between them — two views of the same tree, a
+// treemap of the statistics next to it, a graph of the variable beside its value. They are
+// now tabbed sub-views of a single host panel, which keeps the panel bar readable and stops
+// four columns fighting over the same width.
+//
+// A sub-view keeps the element id its panel had, so every existing lookup, visibility guard
+// and `restorePanel('pane6')` call site keeps working: `restorePanel` routes an absorbed id
+// to its host and selects the right tab.
+// =========================================================================
+
+// Views that share a host by taking turns. Only one is on screen at a time.
+export const PANEL_SUBVIEWS = {
+    pane3: ['sub_pane3', 'pane7', 'pane17'],
+    pane14: ['sub_pane14', 'pane10'],
+    // Runtime: what the document does once it is running.
+    pane8: ['sub_pane8', 'pane15', 'pane16'],
+    // Environment: the conditions the document renders under — theme, then screen size.
+    pane11: ['pane12', 'sub_pane11']
 };
+
+// Views that share a host by splitting it, because you need to see them at the same time:
+// you pick a component in the tree and read its box model, or tick a variable and watch it
+// plot. Tabbing those would defeat the point.
+export const PANEL_SPLITS = {
+    pane3: ['pane13'],
+    pane5: ['sub_pane5', 'pane6']
+};
+
+/** Split section id -> the host panel it is always visible inside. */
+export const SPLIT_HOST = (() => {
+    const map = {};
+    Object.entries(PANEL_SPLITS).forEach(([host, parts]) => {
+        parts.forEach(part => { if (part !== `sub_${host}`) map[part] = host; });
+    });
+    return map;
+})();
+
+/** Absorbed pane id -> the host panel that now contains it. */
+export const SUBVIEW_HOST = (() => {
+    const map = {};
+    Object.entries(PANEL_SUBVIEWS).forEach(([host, subs]) => {
+        subs.forEach(sub => { if (sub !== `sub_${host}`) map[sub] = host; });
+    });
+    return map;
+})();
+
+/** Refresh whichever panel a sub-view id belongs to, reusing the per-panel render hooks. */
+function renderSubview(subId) {
+    const doc = window.currentDocument;
+    if (subId === 'pane7') renderRunningOperationsTree(doc);
+    else if (subId === 'pane13') renderLayoutInspectorPanel(doc);
+    else if (subId === 'pane10') updateTreemapUI();
+    else if (subId === 'pane6') { updateGraphLegend(); setTimeout(() => renderGraphCanvas(), 30); }
+    else if (subId === 'pane17') renderAccessibilityPanel();
+    else if (subId === 'pane15') renderRepaintPanel();
+    else if (subId === 'pane16') renderInteractionPanel();
+    else if (subId === 'pane12') renderResponsiveMatrixPanel(window.currentBuffer || window.currentDocument);
+    else if (subId === 'sub_pane11') renderThemeEnvironmentPanel(window.currentDocument);
+    else if (subId === 'sub_pane5') updateVariablesPanel();
+    else if (subId === 'sub_pane8') {
+        if (window.currentPlayer && typeof window.currentPlayer.repaint === 'function') window.currentPlayer.repaint();
+        drawProfiler();
+    }
+    else if (subId === 'sub_pane14') {
+        const u8 = window.currentU8Buffer || (window.currentBuffer ? new Uint8Array(window.currentBuffer) : null);
+        renderDocumentStatistics(doc, window.allOps || window.currentParsedOps, u8);
+    }
+}
+
+/** Render everything currently on screen in a host panel. */
+function renderHostPanel(hostId) {
+    const tabs = PANEL_SUBVIEWS[hostId];
+    if (tabs) {
+        const active = tabs.find(id => {
+            const el = document.getElementById(id);
+            return el && !el.classList.contains('hidden-panel');
+        }) || tabs[0];
+        if (active) renderSubview(active);
+    }
+    (PANEL_SPLITS[hostId] || []).forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.classList.contains('hidden-panel')) renderSubview(id);
+    });
+}
+
+/**
+ * Drag-to-resize for a split host. The two sections share the panel's height, so the drag
+ * sets the top section's flex-basis and lets the bottom take the rest.
+ */
+export function initSplitDividers() {
+    document.querySelectorAll('.split-divider').forEach(divider => {
+        if (divider.dataset.wired === '1') return;
+        divider.dataset.wired = '1';
+        divider.addEventListener('pointerdown', (e) => {
+            const split = divider.parentElement;
+            const primary = split && split.querySelector('.split-primary');
+            if (!primary) return;
+            e.preventDefault();
+            divider.classList.add('dragging');
+            divider.setPointerCapture(e.pointerId);
+            const startX = e.clientX;
+            const startW = primary.getBoundingClientRect().width;
+            const total = split.getBoundingClientRect().width;
+
+            const onMove = (ev) => {
+                const w = Math.max(140, Math.min(total - 160, startW + (ev.clientX - startX)));
+                primary.style.flex = `0 0 ${w}px`;
+            };
+            const onUp = (ev) => {
+                divider.classList.remove('dragging');
+                try { divider.releasePointerCapture(ev.pointerId); } catch (_) {}
+                divider.removeEventListener('pointermove', onMove);
+                divider.removeEventListener('pointerup', onUp);
+            };
+            divider.addEventListener('pointermove', onMove);
+            divider.addEventListener('pointerup', onUp);
+        });
+    });
+}
+
+/**
+ * Show or hide one half of a split host. The pairing is useful, not obligatory: you may want
+ * the tree on its own, or the variable list without the plot, and either half can take the
+ * whole panel when the other is off.
+ */
+export function toggleSplitSection(hostId, sectionId) {
+    const section = document.getElementById(sectionId);
+    if (!section) return;
+    const showing = section.classList.contains('hidden-panel');
+    section.classList.toggle('hidden-panel', !showing);
+
+    // The divider only means something while both halves are on screen.
+    const divider = section.previousElementSibling;
+    if (divider && divider.classList.contains('split-divider')) {
+        divider.classList.toggle('hidden-panel', !showing);
+    }
+    const btn = document.getElementById(`split_${sectionId}`);
+    if (btn) btn.classList.toggle('active', showing);
+
+    if (showing) renderSubview(sectionId);
+}
+
+export function switchPanelTab(hostId, subId) {
+    const subs = PANEL_SUBVIEWS[hostId];
+    if (!subs) return;
+    subs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.toggle('hidden-panel', id !== subId);
+        const tab = document.getElementById(`tab_${id.replace(/^sub_/, '')}`);
+        if (tab) tab.classList.toggle('active', id === subId);
+    });
+    renderSubview(subId);
+}
+
+/**
+ * Give a panel its remembered width and stop it growing into whatever space is free.
+ * Panels are meant to keep the size you gave them — a lone panel stretching to fill a wide
+ * window is what made it look unresizable, since there was nothing left to drag towards.
+ */
+export function applyPaneWidth(paneId, pane) {
+    const el = pane || document.getElementById(paneId);
+    if (!el) return;
+    const width = lastPaneWidths[paneId] || DEFAULT_PANE_WIDTHS[paneId];
+    if (!width) return;
+    el.style.width = width;
+    el.style.flex = 'none';
+}
+
+/** Show the panels a fresh session opens with. */
+export function applyDefaultLayout() {
+    applyWorkspace(DEFAULT_PANELS);
+}
 
 export function hidePanel(event, paneId) {
     if (event) event.stopPropagation();
@@ -159,53 +280,38 @@ export function hidePanel(event, paneId) {
 }
 
 export function restorePanel(paneId) {
+    // An absorbed panel is now a tab: show its host and select it.
+    const host = SUBVIEW_HOST[paneId];
+    if (host) {
+        restorePanel(host);
+        switchPanelTab(host, paneId);
+        return;
+    }
+    // A split section is always on screen inside its host — showing the host is enough.
+    const splitHost = SPLIT_HOST[paneId];
+    if (splitHost) {
+        restorePanel(splitHost);
+        const section = document.getElementById(paneId);
+        if (section && section.classList.contains('hidden-panel')) toggleSplitSection(splitHost, paneId);
+        return;
+    }
+
     const pane = document.getElementById(paneId);
     if (!pane) return;
 
     pane.classList.remove('hidden-panel');
+    applyPaneWidth(paneId, pane);
     updateHeaderCollapsedBar();
     updatePanelPucks();
     updateResizersVisibility();
-    if (paneId === 'pane7') {
-        renderRunningOperationsTree(window.currentDocument);
-    }
     if (paneId === 'pane4' && jsonEditor) {
         setTimeout(() => jsonEditor.refresh(), 50);
     }
-    if (paneId === 'pane5') {
-        updateVariablesPanel();
-    }
-    if (paneId === 'pane6') {
-        updateGraphLegend();
-        setTimeout(() => renderGraphCanvas(), 50);
-    }
-    if (paneId === 'pane8') {
-        if (window.currentPlayer && typeof window.currentPlayer.repaint === 'function') {
-            window.currentPlayer.repaint();
-        }
-        drawProfiler();
+    if (PANEL_SUBVIEWS[paneId] || PANEL_SPLITS[paneId]) {
+        renderHostPanel(paneId);
     }
     if (paneId === 'pane9') {
         renderExpressionDependencyGraph();
-    }
-    if (paneId === 'pane15') {
-        renderRepaintPanel();
-    }
-    if (paneId === 'pane10') {
-        updateTreemapUI();
-    }
-    if (paneId === 'pane11') {
-        renderThemeEnvironmentPanel(window.currentDocument);
-    }
-    if (paneId === 'pane12') {
-        renderResponsiveMatrixPanel(window.currentBuffer || window.currentDocument);
-    }
-    if (paneId === 'pane13') {
-        renderLayoutInspectorPanel(window.currentDocument);
-    }
-    if (paneId === 'pane14') {
-        const u8 = window.currentU8Buffer || (window.currentBuffer ? new Uint8Array(window.currentBuffer) : null);
-        renderDocumentStatistics(window.currentDocument, window.allOps || window.currentParsedOps, u8);
     }
 }
 
@@ -231,107 +337,28 @@ export function updateHeaderCollapsedBar() {
     container.innerHTML = html;
 }
 
+
 export function updateResizersVisibility() {
-    const p1 = document.getElementById('pane1');
-    const p14 = document.getElementById('pane14');
-    const p2 = document.getElementById('pane2');
-    const p7 = document.getElementById('pane7');
-    const p3 = document.getElementById('pane3');
-    const p4 = document.getElementById('pane4');
-    const p5 = document.getElementById('pane5');
-    const p6 = document.getElementById('pane6');
-    const p8 = document.getElementById('pane8');
-    const p9 = document.getElementById('pane9');
-    const p10 = document.getElementById('pane10');
-    const p11 = document.getElementById('pane11');
-    const p12 = document.getElementById('pane12');
-    const p13 = document.getElementById('pane13');
+    // A handle reads as a divider, so it only earns its place between two panels. A trailing
+    // one sitting past the last panel does resize that panel, but nothing about it says so —
+    // it looks like a stray control. The single exception is a lone open panel: with nothing
+    // to divide it would otherwise have no way to be resized at all.
+    const isVisible = (el) => el && !el.classList.contains('hidden-panel');
+    const openPanels = Array.from(document.querySelectorAll('.panel')).filter(isVisible);
+    const onlyOnePanel = openPanels.length === 1;
 
-    const r1 = document.getElementById('resizer1');
-    const r14 = document.getElementById('resizer14');
-    const r2 = document.getElementById('resizer2');
-    const r6 = document.getElementById('resizer6');
-    const r3 = document.getElementById('resizer3');
-    const r4 = document.getElementById('resizer4');
-    const r5 = document.getElementById('resizer5');
-    const r6_7 = document.getElementById('resizer6_7');
-    const r8_9 = document.getElementById('resizer8_9');
-    const r9_10 = document.getElementById('resizer9_10');
-    const r10_11 = document.getElementById('resizer10_11');
-    const r11_12 = document.getElementById('resizer11_12');
-    const r12_13 = document.getElementById('resizer12_13');
+    document.querySelectorAll('.panel-resizer').forEach(resizer => {
+        const pane = document.getElementById(resizer.dataset.resizePane);
+        if (!isVisible(pane)) { resizer.style.display = 'none'; return; }
 
-    const p1Vis = p1 && !p1.classList.contains('hidden-panel');
-    const p14Vis = p14 && !p14.classList.contains('hidden-panel');
-    const p2Vis = p2 && !p2.classList.contains('hidden-panel');
-    const p7Vis = p7 && !p7.classList.contains('hidden-panel');
-    const p3Vis = p3 && !p3.classList.contains('hidden-panel');
-    const p4Vis = p4 && !p4.classList.contains('hidden-panel');
-    const p5Vis = p5 && !p5.classList.contains('hidden-panel');
-    const p6Vis = p6 && !p6.classList.contains('hidden-panel');
-    const p8Vis = p8 && !p8.classList.contains('hidden-panel');
-    const p9Vis = p9 && !p9.classList.contains('hidden-panel');
-    const p10Vis = p10 && !p10.classList.contains('hidden-panel');
-    const p11Vis = p11 && !p11.classList.contains('hidden-panel');
-    const p12Vis = p12 && !p12.classList.contains('hidden-panel');
-    const p13Vis = p13 && !p13.classList.contains('hidden-panel');
-
-    const visiblePanels = [];
-    if (p1Vis) visiblePanels.push(p1);
-    if (p14Vis) visiblePanels.push(p14);
-    if (p2Vis) visiblePanels.push(p2);
-    if (p7Vis) visiblePanels.push(p7);
-    if (p3Vis) visiblePanels.push(p3);
-    if (p4Vis) visiblePanels.push(p4);
-    if (p5Vis) visiblePanels.push(p5);
-    if (p6Vis) visiblePanels.push(p6);
-    if (p8Vis) visiblePanels.push(p8);
-    if (p9Vis) visiblePanels.push(p9);
-    if (p10Vis) visiblePanels.push(p10);
-    if (p11Vis) visiblePanels.push(p11);
-    if (p12Vis) visiblePanels.push(p12);
-    if (p13Vis) visiblePanels.push(p13);
-
-    // Assign flex: 1 to the last visible panel so it absorbs all remaining container width
-    visiblePanels.forEach((p, idx) => {
-        if (idx === visiblePanels.length - 1) {
-            p.style.flex = '1';
-            p.style.width = '';
-        } else {
-            p.style.flex = 'none';
-            if (!p.style.width || p.style.width === 'auto') {
-                p.style.width = lastPaneWidths[p.id] || '380px';
-            }
+        let dividesTwo = false;
+        let node = resizer.nextElementSibling;
+        while (node) {
+            if (node.classList.contains('panel') && isVisible(node)) { dividesTwo = true; break; }
+            node = node.nextElementSibling;
         }
+        resizer.style.display = (dividesTwo || onlyOnePanel) ? '' : 'none';
     });
-
-    const anyAfter1 = p14Vis || p2Vis || p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter14 = p2Vis || p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter2 = p7Vis || p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter7 = p3Vis || p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter3 = p4Vis || p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter4 = p5Vis || p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter5 = p6Vis || p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter6 = p8Vis || p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter8 = p9Vis || p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter9 = p10Vis || p11Vis || p12Vis || p13Vis;
-    const anyAfter10 = p11Vis || p12Vis || p13Vis;
-    const anyAfter11 = p12Vis || p13Vis;
-    const anyAfter12 = p13Vis;
-
-    if (r1) r1.style.display = (p1Vis && anyAfter1) ? 'flex' : 'none';
-    if (r14) r14.style.display = (p14Vis && anyAfter14) ? 'flex' : 'none';
-    if (r2) r2.style.display = (p2Vis && anyAfter2) ? 'flex' : 'none';
-    if (r6) r6.style.display = (p7Vis && anyAfter7) ? 'flex' : 'none';
-    if (r3) r3.style.display = (p3Vis && anyAfter3) ? 'flex' : 'none';
-    if (r4) r4.style.display = (p4Vis && anyAfter4) ? 'flex' : 'none';
-    if (r5) r5.style.display = (p5Vis && anyAfter5) ? 'flex' : 'none';
-    if (r6_7) r6_7.style.display = (p6Vis && anyAfter6) ? 'flex' : 'none';
-    if (r8_9) r8_9.style.display = (p8Vis && anyAfter8) ? 'flex' : 'none';
-    if (r9_10) r9_10.style.display = (p9Vis && anyAfter9) ? 'flex' : 'none';
-    if (r10_11) r10_11.style.display = (p10Vis && anyAfter10) ? 'flex' : 'none';
-    if (r11_12) r11_12.style.display = (p11Vis && anyAfter11) ? 'flex' : 'none';
-    if (r12_13) r12_13.style.display = (p12Vis && anyAfter12) ? 'flex' : 'none';
 }
 
 // --- Safe Storage & Sandbox Detection (e.g. x20web without allow-same-origin) ---
@@ -385,19 +412,6 @@ export const SafeStorage = {
 
 // --- Workspace & Custom Setups Management ---
 
-export function getCustomSetups() {
-    if (!isLocalStorageAvailable()) return {};
-    try {
-        const raw = SafeStorage.getItem('rc_custom_setups');
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (typeof parsed === 'object' && parsed !== null) {
-                return parsed;
-            }
-        }
-    } catch (_) {}
-    return {};
-}
 
 export function applyWorkspace(panelIds, activeKey = null, customWidths = null) {
     const targetSet = new Set(panelIds);
@@ -420,6 +434,11 @@ export function applyWorkspace(panelIds, activeKey = null, customWidths = null) 
             restorePanel(paneId);
         } else if (!shouldBeVisible && isCurrentlyVisible) {
             pane.classList.add('hidden-panel');
+        } else if (shouldBeVisible) {
+            // Already on screen from the markup, so restorePanel never ran for it — it still
+            // needs its width, or it stretches to the window edge and its resize handle ends
+            // up pinned there with nothing to drag towards.
+            applyPaneWidth(paneId, pane);
         }
     });
 
@@ -432,107 +451,11 @@ export function applyWorkspace(panelIds, activeKey = null, customWidths = null) 
     }
 }
 
-export function applyWorkspacePreset(presetId) {
-    const preset = WORKSPACE_PRESETS[presetId];
-    if (!preset) return;
-    applyWorkspace(preset.panels, presetId);
-    renderSetupsMenu();
-}
 
-export function applyCustomSetup(setupName) {
-    if (!isLocalStorageAvailable()) return;
-    const setups = getCustomSetups();
-    const setup = setups[setupName];
-    if (!setup) return;
-    applyWorkspace(setup.panels, `custom:${setupName}`, setup.widths);
-    renderSetupsMenu();
-}
 
-export function saveCustomSetup(name) {
-    if (!isLocalStorageAvailable()) return;
-    if (!name || !name.trim()) return;
-    const cleanName = name.trim();
-    const setups = getCustomSetups();
 
-    const visiblePanels = [];
-    Object.keys(PANEL_META).forEach(paneId => {
-        const pane = document.getElementById(paneId);
-        if (pane && !pane.classList.contains('hidden-panel')) {
-            visiblePanels.push(paneId);
-        }
-    });
 
-    const widths = {};
-    visiblePanels.forEach(paneId => {
-        const pane = document.getElementById(paneId);
-        if (pane && pane.style.width) {
-            widths[paneId] = pane.style.width;
-        } else if (lastPaneWidths[paneId]) {
-            widths[paneId] = lastPaneWidths[paneId];
-        }
-    });
 
-    setups[cleanName] = {
-        name: cleanName,
-        panels: visiblePanels,
-        widths: widths,
-        updatedAt: Date.now()
-    };
-
-    SafeStorage.setItem('rc_custom_setups', JSON.stringify(setups));
-    SafeStorage.setItem('rc_active_workspace', `custom:${cleanName}`);
-
-    updatePanelPucks();
-    renderSetupsMenu();
-}
-
-export function deleteCustomSetup(name) {
-    if (!isLocalStorageAvailable() || !name) return;
-    const setups = getCustomSetups();
-    delete setups[name];
-    SafeStorage.setItem('rc_custom_setups', JSON.stringify(setups));
-    const active = SafeStorage.getItem('rc_active_workspace');
-    if (active === `custom:${name}`) {
-        SafeStorage.setItem('rc_active_workspace', 'layout');
-        applyWorkspacePreset('layout');
-    }
-    updatePanelPucks();
-    renderSetupsMenu();
-}
-
-export function detectMatchingPreset() {
-    const visible = Object.keys(PANEL_META).filter(paneId => {
-        const p = document.getElementById(paneId);
-        return p && !p.classList.contains('hidden-panel');
-    });
-    const visibleSet = new Set(visible);
-
-    for (const [key, preset] of Object.entries(WORKSPACE_PRESETS)) {
-        if (preset.panels.length === visibleSet.size && preset.panels.every(id => visibleSet.has(id))) {
-            return key;
-        }
-    }
-    return null;
-}
-
-export function togglePanelCheckbox(paneId) {
-    if (paneId === 'pane1') return;
-    const pane = document.getElementById(paneId);
-    if (!pane) return;
-
-    if (pane.classList.contains('hidden-panel')) {
-        restorePanel(paneId);
-    } else {
-        hidePanel(null, paneId);
-    }
-
-    const activePreset = detectMatchingPreset();
-    if (activePreset) {
-        SafeStorage.setItem('rc_active_workspace', activePreset);
-    }
-    updatePanelPucks();
-    renderSetupsMenu();
-}
 
 export function renderPanelPucks() {
     const container = document.getElementById('panelPucksBar');
@@ -577,11 +500,9 @@ export function updatePanelPucks() {
         }
     });
 
-    updateWorkspaceSelectUI();
 }
 
 export function togglePanelPuck(paneId) {
-    if (paneId === 'pane1') return; // Canvas Player is always pinned
     const pane = document.getElementById(paneId);
     if (!pane) return;
 
@@ -591,583 +512,103 @@ export function togglePanelPuck(paneId) {
         hidePanel(null, paneId);
     }
 
-    const activePreset = detectMatchingPreset();
-    if (activePreset) {
-        SafeStorage.setItem('rc_active_workspace', activePreset);
-    }
     updatePanelPucks();
-    renderSetupsMenu();
 }
 
-export function onWorkspaceSelectChange(value) {
-    if (!value) return;
-    if (value.startsWith('custom:')) {
-        const setupName = value.substring(7);
-        applyCustomSetup(setupName);
-    } else if (WORKSPACE_PRESETS[value]) {
-        applyWorkspacePreset(value);
-    }
-}
 
-export function promptSaveCustomWorkspace() {
-    if (!isLocalStorageAvailable()) {
-        if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-            window.alert('Custom workspace saving is unavailable in sandboxed environments without storage access.');
-        }
-        return;
-    }
-    const defaultName = `Setup ${Object.keys(getCustomSetups()).length + 1}`;
-    const name = typeof window !== 'undefined' && typeof window.prompt === 'function' ? window.prompt("Enter a name for this custom setup:", defaultName) : defaultName;
-    if (!name || !name.trim()) return;
-    saveCustomSetup(name.trim());
-}
 
-export function updateWorkspaceSelectUI() {
-    const select = document.getElementById('workspaceSelect');
-    if (!select) return;
 
-    const saveBtn = document.getElementById('saveWorkspaceBtn');
-    if (saveBtn) {
-        saveBtn.style.display = isLocalStorageAvailable() ? 'inline-flex' : 'none';
-    }
 
-    const customSetups = getCustomSetups();
-    const customNames = Object.keys(customSetups);
 
-    let html = `
-        <option value="">📂 Workspace Presets...</option>
-        <option value="layout">📐 Layout (Tree + Inspector)</option>
-        <option value="adaptive">📐 Adaptive (Matrix)</option>
-        <option value="reactivity">⚡ Reactivity (Vars + Graphs)</option>
-        <option value="binary">📦 Binary (Disasm + Stats)</option>
-        <option value="performance">⏱️ Performance (Profiler)</option>
-    `;
-
-    if (isLocalStorageAvailable() && customNames.length > 0) {
-        html += `<optgroup label="⭐ Custom Setups">`;
-        customNames.forEach(name => {
-            html += `<option value="custom:${name}">⭐ ${name} (${customSetups[name].panels.length}p)</option>`;
-        });
-        html += `</optgroup>`;
-    }
-
-    select.innerHTML = html;
-
-    const matched = detectMatchingPreset();
-    const saved = SafeStorage.getItem('rc_active_workspace');
-
-    if (matched) {
-        select.value = matched;
-    } else if (saved && saved.startsWith('custom:') && customSetups[saved.substring(7)]) {
-        select.value = saved;
-    } else {
-        select.value = '';
-    }
-}
-
-export function toggleSetupsDropdown(event) {
-    if (event) {
-        if (typeof event.stopPropagation === 'function') event.stopPropagation();
-        if (typeof event.preventDefault === 'function') event.preventDefault();
-    }
-    const dropdown = document.getElementById('setupsDropdownPopover');
-    const btn = document.getElementById('setupsMenuBtn');
-    if (!dropdown) return;
-
-    if (dropdown.style.display === 'none' || !dropdown.style.display) {
-        renderSetupsMenu();
-        dropdown.style.display = 'flex';
-
-        // Auto-adjust left/right alignment so the popover never clips offscreen
-        if (btn && typeof window !== 'undefined') {
-            const btnRect = btn.getBoundingClientRect();
-            const popoverWidth = Math.min(480, (window.innerWidth || 1000) - 32);
-            if (btnRect.right < popoverWidth) {
-                dropdown.style.left = '0';
-                dropdown.style.right = 'auto';
-            } else {
-                dropdown.style.left = 'auto';
-                dropdown.style.right = '0';
-            }
-        }
-    } else {
-        dropdown.style.display = 'none';
-    }
-}
-
-export function renderSetupsMenu() {
-    const dropdown = document.getElementById('setupsDropdownPopover');
-    if (!dropdown) return;
-
-    const customSetups = getCustomSetups();
-    const customNames = Object.keys(customSetups);
-    let activeKey = SafeStorage.getItem('rc_active_workspace');
-    if (!activeKey) activeKey = detectMatchingPreset() || 'layout';
-
-    let html = `
-        <div class="setups-popover-header">
-            <span class="setups-popover-title">⚙️ Workspace Setups & Panels</span>
-            <button class="setups-close-btn" onclick="toggleSetupsDropdown(event)" title="Close">✕</button>
-        </div>
-        <div class="setups-popover-body">
-    `;
-
-    // Saved Custom Setups Section (Only shown if storage access is available)
-    if (!isLocalStorageAvailable()) {
-        html += `
-            <div class="setups-section">
-                <div style="font-size:0.75rem; color:var(--text-muted); background:rgba(0,0,0,0.25); border:1px dashed var(--border-color); border-radius:6px; padding:8px 10px; line-height:1.4;">
-                    🔒 <strong>Sandboxed Mode:</strong> Local storage access is disabled in this environment. Custom setup saving is unavailable.
-                </div>
-            </div>
-        `;
-    } else {
-        html += `
-            <div class="setups-section">
-                <div class="setups-section-title">⭐ Saved Custom Setups</div>
-                <div class="setups-custom-list">
-        `;
-        if (customNames.length === 0) {
-            html += `<div style="font-size:0.75rem; color:var(--text-muted); padding:4px 0;">No custom setups saved yet. Configure panels below and click "Save View".</div>`;
-        } else {
-            customNames.forEach(name => {
-                const isCurrent = activeKey === `custom:${name}`;
-                html += `
-                    <div class="custom-setup-item ${isCurrent ? 'active' : ''}">
-                        <button class="custom-setup-select-btn" onclick="applyCustomSetup('${name}')" title="Load '${name}' setup">
-                            <span>${isCurrent ? '●' : '○'}</span>
-                            <span style="font-weight:${isCurrent ? '600' : '400'};">${name}</span>
-                            <span style="font-size:0.7rem; color:var(--text-muted);">(${customSetups[name].panels.length} panels)</span>
-                        </button>
-                        <button class="custom-setup-del-btn" onclick="deleteCustomSetup('${name}')" title="Delete setup '${name}'">🗑️</button>
-                    </div>
-                `;
-            });
-        }
-        html += `
-                </div>
-                <div class="setups-save-bar">
-                    <input type="text" id="customSetupNameInput" class="dim-input" placeholder="New setup name..." style="flex:1; font-size:0.75rem; padding:4px 8px;" onkeydown="if(event.key==='Enter'){saveCurrentCustomSetupFromInput();}">
-                    <button class="btn btn-secondary" style="font-size:0.75rem; padding:4px 10px;" onclick="saveCurrentCustomSetupFromInput()">💾 Save View</button>
-                </div>
-            </div>
-        `;
-    }
-
-    // Panels Checklist grouped by Cluster
-    html += `
-        <div class="setups-section" style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-top: 8px;">
-            <div class="setups-section-title">🎛️ Panels Visibility by Cluster</div>
-            <div class="clusters-grid">
-    `;
-
-    Object.values(CLUSTERS).forEach(cluster => {
-        html += `
-            <div class="cluster-block">
-                <div class="cluster-title">${cluster.icon} ${cluster.name}</div>
-                <div class="cluster-panels-list">
-        `;
-        cluster.panels.forEach(paneId => {
-            const meta = PANEL_META[paneId];
-            if (!meta) return;
-            const pane = document.getElementById(paneId);
-            const isVisible = pane ? !pane.classList.contains('hidden-panel') : false;
-            const isLocked = paneId === 'pane1';
-
-            html += `
-                <label class="panel-checkbox-label ${isLocked ? 'locked' : ''}" title="${meta.name}">
-                    <input type="checkbox" ${isVisible ? 'checked' : ''} ${isLocked ? 'disabled' : ''} onchange="togglePanelCheckbox('${paneId}')">
-                    <span>${meta.icon}</span>
-                    <span class="panel-name-text">${meta.name}</span>
-                    ${isLocked ? '<span style="font-size:0.65rem; color:var(--text-muted); margin-left:auto;">(Locked)</span>' : ''}
-                </label>
-            `;
-        });
-        html += `
-                </div>
-            </div>
-        `;
-    });
-
-    html += `
-            </div>
-        </div>
-    `;
-
-    html += `
-        </div>
-        <div class="setups-popover-footer">
-            <button class="btn btn-secondary" style="font-size:0.72rem; padding:3px 8px;" onclick="applyWorkspacePreset('layout')">🔄 Reset to Layout</button>
-            <button class="btn" style="font-size:0.72rem; padding:3px 8px; margin-left:auto;" onclick="toggleSetupsDropdown(event)">Done</button>
-        </div>
-    `;
-
-    dropdown.innerHTML = html;
-}
-
-export function saveCurrentCustomSetupFromInput() {
-    const input = document.getElementById('customSetupNameInput');
-    if (!input || !input.value.trim()) return;
-    saveCustomSetup(input.value.trim());
-}
 
 export function initWorkspaces() {
-    if (typeof window === 'undefined') return;
-
     renderPanelPucks();
-    updateWorkspaceSelectUI();
-
-    // Attach click outside listener to close setups dropdown
-    const dropdownEl = document.getElementById('setupsDropdownPopover');
-    if (dropdownEl) {
-        dropdownEl.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-    }
-
-    window.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('setupsDropdownPopover');
-        const btn = document.getElementById('setupsMenuBtn');
-        if (dropdown && dropdown.style.display !== 'none') {
-            if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
-                dropdown.style.display = 'none';
-            }
-        }
-    });
-
-    // Check saved workspace preference
-    const saved = SafeStorage.getItem('rc_active_workspace');
-
-    if (saved) {
-        if (saved.startsWith('custom:')) {
-            const setupName = saved.substring(7);
-            const setups = getCustomSetups();
-            if (setups[setupName]) {
-                applyCustomSetup(setupName);
-                return;
-            }
-        } else if (WORKSPACE_PRESETS[saved]) {
-            applyWorkspacePreset(saved);
-            return;
-        }
-    }
-
-    // Default to 'layout' preset on first load
-    applyWorkspacePreset('layout');
+    applyDefaultLayout();
 }
 
 export function initPaneResizers() {
-    const resizer1 = document.getElementById('resizer1');
-    const resizer14 = document.getElementById('resizer14');
-    const resizer2 = document.getElementById('resizer2');
-    const resizer6 = document.getElementById('resizer6');
-    const resizer3 = document.getElementById('resizer3');
-    const resizer4 = document.getElementById('resizer4');
-    const resizer5 = document.getElementById('resizer5');
-    const pane1 = document.getElementById('pane1');
-    const pane14 = document.getElementById('pane14');
-    const pane2 = document.getElementById('pane2');
-    const pane7 = document.getElementById('pane7');
-    const pane3 = document.getElementById('pane3');
-    const pane4 = document.getElementById('pane4');
-    const pane5 = document.getElementById('pane5');
-    const pane6 = document.getElementById('pane6');
+    // A divider moves the boundary between two panels: drag right and the left panel grows
+    // while the right one shrinks, drag left and the reverse. Resizing only the left panel
+    // is what left the last panel in the row with no way to be sized — the one handle on
+    // screen belonged to its neighbour.
+    const FALLBACK_MIN_W = 220;
 
-    function setupDrag(resizer, onDrag) {
-        if (!resizer) return;
+    // Panels declare their own min-width in CSS and the values differ. Clamping against a
+    // single constant let one side stop at its CSS floor while the other kept moving, so the
+    // boundary drifted and the row grew wider than the window.
+    const minWidthOf = (el) => {
+        const declared = parseFloat(getComputedStyle(el).minWidth);
+        return Number.isFinite(declared) && declared > 0 ? declared : FALLBACK_MIN_W;
+    };
+
+    document.querySelectorAll('.panel-resizer').forEach(resizer => {
+        if (resizer.dataset.wired === '1') return;
+        resizer.dataset.wired = '1';
+        const paneId = resizer.dataset.resizePane;
+
+        const nextVisiblePanel = () => {
+            let node = resizer.nextElementSibling;
+            while (node) {
+                if (node.classList.contains('panel') && !node.classList.contains('hidden-panel')) return node;
+                node = node.nextElementSibling;
+            }
+            return null;
+        };
+
         resizer.addEventListener('pointerdown', (e) => {
+            const left = document.getElementById(paneId);
+            if (!left) return;
+            const right = nextVisiblePanel();
             e.preventDefault();
             resizer.classList.add('dragging');
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-
+            resizer.setPointerCapture(e.pointerId);
             const startX = e.clientX;
-            const startP1W = pane1 ? pane1.getBoundingClientRect().width : 480;
-            const startP14W = pane14 ? pane14.getBoundingClientRect().width : 480;
-            const startP2W = pane2 ? pane2.getBoundingClientRect().width : 400;
-            const startP7W = pane7 ? pane7.getBoundingClientRect().width : 380;
-            const startP3W = pane3 ? pane3.getBoundingClientRect().width : 320;
-            const startP4W = pane4 ? pane4.getBoundingClientRect().width : 440;
-            const startP5W = pane5 ? pane5.getBoundingClientRect().width : 360;
-            const startP6W = pane6 ? pane6.getBoundingClientRect().width : 440;
+            const startLeftW = left.getBoundingClientRect().width;
+            const startRightW = right ? right.getBoundingClientRect().width : 0;
+            const minLeft = minWidthOf(left);
+            const minRight = right ? minWidthOf(right) : 0;
 
-            function onPointerMove(moveEvent) {
-                const deltaX = moveEvent.clientX - startX;
-                onDrag(deltaX, startP1W, startP14W, startP2W, startP7W, startP3W, startP4W, startP5W, startP6W);
-            }
+            const onMove = (ev) => {
+                let dx = ev.clientX - startX;
+                // Neither side may fall below its own minimum.
+                dx = Math.max(dx, minLeft - startLeftW);
+                if (right) dx = Math.min(dx, startRightW - minRight);
 
-            function onPointerUp() {
+                const lw = Math.round(startLeftW + dx);
+                left.style.width = `${lw}px`;
+                left.style.flex = 'none';
+                lastPaneWidths[paneId] = `${lw}px`;
+
+                if (right) {
+                    const rw = Math.round(startRightW - dx);
+                    right.style.width = `${rw}px`;
+                    right.style.flex = 'none';
+                    lastPaneWidths[right.id] = `${rw}px`;
+                }
+            };
+            const onUp = (ev) => {
                 resizer.classList.remove('dragging');
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                window.removeEventListener('pointermove', onPointerMove);
-                window.removeEventListener('pointerup', onPointerUp);
-                if (jsonEditor) jsonEditor.refresh();
-                renderGraphCanvas();
-            }
-
-            window.addEventListener('pointermove', onPointerMove);
-            window.addEventListener('pointerup', onPointerUp);
+                try { resizer.releasePointerCapture(ev.pointerId); } catch (_) {}
+                resizer.removeEventListener('pointermove', onMove);
+                resizer.removeEventListener('pointerup', onUp);
+            };
+            resizer.addEventListener('pointermove', onMove);
+            resizer.addEventListener('pointerup', onUp);
         });
-    }
 
-    setupDrag(resizer1, (deltaX, p1W) => {
-        if (pane1) {
-            const newP1W = Math.max(240, Math.min(1400, p1W + deltaX));
-            pane1.style.width = `${newP1W}px`;
-            pane1.style.flex = 'none';
-            lastPaneWidths.pane1 = `${newP1W}px`;
-        }
+        resizer.addEventListener('dblclick', () => {
+            [document.getElementById(paneId), nextVisiblePanel()].forEach(pane => {
+                if (!pane) return;
+                const def = DEFAULT_PANE_WIDTHS[pane.id];
+                if (!def) return;
+                pane.style.width = def;
+                pane.style.flex = 'none';
+                lastPaneWidths[pane.id] = def;
+            });
+        });
     });
 
-    setupDrag(resizer14, (deltaX, p1W, p14W) => {
-        if (pane14 && !pane14.classList.contains('hidden-panel')) {
-            const newP14W = Math.max(240, Math.min(1400, (p14W || 480) + deltaX));
-            pane14.style.width = `${newP14W}px`;
-            pane14.style.flex = 'none';
-            lastPaneWidths.pane14 = `${newP14W}px`;
-        }
-    });
-    if (resizer14) {
-        resizer14.addEventListener('dblclick', () => {
-            if (pane14) {
-                pane14.style.width = '480px';
-                pane14.style.flex = 'none';
-                lastPaneWidths.pane14 = '480px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    setupDrag(resizer2, (deltaX, p1W, p14W, p2W) => {
-        if (pane2) {
-            const newP2W = Math.max(200, Math.min(1400, p2W + deltaX));
-            pane2.style.width = `${newP2W}px`;
-            pane2.style.flex = 'none';
-            lastPaneWidths.pane2 = `${newP2W}px`;
-        }
-    });
-
-    setupDrag(resizer6, (deltaX, p1W, p2W, p7W) => {
-        if (pane7 && !pane7.classList.contains('hidden-panel')) {
-            const newP7W = Math.max(200, Math.min(1400, p7W + deltaX));
-            pane7.style.width = `${newP7W}px`;
-            pane7.style.flex = 'none';
-            lastPaneWidths.pane7 = `${newP7W}px`;
-        }
-    });
-
-    setupDrag(resizer3, (deltaX, p1W, p2W, p7W, p3W) => {
-        if (pane3 && !pane3.classList.contains('hidden-panel')) {
-            const newP3W = Math.max(200, Math.min(1400, p3W + deltaX));
-            pane3.style.width = `${newP3W}px`;
-            pane3.style.flex = 'none';
-            lastPaneWidths.pane3 = `${newP3W}px`;
-        }
-    });
-
-    setupDrag(resizer4, (deltaX, p1W, p2W, p7W, p3W, p4W) => {
-        if (pane4 && !pane4.classList.contains('hidden-panel')) {
-            const newP4W = Math.max(200, Math.min(1400, p4W + deltaX));
-            pane4.style.width = `${newP4W}px`;
-            pane4.style.flex = 'none';
-            lastPaneWidths.pane4 = `${newP4W}px`;
-        }
-    });
-
-    setupDrag(resizer5, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W) => {
-        if (pane5 && !pane5.classList.contains('hidden-panel')) {
-            const newP5W = Math.max(200, Math.min(1400, p5W + deltaX));
-            pane5.style.width = `${newP5W}px`;
-            pane5.style.flex = 'none';
-            lastPaneWidths.pane5 = `${newP5W}px`;
-        }
-    });
-
-    if (resizer1) {
-        resizer1.addEventListener('dblclick', () => {
-            if (pane1) {
-                pane1.style.width = '480px';
-                pane1.style.flex = 'none';
-                lastPaneWidths.pane1 = '480px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    if (resizer2) {
-        resizer2.addEventListener('dblclick', () => {
-            if (pane2) {
-                pane2.style.width = '400px';
-                pane2.style.flex = 'none';
-                lastPaneWidths.pane2 = '400px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    if (resizer6) {
-        resizer6.addEventListener('dblclick', () => {
-            if (pane7) {
-                pane7.style.width = '380px';
-                pane7.style.flex = 'none';
-                lastPaneWidths.pane7 = '380px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    if (resizer3) {
-        resizer3.addEventListener('dblclick', () => {
-            if (pane3) {
-                pane3.style.width = '320px';
-                pane3.style.flex = 'none';
-                lastPaneWidths.pane3 = '320px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    if (resizer4) {
-        resizer4.addEventListener('dblclick', () => {
-            if (pane4) {
-                pane4.style.width = '440px';
-                pane4.style.flex = 'none';
-                lastPaneWidths.pane4 = '440px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    if (resizer5) {
-        resizer5.addEventListener('dblclick', () => {
-            if (pane5) {
-                pane5.style.width = '360px';
-                pane5.style.flex = 'none';
-                lastPaneWidths.pane5 = '360px';
-                updateResizersVisibility();
-            }
-        });
-    }
-    const resizer6_7 = document.getElementById('resizer6_7');
-    setupDrag(resizer6_7, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W) => {
-        if (pane6 && !pane6.classList.contains('hidden-panel')) {
-            const newP6W = Math.max(200, Math.min(1400, p6W + deltaX));
-            pane6.style.width = `${newP6W}px`;
-            pane6.style.flex = 'none';
-            lastPaneWidths.pane6 = `${newP6W}px`;
-        }
-    });
-    if (resizer6_7) {
-        resizer6_7.addEventListener('dblclick', () => {
-            if (pane6) {
-                pane6.style.width = '440px';
-                pane6.style.flex = 'none';
-                lastPaneWidths.pane6 = '440px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    const resizer8_9 = document.getElementById('resizer8_9');
-    const pane8 = document.getElementById('pane8');
-    setupDrag(resizer8_9, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W) => {
-        if (pane8 && !pane8.classList.contains('hidden-panel')) {
-            const newP8W = Math.max(200, Math.min(1400, (p8W || 480) + deltaX));
-            pane8.style.width = `${newP8W}px`;
-            pane8.style.flex = 'none';
-            lastPaneWidths.pane8 = `${newP8W}px`;
-        }
-    });
-    if (resizer8_9) {
-        resizer8_9.addEventListener('dblclick', () => {
-            if (pane8) {
-                pane8.style.width = '480px';
-                pane8.style.flex = 'none';
-                lastPaneWidths.pane8 = '480px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    const resizer9_10 = document.getElementById('resizer9_10');
-    const pane9 = document.getElementById('pane9');
-    setupDrag(resizer9_10, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W, p9W) => {
-        if (pane9 && !pane9.classList.contains('hidden-panel')) {
-            const newP9W = Math.max(200, Math.min(1400, (p9W || 480) + deltaX));
-            pane9.style.width = `${newP9W}px`;
-            pane9.style.flex = 'none';
-            lastPaneWidths.pane9 = `${newP9W}px`;
-        }
-    });
-    if (resizer9_10) {
-        resizer9_10.addEventListener('dblclick', () => {
-            if (pane9) {
-                pane9.style.width = '480px';
-                pane9.style.flex = 'none';
-                lastPaneWidths.pane9 = '480px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    const resizer10_11 = document.getElementById('resizer10_11');
-    const pane10 = document.getElementById('pane10');
-    setupDrag(resizer10_11, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W, p9W, p10W) => {
-        if (pane10 && !pane10.classList.contains('hidden-panel')) {
-            const newP10W = Math.max(200, Math.min(1400, (p10W || 480) + deltaX));
-            pane10.style.width = `${newP10W}px`;
-            pane10.style.flex = 'none';
-            lastPaneWidths.pane10 = `${newP10W}px`;
-        }
-    });
-    if (resizer10_11) {
-        resizer10_11.addEventListener('dblclick', () => {
-            if (pane10) {
-                pane10.style.width = '480px';
-                pane10.style.flex = 'none';
-                lastPaneWidths.pane10 = '480px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    const resizer11_12 = document.getElementById('resizer11_12');
-    const pane11 = document.getElementById('pane11');
-    setupDrag(resizer11_12, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W, p9W, p10W, p11W) => {
-        if (pane11 && !pane11.classList.contains('hidden-panel')) {
-            const newP11W = Math.max(200, Math.min(1400, (p11W || 400) + deltaX));
-            pane11.style.width = `${newP11W}px`;
-            pane11.style.flex = 'none';
-            lastPaneWidths.pane11 = `${newP11W}px`;
-        }
-    });
-    if (resizer11_12) {
-        resizer11_12.addEventListener('dblclick', () => {
-            if (pane11) {
-                pane11.style.width = '400px';
-                pane11.style.flex = 'none';
-                lastPaneWidths.pane11 = '400px';
-                updateResizersVisibility();
-            }
-        });
-    }
-
-    const resizer12_13 = document.getElementById('resizer12_13');
-    const pane12 = document.getElementById('pane12');
-    setupDrag(resizer12_13, (deltaX, p1W, p2W, p7W, p3W, p4W, p5W, p6W, p8W, p9W, p10W, p11W, p12W) => {
-        if (pane12 && !pane12.classList.contains('hidden-panel')) {
-            const newP12W = Math.max(200, Math.min(1400, (p12W || 640) + deltaX));
-            pane12.style.width = `${newP12W}px`;
-            pane12.style.flex = 'none';
-            lastPaneWidths.pane12 = `${newP12W}px`;
-        }
-    });
-    if (resizer12_13) {
-        resizer12_13.addEventListener('dblclick', () => {
-            if (pane12) {
-                pane12.style.width = '640px';
-                pane12.style.flex = 'none';
-                lastPaneWidths.pane12 = '640px';
-                updateResizersVisibility();
-            }
-        });
-    }
+    updateResizersVisibility();
 }
 
 export function initKeyboardNavigation() {
@@ -1291,19 +732,8 @@ if (typeof window !== 'undefined') {
     window.toggleSectionCollapse = toggleSectionCollapse;
     window.findOperationByInstanceId = findOperationByInstanceId;
     window.applyWorkspace = applyWorkspace;
-    window.applyWorkspacePreset = applyWorkspacePreset;
-    window.applyCustomSetup = applyCustomSetup;
-    window.saveCustomSetup = saveCustomSetup;
-    window.deleteCustomSetup = deleteCustomSetup;
-    window.togglePanelCheckbox = togglePanelCheckbox;
-    window.toggleSetupsDropdown = toggleSetupsDropdown;
-    window.renderSetupsMenu = renderSetupsMenu;
-    window.saveCurrentCustomSetupFromInput = saveCurrentCustomSetupFromInput;
     window.initWorkspaces = initWorkspaces;
     window.renderPanelPucks = renderPanelPucks;
     window.updatePanelPucks = updatePanelPucks;
     window.togglePanelPuck = togglePanelPuck;
-    window.onWorkspaceSelectChange = onWorkspaceSelectChange;
-    window.updateWorkspaceSelectUI = updateWorkspaceSelectUI;
-    window.promptSaveCustomWorkspace = promptSaveCustomWorkspace;
 }

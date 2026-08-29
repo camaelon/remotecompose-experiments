@@ -947,7 +947,7 @@ export function renderLayoutInspectorPanel(doc) {
                             ` : ''}
                         </div>
                         <div style="font-size:0.7rem; color:var(--text-muted); font-family:var(--code-font);">
-                            ${selectedComp ? `${Math.round(selectedComp.width)}×${Math.round(selectedComp.height)} dp • Depth ${selectedComp.depth}` : 'Select an element in the Component Tree panel or Preview to inspect'}
+                            ${selectedComp ? `${Math.round(selectedComp.width)}×${Math.round(selectedComp.height)} dp • Depth ${selectedComp.depth}` : 'Select an element in the Component Tree tab or Preview to inspect'}
                         </div>
                     </div>
                 </div>

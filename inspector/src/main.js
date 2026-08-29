@@ -31,6 +31,8 @@ import {
     updateExprGraphLiveValues
 } from './panels/DependencyGraphPanel.js';
 import { renderRepaintPanel, updateRepaintPanelLive, resetRepaintHistory } from './panels/RepaintPanel.js';
+import { renderInteractionPanel, fireInteractionTarget } from './panels/InteractionPanel.js';
+import { renderAccessibilityPanel } from './panels/AccessibilityPanel.js';
 
 // 3. Command List, Disassembly & Variable Usage Engine
 import {
@@ -210,7 +212,6 @@ import {
     PANEL_META,
     CLUSTERS,
     PANEL_PUCKS,
-    WORKSPACE_PRESETS,
     hidePanel,
     restorePanel,
     updateHeaderCollapsedBar,
@@ -220,26 +221,17 @@ import {
     toggleSectionCollapse,
     findOperationByInstanceId,
     applyWorkspace,
-    applyWorkspacePreset,
-    applyCustomSetup,
-    saveCustomSetup,
-    deleteCustomSetup,
-    getCustomSetups,
-    detectMatchingPreset,
-    togglePanelCheckbox,
-    toggleSetupsDropdown,
-    renderSetupsMenu,
-    saveCurrentCustomSetupFromInput,
     initWorkspaces,
     renderPanelPucks,
     updatePanelPucks,
     togglePanelPuck,
-    onWorkspaceSelectChange,
-    updateWorkspaceSelectUI,
-    promptSaveCustomWorkspace,
     SafeStorage,
     checkLocalStorageAvailable,
-    isLocalStorageAvailable
+    isLocalStorageAvailable,
+    switchPanelTab,
+    initSplitDividers,
+    toggleSplitSection,
+    applyDefaultLayout
 } from './panels/LayoutManager.js';
 
 // 10. Document Loader & IO Engine (Drag-and-Drop, URL Loader, Binary Parsing)
@@ -497,6 +489,14 @@ if (typeof window !== 'undefined') {
     window.renderRepaintPanel = renderRepaintPanel;
     window.updateRepaintPanelLive = updateRepaintPanelLive;
     window.resetRepaintHistory = resetRepaintHistory;
+    window.switchPanelTab = switchPanelTab;
+    window.initSplitDividers = initSplitDividers;
+    window.toggleSplitSection = toggleSplitSection;
+    window.applyDefaultLayout = applyDefaultLayout;
+    initSplitDividers();
+    window.renderInteractionPanel = renderInteractionPanel;
+    window.fireInteractionTarget = fireInteractionTarget;
+    window.renderAccessibilityPanel = renderAccessibilityPanel;
     window.toggleProfilerMeasurement = toggleProfilerMeasurement;
     window.resetProfilerTotals = resetProfilerTotals;
     window.setProfilerRank = setProfilerRank;
@@ -510,29 +510,15 @@ if (typeof window !== 'undefined') {
     window.toggleSectionCollapse = toggleSectionCollapse;
     window.findOperationByInstanceId = findOperationByInstanceId;
     window.applyWorkspace = applyWorkspace;
-    window.applyWorkspacePreset = applyWorkspacePreset;
-    window.applyCustomSetup = applyCustomSetup;
-    window.saveCustomSetup = saveCustomSetup;
-    window.deleteCustomSetup = deleteCustomSetup;
-    window.getCustomSetups = getCustomSetups;
-    window.detectMatchingPreset = detectMatchingPreset;
-    window.togglePanelCheckbox = togglePanelCheckbox;
-    window.toggleSetupsDropdown = toggleSetupsDropdown;
-    window.renderSetupsMenu = renderSetupsMenu;
-    window.saveCurrentCustomSetupFromInput = saveCurrentCustomSetupFromInput;
     window.initWorkspaces = initWorkspaces;
     window.renderPanelPucks = renderPanelPucks;
     window.updatePanelPucks = updatePanelPucks;
     window.togglePanelPuck = togglePanelPuck;
-    window.onWorkspaceSelectChange = onWorkspaceSelectChange;
-    window.updateWorkspaceSelectUI = updateWorkspaceSelectUI;
-    window.promptSaveCustomWorkspace = promptSaveCustomWorkspace;
     window.SafeStorage = SafeStorage;
     window.checkLocalStorageAvailable = checkLocalStorageAvailable;
     window.isLocalStorageAvailable = isLocalStorageAvailable;
     window.CLUSTERS = CLUSTERS;
     window.PANEL_PUCKS = PANEL_PUCKS;
-    window.WORKSPACE_PRESETS = WORKSPACE_PRESETS;
 
     // Document IO
     window.processFile = processFile;

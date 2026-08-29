@@ -247,9 +247,70 @@ export function resetRepaintHistory() {
     renderRepaintPanel();
 }
 
-export function recordRepaintSample(delayMs) {
-    history.push({ t: Date.now(), delayMs });
+export function recordRepaintSample(delayMs, cause, ops) {
+    history.push({ t: Date.now(), delayMs, cause: cause || null, ops: ops ?? null });
     if (history.length > HISTORY_LIMIT) history.shift();
+}
+
+// A verdict is a single instant; a timeline is what actually happened. The concurrent
+// timer chains in RcdPlayer, for instance, are invisible in a verdict and obvious as soon
+// as the gaps between paints are drawn.
+const CAUSE_COLORS = {
+    immediate: '#f43f5e', layout: '#fb7185', continuousSec: '#f97316',
+    timeInSec: '#fbbf24', timeInMin: '#fcd34d', wakeIn: '#38bdf8', none: '#334155'
+};
+
+const CAUSE_LABELS = {
+    immediate: 'immediate request', layout: 'layout', continuousSec: '$CONTINUOUS_SEC',
+    timeInSec: '$TIME_IN_SEC', timeInMin: '$TIME_IN_MIN', wakeIn: 'wakeIn', none: 'idle'
+};
+
+function renderTimeline() {
+    if (history.length < 2) {
+        return `<div style="font-size:0.7rem; color:var(--text-muted); padding:4px 0;">Timeline builds as frames are painted.</div>`;
+    }
+    const recent = history.slice(-90);
+    const t0 = recent[0].t;
+    const span = Math.max(1, recent[recent.length - 1].t - t0);
+
+    // Each paint is a tick positioned by when it happened, so clustering and gaps are visible.
+    const ticks = recent.map(h => {
+        const x = ((h.t - t0) / span) * 100;
+        const color = CAUSE_COLORS[h.cause] || '#64748b';
+        return `<div title="${esc(CAUSE_LABELS[h.cause] || 'paint')} — ${h.ops !== null ? h.ops + ' ops, ' : ''}needsRepaint()=${h.delayMs}"
+            style="position:absolute; left:${x.toFixed(2)}%; top:0; bottom:0; width:2px; background:${color}; opacity:0.85;"></div>`;
+    }).join('');
+
+    // Gaps between consecutive paints, which is the schedule as actually honoured.
+    const gaps = [];
+    for (let i = 1; i < recent.length; i++) gaps.push(recent[i].t - recent[i - 1].t);
+    gaps.sort((a, b) => a - b);
+    const median = gaps.length ? gaps[Math.floor(gaps.length / 2)] : 0;
+    const maxOps = Math.max(...recent.map(h => h.ops || 0));
+
+    const opsBars = maxOps > 0 ? recent.map(h => {
+        const x = ((h.t - t0) / span) * 100;
+        const hgt = maxOps ? ((h.ops || 0) / maxOps) * 100 : 0;
+        return `<div style="position:absolute; left:${x.toFixed(2)}%; bottom:0; width:2px; height:${hgt.toFixed(1)}%; background:var(--accent-blue); opacity:0.55;"></div>`;
+    }).join('') : '';
+
+    const causeCounts = {};
+    recent.forEach(h => { const k = h.cause || 'none'; causeCounts[k] = (causeCounts[k] || 0) + 1; });
+    const legend = Object.entries(causeCounts).sort((a, b) => b[1] - a[1]).map(([k, n]) =>
+        `<span style="display:inline-flex; align-items:center; gap:3px;"><span style="width:7px; height:7px; border-radius:2px; background:${CAUSE_COLORS[k] || '#64748b'};"></span>${esc(CAUSE_LABELS[k] || k)} ${n}</span>`
+    ).join('');
+
+    return `
+        <div style="margin-top:10px; padding:8px 10px; border:1px solid var(--border-color); border-radius:5px;">
+            <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:5px;">
+                <span style="font-size:0.73rem; font-weight:600; color:var(--text-secondary);">Frame timeline</span>
+                <span style="font-family:var(--code-font); font-size:0.68rem; color:var(--text-muted);">${recent.length} paints · median gap ${median} ms${maxOps ? ` · peak ${maxOps} ops` : ''}</span>
+            </div>
+            <div style="position:relative; height:22px; background:rgba(148,163,184,0.07); border-radius:3px; overflow:hidden;" title="One tick per painted frame, positioned by when it happened">${ticks}</div>
+            ${maxOps > 0 ? `<div style="position:relative; height:26px; margin-top:3px; background:rgba(148,163,184,0.05); border-radius:3px; overflow:hidden;" title="Operations executed per frame">${opsBars}</div>` : ''}
+            <div style="display:flex; gap:10px; flex-wrap:wrap; font-size:0.66rem; color:var(--text-muted); margin-top:5px;">${legend}</div>
+            <div style="font-size:0.66rem; color:var(--text-muted); margin-top:4px;">Oldest ← ${(span / 1000).toFixed(1)} s → newest</div>
+        </div>`;
 }
 
 function historySummary() {
@@ -304,7 +365,7 @@ function causeCardHtml(cause) {
                 ${badge}
             </div>
             <div style="font-family:var(--code-font); font-size:0.75rem; color:var(--accent-amber); margin-bottom:${cause.ops.length || cause.detail ? '5px' : '0'};">${esc(cause.value)}</div>
-            ${cause.ops.length ? `<div style="margin-bottom:4px;">${cause.ops.map(opChipHtml).join('')}</div>` : ''}
+            ${cause.ops.length ? `<div style="margin-bottom:4px; max-height:180px; overflow-y:auto;">${cause.ops.map(opChipHtml).join('')}</div>` : ''}
             ${cause.detail ? `<div style="font-size:0.69rem; color:var(--text-muted); line-height:1.45;">${esc(cause.detail)}</div>` : ''}
         </div>`;
 }
@@ -345,7 +406,7 @@ export function renderRepaintPanel() {
     const idleHtml = a.idleCandidates.length ? `
         <div style="margin-top:10px; padding:7px 10px; border:1px dashed var(--border-color); border-radius:5px;">
             <div style="font-size:0.74rem; color:var(--text-secondary); font-weight:600; margin-bottom:4px;">Can request an immediate repaint, but is not right now</div>
-            ${a.idleCandidates.map(opChipHtml).join('')}
+            <div style="max-height:160px; overflow-y:auto;">${a.idleCandidates.map(opChipHtml).join('')}</div>
         </div>` : '';
 
     const noCause = a.causes.length === 0
@@ -364,7 +425,8 @@ export function renderRepaintPanel() {
         ${histHtml}
         ${noCause}
         ${a.causes.map(causeCardHtml).join('')}
-        ${idleHtml}`;
+        ${idleHtml}
+        ${renderTimeline()}`;
 }
 
 /** Called once per painted frame from the player's variable listener. */
@@ -372,7 +434,9 @@ export function updateRepaintPanelLive() {
     const doc = window.currentDocument;
     if (!doc || typeof doc.needsRepaint !== 'function') return;
     const delay = doc.needsRepaint();
-    recordRepaintSample(delay);
+    const a = analyzeRepaintSchedule(doc, window.currentPlayer);
+    const ops = typeof doc.getOpsPerFrame === 'function' ? doc.getOpsPerFrame() : null;
+    recordRepaintSample(delay, a.winner || 'none', ops);
     const pane = document.getElementById('pane15');
     if (!pane || pane.classList.contains('hidden-panel')) return;
     // The verdict is stable across most frames; only re-render when it moves or roughly twice
