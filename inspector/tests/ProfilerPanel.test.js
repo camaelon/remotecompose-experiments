@@ -124,4 +124,40 @@ describe("ProfilerPanel Tests", () => {
         toggleProfilerMeasurement();
         assert.ok(typeof sink === 'function', "Should re-arm sink when toggled ON");
     });
+
+    test("coverage excludes wire framing, which would otherwise bury the signal", () => {
+        const { computeCoverage } = profilerModule;
+        // ContainerEnd (214) closes a container for the reader and has an empty apply(), so the
+        // engine never executes one. Counting them reported a thousand "never ran" operations
+        // on a document with a thousand containers and nothing else.
+        globalThis.currentParsedOps = [
+            { OP_CODE: 214 }, { OP_CODE: 214 },
+            { OP_CODE: 42 }, { OP_CODE: 46 }
+        ];
+        const { total, never } = computeCoverage({});
+        assert.strictEqual(total, 2, "only executable operations are counted");
+        assert.strictEqual(never.length, 2, "neither draw op has been measured in this fixture");
+    });
+
+    test("coverage reads the measurement stamp, not a guess", () => {
+        const { computeCoverage } = profilerModule;
+        // OperationMeasurement stamps an operation with a symbol-keyed id the first time it
+        // counts one, and only then. An operation without it has never been counted.
+        const measured = { OP_CODE: 42 };
+        measured[Symbol("rcMeasureId")] = 7;
+        globalThis.currentParsedOps = [measured, { OP_CODE: 46 }];
+
+        const { executed, never, total } = computeCoverage({});
+        assert.strictEqual(total, 2);
+        assert.strictEqual(executed.length, 1);
+        assert.strictEqual(never.length, 1);
+        assert.strictEqual(executed[0].id, 7);
+        assert.strictEqual(never[0].idx, 1, "the uncounted operation keeps its command-list index");
+    });
+
+    test("coverage is empty when there is nothing loaded", () => {
+        const { computeCoverage } = profilerModule;
+        globalThis.currentParsedOps = [];
+        assert.deepStrictEqual(computeCoverage({}), { executed: [], never: [], total: 0 });
+    });
 });

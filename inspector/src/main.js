@@ -33,6 +33,7 @@ import {
 import { renderRepaintPanel, updateRepaintPanelLive, resetRepaintHistory } from './panels/RepaintPanel.js';
 import { renderInteractionPanel, fireInteractionTarget } from './panels/InteractionPanel.js';
 import { renderAccessibilityPanel } from './panels/AccessibilityPanel.js';
+import { renderLayers3DPanel, resetLayers3DView, setLayerSpacing, setStackMode, toggleFlattenedLayers, toggleScrollOffset, toggleClipAreas, toggleTextContent, captureLayerContent, clearLayerContent, invalidateLayers3DModel, refreshLayers3DBounds } from './panels/Layers3DPanel.js';
 
 // 3. Command List, Disassembly & Variable Usage Engine
 import {
@@ -229,6 +230,7 @@ import {
     checkLocalStorageAvailable,
     isLocalStorageAvailable,
     switchPanelTab,
+    maximizePanel,
     initSplitDividers,
     toggleSplitSection,
     applyDefaultLayout
@@ -490,6 +492,7 @@ if (typeof window !== 'undefined') {
     window.updateRepaintPanelLive = updateRepaintPanelLive;
     window.resetRepaintHistory = resetRepaintHistory;
     window.switchPanelTab = switchPanelTab;
+    window.maximizePanel = maximizePanel;
     window.initSplitDividers = initSplitDividers;
     window.toggleSplitSection = toggleSplitSection;
     window.applyDefaultLayout = applyDefaultLayout;
@@ -497,6 +500,19 @@ if (typeof window !== 'undefined') {
     window.renderInteractionPanel = renderInteractionPanel;
     window.fireInteractionTarget = fireInteractionTarget;
     window.renderAccessibilityPanel = renderAccessibilityPanel;
+    window.renderLayers3DPanel = renderLayers3DPanel;
+    window.resetLayers3DView = resetLayers3DView;
+    window.setLayerSpacing = setLayerSpacing;
+    window.setStackMode = setStackMode;
+    window.toggleFlattenedLayers = toggleFlattenedLayers;
+    window.toggleScrollOffset = toggleScrollOffset;
+    window.toggleClipAreas = toggleClipAreas;
+    window.toggleTextContent = toggleTextContent;
+    window.captureLayerContent = captureLayerContent;
+    window.clearLayerContent = clearLayerContent;
+    window.toggleScrollOffset = toggleScrollOffset;
+    window.invalidateLayers3DModel = invalidateLayers3DModel;
+    window.refreshLayers3DBounds = refreshLayers3DBounds;
     window.toggleProfilerMeasurement = toggleProfilerMeasurement;
     window.resetProfilerTotals = resetProfilerTotals;
     window.setProfilerRank = setProfilerRank;

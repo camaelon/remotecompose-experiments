@@ -13,29 +13,28 @@ It provides deep visual introspection into RemoteCompose document layouts, opcod
   - [MCP Server & LLM Insights Guide (`MCP_LLM_GUIDE.md`)](MCP_LLM_GUIDE.md)
 - [Quick Start](#quick-start)
 - [Key Features](#key-features)
-- [Panel Overview](#panel-overview)
-  - [Pane 1: Command List & Tree](#pane-1-command-list--tree)
-  - [Pane 2: Operations & Payload Details](#pane-2-operations--payload-details)
-  - [Pane 3: RemoteCompose Live Canvas Player](#pane-3-remotecompose-live-canvas-player)
-  - [Pane 5: State & Variable Inspector](#pane-5-state--variable-inspector)
-  - [Pane 8: Profiler & Operation Measurement Engine](#pane-8-profiler--operation-measurement-engine)
-  - [Pane 9: Expression Dependency Graph](#pane-9-expression-dependency-graph)
-- [Deep Dive: Profiler & Performance Optimization (Pane 8)](#deep-dive-profiler--performance-optimization-pane-8)
-  - [Understanding Profiler Metrics](#understanding-profiler-metrics)
-  - [Ranking Modes: Last, Total, and Peak](#ranking-modes-last-total-and-peak)
-  - [Operation Instance Deep-Linking](#operation-instance-deep-linking)
-  - [Step-by-Step Performance Profiling Workflow](#step-by-step-performance-profiling-workflow)
-- [Deep Dive: Expression Dependency Graph & Document Analysis (Pane 9)](#deep-dive-expression-dependency-graph--document-analysis-pane-9)
-  - [Workflow 1: Dead-Code Identification & Binary Optimization](#workflow-1-dead-code-identification--binary-optimization)
-  - [Workflow 2: Interactive Animation & Formula Simulation (`🎛️ Live Simulator`)](#workflow-2-interactive-animation--formula-simulation-️-live-simulator)
-  - [Workflow 3: Bottleneck & Latency Tracing (`🔥 Critical Path`)](#workflow-3-bottleneck--latency-tracing--critical-path)
-  - [Workflow 4: Deep Subgraph Exploration & Focused Debugging](#workflow-4-deep-subgraph-exploration--focused-debugging)
-  - [Workflow 5: Visual Navigation via Minimap (`🗺️ Minimap`)](#workflow-5-visual-navigation-via-minimap-️-minimap)
+- [The Panel Bar](#the-panel-bar)
+  - [Player](#player)
+  - [Disassembly](#disassembly)
+  - [Structure](#structure)
+  - [Runtime](#runtime)
+  - [Variables](#variables)
+  - [DAG](#dag)
+  - [Environment](#environment)
+  - [Statistics](#statistics)
+  - [JSON](#json)
+- [Deep Dive: Layers 3D](#deep-dive-layers-3d)
+- [Deep Dive: Repaint Scheduling](#deep-dive-repaint-scheduling)
+- [Deep Dive: Profiler & Coverage](#deep-dive-profiler--coverage)
+- [Deep Dive: Expression Dependency Graph](#deep-dive-expression-dependency-graph)
 - [Mouse & Keyboard Controls](#mouse--keyboard-controls)
 
----
 
 ## Architecture & MCP Server Guides
+
+Build the single-file inspector with `npm run build` from the repo root, which compiles the
+player from `players/typescript/`, bundles the UI, and publishes to `docs/inspector/`. Run the
+test suite with `npm test` from `inspector/`.
 
 - 📐 **[Architecture Guide (`ARCHITECTURE.md`)](ARCHITECTURE.md)**: Deep dive into the modular multi-panel architecture, high-level data flow pipelines, and zero-dependency build system.
 - 🤖 **[MCP Server & LLM Insights Guide (`MCP_LLM_GUIDE.md`)](MCP_LLM_GUIDE.md)**: Complete guide on using the Headless Chrome CDP Model Context Protocol server (`mcp-server.mjs`) to automate dead-code pruning, component tree decompilation, multimodal vision screenshot review, and microsecond performance profiling via AI coding assistants.
@@ -50,9 +49,10 @@ It provides deep visual introspection into RemoteCompose document layouts, opcod
    - **File Picker**: Click **"Choose File"** in the top navigation bar.
    - **URL Query Parameter**: Open `index.html?url=path/to/document.rc` to load remote or local binary files automatically.
 3. **Explore**:
-   - View live canvas rendering in the center pane.
-   - Profile frame performance and operation throughput in Pane 8.
-   - Explore expression calculations and critical execution paths in the Expression Dependency Graph (Pane 9).
+   - View live canvas rendering in the **Player**.
+   - Read operations and the expressions driving them in **Disassembly**.
+   - Profile frame throughput and coverage in **Runtime ▸ Profiler**, and find out what is
+     forcing repaints in **Runtime ▸ Repaint**.
 
 ---
 
@@ -67,105 +67,183 @@ It provides deep visual introspection into RemoteCompose document layouts, opcod
 - **Dead-Code & Unused Island Detection**: Automatically isolate unconsumed calculation chains (`unusedIslandSet`) and calculate the exact number of operations (`removableOpsCount`) that can be safely deleted without affecting canvas rendering.
 - **Sugiyama / Barycenter Layout Optimization**: Multi-pass layer sweep algorithm that aligns connected nodes horizontally to minimize connection lengths and edge crossings.
 - **Interactive Minimap**: High-level visual radar with a real-time viewport finder box, click-to-center, and drag navigation.
+- **Operation Parameters**: Every operation shows its decoded parameters and which expression drives each one, with click-through to the defining operation.
+- **Layers 3D**: The component stack as orbitable planes, with clip regions, live positions, and an optional capture of the rendered pixels.
+- **Repaint Scheduling**: What causes the next paint, with the operations responsible and the value each schedules.
+- **Interaction & Accessibility**: Hit targets you can fire through the engine's own dispatch, and the accessible tree a screen reader would see.
+- **Execution Coverage**: Which operations measurement has never seen, and which have gone quiet.
 
 ---
 
-## Panel Overview
+## The Panel Bar
 
-### Pane 1: Command List & Tree
+Nine panels, in the order you work: what the document *is*, then what it *does* when it runs,
+then what it renders to and compiles into. Several panels hold more than one view — either as
+**tabs**, when the views answer the same question in turn, or as a **split**, when you need
+both at once. Every panel has a `✕` to close it, a `+` to grow it into the free space, and a
+drag handle on its right edge that moves the boundary with its neighbour.
 
-Displays all operations contained within the RemoteCompose document.
+A fresh session opens with **Player** and **Disassembly**.
 
-- **Display Modes**:
-  - **📋 Compact Mode**: Groups operations hierarchically, indenting child operations within layout containers (`RootLayoutComponent`, `BoxLayout`, `CanvasLayout`).
-  - **🔍 Detailed Mode**: Lists every operation flat with full opcode numbers, payload byte offsets, and hex dumps.
-- **Search & Filtering**: Search by opcode ID, opcode name (e.g. `DrawRect`, `MatrixRotate`), or property value. Filter by opcode type using dropdown filters.
-- **Command Selection**:
-  - **Single Click**: Selects the operation, highlights it in Pane 1, and centers/highlights the corresponding node in Pane 9 (Expression Dependency Graph).
-  - **Double Click or Arrow Click**: Expands or collapses detailed operation properties inline.
-- **Unused Badges (`⚠️ Unused`)**: Highlights operations that belong to unconsumed expression islands and do not contribute to canvas rendering.
+### Player
+
+Live canvas playback: play/pause, step a frame, reset, and a resizable stage with density,
+zoom and theme controls. The stage is pinned to the top-left so it stays reachable when you
+size it past the viewport.
+
+### Disassembly
+
+Every operation in the document, in wire order, with byte offsets and hex.
+
+Operations show their **parameters**, not just their name — and, critically, which expression
+drives each one. `DrawRect(0, 0, 400, 400)` hides the fact that its right and bottom edges come
+from `componentWidth()`; the panel shows `left=0 top=0 right=var_42 (400) bottom=var_43 (400)`,
+and a click on `var_42` jumps to the operation that defines it. Paint parameters are decoded
+through the `PaintBundle` tag grammar, so a paint reads `color=#FF7BD88F style=stroke
+strokeWidth=10 strokeCap=round`.
+
+Values a component measures during layout (`x`, `y`, `width`, `height`) are marked 📐, because
+they are computed rather than stored in the binary.
+
+### Structure
+
+Three tree views that take turns, beside a **Layout & Box Model** split you can toggle:
+
+| tab | what it shows |
+| :--- | :--- |
+| **Component Tree** | the document's declared component hierarchy |
+| **Running Tree** | the tree after inflation, as the engine actually walks it |
+| **Layers 3D** | the component stack as planes you can orbit — see the deep dive below |
+| **Accessibility** | what a screen reader would find |
+
+The **Accessibility** tab lists the document's `contentDescription`, each component's
+accessible name and where it comes from, and warns about clickable components that have none.
+Where a document has no `AccessibilitySemantics` operations it says so, rather than presenting
+names inferred from drawn text as though the document had stated them.
+
+### Runtime
+
+What the document does once it is running. Three tabs:
+
+- **Profiler** — per-frame operation counts by type and by instance, with a sparkline and the
+  invariants check. Includes **execution coverage**: which operations measurement has never
+  seen, and which ran earlier but not in the last 30 frames.
+- **Repaint** — why the next paint happens and which operation asks for it. See the deep dive.
+- **Interaction** — every clickable and touchable target, where it is, and what it runs.
+  **Fire** dispatches through the engine's own hit-testing, so it behaves exactly like a tap.
+  It flags targets that cannot work: zero-sized regions, click modifiers with no actions, and
+  long-press or double-tap targets, which this player never dispatches.
+
+### Variables
+
+The document's state, split so you can see both halves at once: every float, integer, colour,
+path and string variable on the left with live editing, and a plot of the ones you tick on the
+right. The graph half can be toggled off.
+
+### DAG
+
+The expression dependency graph — see the deep dive.
+
+### Environment
+
+The conditions the document renders under. **Size Matrix** renders it across size buckets
+side by side; **Theme** switches light/dark and the system environment variables.
+
+### Statistics
+
+**Overview** gives byte distribution, opcode KPIs and per-type metrics — including the
+average size of each operation type, which separates "many small ops" from "one large one".
+**Treemap** is the same bytes as a squarified treemap you can drill into.
+
+### JSON
+
+The document decompiled to JSON, editable and recompilable.
+
+
+## Deep Dive: Layers 3D
+
+`Structure ▸ Layers 3D` draws every component as a plane in a stack you can orbit, which is
+where overdraw and stacking become visible in a way no tree can show.
+
+**Flattening.** A component that draws nothing of its own — a `ColumnLayout` that only groups
+its children — does not get a plane. It stays in the model as a selectable wireframe on its
+parent's plane, so nothing becomes unreachable, but it does not pad the stack with an empty
+layer. Across the sample documents this removes 37–59% of the planes.
+
+Deciding what "draws" is the subtle part, and the obvious rule is wrong: this engine draws
+through *leaf components*. `weather_demo` has 67 `CoreText` and 25 `ImageLayout` and not one
+draw operation inside any component's child list. A component is a layer when it is
+self-drawing (`CoreText`, `TextLayout`, `ImageLayout`, `CanvasContent`), holds canvas draw
+operations, or paints a background.
+
+**Stack by.** *Nesting* separates by containment, the familiar hierarchy view. *Paint order*
+gives every drawn component its own plane in the order it is painted, which is what actually
+shows one thing sitting on top of another. On documents that draw through leaves, nesting
+collapses nearly flat — droidkaigi is 3 planes by nesting and 313 by paint order.
+
+**Controls.**
+
+| control | effect |
+| :--- | :--- |
+| **Spacing** | separation between planes |
+| **Text** | render a text layer as the words it draws, at its real size and colour |
+| **Clips** | outline scrolling containers in red, and fade what falls outside them |
+| **Scroll** | position layers where they are displayed rather than where they were laid out |
+| **Containers** | show or hide the flattened wireframes |
+| **📷 Capture** | paint each layer with its pixels from the current frame |
+
+**Capture has two honest limits.** Only what has been rendered can be shown, so on a scrolling
+list the layers outside the visible window come back empty — they were never drawn. And a
+layer's window into the frame shows whatever its neighbours painted there too: it is the
+composite within those bounds, not that layer's private contribution.
+
+**GONE and INVISIBLE are different states, and the stack treats them differently.** `GONE` is
+not laid out at all, so it has no place and no size: it is left out and counted in the header.
+`INVISIBLE` does occupy its space and is simply never painted, so it stays in the stack drawn
+in **mauve** — the difference between "this is not here" and "this is here and you cannot see
+it". Both are inherited: nothing inside a `GONE` component is laid out, and nothing inside an
+`INVISIBLE` one is painted. Neither consumes a paint plane.
+
+Visibility is re-evaluated as the document runs, so a component that goes `GONE` and comes
+back reappears in the stack without a reload.
 
 ---
 
-### Pane 2: Operations & Payload Details
+## Deep Dive: Repaint Scheduling
 
-Displays detailed byte payload structures, property key/value pairs, raw bits, and visual path data previews.
+`Runtime ▸ Repaint` answers why a document will not sit still. The engine decides in
+`CoreDocument.paint()`, and the panel reproduces that decision rather than inventing one:
 
-- **Path Data Preview**: Automatically renders vector path commands (`MoveTo`, `LineTo`, `CubicTo`, `QuadTo`) as interactive 2D previews.
-- **IEEE-754 NaN Bit Decoder**: Displays raw bit representations (`0x7f800000 | varId`) for float-encoded expression variable references.
+1. an operation called `needsRepaint()`, or layout asked for one → paint again immediately
+2. otherwise `getOpsToUpdate()`:
+   - a listener on `$CONTINUOUS_SEC` → immediately, before anything else is considered
+   - a listener on `$TIME_IN_SEC` → the next second boundary
+   - a listener on `$TIME_IN_MIN` → the next minute boundary
+   - an explicit `wakeIn(seconds)` → that
+   - nothing → idle
 
----
+Causes are listed in that order, each tagged **determines next paint** or **subsumed**, with
+the operations behind it and the value it schedules. A listener on `$CONTINUOUS_SEC` is the
+usual answer to an unexplained constant repaint.
 
-### Pane 3: RemoteCompose Live Canvas Player
+One case cannot name its caller: `PaintContext` records the immediate flag as a bare boolean.
+For that branch the panel resolves the operations that request an immediate repaint when they
+run — `TimeAttribute` in its elapsed modes, `ParticlesLoop`, `ParticlesCompare`, animated
+`FloatExpression`s while still running, `TouchExpression` — marks the ones whose state says
+they are doing so right now, and says the attribution is derived rather than observed.
 
-Provides interactive real-time visual playback of the RemoteCompose document.
-
-- **Controls**:
-  - **Play / Pause (`▶` / `⏸`)**: Toggles real-time state variable animation (e.g. `$TIME` advancement).
-  - **Step Forward (`⏭`)**: Advances playback by a single frame.
-  - **Reset (`🔄`)**: Resets state variables to default initial values.
-- **Canvas Interaction**: Zoom and pan the canvas preview to inspect high-resolution vector drawing details.
-
----
-
-### Pane 5: State & Variable Inspector
-
-Lists all active variables stored in `RemoteComposeState`.
-
-- **Categories**: Float Variables, Integer Variables, Color Variables, Path Variables, and String Resources.
-- **Live State Overrides**: Edit variable values directly in input fields to override engine state and trigger instant canvas repainting.
+The **observed** paint rate is measured over five seconds of wall clock, and is deliberately
+separate from what the document *asks for*: the two can disagree.
 
 ---
 
-### Pane 8: Profiler & Operation Measurement Engine
+## Deep Dive: Profiler & Coverage
 
-Measures real-time per-frame execution workload, operation throughput, and rendering invariants.
-
-- **Sparkline Waveform**: Plots operation volume across the last 600 frames to visualize rendering stability and burst spikes.
-- **Opcode & Instance Breakdown**: Ranks operation types and individual instances by execution frequency.
-- **Invariants Engine**: Automatically verifies that per-type and per-instance operation totals match total ops per frame (`getOpsPerFrame()`).
-
----
-
-### Pane 9: Expression Dependency Graph
-
-A full DAG visualizer for expressions, variables, and consumer operations.
-
-- **Node Types**:
-  - **🟦 FloatExpr**: `FloatExpression` formulas (e.g. `var_10 = sys_1 * 6.0`).
-  - **🟪 IntExpr**: `IntegerExpression` formulas and color expressions.
-  - **🟨 SysVar**: System Environment Variables (`sys_1` `$TIME`, `sys_2` `$WIDTH`, `sys_3` `$HEIGHT`, `sys_4` `$ANIMATION`).
-  - **🟩 Constant**: Static float or integer constant definitions (`var_1`, `var_2`).
-  - **🎨 Consumer**: Drawing, matrix, and modifier operations that consume expression values (`DrawRect`, `MatrixRotate`, `MatrixScale`, `MatrixSkew`).
-  - **⚠️ Unused Island**: Dead-code expression nodes that are not consumed by any live rendering path.
-- **Multi-Tier Level of Detail (LOD)**:
-  - **Full LOD (`≥ 55% Zoom`)**: Displays icon, label, formula text, and live value pill (`Val: 15.00`).
-  - **Medium LOD (`30% - 55% Zoom`)**: Displays icon, label, and live value pill.
-  - **Low LOD (`< 30% Zoom`)**: Displays compact micro-cards for large zoomed-out overviews.
-
----
-
-### Pane 10: Binary Treemap & Byte Allocation Visualizer
-
-Visualizes binary file size distribution and byte consumption across semantic opcode categories and individual operations.
-
-- **Squarified 2D Treemap**: Aspect-ratio-optimized hierarchical rectangles representing categories (Header, Layout, Modifiers, Text, Paths, State, Draw, Bitmaps, Control Flow).
-- **Drill-down Navigation**: Click any category tile to zoom into its individual operation tiles with live breadcrumb navigation.
-- **Ranked Allocation Table**: View and sort all operations by byte size, opcode hex code, and byte offset range (`0x0721..0x0986`).
-- **Top 5 Space Consumers**: Quick-access pills highlighting the largest operations in the document.
-- **Bidirectional Command List Deep-Linking**:
-  - Clicking any tile, table row, or hog pill instantly restores the **Command List (Pane 2)**, selects the operation, expands its properties, and smoothly scrolls to it with a cyan pulse glow animation (`treemap-highlight-pulse`).
-  - Selecting any operation in the Command List or Profiler automatically syncs and highlights the corresponding tile/row in the Binary Treemap.
-
----
-
-## Deep Dive: Profiler & Performance Optimization (Pane 8)
-
-The **Profiler & Op Measurement Panel (Pane 8)** allows document authors and engine developers to measure the exact execution cost of a RemoteCompose document frame by frame.
+The **Profiler** tab of the Runtime panel allows document authors and engine developers to measure the exact execution cost of a RemoteCompose document frame by frame.
 
 ```
 +-----------------------------------------------------------------------------------+
-|                        ⏱️ Profiler & Op Measurement (Pane 8)                      |
+|                        ⏱️ Runtime ▸ Profiler                                           |
 +-----------------------------------------------------------------------------------+
 | [Last Frame: 142]   [Peak: 185]   [Mean: 138]   [Frames: 1,240]   [Types: 14]       |
 +-----------------------------------------------------------------------------------+
@@ -198,7 +276,7 @@ The **Profiler & Op Measurement Panel (Pane 8)** allows document authors and eng
 
 ### Ranking Modes: Last, Total, and Peak
 
-Use the **Rank Mode** dropdown in Pane 8 to sort opcode and instance tables:
+Use the **Rank Mode** dropdown in the Profiler to sort opcode and instance tables:
 
 1. **Last Frame (`last`) [Default]**:
    - Sorts opcodes and instances by their execution count in the most recent frame.
@@ -217,34 +295,34 @@ Use the **Rank Mode** dropdown in Pane 8 to sort opcode and instance tables:
 Every row in the **By Operation Instance** table represents a specific instantiated operation object in the document.
 
 - **Clicking an Instance Row**:
-  1. Instantly locates and highlights the operation in the **Command List (Pane 1)**.
-  2. Centers and zooms the corresponding node in the **Expression Dependency Graph (Pane 9)**.
-  3. Displays detailed byte offsets and properties in **Pane 2**.
+  1. Instantly locates and highlights the operation in the **Command List (the Disassembly panel)**.
+  2. Centers and zooms the corresponding node in the **DAG**.
+  3. Displays detailed byte offsets and properties in **Disassembly**.
 
 ---
 
 ### Step-by-Step Performance Profiling Workflow
 
-To optimize a RemoteCompose document using Pane 8:
+To optimize a RemoteCompose document using the Profiler:
 
-1. **Start Playback & Observe Sparkline**: Press Play (`▶`) in Pane 3. Observe the green sparkline waveform in Pane 8.
+1. **Start Playback & Observe Sparkline**: Press Play (`▶`) in the Player. Observe the green sparkline waveform in the Profiler.
    - *Flat, low waveform*: Document is light and efficient.
    - *Spiky or high waveform*: Document has high per-frame operation volume or periodic rendering spikes.
 2. **Identify Heavy Opcode Types**: Inspect the **By Opcode Type** table. Look for high counts of expensive operations:
    - Excessive `MatrixSave` (`#130`) / `MatrixRestore` (`#131`) pairs suggest redundant matrix stack saves.
    - High `FloatExpression` (`#81`) counts suggest complex variable math that could be simplified.
-3. **Locate Hotspot Instances**: Switch Rank Mode to **Total** or **Peak** and click top instance rows to jump directly to the offending commands in Pane 1 and Pane 9.
+3. **Locate Hotspot Instances**: Switch Rank Mode to **Total** or **Peak** and click top instance rows to jump directly to the offending commands in Disassembly and the DAG.
 4. **Verify Engine Invariants**: Ensure the green **Invariants Status** bar reports `Invariants hold`. If `INVARIANT FAILED` appears, one or more custom operations are not properly reporting their frame execution counts.
 
 ---
 
-## Deep Dive: Expression Dependency Graph & Document Analysis (Pane 9)
+## Deep Dive: Expression Dependency Graph
 
-The **Expression Dependency Graph (Pane 9)** translates flat document opcode lists into an interactive directed acyclic graph (DAG). It is designed specifically to analyze mathematical formulas, trace variable state flows, and clean up bloated documents.
+The **DAG** panel translates flat document opcode lists into an interactive directed acyclic graph (DAG). It is designed specifically to analyze mathematical formulas, trace variable state flows, and clean up bloated documents.
 
 ```
 +-----------------------------------------------------------------------------------+
-|                        🧬 Expression Dependency Graph (Pane 9)                    |
+|                        🧬 DAG — Expression Dependency Graph                      |
 +-----------------------------------------------------------------------------------+
 | [🌐 Graph] [📋 Tree] [🎯 Fit] [⚠️ Unused First] [🔥 Critical Path] [🎛️ Live Sim]  |
 +-----------------------------------------------------------------------------------+
@@ -277,7 +355,7 @@ Documents compiled from design tools often contain "dead code" — expressions o
 1. **Check Legend Bar**: Look for the orange badge `⚠️ X Unused Islands (Y ops removable)`.
    - `Unused Islands`: Groups of expressions that do not connect to any Consumer operation.
    - `Removable Ops`: The exact number of operations that can be deleted to shrink file size.
-2. **Enable `⚠️ Unused First` Sorting**: Click **`⚠️ Unused First`** in the Pane 9 header. This sorts all dead-code islands to the top of graph columns.
+2. **Enable `⚠️ Unused First` Sorting**: Click **`⚠️ Unused First`** in the the DAG header. This sorts all dead-code islands to the top of graph columns.
 3. **Inspect Unused Subgraphs**: Unused nodes and edges are styled with orange dashed strokes (`stroke-dasharray="5 3"`).
 4. **Prune Document**: Remove the unused variable IDs from your source layout definition to reduce binary file size and decrease engine initialization time.
 
@@ -288,14 +366,14 @@ Documents compiled from design tools often contain "dead code" — expressions o
 Test animation behavior and inspect expression calculations in real-time without re-compiling the document.
 
 #### How to Simulate Variable State:
-1. **Open Simulator**: Click **`🎛️ Live Simulator`** in the Pane 9 header to open the range slider tray.
+1. **Open Simulator**: Click **`🎛️ Live Simulator`** in the the DAG header to open the range slider tray.
 2. **Adjust System Variables**:
    - Drag **`$TIME (sys_1)`** (0s to 60s) to simulate clock hand motion or time-based animations.
    - Drag **`$ANIMATION (sys_4)`** (0.0 to 1.0) to test transition progress bars or entrance animations.
    - Drag **`$WIDTH (sys_2)`** or **`$HEIGHT (sys_3)`** to test responsive layout resizing.
 3. **Observe Live Graph Feedback**:
-   - Every node card in Pane 9 displays a live green value pill (`Val: 15.00`).
-   - Dragging a slider updates all downstream expression pills and repaints the Live Canvas Player (Pane 3) synchronously.
+   - Every node card in the DAG displays a live green value pill (`Val: 15.00`).
+   - Dragging a slider updates all downstream expression pills and repaints the Player synchronously.
 4. **Test Edge Cases**: Move sliders to extreme bounds (`$TIME = 0`, `$WIDTH = 0`, `$ANIMATION = 1.0`) to check for `NaN` values, divide-by-zero errors, or broken layout math.
 
 ---
@@ -305,7 +383,7 @@ Test animation behavior and inspect expression calculations in real-time without
 Complex RemoteCompose documents with deeply nested `FloatExpression` chains can introduce latency during frame evaluation.
 
 #### How to Trace Critical Calculation Pipelines:
-1. **Enable Critical Path**: Click **`🔥 Critical Path`** in the Pane 9 header.
+1. **Enable Critical Path**: Click **`🔥 Critical Path`** in the the DAG header.
 2. **Identify Deepest Chain**: The engine runs a topological longest-path algorithm ($O(V + E)$) and highlights the deepest calculation stack in glowing gold (`#f59e0b`).
 3. **Inspect Step Evaluation Badges**: Connection arrows display live evaluation step chips directly on the curve midpoints (`10.00 ➔ var_11`).
 4. **Optimize Pipeline**: Simplify multi-stage expression chains (e.g. `sys_1 ➔ var_10 ➔ var_11 ➔ var_12 ➔ MatrixRotate`) by folding constant math terms or combining redundant expressions into single `FloatExpression` operations.
@@ -317,7 +395,7 @@ Complex RemoteCompose documents with deeply nested `FloatExpression` chains can 
 Isolate specific components or variables within large DAG graphs containing 100+ nodes.
 
 #### How to Isolate Subgraphs:
-1. **Select Node**: Click any node card in Pane 9 or any operation in Pane 1.
+1. **Select Node**: Click any node card in the DAG or any operation in the Disassembly panel.
 2. **Visual Color Hierarchy**:
    - **Cyan (`#38bdf8`)**: Currently selected target node.
    - **Soft Emerald Green (`#34d399`)**: Direct & transitive **Upstream Ancestors** (all variables and constants required to compute the selected node).
@@ -332,7 +410,7 @@ Isolate specific components or variables within large DAG graphs containing 100+
 
 Navigate massive multi-column DAG layouts effortlessly using the floating minimap overlay.
 
-1. **Overview Radar**: Located in the bottom-right corner of Pane 9. Shows a color-coded thumbnail of all graph nodes.
+1. **Overview Radar**: Located in the bottom-right corner of the DAG. Shows a color-coded thumbnail of all graph nodes.
 2. **Viewport Finder Box**: The semi-transparent cyan rectangle (`#exprMinimapViewport`) indicates your current visible canvas area.
 3. **Click-to-Center**: Click anywhere inside the minimap to instantly center the main DAG canvas on that position.
 4. **Drag Navigation**: Drag the cyan finder box to smoothly pan across large graph layouts.
@@ -344,11 +422,20 @@ Navigate massive multi-column DAG layouts effortlessly using the floating minima
 
 | Context | Action | Behavior |
 | :--- | :--- | :--- |
-| **Command List (Pane 1)** | Single Click | Selects operation & syncs/centers node in Pane 9 |
-| **Command List (Pane 1)** | Double Click / Arrow | Expands inline detailed property breakdown |
-| **Dependency Graph (Pane 9)**| Click Node | Selects node, highlights upstream ancestors (green) & downstream dependents (purple) |
-| **Dependency Graph (Pane 9)**| Click Empty Canvas | Deselects node selection |
-| **Dependency Graph (Pane 9)**| Mouse Drag | Pans the graph canvas |
-| **Dependency Graph (Pane 9)**| Mouse Wheel | Zooms in/out with cursor-centered focal scaling |
-| **Minimap (Pane 9)** | Pointer Click / Drag | Pans main graph canvas to clicked world location |
-| **Profiler (Pane 8)** | Click Instance Row | Locates operation in Pane 1 & centers node in Pane 9 |
+| **Panels** | Drag a handle | Moves the boundary: the panel on the left grows, the one on the right shrinks |
+| **Panels** | Double-click a handle | Resets both panels it separates to their default widths |
+| **Panels** | `+` in the header | Grows the panel into the free space; press again to restore |
+| **Disassembly** | Single click | Selects the operation and centres the matching node in the DAG |
+| **Disassembly** | Double click / arrow | Expands the parameter table, byte offsets and hex |
+| **Disassembly** | Click `var_N` | Jumps to the operation that defines that variable |
+| **Structure ▸ Layers 3D** | Drag | Orbits about the centre of the view |
+| **Structure ▸ Layers 3D** | Shift-drag, middle-drag, right-drag | Pans |
+| **Structure ▸ Layers 3D** | Scroll / pinch | Zooms, anchored on the cursor |
+| **Structure ▸ Layers 3D** | Click a quad | Selects the component and fills in the box model |
+| **DAG** | Click node | Highlights upstream ancestors (green) and downstream dependents (purple) |
+| **DAG** | Click empty canvas | Deselects |
+| **DAG** | Drag | Pans the graph |
+| **DAG** | Scroll / pinch | Zooms, anchored on the cursor |
+| **DAG minimap** | Click / drag | Pans the graph to that world location |
+| **Runtime ▸ Profiler** | Click instance row | Locates the operation in Disassembly and the DAG |
+| **Runtime ▸ Interaction** | **Fire** | Dispatches through the engine's hit-testing, as a real tap would |

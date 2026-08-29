@@ -724,6 +724,140 @@
             font-weight: 600;
         }
 
+        /* Layers: the component stack in 3D. Quads are real elements so the browser does
+           hit-testing for us; they are parallel planes, so CSS 3D is sufficient. */
+        .layers3d-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .layers3d-viewport {
+            position: relative;
+            flex: 1;
+            min-height: 220px;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 50% 40%, rgba(56,189,248,0.06), transparent 60%),
+                #0b111a;
+            cursor: grab;
+            touch-action: none;
+        }
+
+        .layers3d-viewport.orbiting { cursor: grabbing; }
+
+        .layers3d-viewport.panning { cursor: move; }
+
+        .layers3d-viewport.panning { cursor: move; }
+
+        /* Zoom sits outside the perspective so it magnifies the projection rather than the
+           scene, which keeps layer separation independent of zoom level. */
+        .layers3d-zoom {
+            position: absolute;
+            inset: 0;
+            transform-origin: 50% 50%;
+        }
+
+        .layers3d-stage {
+            position: absolute;
+            inset: 0;
+            perspective: 1600px;
+        }
+
+        .layers3d-scene {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform-style: preserve-3d;
+            transition: transform 0.05s linear;
+        }
+
+        .layers3d-hint {
+            position: absolute;
+            left: 10px;
+            bottom: 8px;
+            font-size: 0.7rem;
+            color: #ffffff;
+            opacity: 0.55;
+            pointer-events: none;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+            z-index: 2;
+        }
+
+        .layer-ground {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: 1px dashed rgba(148,163,184,0.35);
+            background: rgba(148,163,184,0.04);
+            transform: translate3d(0, 0, -14px);
+        }
+
+        .layer-quad {
+            position: absolute;
+            top: 0;
+            left: 0;
+            border: 1px solid;
+            box-sizing: border-box;
+            transform-style: preserve-3d;
+            cursor: pointer;
+        }
+
+        .layer-quad.layer-wire {
+            border-style: dashed;
+            opacity: 0.5;
+        }
+
+        .layer-quad.hovered {
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.5);
+            opacity: 1;
+        }
+
+        .layer-quad.selected {
+            border-color: var(--accent-blue) !important;
+            background: rgba(56,189,248,0.3) !important;
+            box-shadow: 0 0 0 2px var(--accent-blue);
+            opacity: 1;
+        }
+
+        .layer-clip {
+            position: absolute;
+            top: 0;
+            left: 0;
+            box-sizing: border-box;
+            border: 1.5px solid rgba(244, 63, 94, 0.85);
+            background: rgba(244, 63, 94, 0.05);
+            pointer-events: none;
+        }
+
+        /* A text layer showing its own words fills the quad instead of sitting as a corner tag. */
+        .layer-label.layer-text {
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            line-height: 1.05;
+            text-shadow: none;
+        }
+
+        .layer-label {
+            position: absolute;
+            top: 1px;
+            left: 3px;
+            font-family: var(--code-font);
+            font-size: 8px;
+            line-height: 1.1;
+            white-space: nowrap;
+            pointer-events: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.85);
+        }
+
         .panel-split-toggle {
             background: transparent;
             border: 1px solid var(--border-color);
@@ -1926,6 +2060,26 @@
             font-size: 0.75rem;
             transition: all 0.12s ease;
             flex-shrink: 0;
+        }
+
+        .panel-max-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            border-radius: 4px;
+            padding: 2px 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.12s ease;
+            flex-shrink: 0;
+        }
+
+        .panel-max-btn.active {
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
         }
 
         .panel-hide-btn:hover {

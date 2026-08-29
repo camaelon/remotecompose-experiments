@@ -215,12 +215,14 @@ export async function loadRcArrayBuffer(arrayBuffer, name, sourceJson) {
                 if (typeof window.updateComponentTreeLive === 'function') window.updateComponentTreeLive();
                 if (typeof window.updateRunningTreeLive === 'function') window.updateRunningTreeLive();
                 if (typeof window.updateRepaintPanelLive === 'function') window.updateRepaintPanelLive();
+                if (typeof window.refreshLayers3DBounds === 'function') window.refreshLayers3DBounds();
             });
         }
         drawProfiler();
         if (typeof window.resetRepaintHistory === 'function') window.resetRepaintHistory();
         if (typeof window.renderInteractionPanel === 'function') window.renderInteractionPanel();
         if (typeof window.renderAccessibilityPanel === 'function') window.renderAccessibilityPanel();
+        if (typeof window.invalidateLayers3DModel === 'function') window.invalidateLayers3DModel();
     }
 
     // Maintain selected preview density (default 1.0) on document load

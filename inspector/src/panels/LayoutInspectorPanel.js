@@ -19,6 +19,13 @@ export function getSelectedComponentKey() {
     return selectedComponentKey;
 }
 
+/** The live component object behind the current selection, for views that key off identity. */
+export function getSelectedComponentOp() {
+    if (!selectedComponentKey) return null;
+    const found = cachedLayoutComponents.find(c => c.key === selectedComponentKey);
+    return found ? found.op : null;
+}
+
 export function getShowLayoutBoundsOverlay() {
     return showLayoutBoundsOverlay;
 }

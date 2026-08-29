@@ -499,7 +499,14 @@ function initExprGraphInteractions() {
 
     container.addEventListener('wheel', (e) => {
         e.preventDefault();
-        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+        // Scale by how far the gesture actually moved. A fixed factor per event is fine for a
+        // mouse wheel, which fires once per notch, but a trackpad emits a stream of small
+        // events and compounds a gentle swipe into an enormous jump.
+        const px = e.deltaMode === 1 ? e.deltaY * 16        // lines
+                 : e.deltaMode === 2 ? e.deltaY * 400       // pages
+                 : e.deltaY;                                // pixels
+        const sensitivity = e.ctrlKey ? 0.010 : 0.0022;     // pinch arrives with ctrlKey set
+        const zoomFactor = Math.min(1.25, Math.max(0.8, Math.exp(-px * sensitivity)));
         const newZoom = Math.max(0.25, Math.min(3.0, exprGraphZoom * zoomFactor));
 
         const rect = container.getBoundingClientRect();

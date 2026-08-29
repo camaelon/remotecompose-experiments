@@ -11,6 +11,7 @@ import { renderExpressionDependencyGraph } from './DependencyGraphPanel.js';
 import { renderRepaintPanel } from './RepaintPanel.js';
 import { renderInteractionPanel } from './InteractionPanel.js';
 import { renderAccessibilityPanel } from './AccessibilityPanel.js';
+import { renderLayers3DPanel } from './Layers3DPanel.js';
 import {
     stepOpForward,
     stepOpBackward,
@@ -107,7 +108,7 @@ export const DEFAULT_PANELS = ['pane1', 'pane2'];
 
 // Views that share a host by taking turns. Only one is on screen at a time.
 export const PANEL_SUBVIEWS = {
-    pane3: ['sub_pane3', 'pane7', 'pane17'],
+    pane3: ['sub_pane3', 'pane7', 'layers3d', 'pane17'],
     pane14: ['sub_pane14', 'pane10'],
     // Runtime: what the document does once it is running.
     pane8: ['sub_pane8', 'pane15', 'pane16'],
@@ -149,6 +150,7 @@ function renderSubview(subId) {
     else if (subId === 'pane10') updateTreemapUI();
     else if (subId === 'pane6') { updateGraphLegend(); setTimeout(() => renderGraphCanvas(), 30); }
     else if (subId === 'pane17') renderAccessibilityPanel();
+    else if (subId === 'layers3d') renderLayers3DPanel();
     else if (subId === 'pane15') renderRepaintPanel();
     else if (subId === 'pane16') renderInteractionPanel();
     else if (subId === 'pane12') renderResponsiveMatrixPanel(window.currentBuffer || window.currentDocument);
@@ -263,6 +265,59 @@ export function applyPaneWidth(paneId, pane) {
     el.style.flex = 'none';
 }
 
+/**
+ * Grow a panel to take every pixel the other open panels are not using, and put it back on a
+ * second press. Widths are remembered per panel, so "maximise" has to stash the previous one
+ * rather than recompute a default that the user may have deliberately changed.
+ */
+const preMaximizeWidths = {};
+
+export function maximizePanel(event, paneId) {
+    if (event) event.stopPropagation();
+    const pane = document.getElementById(paneId);
+    if (!pane) return;
+
+    if (preMaximizeWidths[paneId]) {
+        const restore = preMaximizeWidths[paneId];
+        delete preMaximizeWidths[paneId];
+        pane.style.width = restore;
+        pane.style.flex = 'none';
+        lastPaneWidths[paneId] = restore;
+        updateMaximizeButtons();
+        return;
+    }
+
+    const row = pane.parentElement;
+    if (!row) return;
+    let taken = 0;
+    Array.from(row.children).forEach(el => {
+        if (el === pane) return;
+        if (el.classList.contains('panel') && el.classList.contains('hidden-panel')) return;
+        if (el.classList.contains('panel-resizer') && el.style.display === 'none') return;
+        if (!el.classList.contains('panel') && !el.classList.contains('panel-resizer')) return;
+        taken += el.getBoundingClientRect().width;
+    });
+    const available = row.getBoundingClientRect().width - taken - 8;
+    if (!(available > 100)) return;
+
+    preMaximizeWidths[paneId] = lastPaneWidths[paneId] || `${Math.round(pane.getBoundingClientRect().width)}px`;
+    const w = `${Math.round(available)}px`;
+    pane.style.width = w;
+    pane.style.flex = 'none';
+    lastPaneWidths[paneId] = w;
+    updateMaximizeButtons();
+}
+
+function updateMaximizeButtons() {
+    document.querySelectorAll('.panel-max-btn').forEach(btn => {
+        const paneId = btn.dataset.pane;
+        const on = !!preMaximizeWidths[paneId];
+        btn.classList.toggle('active', on);
+        btn.textContent = on ? '\u2212' : '+';
+        btn.title = on ? 'Restore this panel to its previous width' : 'Grow this panel to the free space';
+    });
+}
+
 /** Show the panels a fresh session opens with. */
 export function applyDefaultLayout() {
     applyWorkspace(DEFAULT_PANELS);
@@ -274,6 +329,7 @@ export function hidePanel(event, paneId) {
     if (!pane) return;
 
     pane.classList.add('hidden-panel');
+    delete preMaximizeWidths[paneId];
     updateHeaderCollapsedBar();
     updatePanelPucks();
     updateResizersVisibility();
@@ -339,25 +395,12 @@ export function updateHeaderCollapsedBar() {
 
 
 export function updateResizersVisibility() {
-    // A handle reads as a divider, so it only earns its place between two panels. A trailing
-    // one sitting past the last panel does resize that panel, but nothing about it says so —
-    // it looks like a stray control. The single exception is a lone open panel: with nothing
-    // to divide it would otherwise have no way to be resized at all.
-    const isVisible = (el) => el && !el.classList.contains('hidden-panel');
-    const openPanels = Array.from(document.querySelectorAll('.panel')).filter(isVisible);
-    const onlyOnePanel = openPanels.length === 1;
-
+    // Every visible panel gets its handle. A trailing handle is not decoration: panels keep
+    // fixed widths and do not fill the row, so the last panel has free space to its right and
+    // its handle is the only way to grow into it.
     document.querySelectorAll('.panel-resizer').forEach(resizer => {
         const pane = document.getElementById(resizer.dataset.resizePane);
-        if (!isVisible(pane)) { resizer.style.display = 'none'; return; }
-
-        let dividesTwo = false;
-        let node = resizer.nextElementSibling;
-        while (node) {
-            if (node.classList.contains('panel') && isVisible(node)) { dividesTwo = true; break; }
-            node = node.nextElementSibling;
-        }
-        resizer.style.display = (dividesTwo || onlyOnePanel) ? '' : 'none';
+        resizer.style.display = (pane && !pane.classList.contains('hidden-panel')) ? '' : 'none';
     });
 }
 

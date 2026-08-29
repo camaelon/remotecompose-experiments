@@ -75,7 +75,7 @@ The RemoteCompose Inspector is designed with a **two-tier hybrid architecture**:
 
 ## 3. Modular Panel Structure (`src/`)
 
-The inspector source code is structured as follows:
+The inspector source is structured as follows:
 
 ```
 inspector/
@@ -84,29 +84,131 @@ inspector/
 ├── remote_compose_player.js       # Generated: player engine bundled from players/typescript/
 ├── RemoteComposeSerializer.js     # Binary encoder & decompiler engine
 ├── dist/                          # Generated distribution bundle
-│   └── index.html                 # Self-contained single-file inspector (243 KB)
+│   └── index.html                 # Self-contained single-file inspector
 └── src/
     ├── index.html                 # HTML shell and panel DOM templates
     ├── main.js                    # Core event bus and document loader
     ├── styles/
     │   └── main.css               # Dark theme layout styles
     └── panels/
-        ├── CommandListPanel.js    # Disassembly, hex offsets & variable reachability
-        ├── ComponentTreePanel.js  # Static and running post-inflation component trees
-        ├── DependencyGraphPanel.js# RPN DAG graph analyzer & dead-code island detection
-        ├── DocumentLoader.js      # Drag-and-drop, URL parameter fetcher & array buffer parsing
-        ├── DocumentStatsPanel.js  # Document byte distribution & opcode KPI cards
-        ├── JsonEditorPanel.js     # CodeMirror editor, JSON decompiler & live recompiler
-        ├── LayoutManager.js       # Workspace resizers, panel toggles & instance lookup
-        ├── ProfilerPanel.js       # Opcode frequency and microsecond timing measurement
-        ├── StagePanel.js          # Stage sizing, density presets & operation stepper
-        ├── VariablesPanel.js      # Variable inspector & real-time oscilloscope graphing
-        └── BinaryTreemapPanel.js  # Squarified binary treemap & byte allocation analyzer
+        ├── LayoutManager.js       # Panel registry, tabs, splits, resizing
+        ├── DocumentLoader.js      # Load, parse, and fan out to every panel
+        ├── StagePanel.js          # Player, stage sizing, execution stepping
+        ├── CommandListPanel.js    # Disassembly, byte offsets, parameter tables
+        ├── OpParameters.js        # Shared operation parameter decoding
+        ├── ComponentWalk.js       # Component tree walk, layer model, scroll & clip
+        ├── ComponentTreePanel.js  # Static and running post-inflation trees
+        ├── LayoutInspectorPanel.js# Box model, layout diagnostics
+        ├── Layers3DPanel.js       # The component stack as orbitable planes
+        ├── AccessibilityPanel.js  # The accessible tree
+        ├── InteractionPanel.js    # Hit targets and action dispatch
+        ├── RepaintPanel.js        # Repaint scheduling and its causes
+        ├── ProfilerPanel.js       # Per-frame measurement and coverage
+        ├── VariablesPanel.js      # State values and graphs
+        ├── DependencyGraphPanel.js# Expression DAG
+        ├── BinaryTreemapPanel.js  # Byte allocation treemap
+        ├── DocumentStatsPanel.js  # Byte distribution and opcode KPIs
+        ├── ThemeEnvironmentPanel.js
+        ├── ResponsiveMatrixPanel.js
+        └── JsonEditorPanel.js
 ```
+
+### Shared model modules
+
+Two modules hold knowledge about the format rather than about a panel, so that what one panel
+displays and what another reasons about cannot drift apart:
+
+- **`OpParameters.js`** decodes an operation's parameters. RemoteCompose stores a float that an
+  expression drives as a NaN-boxed value — the exponent all ones, the mantissa carrying the
+  variable id — so a literal and a reference occupy the same slot and are only distinguishable
+  from the raw bits. Operations keep those bits in `mFooBits` and the value resolved for the
+  frame in `mFoo`; matrix operations keep the bits directly in the named field. Paint
+  parameters are walked with the `PaintBundle` tag grammar rather than scanned, because an
+  opaque ARGB colour such as `0xFFFFC46B` also satisfies the NaN test and a blind scan reads it
+  as a reference to variable 8373355.
+
+- **`ComponentWalk.js`** walks the inflated component tree and builds the layer model: which
+  components draw, which are pure structure, where each one is on screen, what clips it, and
+  what is hidden. `getLocationInWindow()` sums parent positions and never accounts for scroll —
+  correct for the engine, which hit-tests in unscrolled layout coordinates — so anything
+  showing what is *displayed* subtracts it here instead.
+
+### Panels, tabs and splits
+
+`LayoutManager` owns three relationships:
+
+- **Panels** are columns, declared in `PANEL_META` and ordered by `PANEL_PUCKS`.
+- **`PANEL_SUBVIEWS`** are views that share a host by taking turns — tabs. Only one is on
+  screen at a time.
+- **`PANEL_SPLITS`** are views that share a host side by side, because they are needed
+  together: a tree and the box model of the node you picked in it; a variable list and the plot
+  of the ones you ticked. Each split half can be toggled off.
+
+A merged sub-view keeps the element id its panel had, and inactive sub-views reuse the
+`hidden-panel` class. That is what lets every pre-existing lookup, visibility guard and
+`restorePanel('pane6')` call site keep working after the merge: `restorePanel` routes an
+absorbed id to its host and selects the right tab.
+
+Resize handles are generic — one per panel, addressed by `data-resize-pane` — and a drag moves
+the *boundary*, growing one panel while shrinking its neighbour. The previous version hardcoded
+every adjacent pair, which meant the panel order could not change without rewriting the drag
+logic, and the last panel in the row could never be resized at all.
+
+### The 3D layer view
+
+`Layers3DPanel` renders with CSS 3D rather than a canvas, so every quad is a real element and
+hit-testing, hover and click-to-select come from the DOM and reuse the tree's selection path.
+The layers are parallel planes, so the one thing CSS 3D cannot do — interpenetrating geometry —
+never arises. Three invariants are easy to break and worth stating:
+
+- **Zoom and pan live *outside* the perspective**, on a wrapper the scene sits inside. Folding
+  zoom into the 3D transform scales `translateZ` along with everything else, so zooming appears
+  to change the layer spacing; and anchoring on the cursor through the 3D pivot is only exact
+  on the pivot's own plane, because perspective moves other depths differently. A flat 2D scale
+  about a fixed origin is exactly invertible at every depth.
+- **Rotation turns about an explicit pivot** held at the centre of the viewport, so panning
+  moves the pivot rather than sliding the image. Because pan is applied flat, it is folded back
+  into the pivot when an orbit begins — same image, but the point at the centre of the view
+  becomes the point rotation turns about.
+- **The scene anchor is fixed once the stack is built.** Recomputing the content box every
+  frame makes the scene re-centre as a list scrolls, which reads as everything that *doesn't*
+  scroll drifting the other way.
+
+Content offsets belong inside the transform, never as a CSS margin: margins apply in layout
+space and are not affected by the scale that follows them, so a tall scrolling document ends up
+displaced by thousands of unscaled pixels.
 
 ---
 
-## 4. Headless Chrome CDP Bridge (`Option A`)
+## 4. Testing
+
+```bash
+cd inspector && npm test          # node --test tests/*.test.js
+```
+
+Tests run against the built player in `dist/`, so run a build first if the engine changed.
+`tests/test_helpers.js` provides `setupMockEnvironment()` for a DOM stub and
+`loadSampleDocument(name)` to load a real `.rc` from `samples/` through the actual player —
+the model-level suites use real documents rather than fixtures, because the bugs worth
+catching here have all been about what the format actually does.
+
+The suites divide by what they protect:
+
+| suite | protects |
+| :--- | :--- |
+| `OpParameters` | the NaN-boxing rules, including that an opaque ARGB colour is not a variable reference |
+| `ComponentWalk` | the layer model: what draws, what flattens, scroll accumulation, GONE vs INVISIBLE |
+| `Layers3DPanel` | clip fractions and the screen↔scene projection inverse |
+| `RepaintPanel` | that the panel reports the engine's decision rather than deriving its own |
+| `InteractionPanel` | hit targets, dispatchability, and the accessible tree |
+| `ProfilerPanel` | measurement accumulation and coverage |
+| `LayoutManager` | the panel registry, tabs, splits, and id routing after the merge |
+
+---
+
+---
+
+## 5. Headless Chrome CDP Bridge (`Option A`)
 
 The MCP server uses **Chrome DevTools Protocol (CDP)** over a temporary loopback WebSocket to evaluate RemoteCompose documents headlessly without needing any network ports exposed on public interfaces:
 
@@ -117,7 +219,7 @@ The MCP server uses **Chrome DevTools Protocol (CDP)** over a temporary loopback
 
 ---
 
-## 5. Model Context Protocol (MCP) Tools Registry
+## 6. Model Context Protocol (MCP) Tools Registry
 
 The MCP server (`mcp-server.mjs`) exposes the following tool suite to LLMs:
 
@@ -132,7 +234,7 @@ The MCP server (`mcp-server.mjs`) exposes the following tool suite to LLMs:
 
 ---
 
-## 6. Build Workflow
+## 7. Build Workflow
 
 `build.mjs` runs three stages, from sources to the published distribution:
 

@@ -76,7 +76,7 @@ describe("LayoutManager Tests", () => {
         splits.forEach(id => assert.ok(!tabs.includes(id), `${id} should not be both a tab and a split`));
 
         // The tree views take turns; the box model sits beside them.
-        assert.deepStrictEqual(PANEL_SUBVIEWS.pane3, ['sub_pane3', 'pane7', 'pane17']);
+        assert.deepStrictEqual(PANEL_SUBVIEWS.pane3, ['sub_pane3', 'pane7', 'layers3d', 'pane17']);
         assert.deepStrictEqual(PANEL_SPLITS.pane3, ['pane13']);
         assert.strictEqual(SUBVIEW_HOST.pane7, 'pane3');
         assert.strictEqual(SPLIT_HOST.pane13, 'pane3');
@@ -118,5 +118,48 @@ describe("LayoutManager Tests", () => {
 
         togglePanelPuck("pane3");
         assert.ok(document.getElementById("pane3").classList.contains("hidden-panel"), "pane3 hidden after toggling again");
+    });
+
+    test("a split section can be hidden and shown without disturbing its host", () => {
+        const { toggleSplitSection, restorePanel, PANEL_SPLITS } = layoutModule;
+        restorePanel("pane3");
+        const host = document.getElementById("pane3");
+        const section = document.getElementById("pane13");
+
+        assert.ok(!host.classList.contains("hidden-panel"));
+        assert.ok(PANEL_SPLITS.pane3.includes("pane13"));
+
+        toggleSplitSection("pane3", "pane13");
+        assert.ok(section.classList.contains("hidden-panel"), "the section hides");
+        assert.ok(!host.classList.contains("hidden-panel"), "the host stays open");
+
+        toggleSplitSection("pane3", "pane13");
+        assert.ok(!section.classList.contains("hidden-panel"), "and comes back");
+    });
+
+    test("switching a tab leaves the split section alone", () => {
+        const { switchPanelTab, restorePanel } = layoutModule;
+        restorePanel("pane3");
+        const layoutSection = document.getElementById("pane13");
+        const before = layoutSection.classList.contains("hidden-panel");
+
+        switchPanelTab("pane3", "pane7");
+        assert.ok(!document.getElementById("pane7").classList.contains("hidden-panel"),
+            "the requested tab is shown");
+        assert.ok(document.getElementById("sub_pane3").classList.contains("hidden-panel"),
+            "the previous tab is hidden");
+        assert.strictEqual(layoutSection.classList.contains("hidden-panel"), before,
+            "the box model is a split, not a tab, so a tab change must not touch it");
+    });
+
+    test("maximising a panel is reversible", () => {
+        const { maximizePanel, restorePanel, lastPaneWidths } = layoutModule;
+        restorePanel("pane2");
+        const before = lastPaneWidths.pane2;
+
+        maximizePanel(null, "pane2");
+        maximizePanel(null, "pane2");
+        assert.strictEqual(lastPaneWidths.pane2, before,
+            "a second press restores the width the panel had, not a hardcoded default");
     });
 });
