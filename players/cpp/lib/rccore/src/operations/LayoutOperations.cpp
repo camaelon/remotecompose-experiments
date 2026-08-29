@@ -331,6 +331,12 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     ls.offsetY = m->oY;
                     break;
                 }
+                case 224: { // GraphicsLayerModifier — opacity
+                    auto* m = static_cast<ModifierGraphicsLayer*>(child);
+                    ls.glAlpha = m->alpha;
+                    ls.hasGlAlpha = true;
+                    break;
+                }
                 case 108: { // ClipRectModifier
                     ls.hasClipRect = true;
                     break;
@@ -513,6 +519,27 @@ static void applyLayoutCompute(const LayoutComputeInfo& info, RemoteContext& ctx
 // ── Text wrapping helper ──────────────────────────────────────────────
 struct TextLine { int start, end; };
 
+// Convert a UTF-8 byte offset into a UTF-16 code-unit index. wrapText works in bytes,
+// but drawTextRun takes UTF-16 char indices (Java string semantics); a multi-byte
+// character (e.g. the "•" bullet) would otherwise shift every wrapped line.
+static int utf8ByteToUtf16Index(const std::string& s, int byteOff) {
+    int units = 0, i = 0;
+    int n = (int)s.size();
+    if (byteOff > n) byteOff = n;
+    while (i < byteOff) {
+        unsigned char c = (unsigned char)s[i];
+        int len = 1;
+        uint32_t cp = c;
+        if (c >= 0xF0) { len = 4; cp = c & 0x07; }
+        else if (c >= 0xE0) { len = 3; cp = c & 0x0F; }
+        else if (c >= 0xC0) { len = 2; cp = c & 0x1F; }
+        for (int k = 1; k < len && i + k < n; k++) cp = (cp << 6) | ((unsigned char)s[i + k] & 0x3F);
+        units += (cp >= 0x10000) ? 2 : 1;   // astral chars are a surrogate pair
+        i += len;
+    }
+    return units;
+}
+
 static std::vector<TextLine> wrapText(PaintContext* pc, const std::string& text,
                                        float fontSize, float maxWidth) {
     std::vector<TextLine> lines;
@@ -570,20 +597,20 @@ static std::vector<TextLine> wrapText(PaintContext* pc, const std::string& text,
 
 // ── Compute modifier-defined width (padding + exact size) ────────────
 // Java: returns padding + value for EXACT/EXACT_DP, just padding otherwise.
-static float computeModifierDefinedWidth(const LayoutState& ls) {
+static float computeModifierDefinedWidth(const LayoutState& ls, const RemoteContext& ctx) {
     // Only padding declared *before* the size modifier adds to it — the reference walks
     // the modifier list and breaks at the size modifier, which is Compose's ordering
     // rule. Using total padding here makes `.width(200).padding(30)` 260 wide instead
     // of 200 with 140 of content.
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        return ls.padBeforeWidth + ls.widthValue;
+        return ls.padBeforeWidth + resolveVar(ls.widthValue, ctx);
     }
     return ls.paddingLeft + ls.paddingRight;
 }
 
-static float computeModifierDefinedHeight(const LayoutState& ls) {
+static float computeModifierDefinedHeight(const LayoutState& ls, const RemoteContext& ctx) {
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        return ls.padBeforeHeight + ls.heightValue;
+        return ls.padBeforeHeight + resolveVar(ls.heightValue, ctx);
     }
     return ls.paddingTop + ls.paddingBottom;
 }
@@ -704,6 +731,11 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     std::string text = ctx.getText(tid);
     float textW = pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size();
     float lineH = pc ? pc->measureTextHeight(text, fsize) : fsize * 1.2f;
+    // Capture the baseline with this component's own typeface applied (the guard is
+    // still active here), so getAlignByValue can align mixed styles on one baseline.
+    ls.textBaseline = ls.paddingTop + (pc ? pc->measureTextAscent(text, fsize)
+                                          : fsize * 0.8f);
+    ls.hasTextBaseline = true;
     LTRACE("    measureText cid=%d tid=%d text='%.20s' fsize=%.1f textW=%.1f lineH=%.1f maxW=%.1f maxH=%.1f\n",
            cid, tid, text.c_str(), fsize, textW, lineH, maxW, maxH);
 
@@ -735,17 +767,21 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     float measuredW = textW + ls.paddingLeft + ls.paddingRight;
     float measuredH = textH + ls.paddingTop + ls.paddingBottom;
 
-    // Apply width/height modifiers
+    // Apply width/height modifiers. EXACT values may be NaN-boxed expressions
+    // (e.g. an animated height); resolve them before use. A FILL fraction that is
+    // still NaN after resolution means "fill completely".
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        measuredW = ls.widthValue + ls.padBeforeWidth;
+        measuredW = resolveVar(ls.widthValue, ctx) + ls.padBeforeWidth;
     } else if (ls.widthType == DimType::FILL) {
-        measuredW = std::isnan(ls.widthValue) ? maxW : maxW * ls.widthValue;
+        float wv = resolveVar(ls.widthValue, ctx);
+        measuredW = std::isnan(wv) ? maxW : maxW * wv;
     }
 
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        measuredH = ls.heightValue + ls.padBeforeHeight;
+        measuredH = resolveVar(ls.heightValue, ctx) + ls.padBeforeHeight;
     } else if (ls.heightType == DimType::FILL) {
-        measuredH = std::isnan(ls.heightValue) ? maxH : maxH * ls.heightValue;
+        float hv = resolveVar(ls.heightValue, ctx);
+        measuredH = std::isnan(hv) ? maxH : maxH * hv;
     }
 
     measuredW = std::max(measuredW, minW);
@@ -770,8 +806,8 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     inflateLayout(op, ls);
 
     // STEP 1: Start with modifier-defined dimensions, clamped to maxWidth/maxHeight
-    float measuredW = std::min(maxW, computeModifierDefinedWidth(ls));
-    float measuredH = std::min(maxH, computeModifierDefinedHeight(ls));
+    float measuredW = std::min(maxW, computeModifierDefinedWidth(ls, ctx));
+    float measuredH = std::min(maxH, computeModifierDefinedHeight(ls, ctx));
 
     // STEP 3: Apply widthIn/heightIn constraints to min/max (Java step 3)
     if (ls.widthInMin >= 0) minW = std::max(minW, ls.widthInMin);
@@ -789,9 +825,10 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
     if (ls.widthType == DimType::FILL) {
         // A fill may carry a fraction of the parent; NaN means fill completely.
-        measuredW = std::isnan(ls.widthValue) ? maxW : maxW * ls.widthValue;
-        minW = std::isnan(ls.widthValue) ? insetMaxW
-                                         : measuredW - ls.paddingLeft - ls.paddingRight;
+        float wv = resolveVar(ls.widthValue, ctx);
+        measuredW = std::isnan(wv) ? maxW : maxW * wv;
+        minW = std::isnan(wv) ? insetMaxW
+                              : measuredW - ls.paddingLeft - ls.paddingRight;
     } else if (ls.widthType != DimType::WEIGHT) {
         measuredW = std::clamp(measuredW, minW, maxW);
         hasHWrap = (ls.widthType == DimType::WRAP);
@@ -802,9 +839,10 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     }
 
     if (ls.heightType == DimType::FILL) {
-        measuredH = std::isnan(ls.heightValue) ? maxH : maxH * ls.heightValue;
-        minH = std::isnan(ls.heightValue) ? insetMaxH
-                                          : measuredH - ls.paddingTop - ls.paddingBottom;
+        float hv = resolveVar(ls.heightValue, ctx);
+        measuredH = std::isnan(hv) ? maxH : maxH * hv;
+        minH = std::isnan(hv) ? insetMaxH
+                              : measuredH - ls.paddingTop - ls.paddingBottom;
     } else if (ls.heightType != DimType::WEIGHT) {
         measuredH = std::clamp(measuredH, minH, maxH);
         hasVWrap = (ls.heightType == DimType::WRAP);
@@ -1208,9 +1246,13 @@ static float getAlignByValue(Operation* child, RemoteContext& ctx, PaintContext*
     // Check if line is NaN-encoded (baseline ID or variable reference)
     if (std::isnan(line)) {
         int id = Utils::idFromNan(line);
-        // ID 36 = FIRST_BASELINE, ID 37 = LAST_BASELINE
-        if (id == 36 || id == 37) {
-            // Text component: compute baseline from font metrics
+        // AlignByModifierOperation: ID_FIRST_BASELINE = 1, ID_LAST_BASELINE = 2
+        if (id == 1 || id == 2) {
+            // Prefer the baseline captured during measureText — it was measured with
+            // this component's own typeface (bold/italic/monospace), which the shared
+            // paint here is not, so re-measuring would ignore per-span metrics.
+            if (childLS.hasTextBaseline) return childLS.textBaseline;
+            // Fallback: measure ascent with whatever font is currently active.
             if (oc == 208 || oc == 239) {
                 float fsize = 16;
                 int tid = 0;
@@ -1374,15 +1416,41 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
                 default: break;
             }
 
+            // AlignBy baseline within this row: align children on a common baseline
+            // (the reason alignByBaseline exists — wrapped inline-styled text keeps a
+            // consistent baseline even when spans differ in metrics).
+            bool rowHasAlignBy = false;
+            float rowMaxAlignBy = 0;
             for (auto* child : row) {
                 auto& cm = measure.get(getComponentId(child));
                 if (cm.isGone()) continue;
+                if (getLS(child).hasAlignBy) {
+                    rowHasAlignBy = true;
+                    rowMaxAlignBy = std::max(rowMaxAlignBy, getAlignByValue(child, ctx, pc));
+                }
+            }
+
+            for (auto* child : row) {
+                auto& cm = measure.get(getComponentId(child));
+                if (cm.isGone()) continue;
+                float alignByOffset = (rowHasAlignBy && getLS(child).hasAlignBy)
+                                          ? getAlignByValue(child, ctx, pc) : 0;
                 // Within-row vertical alignment (matching TS)
                 float ty = 0;
                 switch (vPos) {
-                    case POS_CENTER: ty = (rowH - cm.h) / 2; break;
-                    case POS_BOTTOM: case POS_END: ty = rowH - cm.h; break;
-                    default: ty = 0; break;
+                    case POS_CENTER:
+                        ty = rowHasAlignBy ? (rowMaxAlignBy - alignByOffset)
+                                           : (rowH - cm.h) / 2;
+                        break;
+                    case POS_BOTTOM: case POS_END:
+                        // rowH is already the max child height, so the bottom-aligned
+                        // baseline block reduces to the same per-child offset.
+                        ty = rowHasAlignBy ? (rowMaxAlignBy - alignByOffset)
+                                           : (rowH - cm.h);
+                        break;
+                    default:
+                        ty = rowHasAlignBy ? (rowMaxAlignBy - alignByOffset) : 0;
+                        break;
                 }
                 cm.x = tx;
                 cm.y = posY + ty;
@@ -1828,11 +1896,17 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     pc->matrixSave();
     pc->savePaint();
 
-    // Layout-animation opacity: wrap the component in an alpha layer while it is
-    // fading in/out. Bounds are in the parent's (current) coordinate space.
-    bool animLayer = m.isVisible() && m.alpha < 0.999f;
+    // Opacity: combine the layout-animation alpha (enter/exit fades) with an explicit
+    // graphicsLayer alpha modifier (which may be an expression). Wrap the component in
+    // an alpha layer while it is not fully opaque.
+    float effAlpha = m.alpha;
+    if (ls.hasGlAlpha) {
+        float ga = resolveVar(ls.glAlpha, ctx);
+        if (!std::isnan(ga)) effAlpha *= std::max(0.0f, std::min(1.0f, ga));
+    }
+    bool animLayer = m.isVisible() && effAlpha < 0.999f;
     if (animLayer) {
-        pc->saveLayerAlpha(m.alpha, m.x, m.y, m.x + m.w, m.y + m.h);
+        pc->saveLayerAlpha(effAlpha, m.x, m.y, m.x + m.w, m.y + m.h);
     }
 
     // Translate to component position
@@ -1955,7 +2029,10 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
                 for (size_t li = 0; li < wrappedLines.size(); li++) {
                     auto& line = wrappedLines[li];
                     if (line.start < line.end) {
-                        pc->drawTextRun(tid, line.start, line.end, line.start, line.end,
+                        // wrapText gives byte offsets; drawTextRun wants UTF-16 indices.
+                        int cs = utf8ByteToUtf16Index(text, line.start);
+                        int ce = utf8ByteToUtf16Index(text, line.end);
+                        pc->drawTextRun(tid, cs, ce, cs, ce,
                                         0, ascent + lineH * (float)li, false);
                     }
                 }

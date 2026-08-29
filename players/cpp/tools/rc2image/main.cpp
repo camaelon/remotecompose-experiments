@@ -18,7 +18,7 @@
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: rc2image input.rcd output.png [width height] [--time epoch_ms]\n";
+        std::cerr << "Usage: rc2image input.rcd output.png [width height] [--time epoch_ms] [--anim seconds]\n";
         return 1;
     }
 
@@ -26,12 +26,16 @@ int main(int argc, char* argv[]) {
     const char* outputPath = argv[2];
     int overrideWidth = 0, overrideHeight = 0;
     int64_t fixedTimeMs = 0;
+    float animTimeSec = -1.0f;   // >=0 pins animationTime (seconds since first frame)
 
     // Parse remaining args
     int i = 3;
     while (i < argc) {
         if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
             fixedTimeMs = std::atoll(argv[i + 1]);
+            i += 2;
+        } else if (std::strcmp(argv[i], "--anim") == 0 && i + 1 < argc) {
+            animTimeSec = std::atof(argv[i + 1]);
             i += 2;
         } else if (overrideWidth == 0 && i + 1 < argc && std::atoi(argv[i]) > 0) {
             overrideWidth = std::atoi(argv[i]);
@@ -97,6 +101,12 @@ int main(int argc, char* argv[]) {
 
     // Register variable listeners
     doc.registerListeners(context);
+
+    // Pin animationTime for deterministic mid-animation captures. overrideFloat makes the
+    // per-frame time load a no-op for this id, so the value stays put across paints.
+    if (animTimeSec >= 0.0f) {
+        context.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME, animTimeSec);
+    }
 
     // Execute data operations (loads text, expressions, etc.)
     doc.applyDataOperations(context, -2);  // THEME_DARK

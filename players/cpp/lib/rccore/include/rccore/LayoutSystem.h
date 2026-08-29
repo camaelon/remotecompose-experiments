@@ -128,6 +128,10 @@ struct LayoutState {
     float offsetX = 0, offsetY = 0;
     bool hasOffset = false;
 
+    // GraphicsLayer opacity (attrId 11); may be a NaN-encoded expression variable.
+    float glAlpha = 1.0f;
+    bool hasGlAlpha = false;
+
     // Clip modifiers
     bool hasClipRect = false;
     bool hasRoundedClipRect = false;
@@ -162,6 +166,12 @@ struct LayoutState {
     // AlignBy modifier (baseline alignment in Rows)
     float alignByLine = 0;  // NaN-encoded baseline ID or literal value
     bool hasAlignBy = false;
+
+    // Text baseline (distance from the component top to the text baseline), captured
+    // during measureText with the component's own typeface applied. Used to align
+    // mixed-style text on a common baseline (see getAlignByValue).
+    float textBaseline = 0;
+    bool hasTextBaseline = false;
 
     bool inflated = false;
 };

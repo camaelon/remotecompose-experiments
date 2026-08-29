@@ -1046,6 +1046,7 @@ public:
 // ── GraphicsLayerModifier (224) ───────────────────────────────────────
 class ModifierGraphicsLayer : public Operation {
 public:
+    float alpha = 1.0f;   // attrId 11; may be a NaN-encoded expression variable
     std::string name() const override { return "GraphicsLayerModifier"; }
     int opcode() const override { return 224; }
     std::vector<Field> fields() const override { return {}; }
@@ -1055,9 +1056,14 @@ public:
         int len = buf.readInt();
         for (int i = 0; i < len; i++) {
             int tag = buf.readInt();
+            int attrId = tag & 0x3FF;
             int dataType = (tag >> 10) & 0x3;
-            if (dataType == 1) buf.readFloat();
-            else buf.readInt();
+            if (dataType == 1) {
+                float v = buf.readFloat();
+                if (attrId == 11) op->alpha = v;   // opacity (literal or expression)
+            } else {
+                buf.readInt();
+            }
         }
         ops.push_back(std::move(op));
     }

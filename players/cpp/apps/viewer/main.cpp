@@ -572,16 +572,37 @@ static void loadCurrentFile() {
     }
 }
 
+// ── Document fit transform ───────────────────────────────────────────
+// Slides are authored at a fixed design size (the document header width/height).
+// Rather than laying them out at the raw window size — which leaves absolutely-sized
+// content (padding, fonts, pane widths) stranded at authored scale in a corner when
+// the window grows — we lay out at the design size and scale-to-fit (aspect-fit,
+// centred with letterbox bars). This makes a slide fill fullscreen, scaled uniformly.
+struct FitTransform { float scale; float ox; float oy; float docW; float docH; };
+
+static FitTransform docFit() {
+    FitTransform t{1.0f, 0.0f, 0.0f, static_cast<float>(g.width), static_cast<float>(g.height)};
+    if (!g.doc) return t;
+    float dw = static_cast<float>(g.doc->getWidth());
+    float dh = static_cast<float>(g.doc->getHeight());
+    if (dw <= 0.0f || dh <= 0.0f) return t;                 // no design size → 1:1
+    t.docW = dw;
+    t.docH = dh;
+    t.scale = std::min(static_cast<float>(g.width) / dw, static_cast<float>(g.height) / dh);
+    t.ox = (static_cast<float>(g.width) - dw * t.scale) * 0.5f;
+    t.oy = (static_cast<float>(g.height) - dh * t.scale) * 0.5f;
+    return t;
+}
+
 // ── Touch coordinate mapping ─────────────────────────────────────────
-// Convert window (screen) coordinates to document coordinates.
-// The document may be scaled to fit the window via content scaling.
+// Convert window (screen) coordinates to document coordinates, undoing the fit.
 static float touchX(float windowX) {
-    if (!g.doc || g.width == 0) return windowX;
-    return windowX * static_cast<float>(g.doc->getWidth()) / static_cast<float>(g.width);
+    FitTransform t = docFit();
+    return (windowX - t.ox) / t.scale;
 }
 static float touchY(float windowY) {
-    if (!g.doc || g.height == 0) return windowY;
-    return windowY * static_cast<float>(g.doc->getHeight()) / static_cast<float>(g.height);
+    FitTransform t = docFit();
+    return (windowY - t.oy) / t.scale;
 }
 
 // ── Rendering ────────────────────────────────────────────────────────
@@ -628,13 +649,19 @@ static void renderFrame(double deltaTime) {
     g.paintCtx->setCanvas(canvas);
     g.context->mDebug = g.debug;
 
-    g.context->mWidth = static_cast<float>(g.width);
-    g.context->mHeight = static_cast<float>(g.height);
+    // Lay out at the document's design size and scale-to-fit the window.
+    FitTransform t = docFit();
+    g.context->mWidth = t.docW;
+    g.context->mHeight = t.docH;
     g.context->loadFloat(rccore::RemoteContext::ID_TOUCH_POS_X, touchX(g.mouseX));
     g.context->loadFloat(rccore::RemoteContext::ID_TOUCH_POS_Y, touchY(g.mouseY));
 
     g.timeVars.updateTime(*g.context, g.animTime, deltaTime);
+    canvas->save();
+    canvas->translate(t.ox, t.oy);
+    canvas->scale(t.scale, t.scale);
     g.doc->paint(*g.context);
+    canvas->restore();
 }
 
 // ── Callbacks ────────────────────────────────────────────────────────

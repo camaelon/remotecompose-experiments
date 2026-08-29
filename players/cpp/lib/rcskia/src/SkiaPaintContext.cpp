@@ -1325,16 +1325,29 @@ void SkiaPaintContext::applyPaintBundle(const PaintBundle& bundle) {
                     // into every subsequent stroke draw because mPaint is
                     // a persistent state object.
                     mPaint.setPathEffect(nullptr);
-                } else if (count > 0 && count <= 2028) {
-                    std::vector<float> intervals(count);
-                    for (int j = 0; j < count; j++) {
-                        intervals[j] = PaintBundle::intBitsToFloat(arr[i++]);
+                } else if (count >= 3 && count <= 2028) {
+                    // Payload layout (PaintPathEffects.dash): [type, phase, len, intervals…].
+                    // type and len are raw ints; phase and the intervals are floats.
+                    int type = arr[i];
+                    float phase = PaintBundle::intBitsToFloat(arr[i + 1]);
+                    int len = arr[i + 2];
+                    i += 3;
+                    std::vector<float> intervals;
+                    for (int j = 0; j < len && j < count - 3; j++) {
+                        intervals.push_back(PaintBundle::intBitsToFloat(arr[i++]));
                     }
-                    if (count >= 2) {
+                    // Skip any trailing payload we didn't consume.
+                    for (int j = 3 + len; j < count; j++) i++;
+                    if (type == 1 /*DASH*/ && intervals.size() >= 2 && (intervals.size() % 2) == 0) {
                         auto effect = SkDashPathEffect::Make(
-                            SkSpan<const SkScalar>(intervals.data(), count), 0.0f);
+                            SkSpan<const SkScalar>(intervals.data(), intervals.size()), phase);
                         mPaint.setPathEffect(effect);
+                    } else {
+                        mPaint.setPathEffect(nullptr);
                     }
+                } else {
+                    // Unrecognised short payload — consume and ignore.
+                    for (int j = 0; j < count; j++) i++;
                 }
                 break;
             }
