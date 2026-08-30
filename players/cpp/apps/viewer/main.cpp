@@ -25,6 +25,7 @@
 #endif
 #include "WidgetHelper.h"
 #include "WebOverlay.h"
+#include "VideoCustomHost.h"
 
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
@@ -275,6 +276,8 @@ struct ViewerState {
     GLFWwindow* window = nullptr;
     // URL associated with the current slide (from a sibling ".url" sidecar), or empty.
     std::string currentUrl;
+    // Host for embedded-video custom components (LAYOUT_CUSTOM).
+    VideoCustomHost videoHost;
 
     // Override voice-over directory. When empty, resolveVoicePath() falls
     // back to "<slide-parent>/voice". Set when the user passes a directory
@@ -406,6 +409,7 @@ static void initDocument() {
     g.paintCtx = std::make_unique<rcskia::SkiaPaintContext>(*g.context, canvas);
     g.context->setPaintContext(g.paintCtx.get());
     g.context->setDocument(g.doc.get());
+    g.context->setCustomHost(&g.videoHost);      // embedded-video custom components
     g.context->mDebug = g.debug;
 
     g.context->mWidth = static_cast<float>(g.width);
@@ -437,7 +441,9 @@ static bool readFileBytes(const std::string& name, std::vector<uint8_t>& out) {
 static bool loadFile(const std::string& path) {
     // Drop any state left over from the previous file so we start clean.
     webOverlayClose();               // don't carry a web overlay across slides
+    g.videoHost.reset();             // release the previous slide's embedded videos
     g.currentUrl.clear();
+    if (!g.zip) g.videoHost.setBaseDir(fs::path(path).parent_path().string());
     g.webpPlayer.reset();
     g.avfPlayer.reset();
     g.doc.reset();
@@ -725,6 +731,7 @@ static void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int actio
         case GLFW_KEY_SPACE:
             g.paused = !g.paused;
             if (g.avfPlayer) g.avfPlayer->setPaused(g.paused);
+            g.videoHost.setPaused(g.paused);
             std::cerr << (g.paused ? "Paused" : "Playing") << "\n";
             break;
         case GLFW_KEY_R:

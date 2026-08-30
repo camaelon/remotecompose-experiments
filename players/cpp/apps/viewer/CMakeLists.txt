@@ -1,5 +1,6 @@
 set(RCVIEWER_SOURCES
     main.cpp
+    VideoCustomHost.cpp
 )
 
 if(APPLE)

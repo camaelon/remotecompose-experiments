@@ -4,6 +4,7 @@
 #include "rccore/RemoteContext.h"
 #include "rccore/PaintContext.h"
 #include "rccore/PaintBundle.h"
+#include "rccore/CustomComponentHost.h"
 #include "rccore/Utils.h"
 #include "rccore/animation/LayoutAnimation.h"
 
@@ -220,7 +221,7 @@ static bool isLayoutComponent(const Operation* op) {
     // 208 (LAYOUT_TEXT) is included — Java treats it as a layout component.
     return oc == 200 || oc == 202 || oc == 203 || oc == 204 || oc == 205 ||
            oc == 207 || oc == 208 || oc == 217 || oc == 239 || oc == 240 ||
-           oc == 176 || oc == 230 || oc == 233 || oc == 234;
+           oc == 176 || oc == 230 || oc == 233 || oc == 234 || oc == 93;
 }
 
 static bool isContentWrapper(const Operation* op) {
@@ -655,6 +656,7 @@ static int getComponentId(const Operation* op) {
         case 233: return static_cast<const CollapsibleColumnLayout*>(op)->componentId;
         case 217: return static_cast<const StateLayout*>(op)->componentId;
         case 234: return static_cast<const LayoutImage*>(op)->componentId;
+        case 93:  return static_cast<const LayoutCustom*>(op)->componentId;
         default: return -1;
     }
 }
@@ -2043,6 +2045,18 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
                                 textX, ascent, false);
             }
             pc->restorePaint();
+        }
+    } else if (oc == 93) {
+        // Custom component: delegate drawing to the platform host (e.g. video). The
+        // canvas is already translated to the content box; hand it (0,0)..(w,h).
+        auto* cu = static_cast<LayoutCustom*>(op);
+        auto* host = ctx.getCustomHost();
+        float cw = m.w - ls.paddingLeft - ls.paddingRight;
+        float ch = m.h - ls.paddingTop - ls.paddingBottom;
+        if (host) {
+            std::string config = cu->configId >= 0 ? ctx.getText(cu->configId) : std::string();
+            host->drawCustom(cu->componentId, config, pc, cw, ch,
+                             ctx.getAnimationTime());
         }
     } else {
         // Push canvas bounds for touch hit-testing (uses current translate position)

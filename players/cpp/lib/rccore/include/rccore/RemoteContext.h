@@ -13,6 +13,7 @@ class PaintContext;
 class CoreDocument;
 class Operation;
 class ShaderData;
+class CustomComponentHost;
 
 enum class ContextMode { UNSET, DATA, PAINT };
 
@@ -61,6 +62,11 @@ public:
     // Paint context
     void setPaintContext(PaintContext* pc) { mPaintContext = pc; }
     PaintContext* getPaintContext() { return mPaintContext; }
+
+    // Host for native custom components (LAYOUT_CUSTOM, op 93). Optional; when null a
+    // custom component draws nothing.
+    void setCustomHost(CustomComponentHost* h) { mCustomHost = h; }
+    CustomComponentHost* getCustomHost() { return mCustomHost; }
 
     // Animation time (seconds since animation start)
     float getAnimationTime() const { return getFloat(ID_ANIMATION_TIME); }
@@ -296,6 +302,7 @@ private:
 
     ContextMode mMode = ContextMode::UNSET;
     PaintContext* mPaintContext = nullptr;
+    CustomComponentHost* mCustomHost = nullptr;
     CoreDocument* mDocument = nullptr;
     int mTheme = 0;
     int mPaintTheme = -3;  // Default LIGHT (matches Java/TS)

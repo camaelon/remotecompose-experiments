@@ -336,6 +336,48 @@ public:
     }
 };
 
+// ── Custom (93) ────────────────────────────────────────────────────────
+// A native "custom component": a leaf laid out like any component, whose drawing is
+// delegated to a platform CustomComponentHost keyed by its `config` string. Used here
+// to embed video inside a page. Mirrors androidx Custom.
+class LayoutCustom : public Operation {
+public:
+    struct Property {
+        short type = 0;
+        short dataType = 0;
+        int intValue = 0;
+        float floatValue = 0.0f;
+    };
+    int componentId = 0, animationId = 0;
+    int configId = -1;                 // text id for the config string
+    std::vector<Property> properties;
+
+    int getOpComponentId() const override { return componentId; }
+    std::string name() const override { return "LAYOUT_CUSTOM"; }
+    int opcode() const override { return 93; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override {}
+
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<LayoutCustom>();
+        op->componentId = buf.readInt();
+        op->animationId = buf.readInt();
+        op->configId = buf.readInt();
+        int propCount = buf.readInt();
+        for (int i = 0; i < propCount; i++) {
+            Property p;
+            p.type = static_cast<short>(buf.readShort());
+            p.dataType = static_cast<short>(buf.readShort());
+            // FLOAT_PROP (1) and FLOAT_RETURN (3) are floats; everything else is an int.
+            if (p.dataType == 1 || p.dataType == 3) p.floatValue = buf.readFloat();
+            else                                    p.intValue = buf.readInt();
+            op->properties.push_back(p);
+        }
+        ops.push_back(std::move(op));
+    }
+};
+
 // ── LayoutCompute (238) ────────────────────────────────────────────────
 class LayoutCompute : public Operation {
 public:

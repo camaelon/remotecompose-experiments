@@ -44,7 +44,7 @@ void Operations::init() {
     // unknown opcode desyncs the reader and the whole document fails, not just the feature.
     // See StubOperations.h.
     registerReader(COMPONENT_START, "COMPONENT_START", Stub::componentStart);
-    registerReader(LAYOUT_CUSTOM, "LAYOUT_CUSTOM", Stub::layoutCustom);
+    registerReader(LAYOUT_CUSTOM, "LAYOUT_CUSTOM", LayoutCustom::read);
     registerReader(PLAY_SOUND, "PLAY_SOUND", Stub::playSound);
     registerReader(DATA_SOUND, "DATA_SOUND", Stub::soundData);
     registerReader(SOUND_EXPRESSION, "SOUND_EXPRESSION", Stub::soundExpression);
