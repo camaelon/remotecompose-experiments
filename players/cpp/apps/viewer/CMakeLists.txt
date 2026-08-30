@@ -7,11 +7,13 @@ if(APPLE)
         MetalRenderBackend.mm
         WidgetHelper.mm
         AvfVideoPlayer.mm
+        WebOverlay.mm
     )
 else()
     list(APPEND RCVIEWER_SOURCES
         WidgetHelperStub.cpp
         AvfVideoPlayerStub.cpp
+        WebOverlayStub.cpp
     )
 endif()
 
@@ -59,15 +61,17 @@ if(APPLE)
     find_library(AVFOUNDATION_FW AVFoundation)
     find_library(COREMEDIA_FW CoreMedia)
     find_library(COREVIDEO_FW CoreVideo)
+    find_library(WEBKIT_FW WebKit)
     target_link_libraries(rcviewer PRIVATE
         ${IOKIT_FW} ${COCOA_FW} ${QUARTZCORE_FW} ${METALKIT_FW}
-        ${AVFOUNDATION_FW} ${COREMEDIA_FW} ${COREVIDEO_FW})
+        ${AVFOUNDATION_FW} ${COREMEDIA_FW} ${COREVIDEO_FW} ${WEBKIT_FW})
 
     # Obj-C++ flags (ARC) for all .mm sources
     set_source_files_properties(
         MetalRenderBackend.mm
         WidgetHelper.mm
         AvfVideoPlayer.mm
+        WebOverlay.mm
         PROPERTIES COMPILE_FLAGS "-fobjc-arc"
     )
 endif()
