@@ -17,6 +17,89 @@
 #include <set>
 #include <string>
 
+// ── Host state ────────────────────────────────────────────────────────────────────────
+static GLFWwindow* gWindow = nullptr;
+// Keyed by URL, not component id (ids are only unique within a single .rc). Each entry
+// is a *container* view (translucent-black backing) holding a transparent WKWebView and a
+// spinner — so the loading state shows a dark box with a spinner, and transparent pages
+// let the slide show through.
+static std::map<std::string, NSView*> gViews;
+static std::map<std::string, NSRect> gLastFrame;   // last applied frame per view
+static std::set<std::string> gSeenThisFrame;
+static NSView* gActiveContainer = nil;             // the web view the user clicked into
+static id gKeyMonitor = nil;
+static id gMouseMonitor = nil;
+
+static NSView* hostContentView() {
+    if (!gWindow) return nil;
+    NSWindow* w = (NSWindow*)glfwGetCocoaWindow(gWindow);
+    return w ? [w contentView] : nil;
+}
+
+// Hand keyboard focus back to the GLFW content view (so arrow keys navigate slides).
+static void focusGLFWContentView() {
+    if (!gWindow) return;
+    NSWindow* nw = (NSWindow*)glfwGetCocoaWindow(gWindow);
+    if (nw && nw.firstResponder != nw.contentView) [nw makeFirstResponder:nw.contentView];
+}
+
+static void deactivateWeb() {
+    if (gActiveContainer) {
+        gActiveContainer.layer.borderWidth = 0.0;
+        gActiveContainer = nil;
+    }
+    focusGLFWContentView();
+}
+
+// The user clicked into a web page: focus it and draw a blue ring so it's clear the
+// keyboard now goes to the page (Esc releases it).
+static void activateWeb(NSView* container) {
+    if (gActiveContainer == container) return;
+    if (gActiveContainer) gActiveContainer.layer.borderWidth = 0.0;
+    gActiveContainer = container;
+    container.layer.borderColor = [[NSColor keyboardFocusIndicatorColor] CGColor];
+    container.layer.borderWidth = 3.0;
+    for (NSView* sub in container.subviews) {
+        if ([sub isKindOfClass:[WKWebView class]]) {
+            [container.window makeFirstResponder:sub];
+            break;
+        }
+    }
+}
+
+static void ensureMonitors() {
+    // Keyboard: when no page is focused, keep keys on the deck (defeats a page that
+    // autofocuses an input on load); when a page is focused, Esc releases it.
+    if (!gKeyMonitor) {
+        gKeyMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown
+                                                            handler:^NSEvent*(NSEvent* e) {
+            if (gActiveContainer != nil) {
+                if (e.keyCode == 53 /* Esc */) { deactivateWeb(); return nil; }
+                return e;
+            }
+            focusGLFWContentView();
+            return e;
+        }];
+    }
+    // Mouse: clicking a page focuses it; clicking elsewhere releases focus.
+    if (!gMouseMonitor) {
+        gMouseMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskLeftMouseDown
+                                                              handler:^NSEvent*(NSEvent* e) {
+            NSView* content = hostContentView();
+            if (content) {
+                NSPoint p = [content convertPoint:e.locationInWindow fromView:nil];
+                NSView* hit = nil;
+                for (auto& kv : gViews) {
+                    NSView* c = kv.second;
+                    if (!c.hidden && NSPointInRect(p, c.frame)) { hit = c; break; }
+                }
+                if (hit) activateWeb(hit); else deactivateWeb();
+            }
+            return e;   // let the click through to the page
+        }];
+    }
+}
+
 // ── Native UI delegate: file-open panels + JS dialogs, so pages that load files work.
 @interface RCWebHostUIDelegate : NSObject <WKUIDelegate>
 @end
@@ -39,21 +122,64 @@
 }
 @end
 
-// ── Host state (single instance; file-static keeps ObjC types out of the header) ──────
-static GLFWwindow* gWindow = nullptr;
-// Web views are keyed by URL, not component id: component ids are only unique within a
-// single .rc, so keying by id would wrongly reuse a previous slide's page. Keying by URL
-// gives each distinct page one warm, reusable view.
-static std::map<std::string, WKWebView*> gViews;
-static std::set<std::string> gSeenThisFrame;
-static RCWebHostUIDelegate* gUIDelegate = nil;
-static id gKeyMonitor = nil;
+// ── Loading spinner shown over a page until it finishes loading ────────────────────────
+static NSString* const kSpinnerId = @"rc-web-spinner";
+static const CGFloat kSpinnerSize = 64.0;          // 2x the default regular spinner
 
-static NSView* hostContentView() {
-    if (!gWindow) return nil;
-    NSWindow* w = (NSWindow*)glfwGetCocoaWindow(gWindow);
-    return w ? [w contentView] : nil;
+static void addSpinner(NSView* container) {
+    NSProgressIndicator* spin = [[NSProgressIndicator alloc] init];
+    spin.style = NSProgressIndicatorStyleSpinning;
+    spin.identifier = kSpinnerId;
+    // A dark-aqua appearance renders the spinner light (white) instead of dark.
+    spin.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+    NSRect b = container.bounds;
+    spin.frame = NSMakeRect((b.size.width - kSpinnerSize) * 0.5,
+                            (b.size.height - kSpinnerSize) * 0.5,
+                            kSpinnerSize, kSpinnerSize);
+    // Flexible margins on all sides keep it roughly centred as the view resizes.
+    spin.autoresizingMask = NSViewMinXMargin | NSViewMaxXMargin |
+                            NSViewMinYMargin | NSViewMaxYMargin;
+    [spin startAnimation:nil];
+    [container addSubview:spin];
 }
+
+// The spinner lives in the web view's container (its superview).
+static void setSpinnerVisible(WKWebView* wv, bool visible) {
+    NSView* container = wv.superview;
+    for (NSView* sub in container.subviews) {
+        if ([sub.identifier isEqualToString:kSpinnerId] &&
+            [sub isKindOfClass:[NSProgressIndicator class]]) {
+            NSProgressIndicator* p = (NSProgressIndicator*)sub;
+            p.hidden = !visible;
+            if (visible) [p startAnimation:nil]; else [p stopAnimation:nil];
+            return;
+        }
+    }
+}
+
+// ── Navigation delegate: drive the spinner over the page's load lifecycle ──────────────
+@interface RCWebNavDelegate : NSObject <WKNavigationDelegate>
+@end
+@implementation RCWebNavDelegate
+- (void)webView:(WKWebView*)wv didStartProvisionalNavigation:(WKNavigation*)n {
+    (void)n; setSpinnerVisible(wv, true);
+}
+- (void)webView:(WKWebView*)wv didFinishNavigation:(WKNavigation*)n {
+    (void)n;
+    setSpinnerVisible(wv, false);
+    // A freshly-loaded page may autofocus an input and steal the keyboard. Unless the
+    // user clicked into this page, keep focus on the deck so arrow keys still navigate.
+    if (wv.superview != gActiveContainer) focusGLFWContentView();
+}
+- (void)webView:(WKWebView*)wv didFailNavigation:(WKNavigation*)n withError:(NSError*)e {
+    (void)n; (void)e; setSpinnerVisible(wv, false);
+}
+- (void)webView:(WKWebView*)wv didFailProvisionalNavigation:(WKNavigation*)n withError:(NSError*)e {
+    (void)n; (void)e; setSpinnerVisible(wv, false);
+}
+@end
+static RCWebNavDelegate* gNavDelegate = nil;
+static RCWebHostUIDelegate* gUIDelegate = nil;
 
 void WebCustomHost::setWindow(GLFWwindow* window) { gWindow = window; }
 
@@ -65,13 +191,18 @@ void WebCustomHost::endFrame() {
         bool seen = gSeenThisFrame.count(url) != 0;
         if (view.hidden == seen) view.hidden = !seen;   // toggle only on change
     }
+    // If the focused page left the slide, hand keyboard focus back to the deck.
+    if (gActiveContainer && gActiveContainer.hidden) deactivateWeb();
 }
 
 void WebCustomHost::reset() {
     for (auto& [url, view] : gViews) [view removeFromSuperview];
     gViews.clear();
+    gLastFrame.clear();
     gSeenThisFrame.clear();
+    gActiveContainer = nil;
     if (gKeyMonitor) { [NSEvent removeMonitor:gKeyMonitor]; gKeyMonitor = nil; }
+    if (gMouseMonitor) { [NSEvent removeMonitor:gMouseMonitor]; gMouseMonitor = nil; }
     gUIDelegate = nil;
 }
 
@@ -99,41 +230,60 @@ bool WebCustomHost::drawCustom(int componentId, const std::string& config,
     CGFloat yPt = content.isFlipped ? dev.top()
                                     : (content.bounds.size.height - dev.bottom());
     NSRect frame = NSMakeRect(dev.left(), yPt, dev.width(), dev.height());
+    // Snap to the backing-pixel grid, expanding outward so the view fully covers its box.
+    // A fractional frame (fullscreen scale isn't integral) leaves the view's layer edge
+    // anti-aliased against the dark slide — a hairline on the right/bottom edges.
+    frame = [content backingAlignedRect:frame options:NSAlignAllEdgesOutward];
 
-    // One warm view per URL; created (and loaded once) lazily, then just repositioned.
+    // One warm container per URL; created (and loaded once) lazily, then repositioned.
     (void)componentId;
-    WKWebView* view = nil;
+    NSView* view = nil;                  // the container (what we position / show / hide)
     auto it = gViews.find(url);
     if (it == gViews.end()) {
         if (!gUIDelegate) gUIDelegate = [[RCWebHostUIDelegate alloc] init];
-        view = [[WKWebView alloc] initWithFrame:frame];
-        view.UIDelegate = gUIDelegate;
-        [content addSubview:view];
-        gViews[url] = view;
+        if (!gNavDelegate) gNavDelegate = [[RCWebNavDelegate alloc] init];
+
+        // Container: a translucent-black backing so the loading state is a dark box (and
+        // transparent pages let the slide show through), instead of the default white.
+        NSView* container = [[NSView alloc] initWithFrame:frame];
+        container.wantsLayer = YES;
+        container.layer.backgroundColor = [[NSColor colorWithWhite:0.0 alpha:0.55] CGColor];
+        container.hidden = YES;          // endFrame reveals it when it's on-screen
+        [content addSubview:container];
+        gViews[url] = container;
+
+        // Transparent web view filling the container.
+        WKWebView* wv = [[WKWebView alloc] initWithFrame:container.bounds];
+        wv.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+        wv.UIDelegate = gUIDelegate;
+        wv.navigationDelegate = gNavDelegate;
+        @try { [wv setValue:@NO forKey:@"drawsBackground"]; } @catch (NSException* e) { (void)e; }
+        [container addSubview:wv];
+        addSpinner(container);           // spins over the dark box until the page loads
+
+        view = container;
+        ensureMonitors();                // click-to-focus + keep keys on the deck / Esc
         NSURL* nsurl = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
-        if (nsurl) [view loadRequest:[NSURLRequest requestWithURL:nsurl]];
-        // Esc hands keyboard focus back to the GLFW view so slide navigation resumes
-        // after interacting with a page.
-        if (!gKeyMonitor) {
-            gKeyMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskKeyDown
-                                                                handler:^NSEvent*(NSEvent* e) {
-                if (e.keyCode == 53 /* Esc */ && gWindow) {
-                    NSWindow* nw = (NSWindow*)glfwGetCocoaWindow(gWindow);
-                    // Only when a web view holds focus: release it back to the GLFW
-                    // view and consume the Esc. Otherwise let it through (quit).
-                    if (nw && nw.firstResponder != nw.contentView) {
-                        [nw makeFirstResponder:nw.contentView];
-                        return nil;
-                    }
-                }
-                return e;
-            }];
-        }
+        if (nsurl) [wv loadRequest:[NSURLRequest requestWithURL:nsurl]];
     } else {
         view = it->second;
     }
-    [view setFrame:frame];
-    if (view.hidden) view.hidden = NO;
-    gSeenThisFrame.insert(url);
+    // Only reposition when the box actually moved (a fraction of a point of tolerance).
+    // Calling setFrame every frame forces WebKit to re-layout, which makes an otherwise
+    // static page scroll/interact sluggishly on animated slides.
+    auto lf = gLastFrame.find(url);
+    if (lf == gLastFrame.end() || !NSEqualRects(lf->second, frame)) {
+        [view setFrame:frame];
+        gLastFrame[url] = frame;
+    }
+
+    // Mark "seen" (→ endFrame keeps it visible) only when the box is meaningfully
+    // on-screen. A push transition bakes the outgoing slide's content into the current
+    // document, so a previous slide's page sits off-screen (or peeks a sub-pixel sliver)
+    // once settled — requiring real overlap keeps it hidden.
+    NSRect inter = NSIntersectionRect(frame, content.bounds);
+    if (inter.size.width > 2.0 && inter.size.height > 2.0) {
+        gSeenThisFrame.insert(url);
+    }
     return true;
 }
