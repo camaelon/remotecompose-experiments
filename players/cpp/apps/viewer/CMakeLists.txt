@@ -8,13 +8,13 @@ if(APPLE)
         MetalRenderBackend.mm
         WidgetHelper.mm
         AvfVideoPlayer.mm
-        WebOverlay.mm
+        WebCustomHost.mm
     )
 else()
     list(APPEND RCVIEWER_SOURCES
         WidgetHelperStub.cpp
         AvfVideoPlayerStub.cpp
-        WebOverlayStub.cpp
+        WebCustomHostStub.cpp
     )
 endif()
 
@@ -72,7 +72,7 @@ if(APPLE)
         MetalRenderBackend.mm
         WidgetHelper.mm
         AvfVideoPlayer.mm
-        WebOverlay.mm
+        WebCustomHost.mm
         PROPERTIES COMPILE_FLAGS "-fobjc-arc"
     )
 endif()

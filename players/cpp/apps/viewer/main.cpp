@@ -24,8 +24,8 @@
 #include "MetalRenderBackend.h"
 #endif
 #include "WidgetHelper.h"
-#include "WebOverlay.h"
 #include "VideoCustomHost.h"
+#include "WebCustomHost.h"
 
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
@@ -252,6 +252,19 @@ private:
     std::vector<Frame> mFrames;
 };
 
+// Routes LAYOUT_CUSTOM draws to the right host by the config prefix: "web:" → the web
+// host, "video:" (default) → the video host.
+struct CustomHostRouter : rccore::CustomComponentHost {
+    VideoCustomHost* video = nullptr;
+    WebCustomHost* web = nullptr;
+    bool drawCustom(int id, const std::string& config, rccore::PaintContext* pc,
+                    float w, float h, double t) override {
+        if (config.rfind("web:", 0) == 0)
+            return web ? web->drawCustom(id, config, pc, w, h, t) : false;
+        return video ? video->drawCustom(id, config, pc, w, h, t) : false;
+    }
+};
+
 // ── Global state ─────────────────────────────────────────────────────
 
 struct ViewerState {
@@ -272,12 +285,13 @@ struct ViewerState {
 
     pid_t audioPid = 0;
 
-    // GLFW window handle (for the interactive web overlay).
+    // GLFW window handle.
     GLFWwindow* window = nullptr;
-    // URL associated with the current slide (from a sibling ".url" sidecar), or empty.
-    std::string currentUrl;
-    // Host for embedded-video custom components (LAYOUT_CUSTOM).
+    // Hosts for native custom components (LAYOUT_CUSTOM): video + embedded web pages,
+    // behind a router registered on the context.
     VideoCustomHost videoHost;
+    WebCustomHost webHost;
+    CustomHostRouter customRouter;
 
     // Override voice-over directory. When empty, resolveVoicePath() falls
     // back to "<slide-parent>/voice". Set when the user passes a directory
@@ -409,7 +423,9 @@ static void initDocument() {
     g.paintCtx = std::make_unique<rcskia::SkiaPaintContext>(*g.context, canvas);
     g.context->setPaintContext(g.paintCtx.get());
     g.context->setDocument(g.doc.get());
-    g.context->setCustomHost(&g.videoHost);      // embedded-video custom components
+    g.customRouter.video = &g.videoHost;
+    g.customRouter.web = &g.webHost;
+    g.context->setCustomHost(&g.customRouter);   // video + embedded-web custom components
     g.context->mDebug = g.debug;
 
     g.context->mWidth = static_cast<float>(g.width);
@@ -439,10 +455,10 @@ static bool readFileBytes(const std::string& name, std::vector<uint8_t>& out) {
 }
 
 static bool loadFile(const std::string& path) {
-    // Drop any state left over from the previous file so we start clean.
-    webOverlayClose();               // don't carry a web overlay across slides
-    g.videoHost.reset();             // release the previous slide's embedded videos
-    g.currentUrl.clear();
+    // Drop any state left over from the previous file so we start clean. Embedded web
+    // views persist across slides (hidden when off-slide via the frame bracket); only
+    // the per-slide videos are released here.
+    g.videoHost.reset();
     if (!g.zip) g.videoHost.setBaseDir(fs::path(path).parent_path().string());
     g.webpPlayer.reset();
     g.avfPlayer.reset();
@@ -450,24 +466,6 @@ static bool loadFile(const std::string& path) {
     g.context.reset();
     g.paintCtx.reset();
     cleanupTempFile();
-
-    // A slide may carry a URL for the interactive web overlay via a sibling ".url"
-    // sidecar (e.g. 07_demo.rc → 07_demo.url). Not supported from inside a zip.
-    if (!g.zip) {
-        fs::path up(path);
-        up.replace_extension(".url");
-        if (fs::exists(up)) {
-            std::ifstream uf(up);
-            std::getline(uf, g.currentUrl);
-            // Trim surrounding whitespace / trailing CR.
-            auto notspace = [](unsigned char c) { return !std::isspace(c); };
-            auto b = std::find_if(g.currentUrl.begin(), g.currentUrl.end(), notspace);
-            auto e = std::find_if(g.currentUrl.rbegin(), g.currentUrl.rend(), notspace).base();
-            g.currentUrl = (b < e) ? std::string(b, e) : std::string();
-            if (!g.currentUrl.empty())
-                std::cerr << "web: press W to open " << g.currentUrl << "\n";
-        }
-    }
 
     auto ext = getExt(path);
 
@@ -692,7 +690,11 @@ static void renderFrame(double deltaTime) {
     canvas->save();
     canvas->translate(t.ox, t.oy);
     canvas->scale(t.scale, t.scale);
+    // Bracket the paint so the web host can place/hide its native views by whether the
+    // corresponding custom component was drawn this frame.
+    g.webHost.beginFrame();
     g.doc->paint(*g.context);
+    g.webHost.endFrame();
     canvas->restore();
 }
 
@@ -703,20 +705,8 @@ static void keyCallback(GLFWwindow* window, int key, int /*scancode*/, int actio
 
     switch (key) {
         case GLFW_KEY_ESCAPE:
-            // Escape first dismisses an open web overlay, otherwise quits.
-            if (webOverlayIsOpen()) { webOverlayClose(); break; }
-            glfwSetWindowShouldClose(window, GLFW_TRUE);
-            break;
         case GLFW_KEY_Q:
             glfwSetWindowShouldClose(window, GLFW_TRUE);
-            break;
-        case GLFW_KEY_W:
-            // Toggle the interactive web overlay for this slide's URL (if any).
-            if (!g.currentUrl.empty()) {
-                webOverlayToggle(window, g.currentUrl.c_str());
-            } else {
-                std::cerr << "web: this slide has no URL\n";
-            }
             break;
         case GLFW_KEY_RIGHT:
             g.currentIndex++;
@@ -1349,7 +1339,8 @@ int main(int argc, char* argv[]) {
         glfwTerminate();
         return 1;
     }
-    g.window = window;               // for the interactive web overlay
+    g.window = window;
+    g.webHost.setWindow(window);      // host content view for embedded web pages
 
     if (g.widgetMode) {
         if (!g.widgetInteractive) {
