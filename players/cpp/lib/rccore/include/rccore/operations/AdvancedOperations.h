@@ -1047,6 +1047,10 @@ public:
 class ModifierGraphicsLayer : public Operation {
 public:
     float alpha = 1.0f;   // attrId 11; may be a NaN-encoded expression variable
+    // Blur render effect (RenderEffect.createBlurEffect). attrId 17/18 = radius x/y;
+    // a radius implies the effect is on (matches the Java operation's read).
+    float blurX = 0.0f, blurY = 0.0f;
+    bool hasBlur = false;
     std::string name() const override { return "GraphicsLayerModifier"; }
     int opcode() const override { return 224; }
     std::vector<Field> fields() const override { return {}; }
@@ -1060,7 +1064,9 @@ public:
             int dataType = (tag >> 10) & 0x3;
             if (dataType == 1) {
                 float v = buf.readFloat();
-                if (attrId == 11) op->alpha = v;   // opacity (literal or expression)
+                if (attrId == 11) op->alpha = v;                        // opacity
+                else if (attrId == 17) { op->blurX = v; op->hasBlur = true; }
+                else if (attrId == 18) { op->blurY = v; op->hasBlur = true; }
             } else {
                 buf.readInt();
             }

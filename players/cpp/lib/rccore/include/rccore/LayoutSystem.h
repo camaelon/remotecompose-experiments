@@ -131,6 +131,9 @@ struct LayoutState {
     // GraphicsLayer opacity (attrId 11); may be a NaN-encoded expression variable.
     float glAlpha = 1.0f;
     bool hasGlAlpha = false;
+    // GraphicsLayer blur render effect (attrId 17/18).
+    float glBlurX = 0.0f, glBlurY = 0.0f;
+    bool hasGlBlur = false;
 
     // Clip modifiers
     bool hasClipRect = false;

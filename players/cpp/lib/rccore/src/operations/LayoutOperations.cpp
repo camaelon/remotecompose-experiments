@@ -332,10 +332,15 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     ls.offsetY = m->oY;
                     break;
                 }
-                case 224: { // GraphicsLayerModifier — opacity
+                case 224: { // GraphicsLayerModifier — opacity + blur
                     auto* m = static_cast<ModifierGraphicsLayer*>(child);
                     ls.glAlpha = m->alpha;
                     ls.hasGlAlpha = true;
+                    if (m->hasBlur) {
+                        ls.hasGlBlur = true;
+                        ls.glBlurX = m->blurX;
+                        ls.glBlurY = m->blurY;
+                    }
                     break;
                 }
                 case 108: { // ClipRectModifier
@@ -1910,6 +1915,11 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     if (animLayer) {
         pc->saveLayerAlpha(effAlpha, m.x, m.y, m.x + m.w, m.y + m.h);
     }
+    // graphicsLayer blur render effect: wrap the component's drawing in a blurred layer.
+    bool blurLayer = ls.hasGlBlur && (ls.glBlurX > 0.0f || ls.glBlurY > 0.0f) && m.isVisible();
+    if (blurLayer) {
+        pc->saveLayerWithBlur(ls.glBlurX, ls.glBlurY, m.x, m.y, m.x + m.w, m.y + m.h);
+    }
 
     // Translate to component position
     pc->matrixTranslate(m.x, m.y);
@@ -2086,6 +2096,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 
     ctx.popCanvasBounds();
     pc->restorePaint();
+    if (blurLayer) pc->restoreLayer();   // LIFO: blur pushed after alpha
     if (animLayer) pc->restoreLayer();
     pc->matrixRestore();
     if (ls.hasOffset) ctx.popTranslate();

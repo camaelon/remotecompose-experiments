@@ -96,6 +96,14 @@ public:
         (void)alpha; (void)left; (void)top; (void)right; (void)bottom;
         matrixSave();
     }
+    // Blur render effect layer (graphicsLayer blur). Content drawn into the layer is
+    // gaussian-blurred on restore. Default falls back to a plain save so backends without
+    // image filters stay balanced (no blur).
+    virtual void saveLayerWithBlur(float sigmaX, float sigmaY,
+                                   float left, float top, float right, float bottom) {
+        (void)sigmaX; (void)sigmaY; (void)left; (void)top; (void)right; (void)bottom;
+        matrixSave();
+    }
     virtual void restoreLayer() { matrixRestore(); }
 
     // Clipping

@@ -17,6 +17,7 @@
 #include "include/effects/SkGradientShader.h"
 #include "include/effects/SkRuntimeEffect.h"
 #include "include/effects/SkDashPathEffect.h"
+#include "include/effects/SkImageFilters.h"
 #include "include/pathops/SkPathOps.h"
 #include "rccore/operations/DrawOperations.h"
 #include "include/codec/SkCodec.h"
@@ -586,6 +587,18 @@ void SkiaPaintContext::saveLayerAlpha(float alpha, float left, float top,
     if (alpha > 1.0f) alpha = 1.0f;
     SkRect bounds = SkRect::MakeLTRB(left, top, right, bottom);
     mCanvas->saveLayerAlpha(&bounds, static_cast<U8CPU>(alpha * 255.0f + 0.5f));
+}
+
+void SkiaPaintContext::saveLayerWithBlur(float sigmaX, float sigmaY,
+                                         float left, float top, float right, float bottom) {
+    // Blur render effect: draw the layer's content through a gaussian blur image filter
+    // (the Skia equivalent of Android RenderEffect.createBlurEffect). Expand the layer
+    // bounds by ~3σ so the blurred halo isn't clipped.
+    float mx = 3.0f * sigmaX + 1.0f, my = 3.0f * sigmaY + 1.0f;
+    SkRect bounds = SkRect::MakeLTRB(left - mx, top - my, right + mx, bottom + my);
+    SkPaint paint;
+    paint.setImageFilter(SkImageFilters::Blur(sigmaX, sigmaY, nullptr));
+    mCanvas->saveLayer(&bounds, &paint);
 }
 
 void SkiaPaintContext::restoreLayer() {
