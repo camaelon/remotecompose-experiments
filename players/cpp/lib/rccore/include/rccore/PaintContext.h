@@ -106,6 +106,13 @@ public:
     }
     virtual void restoreLayer() { matrixRestore(); }
 
+    // Set the current paint's typeface to a named system font family (e.g. "Futura",
+    // "Avenir Next", "SF Mono") at the given weight/italic, resolved via the platform font
+    // manager. No-op on backends without one (they keep the default typeface).
+    virtual void applyTypefaceByName(const std::string& family, int weight, bool italic) {
+        (void)family; (void)weight; (void)italic;
+    }
+
     // Clipping
     virtual void clipRect(float left, float top, float right, float bottom) = 0;
     virtual void clipPath(int pathId, int regionOp) = 0;

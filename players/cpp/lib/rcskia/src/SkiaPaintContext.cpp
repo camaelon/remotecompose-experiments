@@ -141,15 +141,35 @@ float SkiaPaintContext::drawOrMeasureWithFallback(const std::string& utf8,
     SkTypeface* primary = mFont.getTypeface();
     SkFontStyle style = primary ? primary->fontStyle() : SkFontStyle();
 
+    // Cache key: the shaped geometry depends only on the string, the primary typeface,
+    // and the font size (fallback typeface choices are deterministic given those). Paint
+    // colour/style are applied at drawTextBlob time, so they are deliberately excluded.
+    const float fontSize = mFont.getSize();
+    uint32_t szBits;
+    std::memcpy(&szBits, &fontSize, sizeof(szBits));
+    uint64_t key = std::hash<std::string>{}(utf8);
+    key = key * 1099511628211ull ^ (primary ? primary->uniqueID() : 0u);
+    key = key * 1099511628211ull ^ szBits;
+
+    auto hit = mShapeCache.find(key);
+    if (hit != mShapeCache.end()) {
+        const ShapedText& st = hit->second;
+        if (draw) {
+            for (const ShapedRun& r : st.runs) {
+                if (r.blob) mCanvas->drawTextBlob(r.blob, x + r.dx, y, mPaint);
+            }
+        }
+        if (outBounds) { *outBounds = st.bounds; outBounds->offset(x, y); }
+        return st.advance;
+    }
+
+    // Miss: shape the text, remembering each per-typeface run's blob (built at the origin
+    // pen position) and its offset from the start so future frames can just re-draw them.
+    ShapedText shaped;
     SkRect totalBounds = SkRect::MakeEmpty();
     bool boundsInit = false;
-    float cursorX = x;
+    float cursorX = 0.0f;   // local pen, relative to the run start
 
-    // Accumulate a contiguous run of codepoints sharing one typeface,
-    // flushing whenever the active typeface changes.  This gives one
-    // SkTextBlob::MakeFromString call per typeface segment, which is far
-    // cheaper than per-codepoint draws and lets each segment shape with
-    // its own glyph metrics.
     sk_sp<SkTypeface> runTypeface;
     std::string runUtf8;
     auto flushRun = [&]() {
@@ -159,13 +179,9 @@ float SkiaPaintContext::drawOrMeasureWithFallback(const std::string& utf8,
         SkRect runBounds;
         float adv = runFont.measureText(runUtf8.data(), runUtf8.size(),
                                          SkTextEncoding::kUTF8, &runBounds);
-        if (draw) {
-            auto blob = SkTextBlob::MakeFromString(runUtf8.c_str(), runFont);
-            if (blob) {
-                mCanvas->drawTextBlob(blob, cursorX, y, mPaint);
-            }
-        }
-        runBounds.offset(cursorX, y);
+        auto blob = SkTextBlob::MakeFromString(runUtf8.c_str(), runFont);
+        shaped.runs.push_back({blob, cursorX});
+        runBounds.offset(cursorX, 0.0f);
         if (!boundsInit) { totalBounds = runBounds; boundsInit = true; }
         else             { totalBounds.join(runBounds); }
         cursorX += adv;
@@ -208,11 +224,23 @@ float SkiaPaintContext::drawOrMeasureWithFallback(const std::string& utf8,
     }
     flushRun();
 
-    if (outBounds) {
-        if (boundsInit) *outBounds = totalBounds;
-        else            outBounds->setEmpty();
+    shaped.advance = cursorX;
+    shaped.bounds = boundsInit ? totalBounds : SkRect::MakeEmpty();
+
+    if (draw) {
+        for (const ShapedRun& r : shaped.runs) {
+            if (r.blob) mCanvas->drawTextBlob(r.blob, x + r.dx, y, mPaint);
+        }
     }
-    return cursorX - x;
+    if (outBounds) { *outBounds = shaped.bounds; outBounds->offset(x, y); }
+
+    // Bound memory: distinct (string, typeface, size) triples are finite for a deck, but
+    // animated per-glyph sizes (e.g. a graph label lerping) could grow it without bound.
+    const float advance = shaped.advance;
+    if (mShapeCache.size() >= 8192) mShapeCache.clear();
+    mShapeCache.emplace(key, std::move(shaped));
+
+    return advance;
 }
 
 // ── Helper: trim path to [start, end] fraction ──────────────────────
@@ -589,6 +617,26 @@ void SkiaPaintContext::saveLayerAlpha(float alpha, float left, float top,
     mCanvas->saveLayerAlpha(&bounds, static_cast<U8CPU>(alpha * 255.0f + 0.5f));
 }
 
+void SkiaPaintContext::applyTypefaceByName(const std::string& family, int weight, bool italic) {
+    if (!mFontMgr || family.empty()) return;
+    // Cache by (family, weight, italic) in the shared typeface cache; the high marker bit
+    // keeps these keys clear of the generic-fontType keys used elsewhere.
+    uint64_t key = (1ull << 63)
+                 ^ (std::hash<std::string>{}(family) & 0x7FFFFFFFFFFFull)
+                 ^ (static_cast<uint64_t>(weight) << 48) ^ (italic ? (1ull << 47) : 0ull);
+    auto it = mTypefaceCache.find(key);
+    sk_sp<SkTypeface> tf;
+    if (it != mTypefaceCache.end()) {
+        tf = it->second;
+    } else {
+        SkFontStyle style(weight > 0 ? weight : 400, SkFontStyle::kNormal_Width,
+                          italic ? SkFontStyle::kItalic_Slant : SkFontStyle::kUpright_Slant);
+        tf = sk_sp<SkTypeface>(mFontMgr->matchFamilyStyle(family.c_str(), style));
+        mTypefaceCache[key] = tf;
+    }
+    if (tf) mFont.setTypeface(tf);
+}
+
 void SkiaPaintContext::saveLayerWithBlur(float sigmaX, float sigmaY,
                                          float left, float top, float right, float bottom) {
     // Blur render effect: draw the layer's content through a gaussian blur image filter
@@ -805,14 +853,34 @@ void SkiaPaintContext::reset() {
     mFont.setSize(14);
     while (!mPaintStack.empty()) mPaintStack.pop();
     while (!mFontStack.empty()) mFontStack.pop();
+    // NOTE: do NOT clear mShapeCache / mWidthCache here — reset() runs at the START of
+    // every frame (CoreDocument::paint), so clearing them would defeat the whole point and
+    // add per-frame alloc/clear churn (the actual cause of transition stutter). They are
+    // keyed by (string, typeface, size), stay valid across frames, are bounded by the
+    // 8192-entry cap, and die with the paint context when the document is switched.
 }
 
 // ── Text measurement ──────────────────────────────────────────────────
 
 float SkiaPaintContext::measureTextWidth(const std::string& text, float fontSize) {
+    // Measuring shapes the string too (glyph mapping + advances). The layout measure pass
+    // calls this for every text component every frame, so memoise by (string, typeface,
+    // size) exactly like the draw-side shape cache.
+    SkTypeface* tf = mFont.getTypeface();
+    uint32_t szBits;
+    std::memcpy(&szBits, &fontSize, sizeof(szBits));
+    uint64_t key = std::hash<std::string>{}(text);
+    key = key * 1099511628211ull ^ (tf ? tf->uniqueID() : 0u);
+    key = key * 1099511628211ull ^ szBits;
+    auto it = mWidthCache.find(key);
+    if (it != mWidthCache.end()) return it->second;
+
     SkFont tmpFont(mFont);  // Copy member font (has valid typeface)
     tmpFont.setSize(fontSize);
-    return tmpFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8);
+    float w = tmpFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8);
+    if (mWidthCache.size() >= 8192) mWidthCache.clear();
+    mWidthCache.emplace(key, w);
+    return w;
 }
 
 float SkiaPaintContext::measureTextHeight(const std::string& text, float fontSize) {

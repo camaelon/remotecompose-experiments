@@ -10,6 +10,7 @@
 #include "include/core/SkFont.h"
 #include "include/core/SkTypeface.h"
 #include "include/core/SkData.h"
+#include "include/core/SkTextBlob.h"
 #include "include/effects/SkRuntimeEffect.h"
 
 #include <stack>
@@ -81,6 +82,7 @@ public:
     void saveLayerWithBlur(float sigmaX, float sigmaY,
                            float left, float top, float right, float bottom) override;
     void restoreLayer() override;
+    void applyTypefaceByName(const std::string& family, int weight, bool italic) override;
     void matrixScale(float sx, float sy, float cx, float cy) override;
     void matrixTranslate(float dx, float dy) override;
     void matrixRotate(float degrees, float cx, float cy) override;
@@ -203,6 +205,18 @@ private:
     // covers it via SkFontMgr::matchFamilyStyleCharacter and remember
     // the result here so we don't pay the lookup cost per draw.
     std::unordered_map<int32_t, sk_sp<SkTypeface>> mFallbackCache;
+
+    // Shaped-text cache. Shaping a run (mapping UTF-8 → positioned glyphs via
+    // SkTextBlob::MakeFromString + per-codepoint fallback) is the dominant per-frame
+    // cost on text-heavy slides (syntax-highlighted code = hundreds of runs), and an
+    // animated background forces a full redraw every frame. The glyph geometry depends
+    // only on (string, primary typeface, size) — never on paint colour/style, which are
+    // applied at drawTextBlob time — so we memoise it. Keyed by a hash of those three.
+    struct ShapedRun { sk_sp<SkTextBlob> blob; float dx; };  // blob at origin; dx from start
+    struct ShapedText { std::vector<ShapedRun> runs; float advance = 0; SkRect bounds; };
+    std::unordered_map<uint64_t, ShapedText> mShapeCache;
+    // Measure-side width memo (layout re-measures every text component every frame).
+    std::unordered_map<uint64_t, float> mWidthCache;
 
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, sk_sp<SkImage>> mImages;
