@@ -635,10 +635,35 @@ static void paintComponent(Operation* op, RemoteContext& ctx);
 // (Alternatively, we could add LayoutState to each class, but this avoids
 //  modifying the header for all layout types.)
 #include <unordered_map>
-static std::unordered_map<Operation*, LayoutState>& getLayoutStates() {
-    static std::unordered_map<Operation*, LayoutState> sStates;
-    return sStates;
+// Layout states are held in a STACK of maps, one level per in-flight paint. A paint can be
+// re-entrant: a LAYOUT_CUSTOM host (e.g. an embedded ".rc" sub-document) runs a whole nested
+// paint from inside the outer paint. If the nested paint reset a single shared map it would
+// destroy the outer paint's in-flight LayoutState& references (dangling → crash). Giving each
+// paint its own level keeps every level's states alive for the duration of that paint.
+using LayoutStateMap = std::unordered_map<Operation*, LayoutState>;
+
+static std::vector<LayoutStateMap>& layoutStateStack() {
+    static std::vector<LayoutStateMap> sStack;
+    return sStack;
 }
+
+static LayoutStateMap& getLayoutStates() {
+    auto& s = layoutStateStack();
+    if (s.empty()) s.emplace_back();          // base level for any getLS outside a paint
+    return s.back();
+}
+
+// RAII: a fresh layout-state level for one paint pass, popped (restoring the caller's level)
+// on scope exit. Replaces the previous per-frame clear() of a single global map.
+struct LayoutStateScope {
+    LayoutStateScope() { layoutStateStack().emplace_back(); }
+    ~LayoutStateScope() {
+        auto& s = layoutStateStack();
+        if (!s.empty()) s.pop_back();
+    }
+    LayoutStateScope(const LayoutStateScope&) = delete;
+    LayoutStateScope& operator=(const LayoutStateScope&) = delete;
+};
 
 static LayoutState& getLS(Operation* op) {
     auto& states = getLayoutStates();
@@ -2201,8 +2226,10 @@ void LayoutRoot::apply(RemoteContext& context) {
     LTRACE("LayoutRoot::apply PAINT mode, canvas=%.0fx%.0f\n", context.mWidth, context.mHeight);
     context.setComponentDimension(componentId, context.mWidth, context.mHeight, 0, 0);
 
-    // Clear layout state cache for fresh measurement
-    getLayoutStates().clear();
+    // Fresh layout states for this paint, on their own stack level so a re-entrant paint
+    // (an embedded rc-document custom component) can't clear the states we're mid-iteration
+    // over. Popped automatically on return.
+    LayoutStateScope layoutScope;
 
     // Collect ALL layout children, including those inside LayoutComponentContent
     // wrappers (TS RootLayoutComponent processes all content wrappers transparently)

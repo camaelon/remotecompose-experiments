@@ -2,6 +2,7 @@
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
 #include "rcskia/SkiaPaintContext.h"
+#include "rcskia/RcDocumentHost.h"
 
 #include "include/core/SkSurface.h"
 #include "include/core/SkCanvas.h"
@@ -94,6 +95,15 @@ int main(int argc, char* argv[]) {
     rcskia::SkiaPaintContext paintCtx(context, canvas);
     context.setPaintContext(&paintCtx);
     context.setDocument(&doc);
+
+    // Host for embedded "rc:<file>" sub-documents, resolved next to the input file.
+    rcskia::RcDocumentHost rcHost;
+    {
+        std::string in(inputPath);
+        auto slash = in.find_last_of("/\\");
+        rcHost.setBaseDir(slash == std::string::npos ? "." : in.substr(0, slash));
+    }
+    context.setCustomHost(&rcHost);
 
     // Set canvas dimensions before data pass
     context.mWidth = static_cast<float>(width);

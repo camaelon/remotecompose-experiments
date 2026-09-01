@@ -26,6 +26,7 @@
 #include "WidgetHelper.h"
 #include "VideoCustomHost.h"
 #include "WebCustomHost.h"
+#include "rcskia/RcDocumentHost.h"
 
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
@@ -253,14 +254,17 @@ private:
 };
 
 // Routes LAYOUT_CUSTOM draws to the right host by the config prefix: "web:" → the web
-// host, "video:" (default) → the video host.
+// host, "rc:" → the embedded-document host, "video:" (default) → the video host.
 struct CustomHostRouter : rccore::CustomComponentHost {
     VideoCustomHost* video = nullptr;
     WebCustomHost* web = nullptr;
+    rcskia::RcDocumentHost* rcdoc = nullptr;
     bool drawCustom(int id, const std::string& config, rccore::PaintContext* pc,
                     float w, float h, double t) override {
         if (config.rfind("web:", 0) == 0)
             return web ? web->drawCustom(id, config, pc, w, h, t) : false;
+        if (config.rfind("rc:", 0) == 0)
+            return rcdoc ? rcdoc->drawCustom(id, config, pc, w, h, t) : false;
         return video ? video->drawCustom(id, config, pc, w, h, t) : false;
     }
 };
@@ -291,6 +295,7 @@ struct ViewerState {
     // behind a router registered on the context.
     VideoCustomHost videoHost;
     WebCustomHost webHost;
+    rcskia::RcDocumentHost rcDocHost;
     CustomHostRouter customRouter;
 
     // Override voice-over directory. When empty, resolveVoicePath() falls
@@ -425,7 +430,8 @@ static void initDocument() {
     g.context->setDocument(g.doc.get());
     g.customRouter.video = &g.videoHost;
     g.customRouter.web = &g.webHost;
-    g.context->setCustomHost(&g.customRouter);   // video + embedded-web custom components
+    g.customRouter.rcdoc = &g.rcDocHost;
+    g.context->setCustomHost(&g.customRouter);   // video + embedded-web + embedded-rc custom components
     g.context->mDebug = g.debug;
 
     g.context->mWidth = static_cast<float>(g.width);
@@ -459,7 +465,11 @@ static bool loadFile(const std::string& path) {
     // views persist across slides (hidden when off-slide via the frame bracket); only
     // the per-slide videos are released here.
     g.videoHost.reset();
-    if (!g.zip) g.videoHost.setBaseDir(fs::path(path).parent_path().string());
+    g.rcDocHost.reset();
+    if (!g.zip) {
+        g.videoHost.setBaseDir(fs::path(path).parent_path().string());
+        g.rcDocHost.setBaseDir(fs::path(path).parent_path().string());
+    }
     g.webpPlayer.reset();
     g.avfPlayer.reset();
     g.doc.reset();
@@ -761,6 +771,13 @@ static void cursorCallback(GLFWwindow* /*window*/, double x, double y) {
     g.mouseX = static_cast<float>(x);
     g.mouseY = static_cast<float>(y);
 
+    // A drag that began on an embedded rc-document goes to that sub-document, not the host.
+    if (g.mouseDown && g.rcDocHost.isCapturing()) {
+        g.rcDocHost.pointerMove(g.mouseX, g.mouseY);
+        g.needsRedraw = true;
+        return;
+    }
+
     if (g.mouseDown && g.doc && g.context) {
         float tx = touchX(g.mouseX), ty = touchY(g.mouseY);
         g.context->loadFloat(rccore::RemoteContext::ID_TOUCH_POS_X, tx);
@@ -793,25 +810,28 @@ static void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, 
             g.lastMouseY = g.prevMouseY = g.mouseY;
             g.lastMouseTime = g.prevMouseTime = glfwGetTime();
 
-            if (g.doc && g.context) {
+            // If the press lands on an embedded rc-document, it captures the drag; the host
+            // document doesn't also get it. Otherwise fall through to the host document.
+            if (!g.rcDocHost.pointerDown(g.mouseX, g.mouseY) && g.doc && g.context) {
                 g.doc->touchDown(*g.context, touchX(g.mouseX), touchY(g.mouseY));
             }
         } else if (action == GLFW_RELEASE) {
             g.mouseDown = false;
 
-            if (g.doc && g.context) {
-                // Measure against the *older* sample. TouchExpression turns this velocity into
-                // the fling: a zero here makes getStopPosition return the current value, which
-                // makes the easing curve zero-length, which looks exactly like the fling being
-                // unimplemented. It is in pixels per second, matching what the platform
-                // reports to touchUp.
-                double now = glfwGetTime();
-                double dt = now - g.prevMouseTime;
-                float dx = 0, dy = 0;
-                if (dt > 0.0001) {
-                    dx = static_cast<float>((g.mouseX - g.prevMouseX) / dt);
-                    dy = static_cast<float>((g.mouseY - g.prevMouseY) / dt);
-                }
+            // Measure against the *older* sample. TouchExpression turns this velocity into
+            // the fling: a zero here makes getStopPosition return the current value, which
+            // makes the easing curve zero-length, which looks exactly like the fling being
+            // unimplemented. It is in pixels per second, matching what the platform reports.
+            double now = glfwGetTime();
+            double dt = now - g.prevMouseTime;
+            float dx = 0, dy = 0;
+            if (dt > 0.0001) {
+                dx = static_cast<float>((g.mouseX - g.prevMouseX) / dt);
+                dy = static_cast<float>((g.mouseY - g.prevMouseY) / dt);
+            }
+            if (g.rcDocHost.isCapturing()) {
+                g.rcDocHost.pointerUp(g.mouseX, g.mouseY, dx, dy);
+            } else if (g.doc && g.context) {
                 g.doc->touchUp(*g.context, touchX(g.mouseX), touchY(g.mouseY), dx, dy);
                 g.doc->onClick(*g.context, g.mouseX, g.mouseY);
             }

@@ -141,3 +141,6 @@ add_subdirectory(tools/rc2json)
 add_subdirectory(tools/rc2image)
 add_subdirectory(tools/rc2layout)
 add_subdirectory(apps/viewer)
+
+enable_testing()
+add_subdirectory(tests)
