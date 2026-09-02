@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <memory>
 
 // Debug layout tracing (set to 1 for verbose output)
 #define LAYOUT_DEBUG 0
@@ -460,6 +461,11 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
 }
 
 // ── Resolve a potentially NaN-encoded float variable ─────────────────
+// Set during the layout-animation pass: a state layout (index may flip) or an in-flight layout
+// animation means the layout can't be cached this frame.
+static bool sSawStateLayout = false;
+static bool sSawActiveAnim = false;
+
 static float resolveVar(float v, const RemoteContext& ctx) {
     if (Utils::isVariable(v)) {
         return ctx.getFloat(Utils::idFromNan(v));
@@ -630,44 +636,31 @@ static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& meas
 
 static void paintComponent(Operation* op, RemoteContext& ctx);
 
-// ── Get LayoutState for a layout operation ───────────────────────────
-// We store LayoutState as part of the Operation by using a static map.
-// (Alternatively, we could add LayoutState to each class, but this avoids
-//  modifying the header for all layout types.)
+// ── Per-document layout cache ────────────────────────────────────────
 #include <unordered_map>
-// Layout states are held in a STACK of maps, one level per in-flight paint. A paint can be
-// re-entrant: a LAYOUT_CUSTOM host (e.g. an embedded ".rc" sub-document) runs a whole nested
-// paint from inside the outer paint. If the nested paint reset a single shared map it would
-// destroy the outer paint's in-flight LayoutState& references (dangling → crash). Giving each
-// paint its own level keeps every level's states alive for the duration of that paint.
-using LayoutStateMap = std::unordered_map<Operation*, LayoutState>;
-
-static std::vector<LayoutStateMap>& layoutStateStack() {
-    static std::vector<LayoutStateMap> sStack;
-    return sStack;
-}
-
-static LayoutStateMap& getLayoutStates() {
-    auto& s = layoutStateStack();
-    if (s.empty()) s.emplace_back();          // base level for any getLS outside a paint
-    return s.back();
-}
-
-// RAII: a fresh layout-state level for one paint pass, popped (restoring the caller's level)
-// on scope exit. Replaces the previous per-frame clear() of a single global map.
-struct LayoutStateScope {
-    LayoutStateScope() { layoutStateStack().emplace_back(); }
-    ~LayoutStateScope() {
-        auto& s = layoutStateStack();
-        if (!s.empty()) s.pop_back();
-    }
-    LayoutStateScope(const LayoutStateScope&) = delete;
-    LayoutStateScope& operator=(const LayoutStateScope&) = delete;
+// Owned by the RemoteContext so it lives exactly as long as the
+// document (no stale reuse across docs, no leak). Holds the persistent LayoutState per op, the
+// measured bounds (MeasurePass), and the set of variables the layout actually read. That lets a
+// paint SKIP the whole measure/layout pass when no layout input changed — matching the androidx
+// RootLayoutComponent.mNeedsMeasure gate — while still painting every frame (so paint-time
+// offset/alpha/colour animations are unaffected).
+struct LayoutCache {
+    std::unordered_map<Operation*, LayoutState> states;
+    MeasurePass measure;
+    bool laid = false;
+    bool hasStateLayout = false;   // sticky: doc has a StateLayout → keep re-laying out
+    bool animating = false;        // a layout animation was in flight last measure
+    float w = -1.0f, h = -1.0f;
+    uint64_t epoch = 0;            // RemoteContext.mLayoutEpoch at the last layout
 };
 
-static LayoutState& getLS(Operation* op) {
-    auto& states = getLayoutStates();
-    return states[op];
+static LayoutCache& cacheFor(RemoteContext& ctx) {
+    if (!ctx.mLayoutCache) ctx.mLayoutCache = std::make_shared<LayoutCache>();
+    return *static_cast<LayoutCache*>(ctx.mLayoutCache.get());
+}
+
+static LayoutState& getLS(RemoteContext& ctx, Operation* op) {
+    return cacheFor(ctx).states[op];
 }
 
 // ── Get the component ID for any layout operation ────────────────────
@@ -709,7 +702,7 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
                         MeasurePass& measure) {
     int cid = getComponentId(op);
     auto& m = measure.get(cid);
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
     inflateLayout(op, ls);
 
     int tid = 0;
@@ -841,7 +834,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                                  MeasurePass& measure) {
     int cid = getComponentId(op);
     auto& m = measure.get(cid);
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
     inflateLayout(op, ls);
 
     // STEP 1: Start with modifier-defined dimensions, clamped to maxWidth/maxHeight
@@ -905,7 +898,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
         // Inflate and measure all children first
         for (auto* child : ls.layoutChildren) {
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             inflateLayout(child, childLS);
             measureComponent(child, pc, ctx, 0, insetMaxW, 0, insetMaxH, measure);
         }
@@ -923,7 +916,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                 continue;
             }
             float childW = 0;
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             if (childLS.widthType == DimType::WEIGHT) {
                 // Use minimum WidthIn width for WEIGHT children
                 if (childLS.widthInMin > 0) {
@@ -967,7 +960,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         bool hasWeights = false;
         int totalChildCount = 0;
         for (auto* child : ls.layoutChildren) {
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             inflateLayout(child, childLS);
             if (childLS.widthType == DimType::WEIGHT) {
                 hasWeights = true;
@@ -982,7 +975,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         if (hasWeights && totalWeights > 0) {
             // Pass 1: measure non-WEIGHT children first
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.widthType == DimType::WEIGHT) continue;
                 measureComponent(child, pc, ctx, 0, currentMaxW, 0, insetMaxH, measure);
                 auto& cm = measure.get(getComponentId(child));
@@ -996,7 +989,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             // Account for gaps between all visible children
             int weightChildCount = 0;
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.widthType == DimType::WEIGHT) weightChildCount++;
             }
 
@@ -1005,7 +998,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
             // Pass 2: distribute remaining space to WEIGHT children proportionally
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.widthType != DimType::WEIGHT) continue;
                 float childW = (childLS.widthValue / totalWeights) * remainingW;
                 measureComponent(child, pc, ctx, childW, childW, 0, insetMaxH, measure);
@@ -1041,7 +1034,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         bool hasWeights = false;
         int weightChildCount = 0;
         for (auto* child : ls.layoutChildren) {
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             inflateLayout(child, childLS);
             if (childLS.heightType == DimType::WEIGHT) {
                 hasWeights = true;
@@ -1055,7 +1048,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         if (hasWeights && totalWeights > 0) {
             // Pass 1: measure non-WEIGHT children first
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.heightType == DimType::WEIGHT) continue;
                 measureComponent(child, pc, ctx, 0, insetMaxW, 0, insetMaxH, measure);
                 auto& cm = measure.get(getComponentId(child));
@@ -1070,7 +1063,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
             // Pass 2: distribute remaining height proportionally
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.heightType != DimType::WEIGHT) continue;
                 float childH = (childLS.heightValue / totalWeights) * remainingH;
                 measureComponent(child, pc, ctx, 0, insetMaxW, childH, childH, measure);
@@ -1104,7 +1097,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             measureComponent(child, pc, ctx, 0, insetMaxW, 0, insetMaxH, measure);
             auto& cm = measure.get(getComponentId(child));
             // Apply LayoutCompute TYPE_MEASURE modifiers (stored on CHILD's LayoutState)
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             for (auto& lci : childLS.measureComputes) {
                 applyLayoutCompute(lci, ctx, cm, parentM);
             }
@@ -1204,7 +1197,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             float mh = childMaxH;
 
             for (auto* child : ls.layoutChildren) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.heightType == DimType::WEIGHT) {
                     hasWeights = true;
                     totalWeights += childLS.heightValue;
@@ -1221,7 +1214,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                 // Re-measure all children with weight distribution
                 mh = childMaxH;
                 for (auto* child : ls.layoutChildren) {
-                    auto& childLS = getLS(child);
+                    auto& childLS = getLS(ctx, child);
                     if (childLS.heightType == DimType::WEIGHT) {
                         float wH = (childMaxH - totalNonWeightH) * childLS.heightValue / totalWeights;
                         measureComponent(child, pc, ctx, 0, childMaxW, wH, wH, measure);
@@ -1249,7 +1242,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             for (auto* child : ls.layoutChildren) {
                 measureComponent(child, pc, ctx, 0, childMaxW, 0, childMaxH, measure);
                 // Apply LayoutCompute TYPE_MEASURE modifiers (stored on CHILD)
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (!childLS.measureComputes.empty()) {
                     auto& cm = measure.get(getComponentId(child));
                     for (auto& lci : childLS.measureComputes) {
@@ -1264,6 +1257,17 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     measuredW = std::max(measuredW, minW);
     measuredH = std::max(measuredH, minH);
 
+    // A canvas (LAYOUT_CANVAS) is an explicitly-sized drawing surface: honour its exact
+    // height even when it exceeds the parent's maxHeight. A canvas doesn't clip its own
+    // drawing, so overflow renders (and scrolls) correctly — mirroring how a wrap-content
+    // column reports its full intrinsic height rather than being clamped. Clamping it would
+    // shrink the enclosing panel's background/clip and hide content scrolled past the
+    // viewport (tall code panels inside a scroll viewport).
+    if (op->opcode() == 205 &&
+        (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP)) {
+        measuredH = resolveVar(ls.heightValue, ctx) + ls.padBeforeHeight;
+    }
+
     applyVisibility(ls, ctx, m);
     m.w = measuredW;
     m.h = measuredH;
@@ -1276,7 +1280,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 // For text components: uses font metrics approximation.
 // For non-text components with AlignBy: returns 0.
 static float getAlignByValue(Operation* child, RemoteContext& ctx, PaintContext* pc) {
-    auto& childLS = getLS(child);
+    auto& childLS = getLS(ctx, child);
     if (!childLS.hasAlignBy) return 0;
 
     float line = childLS.alignByLine;
@@ -1327,7 +1331,7 @@ static float getAlignByValue(Operation* child, RemoteContext& ctx, PaintContext*
 static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
     int cid = getComponentId(op);
     auto& selfM = measure.get(cid);
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
 
     float selfW = selfM.w - ls.paddingLeft - ls.paddingRight;
     float selfH = selfM.h - ls.paddingTop - ls.paddingBottom;
@@ -1353,7 +1357,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
                 continue;
             }
             float childW = 0;
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             if (childLS.widthType == DimType::WEIGHT) {
                 if (childLS.widthInMin > 0) {
                     childW = childLS.widthInMin;
@@ -1396,7 +1400,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
                 for (auto* child : row) {
                     auto& cm = measure.get(getComponentId(child));
                     if (cm.isGone()) continue;
-                    auto& childLS = getLS(child);
+                    auto& childLS = getLS(ctx, child);
                     if (childLS.widthType == DimType::WEIGHT) {
                         rowHasWeights = true;
                         rowTotalWeights += childLS.widthValue;
@@ -1407,7 +1411,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
                 if (rowHasWeights && rowTotalWeights > 0) {
                     float rowAvail = selfW - rowNonWeightW;
                     for (auto* child : row) {
-                        auto& childLS = getLS(child);
+                        auto& childLS = getLS(ctx, child);
                         if (childLS.widthType != DimType::WEIGHT) continue;
                         auto& cm = measure.get(getComponentId(child));
                         if (cm.isGone()) continue;
@@ -1463,7 +1467,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             for (auto* child : row) {
                 auto& cm = measure.get(getComponentId(child));
                 if (cm.isGone()) continue;
-                if (getLS(child).hasAlignBy) {
+                if (getLS(ctx, child).hasAlignBy) {
                     rowHasAlignBy = true;
                     rowMaxAlignBy = std::max(rowMaxAlignBy, getAlignByValue(child, ctx, pc));
                 }
@@ -1472,7 +1476,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             for (auto* child : row) {
                 auto& cm = measure.get(getComponentId(child));
                 if (cm.isGone()) continue;
-                float alignByOffset = (rowHasAlignBy && getLS(child).hasAlignBy)
+                float alignByOffset = (rowHasAlignBy && getLS(ctx, child).hasAlignBy)
                                           ? getAlignByValue(child, ctx, pc) : 0;
                 // Within-row vertical alignment (matching TS)
                 float ty = 0;
@@ -1524,7 +1528,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             for (auto* child : ls.layoutChildren) {
                 auto& cm = measure.get(getComponentId(child));
                 if (cm.isGone()) continue;
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.widthType == DimType::WEIGHT) {
                     hasWeights = true;
                     totalWeights += childLS.widthValue;
@@ -1535,7 +1539,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             if (hasWeights && totalWeights > 0) {
                 float availableSpace = selfW - nonWeightWidth;
                 for (auto* child : ls.layoutChildren) {
-                    auto& childLS = getLS(child);
+                    auto& childLS = getLS(ctx, child);
                     if (childLS.widthType != DimType::WEIGHT) continue;
                     auto& cm = measure.get(getComponentId(child));
                     if (cm.isGone()) continue;
@@ -1593,7 +1597,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             auto& cm = measure.get(getComponentId(child));
             if (cm.isGone()) continue;
             childrenHeight = std::max(childrenHeight, cm.h);
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             if (childLS.hasAlignBy) {
                 hasAlignBy = true;
                 float abv = getAlignByValue(child, ctx, pc);
@@ -1608,7 +1612,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
 
             float alignByOffset = 0;
             if (hasAlignBy) {
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.hasAlignBy) {
                     alignByOffset = getAlignByValue(child, ctx, pc);
                 }
@@ -1673,7 +1677,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             for (auto* child : ls.layoutChildren) {
                 auto& cm = measure.get(getComponentId(child));
                 if (cm.isGone()) continue;
-                auto& childLS = getLS(child);
+                auto& childLS = getLS(ctx, child);
                 if (childLS.heightType == DimType::WEIGHT) {
                     hasWeights = true;
                     totalWeights += childLS.heightValue;
@@ -1684,7 +1688,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             if (hasWeights && totalWeights > 0) {
                 float availableSpace = selfH - nonWeightHeight;
                 for (auto* child : ls.layoutChildren) {
-                    auto& childLS = getLS(child);
+                    auto& childLS = getLS(ctx, child);
                     if (childLS.heightType != DimType::WEIGHT) continue;
                     auto& cm = measure.get(getComponentId(child));
                     if (cm.isGone()) continue;
@@ -1790,7 +1794,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             cm.y = ty;
 
             // Apply LayoutCompute TYPE_POSITION modifiers (stored on CHILD's LayoutState)
-            auto& childLS = getLS(child);
+            auto& childLS = getLS(ctx, child);
             for (auto& lci : childLS.positionComputes) {
                 applyLayoutCompute(lci, ctx, cm, parentM);
             }
@@ -1835,7 +1839,7 @@ static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& meas
 // ── Store measured dimensions in RemoteContext for COMPONENT_VALUE ────
 static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
     int cid = getComponentId(op);
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
 
     if (cid != -1 && measure.contains(cid)) {
         auto& m = measure.get(cid);
@@ -1921,7 +1925,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 
     int cid = getComponentId(op);
     auto& m = measure.get(cid);
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
 
     // GONE components are not rendered. During a StateLayout transition the exiting
     // state is kept VISIBLE (with a fading alpha) by the animation pass, so only a
@@ -2154,9 +2158,11 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
     if (cid != -1 && measure.contains(cid)) {
         AnimSpecParams spec;  // default 300ms standard/fade; per-component spec: TODO
         ComponentMeasure& m = measure.get(cid);
-        animUpdate(cid, m, timeSec, gLayoutAnimationEnabled, spec);
+        if (animUpdate(cid, m, timeSec, gLayoutAnimationEnabled, spec))
+            sSawActiveAnim = true;   // still animating → layout depends on animationTime
     }
-    auto& ls = getLS(op);
+    if (op->opcode() == 217) sSawStateLayout = true;   // index can flip → keep re-laying out
+    auto& ls = getLS(ctx, op);
 
     // StateLayout: mark only the current-index state visible. When the index flips,
     // the previous state's target becomes GONE (exit fade) and the new one's becomes
@@ -2181,7 +2187,7 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
 
 // ── Run data operations for a layout tree ────────────────────────────
 static void applyDataOps(Operation* op, RemoteContext& ctx) {
-    auto& ls = getLS(op);
+    auto& ls = getLS(ctx, op);
     inflateLayout(op, ls);
 
     // Run own data operations
@@ -2225,11 +2231,6 @@ void LayoutRoot::apply(RemoteContext& context) {
 
     LTRACE("LayoutRoot::apply PAINT mode, canvas=%.0fx%.0f\n", context.mWidth, context.mHeight);
     context.setComponentDimension(componentId, context.mWidth, context.mHeight, 0, 0);
-
-    // Fresh layout states for this paint, on their own stack level so a re-entrant paint
-    // (an embedded rc-document custom component) can't clear the states we're mid-iteration
-    // over. Popped automatically on return.
-    LayoutStateScope layoutScope;
 
     // Collect ALL layout children, including those inside LayoutComponentContent
     // wrappers (TS RootLayoutComponent processes all content wrappers transparently)
@@ -2282,64 +2283,72 @@ void LayoutRoot::apply(RemoteContext& context) {
 
     float maxW = context.mWidth;
     float maxH = context.mHeight;
-    MeasurePass measure;
+    LayoutCache& cache = cacheFor(context);
+    MeasurePass& measure = cache.measure;
 
-    // Run root-level data ops from content wrappers (expressions, constants, etc.)
-    if (!rootDataOps.empty() || !rootCanvasOps.empty()) {
+    // Re-measure only when a *layout* input changed — mirroring androidx's mNeedsMeasure gate.
+    // The layout epoch bumps whenever any non-clock variable changes value, so a static or
+    // settled slide keeps its cached layout and only re-paints; paint-time animations (a scroll
+    // offset, a fade alpha, a colour) that DO move bump the epoch and re-lay-out while moving.
+    // (The CoreDocument DATA pass ran before this, so mLayoutEpoch already reflects this frame.)
+    bool needMeasure = !cache.laid || cache.w != maxW || cache.h != maxH
+                       || cache.hasStateLayout || cache.animating
+                       || cache.epoch != context.mLayoutEpoch;
+
+    if (needMeasure) {
+        // Full measure/layout, exactly as the un-cached path did (fresh per-op state so
+        // inflateLayout — gated on ls.inflated — re-reads every modifier this pass).
+        cache.states.clear();
+        sSawStateLayout = false;
+        sSawActiveAnim = false;
+
         context.setMode(ContextMode::DATA);
-        for (auto* op : rootDataOps) {
-            context.incrementOpCount();
-            op->apply(context);
+        for (auto* op : rootDataOps) { context.incrementOpCount(); op->apply(context); }
+        for (auto* op : rootCanvasOps) { context.incrementOpCount(); op->apply(context); }
+        context.setMode(ContextMode::PAINT);
+
+        // Two passes: pass 1 establishes dimensions; the DATA pass in between publishes them as
+        // COMPONENT_VALUEs; pass 2 re-layouts so LayoutCompute expressions that read those work.
+        for (auto* layoutChild : layoutChildren) {
+            context.setMode(ContextMode::DATA);
+            applyDataOps(layoutChild, context);
+            context.setMode(ContextMode::PAINT);
+
+            measureComponent(layoutChild, pc, context, 0, maxW, 0, maxH, measure);
+            layoutComponent(layoutChild, context, measure);
+            storeMeasuredDimensions(layoutChild, context, measure);
+
+            context.setMode(ContextMode::DATA);
+            applyDataOps(layoutChild, context);
+            context.setMode(ContextMode::PAINT);
+
+            layoutComponent(layoutChild, context, measure);
+            storeMeasuredDimensions(layoutChild, context, measure);
         }
-        for (auto* op : rootCanvasOps) {
-            context.incrementOpCount();
-            op->apply(context);
+
+        // Layout-animation pass: blend measured bounds toward targets over time.
+        double animTime = context.getAnimationTime();
+        for (auto* layoutChild : layoutChildren) {
+            animateLayoutTree(layoutChild, context, measure, animTime);
         }
-        context.setMode(ContextMode::PAINT);
-    }
 
-    // Process each layout child: data → measure → layout → store dims → data again → paint
-    // Two passes: first pass establishes dimensions, second pass uses COMPONENT_VALUE results
-    for (auto* layoutChild : layoutChildren) {
-        LTRACE("  processing layout child opcode=%d\n", layoutChild->opcode());
-
-        // Run data operations before layout
+        cache.hasStateLayout = cache.hasStateLayout || sSawStateLayout;
+        cache.animating = sSawActiveAnim;
+        cache.epoch = context.mLayoutEpoch;   // snapshot: re-lay-out when a non-clock var moves
+        cache.laid = true;
+        cache.w = maxW;
+        cache.h = maxH;
+    } else {
+        // Cached: still evaluate expressions so the paint reads current offset/alpha/colour
+        // (the measure/layout itself is reused).
         context.setMode(ContextMode::DATA);
-        applyDataOps(layoutChild, context);
+        for (auto* op : rootDataOps) { context.incrementOpCount(); op->apply(context); }
+        for (auto* op : rootCanvasOps) { context.incrementOpCount(); op->apply(context); }
+        for (auto* layoutChild : layoutChildren) applyDataOps(layoutChild, context);
         context.setMode(ContextMode::PAINT);
-
-        // Pass 1: Measure and layout to establish component dimensions
-        LTRACE("  measure maxW=%.0f maxH=%.0f\n", maxW, maxH);
-        measureComponent(layoutChild, pc, context, 0, maxW, 0, maxH, measure);
-
-        int cid = getComponentId(layoutChild);
-        auto& cm = measure.get(cid);
-        LTRACE("  measured: cid=%d w=%.1f h=%.1f\n", cid, cm.w, cm.h);
-
-        // Layout (LayoutCompute modifiers run here, but COMPONENT_VALUE may not be set yet)
-        layoutComponent(layoutChild, context, measure);
-
-        // Store measured dimensions in context for COMPONENT_VALUE resolution
-        storeMeasuredDimensions(layoutChild, context, measure);
-
-        // Re-run DATA pass so COMPONENT_VALUE ops load actual dimensions
-        context.setMode(ContextMode::DATA);
-        applyDataOps(layoutChild, context);
-        context.setMode(ContextMode::PAINT);
-
-        // Pass 2: Re-layout now that COMPONENT_VALUE variables have correct dimensions.
-        // This allows LayoutCompute expressions that reference COMPONENT_VALUE to work.
-        layoutComponent(layoutChild, context, measure);
-        storeMeasuredDimensions(layoutChild, context, measure);
     }
 
-    // Layout-animation pass: blend measured bounds toward targets over time.
-    double animTime = context.getAnimationTime();
-    for (auto* layoutChild : layoutChildren) {
-        animateLayoutTree(layoutChild, context, measure, animTime);
-    }
-
-    // Paint all layout children
+    // Paint every frame, from the (possibly cached) layout.
     pc->matrixSave();
     pc->savePaint();
     pc->clipRect(0, 0, maxW, maxH);
@@ -2473,7 +2482,7 @@ void StateLayout::apply(RemoteContext& context) {
     }
 
     // Find the layout children and render only the one at the current index
-    auto& ls = getLS(this);
+    auto& ls = getLS(context, this);
     int childIdx = 0;
     for (auto* child : ls.layoutChildren) {
         if (childIdx == currentIndex) {

@@ -22,6 +22,27 @@ public:
     RemoteContext() = default;
     virtual ~RemoteContext() = default;
 
+    // Opaque per-document layout cache (owned here so its lifetime matches the document's,
+    // avoiding stale reuse). Populated/used by LayoutRoot::apply — see LayoutOperations.cpp.
+    std::shared_ptr<void> mLayoutCache;
+
+    // Bumped whenever a *non-clock* variable's value changes. LayoutRoot::apply uses it to
+    // skip the measure/layout pass while it's unchanged (a static or settled slide), and to
+    // re-lay-out the moment any layout-affecting value moves. Clock/date variables (which
+    // advance every frame but only drive painted clock/text, not layout) are excluded so a
+    // static slide can actually stay cached.
+    uint64_t mLayoutEpoch = 0;
+    static bool isClockVar(int id) {
+        switch (id) {
+            case ID_CONTINUOUS_SEC: case ID_TIME_IN_SEC: case ID_TIME_IN_MIN: case ID_TIME_IN_HR:
+            case ID_CALENDAR_MONTH: case ID_OFFSET_TO_UTC: case ID_WEEK_DAY: case ID_DAY_OF_MONTH:
+            case ID_ANIMATION_TIME: case ID_ANIMATION_DELTA_TIME: case ID_EPOCH_SECOND:
+            case ID_DAY_OF_YEAR: case ID_YEAR: case ID_API_LEVEL:
+                return true;
+            default: return false;
+        }
+    }
+
     // ── System variable IDs ──────────────────────────────────────────
     static constexpr int ID_CONTINUOUS_SEC      = 1;
     static constexpr int ID_TIME_IN_SEC         = 2;
@@ -99,6 +120,8 @@ public:
      */
     void loadFloat(int id, float value) {
         if (mFloatOverrides.count(id)) return;
+        auto it = mFloats.find(id);
+        if ((it == mFloats.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
         notifyListeners(id);
@@ -109,6 +132,8 @@ public:
      * interaction win over whatever the document keeps writing every frame.
      */
     void overrideFloat(int id, float value) {
+        auto it = mFloats.find(id);
+        if ((it == mFloats.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
         mFloatOverrides.insert(id);
@@ -121,12 +146,16 @@ public:
 
     void loadInteger(int id, int value) {
         if (mIntegerOverrides.count(id)) return;
+        auto it = mIntegers.find(id);
+        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
         notifyListeners(id);
     }
     /** As overrideFloat, for integers. */
     void overrideInteger(int id, int value) {
+        auto it = mIntegers.find(id);
+        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
         mIntegerOverrides.insert(id);

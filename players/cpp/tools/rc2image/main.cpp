@@ -132,8 +132,21 @@ int main(int argc, char* argv[]) {
         frames = std::atoi(f);
         if (frames < 1) frames = 1;
     }
-    for (int i = 0; i < frames; i++) {
-        doc.paint(context, -2);  // THEME_DARK
+    // RC_ANIM_SWEEP=N: paint N frames advancing animationTime linearly to animTimeSec, so a
+    // layout that depends on time is exercised across frames (tests the layout cache doesn't
+    // freeze it). The final frame is at animTimeSec, so it should match a single paint there.
+    int sweep = 0;
+    if (const char* s = std::getenv("RC_ANIM_SWEEP")) sweep = std::max(0, std::atoi(s));
+    if (sweep > 1 && animTimeSec >= 0.0f) {
+        for (int i = 0; i < sweep; i++) {
+            float t = animTimeSec * (float)i / (float)(sweep - 1);
+            context.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME, t);
+            doc.paint(context, -2);
+        }
+    } else {
+        for (int i = 0; i < frames; i++) {
+            doc.paint(context, -2);  // THEME_DARK
+        }
     }
 
     // Encode to PNG
