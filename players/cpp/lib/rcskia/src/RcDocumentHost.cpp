@@ -46,18 +46,38 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                                 rccore::PaintContext* pc, float w, float h, double timeSec) {
     if (w <= 0 || h <= 0) return false;
 
-    // config is "rc:<path>" (or a bare path), with an optional "#<fit>" suffix
-    // (fit | fill | native) overriding the host default.
-    std::string path = config;
+    // config is "rc:<path>" (or a bare path), with an optional "#k=v&k=v" suffix carrying a
+    // `fit` (fit | fill | native) and/or a source `crop` (fractions l,t,r,b). A bare "#value"
+    // is still read as the fit, for back-compat.
+    std::string rest = config;
     auto colon = config.find(':');
     if (colon != std::string::npos && config.compare(0, colon, "rc") == 0) {
-        path = config.substr(colon + 1);
+        rest = config.substr(colon + 1);
     }
     std::string fit = mFit;
-    auto hash = path.find('#');
+    float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+    std::string path = rest;
+    auto hash = rest.find('#');
     if (hash != std::string::npos) {
-        fit = path.substr(hash + 1);
-        path = path.substr(0, hash);
+        path = rest.substr(0, hash);
+        std::string opts = rest.substr(hash + 1);
+        for (size_t s0 = 0; s0 < opts.size(); ) {
+            size_t amp = opts.find('&', s0);
+            std::string tok = opts.substr(s0, amp == std::string::npos ? std::string::npos : amp - s0);
+            auto eq = tok.find('=');
+            if (eq == std::string::npos) { if (!tok.empty()) fit = tok; }   // legacy bare fit
+            else {
+                std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
+                if (k == "fit") fit = v;
+                else if (k == "crop") {
+                    float t[4];
+                    if (std::sscanf(v.c_str(), "%f,%f,%f,%f", &t[0], &t[1], &t[2], &t[3]) == 4)
+                        for (int i = 0; i < 4; i++) crop[i] = t[i];
+                }
+            }
+            if (amp == std::string::npos) break;
+            s0 = amp + 1;
+        }
     }
     if (path.empty()) return false;
 
@@ -65,7 +85,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     if (!skpc || !skpc->canvas()) return false;
     SkCanvas* canvas = skpc->canvas();
 
-    auto it = mDocs.find(componentId);
+    auto it = mDocs.find(config);
     if (it == mDocs.end()) {
         auto nested = std::make_unique<Nested>();
         fs::path p(path);
@@ -90,7 +110,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 nested->ok = true;
             }
         }
-        it = mDocs.emplace(componentId, std::move(nested)).first;
+        it = mDocs.emplace(config, std::move(nested)).first;
     }
 
     Nested* n = it->second.get();
@@ -101,11 +121,16 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     if (docW <= 0) docW = w;
     if (docH <= 0) docH = h;
 
+    // Source crop (fractions → nested coords). Only this region is shown, fitted to the box.
+    const float cropX = crop[0] * docW, cropY = crop[1] * docH;
+    float cropW = (crop[2] - crop[0]) * docW, cropH = (crop[3] - crop[1]) * docH;
+    if (cropW <= 0 || cropH <= 0) { cropW = docW; cropH = docH; }
+
     float s;
-    if (fit == "fill")        s = std::max(w / docW, h / docH);
+    if (fit == "fill")        s = std::max(w / cropW, h / cropH);
     else if (fit == "native") s = 1.0f;
-    else                      s = std::min(w / docW, h / docH);   // fit (default)
-    const float dw = docW * s, dh = docH * s;
+    else                      s = std::min(w / cropW, h / cropH);   // fit (default)
+    const float dw = cropW * s, dh = cropH * s;
     const float ox = (w - dw) * 0.5f, oy = (h - dh) * 0.5f;
 
     // Point the nested paint context at the current canvas (it may change across frames /
@@ -124,8 +149,12 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     canvas->clipRect(SkRect::MakeWH(w, h));
     canvas->translate(ox, oy);
     canvas->scale(s, s);
+    canvas->translate(-cropX, -cropY);       // shift so the crop region lands in the box
     // Full nested-coords → window-points matrix; invert for window → nested pointer mapping.
     if (!canvas->getTotalMatrix().invert(&n->winToNested)) n->winToNested.setIdentity();
+    // Clip to the document's own bounds so draw instructions that spill past its design size
+    // (e.g. a background shape larger than the doc) don't leak outside the embed.
+    canvas->clipRect(SkRect::MakeWH(docW, docH));
     n->painted = true;
     n->doc->paint(*n->ctx, THEME_DARK);
     canvas->restore();
@@ -145,9 +174,9 @@ bool RcDocumentHost::pointerDown(float winX, float winY) {
     if (getenv("RC_DEBUG_POINTER")) {
         fprintf(stderr, "[rcdoc] pointerDown win=(%.1f,%.1f) docs=%zu hit=%s\n",
                 winX, winY, mDocs.size(), n ? "YES" : "no");
-        for (auto& [id, np] : mDocs)
-            fprintf(stderr, "        comp %d ok=%d painted=%d box=[%.1f,%.1f %.1f,%.1f]\n",
-                    id, np->ok, np->painted, np->boxScreen.fLeft, np->boxScreen.fTop,
+        for (auto& [cfg, np] : mDocs)
+            fprintf(stderr, "        %s ok=%d painted=%d box=[%.1f,%.1f %.1f,%.1f]\n",
+                    cfg.c_str(), np->ok, np->painted, np->boxScreen.fLeft, np->boxScreen.fTop,
                     np->boxScreen.fRight, np->boxScreen.fBottom);
     }
     if (!n) { mCaptured = nullptr; return false; }

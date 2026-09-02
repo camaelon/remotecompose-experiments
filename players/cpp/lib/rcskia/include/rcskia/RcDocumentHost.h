@@ -46,7 +46,10 @@ public:
 private:
     struct Nested;
     Nested* hit(float winX, float winY);   // embedded doc under a window point, or null
-    std::unordered_map<int, std::unique_ptr<Nested>> mDocs;
+    // Keyed by the config string (unique per file+options), NOT componentId — refract's
+    // custom components all carry id -1, so keying by id makes every embed on a slide alias
+    // to one nested document.
+    std::unordered_map<std::string, std::unique_ptr<Nested>> mDocs;
     std::string mBaseDir;
     std::string mFit = "fit";
     // The embedded doc currently receiving a drag (captured on press). Tracked by pointer,

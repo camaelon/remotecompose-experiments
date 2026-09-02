@@ -102,20 +102,30 @@ static int encodeUtf8Cp(int32_t cp, char* out) {
     return 4;
 }
 
-SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
-    : PaintContext(context), mCanvas(canvas) {
-    mPaint.setAntiAlias(true);
-    mPaint.setColor(SK_ColorBLACK);
-
-    // Build the font manager once and reuse it for every typeface lookup.
-    // CoreText font catalog scans are expensive — doing this per draw op
-    // tanks frame rate on text-heavy slides (e.g. syntax-highlighted code).
-    mFontMgr =
+// One process-wide font manager, shared by every paint context (see the note in the
+// constructor). Created on first use; SkFontMgr is refcounted and thread-safe.
+static sk_sp<SkFontMgr> SharedFontMgr() {
+    static sk_sp<SkFontMgr> sMgr =
 #if defined(__APPLE__)
         SkFontMgr_New_CoreText(nullptr);
 #else
         SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
 #endif
+    return sMgr;
+}
+
+SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
+    : PaintContext(context), mCanvas(canvas) {
+    mPaint.setAntiAlias(true);
+    mPaint.setColor(SK_ColorBLACK);
+
+    // Build the font manager once *per process* and reuse it for every typeface lookup.
+    // CoreText font catalog scans are expensive — doing this per draw op tanks frame rate on
+    // text-heavy slides. It must also be a singleton, not per-context: each CoreText manager
+    // holds font-file descriptors that aren't promptly released, so building one per paint
+    // context (as the PDF exporter does — one per slide) leaks FDs and, after enough slides,
+    // makes further file opens fail ("Cannot open"). A shared manager is both faster and safe.
+    mFontMgr = SharedFontMgr();
 
     // Initialize font with a valid typeface (required on macOS/Skia m143+)
     auto defaultTf = mFontMgr ? mFontMgr->matchFamilyStyle(nullptr, SkFontStyle())

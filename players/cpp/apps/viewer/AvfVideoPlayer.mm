@@ -241,7 +241,8 @@ void AvfVideoPlayer::setPaused(bool paused) {
     else        [mImpl->objc.player play];
 }
 
-void AvfVideoPlayer::paint(SkCanvas* canvas, int dstW, int dstH) {
+void AvfVideoPlayer::paint(SkCanvas* canvas, int dstW, int dstH,
+                           float cropL, float cropT, float cropR, float cropB) {
     if (!mImpl->objc) return;
 
     @autoreleasepool {
@@ -274,18 +275,21 @@ void AvfVideoPlayer::paint(SkCanvas* canvas, int dstW, int dstH) {
 
     if (!mImpl->lastImage) return;
 
-    // Aspect-fit-centre into the destination rect.
+    // Source crop (fractions 0–1, default full frame) — e.g. to trim black bars.
     const float imgW = (float)mImpl->lastImage->width();
     const float imgH = (float)mImpl->lastImage->height();
-    const float sx = (float)dstW / imgW;
-    const float sy = (float)dstH / imgH;
-    const float s  = std::min(sx, sy);
-    const float dw = imgW * s;
-    const float dh = imgH * s;
+    SkRect src = SkRect::MakeLTRB(cropL * imgW, cropT * imgH, cropR * imgW, cropB * imgH);
+    if (src.width() <= 0 || src.height() <= 0) src = SkRect::MakeWH(imgW, imgH);
+
+    // Aspect-fit-centre the (cropped) source into the destination rect.
+    const float s  = std::min((float)dstW / src.width(), (float)dstH / src.height());
+    const float dw = src.width() * s;
+    const float dh = src.height() * s;
     const float ox = (dstW - dw) * 0.5f;
     const float oy = (dstH - dh) * 0.5f;
 
     SkRect dst = SkRect::MakeXYWH(ox, oy, dw, dh);
     SkSamplingOptions sampling(SkFilterMode::kLinear, SkMipmapMode::kNone);
-    canvas->drawImageRect(mImpl->lastImage, dst, sampling);
+    canvas->drawImageRect(mImpl->lastImage, src, dst, sampling, nullptr,
+                          SkCanvas::kFast_SrcRectConstraint);
 }

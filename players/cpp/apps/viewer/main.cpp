@@ -968,15 +968,8 @@ static bool renderSlideToPdfPage(SkDocument* pdf,
     SkCanvas* canvas = pdf->beginPage((SkScalar)docW, (SkScalar)docH);
     if (!canvas) return false;
 
-    // Warm-up uses a throwaway raster canvas at the document's real size so
-    // draw paths that depend on canvas dimensions (clipping, layout measure,
-    // bounds checks) behave the same as a live playback. A 1x1 surface causes
-    // some operations to short-circuit, leaving animations stuck at t≈0.
-    sk_sp<SkSurface> initSurface = SkSurfaces::Raster(
-        SkImageInfo::MakeN32Premul(docW, docH));
-
     rccore::RemoteContext ctx;
-    rcskia::SkiaPaintContext paintCtx(ctx, initSurface->getCanvas());
+    rcskia::SkiaPaintContext paintCtx(ctx, canvas);   // paint straight to the PDF page
     ctx.setPaintContext(&paintCtx);
     ctx.setDocument(doc.get());
     ctx.mWidth  = (float)docW;
@@ -984,32 +977,40 @@ static bool renderSlideToPdfPage(SkDocument* pdf,
     ctx.loadFloat(rccore::RemoteContext::ID_TOUCH_POS_X, 0.0f);
     ctx.loadFloat(rccore::RemoteContext::ID_TOUCH_POS_Y, 0.0f);
 
+    // Embedded RemoteCompose documents (op 93, config "rc:media/<name>.rc") are drawn by the
+    // rc-document host — register it, with the slide's directory as the base for the relative
+    // media/ paths, or those regions come out blank (as they did before). Pure Skia, so the
+    // nested content is vectorised into the PDF just like the host document.
+    rcskia::RcDocumentHost rcHost;
+    rcHost.setBaseDir(fs::path(entry).parent_path().string());
+    CustomHostRouter router;
+    router.rcdoc = &rcHost;
+    ctx.setCustomHost(&router);
+
     doc->registerListeners(ctx);
     doc->applyDataOperations(ctx);
 
-    // Advance time so animated ops settle into a sensible state for a still.
-    // Pin the wall clock via setFixedTimeMs so variables like CONTINUOUS_SEC
-    // and EPOCH_SECOND advance in lockstep with ANIMATION_TIME rather than
-    // ticking at real wall-clock rate (which would barely move during this
-    // tight loop).
-    int64_t baseWallMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-    rccore::TimeVariables tv;
-    double t = 0.0, step = 1.0 / 60.0;
-    while (t < delaySec) {
-        doc->setFixedTimeMs(baseWallMs + static_cast<int64_t>(t * 1000.0));
-        tv.updateTime(ctx, t, step);
-        initSurface->getCanvas()->clear(SK_ColorTRANSPARENT);
-        doc->paint(ctx);
-        t += step;
-    }
-    doc->setFixedTimeMs(baseWallMs + static_cast<int64_t>(delaySec * 1000.0));
-    tv.updateTime(ctx, delaySec, step);
+    // Pin the clocks to the resting state and paint the page ONCE.
+    //
+    // A slide's load animations (transitions, staggered reveals, scroll) are declarative
+    // functions of animationTime, so the settled still is fully determined by the final time —
+    // no need to rasterise intermediate frames. The old code painted the whole document to a
+    // throwaway raster surface every 60fps step up to delaySec (~120 paints/slide); with
+    // animated background shaders on a CPU raster surface that was the entire cost of export.
+    //
+    // We must *override* ANIMATION_TIME, not merely advance a clock: with no paint before the
+    // final one, CoreDocument::updateTimeVariables latches its animation-start marker on that
+    // single paint and computes animationTime = 0 — freezing every animation (scroll pages
+    // wouldn't scroll, transitions wouldn't settle). overrideFloat makes that recompute a
+    // no-op, exactly as rc2image pins the clock for deterministic captures.
+    int64_t fixedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count()
+        + static_cast<int64_t>(delaySec * 1000.0);
+    doc->setFixedTimeMs(fixedMs);                                    // deterministic wall clock
+    ctx.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME,
+                      static_cast<float>(delaySec));                 // pin the animation clock at rest
 
-    // Now paint onto the real PDF page canvas.
-    paintCtx.setCanvas(canvas);
     doc->paint(ctx);
-
     pdf->endPage();
     return true;
 }

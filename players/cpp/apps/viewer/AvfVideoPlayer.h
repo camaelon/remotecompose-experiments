@@ -30,9 +30,11 @@ public:
     int height() const;
     double durationSec() const;
 
-    // Pull the most recent decoded frame and draw it aspect-fit-centred into
-    // a (dstW x dstH) destination on the given canvas.
-    void paint(SkCanvas* canvas, int dstW, int dstH);
+    // Pull the most recent decoded frame and draw it aspect-fit-centred into a (dstW x dstH)
+    // destination. An optional source crop (fractions 0–1, default = full frame) trims the
+    // frame before fitting — e.g. to remove black bars around a portrait recording.
+    void paint(SkCanvas* canvas, int dstW, int dstH,
+               float cropL = 0.0f, float cropT = 0.0f, float cropR = 1.0f, float cropB = 1.0f);
 
     // Pause / resume playback. AVPlayer drives its own clock so we have to
     // call this explicitly when the host viewer toggles its pause flag.

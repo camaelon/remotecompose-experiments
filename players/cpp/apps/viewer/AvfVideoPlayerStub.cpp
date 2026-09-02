@@ -29,6 +29,7 @@ double AvfVideoPlayer::durationSec() const {
     return 0.0;
 }
 
-void AvfVideoPlayer::paint(SkCanvas* /*canvas*/, int /*dstW*/, int /*dstH*/) {}
+void AvfVideoPlayer::paint(SkCanvas* /*canvas*/, int /*dstW*/, int /*dstH*/,
+                           float, float, float, float) {}
 
 void AvfVideoPlayer::setPaused(bool /*paused*/) {}
