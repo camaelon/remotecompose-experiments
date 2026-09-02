@@ -1606,10 +1606,23 @@ inline SkISize canvasSize(SkCanvas* c) {
 }  // namespace
 
 rccore::d3::SoftwarePaint3DContext* SkiaPaintContext::Skia3D::ensure() {
-    SkISize sz = canvasSize(mOwner.mCanvas);
-    if (sz.width() <= 0 || sz.height() <= 0) return nullptr;
-    if (!mSized || mCtx.width() != sz.width() || mCtx.height() != sz.height()) {
-        mCtx.setSize(sz.width(), sz.height());
+    // Size the 3D buffer to the document's OWN coordinate space (its logical width/height),
+    // not the device base layer. The buffer is blit at (0,0) under the live transform, so its
+    // scene centres on (w/2, h/2) of whatever it's sized to. For a nested embed the sub-doc is
+    // painted into the shared canvas under a fit transform (translate/scale into the embed box)
+    // and its context carries the sub-doc's size — matching it here centres the scene in the
+    // embed box. Sizing to the base layer instead centred it on the whole slide, so an embedded
+    // 3D scene drifted off. (The TS player's 3D buffer is likewise the sub-document canvas size.)
+    int w = static_cast<int>(std::lround(mOwner.getContext().mWidth));
+    int h = static_cast<int>(std::lround(mOwner.getContext().mHeight));
+    if (w <= 0 || h <= 0) {                       // fallback: no doc size set
+        SkISize sz = canvasSize(mOwner.mCanvas);
+        w = sz.width();
+        h = sz.height();
+    }
+    if (w <= 0 || h <= 0) return nullptr;
+    if (!mSized || mCtx.width() != w || mCtx.height() != h) {
+        mCtx.setSize(w, h);
         // setSize does not clear; the depth buffer must start far or the first mesh is
         // rejected against whatever happened to be in memory.
         mCtx.clearDepth3D();
