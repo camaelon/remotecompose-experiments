@@ -39,6 +39,13 @@
 #include "include/core/SkSurface.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkData.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontMgr.h"
+#include "include/core/SkPaint.h"
+#include "include/core/SkTypeface.h"
+#if defined(__APPLE__)
+#include "include/ports/SkFontMgr_mac_ct.h"
+#endif
 #include "include/core/SkPixmap.h"
 #include "include/core/SkBitmap.h"
 #include "include/core/SkImage.h"
@@ -61,6 +68,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -256,7 +264,7 @@ private:
 // Routes LAYOUT_CUSTOM draws to the right host by the config prefix: "web:" → the web
 // host, "rc:" → the embedded-document host, "video:" (default) → the video host.
 struct CustomHostRouter : rccore::CustomComponentHost {
-    VideoCustomHost* video = nullptr;
+    rccore::CustomComponentHost* video = nullptr;   // live VideoCustomHost, or a still-frame host for PDF
     WebCustomHost* web = nullptr;
     rcskia::RcDocumentHost* rcdoc = nullptr;
     bool drawCustom(int id, const std::string& config, rccore::PaintContext* pc,
@@ -864,10 +872,134 @@ static bool saveScreenshot(const std::string& outPath) {
     return true;
 }
 
+// A custom-component host that draws an *embedded* video (config "video:media/<clip>.mp4")
+// as its first frame in the PDF. The live VideoCustomHost drives an AVFoundation player
+// (async playback), which produces nothing in a one-shot headless paint; here we extract the
+// first frame synchronously — the same still the standalone-video PDF path uses — so an
+// embedded clip shows a poster frame instead of a blank box. Frames are cached by path so a
+// clip reused across slides is decoded once.
+struct PdfVideoFrameHost : rccore::CustomComponentHost {
+    std::string baseDir;
+    std::map<std::string, sk_sp<SkImage>> frames;
+
+    bool drawCustom(int, const std::string& config, rccore::PaintContext* pc,
+                    float w, float h, double) override {
+        if (w <= 0 || h <= 0) return false;
+        std::string rest = config;
+        auto colon = config.find(':');
+        if (colon != std::string::npos && config.compare(0, colon, "video") == 0)
+            rest = config.substr(colon + 1);
+        // Split "<path>#crop=l,t,r,b".
+        float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+        std::string path = rest;
+        auto hash = rest.find('#');
+        if (hash != std::string::npos) {
+            path = rest.substr(0, hash);
+            auto cpos = rest.find("crop=", hash);
+            if (cpos != std::string::npos) {
+                float t[4];
+                if (std::sscanf(rest.c_str() + cpos + 5, "%f,%f,%f,%f",
+                                &t[0], &t[1], &t[2], &t[3]) == 4)
+                    for (int i = 0; i < 4; i++) crop[i] = t[i];
+            }
+        }
+        if (path.empty()) return false;
+        fs::path p(path);
+        if (p.is_relative() && !baseDir.empty()) p = fs::path(baseDir) / p;
+
+        auto key = p.string();
+        auto it = frames.find(key);
+        if (it == frames.end())
+            it = frames.emplace(key, AvfVideoPlayer::ExtractFirstFrame(key)).first;
+        sk_sp<SkImage> img = it->second;
+        if (!img) return false;
+
+        auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
+        if (!skpc || !skpc->canvas()) return false;
+        SkCanvas* canvas = skpc->canvas();
+
+        // Cropped source rect, aspect-fit into the component box (0,0)..(w,h) — matching how
+        // the live video host frames it.
+        float iw = (float)img->width(), ih = (float)img->height();
+        SkRect src = SkRect::MakeLTRB(crop[0] * iw, crop[1] * ih, crop[2] * iw, crop[3] * ih);
+        float sw = src.width(), sh = src.height();
+        if (sw <= 0 || sh <= 0) { src = SkRect::MakeWH(iw, ih); sw = iw; sh = ih; }
+        float s = std::min(w / sw, h / sh);
+        float dw = sw * s, dh = sh * s;
+        SkRect dst = SkRect::MakeXYWH((w - dw) * 0.5f, (h - dh) * 0.5f, dw, dh);
+        SkSamplingOptions sampling(SkFilterMode::kLinear, SkMipmapMode::kNone);
+        canvas->drawImageRect(img, src, dst, sampling, nullptr,
+                              SkCanvas::kFast_SrcRectConstraint);
+        return true;
+    }
+};
+
+// ── Speaker notes (PDF) ──────────────────────────────────────────────
+// Presenter notes for a slide live in a sidecar "<slide>.rc.notes" file (written by refract).
+// In the PDF they are laid out BELOW the slide — the page grows taller so the notes never
+// overlap the slide content.
+
+static SkFont notesFont(float size) {
+    static sk_sp<SkFontMgr> mgr =
+#if defined(__APPLE__)
+        SkFontMgr_New_CoreText(nullptr);
+#else
+        SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
+#endif
+    static sk_sp<SkTypeface> tf = mgr ? mgr->matchFamilyStyle(nullptr, SkFontStyle())
+                                      : nullptr;
+    SkFont f(tf, size);
+    f.setEdging(SkFont::Edging::kAntiAlias);
+    f.setSubpixel(true);
+    return f;
+}
+
+// Greedy word-wrap `text` (honouring its own newlines) into lines that fit `maxWidth`.
+static std::vector<std::string> wrapNotes(const std::string& text, const SkFont& font,
+                                          float maxWidth) {
+    auto measure = [&](const std::string& s) {
+        return font.measureText(s.c_str(), s.size(), SkTextEncoding::kUTF8);
+    };
+    std::vector<std::string> lines;
+    std::string paragraph;
+    std::stringstream in(text);
+    while (std::getline(in, paragraph)) {
+        // Trim a trailing '\r' (CRLF files).
+        if (!paragraph.empty() && paragraph.back() == '\r') paragraph.pop_back();
+        if (paragraph.empty()) { lines.push_back(""); continue; }
+        std::stringstream words(paragraph);
+        std::string word, line;
+        while (words >> word) {
+            std::string candidate = line.empty() ? word : line + " " + word;
+            if (!line.empty() && measure(candidate) > maxWidth) {
+                lines.push_back(line);
+                line = word;
+            } else {
+                line = candidate;
+            }
+        }
+        lines.push_back(line);
+    }
+    return lines;
+}
+
+// Read the sidecar notes for a slide entry ("<entry>.notes"), or "" if none.
+static std::string readSlideNotes(const std::string& entry) {
+    std::ifstream nf(entry + ".notes", std::ios::binary);
+    if (!nf) return "";
+    std::string s((std::istreambuf_iterator<char>(nf)), std::istreambuf_iterator<char>());
+    // Trim trailing whitespace.
+    while (!s.empty() && (s.back() == '\n' || s.back() == '\r' || s.back() == ' '))
+        s.pop_back();
+    return s;
+}
+
 // ── PDF export ───────────────────────────────────────────────────────
 // Render one "slide" to a PDF page. The file may be an .rc/.rcd document
 // (rendered vector via Skia's PDF backend — text, paths, images preserved),
 // a video (first frame only), or an animated image (first frame only).
+// If a sidecar "<file>.notes" exists, the page grows taller and the notes
+// are drawn in a panel below the slide (never overlapping it).
 //
 // For .rc files: builds a fresh CoreDocument + RemoteContext + SkiaPaintContext
 // pointed at the PDF page canvas, runs the data pass up to `delaySec`, then
@@ -965,7 +1097,21 @@ static bool renderSlideToPdfPage(SkDocument* pdf,
     int docW = doc->getWidth()  > 0 ? doc->getWidth()  : pageW;
     int docH = doc->getHeight() > 0 ? doc->getHeight() : pageH;
 
-    SkCanvas* canvas = pdf->beginPage((SkScalar)docW, (SkScalar)docH);
+    // Presenter notes (sidecar) are laid out in a panel BELOW the slide — measure them first
+    // so the page can grow to fit, keeping them off the slide content.
+    std::string notes = readSlideNotes(entry);
+    const float noteSize   = docH * 0.026f;             // scales with the slide
+    const float noteMargin = docW * 0.04f;
+    const float noteLineH  = noteSize * 1.42f;
+    const float notePad    = noteSize * 1.4f;           // top/bottom padding of the panel
+    std::vector<std::string> noteLines;
+    float notesH = 0.0f;
+    if (!notes.empty()) {
+        noteLines = wrapNotes(notes, notesFont(noteSize), (float)docW - 2 * noteMargin);
+        notesH = 2 * notePad + noteLines.size() * noteLineH;
+    }
+
+    SkCanvas* canvas = pdf->beginPage((SkScalar)docW, (SkScalar)(docH + (int)notesH));
     if (!canvas) return false;
 
     rccore::RemoteContext ctx;
@@ -983,8 +1129,11 @@ static bool renderSlideToPdfPage(SkDocument* pdf,
     // nested content is vectorised into the PDF just like the host document.
     rcskia::RcDocumentHost rcHost;
     rcHost.setBaseDir(fs::path(entry).parent_path().string());
+    PdfVideoFrameHost videoFrameHost;
+    videoFrameHost.baseDir = fs::path(entry).parent_path().string();
     CustomHostRouter router;
     router.rcdoc = &rcHost;
+    router.video = &videoFrameHost;      // embedded clips → poster (first) frame
     ctx.setCustomHost(&router);
 
     doc->registerListeners(ctx);
@@ -1010,7 +1159,34 @@ static bool renderSlideToPdfPage(SkDocument* pdf,
     ctx.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME,
                       static_cast<float>(delaySec));                 // pin the animation clock at rest
 
+    // Paint the slide into the top region only, clipped so nothing bleeds into the notes.
+    canvas->save();
+    canvas->clipRect(SkRect::MakeWH((SkScalar)docW, (SkScalar)docH));
     doc->paint(ctx);
+    canvas->restore();
+
+    // Notes panel below the slide: a light card with dark, wrapped text.
+    if (notesH > 0.0f) {
+        SkPaint bg;
+        bg.setColor(SkColorSetRGB(0xF6, 0xF6, 0xF4));
+        canvas->drawRect(SkRect::MakeXYWH(0, (SkScalar)docH, (SkScalar)docW, notesH), bg);
+        // A thin rule separating the slide from its notes.
+        SkPaint rule;
+        rule.setColor(SkColorSetRGB(0xCF, 0xCF, 0xCF));
+        canvas->drawRect(SkRect::MakeXYWH(0, (SkScalar)docH, (SkScalar)docW, 2), rule);
+
+        SkFont f = notesFont(noteSize);
+        SkPaint tp;
+        tp.setColor(SkColorSetRGB(0x22, 0x22, 0x22));
+        tp.setAntiAlias(true);
+        float y = (float)docH + notePad + noteSize;     // baseline of the first line
+        for (const auto& ln : noteLines) {
+            if (!ln.empty())
+                canvas->drawString(ln.c_str(), noteMargin, y, f, tp);
+            y += noteLineH;
+        }
+    }
+
     pdf->endPage();
     return true;
 }
