@@ -8,6 +8,7 @@ cmake_minimum_required(VERSION 3.20)
 
 set(RCPLAYER_SOURCES
     src/Callbacks.cpp
+    src/ImageExport.cpp
     src/PdfExport.cpp
     src/Player.cpp
     src/StillHosts.cpp

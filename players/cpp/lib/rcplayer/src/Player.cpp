@@ -84,6 +84,28 @@ std::vector<std::string> collectZipFiles(ZipArchive& zip) {
     return result;
 }
 
+std::vector<std::string> collectDeckEntries(const std::string& input) {
+    std::vector<std::string> entries;
+    if (isZipFile(getExt(input))) {
+        g.zip = std::make_unique<ZipArchive>();
+        if (!g.zip->open(input)) {
+            std::cerr << "Failed to open zip: " << input << "\n";
+            return entries;
+        }
+        return collectZipFiles(*g.zip);
+    }
+    if (fs::is_directory(fs::path(input))) {
+        for (auto& e : fs::directory_iterator(input)) {
+            if (isPlayableExt(e.path().extension().string()))
+                entries.push_back(e.path().string());
+        }
+        std::sort(entries.begin(), entries.end());
+        return entries;
+    }
+    entries.push_back(input);
+    return entries;
+}
+
 // Remove any temp file left by the previous load (used for AVF video extraction).
 void cleanupTempFile() {
     if (!g.zipTempFile.empty()) {
@@ -233,26 +255,34 @@ void stopVoiceOver() {
     }
 }
 
-fs::path resolveVoicePath(const std::string& slidePath) {
+fs::path voicePathFor(const std::string& slidePath) {
     fs::path p(slidePath);
     fs::path voiceDir = !g.voiceDirOverride.empty()
                             ? g.voiceDirOverride
                             : p.parent_path() / "voice";
-    if (!fs::is_directory(voiceDir)) {
-        std::cerr << "voice: dir not found: " << voiceDir.string() << "\n";
-        return {};
-    }
+    // Slides are keyed by the number they start with, so a wav survives a slide being
+    // renamed — "07_a_graph.rc" and "07_the_graph.rc" both want "07.wav".
     std::string fname = p.filename().string();
     std::string stem;
     for (char c : fname) {
         if (std::isdigit(static_cast<unsigned char>(c))) stem += c;
         else break;
     }
-    if (stem.empty()) {
-        std::cerr << "voice: no leading digits in " << fname << "\n";
+    if (stem.empty()) return {};
+    return voiceDir / (stem + ".wav");
+}
+
+fs::path resolveVoicePath(const std::string& slidePath) {
+    fs::path wav = voicePathFor(slidePath);
+    if (wav.empty()) {
+        std::cerr << "voice: no leading digits in "
+                  << fs::path(slidePath).filename().string() << "\n";
         return {};
     }
-    fs::path wav = voiceDir / (stem + ".wav");
+    if (!fs::is_directory(wav.parent_path())) {
+        std::cerr << "voice: dir not found: " << wav.parent_path().string() << "\n";
+        return {};
+    }
     if (fs::exists(wav)) {
         std::cerr << "voice: " << wav.string() << "\n";
         return wav;
@@ -263,7 +293,7 @@ fs::path resolveVoicePath(const std::string& slidePath) {
 
 void playVoiceOver(const fs::path& wav) {
     stopVoiceOver();
-    if (wav.empty()) return;
+    if (wav.empty() || !g.voiceOverEnabled) return;
     pid_t pid = ::fork();
     if (pid < 0) return;
     if (pid == 0) {
@@ -283,7 +313,9 @@ void loadCurrentFile() {
     if (loadFile(path)) {
         std::cerr << "[" << (g.currentIndex + 1) << "/" << g.files.size()
                   << "] " << name << "\n";
-        playVoiceOver(resolveVoicePath(path));
+        // Resolution is skipped, not just the playback: it reports what it looked for and
+        // did not find, which is noise for a player that has voice-over switched off.
+        if (g.voiceOverEnabled) playVoiceOver(resolveVoicePath(path));
     } else {
         std::cerr << "[" << (g.currentIndex + 1) << "/" << g.files.size()
                   << "] FAILED: " << name << "\n";

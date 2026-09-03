@@ -24,6 +24,7 @@
 #if defined(__APPLE__)
 #include "rcplayer/MetalRenderBackend.h"
 #endif
+#include "rcplayer/ImageExport.h"
 #include "rcplayer/PdfExport.h"
 #include "rcplayer/Player.h"
 #include "rcplayer/WidgetHelper.h"
@@ -197,72 +198,24 @@ int main(int argc, char* argv[]) {
             std::cerr << "Usage: rcviewer [--cpu|--metal] --screenshot-dir <dir_of_rc> <output_dir> [width height] [delay_sec]\n";
             return 1;
         }
-        std::string rcDir = argv[argOffset + 1];
+        std::string rcDir  = argv[argOffset + 1];
         std::string outDir = argv[argOffset + 2];
         int w = 400, h = 400;
         double delay = 0.2;
         if (argOffset + 4 < argc) { w = std::atoi(argv[argOffset + 3]); h = std::atoi(argv[argOffset + 4]); }
         if (argOffset + 5 < argc) { delay = std::atof(argv[argOffset + 5]); }
 
-        fs::create_directories(outDir);
-
-        std::vector<std::string> rcFiles;
-        for (auto& entry : fs::directory_iterator(rcDir)) {
-            auto ext = entry.path().extension().string();
-            if (ext == ".rc" || ext == ".rcd") {
-                rcFiles.push_back(entry.path().string());
-            }
-        }
-        std::sort(rcFiles.begin(), rcFiles.end());
-
-        if (rcFiles.empty()) {
-            std::cerr << "No .rc files found in " << rcDir << "\n";
-            return 1;
-        }
-
-        g.backend = std::make_unique<CpuRenderBackend>();
-
-        int ok = 0, fail = 0;
-        for (const auto& rcPath : rcFiles) {
-            std::string stem = fs::path(rcPath).stem().string();
-            std::string outPath = (fs::path(outDir) / (stem + ".png")).string();
-
-            ensureSurface(w, h);
-            if (!loadFile(rcPath)) {
-                std::cerr << "FAIL: " << stem << "\n";
-                fail++;
-                continue;
-            }
-
-            double t = 0.0, step = 1.0 / 60.0;
-            while (t < delay) {
-                g.animTime = t;
-                g.timeVars.updateTime(*g.context, t, step);
-                g.doc->paint(*g.context);
-                t += step;
-            }
-            g.animTime = delay;
-            renderFrame(step);
-
-            if (saveScreenshot(outPath)) {
-                std::cout << outPath << "\n";
-                ok++;
-            } else {
-                std::cerr << "FAIL write: " << outPath << "\n";
-                fail++;
-            }
-        }
-        std::cerr << "Done: " << ok << " screenshots, " << fail << " failures\n";
-        return fail > 0 ? 1 : 0;
+        auto result = exportDeckToImages(rcDir, outDir, w, h, delay);
+        return result.failures > 0 ? 1 : 0;
     }
 
     // ── PDF export mode ──────────────────────────────────────────────
     // rcviewer --pdf <input.zip|dir|file.rc> <output.pdf> [page_w page_h] [delay_sec]
     //
-    // Emits one PDF page per slide. .rc/.rcd files are rendered vector via
-    // Skia's PDF backend so text, paths, and shapes stay selectable and
-    // scalable. Videos contribute only their first frame; animated images
-    // contribute frame 0.
+    // Emits one PDF page per slide. .rc/.rcd files are rendered vector via Skia's PDF
+    // backend so text, paths and shapes stay selectable and scalable; videos contribute
+    // their first frame. The work itself is rcplayer's, so every player exports the
+    // same PDF from the same deck.
     if (std::string(argv[argOffset]) == "--pdf") {
         if (argOffset + 2 >= argc) {
             std::cerr << "Usage: rcviewer --pdf <input.zip|dir|file.rc> <output.pdf> [page_w page_h] [delay_sec]\n";
@@ -278,67 +231,8 @@ int main(int argc, char* argv[]) {
         }
         if (argOffset + 5 < argc) delay = std::atof(argv[argOffset + 5]);
 
-        // Collect entries (zip, directory, or single file).
-        std::vector<std::string> entries;
-        if (isZipFile(getExt(inputPath))) {
-            g.zip = std::make_unique<ZipArchive>();
-            if (!g.zip->open(inputPath)) {
-                std::cerr << "Failed to open zip: " << inputPath << "\n";
-                return 1;
-            }
-            entries = collectZipFiles(*g.zip);
-        } else if (fs::is_directory(fs::path(inputPath))) {
-            for (auto& e : fs::directory_iterator(inputPath)) {
-                auto ext = e.path().extension().string();
-                if (isPlayableExt(ext)) entries.push_back(e.path().string());
-            }
-            std::sort(entries.begin(), entries.end());
-        } else {
-            entries.push_back(inputPath);
-        }
-
-        if (entries.empty()) {
-            std::cerr << "No playable files found in " << inputPath << "\n";
-            return 1;
-        }
-
-        SkFILEWStream out(outputPath.c_str());
-        if (!out.isValid()) {
-            std::cerr << "Cannot open output: " << outputPath << "\n";
-            return 1;
-        }
-
-        // Use MetadataWithCallbacks so Skia can encode embedded images as JPEG
-        // when appropriate (required by this Skia build).
-        SkPDF::Metadata meta = SkPDF::JPEG::MetadataWithCallbacks();
-        meta.fTitle    = SkString("RemoteCompose Presentation");
-        meta.fCreator  = SkString("rcviewer");
-        meta.fRasterDPI = 300;
-        auto pdf = SkPDF::MakeDocument(&out, meta);
-        if (!pdf) {
-            std::cerr << "Failed to create PDF document\n";
-            return 1;
-        }
-
-        int ok = 0, fail = 0;
-        for (const auto& entry : entries) {
-            std::string name = g.zip ? baseName(entry)
-                                     : fs::path(entry).filename().string();
-            if (renderSlideToPdfPage(pdf.get(), entry, pageW, pageH, delay)) {
-                std::cout << "[" << (ok + fail + 1) << "/" << entries.size() << "] "
-                          << name << "\n";
-                ok++;
-            } else {
-                std::cerr << "FAIL: " << name << "\n";
-                fail++;
-            }
-        }
-
-        pdf->close();
-        g.zip.reset();
-        std::cerr << "Done: " << ok << " pages written to " << outputPath
-                  << " (" << fail << " failures)\n";
-        return fail > 0 && ok == 0 ? 1 : 0;
+        auto result = exportDeckToPdf(inputPath, outputPath, pageW, pageH, delay);
+        return result.pages > 0 ? 0 : 1;
     }
 
     // ── Interactive mode ─────────────────────────────────────────────

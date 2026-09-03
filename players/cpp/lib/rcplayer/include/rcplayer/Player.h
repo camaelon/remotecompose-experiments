@@ -82,6 +82,11 @@ struct ViewerState {
     rcskia::RcDocumentHost rcDocHost;
     CustomHostRouter customRouter;
 
+    // Set false to stop loadCurrentFile() starting a slide's voice-over. A player that is
+    // *recording* narration has to turn this off, or the previous take plays out of the
+    // speakers and straight back into the new one.
+    bool voiceOverEnabled = true;
+
     // Override voice-over directory. When empty, resolveVoicePath() falls
     // back to "<slide-parent>/voice". Set when the user passes a directory
     // on the command line — the voice dir sits alongside that directory.
@@ -155,6 +160,11 @@ std::vector<std::string> collectRcFiles(const std::string& path);
 // Every playable entry in an open zip archive, sorted.
 std::vector<std::string> collectZipFiles(ZipArchive& zip);
 
+// The entries an export should walk, from whichever of the three things it was pointed at:
+// a directory of slides, a zip bundle (opened into g.zip), or a single file. Empty when
+// there is nothing playable there.
+std::vector<std::string> collectDeckEntries(const std::string& input);
+
 // Remove the temp file left by the previous zip video extraction, if any.
 void cleanupTempFile();
 
@@ -175,8 +185,17 @@ void loadCurrentFile();
 
 void stopVoiceOver();
 
-// The wav for a slide: "<voice dir>/<leading digits of the slide name>.wav", where the
-// voice dir is g.voiceDirOverride or "<slide dir>/voice". Empty when there is none.
+// Where a slide's voice-over lives — "<voice dir>/<leading digits of the slide name>.wav",
+// with the voice dir being g.voiceDirOverride or "<slide dir>/voice". Computed, not checked:
+// the file and even the directory need not exist. Empty only when the slide's name has no
+// leading digits to key it by.
+//
+// Recording a voice-over and playing one back must agree on this path, so both go through
+// here rather than each spelling out the rule.
+std::filesystem::path voicePathFor(const std::string& slidePath);
+
+// The wav for a slide, or empty when there isn't one. voicePathFor() plus the existence
+// checks, with a line on stderr saying which way it went.
 std::filesystem::path resolveVoicePath(const std::string& slidePath);
 
 // Play `wav` in a forked `afplay`, replacing any voice-over already playing.

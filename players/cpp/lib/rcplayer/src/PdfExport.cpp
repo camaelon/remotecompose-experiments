@@ -3,6 +3,7 @@
 #include "rcplayer/AvfVideoPlayer.h"
 #include "rcplayer/MediaTypes.h"
 #include "rcplayer/Player.h"
+#include "rcplayer/ZipArchive.h"
 #include "rcplayer/StillHosts.h"
 
 #include "rccore/CoreDocument.h"
@@ -17,6 +18,9 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkData.h"
 #include "include/core/SkDocument.h"
+#include "include/core/SkStream.h"
+#include "include/docs/SkPDFDocument.h"
+#include "include/docs/SkPDFJpegHelpers.h"
 #include "include/core/SkFont.h"
 #include "include/core/SkFontMgr.h"
 #include "include/core/SkImage.h"
@@ -296,6 +300,59 @@ bool renderSlideToPdfPage(SkDocument* pdf,
 
     pdf->endPage();
     return true;
+}
+
+// ── Deck export ──────────────────────────────────────────────────────
+// The loop around renderSlideToPdfPage: collect the slides, open the document, write a
+// page each. Lives here rather than in an app so that every player exports identically —
+// the app supplies a flag, not a copy of this.
+PdfExportResult exportDeckToPdf(const std::string& input, const std::string& output,
+                                int pageW, int pageH, double delaySec) {
+    PdfExportResult result;
+
+    std::vector<std::string> entries = collectDeckEntries(input);
+
+    if (entries.empty()) {
+        std::cerr << "No playable files found in " << input << "\n";
+        return result;
+    }
+
+    SkFILEWStream out(output.c_str());
+    if (!out.isValid()) {
+        std::cerr << "Cannot open output: " << output << "\n";
+        return result;
+    }
+
+    // MetadataWithCallbacks so Skia can encode embedded images as JPEG where that is the
+    // better choice (required by this Skia build).
+    SkPDF::Metadata meta = SkPDF::JPEG::MetadataWithCallbacks();
+    meta.fTitle     = SkString("RemoteCompose Presentation");
+    meta.fCreator   = SkString("rcplayer");
+    meta.fRasterDPI = 300;
+    auto pdf = SkPDF::MakeDocument(&out, meta);
+    if (!pdf) {
+        std::cerr << "Failed to create PDF document\n";
+        return result;
+    }
+
+    for (const auto& entry : entries) {
+        const std::string name = g.zip ? baseName(entry)
+                                       : fs::path(entry).filename().string();
+        if (renderSlideToPdfPage(pdf.get(), entry, pageW, pageH, delaySec)) {
+            result.pages++;
+            std::cout << "[" << (result.pages + result.failures) << "/" << entries.size()
+                      << "] " << name << "\n";
+        } else {
+            result.failures++;
+            std::cerr << "FAIL: " << name << "\n";
+        }
+    }
+
+    pdf->close();
+    g.zip.reset();
+    std::cerr << "Done: " << result.pages << " pages written to " << output
+              << " (" << result.failures << " failures)\n";
+    return result;
 }
 
 }  // namespace rcplayer

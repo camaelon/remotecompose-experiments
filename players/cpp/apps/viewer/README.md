@@ -58,12 +58,15 @@ Velocity is computed on release and forwarded as the touch-up velocity.
 # Render a single file to PNG.
 rcviewer --screenshot input.rc out.png [width height] [delay_sec]
 
-# Render every .rc in a directory.
+# Render every slide in a directory / zip to its own PNG.
 rcviewer --screenshot-dir ./samples ./out [width height] [delay_sec]
 
 # Render the contents of a zip / directory to a multi-page PDF.
 rcviewer --pdf input.zip out.pdf
 ```
+
+`--pdf` and `--screenshot-dir` are thin wrappers over `rcplayer`'s `exportDeckToPdf` and
+`exportDeckToImages`, so any player built on the library exports identically.
 
 The optional `delay_sec` argument lets the viewer animate for that many
 seconds before grabbing the frame, which is useful for documents whose
