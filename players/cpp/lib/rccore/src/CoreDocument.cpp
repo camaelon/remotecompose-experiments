@@ -24,9 +24,10 @@ static constexpr int THEME_LIGHT = -3;
 bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
     Operations::init();
     mOperations.clear();
-    // New document: drop any layout-animation state from the previous one so
-    // component ids can't carry stale bounds and trigger spurious transitions.
-    resetAnimStore();
+    // Re-init of this document: drop its layout-animation state so component ids
+    // can't carry stale bounds and trigger spurious transitions. Other documents'
+    // stores are theirs and are left alone.
+    mAnimStore.clear();
 
     // Stack of container operations being built
     std::vector<Operation*> containerStack;

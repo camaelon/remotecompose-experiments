@@ -4,7 +4,7 @@
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 
-#include "WidgetHelper.h"
+#include "rcplayer/WidgetHelper.h"
 
 void configureDesktopWidget(GLFWwindow* window, int posX, int posY) {
     NSWindow* nsWindow = (NSWindow*)glfwGetCocoaWindow(window);

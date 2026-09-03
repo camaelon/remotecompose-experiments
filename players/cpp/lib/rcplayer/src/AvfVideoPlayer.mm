@@ -22,7 +22,7 @@
 #import <CoreMedia/CoreMedia.h>
 #import <QuartzCore/QuartzCore.h>
 
-#include "AvfVideoPlayer.h"
+#include "rcplayer/AvfVideoPlayer.h"
 
 #include "include/core/SkBitmap.h"
 #include "include/core/SkCanvas.h"

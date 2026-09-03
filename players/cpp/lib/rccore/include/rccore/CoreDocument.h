@@ -1,6 +1,7 @@
 #pragma once
 #include "rccore/Operation.h"
 #include "rccore/RemoteContext.h"
+#include "rccore/animation/LayoutAnimation.h"
 #include <vector>
 #include <memory>
 
@@ -19,6 +20,11 @@ public:
 
     // Register variable listeners (call once after initFromBuffer)
     void registerListeners(RemoteContext& context);
+
+    // This document's layout-animation state (previous painted bounds per component id).
+    // Per-document because component ids only mean something inside one document; see
+    // animation/LayoutAnimation.h.
+    LayoutAnimStore& animStore() { return mAnimStore; }
 
     // Two-pass execution
     // theme: -1=UNSPECIFIED (no filtering), -3=LIGHT, -2=DARK
@@ -85,6 +91,7 @@ private:
     void computeTranslate(float w, float h, float sx, float sy, float* translateOutput);
 
     std::vector<std::unique_ptr<Operation>> mOperations;
+    LayoutAnimStore mAnimStore;
     int mWidth = 600;
     int mHeight = 600;
     int mMajorVersion = 0;

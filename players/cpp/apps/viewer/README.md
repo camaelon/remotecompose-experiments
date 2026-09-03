@@ -1,6 +1,11 @@
 # rcviewer
 
-GLFW desktop viewer. On macOS it can use Metal or CPU rendering; on Linux it
+GLFW desktop viewer. It is a thin shell — the command line, the window, and the
+event loop — over [`lib/rcplayer`](../../lib/rcplayer), which holds the playback
+runtime. Building a different player (a presenter tool, a kiosk, a widget) means
+linking `rcplayer` and writing your own `main.cpp`, not forking this one.
+
+On macOS it can use Metal or CPU rendering; on Linux it
 uses the CPU/OpenGL path. Loads `.rc`/`.rcd` documents, animated images
 (WebP / GIF / APNG), macOS video (MP4 / MOV via AVFoundation), and zip
 archives of any mix, then plays through them with keyboard navigation.

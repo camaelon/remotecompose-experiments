@@ -7,6 +7,7 @@
 #include "rccore/CustomComponentHost.h"
 #include "rccore/Utils.h"
 #include "rccore/animation/LayoutAnimation.h"
+#include "rccore/CoreDocument.h"
 
 #include <algorithm>
 #include <cmath>
@@ -2158,7 +2159,12 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
     if (cid != -1 && measure.contains(cid)) {
         AnimSpecParams spec;  // default 300ms standard/fade; per-component spec: TODO
         ComponentMeasure& m = measure.get(cid);
-        if (animUpdate(cid, m, timeSec, gLayoutAnimationEnabled, spec))
+        // The store belongs to the document being laid out. A context with no document
+        // (measuring in isolation) gets a scratch one rather than sharing a global.
+        static LayoutAnimStore sDetachedStore;
+        LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore()
+                                                   : sDetachedStore;
+        if (animUpdate(store, cid, m, timeSec, gLayoutAnimationEnabled, spec))
             sSawActiveAnim = true;   // still animating → layout depends on animationTime
     }
     if (op->opcode() == 217) sSawStateLayout = true;   // index can flip → keep re-laying out

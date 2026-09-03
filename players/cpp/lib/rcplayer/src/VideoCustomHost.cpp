@@ -1,6 +1,6 @@
-#include "VideoCustomHost.h"
+#include "rcplayer/VideoCustomHost.h"
 
-#include "AvfVideoPlayer.h"
+#include "rcplayer/AvfVideoPlayer.h"
 #include "rcskia/SkiaPaintContext.h"
 
 #include <cstdio>

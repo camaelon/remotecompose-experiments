@@ -29,10 +29,16 @@ rcX/
 ├── lib/
 │   ├── rccore/      Engine — wire format, document model, expressions,
 │   │               layout, paint state, time variables, particles, etc.
-│   └── rcskia/      Skia bridge — implements the engine's PaintContext
-│                   abstraction on top of SkCanvas.
+│   ├── rcskia/      Skia bridge — implements the engine's PaintContext
+│   │               abstraction on top of SkCanvas.
+│   └── rcplayer/    Desktop player runtime — render backends (Metal / CPU),
+│                   playlist + document loading, custom-component hosts for
+│                   embedded video / web / sub-documents, zip decks,
+│                   voice-over, PDF export. Link this to build your own
+│                   player; `rcviewer` is one 500-line main.cpp on top.
 ├── apps/
-│   ├── viewer/      `rcviewer` — GLFW + Metal/CPU desktop viewer.
+│   ├── viewer/      `rcviewer` — GLFW + Metal/CPU desktop viewer (rcplayer +
+│   │               a command line and an event loop).
 │   │               Loads .rc/.rcd, animated images (WebP/GIF/APNG),
 │   │               video (MP4/MOV via AVFoundation), and zip decks.
 │   └── iosViewer/   SwiftUI iOS / iPadOS app, MTKView + Skia-Ganesh-Metal.

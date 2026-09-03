@@ -1,4 +1,4 @@
-#include "WidgetHelper.h"
+#include "rcplayer/WidgetHelper.h"
 
 void configureDesktopWidget(GLFWwindow* /*window*/, int /*posX*/, int /*posY*/) {
     // Linux widget integration is intentionally a no-op for now. GLFW still

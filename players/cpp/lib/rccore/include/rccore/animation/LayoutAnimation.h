@@ -7,6 +7,13 @@
 // The pipeline rebuilds MeasurePass and LayoutState every frame, so the
 // "previous painted bounds" a component must animate FROM are kept in a
 // persistent store keyed by componentId (below), surviving frame rebuilds.
+//
+// The store belongs to a CoreDocument, not to the process. Component ids are only
+// unique *within* a document, and more than one document is routinely live at once —
+// a document embedding another via `rc:`, or a player rendering a still of a second
+// document off-screen while the first keeps playing. A shared store lets those
+// documents read each other's bounds through colliding ids, which surfaces as
+// components animating from positions they never occupied.
 
 #include <unordered_map>
 #include "rccore/LayoutSystem.h"
@@ -40,11 +47,8 @@ struct AnimState {
 };
 
 // Persistent per-componentId store; NOT cleared each frame. Cleared on doc load.
-inline std::unordered_map<int, AnimState>& animStore() {
-    static std::unordered_map<int, AnimState> s;
-    return s;
-}
-inline void resetAnimStore() { animStore().clear(); }
+// One per CoreDocument — see the note at the top of this file.
+using LayoutAnimStore = std::unordered_map<int, AnimState>;
 
 inline float animLerp(float a, float b, float t) { return a * (1.0f - t) + b * t; }
 
@@ -66,9 +70,9 @@ inline float animEase(int type, float x) {
 //  * entering (from GONE → visible): hold at target bounds, alpha 0→1.
 //  * exiting  (visible → GONE): hold at previous bounds, alpha 1→0, keep painting
 //    until done, then settle to GONE.
-inline bool animUpdate(int cid, ComponentMeasure& target, double timeSec,
-                       bool enabled, const AnimSpecParams& spec) {
-    AnimState& st = animStore()[cid];
+inline bool animUpdate(LayoutAnimStore& store, int cid, ComponentMeasure& target,
+                       double timeSec, bool enabled, const AnimSpecParams& spec) {
+    AnimState& st = store[cid];
 
     if (!st.hasLive) {
         st.hasLive = true;

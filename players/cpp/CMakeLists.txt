@@ -3,6 +3,7 @@
 # Produces:
 #   - lib/rccore/librccore.a            engine
 #   - lib/rcskia/librcskia.a            Skia bridge
+#   - lib/rcplayer/librcplayer.a        desktop player runtime (windowed playback)
 #   - tools/rc2json/rc2json             binary -> JSON
 #   - tools/rc2image/rc2image           headless render -> PNG
 #   - apps/viewer/rcviewer              GLFW interactive viewer
@@ -17,6 +18,12 @@ project(RcX VERSION 0.1.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# A project that embeds this tree (add_subdirectory) usually wants the libraries only —
+# rcplayer to build its own player on, without also building rcviewer and the tools.
+option(RCX_BUILD_APPS  "Build the rcviewer app"        ON)
+option(RCX_BUILD_TOOLS "Build the headless CLI tools"  ON)
+option(RCX_BUILD_TESTS "Build the test suite"          ON)
 
 if(APPLE)
     enable_language(OBJCXX)
@@ -137,10 +144,19 @@ file(WRITE "${MINIZ_DIR}/miniz_export.h"
 # ── Sub-projects ───────────────────────────────────────────────────────
 add_subdirectory(lib/rccore)
 add_subdirectory(lib/rcskia)
-add_subdirectory(tools/rc2json)
-add_subdirectory(tools/rc2image)
-add_subdirectory(tools/rc2layout)
-add_subdirectory(apps/viewer)
+add_subdirectory(lib/rcplayer)
 
-enable_testing()
-add_subdirectory(tests)
+if(RCX_BUILD_TOOLS)
+    add_subdirectory(tools/rc2json)
+    add_subdirectory(tools/rc2image)
+    add_subdirectory(tools/rc2layout)
+endif()
+
+if(RCX_BUILD_APPS)
+    add_subdirectory(apps/viewer)
+endif()
+
+if(RCX_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
