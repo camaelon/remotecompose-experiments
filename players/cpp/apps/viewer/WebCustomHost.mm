@@ -264,7 +264,14 @@ bool WebCustomHost::drawCustom(int componentId, const std::string& config,
         view = container;
         ensureMonitors();                // click-to-focus + keep keys on the deck / Esc
         NSURL* nsurl = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
-        if (nsurl) [wv loadRequest:[NSURLRequest requestWithURL:nsurl]];
+        if (nsurl && nsurl.isFileURL) {
+            // Local HTML file: WKWebView blocks file access via a plain request, so load it
+            // with read access granted to its directory (so linked CSS/JS/images load too).
+            NSURL* dir = [nsurl URLByDeletingLastPathComponent];
+            [wv loadFileURL:nsurl allowingReadAccessToURL:(dir ?: nsurl)];
+        } else if (nsurl) {
+            [wv loadRequest:[NSURLRequest requestWithURL:nsurl]];
+        }
     } else {
         view = it->second;
     }

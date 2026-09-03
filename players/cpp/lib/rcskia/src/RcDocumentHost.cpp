@@ -56,6 +56,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     }
     std::string fit = mFit;
     float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+    float gate = 0.0f;   // skip painting until animTime >= gate (a "frozen" transition intro)
     std::string path = rest;
     auto hash = rest.find('#');
     if (hash != std::string::npos) {
@@ -69,6 +70,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
             else {
                 std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
                 if (k == "fit") fit = v;
+                else if (k == "gate") gate = std::strtof(v.c_str(), nullptr);
                 else if (k == "crop") {
                     float t[4];
                     if (std::sscanf(v.c_str(), "%f,%f,%f,%f", &t[0], &t[1], &t[2], &t[3]) == 4)
@@ -80,6 +82,11 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
         }
     }
     if (path.empty()) return false;
+
+    // Gated embed: during a slide's opening transition its expensive live content is skipped
+    // (a static snapshot is shown over it instead — see refract's `freeze`), so the push stays
+    // smooth. Once animTime passes the gate the real document paints and the snapshot fades.
+    if (gate > 0.0f && timeSec < static_cast<double>(gate)) return true;
 
     auto* skpc = static_cast<SkiaPaintContext*>(pc);
     if (!skpc || !skpc->canvas()) return false;
