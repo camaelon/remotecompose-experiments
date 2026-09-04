@@ -83,8 +83,21 @@ export abstract class LayoutManager extends LayoutComponent {
         selfMeasure.setW(w);
         selfMeasure.setH(h);
 
-        const horizontalWrap = wMod?.getType() === WidthModifier.WRAP;
-        const verticalWrap = hMod?.getType() === HeightModifier.WRAP;
+        // A weight only means something once the parent has distributed space for it, and it
+        // does that by pinning the axis — measure(share, share, ...). On the *cross* axis
+        // there is no distribution pass, so the branches above fall back to the padding
+        // alone: the component collapses to its border, its content box comes out zero, and
+        // everything inside is clipped away while the component's own background still
+        // draws. That is a table whose rows and header band are there with no text in them.
+        //
+        // An undistributed weight has no share to take, so the only size available is the
+        // one its content asks for — measure that axis as a wrap.
+        const widthWeightUnpinned = wMod?.getType() === WidthModifier.WEIGHT
+            && minWidth <= this.mPadBeforeWidth;
+        const heightWeightUnpinned = hMod?.getType() === HeightModifier.WEIGHT
+            && minHeight <= this.mPadBeforeHeight;
+        const horizontalWrap = wMod?.getType() === WidthModifier.WRAP || widthWeightUnpinned;
+        const verticalWrap = hMod?.getType() === HeightModifier.WRAP || heightWeightUnpinned;
 
         if (horizontalWrap || verticalWrap) {
             this.mCachedWrapSize.clear();

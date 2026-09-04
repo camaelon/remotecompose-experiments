@@ -443,7 +443,17 @@ export class CoreText extends LayoutManager implements VariableSupport {
             this.mBaseline = -bounds[1];
         }
 
-        if (forceComplex || (bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0)) {
+        // Wrapping needs a width to wrap against, so a measure with no width limit cannot
+        // compute one — but it must not answer with the single-line height either. The
+        // component is measured several times, and an unconstrained pass that reports one
+        // line poisons the passes after it: its height comes back as the next pass's
+        // maxHeight, which then clamps the correct two-line height back down to one line.
+        // The result is a row sized for two lines with only the first one drawn.
+        //
+        // So an unconstrained pass reuses whatever a constrained pass already worked out.
+        const wantsComplex = forceComplex
+            || (bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0);
+        if (wantsComplex) {
             if (inAutosize) {
                 flags |= 0x01; // TEXT_MEASURE_AUTOSIZE
             }
@@ -461,8 +471,15 @@ export class CoreText extends LayoutManager implements VariableSupport {
                 bounds[2] = this.mComputedTextLayout.width;
                 bounds[3] = this.mComputedTextLayout.height;
             }
-        } else {
+        } else if (maxWidth > 0) {
+            // A real width that the text fits inside: the wrapped layout is genuinely
+            // stale, so drop it.
             this.mComputedTextLayout = null;
+        } else if (this.mComputedTextLayout) {
+            bounds[0] = 0;
+            bounds[1] = 0;
+            bounds[2] = this.mComputedTextLayout.width;
+            bounds[3] = this.mComputedTextLayout.height;
         }
     }
 
