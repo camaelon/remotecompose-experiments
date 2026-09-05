@@ -105,8 +105,11 @@ struct VideoFrameHost : rccore::CustomComponentHost {
 // next slide is the spec browser" is useful, a blank rectangle is not. So the region is
 // drawn as a dashed frame labelled with where the page comes from.
 struct WebPlaceholderHost : rccore::CustomComponentHost {
-    // The system UI face, for the label. Resolved once.
-    static const SkFont& labelFont(float size) {
+    // The system UI face, for the label. The typeface is resolved once and shared (SkTypeface
+    // is immutable and atomically refcounted); the font is returned *by value*, because it
+    // carries the size and the previous version of this handed out a reference to a static it
+    // then reassigned on the next call.
+    static SkFont labelFont(float size) {
         static sk_sp<SkFontMgr> mgr =
 #if defined(__APPLE__)
             SkFontMgr_New_CoreText(nullptr);
@@ -115,8 +118,7 @@ struct WebPlaceholderHost : rccore::CustomComponentHost {
 #endif
         static sk_sp<SkTypeface> face =
             mgr ? mgr->matchFamilyStyle(nullptr, SkFontStyle()) : nullptr;
-        static SkFont font;
-        font = SkFont(face, size);
+        SkFont font(face, size);
         font.setEdging(SkFont::Edging::kAntiAlias);
         font.setSubpixel(true);
         return font;

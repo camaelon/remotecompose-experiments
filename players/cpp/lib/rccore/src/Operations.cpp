@@ -5,12 +5,18 @@
 #include "rccore/operations/LayoutOperations.h"
 #include "rccore/operations/Operations3D.h"
 #include "rccore/operations/StubOperations.h"
+#include <mutex>
 
 namespace rccore {
 
 std::unordered_map<int, ReaderFn> Operations::sReaders;
 std::unordered_map<int, std::string> Operations::sNames;
 bool Operations::sInitialized = false;
+
+void Operations::ensureInit() {
+    static std::once_flag once;
+    std::call_once(once, [] { init(); });
+}
 
 // Skip system info defaults — pin to the highest baseline we know about
 // (v7 androidx) so docs targeting the latest features are accepted by
@@ -24,13 +30,13 @@ void Operations::registerReader(int opcode, const std::string& name, ReaderFn fn
 }
 
 ReaderFn Operations::getReader(int opcode) {
-    if (!sInitialized) init();
+    ensureInit();
     auto it = sReaders.find(opcode);
     return it != sReaders.end() ? it->second : nullptr;
 }
 
 std::string Operations::getName(int opcode) {
-    if (!sInitialized) init();
+    ensureInit();
     auto it = sNames.find(opcode);
     return it != sNames.end() ? it->second : "UNKNOWN_" + std::to_string(opcode);
 }

@@ -54,8 +54,12 @@ private:
 
     static constexpr uint64_t kMult = 0x5DEECE66DULL;
     static constexpr uint64_t kMask = (1ULL << 48) - 1;
-    static uint64_t sState;
-    static bool sSeeded;
+    // Per thread. The reference has one lazy `Random` per process, but a stream of random
+    // numbers is only meaningful within the document being evaluated, and sharing the state
+    // across threads makes advancing it a data race for no gain: a document rendered off
+    // screen on a worker gets its own stream, seeded the same way.
+    static thread_local uint64_t sState;
+    static thread_local bool sSeeded;
 };
 
 class ExpressionEvaluator {

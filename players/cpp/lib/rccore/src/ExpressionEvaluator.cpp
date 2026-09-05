@@ -4,11 +4,12 @@
 #include <algorithm>
 #include <numeric>
 #include <random>
+#include <mutex>
 
 namespace rccore {
 
-uint64_t JavaRandom::sState = 0;
-bool JavaRandom::sSeeded = false;
+thread_local uint64_t JavaRandom::sState = 0;
+thread_local bool JavaRandom::sSeeded = false;
 
 void JavaRandom::seedFromBits(int32_t bits) {
     // Java widens the int to long before scrambling, so a negative float's bits
@@ -30,7 +31,7 @@ uint32_t JavaRandom::next(int bits) {
 }
 
 float JavaRandom::nextFloat() {
-    if (!sSeeded) seedArbitrary();   // the reference's lazy `new Random()`
+    if (!sSeeded) seedArbitrary();   // the reference's lazy `new Random()`, per thread
     return static_cast<float>(next(24)) / static_cast<float>(1 << 24);
 }
 

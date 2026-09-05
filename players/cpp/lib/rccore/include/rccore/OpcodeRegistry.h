@@ -42,6 +42,8 @@ public:
 
 private:
     static void reg(OpSpec spec);
+    // See Operations::ensureInit — the same table, built once, read from any thread.
+    static void ensureInit();
     static std::unordered_map<int, OpSpec> sSpecs;
     static bool sInitialized;
 };

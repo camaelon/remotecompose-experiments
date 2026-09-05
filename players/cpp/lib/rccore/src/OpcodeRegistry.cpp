@@ -1,16 +1,22 @@
 #include "rccore/OpcodeRegistry.h"
+#include <mutex>
 
 namespace rccore {
 
 std::unordered_map<int, OpSpec> OpcodeRegistry::sSpecs;
 bool OpcodeRegistry::sInitialized = false;
 
+void OpcodeRegistry::ensureInit() {
+    static std::once_flag once;
+    std::call_once(once, [] { init(); });
+}
+
 void OpcodeRegistry::reg(OpSpec spec) {
     sSpecs[spec.opcode] = std::move(spec);
 }
 
 const OpSpec* OpcodeRegistry::get(int opcode) {
-    if (!sInitialized) init();
+    ensureInit();
     auto it = sSpecs.find(opcode);
     return it != sSpecs.end() ? &it->second : nullptr;
 }

@@ -464,8 +464,13 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
 // ── Resolve a potentially NaN-encoded float variable ─────────────────
 // Set during the layout-animation pass: a state layout (index may flip) or an in-flight layout
 // animation means the layout can't be cached this frame.
-static bool sSawStateLayout = false;
-static bool sSawActiveAnim = false;
+//
+// Per thread. They are cleared at the start of a layout pass and read at the end, so they
+// belong to *a* pass, not to the process: a second thread laying out another document (a
+// thumbnail, a PDF page) would otherwise clear them mid-pass and the first document would
+// cache a layout that is still moving.
+thread_local bool sSawStateLayout = false;
+thread_local bool sSawActiveAnim = false;
 
 static float resolveVar(float v, const RemoteContext& ctx) {
     if (Utils::isVariable(v)) {
@@ -2160,8 +2165,9 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
         AnimSpecParams spec;  // default 300ms standard/fade; per-component spec: TODO
         ComponentMeasure& m = measure.get(cid);
         // The store belongs to the document being laid out. A context with no document
-        // (measuring in isolation) gets a scratch one rather than sharing a global.
-        static LayoutAnimStore sDetachedStore;
+        // (measuring in isolation) gets a scratch one — per thread, so two threads measuring
+        // at once do not share one.
+        static thread_local LayoutAnimStore sDetachedStore;
         LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore()
                                                    : sDetachedStore;
         if (animUpdate(store, cid, m, timeSec, gLayoutAnimationEnabled, spec))

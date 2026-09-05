@@ -191,6 +191,10 @@ public:
 private:
     static void registerReader(int opcode, const std::string& name, ReaderFn fn);
 
+    // Built once and then only read. `ensureInit` is what makes "once" hold when two
+    // threads reach the table together — a second thread rendering a document off screen is
+    // an ordinary thing to be doing, and it must not race the first one into the map.
+    static void ensureInit();
     static std::unordered_map<int, ReaderFn> sReaders;
     static std::unordered_map<int, std::string> sNames;
     static bool sInitialized;
