@@ -16,23 +16,34 @@
 #include <vector>
 #include <cstring>
 #include <cstdlib>
+#include <algorithm>
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "Usage: rc2image input.rcd output.png [width height] [--time epoch_ms] [--anim seconds]\n";
+        std::cerr << "Usage: rc2image input.rcd output.png [width height]"
+                     " [--fit W H] [--time epoch_ms] [--anim seconds]\n"
+                     "  --fit W H  render onto a W x H surface with the document kept in its\n"
+                     "             own coordinate space and scaled to fit, which is what every\n"
+                     "             real player does. Without it the document is painted at its\n"
+                     "             native size and the fit transform is never exercised.\n";
         return 1;
     }
 
     const char* inputPath = argv[1];
     const char* outputPath = argv[2];
     int overrideWidth = 0, overrideHeight = 0;
+    int fitWidth = 0, fitHeight = 0;   // --fit: surface size, document keeps its own space
     int64_t fixedTimeMs = 0;
     float animTimeSec = -1.0f;   // >=0 pins animationTime (seconds since first frame)
 
     // Parse remaining args
     int i = 3;
     while (i < argc) {
-        if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
+        if (std::strcmp(argv[i], "--fit") == 0 && i + 2 < argc) {
+            fitWidth = std::atoi(argv[i + 1]);
+            fitHeight = std::atoi(argv[i + 2]);
+            i += 3;
+        } else if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
             fixedTimeMs = std::atoll(argv[i + 1]);
             i += 2;
         } else if (std::strcmp(argv[i], "--anim") == 0 && i + 1 < argc) {
@@ -78,8 +89,21 @@ int main(int argc, char* argv[]) {
     if (width <= 0) width = 600;
     if (height <= 0) height = 600;
 
+    // --fit renders onto a surface of a different size than the document, with the document
+    // left in its own coordinate space and a translate+scale mapping it in. That is what the
+    // iOS/desktop players do, and it is a genuinely different code path for anything that
+    // composites a buffer (3D blits at the origin of the DOCUMENT space, under the live CTM).
+    int surfW = fitWidth  > 0 ? fitWidth  : width;
+    int surfH = fitHeight > 0 ? fitHeight : height;
+    float fitScale = 1.0f, fitOx = 0.0f, fitOy = 0.0f;
+    if (fitWidth > 0 && fitHeight > 0) {
+        fitScale = std::min((float) surfW / (float) width, (float) surfH / (float) height);
+        fitOx = ((float) surfW - (float) width  * fitScale) * 0.5f;
+        fitOy = ((float) surfH - (float) height * fitScale) * 0.5f;
+    }
+
     // Create Skia surface
-    SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
+    SkImageInfo info = SkImageInfo::MakeN32Premul(surfW, surfH);
     auto surface = SkSurfaces::Raster(info);
     if (!surface) {
         std::cerr << "Error: failed to create Skia surface\n";
@@ -89,6 +113,10 @@ int main(int argc, char* argv[]) {
     SkCanvas* canvas = surface->getCanvas();
     // White background (matches TS renderer)
     canvas->clear(SK_ColorWHITE);
+    if (fitWidth > 0 && fitHeight > 0) {
+        canvas->translate(fitOx, fitOy);
+        canvas->scale(fitScale, fitScale);
+    }
 
     // Set up context and paint context
     rccore::RemoteContext context;
