@@ -1,0 +1,561 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>live</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; background: #0a0d12; overflow: hidden; color: #93a2b8;
+    font: 13px/1.65 ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  body { display: flex; flex-direction: column; }
+  button {
+    background: none; border: 1px solid #253243; border-radius: 5px; color: #7fb2e5;
+    font: inherit; font-size: 11.5px; padding: 3px 10px; cursor: pointer;
+  }
+  button:hover { border-color: #54c7f5; color: #54c7f5; }
+  button.primary { border-color: #2c6f92; color: #9fdcf8; padding: 5px 18px; }
+
+  .screen { flex: 1; min-height: 0; display: none; }
+  body[data-mode="browse"] #browse { display: flex; }
+  body[data-mode="view"] #view { display: block; }
+
+  /* ── browse ──────────────────────────────────────────────────────────────────────── */
+  #browse { flex-direction: row; }
+  #listPane {
+    width: 44%; min-width: 300px; display: flex; flex-direction: column;
+    border-right: 1px solid #182130;
+  }
+  #filterRow {
+    display: flex; gap: 10px; align-items: center;
+    padding: 12px 14px; border-bottom: 1px solid #182130;
+  }
+  #filter {
+    flex: 1; background: #0d1219; border: 1px solid #253243; border-radius: 5px;
+    color: #cbd6e4; font: inherit; font-size: 12px; padding: 4px 9px;
+  }
+  #filter:focus { outline: none; border-color: #54c7f5; }
+  #count { color: #5d6b7e; font-size: 11.5px; }
+  #list { flex: 1; overflow: auto; }
+  .row {
+    display: flex; gap: 10px; align-items: baseline; padding: 5px 14px; cursor: pointer;
+    border-left: 2px solid transparent; white-space: nowrap;
+  }
+  .row:hover { background: #101722; }
+  .row.sel { background: #16283a; border-left-color: #54c7f5; }
+  .row .rname { flex: 1; color: #cbd6e4; overflow: hidden; text-overflow: ellipsis; }
+  .row.sel .rname { color: #fff; }
+  .row .rsize {
+    width: 6em; text-align: right;
+    font-size: 11px; color: #5d6b7e; font-variant-numeric: tabular-nums;
+  }
+  .row.bad .rname { color: #ff8f8f; }
+  .row.bad .rsize { color: #ff8f8f; }
+
+  #previewPane {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 14px; padding: 24px; min-width: 0;
+  }
+  #stage {
+    display: grid; place-items: center; padding: 14px;
+    background: #0d1219; border: 1px solid #253243; border-radius: 12px;
+  }
+  #stage.flash, #inset.flash { border-color: #54c7f5; }
+  #stage:not(.flash), #inset:not(.flash) { transition: border-color .6s ease-out; }
+  canvas { display: block; border-radius: 6px; background: #05070a; }
+  #previewName { color: #cbd6e4; display: flex; gap: 8px; align-items: baseline; }
+  #copied {
+    color: #7fd6a8; font-size: 11px; opacity: 0; transition: opacity .5s ease-out;
+  }
+  #copied.show { opacity: 1; transition: none; }
+  #stats { border-collapse: collapse; font-size: 11.5px; }
+  #stats td { padding: 2px 10px; }
+  #stats td:first-child { color: #5d6b7e; text-align: right; }
+  #stats td:last-child { color: #cbd6e4; font-variant-numeric: tabular-nums; }
+  #empty { color: #46566a; }
+
+  /* ── view ────────────────────────────────────────────────────────────────────────── */
+  #view { position: relative; }
+  #src {
+    position: absolute; inset: 0; overflow: auto; margin: 0;
+    padding: 18px 18px 18px 0; tab-size: 2;
+  }
+  .ln { display: flex; white-space: pre; }
+  .ln > .no {
+    flex: none; width: 3.2em; padding-right: .5em; text-align: right;
+    color: #3a4756; user-select: none;
+  }
+  .ln > .fx {
+    flex: none; width: 1.3em; text-align: center; color: #46566a;
+    user-select: none; cursor: pointer;
+  }
+  .ln > .fx:hover { color: #54c7f5; }
+  .ln > .tx { flex: 1; min-width: 0; }
+  /* An edit is the whole point, so the line it landed on says so for a moment and then
+     stops shouting. Without this you cannot tell, in a recording, which line changed. */
+  .ln.hit { background: #16283a; }
+  .ln.hit > .no { color: #54c7f5; }
+  .ln.fade { background: transparent; transition: background-color 1.4s ease-out; }
+  .ln.fade > .no { color: #3a4756; transition: color 1.4s ease-out; }
+
+  .k { color: #7fb2e5; }               /* key */
+  .s { color: #c8d4e3; }               /* string */
+  .n { color: #f0a868; }               /* number */
+  .b { color: #b58ce0; }               /* true / false / null */
+  .p { color: #4c5b6d; }               /* punctuation is noise; push it back */
+  .e { color: #7fd6a8; }               /* a string the engine will evaluate */
+  .sw {
+    display: inline-block; width: .78em; height: .78em; margin-right: .35em;
+    border-radius: 2px; vertical-align: -1px; border: 1px solid #ffffff26;
+  }
+  .fold {
+    color: #54c7f5; background: #16283a; border-radius: 4px;
+    padding: 0 .45em; margin: 0 .3em; cursor: pointer; font-size: .88em;
+  }
+
+  #inset {
+    position: absolute; top: 16px; right: 16px; z-index: 2;
+    background: #0d1219; border: 1px solid #253243; border-radius: 10px;
+    box-shadow: 0 14px 40px #00000099; padding: 10px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  #cap {
+    font-size: 10.5px; color: #5d6b7e; text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── chrome ──────────────────────────────────────────────────────────────────────── */
+  #err {
+    display: none; padding: 8px 14px; background: #2a1114; color: #ff8f8f;
+    border-top: 1px solid #4a1d22; white-space: pre-wrap; word-break: break-word;
+    font-size: 12px;
+  }
+  body.broken #err { display: block; }
+  #bar {
+    display: flex; gap: 12px; align-items: center; font-size: 11.5px;
+    padding: 8px 14px; border-top: 1px solid #182130; background: #0d1219;
+    white-space: nowrap; overflow: hidden;
+  }
+  #where { color: #cbd6e4; overflow: hidden; text-overflow: ellipsis; }
+  body.broken #where { color: #ff8f8f; }
+  #meta { margin-left: auto; color: #5d6b7e; font-variant-numeric: tabular-nums; }
+  body.offline #meta::after { content: ' · server offline'; color: #ff8f8f; }
+  body[data-mode="browse"] #backBtn { display: none; }
+  body[data-mode="browse"] #viewmeta { display: none; }
+  body[data-mode="view"] #summary { display: none; }
+  body:not(.folded) #expand, body[data-mode="browse"] #expand { display: none; }
+</style>
+
+<div id="browse" class="screen">
+  <div id="listPane">
+    <div id="filterRow">
+      <input id="filter" type="search" placeholder="filter…" autocomplete="off">
+      <span id="count"></span>
+    </div>
+    <div id="list"></div>
+  </div>
+  <div id="previewPane">
+    <div id="empty">select a document</div>
+    <div id="previewName" hidden><span id="pname"></span><span id="copied">copied</span></div>
+    <table id="stats" hidden></table>
+    <button id="viewBtn" class="primary" hidden>view</button>
+  </div>
+</div>
+
+<div id="view" class="screen">
+  <pre id="src"></pre>
+  <div id="inset"><div id="cap">—</div></div>
+</div>
+
+<div id="err"></div>
+<div id="bar">
+  <button id="backBtn" type="button">← files</button>
+  <span id="where">loading…</span>
+  <button id="expand" type="button">expand all</button>
+  <span id="meta"><span id="summary"></span><span id="viewmeta"></span></span>
+</div>
+
+<script src="/bundle.js"></script>
+<script type="module">
+  import { scan, foldKeys, highlight, esc } from './view.mjs';
+
+  const $ = (id) => document.getElementById(id);
+  const listEl = $('list'), filterEl = $('filter'), countEl = $('count');
+  const previewName = $('previewName'), pnameEl = $('pname'), copiedEl = $('copied');
+  const statsEl = $('stats'), emptyEl = $('empty');
+  const viewBtn = $('viewBtn'), backBtn = $('backBtn'), expandBtn = $('expand');
+  const srcEl = $('src'), insetEl = $('inset'), capEl = $('cap');
+  const whereEl = $('where'), errEl = $('err');
+  const summaryEl = $('summary'), viewmetaEl = $('viewmeta');
+
+  // One canvas and one player for the whole app, moved between the preview panel and the
+  // inset. Two players would mean two animation loops, one of them always off-screen.
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const player = new window.RC.RcdPlayer(canvas);
+  const stage = document.createElement('div');
+  stage.id = 'stage';
+  stage.appendChild(canvas);
+
+  const PREVIEW_MAX = 340, INSET_MAX = 240;
+
+  let files = [];
+  let selected = null;
+  let mode = 'browse';
+  let docSize = null;
+
+  // ── the document ──────────────────────────────────────────────────────────────────────
+
+  async function showDoc(b64) {
+    const raw = Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0));
+    const doc = await player.loadFromArrayBuffer(raw.buffer);
+    // getAuthorWidth, not getWidth: getWidth reports the size the root was *laid out* to,
+    // which is whatever the canvas happened to be — so it answers 256×256 for a 360×360
+    // document and every panel then sizes itself to the previous one forever.
+    docSize = [doc.getAuthorWidth(), doc.getAuthorHeight()];
+    fit();
+    const holder = mode === 'view' ? insetEl : stage;
+    holder.classList.add('flash');
+    requestAnimationFrame(() => requestAnimationFrame(() => holder.classList.remove('flash')));
+  }
+
+  function fit() {
+    if (!docSize) return;
+    const [w, h] = docSize;
+    player.resize(w, h);
+    const max = mode === 'view' ? INSET_MAX : PREVIEW_MAX;
+    const scale = Math.min(1, max / w, max / h);
+    canvas.style.width = Math.round(w * scale) + 'px';
+    canvas.style.height = Math.round(h * scale) + 'px';
+  }
+
+  // ── browse ────────────────────────────────────────────────────────────────────────────
+
+  const bytesOf = (n) => (n == null ? '—' : n.toLocaleString() + ' B');
+
+  /**
+   * The rows actually on screen.
+   *
+   * Both the list and the arrow keys go through this. If they each did their own filtering
+   * the two would drift and Down would eventually walk onto a row nobody can see.
+   */
+  function visibleFiles() {
+    const q = filterEl.value.trim().toLowerCase();
+    return files.filter((f) => !q || f.rel.toLowerCase().includes(q));
+  }
+
+  function renderList() {
+    const shown = visibleFiles();
+    countEl.textContent = shown.length === files.length
+      ? `${files.length}` : `${shown.length} / ${files.length}`;
+    listEl.innerHTML = shown.map((f) =>
+      `<div class="row${f.rel === selected ? ' sel' : ''}${f.ok ? '' : ' bad'}" ` +
+      `data-rel="${esc(f.rel)}"><span class="rname">${esc(f.rel)}</span>` +
+      `<span class="rsize">${f.ok ? f.size.toLocaleString() : '✗'}</span></div>`).join('');
+  }
+
+  function renderSummary() {
+    const good = files.filter((f) => f.ok);
+    const kb = (n) => (n / 1024).toFixed(0) + ' KB';
+    summaryEl.textContent =
+      `${good.length}/${files.length} compiled · ` +
+      `${kb(good.reduce((a, f) => a + f.json, 0))} json → ` +
+      `${kb(good.reduce((a, f) => a + f.size, 0))} rc → ` +
+      `${kb(good.reduce((a, f) => a + f.gzip, 0))} gzip`;
+  }
+
+  function renderStats(rec) {
+    const rows = [
+      ['dimensions', rec.w && rec.h ? `${rec.w} × ${rec.h}` : '—'],
+      ['json', bytesOf(rec.json)],
+      ['.rc', bytesOf(rec.size)],
+      ['gzipped', bytesOf(rec.gzip)],
+      ['json / .rc', rec.ok && rec.json ? (rec.json / rec.size).toFixed(1) + '×' : '—'],
+      ['compiled', rec.ok ? `${rec.ms} ms · ${rec.at}` : 'failed'],
+    ];
+    statsEl.innerHTML = rows
+      .map(([k, v]) => `<tr><td>${k}</td><td>${esc(String(v))}</td></tr>`).join('');
+  }
+
+  /**
+   * Put the selected document's path on the clipboard.
+   *
+   * The whole point of the browse screen is to pick a file and then *say its name* to an
+   * agent, so the name should already be in the paste buffer by the time you have finished
+   * clicking. Selection is a click, which is the user activation the clipboard API wants;
+   * it still fails if the window is not focused, so the failure is shown rather than
+   * swallowed — silently not copying would be discovered at exactly the wrong moment.
+   */
+  async function copyName(rel) {
+    try {
+      await navigator.clipboard.writeText(rel);
+      copiedEl.textContent = 'copied';
+      copiedEl.classList.add('show');
+      requestAnimationFrame(() => requestAnimationFrame(() => copiedEl.classList.remove('show')));
+    } catch (e) {
+      copiedEl.textContent = 'clipboard blocked — click the window first';
+      copiedEl.classList.add('show');
+    }
+  }
+
+  /**
+   * Move the highlight now; load the document shortly.
+   *
+   * Held arrow keys repeat about thirty times a second, and each selection otherwise means
+   * a fetch, a document swap and a clipboard write. The highlight moves on every keypress
+   * so the list still feels direct, but the expensive half waits for you to stop — landing
+   * on a file is what selects it, not passing over it. A click uses no delay at all.
+   */
+  let loadTimer = null;
+  function choose(rel, { copy = true, delay = 0 } = {}) {
+    if (!rel) return;
+    selected = rel;
+    renderList();
+    listEl.querySelector('.row.sel')?.scrollIntoView({ block: 'nearest' });
+    clearTimeout(loadTimer);
+    loadTimer = setTimeout(() => select(rel, { copy }), delay);
+  }
+
+  /** Step through the *visible* rows. Clamped, not wrapping: holding Down should stop. */
+  function move(delta) {
+    const shown = visibleFiles();
+    if (!shown.length) return;
+    const at = shown.findIndex((f) => f.rel === selected);
+    // A filter that hides the selection leaves `at` at -1; enter the list from the end the
+    // key is heading towards rather than jumping to wherever the old selection used to be.
+    const next = at === -1
+      ? (delta > 0 ? 0 : shown.length - 1)
+      : Math.min(shown.length - 1, Math.max(0, at + delta));
+    choose(shown[next].rel, { delay: 180 });
+  }
+
+  let loadToken = 0;
+  async function select(rel, { copy = true, scroll = false } = {}) {
+    selected = rel;
+    renderList();
+    if (scroll) listEl.querySelector('.row.sel')?.scrollIntoView({ block: 'nearest' });
+
+    // Everything past the await belongs to *this* selection. Without the token a slow fetch
+    // finishing after you have moved on would put its document, its stats and its name back
+    // on screen — and, worse, its name on the clipboard — while the list highlights another
+    // file. The debounce makes that rare rather than impossible.
+    const token = ++loadToken;
+    const data = await (await fetch(`/doc?p=${encodeURIComponent(rel)}`)).json();
+    if (token !== loadToken) return;
+    const rec = data.record;
+
+    emptyEl.hidden = true;
+    previewName.hidden = statsEl.hidden = viewBtn.hidden = false;
+    pnameEl.textContent = rel;
+    previewName.after(stage);
+    renderStats(rec);
+
+    document.body.classList.toggle('broken', !rec.ok);
+    errEl.textContent = rec.ok ? '' : rec.error;
+    whereEl.textContent = rel;
+    viewmetaEl.textContent = rec.ok
+      ? `${rec.size.toLocaleString()} B · ${rec.ms} ms · ${rec.at}` : rec.at;
+
+    prevLines = null;            // a different file: nothing to diff against
+    collapsed.clear();
+    if (data.source != null) setSource(data.source);
+    if (data.b64) await showDoc(data.b64);
+    if (token !== loadToken) return;
+    if (docSize) capEl.textContent = `${docSize[0]}×${docSize[1]} · ${bytesOf(rec.size)}`;
+    if (copy) await copyName(rel);
+    reportTitle(rec);
+  }
+
+  listEl.addEventListener('click', (e) => {
+    const row = e.target.closest('.row');
+    if (row) choose(row.dataset.rel);
+  });
+  filterEl.addEventListener('input', renderList);
+
+  // ── mode ──────────────────────────────────────────────────────────────────────────────
+
+  function setMode(next) {
+    mode = next;
+    document.body.dataset.mode = next;
+    if (next === 'view') insetEl.prepend(canvas);
+    else { stage.appendChild(canvas); if (selected) previewName.after(stage); }
+    fit();
+  }
+
+  viewBtn.addEventListener('click', () => selected && setMode('view'));
+  backBtn.addEventListener('click', () => setMode('browse'));
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mode === 'view') { setMode('browse'); return; }
+    // In view mode the arrows belong to the source pane, so nothing below applies.
+    if (mode !== 'browse') return;
+
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      // Also while the filter box has focus: typing a few letters and arrowing into the
+      // results is the natural way to use a filtered list, and Up/Down in a single-line
+      // input would otherwise just jump the caret to either end.
+      e.preventDefault();
+      move(e.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+    if (e.key === 'Home' || e.key === 'End') {
+      if (document.activeElement === filterEl) return;   // let the caret move
+      e.preventDefault();
+      const shown = visibleFiles();
+      if (shown.length) choose(shown[e.key === 'Home' ? 0 : shown.length - 1].rel, { delay: 180 });
+      return;
+    }
+    if (e.key === 'Enter' && selected) {
+      // Enter works from the filter box too — filter, arrow to it, open it, without
+      // reaching for the mouse.
+      e.preventDefault();
+      setMode('view');
+    }
+  });
+
+  // ── the source view ───────────────────────────────────────────────────────────────────
+
+  let model = null;
+  let prevLines = null;
+  let changed = new Set();
+  const collapsed = new Set();
+
+  function setSource(text) {
+    const { lines, pairs, depth } = scan(text);
+    model = { lines, pairs, depth, keys: foldKeys(lines) };
+
+    // Line-for-line against the previous version. Not a real diff: an insert shifts every
+    // line after it and they all light up, which is honest — the file did change there.
+    changed = new Set();
+    if (prevLines) {
+      for (let i = 0; i < lines.length; i++) if (lines[i] !== prevLines[i]) changed.add(i);
+    }
+    prevLines = lines;
+
+    // A change inside a folded block reveals it. Editing something you cannot see and
+    // watching nothing happen is the worst thing this view could do.
+    for (const [open, close] of pairs) {
+      const key = model.keys[open];
+      if (!collapsed.has(key)) continue;
+      for (const i of changed) if (i > open && i <= close) { collapsed.delete(key); break; }
+    }
+    paint();
+  }
+
+  function paint() {
+    if (!model) return;
+    const { lines, pairs, keys } = model;
+    const hidden = new Array(lines.length).fill(false);
+    for (const [open, close] of pairs) {
+      if (!collapsed.has(keys[open])) continue;
+      for (let i = open + 1; i <= close; i++) hidden[i] = true;
+    }
+
+    const out = [];
+    for (let i = 0; i < lines.length; i++) {
+      if (hidden[i]) continue;
+      const close = pairs.get(i);
+      const isCollapsed = close !== undefined && collapsed.has(keys[i]);
+      const chev = close === undefined ? '' : (isCollapsed ? '▸' : '▾');
+      // When collapsed, the block's closing text is pulled up onto the opening line so the
+      // JSON still reads as JSON rather than as a line with a dangling brace.
+      const tail = isCollapsed
+        ? `<span class="fold" data-line="${i}">… ${close - i} lines</span>` +
+          `<span class="p">${esc(lines[close].trim())}</span>`
+        : '';
+      out.push(
+        `<div class="ln${changed.has(i) ? ' hit' : ''}" data-line="${i}">` +
+        `<span class="no">${i + 1}</span>` +
+        `<span class="fx" data-line="${i}">${chev}</span>` +
+        `<span class="tx">${highlight(lines[i]) || '&nbsp;'}${tail}</span></div>`);
+    }
+    srcEl.innerHTML = out.join('');
+    document.body.classList.toggle('folded', collapsed.size > 0);
+
+    if (changed.size && mode === 'view') {
+      srcEl.querySelector('.ln.hit')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // Two frames, so the browser paints the highlight before the transition to
+      // transparent is attached; adding both at once means no visible flash at all.
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        for (const el of srcEl.querySelectorAll('.ln.hit')) el.classList.add('fade');
+      }));
+    }
+  }
+
+  srcEl.addEventListener('click', (e) => {
+    const t = e.target.closest('.fx, .fold');
+    if (!t || !model) return;
+    const i = Number(t.dataset.line);
+    if (!model.pairs.has(i)) return;
+    const key = model.keys[i];
+    if (collapsed.has(key)) collapsed.delete(key); else collapsed.add(key);
+    changed = new Set();          // a fold is not an edit; do not flash the file
+    paint();
+  });
+  expandBtn.addEventListener('click', () => { collapsed.clear(); changed = new Set(); paint(); });
+
+  // ── live updates ──────────────────────────────────────────────────────────────────────
+
+  const source = new EventSource('/events');
+  source.onerror = () => document.body.classList.add('offline');
+  source.onmessage = async (e) => {
+    document.body.classList.remove('offline');
+    const msg = JSON.parse(e.data);
+    if (msg.type !== 'update') return;
+    const rec = msg.record;
+
+    const i = files.findIndex((f) => f.rel === rec.rel);
+    if (i >= 0) files[i] = rec; else files.push(rec);
+    renderList();
+    renderSummary();
+    if (rec.rel !== selected) return;    // another file changed; the list already knows
+
+    renderStats(rec);
+    document.body.classList.toggle('broken', !rec.ok);
+    errEl.textContent = rec.ok ? '' : rec.error;
+    viewmetaEl.textContent = rec.ok
+      ? `${rec.size.toLocaleString()} B · ${rec.ms} ms · ${rec.at}` : rec.at;
+    if (msg.source != null) setSource(msg.source);
+    if (msg.b64) {
+      try {
+        await showDoc(msg.b64);
+        capEl.textContent = `${docSize[0]}×${docSize[1]} · ${bytesOf(rec.size)}`;
+      } catch (err) {
+        // The bytes compiled but the player would not read them — a converter/player
+        // disagreement, a different fault from a JSON mistake, and labelled so.
+        document.body.classList.add('broken');
+        errEl.textContent = 'player: ' + (err?.message ?? String(err));
+      }
+    }
+    reportTitle(rec);
+  };
+
+  // The title is the only thing a headless check can read back without a websocket, and a
+  // canvas that drew nothing looks identical to one that drew correctly unless you count
+  // pixels. `ink` is how many differ from the corner; 0 is a blank frame.
+  function reportTitle(rec) {
+    let ink = 0;
+    if (docSize) {
+      const px = canvas.getContext('2d').getImageData(0, 0, docSize[0], docSize[1]).data;
+      for (let i = 4; i < px.length; i += 4) {
+        if (px[i] !== px[0] || px[i + 1] !== px[1] || px[i + 2] !== px[2]) ink++;
+      }
+    }
+    document.title = `${rec.rel ?? '—'} ${docSize ? docSize.join('x') : '?'} ` +
+      `bytes=${rec.size ?? 0} ink=${ink} mode=${mode} folds=${collapsed.size} files=${files.length}`;
+  }
+
+  // ── start ─────────────────────────────────────────────────────────────────────────────
+
+  const list = await (await fetch('/list')).json();
+  files = list.files;
+  whereEl.textContent = list.base;
+  renderList();
+  renderSummary();
+  setMode('browse');
+  if (list.single) {
+    // Pointed at one file: there is nothing to browse, so go straight in. No clipboard
+    // write either — nothing here was clicked, so the browser would refuse it anyway.
+    await select(list.single, { copy: false, scroll: true });
+    setMode('view');
+  } else if (files.length) {
+    await select(files[0].rel, { copy: false, scroll: true });
+  }
+</script>

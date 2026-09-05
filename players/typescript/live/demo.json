@@ -1,0 +1,62 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 360,
+  "profiles": 513,
+  "contentDescription": "live — a ring of bars with a wave travelling around it"
+ },
+ "root": [
+  {
+   "type": "canvas",
+   "modifiers": ["fillMaxSize"],
+   "commands": [
+
+   {"paint": {"ops": [{"color": "#FF0A0D12"}, {"style": "fill"}]}},
+   {"drawRect": {"left": 0, "top": 0, "right": 360, "bottom": 360}},
+
+   {"variable": {"name": "speed", "value": 1.5707963}},
+   {"variable": {"name": "spin", "value": 45}},
+
+   {"save": {}},
+   {"rotate": {"angle": "continuousSec() * @spin", "pivotX": 180, "pivotY": 180}},
+
+   {"loop": {
+    "from": 0,
+    "until": 40,
+    "index": "i",
+    "commands": [
+
+     {"variable": {"name": "wave",
+       "value": "0.5 + 0.5 * sin(i * 0.55 + continuousSec() * @speed)", "commit": true}},
+
+     {"paint": {"ops": [
+       {"color": "#FFFF4D4D"},
+       {"style": "fill"},
+       {"alpha": "0.25 + 0.75 * @wave"}
+     ]}},
+
+     {"save": {}},
+     {"rotate": {"angle": "i * 9", "pivotX": 180, "pivotY": 180}},
+     {"drawRoundRect": {
+       "left": 84, "top": 176,
+       "right": "104 + 44 * @wave", "bottom": 184,
+       "rx": 4, "ry": 4
+     }},
+     {"restore": {}}
+
+    ]}},
+
+   {"restore": {}},
+
+   {"paint": {"ops": [{"color": "#FFFF4D4D"}, {"style": "fill"},
+                      {"alpha": "0.20 + 0.20 * sin(continuousSec() * 3.1415927)"}]}},
+   {"drawCircle": {"cx": 180, "cy": 180, "radius": 34}},
+
+   {"paint": {"ops": [{"color": "#FFEAF0F8"}, {"style": "fill"}, {"textSize": 15.0}]}},
+   {"drawTextAnchored": {"text": "live", "x": 180, "y": 180, "panX": 0, "panY": 0}}
+
+   ]
+  }
+ ]
+}

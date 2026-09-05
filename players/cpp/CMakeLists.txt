@@ -146,10 +146,20 @@ add_subdirectory(lib/rccore)
 add_subdirectory(lib/rcskia)
 add_subdirectory(lib/rcplayer)
 
+# The Core Graphics backend is built for iOS out of iosNative/, but its source is plain
+# CG/CoreText/ImageIO and so builds on macOS unchanged. Building it here is what lets
+# rc2image-native diff the two backends on the desktop instead of on a phone.
+if(APPLE)
+    add_subdirectory(iosNative ${CMAKE_BINARY_DIR}/rcnative)
+endif()
+
 if(RCX_BUILD_TOOLS)
     add_subdirectory(tools/rc2json)
     add_subdirectory(tools/rc2image)
     add_subdirectory(tools/rc2layout)
+    if(APPLE)
+        add_subdirectory(tools/rc2image-native)
+    endif()
 endif()
 
 if(RCX_BUILD_APPS)
