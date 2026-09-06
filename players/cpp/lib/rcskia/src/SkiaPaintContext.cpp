@@ -975,6 +975,12 @@ void SkiaPaintContext::beginDrawToBitmap(int bitmapId, int mode, int color) {
     if (!mMainCanvas) {
         mMainCanvas = mCanvas;
     }
+    // Switching straight from one bitmap to another: publish the bitmap we were drawing into
+    // first, or a later read of it (drawBitmap, a runtime-shader child) sees its stale image.
+    // Multi-pass rendering (ping-pong buffers) depends on this.
+    if (mActiveBitmapId != 0 && mActiveBitmapId != bitmapId && mOffscreenBitmap) {
+        mImages[mActiveBitmapId] = mOffscreenBitmap->bitmap.asImage();
+    }
     mActiveBitmapId = bitmapId;
 
     // Create offscreen bitmap
