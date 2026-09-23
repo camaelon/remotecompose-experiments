@@ -7,6 +7,7 @@
 #include "include/core/SkPathBuilder.h"
 #include "include/core/SkBitmap.h"
 #include "include/core/SkVertices.h"
+#include "rccore/operations/Mesh2D.h"
 #include "rccore/d3/Paint3DContext.h"
 #include "include/core/SkFontMgr.h"
 #include "include/core/SkFontMetrics.h"
@@ -303,6 +304,103 @@ void SkiaPaintContext::drawSector(float left, float top, float right, float bott
     // Sector = arc with useCenter=true
     mCanvas->drawArc(SkRect::MakeLTRB(left, top, right, bottom),
                      startAngle, sweepAngle, true, mPaint);
+}
+
+// ── 2D vertex meshes ────────────────────────────────────────────────────────────────────
+//
+// SkVertices is the direct analogue of Android's Canvas.drawVertices, so the geometry the
+// core hands over needs repacking into SkPoint/SkColor but nothing more.
+
+void SkiaPaintContext::setMesh(int meshId, int layout, int uCount, int vCount,
+                               const std::vector<float>& verts, const std::vector<float>& uv,
+                               const std::vector<int32_t>& colors,
+                               const std::vector<int32_t>& indices) {
+    Mesh2DEntry e;
+    e.layout = layout;
+    e.uCount = uCount;
+    e.vCount = vCount;
+    size_t n = verts.size() / 2;
+    e.pos.resize(n);
+    for (size_t i = 0; i < n; i++) e.pos[i] = SkPoint{verts[i * 2], verts[i * 2 + 1]};
+    if (uv.size() == verts.size()) {
+        // uv is kept normalised here and scaled to image pixels at draw time, because the
+        // image is not known until then — drawMesh carries the id, setMesh does not.
+        e.uv.resize(n);
+        for (size_t i = 0; i < n; i++) e.uv[i] = SkPoint{uv[i * 2], uv[i * 2 + 1]};
+    }
+    if (colors.size() == n) {
+        // ARGB in an int32 is exactly SkColor's layout.
+        e.colors.assign(reinterpret_cast<const SkColor*>(colors.data()),
+                        reinterpret_cast<const SkColor*>(colors.data()) + n);
+    }
+    e.indices.resize(indices.size());
+    for (size_t i = 0; i < indices.size(); i++) {
+        e.indices[i] = static_cast<uint16_t>(indices[i] & 0xFFFF);
+    }
+    mMeshes2D[meshId] = std::move(e);
+}
+
+void SkiaPaintContext::drawMesh(int meshId, int blend, int imageId) {
+    auto it = mMeshes2D.find(meshId);
+    if (it == mMeshes2D.end()) return;
+    const Mesh2DEntry& e = it->second;
+    if (e.pos.empty() || e.indices.empty()) return;
+
+    // A copy, not mPaint itself: this must leave the paint exactly as it found it, and a
+    // local copy makes that true by construction rather than by remembering to undo.
+    SkPaint paint(mPaint);
+    paint.setStyle(SkPaint::kFill_Style);
+    paint.setShader(nullptr);
+
+    std::vector<SkPoint> texs;
+    SkBlendMode mode = SkBlendMode::kDst;    // colours only: take the vertex colours
+    if (blend == rccore::mesh2d::BLEND_MODULATE && imageId != rccore::mesh2d::NO_IMAGE
+        && !e.uv.empty()) {
+        auto img = mImages.find(imageId);
+        if (img != mImages.end() && img->second) {
+            const float tw = static_cast<float>(img->second->width());
+            const float th = static_cast<float>(img->second->height());
+            texs.resize(e.uv.size());
+            for (size_t i = 0; i < e.uv.size(); i++) {
+                // uv is 0..1 with (0,0) at the TOP LEFT and there is no v flip. The 3D path
+                // in this same file does flip v, for the GL convention; 2D deliberately does
+                // not, and matching Android here is what makes a textured mesh portable.
+                texs[i] = SkPoint{e.uv[i].fX * tw, e.uv[i].fY * th};
+            }
+            paint.setShader(img->second->makeShader(SkTileMode::kClamp, SkTileMode::kClamp,
+                                                    SkSamplingOptions(SkFilterMode::kLinear),
+                                                    nullptr));
+            mode = SkBlendMode::kModulate;
+        }
+    }
+
+    auto verts = SkVertices::MakeCopy(
+        SkVertices::kTriangles_VertexMode, static_cast<int>(e.pos.size()), e.pos.data(),
+        texs.empty() ? nullptr : texs.data(),
+        e.colors.empty() ? nullptr : e.colors.data(),
+        static_cast<int>(e.indices.size()), e.indices.data());
+    if (verts) mCanvas->drawVertices(verts, mode, paint);
+}
+
+void SkiaPaintContext::matrixFromMesh(int meshId, float u, float v, int flags) {
+    auto it = mMeshes2D.find(meshId);
+    if (it == mMeshes2D.end()) return;
+    float frame[6];
+    // SkPoint is two contiguous floats, so the position array is already the x,y interleaved
+    // layout sampleFrame wants.
+    if (!rccore::mesh2d::sampleFrame(it->second.layout, it->second.uCount, it->second.vCount,
+                                     reinterpret_cast<const float*>(it->second.pos.data()),
+                                     static_cast<int>(it->second.pos.size()), u, v, frame)) {
+        return;
+    }
+    float m[6];   // duX, duY, dvX, dvY, originX, originY
+    rccore::mesh2d::buildMatrix(frame, flags, m);
+    // The affine maps the (u, v) basis: x' = duX*x + dvX*y + originX. SkMatrix::MakeAll takes
+    // (scaleX, skewX, transX, skewY, scaleY, transY), so du is the first COLUMN, not the
+    // first row — transposing here would rotate every mesh-anchored draw the wrong way.
+    mCanvas->concat(SkMatrix::MakeAll(m[0], m[2], m[4],
+                                      m[1], m[3], m[5],
+                                      0, 0, 1));
 }
 
 void SkiaPaintContext::drawPath(int pathId, float start, float end) {

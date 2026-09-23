@@ -10,6 +10,7 @@ import { DrawOval } from './operations/DrawOval';
 import { DrawRoundRect } from './operations/DrawRoundRect';
 import { DrawArc } from './operations/DrawArc';
 import { DrawSector } from './operations/DrawSector';
+import { AddMesh2D, DrawMesh2D, MatrixFromMesh2D } from './operations/Mesh2D';
 import { DrawPath } from './operations/DrawPath';
 import { DrawTweenPath } from './operations/DrawTweenPath';
 import { DrawContent } from './operations/DrawContent';
@@ -161,6 +162,9 @@ export class Operations {
         m.set(DrawRoundRect.OP_CODE, DrawRoundRect.read);
         m.set(DrawArc.OP_CODE, DrawArc.read);
         m.set(DrawSector.OP_CODE, DrawSector.read);
+        m.set(AddMesh2D.OP_CODE, AddMesh2D.read);
+        m.set(DrawMesh2D.OP_CODE, DrawMesh2D.read);
+        m.set(MatrixFromMesh2D.OP_CODE, MatrixFromMesh2D.read);
         m.set(DrawPath.OP_CODE, DrawPath.read);
         m.set(DrawTweenPath.OP_CODE, DrawTweenPath.read);
         m.set(DrawContent.OP_CODE, DrawContent.read);

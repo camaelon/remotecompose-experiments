@@ -14,6 +14,8 @@ import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Uti
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
 import { WebGLShaderRenderer } from './shader/WebGLShaderRenderer';
 import type { ShaderData } from '../core/operations/ShaderData';
+import { BLEND_MODULATE as MESH_BLEND_MODULATE, sampleFrame as meshSampleFrame,
+         buildMatrix as meshBuildMatrix } from '../core/operations/Mesh2DGenerator';
 
 function argbToRgba(argb: number): string {
     const a = ((argb >>> 24) & 0xFF) / 255;
@@ -90,6 +92,12 @@ export class CanvasPaintContext extends PaintContext {
 
     // Bitmap cache: id -> ImageBitmap or HTMLImageElement
     private bitmapCache = new Map<number, HTMLImageElement | ImageBitmap>();
+
+    /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
+    private meshCache = new Map<number, {
+        layout: number; uCount: number; vCount: number;
+        verts: Float32Array; uv: Float32Array; colors: Int32Array; indices: Int32Array;
+    }>();
     private bitmapPromises = new Map<number, Promise<void>>();
     /** Bitmaps converted to ARGB for 3D texturing, kept so the readback happens once. */
     private texturePixels = new Map<number, { argb: Int32Array; width: number; height: number }>();
@@ -877,8 +885,12 @@ export class CanvasPaintContext extends PaintContext {
     drawOval(left: number, top: number, right: number, bottom: number): void {
         const cx = (left + right) / 2;
         const cy = (top + bottom) / 2;
-        const rx = (right - left) / 2;
-        const ry = (bottom - top) / 2;
+        // Math.abs: an inverted rect (right < left) yields a negative radius, and Canvas2D's
+        // ellipse() throws IndexSizeError on that where Skia simply normalises the rect. One
+        // such rect kills the whole document — the exception escapes the paint and nothing
+        // after it draws. Normalising here matches every other player.
+        const rx = Math.abs(right - left) / 2;
+        const ry = Math.abs(bottom - top) / 2;
         this.ctx.beginPath();
         this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         this.fillOrStroke(
@@ -901,8 +913,12 @@ export class CanvasPaintContext extends PaintContext {
     drawArc(left: number, top: number, right: number, bottom: number, startAngle: number, sweepAngle: number): void {
         const cx = (left + right) / 2;
         const cy = (top + bottom) / 2;
-        const rx = (right - left) / 2;
-        const ry = (bottom - top) / 2;
+        // Math.abs: an inverted rect (right < left) yields a negative radius, and Canvas2D's
+        // ellipse() throws IndexSizeError on that where Skia simply normalises the rect. One
+        // such rect kills the whole document — the exception escapes the paint and nothing
+        // after it draws. Normalising here matches every other player.
+        const rx = Math.abs(right - left) / 2;
+        const ry = Math.abs(bottom - top) / 2;
         const start = (startAngle * Math.PI) / 180;
         const end = ((startAngle + sweepAngle) * Math.PI) / 180;
         this.ctx.beginPath();
@@ -916,8 +932,12 @@ export class CanvasPaintContext extends PaintContext {
     drawSector(left: number, top: number, right: number, bottom: number, startAngle: number, sweepAngle: number): void {
         const cx = (left + right) / 2;
         const cy = (top + bottom) / 2;
-        const rx = (right - left) / 2;
-        const ry = (bottom - top) / 2;
+        // Math.abs: an inverted rect (right < left) yields a negative radius, and Canvas2D's
+        // ellipse() throws IndexSizeError on that where Skia simply normalises the rect. One
+        // such rect kills the whole document — the exception escapes the paint and nothing
+        // after it draws. Normalising here matches every other player.
+        const rx = Math.abs(right - left) / 2;
+        const ry = Math.abs(bottom - top) / 2;
         const start = (startAngle * Math.PI) / 180;
         const end = ((startAngle + sweepAngle) * Math.PI) / 180;
         this.ctx.beginPath();
@@ -928,6 +948,139 @@ export class CanvasPaintContext extends PaintContext {
             () => { this.ctx.fill(); },
             () => { this.ctx.stroke(); }
         );
+    }
+
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Canvas2D has no drawVertices and no Gouraud shading, so the triangle list is walked
+    // here. Two consequences worth stating rather than discovering:
+    //
+    //   * Per-vertex colour is approximated by filling each triangle with the AVERAGE of its
+    //     three vertex colours. Skia and Android interpolate across the face, so a mesh used
+    //     as a smooth gradient shows faceting here, more visibly as uCount/vCount drop.
+    //   * A textured triangle is drawn by clipping to it and applying the affine that takes
+    //     its uv triangle to its screen triangle — three corresponding points determine that
+    //     exactly, which makes it a real texture map rather than a stretched blit.
+
+    setMesh(meshId: number, layout: number, uCount: number, vCount: number,
+            verts: Float32Array, uv: Float32Array,
+            colors: Int32Array, indices: Int32Array): void {
+        this.meshCache.set(meshId, { layout, uCount, vCount, verts, uv, colors, indices });
+    }
+
+    drawMesh(meshId: number, blend: number, imageId: number): void {
+        const m = this.meshCache.get(meshId);
+        if (!m) return;
+        const vertexCount = m.verts.length / 2;
+        if (vertexCount < 3 || m.indices.length < 3) return;
+
+        let texture: HTMLImageElement | ImageBitmap | undefined;
+        if (blend === MESH_BLEND_MODULATE && imageId !== 0
+            && m.uv.length === m.verts.length) {
+            texture = this.bitmapCache.get(imageId);
+        }
+
+        // save/restore brackets the whole walk: this must leave the context exactly as it
+        // found it, and the per-triangle fills below overwrite fillStyle.
+        this.ctx.save();
+        const texW = texture ? (texture as any).width : 0;
+        const texH = texture ? (texture as any).height : 0;
+
+        // Flat, untextured mesh: one path for the whole thing, filled once.
+        //
+        // Filling triangle by triangle is correct but ugly here — Canvas2D antialiases every
+        // edge, and two adjacent half-covered edges composite to a visible seam, so the mesh
+        // comes out drawn in a net of hairlines. Merging them into a single path removes the
+        // internal edges altogether rather than trying to hide them, and it is also markedly
+        // faster on a dense grid. Only possible when every triangle takes the same paint;
+        // per-vertex colour and texture still need a fill each.
+        if (!texture && m.colors.length !== vertexCount) {
+            const all = new Path2D();
+            for (let t = 0; t + 2 < m.indices.length; t += 3) {
+                const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+                if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+                if (i0 >= vertexCount || i1 >= vertexCount || i2 >= vertexCount) continue;
+                all.moveTo(m.verts[i0 * 2], m.verts[i0 * 2 + 1]);
+                all.lineTo(m.verts[i1 * 2], m.verts[i1 * 2 + 1]);
+                all.lineTo(m.verts[i2 * 2], m.verts[i2 * 2 + 1]);
+                all.closePath();
+            }
+            this.applyFillStyle();
+            this.ctx.fill(all);
+            this.ctx.restore();
+            return;
+        }
+
+        for (let t = 0; t + 2 < m.indices.length; t += 3) {
+            const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+            if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+            if (i0 >= vertexCount || i1 >= vertexCount || i2 >= vertexCount) continue;
+            const x0 = m.verts[i0 * 2], y0 = m.verts[i0 * 2 + 1];
+            const x1 = m.verts[i1 * 2], y1 = m.verts[i1 * 2 + 1];
+            const x2 = m.verts[i2 * 2], y2 = m.verts[i2 * 2 + 1];
+
+            const tri = new Path2D();
+            tri.moveTo(x0, y0);
+            tri.lineTo(x1, y1);
+            tri.lineTo(x2, y2);
+            tri.closePath();
+
+            if (texture) {
+                // uv is 0..1 with (0,0) at the TOP LEFT and there is no v flip — the 3D path
+                // flips for the GL convention, 2D deliberately does not.
+                const u0 = m.uv[i0 * 2] * texW, v0 = m.uv[i0 * 2 + 1] * texH;
+                const u1 = m.uv[i1 * 2] * texW, v1 = m.uv[i1 * 2 + 1] * texH;
+                const u2 = m.uv[i2 * 2] * texW, v2 = m.uv[i2 * 2 + 1] * texH;
+                const det = (u1 - u0) * (v2 - v0) - (u2 - u0) * (v1 - v0);
+                if (Math.abs(det) < 1e-9) continue;
+                const a = ((x1 - x0) * (v2 - v0) - (x2 - x0) * (v1 - v0)) / det;
+                const b = ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) / det;
+                const c = ((x2 - x0) * (u1 - u0) - (x1 - x0) * (u2 - u0)) / det;
+                const d = ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) / det;
+                const e = x0 - a * u0 - c * v0;
+                const f = y0 - b * u0 - d * v0;
+                this.ctx.save();
+                this.ctx.clip(tri);
+                this.ctx.transform(a, b, c, d, e, f);
+                this.ctx.drawImage(texture as any, 0, 0);
+                this.ctx.restore();
+                continue;
+            }
+
+            if (m.colors.length === vertexCount) {
+                // The mean of the three: with no interpolation available it is the least wrong
+                // single colour for the face.
+                const c0 = m.colors[i0], c1 = m.colors[i1], c2 = m.colors[i2];
+                const av = (sh: number) =>
+                    Math.round((((c0 >>> sh) & 0xff) + ((c1 >>> sh) & 0xff)
+                                + ((c2 >>> sh) & 0xff)) / 3);
+                const alpha = av(24) / 255;
+                this.ctx.fillStyle = 'rgba(' + av(16) + ',' + av(8) + ',' + av(0) + ','
+                                   + alpha + ')';
+                this.ctx.fill(tri);
+            } else {
+                // applyFillStyle, not a bare fill: fillStyle carries whatever the last text or
+                // shape left behind, so filling directly paints the mesh in the previous
+                // colour — grey from a label, or black on a dark background, which reads as the
+                // mesh having failed to draw at all.
+                this.applyFillStyle();
+                this.ctx.fill(tri);
+            }
+        }
+        this.ctx.restore();
+    }
+
+    matrixFromMesh(meshId: number, u: number, v: number, flags: number): void {
+        const m = this.meshCache.get(meshId);
+        if (!m) return;
+        const frame = new Float32Array(6);
+        if (!meshSampleFrame(m.layout, m.uCount, m.vCount, m.verts, u, v, frame)) return;
+        const out = new Float32Array(6);   // duX, duY, dvX, dvY, originX, originY
+        meshBuildMatrix(frame, flags, out);
+        // The affine maps the (u, v) basis: x' = duX*x + dvX*y + originX. ctx.transform takes
+        // (a, b, c, d, e, f) as x' = a*x + c*y + e, so du is (a, b) and dv is (c, d) — the
+        // same column convention buildMatrix emits.
+        this.ctx.transform(out[0], out[1], out[2], out[3], out[4], out[5]);
     }
 
     drawPath(id: number, start: number, end: number): void {

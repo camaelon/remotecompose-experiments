@@ -308,6 +308,46 @@ static void initAdvanceReaders() {
     auto advGlyph = [](WireBuffer& buf) {
         if ((buf.readInt() & 0x80000000) != 0) buf.readInt();
     };
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────
+    // ADD_MESH_2D is variable length AND its body shape depends on `type`, so it needs an
+    // explicit advance reader; a fixed OpSpec cannot describe it. rc2json keeps its own
+    // tables, separate from rccore's registerReader, so registering the op for rendering
+    // does NOT make it decodable here — that gap showed up as "Unknown opcode 104".
+    sAdvanceNames[104] = "ADD_MESH_2D";
+    sAdvanceReaders[104] = [adv](WireBuffer& buf) {
+        buf.readInt();                          // meshId
+        const int type = buf.readInt();
+        adv(buf, 5);                            // layout, uCount, vCount, flags, aux
+        if (type == 0) {                        // TYPE_EXPRESSION: nine RPN groups
+            for (int g = 0; g < 9; g++) {
+                const int len = buf.readInt();
+                for (int i = 0; i < len; i++) buf.readInt();
+            }
+            return;
+        }
+        if (type == 3 || type == 4) {           // spline strips: widths then positions
+            const int wn = buf.readInt();
+            for (int i = 0; i < wn; i++) buf.readInt();
+            const int pn = buf.readInt();
+            for (int i = 0; i < pn; i++) buf.readInt();
+            return;
+        }
+        const int indexCount = buf.readInt();   // 16-bit indices
+        for (int i = 0; i < indexCount; i++) buf.readShort();
+        const int vertCount = buf.readInt();
+        const int uvCount = buf.readInt();
+        const int colorCount = buf.readInt();
+        if (type == 2) {                        // TYPE_F16_VALUES: halves, not floats
+            for (int i = 0; i < vertCount + uvCount; i++) buf.readShort();
+        } else {
+            for (int i = 0; i < vertCount + uvCount; i++) buf.readInt();
+        }
+        for (int i = 0; i < colorCount; i++) buf.readInt();
+    };
+    sAdvanceNames[105] = "DRAW_MESH_2D";
+    sAdvanceReaders[105] = [adv](WireBuffer& buf) { adv(buf, 3); };
+    sAdvanceNames[106] = "MATRIX_FROM_MESH_2D";
+    sAdvanceReaders[106] = [adv](WireBuffer& buf) { adv(buf, 4); };
     sAdvanceNames[2] = "COMPONENT_START";
     sAdvanceReaders[2] = [adv](WireBuffer& buf) { adv(buf, 4); };
     sAdvanceNames[49] = "DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH";

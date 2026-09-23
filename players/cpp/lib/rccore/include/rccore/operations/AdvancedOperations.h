@@ -846,7 +846,21 @@ public:
     std::vector<Field> fields() const override { return {}; }
     bool isContainer() const override { return true; }
     void apply(RemoteContext& context) override {
-        for (auto& child : mChildren) child->apply(context);
+        if (getenv("RC_DIAG"))
+            fprintf(stderr, "[DIAG] RunAction mode=%d children=%zu\n",
+                    (int)context.getMode(), mChildren.size());
+        for (auto& child : mChildren) {
+            if (getenv("RC_DIAG"))
+                fprintf(stderr, "[DIAG]   child op=%d varSupport=%d dirty=%d\n",
+                        child->opcode(), (int)child->isVariableSupport(), (int)child->isDirty());
+            // updateVariables before apply, exactly as the layout containers do. A plain
+            // child->apply() skips the recompute step that top-level ops get from
+            // CoreDocument::applyOperations, so a child expression evaluates once and then
+            // serves a cached value forever -- the accumulator advances a single step and
+            // then sits still, which looks like the write failing when it is the read.
+            if (child->isVariableSupport()) child->updateVariables(context);
+            child->apply(context);
+        }
     }
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
@@ -876,7 +890,10 @@ public:
     std::string name() const override { return "ValueFloatExpressionChangeActionOperation"; }
     int opcode() const override { return 222; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        if (context.getMode() != ContextMode::PAINT) return;  // see the 227 note below
+        context.overrideFloat(targetId, value);
+    }
     void runAction(RemoteContext& context, float, float) override {
         context.overrideFloat(targetId, value);
     }
@@ -929,8 +946,35 @@ public:
     int opcode() const override { return 236; }
     std::vector<Field> fields() const override { return {}; }
     bool isContainer() const override { return true; }
-    void apply(RemoteContext& context) override {}
-    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+    /**
+     * Run the child actions, once per painted frame.
+     *
+     * This is the one sanctioned cycle in the format: a value-change action here writes a
+     * float id, and that write is visible to operations appearing *earlier* in the document
+     * on the following frame — which is how a document builds a counter, an integrator or a
+     * latch. Leaving this empty (as it was) makes every such document silently static: it
+     * loads, paints, and never changes, while the same bytes animate on Java and TypeScript.
+     *
+     * Children are applied in BOTH passes, deliberately. The float expressions that compute
+     * each action's new value are children too, and they are evaluated in the data pass — so
+     * skipping the container during DATA leaves the actions reading a value nothing computed.
+     * The once-per-frame guard therefore lives on the action operations themselves, which
+     * return early in DATA mode; the expressions run in both and the writes happen once.
+     */
+    void apply(RemoteContext& context) override {
+        for (auto& child : mChildren) {
+            // updateVariables BEFORE apply, exactly as the layout containers do. A bare
+            // child->apply() skips the refresh that top-level ops get from
+            // CoreDocument::applyOperations, and a static FloatExpression only reloads its
+            // operands from the context inside updateVariables -- apply() populates
+            // preCalcValues once and then evaluates the same cached operands forever. The
+            // visible effect is an accumulator that advances exactly one step and stops,
+            // which reads as the write failing when in fact it is the read.
+            if (child->isVariableSupport()) child->updateVariables(context);
+            child->apply(context);
+        }
+    }
+    static void read(WireBuffer&, std::vector<std::unique_ptr<Operation>>& ops) {
         ops.push_back(std::make_unique<RunActionOp>());
     }
 };
@@ -979,21 +1023,41 @@ public:
     }
 };
 
-// ── ValueBooleanChange (227) ──────────────────────────────────────────
-class ValueBooleanChangeOp : public Operation {
+// ── ValueFloatExpressionChange (227) ──────────────────────────────────
+/**
+ * Set a float id to the value of an *expression* id.
+ *
+ * The second wire field is the id of a float expression, not a value. This used to be read
+ * as a literal and written straight through (`overrideFloat(targetId, (float) value)`),
+ * which stored the expression's id — a number in the hundreds of millions — as the target's
+ * value. That is the difference between a latch that tracks a quantity and one pinned to
+ * garbage, and it was silent.
+ *
+ * The expression's own op appears earlier in the document and has already run this frame, so
+ * its current value is simply `getFloat(exprId)`; that ordering is guaranteed because the
+ * writers emit the expression before the action that consumes it.
+ */
+class ValueFloatExpressionChangeOp : public Operation {
 public:
-    int targetId = 0, value = 0;
+    int targetId = 0, exprId = 0;
     std::string name() const override { return "ValueFloatExpressionChangeActionOperation"; }
     int opcode() const override { return 227; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        // PAINT only. The data pass runs several times per frame (the layout system
+        // re-applies the tree while measuring), so writing there advances an accumulator
+        // by three per frame instead of one; the paint pass runs exactly once. This is
+        // also what the TypeScript player does.
+        if (context.getMode() != ContextMode::PAINT) return;
+        context.overrideFloat(targetId, context.getFloat(exprId));
+    }
     void runAction(RemoteContext& context, float, float) override {
-        context.overrideFloat(targetId, static_cast<float>(value));
+        context.overrideFloat(targetId, context.getFloat(exprId));
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
-        auto op = std::make_unique<ValueBooleanChangeOp>();
+        auto op = std::make_unique<ValueFloatExpressionChangeOp>();
         op->targetId = buf.readInt();
-        op->value = buf.readInt();
+        op->exprId = buf.readInt();
         ops.push_back(std::move(op));
     }
 };

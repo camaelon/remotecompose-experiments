@@ -53,6 +53,12 @@ public:
     void drawSector(float left, float top, float right, float bottom,
                     float startAngle, float sweepAngle) override;
     void drawPath(int pathId, float start, float end) override;
+    void setMesh(int meshId, int layout, int uCount, int vCount,
+                 const std::vector<float>& verts, const std::vector<float>& uv,
+                 const std::vector<int32_t>& colors,
+                 const std::vector<int32_t>& indices) override;
+    void drawMesh(int meshId, int blend, int imageId) override;
+    void matrixFromMesh(int meshId, float u, float v, int flags) override;
     void drawTweenPath(int path1Id, int path2Id, float tween,
                        float start, float end) override;
     void tweenPath(int outId, int pathId1, int pathId2, float tween) override;
@@ -220,6 +226,16 @@ private:
 
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, sk_sp<SkImage>> mImages;
+
+    /// One stored 2D mesh, already in the shape SkVertices wants.
+    struct Mesh2DEntry {
+        int layout = 0, uCount = 0, vCount = 0;
+        std::vector<SkPoint> pos;
+        std::vector<SkPoint> uv;        // empty when the mesh carries no uv
+        std::vector<SkColor> colors;    // empty when the mesh carries no colours
+        std::vector<uint16_t> indices;
+    };
+    std::unordered_map<int, Mesh2DEntry> mMeshes2D;
     std::unordered_map<int, SkPath> mPaths;
 
     // Cache compiled SkRuntimeEffect objects keyed by shader text ID

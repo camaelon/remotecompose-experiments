@@ -254,6 +254,18 @@ public:
     void loadPathData(int instanceId, int winding, const std::vector<float>& path);
     void appendPathData(int instanceId, const std::vector<float>& path);
 
+    /** The raw verb stream of a stored path, or null if no such path was loaded.
+     *
+     * Paths were previously handed straight to the PaintContext and not retained, because
+     * nothing needed to read one back. LAYOUT_PATH_STRIP does: it flattens the path to a
+     * polyline and rides along it, so the geometry has to be available to the core rather
+     * than only to the backend. Mirrors RemoteContext.getPathData upstream.
+     */
+    const std::vector<float>* getPathData(int instanceId) const {
+        auto it = mPathData.find(instanceId);
+        return it != mPathData.end() ? &it->second : nullptr;
+    }
+
     // Shader store
     void loadShader(int id, ShaderData* shader) { mShaders[id] = shader; }
     ShaderData* getShader(int id) const {
@@ -355,6 +367,8 @@ private:
     std::unordered_map<int, Operation*> mObjects;
     std::unordered_map<int, ComponentDim> mComponentDims;
     std::unordered_map<int, ShaderData*> mShaders;
+    // Retained so LAYOUT_PATH_STRIP can flatten a path it did not create. See getPathData.
+    std::unordered_map<int, std::vector<float>> mPathData;
     std::unordered_map<int, BitmapDim> mBitmapDims;
 
     // Variable → list of operations listening to it

@@ -73,6 +73,19 @@ export abstract class PaintContext {
     abstract drawLine(x1: number, y1: number, x2: number, y2: number): void;
     abstract drawOval(left: number, top: number, right: number, bottom: number): void;
     abstract drawPath(id: number, start: number, end: number): void;
+
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Deliberately not abstract: a backend that has not implemented meshes still compiles and
+    // draws nothing. Geometry arrives already in the layout drawVertices wants. An empty `uv`
+    // or `colors` means the channel is absent.
+    //
+    // drawMesh must leave the paint exactly as it found it.
+    setMesh(_meshId: number, _layout: number, _uCount: number, _vCount: number,
+            _verts: Float32Array, _uv: Float32Array,
+            _colors: Int32Array, _indices: Int32Array): void {}
+    drawMesh(_meshId: number, _blend: number, _imageId: number): void {}
+    matrixFromMesh(_meshId: number, _u: number, _v: number, _flags: number): void {}
     abstract drawRect(left: number, top: number, right: number, bottom: number): void;
     abstract drawRoundRect(left: number, top: number, right: number, bottom: number, radiusX: number, radiusY: number): void;
     abstract drawTextOnPath(textId: number, pathId: number, hOffset: number, vOffset: number): void;
