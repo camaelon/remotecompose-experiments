@@ -1,6 +1,7 @@
 #include "rccore/WireBuffer.h"
 #include "rccore/OpcodeRegistry.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -889,10 +890,11 @@ static std::vector<uint8_t> readFile(const std::string& path) {
         std::cerr << "Cannot open: " << path << std::endl;
         exit(1);
     }
-    return std::vector<uint8_t>(
-        std::istreambuf_iterator<char>(f),
-        std::istreambuf_iterator<char>()
-    );
+    f.seekg(0, std::ios::end);
+    std::vector<uint8_t> data(static_cast<size_t>(std::max<std::streamoff>(f.tellg(), 0)));
+    f.seekg(0);
+    if (!data.empty()) f.read(reinterpret_cast<char*>(data.data()), data.size());
+    return data;
 }
 
 // Find int value in already-parsed fields

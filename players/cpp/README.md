@@ -41,6 +41,9 @@ rcX/
 │   │               a command line and an event loop).
 │   │               Loads .rc/.rcd, animated images (WebP/GIF/APNG),
 │   │               video (MP4/MOV via AVFoundation), and zip decks.
+│   │               A multi-frame bitmap *inside* a document (an animated
+│   │               GIF embedded whole by json2rc) plays in place too:
+│   │               SkiaPaintContext keeps every frame and picks by time.
 │   └── iosViewer/   SwiftUI iOS / iPadOS app, MTKView + Skia-Ganesh-Metal.
 ├── tools/
 │   ├── rc2json/     Lossless binary → JSON dumper. Useful for diffing

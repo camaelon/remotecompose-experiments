@@ -11,6 +11,7 @@
 #include "include/encode/SkPngEncoder.h"
 #include "include/core/SkStream.h"
 
+#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -53,8 +54,10 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: cannot open " << inputPath << "\n";
         return 1;
     }
-    std::vector<uint8_t> data((std::istreambuf_iterator<char>(ifs)),
-                               std::istreambuf_iterator<char>());
+    ifs.seekg(0, std::ios::end);
+    std::vector<uint8_t> data(static_cast<size_t>(std::max<std::streamoff>(ifs.tellg(), 0)));
+    ifs.seekg(0);
+    if (!data.empty()) ifs.read(reinterpret_cast<char*>(data.data()), data.size());
     ifs.close();
 
     if (data.empty()) {

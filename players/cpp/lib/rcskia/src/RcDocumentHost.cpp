@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <chrono>
 #include <fstream>
 #include <iterator>
 
@@ -32,12 +33,39 @@ struct RcDocumentHost::Nested {
     SkRect boxScreen = SkRect::MakeEmpty();   // the component's box in window points
     SkMatrix winToNested;                     // window points → nested-doc coordinates
     bool painted = false;                     // laid out at least once this session
+    // `persist` embeds: kept across host-document switches and clocked from their own
+    // start, so a film embedded on consecutive slides neither reloads nor rewinds.
+    bool persist = false;
+    std::chrono::steady_clock::time_point started{};
+    // The file a persistent document came from and its stamp when read: a deck rebuild
+    // rewrites the file while the player is open, and the retire() on the next slide change
+    // has to notice or the player keeps showing the old document indefinitely.
+    std::filesystem::path file;
+    std::filesystem::file_time_type fileTime{};
+    std::uintmax_t fileSize = 0;
+
+    bool fileChanged() const {
+        if (file.empty()) return false;
+        std::error_code ec;
+        auto t = std::filesystem::last_write_time(file, ec);
+        if (ec) return true;
+        auto sz = std::filesystem::file_size(file, ec);
+        if (ec) return true;
+        return t != fileTime || sz != fileSize;
+    }
 };
 
 RcDocumentHost::RcDocumentHost() = default;
 RcDocumentHost::~RcDocumentHost() = default;
 
 void RcDocumentHost::reset() { mCaptured = nullptr; mDocs.clear(); }
+
+void RcDocumentHost::retire() {
+    mCaptured = nullptr;
+    for (auto it = mDocs.begin(); it != mDocs.end(); ) {
+        if (it->second->persist && !it->second->fileChanged()) ++it; else it = mDocs.erase(it);
+    }
+}
 
 // Match the normal render path (rc2image / viewer both paint with THEME_DARK).
 static constexpr int THEME_DARK = -2;
@@ -57,6 +85,13 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     std::string fit = mFit;
     float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
     float gate = 0.0f;   // skip painting until animTime >= gate (a "frozen" transition intro)
+    // Slide-driven documents. `persist` keeps the document across slides on its own clock;
+    // `step=N` is the slide's number for it, written each frame into the float variable
+    // `stepid`; `timeid` names the float that receives the host's time (seconds since the
+    // slide started). Ids are the document's own DATA_FLOAT ids — a plain-number variable
+    // declared in its source; refract passes them through from the include options.
+    bool persist = false;
+    bool hasStep = false; float step = 0.0f; int stepId = -1, timeId = -1;
     std::string path = rest;
     auto hash = rest.find('#');
     if (hash != std::string::npos) {
@@ -66,10 +101,16 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
             size_t amp = opts.find('&', s0);
             std::string tok = opts.substr(s0, amp == std::string::npos ? std::string::npos : amp - s0);
             auto eq = tok.find('=');
-            if (eq == std::string::npos) { if (!tok.empty()) fit = tok; }   // legacy bare fit
-            else {
+            if (eq == std::string::npos) {
+                if (tok == "persist") persist = true;
+                else if (!tok.empty()) fit = tok;                              // legacy bare fit
+            } else {
                 std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
                 if (k == "fit") fit = v;
+                else if (k == "persist") persist = (v != "0" && v != "false" && v != "off");
+                else if (k == "step") { hasStep = true; step = std::strtof(v.c_str(), nullptr); persist = true; }
+                else if (k == "stepid") stepId = std::atoi(v.c_str());
+                else if (k == "timeid") timeId = std::atoi(v.c_str());
                 else if (k == "gate") gate = std::strtof(v.c_str(), nullptr);
                 else if (k == "crop") {
                     float t[4];
@@ -92,15 +133,27 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     if (!skpc || !skpc->canvas()) return false;
     SkCanvas* canvas = skpc->canvas();
 
-    auto it = mDocs.find(config);
+    const std::string key = persist ? ("persist:" + path) : config;
+    auto it = mDocs.find(key);
     if (it == mDocs.end()) {
         auto nested = std::make_unique<Nested>();
+        nested->persist = persist;
+        nested->started = std::chrono::steady_clock::now();
         fs::path p(path);
         if (p.is_relative() && !mBaseDir.empty()) p = fs::path(mBaseDir) / p;
+        if (persist) {
+            std::error_code ec;
+            nested->file = p;
+            nested->fileTime = fs::last_write_time(p, ec);
+            nested->fileSize = ec ? 0 : fs::file_size(p, ec);
+        }
         std::ifstream f(p.string(), std::ios::binary);
         if (f) {
-            nested->data.assign(std::istreambuf_iterator<char>(f),
-                                std::istreambuf_iterator<char>());
+            f.seekg(0, std::ios::end);
+            nested->data.resize(static_cast<size_t>(std::max<std::streamoff>(f.tellg(), 0)));
+            f.seekg(0);
+            if (!nested->data.empty())
+                f.read(reinterpret_cast<char*>(nested->data.data()), nested->data.size());
         }
         if (!nested->data.empty()) {
             rccore::WireBuffer buffer(nested->data.data(), nested->data.size());
@@ -117,7 +170,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 nested->ok = true;
             }
         }
-        it = mDocs.emplace(config, std::move(nested)).first;
+        it = mDocs.emplace(key, std::move(nested)).first;
     }
 
     Nested* n = it->second.get();
@@ -145,8 +198,31 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     n->paint->setCanvas(canvas);
     n->ctx->mWidth = docW;
     n->ctx->mHeight = docH;
+    // A persistent document keeps its own clock (seconds since it first loaded) so a slide
+    // change neither restarts nor rewinds it; the host's slide clock still reaches it through
+    // `timeid`, and the slide's number through `stepid`.
+    double docTime = timeSec;
+    if (n->persist) {
+        docTime = std::chrono::duration<double>(std::chrono::steady_clock::now() - n->started).count();
+    }
     n->ctx->overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME,
-                          static_cast<float>(timeSec));
+                          static_cast<float>(docTime));
+    if (hasStep && stepId >= 0) n->ctx->overrideFloat(stepId, step);
+    if (timeId >= 0) n->ctx->overrideFloat(timeId, static_cast<float>(timeSec));
+    if (std::getenv("RC_EMBED_TRACE")) {
+        std::fprintf(stderr, "[rc-embed] %s persist=%d step=%g(id %d) time=%g(id %d) docTime=%g -> f42=%g f43=%g\n",
+                     config.c_str(), (int)n->persist, step, stepId, timeSec, timeId, docTime,
+                     n->ctx->getFloat(42), n->ctx->getFloat(43));
+        if (const char* w = std::getenv("RC_EMBED_WATCH")) {      // comma-separated float ids to print
+            std::string ws = w; size_t p0 = 0;
+            while (p0 < ws.size()) {
+                size_t c = ws.find(',', p0); std::string tok = ws.substr(p0, c == std::string::npos ? std::string::npos : c - p0);
+                int id = std::atoi(tok.c_str()); std::fprintf(stderr, "   f%d=%g", id, n->ctx->getFloat(id));
+                if (c == std::string::npos) break; p0 = c + 1;
+            }
+            std::fprintf(stderr, "\n");
+        }
+    }
 
     // The core has already translated the canvas so (0,0)..(w,h) is the component box; clip
     // to it and place the fitted document inside, then paint it in its own coordinate space.

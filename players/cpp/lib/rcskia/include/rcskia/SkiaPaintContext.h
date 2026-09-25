@@ -7,6 +7,8 @@
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkImage.h"
+#include "include/core/SkBitmap.h"
+#include "include/codec/SkCodec.h"
 #include "include/core/SkFont.h"
 #include "include/core/SkTypeface.h"
 #include "include/core/SkData.h"
@@ -16,6 +18,7 @@
 #include <stack>
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 namespace rcskia {
 
@@ -220,6 +223,30 @@ private:
 
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, sk_sp<SkImage>> mImages;
+    // The bitmap data op is applied on every paint pass; the decoded result is keyed by the
+    // bytes it came from so the (expensive) decode happens once per document, not per frame.
+    struct ImageSource { const void* ptr = nullptr; size_t size = 0; };
+    std::unordered_map<int, ImageSource> mImageSources;
+    // Multi-frame bitmaps (an animated GIF / WebP / APNG embedded whole) are streamed: one
+    // working buffer the codec composites deltas into, decoded forward as playback needs
+    // the next frame, and a snapshot of the frame on show. Nothing is decoded up front but
+    // the frame table, so a long clip costs two frames of memory, not the whole reel.
+    struct AnimatedImage {
+        std::unique_ptr<SkCodec> codec;
+        SkImageInfo info;
+        std::vector<double> starts;    // frame start, seconds into the loop
+        double total = 0.0;            // loop length, seconds
+        SkBitmap work;                 // holds frame `decoded` (the codec's prior frame)
+        int decoded = -1;
+        sk_sp<SkImage> shown;          // immutable snapshot of frame `shownIndex`
+        int shownIndex = -1;
+    };
+    std::unordered_map<int, AnimatedImage> mAnimated;
+    sk_sp<SkImage> imageFor(int imageId);   // the frame due now (animated) or the image
+    sk_sp<SkImage> animatedFrame(AnimatedImage& a, int k);
+public:
+    bool hasAnimatedImages() const { return !mAnimated.empty(); }
+private:
     std::unordered_map<int, SkPath> mPaths;
 
     // Cache compiled SkRuntimeEffect objects keyed by shader text ID

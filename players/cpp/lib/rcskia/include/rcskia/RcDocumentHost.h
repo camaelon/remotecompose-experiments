@@ -30,6 +30,10 @@ public:
     void setFit(const std::string& fit) { mFit = fit; }
     // Drop cached nested documents — call on host-document switch.
     void reset();
+    // Host-document switch: drop the nested documents that belong to the slide being left,
+    // keep the ones embedded with `persist` (they run on across slides, on their own clock,
+    // so consecutive slides embedding the same file share one live document).
+    void retire();
 
     bool drawCustom(int componentId, const std::string& config,
                     rccore::PaintContext* pc, float w, float h, double timeSec) override;
@@ -49,6 +53,8 @@ private:
     // Keyed by the config string (unique per file+options), NOT componentId — refract's
     // custom components all carry id -1, so keying by id makes every embed on a slide alias
     // to one nested document.
+    // A `persist` embed is keyed by its file path instead, so every slide that embeds that
+    // file — whatever its per-slide options (step, fit) — finds the same live document.
     std::unordered_map<std::string, std::unique_ptr<Nested>> mDocs;
     std::string mBaseDir;
     std::string mFit = "fit";

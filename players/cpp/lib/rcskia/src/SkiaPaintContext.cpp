@@ -412,24 +412,73 @@ void SkiaPaintContext::tweenPath(int outId, int pathId1, int pathId2, float twee
     mPaths[outId] = std::move(result);
 }
 
+sk_sp<SkImage> SkiaPaintContext::animatedFrame(AnimatedImage& a, int k) {
+    if (k == a.shownIndex && a.shown) return a.shown;
+    if (!a.codec || a.work.isNull()) return a.shown;
+    if (k < a.decoded) a.decoded = -1;            // looped: the codec restarts from frame 0
+    // Decode forward to k. Frames arrive one at a time during playback; a seek (a slide
+    // shown again after a while) can ask for many, so the catch-up is bounded per paint
+    // and the rest arrives on the following paints — cheaper than a visible stall.
+    const int kMaxStep = 24;
+    int target = k;
+    if (a.decoded >= 0 && k - a.decoded > kMaxStep) target = a.decoded + kMaxStep;
+    else if (a.decoded < 0 && k > kMaxStep) target = kMaxStep;
+    for (int i = a.decoded + 1; i <= target; i++) {
+        SkCodec::Options opts;
+        opts.fFrameIndex = i;
+        opts.fPriorFrame = (a.decoded == i - 1 && a.decoded >= 0) ? a.decoded : SkCodec::kNoFrame;
+        auto r = a.codec->getPixels(a.info, a.work.getPixels(), a.work.rowBytes(), &opts);
+        if (r != SkCodec::kSuccess && opts.fPriorFrame != SkCodec::kNoFrame) {
+            opts.fPriorFrame = SkCodec::kNoFrame;
+            r = a.codec->getPixels(a.info, a.work.getPixels(), a.work.rowBytes(), &opts);
+        }
+        if (r != SkCodec::kSuccess) break;
+        a.decoded = i;
+    }
+    if (a.decoded != a.shownIndex && a.decoded >= 0) {
+        SkBitmap snap;
+        if (snap.tryAllocPixels(a.info) && a.work.readPixels(snap.pixmap(), 0, 0)) {
+            snap.setImmutable();
+            a.shown = snap.asImage();
+            a.shownIndex = a.decoded;
+        }
+    }
+    return a.shown;
+}
+
+sk_sp<SkImage> SkiaPaintContext::imageFor(int imageId) {
+    auto an = mAnimated.find(imageId);
+    if (an != mAnimated.end() && an->second.total > 0.0 && !an->second.starts.empty()) {
+        AnimatedImage& a = an->second;
+        double t = std::fmod((double)getContext().getAnimationTime(), a.total);
+        if (t < 0) t += a.total;
+        size_t k = 0;
+        while (k + 1 < a.starts.size() && a.starts[k + 1] <= t) k++;
+        needsRepaint();                       // the next frame is due whether or not anything else moves
+        auto img = animatedFrame(a, (int)k);
+        if (img) return img;
+    }
+    auto it = mImages.find(imageId);
+    return it == mImages.end() ? nullptr : it->second;
+}
+
 void SkiaPaintContext::drawBitmap(int imageId, float left, float top,
                                   float right, float bottom) {
-    auto it = mImages.find(imageId);
-    if (it == mImages.end()) return;
+    auto img = imageFor(imageId);
+    if (!img) return;
     SkRect dst = SkRect::MakeLTRB(left, top, right, bottom);
-    mCanvas->drawImageRect(it->second, dst, SkSamplingOptions(SkFilterMode::kLinear),
-                           &mPaint);
+    mCanvas->drawImageRect(img, dst, SkSamplingOptions(SkFilterMode::kLinear), &mPaint);
 }
 
 void SkiaPaintContext::drawBitmapInt(int imageId,
                                      int srcL, int srcT, int srcR, int srcB,
                                      int dstL, int dstT, int dstR, int dstB,
                                      int cdId) {
-    auto it = mImages.find(imageId);
-    if (it == mImages.end()) return;
+    auto img = imageFor(imageId);
+    if (!img) return;
     SkRect src = SkRect::MakeLTRB(srcL, srcT, srcR, srcB);
     SkRect dst = SkRect::MakeLTRB(dstL, dstT, dstR, dstB);
-    mCanvas->drawImageRect(it->second, src, dst,
+    mCanvas->drawImageRect(img, src, dst,
                            SkSamplingOptions(SkFilterMode::kLinear),
                            &mPaint, SkCanvas::kStrict_SrcRectConstraint);
 }
@@ -767,15 +816,47 @@ void SkiaPaintContext::loadBitmap(int imageId, int widthAndType,
         case TYPE_PNG_8888:
         case TYPE_PNG:
         case TYPE_PNG_ALPHA_8: {
-            // PNG-compressed - decode with Skia codec
+            // PNG-compressed - decode with Skia codec. The data op re-applies every paint
+            // pass: skip when these exact bytes are what produced the current image.
+            {
+                auto src = mImageSources.find(imageId);
+                if (src != mImageSources.end() && src->second.ptr == data.data()
+                        && src->second.size == data.size() && mImages.count(imageId)) {
+                    break;
+                }
+            }
             auto skData = SkData::MakeWithCopy(data.data(), data.size());
             auto codec = SkCodec::MakeFromData(skData);
             if (codec) {
+                mImageSources[imageId] = ImageSource{data.data(), data.size()};
                 auto colorType = (type == TYPE_PNG_ALPHA_8)
                     ? kAlpha_8_SkColorType : kN32_SkColorType;
                 SkImageInfo info = codec->getInfo()
                     .makeColorType(colorType)
                     .makeAlphaType(kPremul_SkAlphaType);
+                const int frameCount = codec->getFrameCount();
+                if (frameCount > 1) {
+                    AnimatedImage anim;
+                    anim.info = info;
+                    double cursor = 0.0;
+                    for (const auto& fi : codec->getFrameInfo()) {
+                        int durMs = fi.fDuration > 0 ? fi.fDuration : 100;
+                        anim.starts.push_back(cursor);
+                        cursor += durMs / 1000.0;
+                    }
+                    anim.total = cursor;
+                    if (anim.work.tryAllocPixels(info)) {
+                        anim.codec = std::move(codec);
+                        auto first = animatedFrame(anim, 0);
+                        if (first) {
+                            mImages[imageId] = first;
+                            mAnimated[imageId] = std::move(anim);
+                            break;
+                        }
+                        codec = std::move(anim.codec);
+                    }
+                }
+                mAnimated.erase(imageId);
                 SkBitmap bmp;
                 bmp.allocPixels(info);
                 codec->getPixels(info, bmp.getPixels(), bmp.rowBytes());

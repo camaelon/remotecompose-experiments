@@ -156,8 +156,10 @@ bool readFileBytes(const std::string& name, std::vector<uint8_t>& out) {
         std::cerr << "Cannot open: " << name << "\n";
         return false;
     }
-    out.assign((std::istreambuf_iterator<char>(ifs)),
-                std::istreambuf_iterator<char>());
+    ifs.seekg(0, std::ios::end);
+    out.resize(static_cast<size_t>(std::max<std::streamoff>(ifs.tellg(), 0)));
+    ifs.seekg(0);
+    if (!out.empty()) ifs.read(reinterpret_cast<char*>(out.data()), out.size());
     return !out.empty();
 }
 
@@ -166,7 +168,7 @@ bool loadFile(const std::string& path) {
     // views persist across slides (hidden when off-slide via the frame bracket); only
     // the per-slide videos are released here.
     g.videoHost.reset();
-    g.rcDocHost.reset();
+    g.rcDocHost.retire();   // keeps `persist` embeds (a film that runs on across slides)
     if (!g.zip) {
         g.videoHost.setBaseDir(fs::path(path).parent_path().string());
         g.rcDocHost.setBaseDir(fs::path(path).parent_path().string());

@@ -15,6 +15,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(RcX VERSION 0.1.0 LANGUAGES C CXX)
 
+# An empty CMAKE_BUILD_TYPE builds with no optimisation flags at all — a 45 MB document
+# took a second to load, decoders ran an order of magnitude slow. Default to Release
+# unless the generator is multi-config or the user asked for something else.
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
