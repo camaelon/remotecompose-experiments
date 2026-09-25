@@ -68,6 +68,25 @@ const frames = Number(flag('frames', 3));
 //   --theme light | dark | unspecified   (default: light, which is the phone's default)
 const THEMES = { light: -3, dark: -2, unspecified: -1 };  // Theme.LIGHT/DARK/UNSPECIFIED
 const theme = THEMES[String(flag('theme', 'light'))] ?? -1;
+// --time MS : pin the document clock to a fixed epoch-millis value, matching rc2image --time.
+//
+// setAnimationTime does NOT do this: it feeds animationTime (id 30), while continuousSec()
+// is id 1 and comes from the RemoteClock. So an animated mesh rendered here at the default
+// clock cannot be compared against rc2image at all — the difference is the harness, and on a
+// moving mesh it is large enough to look like a rendering fault. Replacing the clock is what
+// pins every time-derived system variable at once.
+const timeMs = flag('time', null);
+if (timeMs !== null) {
+    const fixed = Number(timeMs);
+    // Patch millis() ON the existing clock objects rather than swapping the clock in.
+    // RemoteContext re-reads mClock from the document, so a replacement object is dropped and
+    // the render stays on the wall clock — silently, which is how --time appeared to work while
+    // producing byte-identical output for t=0 and t=5000.
+    for (const o of [remote.getClock?.(), doc.getClock?.()]) {
+        if (o) o.millis = () => fixed;
+    }
+    remote.setClock?.({ millis: () => fixed });
+}
 for (let f = 0; f < frames; f++) {
     remote.setAnimationTime?.(f / 60);
     paint.reset?.(); paint.clearNeedsRepaint?.();

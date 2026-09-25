@@ -4,6 +4,7 @@
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/operations/LayoutOperations.h"
 #include "rccore/operations/Operations3D.h"
+#include "rccore/operations/Mesh2D.h"
 #include "rccore/operations/StubOperations.h"
 #include <mutex>
 
@@ -120,6 +121,9 @@ void Operations::init() {
     registerReader(DRAW_OVAL, "DRAW_OVAL", DrawOval::read);
     registerReader(DRAW_ROUND_RECT, "DRAW_ROUND_RECT", DrawRoundRect::read);
     registerReader(DRAW_SECTOR, "DRAW_SECTOR", DrawSector::read);
+    registerReader(ADD_MESH_2D, "ADD_MESH_2D", AddMesh2D::read);
+    registerReader(DRAW_MESH_2D, "DRAW_MESH_2D", DrawMesh2D::read);
+    registerReader(MATRIX_FROM_MESH_2D, "MATRIX_FROM_MESH_2D", MatrixFromMesh2D::read);
     registerReader(DRAW_ARC, "DRAW_ARC", DrawArc::read);
     registerReader(DRAW_PATH, "DRAW_PATH", DrawPath::read);
     registerReader(DRAW_TWEEN_PATH, "DRAW_TWEEN_PATH", DrawTweenPath::read);
@@ -219,10 +223,11 @@ void Operations::init() {
     registerReader(HOST_ACTION, "HOST_ACTION", HostActionOp::read);
     registerReader(HOST_ACTION_LIST, "HostNamedAction", HostNamedActionOp::read);
     registerReader(HOST_SCROLL_ACTION, "HostActionMetadataOperation", HostActionMetadataOp::read);
-    registerReader(VALUE_FLOAT_CHANGE, "ValueFloatExpressionChangeActionOperation", ValueFloatChangeOp::read);
+    registerReader(VALUE_FLOAT_CHANGE, "ValueFloatChangeActionOperation", ValueFloatChangeOp::read);
     registerReader(VALUE_INTEGER_CHANGE, "VALUE_INTEGER_CHANGE_ACTION", ValueIntChangeOp::read);
     registerReader(VALUE_STRING_CHANGE, "VALUE_STRING_CHANGE_ACTION", ValueStringChangeOp::read);
-    registerReader(VALUE_BOOLEAN_CHANGE, "ValueBooleanChange", ValueBooleanChangeOp::read);
+    registerReader(VALUE_FLOAT_EXPRESSION_CHANGE, "ValueFloatExpressionChangeActionOperation",
+                   ValueFloatExpressionChangeOp::read);
     registerReader(VALUE_LONG_CHANGE, "ValueLongChange", ValueLongChangeOp::read);
     registerReader(RUN_ACTION, "RUN_ACTION", RunActionOp::read);
 

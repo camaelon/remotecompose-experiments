@@ -44,6 +44,17 @@ public:
     ~CoreGraphicsPaintContext() override;
 
     /**
+     * Point the backend at a different CGContext, keeping all engine state.
+     *
+     * UIKit hands `drawRect:` a *fresh* CGContext every frame, so a host that rebuilt its
+     * RemoteContext whenever the CGContext changed would discard every accumulated value once
+     * per frame — counters, latches and anything else written through a value-change action
+     * would silently reset and the document would look frozen. This is the counterpart to
+     * rcskia's setCanvas: swap the surface, keep the state.
+     */
+    void setCGContext(CGContextRef cg);
+
+    /**
      * 3D goes through the shared software rasterizer, which is already Skia-free — the same
      * arrangement the Skia backend uses. Returning non-null here is the whole reason a 3D
      * document draws anything: every 3D op begins with this downcast and silently no-ops on
@@ -60,6 +71,12 @@ public:
     void drawRoundRect(float l, float t, float r, float b, float rx, float ry) override;
     void drawSector(float l, float t, float r, float b, float startAngle, float sweep) override;
     void drawPath(int pathId, float start, float end) override;
+    void setMesh(int meshId, int layout, int uCount, int vCount,
+                 const std::vector<float>& verts, const std::vector<float>& uv,
+                 const std::vector<int32_t>& colors,
+                 const std::vector<int32_t>& indices) override;
+    void drawMesh(int meshId, int blend, int imageId) override;
+    void matrixFromMesh(int meshId, float u, float v, int flags) override;
     void drawTweenPath(int p1, int p2, float tween, float start, float end) override;
     void tweenPath(int outId, int p1, int p2, float tween) override;
     void drawBitmap(int imageId, float l, float t, float r, float b) override;
@@ -178,6 +195,7 @@ private:
 
     CGContextRef mCG = nullptr;
     float mWidth = 0, mHeight = 0;
+    bool mYDown = false;   // whether the host's context is already y-down
 
     Paint mPaint;
     std::stack<Paint> mPaintStack;
@@ -185,6 +203,16 @@ private:
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, CGMutablePathRef> mPaths;
     std::unordered_map<int, CGImageRef> mImages;
+
+    /// One stored 2D mesh. Core Graphics has no drawVertices, so this keeps the raw channels
+    /// and drawMesh walks the triangle list itself.
+    struct Mesh2DEntry {
+        int layout = 0, uCount = 0, vCount = 0;
+        std::vector<float> verts, uv;
+        std::vector<int32_t> colors;
+        std::vector<int32_t> indices;
+    };
+    std::unordered_map<int, Mesh2DEntry> mMeshes2D;
 };
 
 } // namespace rcnative

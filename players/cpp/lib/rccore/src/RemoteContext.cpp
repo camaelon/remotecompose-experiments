@@ -36,6 +36,8 @@ void RemoteContext::loadBitmap(int imageId, int widthAndType,
 
 void RemoteContext::loadPathData(int instanceId, int winding,
                                   const std::vector<float>& path) {
+    // Kept as well as forwarded: LAYOUT_PATH_STRIP reads the verb stream back to flatten it.
+    mPathData[instanceId] = path;
     if (mPaintContext) {
         mPaintContext->loadPathData(instanceId, winding, path);
     }
@@ -43,6 +45,10 @@ void RemoteContext::loadPathData(int instanceId, int winding,
 
 void RemoteContext::appendPathData(int instanceId,
                                     const std::vector<float>& path) {
+    // Mirror the append into the retained copy so a path built incrementally is as readable
+    // to LAYOUT_PATH_STRIP as one loaded whole.
+    auto& stored = mPathData[instanceId];
+    stored.insert(stored.end(), path.begin(), path.end());
     if (mPaintContext) {
         mPaintContext->appendPathData(instanceId, path);
     }

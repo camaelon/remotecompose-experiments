@@ -18,6 +18,7 @@ Prerequisite: the player bundle must be built once via
 `npm run bundle` from the typescript player root.
 """
 import argparse
+import json
 import os
 import re
 import shutil
@@ -74,7 +75,7 @@ def _human_size(nbytes):
         return f"{nbytes / (1024 * 1024):.1f} MB"
 
 
-def generate_html(all_files):
+def generate_html_impl(all_files, inline_payload=""):
     """Generate the presentation HTML page."""
     # Build slide entries with file sizes
     slide_entries = []
@@ -214,6 +215,16 @@ body.present-mode canvas {{
 .slide-tooltip .tt-fill {{ height: 100%; background: #8ab4f8; border-radius: 2px; }}
 
 /* Canvas area */
+/* Pinned to the bottom of the stage rather than placed after it: canvas-area sits in a flex
+   ROW next to the sidebar, so a sibling would become a third column. z-index clears the
+   nav zones, which cover the full height and would otherwise swallow the click. */
+.dl-bar {{ position: absolute; left: 0; right: 0; bottom: 14px; z-index: 5;
+  display: flex; justify-content: center; pointer-events: none; }}
+.dl-link {{ font: 13px system-ui, sans-serif; color: #ccc; text-decoration: none;
+  border: 1px solid #3a3a55; border-radius: 8px; padding: 7px 16px;
+  background: rgba(27,27,43,.92); pointer-events: auto; }}
+.dl-link:hover {{ border-color: #8ab4f8; color: #8ab4f8; }}
+body.present-mode .dl-bar {{ display: none; }}
 .canvas-area {{
   flex: 1; display: flex; align-items: center; justify-content: center;
   background: #000; position: relative; overflow: hidden;
@@ -271,11 +282,13 @@ video.active {{ display: block; }}
     <video id="video" loop muted></video>
     <div class="nav-zone left" id="nav-prev"><span class="nav-arrow">&#x276E;</span></div>
     <div class="nav-zone right" id="nav-next"><span class="nav-arrow">&#x276F;</span></div>
+    <div class="dl-bar" id="dl-bar"><a id="dl-link" class="dl-link" download>Download .rc</a></div>
   </div>
 </div>
 
 <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
 
+{inline_payload}
 <script src="bundle.js"></script>
 <script>
 (function() {{
@@ -400,6 +413,31 @@ video.active {{ display: block; }}
       items[idx].scrollIntoView({{ block: 'nearest' }});
     }}
 
+    // Point the download at whatever is on screen. Media slides are not .rc, so the button
+    // hides rather than offering a file the player never produced.
+    var dlBar = document.getElementById('dl-bar');
+    var dlLink = document.getElementById('dl-link');
+    if (dlBar && dlLink) {{
+      if (s.media) {{
+        dlBar.style.display = 'none';
+      }} else {{
+        dlBar.style.display = 'flex';
+        if (window.INLINE && window.INLINE[s.file]) {{
+          // No file on disk to link to — hand the browser the bytes directly. The previous
+          // object URL is revoked so a long session does not leak one per slide viewed.
+          if (dlLink._blob) URL.revokeObjectURL(dlLink._blob);
+          const bytes = Uint8Array.from(atob(window.INLINE[s.file]), c => c.charCodeAt(0));
+          dlLink._blob = URL.createObjectURL(new Blob([bytes],
+                            {{type: 'application/octet-stream'}}));
+          dlLink.href = dlLink._blob;
+        }} else {{
+          dlLink.href = s.file;
+        }}
+        dlLink.setAttribute('download', s.file);
+        dlLink.textContent = 'Download ' + s.file;
+      }}
+    }}
+
     // Update counter & progress
     counter.textContent = (idx + 1) + ' / ' + SLIDES.length;
     progress.style.width = ((idx + 1) / SLIDES.length * 100) + '%';
@@ -417,8 +455,11 @@ video.active {{ display: block; }}
       canvas.style.display = 'block';
       fitCanvas();
       try {{
-        const res = await fetch(s.file);
-        const data = await res.arrayBuffer();
+        // INLINE[name] is present only in single-file builds, where there is no server to
+        // fetch from. Falling back to fetch keeps the directory build byte-identical.
+        const data = (window.INLINE && window.INLINE[s.file])
+          ? Uint8Array.from(atob(window.INLINE[s.file]), c => c.charCodeAt(0)).buffer
+          : await (await fetch(s.file)).arrayBuffer();
         const p = getPlayer();
         await p.loadFromArrayBuffer(data);
         fitCanvas();
@@ -523,12 +564,23 @@ video.active {{ display: block; }}
 """
 
 
+def generate_html(all_files, inline_payload=""):
+    """Render the page. With a payload the bundle is inlined; without it the page keeps the
+    external <script src="bundle.js">, so the directory build is unchanged."""
+    if not inline_payload:
+        inline_payload = '<script src="bundle.js"></script>'
+    return generate_html_impl(all_files, inline_payload)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Build a static deck site from a directory of .rc and "
                     "media files.")
     parser.add_argument("deck_dir",
         help="directory containing .rc / .mp4 / .mov / .webp / .m4v files")
+    parser.add_argument("--single-file", action="store_true",
+                        help="inline the player and all .rc files into one index.html "
+                             "that opens without a server")
     parser.add_argument("output_dir", nargs="?", default=None,
         help="output directory (default: <deck_dir>/web/)")
     args = parser.parse_args()
@@ -557,13 +609,15 @@ def main():
         print(f"error: {BUNDLE_SRC} not found — run `npm run bundle` "
               f"from the typescript player root first", file=sys.stderr)
         sys.exit(1)
-    shutil.copy2(BUNDLE_SRC, os.path.join(WEB_DIR, "bundle.js"))
-    print(f"copied bundle.js")
+    if not args.single_file:
+        shutil.copy2(BUNDLE_SRC, os.path.join(WEB_DIR, "bundle.js"))
+        print("copied bundle.js")
 
     # Copy all slide files (RC + media interleaved by sort order)
     n_rc = n_media = 0
     for f in all_files:
-        shutil.copy2(os.path.join(DECK_DIR, f), os.path.join(WEB_DIR, f))
+        if not args.single_file:
+            shutil.copy2(os.path.join(DECK_DIR, f), os.path.join(WEB_DIR, f))
         ext = os.path.splitext(f)[1].lower()
         if ext in MEDIA_EXTS:
             n_media += 1
@@ -571,8 +625,29 @@ def main():
             n_rc += 1
     print(f"copied {n_rc} .rc files, {n_media} media files")
 
+    # Single file: inline the player and every document as base64, so the result opens by
+    # double-click with no server. Media files are NOT inlined — a deck of videos would be
+    # enormous as base64, and they are skipped with a warning rather than silently dropped.
+    payload = ""
+    if args.single_file:
+        import base64
+        parts, skipped = [], []
+        for f in all_files:
+            if os.path.splitext(f)[1].lower() in MEDIA_EXTS:
+                skipped.append(f)
+                continue
+            with open(os.path.join(DECK_DIR, f), "rb") as fh:
+                parts.append(json.dumps(f) + ":" + json.dumps(
+                    base64.b64encode(fh.read()).decode("ascii")))
+        with open(BUNDLE_SRC) as fh:
+            bundle = fh.read()
+        payload = ("<script>window.INLINE={" + ",".join(parts) + "};</script>\n"
+                   "<script>" + bundle + "</script>")
+        if skipped:
+            print(f"  note: {len(skipped)} media file(s) not inlined: {skipped[:3]}")
+
     # Write index.html
-    html = generate_html(all_files)
+    html = generate_html(all_files, payload)
     html_path = os.path.join(WEB_DIR, "index.html")
     with open(html_path, "w") as f:
         f.write(html)

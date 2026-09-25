@@ -37,6 +37,10 @@ public:
     static constexpr int DRAW_BITMAP_FONT_TEXT_RUN = 48;
     static constexpr int DRAW_ROUND_RECT = 51;
     static constexpr int DRAW_SECTOR = 52;
+    // 2D vertex meshes (androidx-main, 2026-09)
+    static constexpr int ADD_MESH_2D = 104;
+    static constexpr int DRAW_MESH_2D = 105;
+    static constexpr int MATRIX_FROM_MESH_2D = 106;
     static constexpr int DRAW_TEXT_ON_PATH = 53;
     static constexpr int MODIFIER_ROUNDED_CLIP_RECT = 54;
     static constexpr int MODIFIER_BACKGROUND = 55;
@@ -159,7 +163,8 @@ public:
     static constexpr int MODIFIER_GRAPHICS_LAYER = 224;
     static constexpr int MODIFIER_TOUCH_CANCEL = 225;
     static constexpr int MODIFIER_SCROLL = 226;
-    static constexpr int VALUE_BOOLEAN_CHANGE = 227;
+    // 227 carries a target id and a float *expression* id, not a boolean.
+    static constexpr int VALUE_FLOAT_EXPRESSION_CHANGE = 227;
     static constexpr int MODIFIER_MARQUEE = 228;
     static constexpr int MODIFIER_RIPPLE = 229;
     static constexpr int COLLAPSIBLE_ROW_LAYOUT = 230;

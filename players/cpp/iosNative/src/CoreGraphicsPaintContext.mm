@@ -3,11 +3,13 @@
 #include "rccore/RemoteContext.h"
 #include "rccore/Utils.h"
 #include "rccore/d3/Paint3DContext.h"   // MODE_* constants
+#include "rccore/operations/Mesh2D.h"
 
 #include <CoreText/CoreText.h>
 #include <ImageIO/ImageIO.h>
 
 #include <cmath>
+#include <cstring>
 
 namespace rcnative {
 
@@ -18,13 +20,28 @@ using rccore::PaintBundle;
 CoreGraphicsPaintContext::CoreGraphicsPaintContext(rccore::RemoteContext& context,
                                                    CGContextRef cg,
                                                    float widthPx, float heightPx, bool yDown)
-    : rccore::PaintContext(context), mCG(cg), mWidth(widthPx), mHeight(heightPx) {
+    : rccore::PaintContext(context), mCG(cg), mWidth(widthPx), mHeight(heightPx),
+      mYDown(yDown) {
     CGContextRetain(mCG);
     // RemoteCompose is y-down. A bare CGBitmapContext is y-up and needs flipping; a
     // UIView drawRect context has already been flipped by UIKit and must not be flipped
     // again. Text compensates locally in both cases — see drawTextAnchored.
     if (!yDown) {
         CGContextTranslateCTM(mCG, 0, heightPx);
+        CGContextScaleCTM(mCG, 1, -1);
+    }
+    CGContextSetShouldAntialias(mCG, true);
+}
+
+void CoreGraphicsPaintContext::setCGContext(CGContextRef cg) {
+    if (cg == mCG) return;
+    CGContextRetain(cg);
+    if (mCG) CGContextRelease(mCG);
+    mCG = cg;
+    // A y-up context needs the same one-time flip the constructor applies, since this one
+    // has never been through it.
+    if (!mYDown) {
+        CGContextTranslateCTM(mCG, 0, mHeight);
         CGContextScaleCTM(mCG, 1, -1);
     }
     CGContextSetShouldAntialias(mCG, true);
@@ -228,6 +245,141 @@ void CoreGraphicsPaintContext::roundedClipRect(float w, float h, float ts, float
 
 // ── 2D drawing ───────────────────────────────────────────────────────────
 
+// ── 2D vertex meshes ────────────────────────────────────────────────────────────────────
+//
+// Core Graphics has no drawVertices and no Gouraud shading, so the triangle list is walked
+// here. Two consequences worth stating rather than discovering:
+//
+//   * Per-vertex colour is approximated by filling each triangle with the AVERAGE of its
+//     three vertex colours. Skia and Android interpolate across the face, so a mesh used as
+//     a smooth gradient will show faceting here, growing more visible as uCount/vCount drop.
+//     The 3D backend in this same file already accepts flat shading for the same reason.
+//   * Antialiasing is turned OFF for the walk. Adjacent triangles share an edge, and two
+//     antialiased half-covered edges composite to a visible light seam along every one of
+//     them — the mesh comes out drawn in a net of hairlines.
+
+void CoreGraphicsPaintContext::setMesh(int meshId, int layout, int uCount, int vCount,
+                                       const std::vector<float>& verts,
+                                       const std::vector<float>& uv,
+                                       const std::vector<int32_t>& colors,
+                                       const std::vector<int32_t>& indices) {
+    Mesh2DEntry e;
+    e.layout = layout;
+    e.uCount = uCount;
+    e.vCount = vCount;
+    e.verts = verts;
+    e.uv = uv;
+    e.colors = colors;
+    e.indices = indices;
+    mMeshes2D[meshId] = std::move(e);
+}
+
+void CoreGraphicsPaintContext::drawMesh(int meshId, int blend, int imageId) {
+    auto it = mMeshes2D.find(meshId);
+    if (it == mMeshes2D.end()) return;
+    const Mesh2DEntry& e = it->second;
+    const size_t vertexCount = e.verts.size() / 2;
+    if (vertexCount < 3 || e.indices.size() < 3) return;
+
+    CGImageRef texture = nullptr;
+    if (blend == rccore::mesh2d::BLEND_MODULATE && imageId != rccore::mesh2d::NO_IMAGE
+        && e.uv.size() == e.verts.size()) {
+        auto img = mImages.find(imageId);
+        if (img != mImages.end()) texture = img->second;
+    }
+
+    // Save/restore brackets everything: this must leave the context exactly as it found it,
+    // including the fill colour, which the per-triangle fills below overwrite.
+    CGContextSaveGState(mCG);
+    CGContextSetShouldAntialias(mCG, false);
+
+    const float texW = texture ? (float) CGImageGetWidth(texture) : 0.0f;
+    const float texH = texture ? (float) CGImageGetHeight(texture) : 0.0f;
+
+    for (size_t t = 0; t + 2 < e.indices.size(); t += 3) {
+        int i0 = e.indices[t], i1 = e.indices[t + 1], i2 = e.indices[t + 2];
+        if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+        if ((size_t) i0 >= vertexCount || (size_t) i1 >= vertexCount
+            || (size_t) i2 >= vertexCount) {
+            continue;
+        }
+        const float x0 = e.verts[i0 * 2], y0 = e.verts[i0 * 2 + 1];
+        const float x1 = e.verts[i1 * 2], y1 = e.verts[i1 * 2 + 1];
+        const float x2 = e.verts[i2 * 2], y2 = e.verts[i2 * 2 + 1];
+
+        CGContextBeginPath(mCG);
+        CGContextMoveToPoint(mCG, x0, y0);
+        CGContextAddLineToPoint(mCG, x1, y1);
+        CGContextAddLineToPoint(mCG, x2, y2);
+        CGContextClosePath(mCG);
+
+        if (texture) {
+            // Map the triangle's uv back to the image and draw the image through that
+            // transform, clipped to the triangle. Three corresponding points determine the
+            // affine exactly, which is what makes this a real texture map rather than a
+            // stretched blit.
+            const float u0 = e.uv[i0 * 2] * texW, v0 = e.uv[i0 * 2 + 1] * texH;
+            const float u1 = e.uv[i1 * 2] * texW, v1 = e.uv[i1 * 2 + 1] * texH;
+            const float u2 = e.uv[i2 * 2] * texW, v2 = e.uv[i2 * 2 + 1] * texH;
+            const float det = (u1 - u0) * (v2 - v0) - (u2 - u0) * (v1 - v0);
+            if (std::fabs(det) < 1e-9f) { CGContextBeginPath(mCG); continue; }
+
+            // Solve for the affine taking (u, v) to (x, y).
+            const float a = ((x1 - x0) * (v2 - v0) - (x2 - x0) * (v1 - v0)) / det;
+            const float b = ((x2 - x0) * (u1 - u0) - (x1 - x0) * (u2 - u0)) / det;
+            const float c = ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) / det;
+            const float d = ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) / det;
+            const float tx = x0 - a * u0 - b * v0;
+            const float ty = y0 - c * u0 - d * v0;
+
+            CGContextSaveGState(mCG);
+            CGContextClip(mCG);
+            CGContextConcatCTM(mCG, CGAffineTransformMake(a, c, b, d, tx, ty));
+            // uv has (0,0) at the top left and CGImage draws bottom-up in its own box, so
+            // the image is flipped inside the uv frame — not in the mesh frame, which would
+            // move the geometry rather than the texels.
+            CGContextTranslateCTM(mCG, 0, texH);
+            CGContextScaleCTM(mCG, 1, -1);
+            CGContextDrawImage(mCG, CGRectMake(0, 0, texW, texH), texture);
+            CGContextRestoreGState(mCG);
+            continue;
+        }
+
+        CGFloat col[4] = {0, 0, 0, 1};
+        if (e.colors.size() == vertexCount) {
+            // Average the three, rather than taking vertex 0: with no interpolation available
+            // the mean is the least wrong single colour for the face.
+            CGFloat c0[4], c1[4], c2[4];
+            rgba((uint32_t) e.colors[i0], c0);
+            rgba((uint32_t) e.colors[i1], c1);
+            rgba((uint32_t) e.colors[i2], c2);
+            for (int k = 0; k < 4; k++) col[k] = (c0[k] + c1[k] + c2[k]) / 3.0;
+        } else {
+            rgba(mPaint.color, col);
+        }
+        CGContextSetRGBFillColor(mCG, col[0], col[1], col[2], col[3]);
+        CGContextFillPath(mCG);
+    }
+
+    CGContextRestoreGState(mCG);
+}
+
+void CoreGraphicsPaintContext::matrixFromMesh(int meshId, float u, float v, int flags) {
+    auto it = mMeshes2D.find(meshId);
+    if (it == mMeshes2D.end()) return;
+    const Mesh2DEntry& e = it->second;
+    float frame[6];
+    if (!rccore::mesh2d::sampleFrame(e.layout, e.uCount, e.vCount, e.verts.data(),
+                                     (int) (e.verts.size() / 2), u, v, frame)) {
+        return;
+    }
+    float m[6];   // duX, duY, dvX, dvY, originX, originY
+    rccore::mesh2d::buildMatrix(frame, flags, m);
+    // CGAffineTransformMake(a, b, c, d, tx, ty) is x' = a*x + c*y + tx, so du is (a, b) and
+    // dv is (c, d) — the same column convention buildMatrix emits.
+    CGContextConcatCTM(mCG, CGAffineTransformMake(m[0], m[1], m[2], m[3], m[4], m[5]));
+}
+
 void CoreGraphicsPaintContext::drawRect(float l, float t, float r, float b) {
     CGContextBeginPath(mCG);
     CGContextAddRect(mCG, CGRectMake(l, t, r - l, b - t));
@@ -326,21 +478,79 @@ void CoreGraphicsPaintContext::appendPathData(int instanceId, const std::vector<
     auto it = mPaths.find(instanceId);
     if (it == mPaths.end()) return;
     CGMutablePathRef p = it->second;
-    // Verb tags arrive NaN-encoded, coordinates as plain floats — the same encoding the
-    // writer produces for DATA_PATH.
-    size_t i = 0;
-    while (i < path.size()) {
-        float v = path[i];
-        if (!std::isnan(v)) { i++; continue; }
-        int verb = rccore::Utils::idFromNan(v);
-        i++;
-        switch (verb) {
-            case 0: if (i + 1 < path.size()) { CGPathMoveToPoint(p, nullptr, path[i], path[i+1]); i += 2; } break;
-            case 1: if (i + 1 < path.size()) { CGPathAddLineToPoint(p, nullptr, path[i], path[i+1]); i += 2; } break;
-            case 2: if (i + 3 < path.size()) { CGPathAddQuadCurveToPoint(p, nullptr, path[i], path[i+1], path[i+2], path[i+3]); i += 4; } break;
-            case 3: if (i + 5 < path.size()) { CGPathAddCurveToPoint(p, nullptr, path[i], path[i+1], path[i+2], path[i+3], path[i+4], path[i+5]); i += 6; } break;
-            case 4: CGPathCloseSubpath(p); break;
-            default: i = path.size(); break;
+
+    // Wire format, mirroring rcskia's buildPathFromFloats. Three things here are easy to get
+    // wrong, and each one silently yields an EMPTY path rather than a wrong-looking one:
+    //
+    //  * Verb ids are 10..16, not 0..n. Decoding them as 0-based sends every verb to the
+    //    default branch and the path comes out empty — the document draws nothing at all
+    //    while every other primitive still works, which reads as "paths are unsupported".
+    //  * Every verb except MOVE and CLOSE is followed by TWO padding floats before its
+    //    coordinates.
+    //  * A coordinate may itself be a NaN-encoded variable reference and has to be resolved
+    //    against the context. Treating any NaN as a verb misreads those as commands, and
+    //    passing one through unresolved poisons the CGPath (Core Graphics rejects NaN and
+    //    silently drops the subpath, where Skia tolerates it).
+    const int PATH_MOVE = 10, PATH_LINE = 11, PATH_QUADRATIC = 12,
+              PATH_CONIC = 13, PATH_CUBIC = 14, PATH_CLOSE = 15, PATH_DONE = 16;
+
+    auto nanId = [](float v) -> int {
+        int32_t bits; memcpy(&bits, &v, sizeof(bits)); return bits & 0x3FFFFF;
+    };
+    auto isCmd = [&](float v) -> bool {
+        if (!std::isnan(v)) return false;
+        int id = nanId(v);
+        return id >= PATH_MOVE && id <= PATH_DONE;
+    };
+    auto val = [&](float v) -> float {
+        if (!std::isnan(v)) return v;
+        int id = nanId(v);
+        if (id >= PATH_MOVE && id <= PATH_DONE) return v;   // not a coordinate
+        return mContext.getFloat(id);
+    };
+
+    int i = 0, n = (int) path.size();
+    while (i < n) {
+        if (!isCmd(path[i])) { i++; continue; }
+        switch (nanId(path[i])) {
+            case PATH_MOVE:
+                i++;
+                if (i + 1 < n) { CGPathMoveToPoint(p, nullptr, val(path[i]), val(path[i+1])); i += 2; }
+                break;
+            case PATH_LINE:
+                i += 3;   // command + 2 padding
+                if (i + 1 < n) { CGPathAddLineToPoint(p, nullptr, val(path[i]), val(path[i+1])); i += 2; }
+                break;
+            case PATH_QUADRATIC:
+                i += 3;
+                if (i + 3 < n) {
+                    CGPathAddQuadCurveToPoint(p, nullptr, val(path[i]), val(path[i+1]),
+                                              val(path[i+2]), val(path[i+3]));
+                    i += 4;
+                }
+                break;
+            case PATH_CONIC:
+                // CG has no conic. Approximating with a quadratic drops the weight, which is
+                // visible only on strongly-weighted arcs; drawing nothing would be worse.
+                i += 3;
+                if (i + 4 < n) {
+                    CGPathAddQuadCurveToPoint(p, nullptr, val(path[i]), val(path[i+1]),
+                                              val(path[i+2]), val(path[i+3]));
+                    i += 5;
+                }
+                break;
+            case PATH_CUBIC:
+                i += 3;
+                if (i + 5 < n) {
+                    CGPathAddCurveToPoint(p, nullptr, val(path[i]), val(path[i+1]),
+                                          val(path[i+2]), val(path[i+3]),
+                                          val(path[i+4]), val(path[i+5]));
+                    i += 6;
+                }
+                break;
+            case PATH_CLOSE: i++; CGPathCloseSubpath(p); break;
+            case PATH_DONE:  i = n; break;
+            default:         i++; break;
         }
     }
 }

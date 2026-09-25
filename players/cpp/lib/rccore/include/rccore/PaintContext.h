@@ -60,6 +60,31 @@ public:
     virtual void drawSector(float left, float top, float right, float bottom,
                             float startAngle, float sweepAngle) = 0;
     virtual void drawPath(int pathId, float start, float end) = 0;
+
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Not pure: a backend that has not implemented meshes still compiles and simply draws
+    // nothing, which is how the 3D family is handled next door. Geometry arrives already in
+    // the layout drawVertices wants, so a backend should need no repacking.
+    //
+    // An empty `uv` or `colors` means the channel is absent.
+    //
+    // drawMesh MUST leave the paint exactly as it found it — shader, blend, style, colour —
+    // including when it throws. Nothing errors when it does not; the shapes are all correct
+    // and simply the wrong colour, which is the hardest kind of defect to attribute.
+    virtual void setMesh(int meshId, int layout, int uCount, int vCount,
+                         const std::vector<float>& verts, const std::vector<float>& uv,
+                         const std::vector<int32_t>& colors,
+                         const std::vector<int32_t>& indices) {
+        (void)meshId; (void)layout; (void)uCount; (void)vCount;
+        (void)verts; (void)uv; (void)colors; (void)indices;
+    }
+    virtual void drawMesh(int meshId, int blend, int imageId) {
+        (void)meshId; (void)blend; (void)imageId;
+    }
+    virtual void matrixFromMesh(int meshId, float u, float v, int flags) {
+        (void)meshId; (void)u; (void)v; (void)flags;
+    }
     virtual void drawTweenPath(int path1Id, int path2Id, float tween,
                                float start, float end) = 0;
     virtual void tweenPath(int outId, int pathId1, int pathId2, float tween) = 0;
