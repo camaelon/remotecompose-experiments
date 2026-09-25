@@ -14,9 +14,12 @@
 
 namespace rccore {
 
-// Thread-local evaluator
+// One evaluator per thread. It keeps its stack and registers between calls, so a single
+// process-wide instance is torn apart when two threads evaluate at once — which is what
+// happens the moment a presenter thumbnail renders a document on a worker while the main
+// thread paints the same kind of document (crash: a jump through a corrupted stack).
 static ExpressionEvaluator& getEvaluator() {
-    static ExpressionEvaluator eval;
+    static thread_local ExpressionEvaluator eval;
     return eval;
 }
 

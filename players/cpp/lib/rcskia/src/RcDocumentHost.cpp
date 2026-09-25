@@ -37,6 +37,11 @@ struct RcDocumentHost::Nested {
     // start, so a film embedded on consecutive slides neither reloads nor rewinds.
     bool persist = false;
     std::chrono::steady_clock::time_point started{};
+    // The document's own clock, stitched from the host clocks of the slides it lived on: the
+    // host's time restarts with every slide, and the sum of the pieces is continuous. Kept
+    // in host time rather than wall time so an export that runs off the clock still agrees.
+    double hostLast = 0.0;
+    double hostBase = 0.0;
     // The file a persistent document came from and its stamp when read: a deck rebuild
     // rewrites the file while the player is open, and the retire() on the next slide change
     // has to notice or the player keeps showing the old document indefinitely.
@@ -203,7 +208,9 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     // `timeid`, and the slide's number through `stepid`.
     double docTime = timeSec;
     if (n->persist) {
-        docTime = std::chrono::duration<double>(std::chrono::steady_clock::now() - n->started).count();
+        if (timeSec + 1e-6 < n->hostLast) n->hostBase += n->hostLast;   // a new slide: carry on
+        n->hostLast = timeSec;
+        docTime = n->hostBase + timeSec;
     }
     n->ctx->overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME,
                           static_cast<float>(docTime));
