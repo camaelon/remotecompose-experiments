@@ -5,6 +5,7 @@
 #include "rcplayer/Player.h"
 #include "rcplayer/ZipArchive.h"
 #include "rcplayer/StillHosts.h"
+#include "rcplayer/TextFont.h"
 
 #include "rccore/CoreDocument.h"
 #include "rccore/CustomComponentHost.h"
@@ -56,20 +57,7 @@ namespace rcplayer {
 // In the PDF they are laid out BELOW the slide — the page grows taller so the notes never
 // overlap the slide content.
 
-SkFont notesFont(float size) {
-    static sk_sp<SkFontMgr> mgr =
-#if defined(__APPLE__)
-        SkFontMgr_New_CoreText(nullptr);
-#else
-        SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
-#endif
-    static sk_sp<SkTypeface> tf = mgr ? mgr->matchFamilyStyle(nullptr, SkFontStyle())
-                                      : nullptr;
-    SkFont f(tf, size);
-    f.setEdging(SkFont::Edging::kAntiAlias);
-    f.setSubpixel(true);
-    return f;
-}
+SkFont notesFont(float size) { return systemTextFont(size); }
 
 // Greedy word-wrap `text` (honouring its own newlines) into lines that fit `maxWidth`.
 std::vector<std::string> wrapNotes(const std::string& text, const SkFont& font,
@@ -338,6 +326,10 @@ PdfExportResult exportDeckToPdf(const std::string& input, const std::string& out
     for (const auto& entry : entries) {
         const std::string name = g.zip ? baseName(entry)
                                        : fs::path(entry).filename().string();
+        // A line per page on stderr, for a host showing progress: the same shape the
+        // video export prints.
+        std::cerr << "progress: " << (result.pages + result.failures) << "/" << entries.size()
+                  << " page " << (result.pages + result.failures + 1) << " " << name << "\n" << std::flush;
         if (renderSlideToPdfPage(pdf.get(), entry, pageW, pageH, delaySec)) {
             result.pages++;
             std::cout << "[" << (result.pages + result.failures) << "/" << entries.size()
@@ -348,8 +340,10 @@ PdfExportResult exportDeckToPdf(const std::string& input, const std::string& out
         }
     }
 
+    std::cerr << "progress: " << entries.size() << "/" << entries.size() << " finishing the file\n" << std::flush;
     pdf->close();
     g.zip.reset();
+    std::cerr << "progress: " << entries.size() << "/" << entries.size() << " done\n" << std::flush;
     std::cerr << "Done: " << result.pages << " pages written to " << output
               << " (" << result.failures << " failures)\n";
     return result;

@@ -13,6 +13,7 @@ set(RCPLAYER_SOURCES
     src/PdfExport.cpp
     src/Player.cpp
     src/StillHosts.cpp
+    src/TextFont.cpp
     src/VideoCustomHost.cpp
 )
 
