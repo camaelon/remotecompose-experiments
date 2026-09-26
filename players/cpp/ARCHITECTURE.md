@@ -99,6 +99,11 @@ supports arithmetic, trig, logic, comparisons, splines, springs, array
 operations, and reads from system variables (`ANIMATION_TIME`,
 `WINDOW_WIDTH`, `TOUCH_X`, …) provided by `RemoteContext`.
 
+The evaluator instance the operations share is `thread_local`
+(`AdvancedOperations.cpp`): documents may be painted on more than one thread at
+once (a presenter's thumbnail worker beside the main thread), and a single
+static evaluator with its RPN stack was a crash waiting for that.
+
 ### Particles
 
 `ParticlesCreate` allocates a per-particle state vector and seeds initial
@@ -128,6 +133,12 @@ into Skia for each draw call.
 - **`rc2image`** — instantiates `CoreDocument`, paints into a Skia raster
   surface at fixed dimensions, encodes to PNG. Used as a smoke test in CI
   and as a source for visual-regression comparisons.
+- **Exporters in `rcplayer`** — `PdfExport`, `ImageExport` and `VideoExport`
+  walk a deck headless on the CPU backend. `VideoExport` renders every frame
+  at a fixed rate, each slide for a given stay, and pipes RGBA straight into
+  `ffmpeg` with a caller-prepared soundtrack; a document's clocks are pinned
+  with `setFixedTimeMs` from the moment it loaded, so the export can run
+  faster or slower than real time without the picture knowing.
 
 ## Apps
 

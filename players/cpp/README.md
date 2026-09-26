@@ -34,7 +34,7 @@ rcX/
 │   └── rcplayer/    Desktop player runtime — render backends (Metal / CPU),
 │                   playlist + document loading, custom-component hosts for
 │                   embedded video / web / sub-documents, zip decks,
-│                   voice-over, PDF export. Link this to build your own
+│                   voice-over, PDF and video export. Link this to build your own
 │                   player; `rcviewer` is one 500-line main.cpp on top.
 ├── apps/
 │   ├── viewer/      `rcviewer` — GLFW + Metal/CPU desktop viewer (rcplayer +
