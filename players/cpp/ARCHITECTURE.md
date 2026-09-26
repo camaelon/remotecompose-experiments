@@ -138,7 +138,11 @@ into Skia for each draw call.
   at a fixed rate, each slide for a given stay, and pipes RGBA straight into
   `ffmpeg` with a caller-prepared soundtrack; a document's clocks are pinned
   with `setFixedTimeMs` from the moment it loaded, so the export can run
-  faster or slower than real time without the picture knowing.
+  faster or slower than real time without the picture knowing. It can add a
+  caption band under every frame (`VideoCaptionBand`, one `VideoCue` line at a
+  time with the spoken word lit). Both exporters report on stderr, one line
+  per step — `progress: <done>/<total> <what>` — for a host that shows
+  progress; `TextFont` is the platform typeface the exporters' own text uses.
 
 ## Apps
 
