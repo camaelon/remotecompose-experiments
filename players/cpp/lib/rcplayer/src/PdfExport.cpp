@@ -296,12 +296,19 @@ bool renderSlideToPdfPage(SkDocument* pdf,
 // the app supplies a flag, not a copy of this.
 PdfExportResult exportDeckToPdf(const std::string& input, const std::string& output,
                                 int pageW, int pageH, double delaySec) {
-    PdfExportResult result;
-
     std::vector<std::string> entries = collectDeckEntries(input);
-
     if (entries.empty()) {
         std::cerr << "No playable files found in " << input << "\n";
+        return PdfExportResult();
+    }
+    return exportEntriesToPdf(entries, output, pageW, pageH, delaySec);
+}
+
+PdfExportResult exportEntriesToPdf(const std::vector<std::string>& entries, const std::string& output,
+                                   int pageW, int pageH, double delaySec) {
+    PdfExportResult result;
+    if (entries.empty()) {
+        std::cerr << "No slides to export\n";
         return result;
     }
 

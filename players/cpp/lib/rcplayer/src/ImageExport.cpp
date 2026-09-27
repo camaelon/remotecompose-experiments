@@ -19,11 +19,19 @@ namespace rcplayer {
 
 ImageExportResult exportDeckToImages(const std::string& input, const std::string& outputDir,
                                      int width, int height, double delaySec) {
-    ImageExportResult result;
-
     std::vector<std::string> entries = collectDeckEntries(input);
     if (entries.empty()) {
         std::cerr << "No playable files found in " << input << "\n";
+        return ImageExportResult();
+    }
+    return exportEntriesToImages(entries, outputDir, width, height, delaySec);
+}
+
+ImageExportResult exportEntriesToImages(const std::vector<std::string>& entries, const std::string& outputDir,
+                                        int width, int height, double delaySec) {
+    ImageExportResult result;
+    if (entries.empty()) {
+        std::cerr << "No slides to export\n";
         return result;
     }
 

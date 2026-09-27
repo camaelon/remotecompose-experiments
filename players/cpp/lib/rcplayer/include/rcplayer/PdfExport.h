@@ -4,6 +4,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 class SkDocument;
 
@@ -33,5 +34,10 @@ struct PdfExportResult {
 // skipped rather than abandoning the export.
 PdfExportResult exportDeckToPdf(const std::string& input, const std::string& output,
                                 int pageW, int pageH, double delaySec);
+
+// The same over the slides given — a selection of a deck's entries, as collectDeckEntries
+// returns them — rather than everything under `input`.
+PdfExportResult exportEntriesToPdf(const std::vector<std::string>& entries, const std::string& output,
+                                   int pageW, int pageH, double delaySec);
 
 }  // namespace rcplayer

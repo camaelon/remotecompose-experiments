@@ -6,6 +6,7 @@
 #pragma once
 
 #include <string>
+#include <vector>
 
 namespace rcplayer {
 
@@ -26,5 +27,10 @@ struct ImageExportResult {
 // skipped rather than abandoning the export.
 ImageExportResult exportDeckToImages(const std::string& input, const std::string& outputDir,
                                      int width, int height, double delaySec);
+
+// The same over the slides given — a selection of a deck's entries — rather than everything
+// under `input`.
+ImageExportResult exportEntriesToImages(const std::vector<std::string>& entries, const std::string& outputDir,
+                                        int width, int height, double delaySec);
 
 }  // namespace rcplayer
