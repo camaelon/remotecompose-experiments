@@ -92,6 +92,9 @@ export class CanvasPaintContext extends PaintContext {
 
     // Bitmap cache: id -> ImageBitmap or HTMLImageElement
     private bitmapCache = new Map<number, HTMLImageElement | ImageBitmap>();
+    // Animated bitmaps (a GIF embedded whole): every frame decoded once, picked by the
+    // document's animation time when drawn — the C++ player keeps every frame the same way.
+    private animatedBitmaps = new Map<number, { frames: ImageBitmap[]; starts: number[]; total: number }>();
 
     /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
     private meshCache = new Map<number, {
@@ -138,6 +141,9 @@ export class CanvasPaintContext extends PaintContext {
     }
 
     getCanvas(): CanvasRenderingContext2D { return this.ctx; }
+    // An embedded document paints on whatever canvas its host is painting on, which can
+    // change between frames (a resize, a new host document on the same page).
+    setCanvas(canvas: CanvasRenderingContext2D): void { this.ctx = canvas; }
 
     // --- Text cache ---
 
@@ -149,6 +155,14 @@ export class CanvasPaintContext extends PaintContext {
 
     loadBitmap(imageId: number, encoding: number, type: number,
                width: number, height: number, bitmap: Uint8Array): void {
+        // A GIF: an <img> would draw its first frame forever, so its frames are decoded
+        // separately where the browser can (WebCodecs' ImageDecoder), and the <img> below
+        // stays as the still to show until they are, or on a browser that cannot.
+        const isGif = bitmap.length > 6 && bitmap[0] === 0x47 && bitmap[1] === 0x49
+                      && bitmap[2] === 0x46 && bitmap[3] === 0x38;
+        if (isGif && typeof (globalThis as any).ImageDecoder !== 'undefined') {
+            this.loadAnimatedBitmap(imageId, bitmap);
+        }
         // Decode bitmap asynchronously and cache
         const blob = new Blob([bitmap.buffer as ArrayBuffer], { type: 'image/png' });
         const url = URL.createObjectURL(blob);
@@ -167,6 +181,52 @@ export class CanvasPaintContext extends PaintContext {
             img.src = url;
         });
         this.bitmapPromises.set(imageId, promise);
+    }
+
+    private async loadAnimatedBitmap(imageId: number, bytes: Uint8Array): Promise<void> {
+        try {
+            const Decoder = (globalThis as any).ImageDecoder;
+            const decoder = new Decoder({ data: bytes, type: 'image/gif' });
+            await decoder.tracks.ready;
+            const track = decoder.tracks.selectedTrack;
+            const count: number = track ? track.frameCount : 0;
+            if (count < 2) { decoder.close(); return; }
+            const frames: ImageBitmap[] = [];
+            const starts: number[] = [];
+            let t = 0;
+            for (let i = 0; i < count; i++) {
+                const { image } = await decoder.decode({ frameIndex: i });
+                // Durations come in microseconds; a frame that says nothing (or too little
+                // to see) gets the 100 ms browsers give such GIFs.
+                let seconds = (image.duration ?? 0) / 1e6;
+                if (!(seconds >= 0.02)) seconds = 0.1;
+                frames.push(await createImageBitmap(image));
+                image.close();
+                starts.push(t);
+                t += seconds;
+            }
+            decoder.close();
+            this.animatedBitmaps.set(imageId, { frames, starts, total: t });
+            this.needsRepaint();
+        } catch (e) {
+            console.warn(`CanvasPaintContext: cannot animate bitmap ${imageId}`, e);
+        }
+    }
+
+    // The bitmap to draw now: for an animated one, the frame the document's clock is on,
+    // and a repaint asked for so the next frame follows.
+    private bitmapToDraw(imageId: number): HTMLImageElement | ImageBitmap | undefined {
+        const anim = this.animatedBitmaps.get(imageId);
+        if (!anim || anim.total <= 0) return this.bitmapCache.get(imageId);
+        const context = this.getContext();
+        const t = context ? context.getAnimationTime() : 0;
+        const phase = ((t % anim.total) + anim.total) % anim.total;
+        let index = 0;
+        for (let i = 0; i < anim.starts.length; i++) {
+            if (anim.starts[i] <= phase) index = i; else break;
+        }
+        this.needsRepaint();
+        return anim.frames[index];
     }
 
     // --- Path cache ---
@@ -417,6 +477,14 @@ export class CanvasPaintContext extends PaintContext {
         //
         // This previously cleared `gradientStyle` here, which quietly broke that contract:
         // a bundle setting only an alpha would drop a shader an earlier bundle had set.
+        // A float that is still a variable reference — a bundle painted before its
+        // variables were resolved — is looked up here rather than applied as NaN, which the
+        // canvas would silently ignore. The C++ paint context does the same.
+        const context = this.getContext();
+        const floatArg = (bits: number): number => {
+            if (isNaNBits(bits) && context) return context.getFloat(idFromBits(bits));
+            return intBitsToFloat(bits);
+        };
         let i = 0;
         while (i < len) {
             const cmd = arr[i++];
@@ -424,7 +492,7 @@ export class CanvasPaintContext extends PaintContext {
             const upper = (cmd >> 16) & 0xFFFF;
             switch (tag) {
                 case PaintBundle.TEXT_SIZE:
-                    this.textSize = intBitsToFloat(arr[i++]);
+                    this.textSize = floatArg(arr[i++]);
                     this.setFont();
                     break;
                 case PaintBundle.COLOR: {
@@ -447,10 +515,10 @@ export class CanvasPaintContext extends PaintContext {
                     break;
                 }
                 case PaintBundle.STROKE_WIDTH:
-                    this.strokeWidth = intBitsToFloat(arr[i++]);
+                    this.strokeWidth = floatArg(arr[i++]);
                     break;
                 case PaintBundle.STROKE_MITER:
-                    this.miterLimit = intBitsToFloat(arr[i++]);
+                    this.miterLimit = floatArg(arr[i++]);
                     break;
                 case PaintBundle.STROKE_CAP:
                     this.lineCap = upper === 0 ? 'butt' : upper === 1 ? 'round' : 'square';
@@ -531,7 +599,7 @@ export class CanvasPaintContext extends PaintContext {
                     break;
                 }
                 case PaintBundle.ALPHA:
-                    this.alpha = intBitsToFloat(arr[i++]);
+                    this.alpha = floatArg(arr[i++]);
                     break;
                 case PaintBundle.COLOR_FILTER: {
                     const cfArgb = arr[i++];
@@ -626,16 +694,30 @@ export class CanvasPaintContext extends PaintContext {
                     break;
                 }
                 case PaintBundle.PATH_EFFECT: {
+                    // Payload (PaintPathEffects.dash): [type, phase, len, intervals…], `count`
+                    // ints in all; type and len are raw ints, phase and the intervals floats.
+                    // An empty payload clears the effect, as the C++ player's does.
                     const count = upper;
                     if (count === 0) {
                         this.ctx.setLineDash([]);
                         this.ctx.lineDashOffset = 0;
-                    } else {
+                    } else if (count >= 3) {
+                        const type = arr[i];
+                        const phase = floatArg(arr[i + 1]);
+                        const len = arr[i + 2];
+                        i += 3;
                         const intervals: number[] = [];
-                        for (let k = 0; k < count; k++) {
-                            intervals.push(intBitsToFloat(arr[i++]));
+                        for (let k = 0; k < len && k < count - 3; k++) intervals.push(floatArg(arr[i++]));
+                        for (let k = 3 + len; k < count; k++) i++;
+                        if (type === 1 && intervals.length >= 2 && intervals.length % 2 === 0) {
+                            this.ctx.setLineDash(intervals);
+                            this.ctx.lineDashOffset = phase;
+                        } else {
+                            this.ctx.setLineDash([]);
+                            this.ctx.lineDashOffset = 0;
                         }
-                        this.ctx.setLineDash(intervals);
+                    } else {
+                        i += count;
                     }
                     break;
                 }
@@ -1328,7 +1410,7 @@ export class CanvasPaintContext extends PaintContext {
 
     drawBitmap(imageId: number, srcLeft: number, srcTop: number, srcRight: number, srcBottom: number,
                dstLeft: number, dstTop: number, dstRight: number, dstBottom: number, _cdId: number): void {
-        const img = this.bitmapCache.get(imageId);
+        const img = this.bitmapToDraw(imageId);
         if (!img) return;
         this.ctx.globalAlpha = this.alpha;
         this.ctx.globalCompositeOperation = this.blendMode;
@@ -1345,7 +1427,7 @@ export class CanvasPaintContext extends PaintContext {
     }
 
     drawBitmapSimple(id: number, left: number, top: number, right: number, bottom: number): void {
-        const img = this.bitmapCache.get(id);
+        const img = this.bitmapToDraw(id);
         if (!img) return;
         this.ctx.globalAlpha = this.alpha;
         this.ctx.globalCompositeOperation = this.blendMode;

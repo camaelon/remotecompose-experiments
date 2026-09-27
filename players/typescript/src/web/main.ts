@@ -9,6 +9,7 @@ import { ContextMode, RemoteContext } from '../core/RemoteContext';
 import { Header } from '../core/operations/Header';
 import { Theme } from '../core/operations/DataOperations';
 import type { MeasurementSink } from '../core/OperationMeasurement';
+import { WebCustomHost, type EmbedResolver } from './CustomHosts';
 
 /**
  * How far a press may travel and still count as a tap, in document units.
@@ -68,6 +69,11 @@ export class RcdPlayer {
     private mContentOffsetY = 0;
 
     private isPaused = false;
+
+    // Draws the custom components — embedded documents, videos — for every document this
+    // player shows. It outlives the documents, so an embed marked `persist` carries across
+    // them; a new document retires the rest.
+    private customHost = new WebCustomHost();
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -308,6 +314,8 @@ export class RcdPlayer {
         doc.initializeContext(this.remoteContext);
         this.remoteContext.setPaintContext(this.paintContext);
         this.paintContext.setContext(this.remoteContext);
+        this.customHost.retire();
+        this.remoteContext.setCustomHost(this.customHost);
         this.remoteContext.mWidth = docWidth;
         this.remoteContext.mHeight = docHeight;
         this.remoteContext.setDensity(density);
@@ -460,6 +468,14 @@ export class RcdPlayer {
         this.repaint();
     }
 
+    /**
+     * How embedded documents and videos are fetched: by path, relative to the page, unless
+     * a page supplies its own — a deck opened off the disk cannot fetch, so its embeds
+     * travel inside the page and this hands them over.
+     */
+    setEmbedResolver(resolver: EmbedResolver): void { this.customHost.setResolver(resolver); }
+    getCustomHost(): WebCustomHost { return this.customHost; }
+
     getDocument(): CoreDocument | null { return this.document; }
     getRemoteContext(): WebRemoteContext | null { return this.remoteContext; }
 
@@ -506,6 +522,8 @@ export class RcdPlayer {
 // Re-export public API
 import { createPlayer, RcPlayerElement, base64ToArrayBuffer } from './RcPlayerElement';
 export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
+export { WebCustomHost, parseEmbedConfig, fitInto } from './CustomHosts';
+export type { EmbedResolver } from './CustomHosts';
 export type { RcPlayerOptions, RcPlayerHandle } from './RcPlayerElement';
 export type { MeasurementSink, FrameMeasurement, TypeCount, InstanceCount } from '../core/OperationMeasurement';
 

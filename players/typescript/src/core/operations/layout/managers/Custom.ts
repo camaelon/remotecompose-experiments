@@ -1,12 +1,19 @@
 // Custom: a custom layout component (LAYOUT_CUSTOM op=93).
-// Parse-only tier: read() consumes the exact bytes; it is a container (extends
-// LayoutManager -> Component, inheriting getList()/inflate() so CoreDocument nests
-// its children exactly like BoxLayout/RowLayout). No layout/render behavior yet.
+//
+// A container (extends LayoutManager -> Component, inheriting getList()/inflate() so
+// CoreDocument nests its children exactly like BoxLayout/RowLayout) that is laid out like
+// a box and painted by the platform's CustomComponentHost: the engine translates to the
+// component's content box and hands the host the config string — "rc:media/film.rc#…",
+// "video:clip.mp4" — and the box size. Without a host it paints as the empty box it
+// always was.
 
 import { LayoutManager } from './LayoutManager';
+import { Visibility } from '../Component';
+import { PaddingModifier } from '../modifiers/ModifierOperations';
 import type { Operation } from '../../../Operation';
 import type { WireBuffer } from '../../../WireBuffer';
 import type { RemoteContext } from '../../../RemoteContext';
+import type { PaintContext } from '../../../PaintContext';
 
 interface CustomProperty {
     type: number;
@@ -44,6 +51,42 @@ export class Custom extends LayoutManager {
     }
 
     apply(context: RemoteContext): void { super.apply(context); }
+
+    // The same modifier pass as any layout component, then the host draws the content —
+    // what the C++ engine does for opcode 93 in LayoutOperations.cpp.
+    override paintingComponent(paintContext: PaintContext): void {
+        const context = paintContext.getContext();
+        const host = context.getCustomHost();
+        if (!host) { super.paintingComponent(paintContext); return; }
+        if (Visibility.isGone(this.mVisibility) && this.mAnimateMeasure === null) return;
+
+        paintContext.matrixSave();
+        paintContext.matrixTranslate(this.mX, this.mY);
+        let tx = 0;
+        let ty = 0;
+        for (const mod of this.mComponentModifiers) {
+            context.incrementOpCount(mod);
+            if (mod.isDirty() && typeof (mod as any).updateVariables === 'function') {
+                mod.markNotDirty();
+                (mod as any).updateVariables(context);
+            }
+            if (mod instanceof PaddingModifier) {
+                paintContext.matrixTranslate(mod.mLeftValue, mod.mTopValue);
+                tx += mod.mLeftValue;
+                ty += mod.mTopValue;
+            } else {
+                mod.apply(context);
+            }
+        }
+        paintContext.matrixTranslate(-tx, -ty);
+        paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
+
+        const config = this.mConfigId >= 0 ? (context.getText(this.mConfigId) ?? '') : '';
+        const w = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+        const h = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
+        host.drawCustom(this.getComponentId(), config, paintContext, w, h, context.getAnimationTime());
+        paintContext.matrixRestore();
+    }
 
     deepToString(indent: string): string {
         return `${indent}Custom(${this.getComponentId()}, config=${this.mConfigId}, ${this.mProperties.length} props)`;

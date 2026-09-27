@@ -224,13 +224,15 @@ export class PaintBundle {
                     i = this.registerGradientListening(cmd, arr, i, context, op);
                     break;
                 case PaintBundle.PATH_EFFECT: {
+                    // Exactly `count` ints follow — [type, phase, len, intervals…] for a
+                    // dash, nothing for a clear — and the phase is inside the count, not
+                    // after it. Reading one more here walked every later tag off by one, so
+                    // an alpha after a path effect was never resolved (nor listened to).
                     const count = (cmd >> 16) & 0xFFFF;
                     for (let j = 0; j < count; j++) {
-                        listenFloatVar(arr[i], context, op);
+                        listenFloatVar(arr[i], context, op);   // ints are never NaN bits
                         i++;
                     }
-                    listenFloatVar(arr[i], context, op); // phase
-                    i++;
                     break;
                 }
                 default:
@@ -339,13 +341,11 @@ export class PaintBundle {
                     i = this.updateGradientVars(cmd, arr, out, i, context);
                     break;
                 case PaintBundle.PATH_EFFECT: {
-                    const count = (cmd >> 16) & 0xFFFF;
+                    const count = (cmd >> 16) & 0xFFFF;   // see registerListening
                     for (let j = 0; j < count; j++) {
                         out[i] = fixFloatVar(arr[i], context);
                         i++;
                     }
-                    out[i] = fixFloatVar(arr[i], context); // phase
-                    i++;
                     break;
                 }
                 default:

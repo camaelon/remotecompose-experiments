@@ -59,6 +59,8 @@ typescript/
 │   ├── rc2json.ts         binary → JSON dumper (used by VS Code, debug)
 │   ├── debug_entry.ts     dev-only entry point for browser-side debugging
 │   └── node-entry.ts      headless Node entry (canvas via the `canvas` npm pkg)
+│   web/CustomHosts.ts     the custom-component host: embedded documents (persistent
+│                          across host documents, with step/time ids), videos, web frames
 ├── web-player/          interactive in-browser viewer
 │   ├── index.html         file picker + canvas + scrubber
 │   └── standalone-template.html   template the standalone builder fills in

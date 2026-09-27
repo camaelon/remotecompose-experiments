@@ -55,7 +55,7 @@ export class LayoutComponent extends Component {
     private mDrawContentOperations: Operation[] | null = null;
 
     // Component modifier operations (non-structural modifiers that need paint)
-    private mComponentModifiers: Operation[] = [];
+    protected mComponentModifiers: Operation[] = [];
 
     // Content operations (paint ops from LayoutComponentContent/CanvasContent)
     private mContentOps: Operation[] = [];

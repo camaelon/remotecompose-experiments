@@ -1,5 +1,6 @@
 // RemoteContext: abstract context used to playback RemoteCompose documents.
 
+import type { CustomComponentHost } from './CustomComponentHost';
 import { asNan, idFromNan } from './operations/Utils';
 import { RemoteComposeState } from './RemoteComposeState';
 import type { RemoteClock } from './RemoteClock';
@@ -50,6 +51,12 @@ export abstract class RemoteContext {
      * TouchExpression inside a component rejected touches that were within it.
      */
     private mTouchVersion = 1;
+
+    // Whoever draws custom components (LAYOUT_CUSTOM) for this platform, or null: with no
+    // host a custom component is an empty box, exactly as it was before hosts existed.
+    private mCustomHost: CustomComponentHost | null = null;
+    setCustomHost(host: CustomComponentHost | null): void { this.mCustomHost = host; }
+    getCustomHost(): CustomComponentHost | null { return this.mCustomHost; }
 
     constructor(clock: RemoteClock = SYSTEM_CLOCK) {
         this.mClock = clock;
