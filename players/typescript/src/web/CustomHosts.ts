@@ -129,7 +129,10 @@ export class WebCustomHost implements CustomComponentHost {
     // ones — a film running across slides — carry on, clock and all.
     retire(): void {
         for (const [key, nested] of this.docs) {
-            if (!nested.persist) this.docs.delete(key);
+            if (!nested.persist) {
+                if (nested.paint) nested.paint.dispose();
+                this.docs.delete(key);
+            }
         }
         for (const [key, video] of this.videos) {
             video.element.pause();
@@ -139,6 +142,7 @@ export class WebCustomHost implements CustomComponentHost {
     }
 
     reset(): void {
+        for (const nested of this.docs.values()) if (nested.paint) nested.paint.dispose();
         this.docs.clear();
         this.retire();
     }

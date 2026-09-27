@@ -306,7 +306,9 @@ export class RcdPlayer {
         doc.setWidth(docWidth);
         doc.setHeight(docHeight);
 
-        // Create contexts
+        // Create contexts — letting the old one go first, with the decoders and frames an
+        // animated bitmap holds.
+        if (this.paintContext) this.paintContext.dispose();
         this.paintContext = new CanvasPaintContext(null as any, this.ctx);
         this.remoteContext = new WebRemoteContext(this.paintContext);
 

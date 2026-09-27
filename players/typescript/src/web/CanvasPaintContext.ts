@@ -33,6 +33,18 @@ const DESCENT_RATIO = 0.24;
 /** Mean advance per character as a fraction of text size, measured on a device. */
 const AVG_ADVANCE = 0.528;
 
+// One animated bitmap as it streams: the decoder kept open, the frame showing, and when
+// the document's clock passes the end of it.
+interface AnimatedBitmap {
+    decoder: any;            // WebCodecs ImageDecoder
+    count: number;
+    index: number;           // the frame showing, -1 before the first lands
+    frame: VideoFrame | null;   // drawn as it comes from the decoder; no bitmap in between
+    frameEnds: number;       // document seconds at which the frame showing ends
+    decoding: boolean;
+    failed: boolean;
+}
+
 export class CanvasPaintContext extends PaintContext {
     private ctx: CanvasRenderingContext2D;
 
@@ -92,9 +104,12 @@ export class CanvasPaintContext extends PaintContext {
 
     // Bitmap cache: id -> ImageBitmap or HTMLImageElement
     private bitmapCache = new Map<number, HTMLImageElement | ImageBitmap>();
-    // Animated bitmaps (a GIF embedded whole): every frame decoded once, picked by the
-    // document's animation time when drawn — the C++ player keeps every frame the same way.
-    private animatedBitmaps = new Map<number, { frames: ImageBitmap[]; starts: number[]; total: number }>();
+    // Animated bitmaps (a GIF embedded whole), streamed: one frame decoded at a time, the
+    // next asked for when the document's clock passes the end of the one showing. A long
+    // GIF at full size is hundreds of megabytes as bitmaps, so nothing is decoded ahead —
+    // the C++ player streams through one working buffer for the same reason.
+    private animatedBitmaps = new Map<number, AnimatedBitmap>();
+    private disposed = false;
 
     /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
     private meshCache = new Map<number, {
@@ -190,43 +205,72 @@ export class CanvasPaintContext extends PaintContext {
             await decoder.tracks.ready;
             const track = decoder.tracks.selectedTrack;
             const count: number = track ? track.frameCount : 0;
-            if (count < 2) { decoder.close(); return; }
-            const frames: ImageBitmap[] = [];
-            const starts: number[] = [];
-            let t = 0;
-            for (let i = 0; i < count; i++) {
-                const { image } = await decoder.decode({ frameIndex: i });
-                // Durations come in microseconds; a frame that says nothing (or too little
-                // to see) gets the 100 ms browsers give such GIFs.
-                let seconds = (image.duration ?? 0) / 1e6;
-                if (!(seconds >= 0.02)) seconds = 0.1;
-                frames.push(await createImageBitmap(image));
-                image.close();
-                starts.push(t);
-                t += seconds;
-            }
-            decoder.close();
-            this.animatedBitmaps.set(imageId, { frames, starts, total: t });
+            if (count < 2 || this.disposed) { decoder.close(); return; }
+            const anim: AnimatedBitmap = { decoder, count, index: -1, frame: null, frameEnds: 0,
+                                           decoding: false, failed: false };
+            this.animatedBitmaps.set(imageId, anim);
             this.needsRepaint();
         } catch (e) {
             console.warn(`CanvasPaintContext: cannot animate bitmap ${imageId}`, e);
         }
     }
 
-    // The bitmap to draw now: for an animated one, the frame the document's clock is on,
-    // and a repaint asked for so the next frame follows.
-    private bitmapToDraw(imageId: number): HTMLImageElement | ImageBitmap | undefined {
+    // Decode the frame after the one showing, and make it the one showing when it lands.
+    // One decode in flight at a time: a clock that has run ahead is not chased through the
+    // frames in between (a GIF's frames build on each other, so every one would cost), the
+    // picture just plays late until it catches up.
+    private advanceAnimated(anim: AnimatedBitmap, now: number): void {
+        if (anim.decoding || anim.failed || anim.count < 1) return;
+        anim.decoding = true;
+        const next = (anim.index + 1) % anim.count;
+        anim.decoder.decode({ frameIndex: next }).then((result: any) => {
+            const image: VideoFrame = result.image;
+            // Durations come in microseconds; a frame that says nothing (or too little to
+            // see) gets the 100 ms browsers give such GIFs.
+            let seconds = (image.duration ?? 0) / 1e6;
+            if (!(seconds >= 0.02)) seconds = 0.1;
+            if (this.disposed) { image.close(); return; }
+            if (anim.frame) anim.frame.close();
+            anim.frame = image;
+            anim.index = next;
+            // The new frame lasts from now (or from when the last one ended, if that was a
+            // moment ago) rather than from a start the clock is far past.
+            anim.frameEnds = Math.max(now, anim.frameEnds) + seconds;
+            anim.decoding = false;
+            this.needsRepaint();
+        }).catch((e: unknown) => {
+            anim.failed = true;
+            anim.decoding = false;
+            console.warn('CanvasPaintContext: animated bitmap frame failed', e);
+        });
+    }
+
+    // The bitmap to draw now: for an animated one, the frame the document's clock is on —
+    // the next one is asked for once the clock passes the end of this one — and a repaint
+    // asked for so it follows.
+    private bitmapToDraw(imageId: number): CanvasImageSource | undefined {
         const anim = this.animatedBitmaps.get(imageId);
-        if (!anim || anim.total <= 0) return this.bitmapCache.get(imageId);
+        if (!anim) return this.bitmapCache.get(imageId);
         const context = this.getContext();
-        const t = context ? context.getAnimationTime() : 0;
-        const phase = ((t % anim.total) + anim.total) % anim.total;
-        let index = 0;
-        for (let i = 0; i < anim.starts.length; i++) {
-            if (anim.starts[i] <= phase) index = i; else break;
-        }
+        const now = context ? context.getAnimationTime() : 0;
+        if (anim.index < 0 || now >= anim.frameEnds) this.advanceAnimated(anim, now);
         this.needsRepaint();
-        return anim.frames[index];
+        return anim.frame ?? this.bitmapCache.get(imageId);
+    }
+
+    // Let go of what animated bitmaps hold — decoders and frames are not cheap, and a paint
+    // context outlives its document only as garbage.
+    dispose(): void {
+        this.disposed = true;
+        for (const anim of this.animatedBitmaps.values()) {
+            try { anim.decoder.close(); } catch { /* already closed */ }
+            if (anim.frame) anim.frame.close();
+        }
+        this.animatedBitmaps.clear();
+        for (const img of this.bitmapCache.values()) {
+            if (typeof (img as ImageBitmap).close === 'function') (img as ImageBitmap).close();
+        }
+        this.bitmapCache.clear();
     }
 
     // --- Path cache ---
