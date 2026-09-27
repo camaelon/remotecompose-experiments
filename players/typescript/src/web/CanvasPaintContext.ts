@@ -170,6 +170,10 @@ export class CanvasPaintContext extends PaintContext {
 
     loadBitmap(imageId: number, encoding: number, type: number,
                width: number, height: number, bitmap: Uint8Array): void {
+        // A bitmap's data operation is applied on every paint's data pass, with the same
+        // bytes each time. Decoding once is enough — and for an animated one, essential: a
+        // fresh decoder every frame is one that never gets to its first picture.
+        if (this.bitmapPromises.has(imageId)) return;
         // A GIF: an <img> would draw its first frame forever, so its frames are decoded
         // separately where the browser can (WebCodecs' ImageDecoder), and the <img> below
         // stays as the still to show until they are, or on a browser that cannot.
