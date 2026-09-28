@@ -17,6 +17,7 @@ presenter player. If you are writing a third, link this — do not fork the view
 | `rcplayer/StillHosts.h`  | The custom-component hosts for painting a document off-screen — used by PDF pages and by a player's previews |
 | `rcplayer/WebpPlayer.h`, `AvfVideoPlayer.h` | Animated images and macOS video as whole slides    |
 | `rcplayer/VideoCustomHost.h`, `WebCustomHost.h` | `LAYOUT_CUSTOM` hosts for video and web embeds inside a document |
+| `rcplayer/CameraCustomHost.h` | `LAYOUT_CUSTOM` host for the machine's camera (`camera:<device>#fit=fill&crop=…&mirror=1`): one AVFoundation session per device, started on first draw, stopped by itself when no slide has drawn it for a few seconds |
 | `rcplayer/WidgetHelper.h`| Put a borderless window on the macOS desktop layer                   |
 
 State is process-wide — `rcplayer::g` — because a player is a single window playing

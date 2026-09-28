@@ -8,6 +8,9 @@
 //                         for a film that runs across many slides — persist, step, stepid,
 //                         timeid (see the comments on drawRc below).
 //   video:<path>#…       a video, played muted and looped, fitted into the box.
+//   camera:<device>#…    the viewer's camera (getUserMedia), filled into the box; `mirror=1`
+//                        flips it. The device is advisory here: the browser picks the
+//                        user-facing camera and asks the viewer once.
 //   web:<url>#…          a web page; there is no drawing a browser into a canvas, so it
 //                         becomes the same labelled frame the desktop player's exports show.
 //
@@ -26,10 +29,11 @@ import { WebRemoteContext } from './WebRemoteContext';
 export type EmbedResolver = (path: string) => Promise<ArrayBuffer | null>;
 
 interface EmbedConfig {
-    kind: string;            // "rc", "video", "web", or "" for a bare path
+    kind: string;            // "rc", "video", "web", "camera", or "" for a bare path
     path: string;
     fit: string;             // fit | fill | native
     crop: [number, number, number, number];
+    mirror: boolean;         // camera: flipped left-right
     gate: number;
     persist: boolean;
     hasStep: boolean;
@@ -42,13 +46,18 @@ interface EmbedConfig {
 // still read as the fit, for back-compat with the first decks.
 export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfig {
     const out: EmbedConfig = {
-        kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], gate: 0,
+        kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], mirror: false, gate: 0,
         persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1,
     };
     const colon = config.indexOf(':');
     if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
         out.kind = config.slice(0, colon);
         out.path = config.slice(colon + 1);
+    }
+    // A camera fills its box unless told otherwise, and "camera:" alone is the default one.
+    if (out.kind === 'camera') {
+        out.fit = 'fill';
+        if (!out.path || out.path.startsWith('#')) out.path = 'default' + out.path;
     }
     const hash = out.path.indexOf('#');
     if (hash >= 0) {
@@ -58,11 +67,13 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             const eq = tok.indexOf('=');
             if (eq < 0) {
                 if (tok === 'persist') out.persist = true;
+                else if (tok === 'mirror') out.mirror = true;
                 else if (tok) out.fit = tok;
                 continue;
             }
             const k = tok.slice(0, eq), v = tok.slice(eq + 1);
             if (k === 'fit') out.fit = v;
+            else if (k === 'mirror') out.mirror = !(v === '0' || v === 'false' || v === 'off');
             else if (k === 'persist') out.persist = !(v === '0' || v === 'false' || v === 'off');
             else if (k === 'step') { out.hasStep = true; out.step = parseFloat(v) || 0; out.persist = true; }
             else if (k === 'stepid') out.stepId = parseInt(v, 10);
@@ -103,9 +114,18 @@ interface VideoEmbed {
     ready: boolean;
 }
 
+// The viewer's camera, once asked for: one stream for every camera embed on the page.
+interface CameraFeed {
+    element: HTMLVideoElement;
+    ready: boolean;
+    failed: boolean;
+    stream: MediaStream | null;
+}
+
 export class WebCustomHost implements CustomComponentHost {
     private docs = new Map<string, NestedDoc>();
     private videos = new Map<string, VideoEmbed>();
+    private camera: CameraFeed | null = null;
     private resolver: EmbedResolver;
     private defaultFit = 'fit';
     // Something asked to be painted before it was ready; the page is told so it paints again.
@@ -153,6 +173,7 @@ export class WebCustomHost implements CustomComponentHost {
         const cfg = parseEmbedConfig(config, this.defaultFit);
         if (!cfg.path) return false;
         if (cfg.kind === 'video') return this.drawVideo(cfg, pc, w, h);
+        if (cfg.kind === 'camera') return this.drawCamera(cfg, pc, w, h);
         if (cfg.kind === 'web') return this.drawWebFrame(cfg, pc, w, h);
         if (cfg.kind && cfg.kind !== 'rc') return false;
         return this.drawRc(cfg, config, pc, w, h, timeSec);
@@ -302,6 +323,67 @@ export class WebCustomHost implements CustomComponentHost {
         canvas.clip();
         canvas.drawImage(video.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
         canvas.restore();
+        return true;
+    }
+
+    // ── The camera ────────────────────────────────────────────────────
+
+    // The viewer's own camera in the box, the way the desktop player puts the speaker's
+    // there. The stream is asked for once, on the first camera embed, and kept for the
+    // page; the browser's own prompt does the asking. Until it arrives — or when it is
+    // refused — the box is a dark plate, as on the desktop.
+    private drawCamera(cfg: EmbedConfig, pc: PaintContext, w: number, h: number): boolean {
+        const host = pc as CanvasPaintContext;
+        if (typeof host.getCanvas !== 'function' || typeof document === 'undefined') return false;
+        const canvas = host.getCanvas();
+        if (!this.camera) {
+            const element = document.createElement('video');
+            element.muted = true;
+            element.playsInline = true;
+            element.autoplay = true;
+            // Detached, a video element never starts: it lives in the page, out of sight.
+            element.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+            document.body.appendChild(element);
+            const feed: CameraFeed = { element, ready: false, failed: false, stream: null };
+            this.camera = feed;
+            const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
+            if (!media || !media.getUserMedia) {
+                feed.failed = true;
+            } else {
+                media.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+                    .then(stream => {
+                        feed.stream = stream;
+                        element.srcObject = stream;
+                        element.addEventListener('loadeddata', () => { feed.ready = true; });
+                        element.play().catch(() => {});
+                    })
+                    .catch(e => { console.warn('camera: not available', e); feed.failed = true; });
+            }
+        }
+        const feed = this.camera;
+        canvas.save();
+        canvas.beginPath();
+        canvas.rect(0, 0, w, h);
+        canvas.clip();
+        const vw = feed.element.videoWidth, vh = feed.element.videoHeight;
+        if (!feed.ready || vw <= 0 || vh <= 0) {
+            canvas.fillStyle = '#101318';
+            canvas.fillRect(0, 0, w, h);
+            canvas.restore();
+            if (!feed.failed) pc.needsRepaint();
+            return true;
+        }
+        const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
+        let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
+        if (cropW <= 0 || cropH <= 0) { cropW = vw; cropH = vh; }
+        const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+        if (cfg.mirror) {
+            canvas.translate(w, 0);
+            canvas.scale(-1, 1);
+        }
+        canvas.drawImage(feed.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+        canvas.restore();
+        pc.needsRepaint();      // a live feed is a new frame every frame
         return true;
     }
 

@@ -131,6 +131,7 @@ void initDocument() {
     g.context->setDocument(g.doc.get());
     g.customRouter.video = &g.videoHost;
     g.customRouter.web = &g.webHost;
+    g.customRouter.camera = &g.cameraHost;
     g.customRouter.rcdoc = &g.rcDocHost;
     g.context->setCustomHost(&g.customRouter);   // video + embedded-web + embedded-rc custom components
     g.context->mDebug = g.debug;
@@ -168,6 +169,7 @@ bool loadFile(const std::string& path) {
     // views persist across slides (hidden when off-slide via the frame bracket); only
     // the per-slide videos are released here.
     g.videoHost.reset();
+    g.cameraHost.reset();   // the feed idles itself; the next slide that wants it has it at once
     g.rcDocHost.retire();   // keeps `persist` embeds (a film that runs on across slides)
     if (!g.zip) {
         g.videoHost.setBaseDir(fs::path(path).parent_path().string());

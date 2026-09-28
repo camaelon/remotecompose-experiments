@@ -1,6 +1,8 @@
 #include "rcplayer/StillHosts.h"
 
 #include "rcplayer/AvfVideoPlayer.h"
+#include "rcplayer/CameraCustomHost.h"
+#include "rcplayer/CameraStandIn.h"
 #include "rcplayer/Player.h"
 
 #include "rccore/CustomComponentHost.h"
@@ -213,12 +215,29 @@ struct WebPlaceholderHost : rccore::CustomComponentHost {
     }
 };
 
+// Draws a marked-out frame where the camera will be, for the same reason as the web one: a
+// still cannot show a live feed, and a hole where the speaker's face goes is worse than a
+// labelled box. Named for the camera the slide asked for.
+struct CameraPlaceholderHost : rccore::CustomComponentHost {
+    bool drawCustom(int, const std::string& config, rccore::PaintContext* pc,
+                    float w, float h, double) override {
+        if (w <= 2 || h <= 2) return false;
+        CameraCustomHost::Config cfg;
+        if (!CameraCustomHost::parseConfig(config, &cfg)) return false;
+        auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
+        if (!skpc || !skpc->canvas()) return false;
+        drawCameraStandIn(skpc->canvas(), cfg, w, h);
+        return true;
+    }
+};
+
 }  // namespace
 
 struct StillHosts::Impl {
     rcskia::RcDocumentHost rcHost;
     VideoFrameHost videoHost;
     WebPlaceholderHost webHost;
+    CameraPlaceholderHost cameraHost;
     CustomHostRouter router;
 };
 
@@ -228,6 +247,7 @@ StillHosts::StillHosts(const std::string& baseDir) : mImpl(std::make_unique<Impl
     mImpl->router.rcdoc = &mImpl->rcHost;
     mImpl->router.video = &mImpl->videoHost;
     mImpl->router.web = &mImpl->webHost;   // a marked frame; a real view needs a window
+    mImpl->router.camera = &mImpl->cameraHost;   // likewise: a feed is only live
 }
 
 StillHosts::~StillHosts() = default;

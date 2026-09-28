@@ -15,11 +15,13 @@ set(RCPLAYER_SOURCES
     src/StillHosts.cpp
     src/TextFont.cpp
     src/VideoCustomHost.cpp
+    src/CameraStandIn.cpp
 )
 
 if(APPLE)
     list(APPEND RCPLAYER_SOURCES
         src/AvfVideoPlayer.mm
+        src/CameraCustomHost.mm
         src/MetalRenderBackend.mm
         src/WebCustomHost.mm
         src/WidgetHelper.mm
@@ -27,6 +29,7 @@ if(APPLE)
 else()
     list(APPEND RCPLAYER_SOURCES
         src/AvfVideoPlayerStub.cpp
+        src/CameraCustomHostStub.cpp
         src/WebCustomHostStub.cpp
         src/WidgetHelperStub.cpp
     )
@@ -85,6 +88,7 @@ if(APPLE)
     # Obj-C++ ARC for the .mm sources.
     set_source_files_properties(
         src/AvfVideoPlayer.mm
+        src/CameraCustomHost.mm
         src/MetalRenderBackend.mm
         src/WebCustomHost.mm
         src/WidgetHelper.mm

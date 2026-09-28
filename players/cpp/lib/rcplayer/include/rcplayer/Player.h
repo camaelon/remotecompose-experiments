@@ -13,6 +13,7 @@
 
 #include "rcplayer/AvfVideoPlayer.h"
 #include "rcplayer/RenderBackend.h"
+#include "rcplayer/CameraCustomHost.h"
 #include "rcplayer/VideoCustomHost.h"
 #include "rcplayer/WebCustomHost.h"
 #include "rcplayer/WebpPlayer.h"
@@ -38,15 +39,19 @@ struct GLFWwindow;
 namespace rcplayer {
 
 // Routes LAYOUT_CUSTOM draws to the right host by the config prefix: "web:" → the web
-// host, "rc:" → the embedded-document host, "video:" (default) → the video host.
+// host, "rc:" → the embedded-document host, "camera:" → the camera host, "video:"
+// (default) → the video host.
 struct CustomHostRouter : rccore::CustomComponentHost {
     rccore::CustomComponentHost* video = nullptr;   // live VideoCustomHost, or a still-frame stand-in
     rccore::CustomComponentHost* web = nullptr;     // live WebCustomHost, or a placeholder for stills
+    rccore::CustomComponentHost* camera = nullptr;  // live CameraCustomHost, or a placeholder for stills
     rcskia::RcDocumentHost* rcdoc = nullptr;
     bool drawCustom(int id, const std::string& config, rccore::PaintContext* pc,
                     float w, float h, double t) override {
         if (config.rfind("web:", 0) == 0)
             return web ? web->drawCustom(id, config, pc, w, h, t) : false;
+        if (config.rfind("camera:", 0) == 0)
+            return camera ? camera->drawCustom(id, config, pc, w, h, t) : false;
         if (config.rfind("rc:", 0) == 0)
             return rcdoc ? rcdoc->drawCustom(id, config, pc, w, h, t) : false;
         return video ? video->drawCustom(id, config, pc, w, h, t) : false;
@@ -79,6 +84,7 @@ struct ViewerState {
     // behind a router registered on the context.
     VideoCustomHost videoHost;
     WebCustomHost webHost;
+    CameraCustomHost cameraHost;
     rcskia::RcDocumentHost rcDocHost;
     CustomHostRouter customRouter;
 
