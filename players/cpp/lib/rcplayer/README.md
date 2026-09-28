@@ -18,6 +18,7 @@ presenter player. If you are writing a third, link this — do not fork the view
 | `rcplayer/WebpPlayer.h`, `AvfVideoPlayer.h` | Animated images and macOS video as whole slides    |
 | `rcplayer/VideoCustomHost.h`, `WebCustomHost.h` | `LAYOUT_CUSTOM` hosts for video and web embeds inside a document |
 | `rcplayer/CameraCustomHost.h` | `LAYOUT_CUSTOM` host for the machine's camera (`camera:<device>#fit=fill&crop=…&mirror=1`): one AVFoundation session per device, started on first draw, stopped by itself when no slide has drawn it for a few seconds |
+| `rcplayer/AvfFrameReader.h` | Frames of a movie by their time, decoded forward (AVAssetReader) — a camera take played under the narration it was recorded with, on screen and into a video export |
 | `rcplayer/WidgetHelper.h`| Put a borderless window on the macOS desktop layer                   |
 
 State is process-wide — `rcplayer::g` — because a player is a single window playing

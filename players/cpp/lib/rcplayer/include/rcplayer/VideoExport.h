@@ -33,6 +33,8 @@ struct VideoSlide {
     std::string entry;      // a playlist entry, as collectDeckEntries returns them
     double duration = 0.0;  // how long it stays up, seconds (snapped to the frame grid)
     std::vector<VideoCue> cues;   // captions, in order; empty for none
+    std::string take;       // the camera take recorded with the narration (a movie), or empty:
+                            // shown in the slide's camera boxes, frame by frame with the audio
 };
 
 // A band under every frame for the captions: the movie is `height` plus this tall, the

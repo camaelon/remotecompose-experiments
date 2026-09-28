@@ -174,10 +174,13 @@ VideoExportResult exportDeckToVideo(const std::vector<VideoSlide>& slides,
                   << "  " << frames << " frames\n";
         const std::string what = "slide " + std::to_string(k + 1) + "/" + std::to_string(slides.size())
                                  + " " + baseName(slide.entry);
+        // The camera take, when the narration has one: the boxes show it at the frame's time.
+        g.cameraHost.setTake(slide.take);
         for (long f = 0; f < frames; f++) {
             if (f % sayEvery == 0) sayProgress(result.frames, totalFrames, what);
             const double t = f * dt;
             g.animTime = t;
+            if (!slide.take.empty()) g.cameraHost.setTakeTime(t);
             if (g.doc) g.doc->setFixedTimeMs(wallBase + static_cast<int64_t>(t * 1000.0));
             renderFrame(dt);
             SkSurface* surface = g.backend ? g.backend->surface() : nullptr;
@@ -204,6 +207,7 @@ VideoExportResult exportDeckToVideo(const std::vector<VideoSlide>& slides,
         result.slides++;
     }
 
+    g.cameraHost.setTake(std::string());
     if (!failed) sayProgress(totalFrames, totalFrames, "finishing the file");
     const int rc = ::pclose(pipe);
     g.zip.reset();

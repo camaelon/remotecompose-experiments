@@ -20,6 +20,7 @@ set(RCPLAYER_SOURCES
 
 if(APPLE)
     list(APPEND RCPLAYER_SOURCES
+        src/AvfFrameReader.mm
         src/AvfVideoPlayer.mm
         src/CameraCustomHost.mm
         src/MetalRenderBackend.mm
@@ -87,6 +88,7 @@ if(APPLE)
 
     # Obj-C++ ARC for the .mm sources.
     set_source_files_properties(
+        src/AvfFrameReader.mm
         src/AvfVideoPlayer.mm
         src/CameraCustomHost.mm
         src/MetalRenderBackend.mm

@@ -10,6 +10,11 @@
 // next slide that wants it starts it again. `<device>` is "default", a substring of a
 // camera's name ("FaceTime", "iPhone"), or an index into the cameras the system lists.
 //
+// A take: while a talk's narration is recorded, the camera can be recorded too, to a movie
+// beside the wav (startTake / finishTake). Played back, a take stands in for the live feed
+// in every camera box (setTake / setTakeTime), following the narration's clock — on screen,
+// and frame by frame into a video export.
+//
 // Apple platforms only: elsewhere the host draws nothing.
 #pragma once
 
@@ -37,6 +42,26 @@ public:
 
     bool drawCustom(int componentId, const std::string& config,
                     rccore::PaintContext* pc, float w, float h, double timeSec) override;
+
+    // ── Recording a take ─────────────────────────────────────────────
+    // Record `device` to the movie at `path` (a .mov), starting the camera if it is not
+    // running. False when there is no camera to record. One take at a time.
+    bool startTake(const std::string& device, const std::string& path);
+    // Stop recording. The file is finalised in the background; once it is, it is moved to
+    // `moveTo` when that is given, or left where it was recorded.
+    void finishTake(const std::string& moveTo = std::string());
+    // Stop recording and throw the file away.
+    void discardTake();
+    // A break in the talk is a break in the take.
+    void pauseTake(bool paused);
+    bool takeRunning() const;
+
+    // ── Playing a take back ──────────────────────────────────────────
+    // Every camera box shows the movie at `path` instead of the live feed, at the time last
+    // given to setTakeTime. Empty: back to the live feed.
+    void setTake(const std::string& path);
+    void setTakeTime(double sec);
+    bool takePlaying() const;
 
     // The config's parts, for tests and for the still-frame stand-in: the device query
     // and the options. Fit is "fill" unless said otherwise.

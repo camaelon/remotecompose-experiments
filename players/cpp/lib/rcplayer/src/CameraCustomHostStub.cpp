@@ -24,6 +24,14 @@ bool CameraCustomHost::drawCustom(int, const std::string& config, rccore::PaintC
     rcplayer::drawCameraStandIn(skpc->canvas(), cfg, w, h);
     return true;
 }
+bool CameraCustomHost::startTake(const std::string&, const std::string&) { return false; }
+void CameraCustomHost::finishTake(const std::string&) {}
+void CameraCustomHost::discardTake() {}
+void CameraCustomHost::pauseTake(bool) {}
+bool CameraCustomHost::takeRunning() const { return false; }
+void CameraCustomHost::setTake(const std::string&) {}
+void CameraCustomHost::setTakeTime(double) {}
+bool CameraCustomHost::takePlaying() const { return false; }
 bool CameraCustomHost::parseConfig(const std::string& config, Config* out) {
     return rcplayer::parseCameraConfig(config, out);
 }
