@@ -75,6 +75,9 @@ export class RcdPlayer {
     // them; a new document retires the rest.
     private customHost = new WebCustomHost();
 
+    // Bitmaps the page supplies as video (see setBitmapVideos), for the next document.
+    private bitmapVideos: Record<string, string> | null = null;
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         const ctx = canvas.getContext('2d');
@@ -310,6 +313,7 @@ export class RcdPlayer {
         // animated bitmap holds.
         if (this.paintContext) this.paintContext.dispose();
         this.paintContext = new CanvasPaintContext(null as any, this.ctx);
+        this.paintContext.setBitmapVideos(this.bitmapVideos);
         this.remoteContext = new WebRemoteContext(this.paintContext);
 
         // Wire up
@@ -476,6 +480,13 @@ export class RcdPlayer {
      * travel inside the page and this hands them over.
      */
     setEmbedResolver(resolver: EmbedResolver): void { this.customHost.setResolver(resolver); }
+
+    /**
+     * Bitmaps of the *next* document to load that should be drawn from a video instead of
+     * their own bytes: image id → URL. An exporter transcodes an animated GIF once and hands
+     * the page the result; the browser's video pipeline then does the decoding.
+     */
+    setBitmapVideos(videos: Record<string, string> | null): void { this.bitmapVideos = videos; }
     getCustomHost(): WebCustomHost { return this.customHost; }
 
     getDocument(): CoreDocument | null { return this.document; }

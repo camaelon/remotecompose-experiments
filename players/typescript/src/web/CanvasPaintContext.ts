@@ -110,6 +110,10 @@ export class CanvasPaintContext extends PaintContext {
     // the C++ player streams through one working buffer for the same reason.
     private animatedBitmaps = new Map<number, AnimatedBitmap>();
     private disposed = false;
+    // Bitmaps a host has supplied as video instead: a GIF transcoded once at export time,
+    // decoded by the browser's own video pipeline and drawn frame by frame from the element.
+    // Far cheaper than decoding GIF frames, and the preferred way to animate a bitmap.
+    private bitmapVideos = new Map<number, HTMLVideoElement>();
 
     /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
     private meshCache = new Map<number, {
@@ -179,7 +183,8 @@ export class CanvasPaintContext extends PaintContext {
         // stays as the still to show until they are, or on a browser that cannot.
         const isGif = bitmap.length > 6 && bitmap[0] === 0x47 && bitmap[1] === 0x49
                       && bitmap[2] === 0x46 && bitmap[3] === 0x38;
-        if (isGif && typeof (globalThis as any).ImageDecoder !== 'undefined') {
+        if (isGif && !this.bitmapVideos.has(imageId)
+            && typeof (globalThis as any).ImageDecoder !== 'undefined') {
             this.loadAnimatedBitmap(imageId, bitmap);
         }
         // Decode bitmap asynchronously and cache
@@ -200,6 +205,31 @@ export class CanvasPaintContext extends PaintContext {
             img.src = url;
         });
         this.bitmapPromises.set(imageId, promise);
+    }
+
+    // `videos` maps image ids to video URLs. Called before the document's data pass, so a
+    // bitmap with a video never starts a GIF decoder.
+    setBitmapVideos(videos: Record<string, string> | Map<number, string> | null): void {
+        for (const v of this.bitmapVideos.values()) { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); }
+        this.bitmapVideos.clear();
+        if (!videos || typeof document === 'undefined') return;
+        const entries: Array<[number, string]> = videos instanceof Map
+            ? [...videos.entries()]
+            : Object.entries(videos).map(([k, v]) => [Number(k), v] as [number, string]);
+        for (const [id, url] of entries) {
+            const video = document.createElement('video');
+            video.muted = true;
+            video.loop = true;
+            video.playsInline = true;
+            video.preload = 'auto';
+            video.src = url;
+            // In the document, out of sight: a detached video element is loaded lazily and
+            // played reluctantly; one on the page, however small, streams like any other.
+            video.style.cssText = 'position:fixed;left:-4px;top:-4px;width:2px;height:2px;opacity:0;pointer-events:none';
+            document.body.appendChild(video);
+            video.play().catch(() => { /* until the page has been clicked */ });
+            this.bitmapVideos.set(id, video);
+        }
     }
 
     private async loadAnimatedBitmap(imageId: number, bytes: Uint8Array): Promise<void> {
@@ -253,6 +283,15 @@ export class CanvasPaintContext extends PaintContext {
     // the next one is asked for once the clock passes the end of this one — and a repaint
     // asked for so it follows.
     private bitmapToDraw(imageId: number): CanvasImageSource | undefined {
+        const video = this.bitmapVideos.get(imageId);
+        if (video) {
+            this.needsRepaint();
+            if (video.readyState >= 2 && video.videoWidth > 0) {
+                if (video.paused) video.play().catch(() => {});
+                return video;
+            }
+            return this.bitmapCache.get(imageId);     // the still, until the video is ready
+        }
         const anim = this.animatedBitmaps.get(imageId);
         if (!anim) return this.bitmapCache.get(imageId);
         const context = this.getContext();
@@ -266,6 +305,8 @@ export class CanvasPaintContext extends PaintContext {
     // context outlives its document only as garbage.
     dispose(): void {
         this.disposed = true;
+        for (const v of this.bitmapVideos.values()) { v.pause(); v.removeAttribute('src'); v.load(); v.remove(); }
+        this.bitmapVideos.clear();
         for (const anim of this.animatedBitmaps.values()) {
             try { anim.decoder.close(); } catch { /* already closed */ }
             if (anim.frame) anim.frame.close();
