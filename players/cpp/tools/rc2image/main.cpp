@@ -115,7 +115,15 @@ int main(int argc, char* argv[]) {
 
     SkCanvas* canvas = surface->getCanvas();
     // White background (matches TS renderer)
-    canvas->clear(SK_ColorWHITE);
+    // RC_BG=transparent (or any 0xAARRGGBB hex) picks the clear colour; default stays white.
+    {
+        SkColor bg = SK_ColorWHITE;
+        if (const char* e = std::getenv("RC_BG")) {
+            if (std::strcmp(e, "transparent") == 0) bg = SK_ColorTRANSPARENT;
+            else bg = static_cast<SkColor>(std::strtoul(e, nullptr, 16));
+        }
+        canvas->clear(bg);
+    }
     if (fitWidth > 0 && fitHeight > 0) {
         canvas->translate(fitOx, fitOy);
         canvas->scale(fitScale, fitScale);
