@@ -490,7 +490,7 @@ export class RcdPlayer {
     // The camera take for the slide being shown (a recording of the speaker), and where its
     // narration has got to. With a take set, a camera box draws it instead of asking the
     // viewer for their own camera.
-    setCameraTake(src: string | null): void { this.customHost.setCameraTake(src); }
+    setCameraTake(src: string | null, framed = false): void { this.customHost.setCameraTake(src, framed); }
     setCameraTakeTime(seconds: number, playing: boolean): void {
         this.customHost.setCameraTakeTime(seconds, playing);
     }

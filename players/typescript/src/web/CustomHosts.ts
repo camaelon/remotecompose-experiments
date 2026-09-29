@@ -130,6 +130,7 @@ interface CameraTake {
     element: HTMLVideoElement;
     src: string;
     ready: boolean;
+    framed: boolean;     // already cut to what the box shows: do not cut it again
 }
 
 export class WebCustomHost implements CustomComponentHost {
@@ -157,9 +158,12 @@ export class WebCustomHost implements CustomComponentHost {
     setDefaultFit(fit: string): void { this.defaultFit = fit; }
 
     // The camera take for the slide being shown, or null for none. A camera box then draws
-    // the recording instead of asking the viewer for their own camera.
-    setCameraTake(src: string | null): void {
-        if (this.take && this.take.src === src) return;
+    // the recording instead of asking the viewer for their own camera. `framed` says the
+    // file has already been cut to the part of the frame the box shows and scaled to the
+    // size it shows it at — which is how the web export ships one — so the crop in the
+    // slide's config has been applied and must not be applied twice.
+    setCameraTake(src: string | null, framed = false): void {
+        if (this.take && this.take.src === src) { this.take.framed = framed; return; }
         if (this.take) {
             this.take.element.pause();
             this.take.element.remove();
@@ -174,7 +178,7 @@ export class WebCustomHost implements CustomComponentHost {
         // A detached video element never loads: it lives in the page, out of sight.
         element.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
         document.body.appendChild(element);
-        const take: CameraTake = { element, src, ready: false };
+        const take: CameraTake = { element, src, ready: false, framed };
         element.addEventListener('loadeddata', () => { take.ready = true; });
         this.take = take;
     }
@@ -387,7 +391,8 @@ export class WebCustomHost implements CustomComponentHost {
         // The take recorded with the narration, when this slide has one: what the speaker's
         // camera saw while they were saying this.
         if (this.take) {
-            this.drawVideoInto(canvas, this.take.element, cfg, w, h, this.take.ready);
+            const framed = this.take.framed ? { ...cfg, crop: [0, 0, 1, 1] as [number, number, number, number] } : cfg;
+            this.drawVideoInto(canvas, this.take.element, framed, w, h, this.take.ready);
             pc.needsRepaint();
             return true;
         }
