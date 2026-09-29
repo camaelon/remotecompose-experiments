@@ -487,6 +487,13 @@ export class RcdPlayer {
      * the page the result; the browser's video pipeline then does the decoding.
      */
     setBitmapVideos(videos: Record<string, string> | null): void { this.bitmapVideos = videos; }
+    // The camera take for the slide being shown (a recording of the speaker), and where its
+    // narration has got to. With a take set, a camera box draws it instead of asking the
+    // viewer for their own camera.
+    setCameraTake(src: string | null): void { this.customHost.setCameraTake(src); }
+    setCameraTakeTime(seconds: number, playing: boolean): void {
+        this.customHost.setCameraTakeTime(seconds, playing);
+    }
     getCustomHost(): WebCustomHost { return this.customHost; }
 
     getDocument(): CoreDocument | null { return this.document; }

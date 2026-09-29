@@ -8,9 +8,12 @@
 //                         for a film that runs across many slides — persist, step, stepid,
 //                         timeid (see the comments on drawRc below).
 //   video:<path>#…       a video, played muted and looped, fitted into the box.
-//   camera:<device>#…    the viewer's camera (getUserMedia), filled into the box; `mirror=1`
-//                        flips it. The device is advisory here: the browser picks the
-//                        user-facing camera and asks the viewer once.
+//   camera:<device>#…    the speaker, in the box. On a page built from a recorded talk that
+//                        is the take recorded with the narration (setCameraTake), drawn in
+//                        step with the audio — the viewer is watching a talk, not being
+//                        asked for their own face. Without a take it falls back to the
+//                        viewer's camera (getUserMedia), which is what a live page wants.
+//                        `mirror=1` flips it; the device is advisory in a browser.
 //   web:<url>#…          a web page; there is no drawing a browser into a canvas, so it
 //                         becomes the same labelled frame the desktop player's exports show.
 //
@@ -122,10 +125,18 @@ interface CameraFeed {
     stream: MediaStream | null;
 }
 
+// The take recorded with this slide's narration, played under it.
+interface CameraTake {
+    element: HTMLVideoElement;
+    src: string;
+    ready: boolean;
+}
+
 export class WebCustomHost implements CustomComponentHost {
     private docs = new Map<string, NestedDoc>();
     private videos = new Map<string, VideoEmbed>();
     private camera: CameraFeed | null = null;
+    private take: CameraTake | null = null;
     private resolver: EmbedResolver;
     private defaultFit = 'fit';
     // Something asked to be painted before it was ready; the page is told so it paints again.
@@ -144,6 +155,43 @@ export class WebCustomHost implements CustomComponentHost {
 
     setResolver(resolver: EmbedResolver): void { this.resolver = resolver; }
     setDefaultFit(fit: string): void { this.defaultFit = fit; }
+
+    // The camera take for the slide being shown, or null for none. A camera box then draws
+    // the recording instead of asking the viewer for their own camera.
+    setCameraTake(src: string | null): void {
+        if (this.take && this.take.src === src) return;
+        if (this.take) {
+            this.take.element.pause();
+            this.take.element.remove();
+            this.take = null;
+        }
+        if (!src || typeof document === 'undefined') return;
+        const element = document.createElement('video');
+        element.src = src;
+        element.muted = true;            // the narration is the sound; this is the picture
+        element.playsInline = true;
+        element.preload = 'auto';
+        // A detached video element never loads: it lives in the page, out of sight.
+        element.style.cssText = 'position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none';
+        document.body.appendChild(element);
+        const take: CameraTake = { element, src, ready: false };
+        element.addEventListener('loadeddata', () => { take.ready = true; });
+        this.take = take;
+    }
+
+    // Where the narration has got to, and whether it is running: the take follows it rather
+    // than its own clock, so the speaker's face and their voice stay together. Seeking every
+    // frame would stall the decoder, so it plays and is nudged back only when it drifts.
+    setCameraTakeTime(seconds: number, playing: boolean): void {
+        const take = this.take;
+        if (!take || !take.ready) return;
+        const element = take.element;
+        if (playing && element.paused) element.play().catch(() => {});
+        if (!playing && !element.paused) element.pause();
+        if (Math.abs(element.currentTime - seconds) > 0.25) {
+            try { element.currentTime = seconds; } catch { /* not seekable yet */ }
+        }
+    }
 
     // A new host document: embeds that do not persist go with the old one. The persistent
     // ones — a film running across slides — carry on, clock and all.
@@ -336,6 +384,13 @@ export class WebCustomHost implements CustomComponentHost {
         const host = pc as CanvasPaintContext;
         if (typeof host.getCanvas !== 'function' || typeof document === 'undefined') return false;
         const canvas = host.getCanvas();
+        // The take recorded with the narration, when this slide has one: what the speaker's
+        // camera saw while they were saying this.
+        if (this.take) {
+            this.drawVideoInto(canvas, this.take.element, cfg, w, h, this.take.ready);
+            pc.needsRepaint();
+            return true;
+        }
         if (!this.camera) {
             const element = document.createElement('video');
             element.muted = true;
@@ -361,17 +416,25 @@ export class WebCustomHost implements CustomComponentHost {
             }
         }
         const feed = this.camera;
+        this.drawVideoInto(canvas, feed.element, cfg, w, h, feed.ready);
+        if (!feed.failed) pc.needsRepaint();      // a live feed is a new frame every frame
+        return true;
+    }
+
+    // One video element into a camera box: cropped, fitted, mirrored when asked, and a dark
+    // plate until there are frames — the same thing the desktop player draws.
+    private drawVideoInto(canvas: CanvasRenderingContext2D, element: HTMLVideoElement,
+                          cfg: EmbedConfig, w: number, h: number, ready: boolean): void {
         canvas.save();
         canvas.beginPath();
         canvas.rect(0, 0, w, h);
         canvas.clip();
-        const vw = feed.element.videoWidth, vh = feed.element.videoHeight;
-        if (!feed.ready || vw <= 0 || vh <= 0) {
+        const vw = element.videoWidth, vh = element.videoHeight;
+        if (!ready || vw <= 0 || vh <= 0) {
             canvas.fillStyle = '#101318';
             canvas.fillRect(0, 0, w, h);
             canvas.restore();
-            if (!feed.failed) pc.needsRepaint();
-            return true;
+            return;
         }
         const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
         let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
@@ -381,10 +444,8 @@ export class WebCustomHost implements CustomComponentHost {
             canvas.translate(w, 0);
             canvas.scale(-1, 1);
         }
-        canvas.drawImage(feed.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+        canvas.drawImage(element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
         canvas.restore();
-        pc.needsRepaint();      // a live feed is a new frame every frame
-        return true;
     }
 
     // ── Web pages ─────────────────────────────────────────────────────
