@@ -1,6 +1,12 @@
 // macOS implementation: each "web:<url>" custom component gets a WKWebView positioned
 // over the slide at the component's on-screen bounds (derived from the Skia canvas
 // matrix). The view is a real, interactive page that follows layout/transitions.
+//
+// A native view over the window is not in the window's pixels, so anything that reads those
+// pixels back — the presenter's preview of the slide on the wall — would show a hole exactly
+// where the demo is. So the host also keeps a picture of each page, refreshed a couple of
+// times a second, and draws it into the slide underneath the live view. On the projector it
+// is covered and changes nothing; in a readback it is the page.
 
 #define GLFW_EXPOSE_NATIVE_COCOA
 #import <Cocoa/Cocoa.h>
@@ -10,10 +16,18 @@
 
 #include "rcplayer/WebCustomHost.h"
 #include "rcskia/SkiaPaintContext.h"
+#include "include/core/SkBitmap.h"
 #include "include/core/SkCanvas.h"
+#include "include/core/SkImage.h"
+#include "include/core/SkImageInfo.h"
 #include "include/core/SkMatrix.h"
+#include "include/core/SkPaint.h"
+#include "include/core/SkSamplingOptions.h"
 
+#include <atomic>
+#include <cmath>
 #include <map>
+#include <mutex>
 #include <set>
 #include <string>
 
@@ -27,8 +41,99 @@ static std::map<std::string, NSView*> gViews;
 static std::map<std::string, NSRect> gLastFrame;   // last applied frame per view
 static std::set<std::string> gSeenThisFrame;
 static NSView* gActiveContainer = nil;             // the web view the user clicked into
+
+// The page as a picture, for whatever reads the window's pixels back. One per URL, taken on
+// a timer rather than every frame: a snapshot is a render of the page, and a demo that is a
+// video or an animation is not worth re-rendering sixty times a second for a preview.
+struct WebShot {
+    sk_sp<SkImage> image;
+    double at = 0.0;        // when it was taken, on the media clock
+    bool busy = false;      // one in flight; the callback is async
+    int taken = 0;          // how many have landed for this page
+};
+static std::map<std::string, WebShot> gShots;
+constexpr double kShotEvery = 0.5;      // seconds between snapshots of one page
+constexpr int kNewsWorthyShots = 4;     // the pictures of a page that refresh whatever kept a still
+// The pictures are taken and drawn on the main thread, and read on the worker that renders
+// the deck view's stills, so every touch of the map is under this.
+static std::mutex gShotsLock;
+// Bumped when a page is pictured for the first time — see pagesPictured().
+static std::atomic<uint64_t> gPagesPictured{0};
 static id gKeyMonitor = nil;
 static id gMouseMonitor = nil;
+
+// An NSImage from -takeSnapshot as something Skia can draw: its bytes, copied once.
+static sk_sp<SkImage> imageFromSnapshot(NSImage* shot) {
+    if (!shot) return nullptr;
+    NSSize size = shot.size;
+    const int w = (int)std::lround(size.width), h = (int)std::lround(size.height);
+    if (w <= 0 || h <= 0) return nullptr;
+    CGImageRef cg = [shot CGImageForProposedRect:NULL context:nil hints:nil];
+    if (!cg) return nullptr;
+    SkImageInfo info = SkImageInfo::Make(w, h, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
+    SkBitmap bm;
+    if (!bm.tryAllocPixels(info)) return nullptr;
+    bm.eraseColor(SK_ColorTRANSPARENT);
+    CGColorSpaceRef space = CGColorSpaceCreateDeviceRGB();
+    CGContextRef ctx = CGBitmapContextCreate(bm.getPixels(), w, h, 8, bm.rowBytes(), space,
+                                             kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
+    CGColorSpaceRelease(space);
+    if (!ctx) return nullptr;
+    CGContextDrawImage(ctx, CGRectMake(0, 0, w, h), cg);
+    CGContextRelease(ctx);
+    bm.setImmutable();
+    return bm.asImage();
+}
+
+// Ask a page for its picture, at most every kShotEvery seconds. The answer arrives later,
+// on the main thread, and replaces whatever was there.
+static void refreshShot(const std::string& url, NSView* container, double now) {
+    // Whether there is anything to photograph is settled before the slot is claimed: a
+    // claim that returned without taking one would leave the page marked busy for good, and
+    // it would never be pictured again.
+    WKWebView* wv = nil;
+    for (NSView* sub in container.subviews) {
+        if ([sub isKindOfClass:[WKWebView class]]) { wv = (WKWebView*)sub; break; }
+    }
+    if (!wv || wv.isLoading || wv.bounds.size.width < 2 || wv.bounds.size.height < 2) return;
+    {
+        std::lock_guard<std::mutex> guard(gShotsLock);
+        WebShot& shot = gShots[url];
+        if (shot.busy || now - shot.at < kShotEvery) return;
+        shot.busy = true;
+        shot.at = now;
+    }
+    // The key the answer belongs to, copied: the block outlives this call, and a block that
+    // captured the caller's reference would write its picture into whatever that memory had
+    // become by the time WebKit answered.
+    const std::string key = url;
+    WKSnapshotConfiguration* config = [[WKSnapshotConfiguration alloc] init];
+    // What is on the screen now, rather than waiting for the page to settle: this runs
+    // twice a second under a live talk, and asking WebKit to flush pending updates first
+    // makes a busy page pay for a preview nobody is interacting with.
+    config.afterScreenUpdates = NO;
+    [wv takeSnapshotWithConfiguration:config completionHandler:^(NSImage* image, NSError* error) {
+        sk_sp<SkImage> made = (error || !image) ? nullptr : imageFromSnapshot(image);
+        std::lock_guard<std::mutex> guard(gShotsLock);
+        WebShot& entry = gShots[key];
+        entry.busy = false;
+        if (!made) return;
+        entry.image = made;
+        // The first few pictures of a page each count as news, not just the first: a page
+        // that is still painting itself when it is first photographed would otherwise leave
+        // a blank still behind for good. After a couple of seconds it has settled and the
+        // stills are left alone.
+        if (++entry.taken <= kNewsWorthyShots) gPagesPictured++;
+    }];
+}
+
+uint64_t WebCustomHost::pagesPictured() { return gPagesPictured.load(); }
+
+sk_sp<SkImage> WebCustomHost::pageSnapshot(const std::string& url) {
+    std::lock_guard<std::mutex> guard(gShotsLock);
+    auto it = gShots.find(url);
+    return it == gShots.end() ? nullptr : it->second.image;
+}
 
 static NSView* hostContentView() {
     if (!gWindow) return nil;
@@ -198,6 +303,10 @@ void WebCustomHost::endFrame() {
 void WebCustomHost::reset() {
     for (auto& [url, view] : gViews) [view removeFromSuperview];
     gViews.clear();
+    {
+        std::lock_guard<std::mutex> guard(gShotsLock);
+        gShots.clear();
+    }
     gLastFrame.clear();
     gSeenThisFrame.clear();
     gActiveContainer = nil;
@@ -289,8 +398,22 @@ bool WebCustomHost::drawCustom(int componentId, const std::string& config,
     // document, so a previous slide's page sits off-screen (or peeks a sub-pixel sliver)
     // once settled — requiring real overlap keeps it hidden.
     NSRect inter = NSIntersectionRect(frame, content.bounds);
-    if (inter.size.width > 2.0 && inter.size.height > 2.0) {
+    const bool onScreen = inter.size.width > 2.0 && inter.size.height > 2.0;
+    if (onScreen) {
         gSeenThisFrame.insert(url);
+    }
+
+    // The page, drawn into the slide itself. The live view covers it on the window, so this
+    // is invisible there; it is what a readback of the window sees — the presenter's
+    // preview — and what shows while the view is still hidden.
+    const double now = CACurrentMediaTime();
+    if (onScreen) refreshShot(url, view, now);
+    if (sk_sp<SkImage> page = WebCustomHost::pageSnapshot(url)) {
+        SkSamplingOptions sampling(SkFilterMode::kLinear, SkMipmapMode::kNone);
+        skpc->canvas()->drawImageRect(page,
+                                      SkRect::MakeWH((float)page->width(), (float)page->height()),
+                                      SkRect::MakeWH(w, h), sampling, nullptr,
+                                      SkCanvas::kStrict_SrcRectConstraint);
     }
     return true;
 }

@@ -2,6 +2,7 @@
 
 #include "rcplayer/AvfVideoPlayer.h"
 #include "rcplayer/CameraCustomHost.h"
+#include "rcplayer/WebCustomHost.h"
 #include "rcplayer/CameraStandIn.h"
 #include "rcplayer/Player.h"
 
@@ -180,6 +181,18 @@ struct WebPlaceholderHost : rccore::CustomComponentHost {
         auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
         if (!skpc || !skpc->canvas()) return false;
         SkCanvas* canvas = skpc->canvas();
+
+        // The page itself, when this player has shown it and kept a picture: a still of a
+        // slide with a demo in it should be that slide, not a note saying where the demo
+        // would be. The marked frame below is for the rest — an export with no window, a
+        // page this run has not reached yet.
+        if (sk_sp<SkImage> page = WebCustomHost::pageSnapshot(url)) {
+            SkSamplingOptions sampling(SkFilterMode::kLinear, SkMipmapMode::kNone);
+            canvas->drawImageRect(page, SkRect::MakeWH((float)page->width(), (float)page->height()),
+                                  SkRect::MakeWH(w, h), sampling, nullptr,
+                                  SkCanvas::kStrict_SrcRectConstraint);
+            return true;
+        }
 
         const SkRect box = SkRect::MakeWH(w, h);
         const float radius = std::min(12.0f, std::min(w, h) * 0.06f);

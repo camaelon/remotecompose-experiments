@@ -9,3 +9,5 @@ void WebCustomHost::endFrame() {}
 void WebCustomHost::reset() {}
 bool WebCustomHost::drawCustom(int, const std::string&, rccore::PaintContext*,
                                float, float, double) { return false; }
+sk_sp<SkImage> WebCustomHost::pageSnapshot(const std::string&) { return nullptr; }
+uint64_t WebCustomHost::pagesPictured() { return 0; }
