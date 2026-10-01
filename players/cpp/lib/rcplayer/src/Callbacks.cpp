@@ -143,8 +143,14 @@ void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, int /*m
     }
 }
 
-void framebufferSizeCallback(GLFWwindow* /*window*/, int w, int h) {
-    if (g.backend) g.backend->onFramebufferResize(w, h);
+void framebufferSizeCallback(GLFWwindow* window, int w, int h) {
+    if (!g.backend) return;
+    // GLFW delivers this from the event pump, with whichever context was last made current —
+    // in a host with several windows, usually not this one. The viewport is per context.
+    GLFWwindow* previous = glfwGetCurrentContext();
+    if (window && previous != window) glfwMakeContextCurrent(window);
+    g.backend->onFramebufferResize(w, h);
+    if (window && previous != window && previous) glfwMakeContextCurrent(previous);
 }
 
 void windowSizeCallback(GLFWwindow* /*window*/, int w, int h) {

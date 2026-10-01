@@ -51,6 +51,11 @@ public:
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0,
                      GL_RGBA, GL_UNSIGNED_BYTE, pm.addr());
 
+        // The viewport is set here, in the context being presented to, rather than trusted
+        // from the last resize: GL state is per context, and a resize callback can arrive
+        // while another window's context is current. Several windows each with a backend
+        // would otherwise draw at each other's sizes.
+        if (mFbWidth > 0 && mFbHeight > 0) glViewport(0, 0, mFbWidth, mFbHeight);
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, mTextureId);
@@ -64,6 +69,8 @@ public:
     }
 
     void onFramebufferResize(int fbW, int fbH) override {
+        mFbWidth = fbW;
+        mFbHeight = fbH;
         glViewport(0, 0, fbW, fbH);
     }
 
@@ -74,4 +81,6 @@ private:
     GLuint mTextureId = 0;
     int mWidth = 0;
     int mHeight = 0;
+    int mFbWidth = 0;
+    int mFbHeight = 0;
 };

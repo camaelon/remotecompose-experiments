@@ -26,6 +26,7 @@ struct MetalRenderBackend::Impl {
     id<MTLCommandQueue> queue = nil;
     sk_sp<GrDirectContext> grContext;
     GLuint textureId = 0;
+    int fbWidth = 0, fbHeight = 0;   // the window's framebuffer, for the viewport at present
 
     // CPU-side pixel buffer for readback
     std::vector<uint8_t> pixels;
@@ -131,6 +132,8 @@ void MetalRenderBackend::present() {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, mImpl->pixels.data());
 
+    // Set in the context being presented to: see CpuRenderBackend::present.
+    if (mImpl->fbWidth > 0 && mImpl->fbHeight > 0) glViewport(0, 0, mImpl->fbWidth, mImpl->fbHeight);
     glClear(GL_COLOR_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, mImpl->textureId);
@@ -144,5 +147,7 @@ void MetalRenderBackend::present() {
 }
 
 void MetalRenderBackend::onFramebufferResize(int fbW, int fbH) {
+    mImpl->fbWidth = fbW;
+    mImpl->fbHeight = fbH;
     glViewport(0, 0, fbW, fbH);
 }
