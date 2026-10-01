@@ -1163,10 +1163,18 @@ class Parser {
                 // the default for actionType on the branch that carries a value.
                 const type = value !== null
                     ? Number(a.actionType ?? Writer_1.HOST_ACTION_STRING_TYPE) : -1;
-                actions.push((w) => {
-                    const textId = w.addText(name);
-                    const valueId = value !== null ? w.addText(value) : -1;
-                    (0, Writer_1.hostNamedAction)(textId, type, valueId)(w);
+                // The name and the value are resolved at DIFFERENT times, and it is not an
+                // oversight: the reference parser resolves the value immediately, but hands
+                // HostAction the name as a String, so the name's addText runs later. The
+                // value's DATA_TEXT therefore lands BEFORE the container op and the name's
+                // after it. Resolving both here, or both in the callback, shifts every id
+                // that follows and changes the bytes - and it looks correct whenever name
+                // and value are the same string, because the text cache then collapses them
+                // into one op.
+                const valueId = value !== null ? this.writer.addText(value) : -1;
+                actions.push((w2) => {
+                    const textId = w2.addText(name);
+                    (0, Writer_1.hostNamedAction)(textId, type, valueId)(w2);
                 });
             }
             else if (t === "valuefloatexpressionchange") {
@@ -1389,6 +1397,21 @@ class Parser {
         }
         if (t === "pathcreate") {
             const pid = w.pathCreate(f("x"), f("y"));
+            if (command.id !== undefined && command.id !== null) {
+                this.paths.set(String(command.id), pid);
+            }
+            return;
+        }
+        if (t === "pathexpression") {
+            // start/end/count name the sweep of the parameter the expressions see as a[0];
+            // the reference calls them min/max on the wire.
+            //
+            // expressionY and count are required even though the op allows a null Y, because
+            // the reference JSON parser throws without them - accepting them here would
+            // produce bytes no reference run could be compared against.
+            const xOps = this.expr.infixToRpn(String(command.expressionX));
+            const yOps = this.expr.infixToRpn(String(command.expressionY));
+            const pid = w.pathExpression(Number(command.flags ?? 0), f("start"), f("end"), f("count"), xOps, yOps);
             if (command.id !== undefined && command.id !== null) {
                 this.paths.set(String(command.id), pid);
             }

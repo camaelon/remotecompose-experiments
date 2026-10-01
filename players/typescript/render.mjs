@@ -78,14 +78,25 @@ const theme = THEMES[String(flag('theme', 'light'))] ?? -1;
 const timeMs = flag('time', null);
 if (timeMs !== null) {
     const fixed = Number(timeMs);
-    // Patch millis() ON the existing clock objects rather than swapping the clock in.
-    // RemoteContext re-reads mClock from the document, so a replacement object is dropped and
-    // the render stays on the wall clock — silently, which is how --time appeared to work while
-    // producing byte-identical output for t=0 and t=5000.
-    for (const o of [remote.getClock?.(), doc.getClock?.()]) {
-        if (o) o.millis = () => fixed;
+    // Pin the clock TimeVariables reads, not the context's.
+    //
+    // CoreDocument holds its own TimeVariables with its own RemoteClock, and every time
+    // variable — continuousSec included — is rebuilt from `clock.snapshot()` on each paint.
+    // Replacing the context's clock therefore changes nothing, which is why an earlier
+    // --time produced byte-identical frames for t=0 and t=5000 and looked like the flag
+    // was being ignored. `mTimeVariables` is TS-private and present at runtime.
+    const { createSnapshot } = await import('./build-node/node-entry.js');
+    const tv = doc.mTimeVariables;
+    const clk = tv && tv.getClock && tv.getClock();
+    if (clk) {
+        clk.millis = () => fixed;
+        clk.snapshot = () => createSnapshot(fixed);
+    } else {
+        console.error('--time: could not reach the document clock; frames will not be pinned');
     }
-    remote.setClock?.({ millis: () => fixed });
+    for (const o of [remote.getClock?.(), doc.getClock?.()]) {
+        if (o) { o.millis = () => fixed; o.snapshot = () => createSnapshot(fixed); }
+    }
 }
 for (let f = 0; f < frames; f++) {
     remote.setAnimationTime?.(f / 60);

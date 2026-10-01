@@ -97,7 +97,13 @@ export function createPlayer(
             player.resize(width, height);
         },
         destroy() {
-            player.stop();
+            // player.destroy(), not player.stop(). stop() only cancels the animation frame and
+            // leaves the WebGL context held by the paint context alive. A page that creates and
+            // discards many players - a gallery scrolling through documents - then hits the
+            // browser's context limit, and the earliest canvases silently go blank with no error.
+            // CanvasPaintContext.destroy() is a no-op when no shader renderer was ever created,
+            // so this is safe for documents that never touched WebGL.
+            player.destroy();
             canvas.remove();
         },
         player,
