@@ -141,7 +141,7 @@ void CoreDocument::registerListenersRecursive(
 
 void CoreDocument::updateTimeVariables(RemoteContext& context) {
     int64_t ms;
-    if (mFixedTimeMs > 0) {
+    if (mFixedTimeMs >= 0) {
         ms = mFixedTimeMs;
     } else {
         ms = std::chrono::duration_cast<std::chrono::milliseconds>(

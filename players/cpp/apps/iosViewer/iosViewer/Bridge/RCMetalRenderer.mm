@@ -2,6 +2,8 @@
 
 #import <Metal/Metal.h>
 
+#include <chrono>
+
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
@@ -177,7 +179,23 @@
 
 - (BOOL)needsAnimation {
     if (!_context) return NO;
-    return _context->getRepaintDelay() > 0;
+
+    // getRepaintDelay now takes the wall clock, because the repaint schedule is computed
+    // against absolute time rather than treating animation time as always-advancing.
+    const int64_t nowMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::system_clock::now().time_since_epoch()).count();
+    if (_context->getRepaintDelay(nowMs) > 0) return YES;
+
+    // A document can also ask for the next frame itself, and that request is the only thing
+    // driving an animation the schedule knows nothing about. A fling is the case that
+    // matters: on touch-up TouchExpression configures an easing curve and then calls
+    // needsRepaint() each frame until it runs out. Ignore it and the fling dies the instant
+    // the finger lifts, with no error and no visible cause. apps/viewer carries the same
+    // check and the same reason.
+    if (rccore::PaintContext *pc = _context->getPaintContext()) {
+        if (pc->doesNeedsRepaint()) return YES;
+    }
+    return NO;
 }
 
 - (void)sendTouchDownX:(float)x y:(float)y {
