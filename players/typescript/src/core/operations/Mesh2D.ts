@@ -10,7 +10,7 @@ import type { PaintContext } from '../PaintContext';
 import type { RemoteContext } from '../RemoteContext';
 import type { WireBuffer } from '../WireBuffer';
 import type { VariableSupport } from '../VariableSupport';
-import { idFromNan, idFromBits, isNaNBits, intBitsToFloat } from './Utils';
+import { idFromBits, isNaNBits, intBitsToFloat, floatToRawIntBits } from './Utils';
 import { FloatExpression } from './FloatExpression';
 
 // AnimatedFloatExpression's operator range and the array-id region, as FloatExpression
@@ -20,8 +20,12 @@ const MESH_ID_REGION_MASK = 0x700000;
 const MESH_ID_REGION_ARRAY = 0x200000;
 import * as G from './Mesh2DGenerator';
 
-function isResolvable(v: number): boolean {
-    return Number.isNaN(v);
+/**
+ * Raw bits, not a float. These arrays mix literals with NaN-boxed variable ids, and a NaN id
+ * does not survive being read as a float — Safari canonicalizes it and the id becomes 0.
+ */
+function isResolvableBits(bits: number): boolean {
+    return isNaNBits(bits);
 }
 
 export class AddMesh2D extends Operation implements VariableSupport {
@@ -58,11 +62,11 @@ export class AddMesh2D extends Operation implements VariableSupport {
         // of this codebase keeps expression tokens as Int32Array for the same reason.
         readonly mExpressions: Int32Array[],
         readonly mSrcIndices: Int32Array,
-        readonly mSrcVerts: Float32Array,
+        readonly mSrcVerts: Int32Array,
         readonly mSrcUv: Float32Array,
         readonly mSrcColors: Int32Array,
-        readonly mWidths: Float32Array,
-        readonly mWidthPositions: Float32Array,
+        readonly mWidths: Int32Array,
+        readonly mWidthPositions: Int32Array,
     ) {
         super();
     }
@@ -93,7 +97,7 @@ export class AddMesh2D extends Operation implements VariableSupport {
         }
         for (const arr of [this.mSrcVerts, this.mWidths, this.mWidthPositions]) {
             for (let i = 0; i < arr.length; i++) {
-                if (Number.isNaN(arr[i])) context.listensTo(idFromNan(arr[i]), this);
+                if (isNaNBits(arr[i])) context.listensTo(idFromBits(arr[i]), this);
             }
         }
     }
@@ -119,8 +123,9 @@ export class AddMesh2D extends Operation implements VariableSupport {
             || this.mType === G.TYPE_SPLINE_ROUND_STRIP;
     }
 
-    private val(context: RemoteContext, f: number): number {
-        return isResolvable(f) ? context.getFloat(idFromNan(f)) : f;
+    private val(context: RemoteContext, bits: number): number {
+        return isResolvableBits(bits)
+            ? context.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
     }
 
     private expand(context: RemoteContext): void {
@@ -312,11 +317,11 @@ export class AddMesh2D extends Operation implements VariableSupport {
 
         const expressions: Int32Array[] = [];
         let srcIndices = new Int32Array(0);
-        let srcVerts = new Float32Array(0);
+        let srcVerts = new Int32Array(0);
         let srcUv = new Float32Array(0);
         let srcColors = new Int32Array(0);
-        let widths = new Float32Array(0);
-        let widthPositions = new Float32Array(0);
+        let widths = new Int32Array(0);
+        let widthPositions = new Int32Array(0);
 
         if (type === G.TYPE_EXPRESSION) {
             // Nine groups unconditionally: an absent channel is a zero length, not a missing
@@ -329,11 +334,11 @@ export class AddMesh2D extends Operation implements VariableSupport {
             }
         } else if (type === G.TYPE_PATH_SPLINE_STRIP || type === G.TYPE_SPLINE_ROUND_STRIP) {
             const wn = buffer.readInt();
-            widths = new Float32Array(Math.max(0, wn));
-            for (let i = 0; i < wn; i++) widths[i] = buffer.readFloat();
+            widths = new Int32Array(Math.max(0, wn));
+            for (let i = 0; i < wn; i++) widths[i] = buffer.readInt();
             const pn = buffer.readInt();
-            widthPositions = new Float32Array(Math.max(0, pn));
-            for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readFloat();
+            widthPositions = new Int32Array(Math.max(0, pn));
+            for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readInt();
             for (let g = 0; g < G.EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
         } else {
             const indexCount = buffer.readInt();
@@ -342,18 +347,20 @@ export class AddMesh2D extends Operation implements VariableSupport {
             const vertCount = buffer.readInt();
             const uvCount = buffer.readInt();
             const colorCount = buffer.readInt();
-            srcVerts = new Float32Array(Math.max(0, vertCount));
+            srcVerts = new Int32Array(Math.max(0, vertCount));
             srcUv = new Float32Array(Math.max(0, uvCount));
             srcColors = new Int32Array(Math.max(0, colorCount));
             if (type === G.TYPE_F16_VALUES) {
                 for (let i = 0; i < vertCount; i++) {
-                    srcVerts[i] = G.halfToFloat(buffer.readShort() & 0xffff);
+                    // f16 cannot encode a 22-bit id, so these are genuine literals; store
+                    // their bits so the array has one representation throughout.
+                    srcVerts[i] = floatToRawIntBits(G.halfToFloat(buffer.readShort() & 0xffff));
                 }
                 for (let i = 0; i < uvCount; i++) {
                     srcUv[i] = G.halfToFloat(buffer.readShort() & 0xffff);
                 }
             } else {
-                for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readFloat();
+                for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readInt();
                 for (let i = 0; i < uvCount; i++) srcUv[i] = buffer.readFloat();
             }
             for (let i = 0; i < colorCount; i++) srcColors[i] = buffer.readInt();
@@ -406,15 +413,17 @@ export class MatrixFromMesh2D extends PaintOperation implements VariableSupport 
     write(_buffer: WireBuffer): void { /* stub */ }
 
     registerListening(context: RemoteContext): void {
-        if (isResolvable(this.mU)) context.listensTo(idFromNan(this.mU), this);
-        if (isResolvable(this.mV)) context.listensTo(idFromNan(this.mV), this);
+        if (isResolvableBits(this.mU)) context.listensTo(idFromBits(this.mU), this);
+        if (isResolvableBits(this.mV)) context.listensTo(idFromBits(this.mV), this);
     }
 
     markDirty(): void { /* recomputed from the context each frame */ }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutU = isResolvable(this.mU) ? context.getFloat(idFromNan(this.mU)) : this.mU;
-        this.mOutV = isResolvable(this.mV) ? context.getFloat(idFromNan(this.mV)) : this.mV;
+        this.mOutU = isResolvableBits(this.mU)
+            ? context.getFloat(idFromBits(this.mU)) : intBitsToFloat(this.mU);
+        this.mOutV = isResolvableBits(this.mV)
+            ? context.getFloat(idFromBits(this.mV)) : intBitsToFloat(this.mV);
     }
 
     paint(context: PaintContext): void {
@@ -426,7 +435,8 @@ export class MatrixFromMesh2D extends PaintOperation implements VariableSupport 
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixFromMesh2D(buffer.readInt(), buffer.readFloat(),
-                                             buffer.readFloat(), buffer.readInt()));
+        // u and v as raw bits: either may be a NaN-boxed variable.
+        operations.push(new MatrixFromMesh2D(buffer.readInt(), buffer.readInt(),
+                                             buffer.readInt(), buffer.readInt()));
     }
 }
