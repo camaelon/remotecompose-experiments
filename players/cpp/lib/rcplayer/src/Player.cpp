@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <exception>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -240,7 +241,15 @@ bool loadFile(const std::string& path) {
 
     g.doc = std::make_unique<rccore::CoreDocument>();
     rccore::WireBuffer buffer(g.fileData.data(), g.fileData.size());
-    if (!g.doc->initFromBuffer(buffer)) {
+    // A malformed document throws from the wire reader. Fail just this file, so a
+    // slideshow skips it instead of the whole viewer terminating.
+    bool parsed = false;
+    try {
+        parsed = g.doc->initFromBuffer(buffer);
+    } catch (const std::exception& e) {
+        std::cerr << "Parse error: " << path << ": " << e.what() << "\n";
+    }
+    if (!parsed) {
         std::cerr << "Parse failed: " << path << "\n";
         g.doc.reset();
         return false;

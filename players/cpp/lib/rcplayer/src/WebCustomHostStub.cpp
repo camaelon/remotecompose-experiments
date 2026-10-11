@@ -3,6 +3,8 @@
 
 #include "rcplayer/WebCustomHost.h"
 
+#include "include/core/SkImage.h"
+
 void WebCustomHost::setWindow(GLFWwindow*) {}
 void WebCustomHost::beginFrame() {}
 void WebCustomHost::endFrame() {}
