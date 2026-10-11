@@ -97,6 +97,10 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     // declared in its source; refract passes them through from the include options.
     bool persist = false;
     bool hasStep = false; float step = 0.0f; int stepId = -1, timeId = -1;
+    // Time windows: `from`/`to` (seconds of the document's own timeline) and `speed`. The slide
+    // plays that stretch of the document and holds at `to`; the document needs nothing special,
+    // only to animate on its animation time. Implies `persist`. Independent of step/stepid/timeid.
+    bool hasWindow = false; double winFrom = 0.0, winTo = -1.0, winSpeed = 1.0;
     std::string path = rest;
     auto hash = rest.find('#');
     if (hash != std::string::npos) {
@@ -116,6 +120,9 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 else if (k == "step") { hasStep = true; step = std::strtof(v.c_str(), nullptr); persist = true; }
                 else if (k == "stepid") stepId = std::atoi(v.c_str());
                 else if (k == "timeid") timeId = std::atoi(v.c_str());
+                else if (k == "from") { hasWindow = true; winFrom = std::strtod(v.c_str(), nullptr); persist = true; }
+                else if (k == "to") { hasWindow = true; winTo = std::strtod(v.c_str(), nullptr); persist = true; }
+                else if (k == "speed") winSpeed = std::strtod(v.c_str(), nullptr);
                 else if (k == "gate") gate = std::strtof(v.c_str(), nullptr);
                 else if (k == "crop") {
                     float t[4];
@@ -211,6 +218,12 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
         if (timeSec + 1e-6 < n->hostLast) n->hostBase += n->hostLast;   // a new slide: carry on
         n->hostLast = timeSec;
         docTime = n->hostBase + timeSec;
+    }
+    if (hasWindow) {
+        // the slide's own time, mapped into the window, held at its end
+        double t = timeSec * winSpeed;
+        if (winTo > winFrom) t = std::min(t, winTo - winFrom);
+        docTime = winFrom + std::max(t, 0.0);
     }
     n->ctx->overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME,
                           static_cast<float>(docTime));

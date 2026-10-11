@@ -43,6 +43,11 @@ interface EmbedConfig {
     step: number;
     stepId: number;
     timeId: number;
+    // time windows: play [from, to] of the document's own timeline at `speed`, hold at `to`
+    hasWindow: boolean;
+    from: number;
+    to: number;
+    speed: number;
 }
 
 // "rc:media/film.rc#persist=1&step=0&stepid=42&timeid=43" and friends. A bare "#value" is
@@ -51,6 +56,7 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
     const out: EmbedConfig = {
         kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], mirror: false, gate: 0,
         persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1,
+        hasWindow: false, from: 0, to: -1, speed: 1,
     };
     const colon = config.indexOf(':');
     if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
@@ -81,6 +87,9 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             else if (k === 'step') { out.hasStep = true; out.step = parseFloat(v) || 0; out.persist = true; }
             else if (k === 'stepid') out.stepId = parseInt(v, 10);
             else if (k === 'timeid') out.timeId = parseInt(v, 10);
+            else if (k === 'from') { out.hasWindow = true; out.from = parseFloat(v) || 0; out.persist = true; }
+            else if (k === 'to') { out.hasWindow = true; out.to = parseFloat(v); out.persist = true; }
+            else if (k === 'speed') out.speed = parseFloat(v) || 1;
             else if (k === 'gate') out.gate = parseFloat(v) || 0;
             else if (k === 'crop') {
                 const t = v.split(',').map(parseFloat);
@@ -281,6 +290,12 @@ export class WebCustomHost implements CustomComponentHost {
         ctx.mWidth = docW;
         ctx.mHeight = docH;
         ctx.currentTime = Date.now();
+        if (cfg.hasWindow) {
+            // the slide's own time, mapped into the window, held at its end
+            let t = timeSec * cfg.speed;
+            if (cfg.to > cfg.from) t = Math.min(t, cfg.to - cfg.from);
+            docTime = cfg.from + Math.max(t, 0);
+        }
         ctx.overrideFloat(RemoteContext.ID_ANIMATION_TIME, docTime);
         ctx.setAnimationTime(docTime);
         if (cfg.hasStep && cfg.stepId >= 0) ctx.overrideFloat(cfg.stepId, cfg.step);
