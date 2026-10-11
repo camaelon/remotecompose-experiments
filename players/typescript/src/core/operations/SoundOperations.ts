@@ -4,7 +4,7 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { idFromNan } from './Utils';
+import { idFromBits, intBitsToFloat } from './Utils';
 import { ToneSynthesizer } from './utilities/ToneSynthesizer';
 
 export class SoundData extends Operation {
@@ -37,9 +37,10 @@ export class SoundExpression extends Operation {
     private mLeftVolume: number;
     private mRightVolume: number;
     private mRate: number;
-    private mParams: Float32Array;
+    /** Raw bits: mParams[0] is a NaN-boxed type id, the rest are literals. */
+    private mParams: Int32Array;
 
-    constructor(id: number, leftVolume: number, rightVolume: number, rate: number, params: Float32Array) {
+    constructor(id: number, leftVolume: number, rightVolume: number, rate: number, params: Int32Array) {
         super();
         this.mId = id; this.mLeftVolume = leftVolume; this.mRightVolume = rightVolume;
         this.mRate = rate; this.mParams = params;
@@ -51,12 +52,12 @@ export class SoundExpression extends Operation {
 
     apply(context: RemoteContext): void {
         if (this.mParams.length === 0) return;
-        const typeId = idFromNan(this.mParams[0]);
+        const typeId = idFromBits(this.mParams[0]);
         if (typeId === SoundExpression.TYPE_TONE && this.mParams.length >= 4) {
             const wav = ToneSynthesizer.synthesizeWav(
-                this.mParams[1],
-                this.mParams[2],
-                this.mParams[3]
+                intBitsToFloat(this.mParams[1]),
+                intBitsToFloat(this.mParams[2]),
+                intBitsToFloat(this.mParams[3])
             );
             context.loadSound(this.mId, wav);
         }
@@ -73,9 +74,9 @@ export class SoundExpression extends Operation {
         if (len > SoundExpression.MAX_PARAMS) {
             throw new Error(`SoundExpression: too many params ${len} > ${SoundExpression.MAX_PARAMS}`);
         }
-        const params = new Float32Array(len);
+        const params = new Int32Array(len);
         for (let i = 0; i < len; i++) {
-            params[i] = buffer.readFloat();
+            params[i] = buffer.readInt();
         }
         operations.push(new SoundExpression(id, leftVolume, rightVolume, rate, params));
     }

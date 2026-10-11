@@ -26,7 +26,7 @@ export const OP = {
     VALUE_FLOAT_EXPRESSION_CHANGE_ACTION: 227, VALUE_FLOAT_CHANGE_ACTION: 222,
     VALUE_INTEGER_CHANGE_ACTION: 212, VALUE_STRING_CHANGE_ACTION: 213,
     VALUE_INTEGER_EXPRESSION_CHANGE_ACTION: 218, CONDITIONAL_OPERATIONS: 178,
-    DATA_PATH: 123, DRAW_PATH: 124, PATH_CREATE: 159,
+    DATA_PATH: 123, DRAW_PATH: 124, PATH_CREATE: 159, PATH_EXPRESSION: 193,
     PATH_APPEND: 160, TEXT_FROM_FLOAT: 135, FLOAT_LIST: 147, CV_WIDTH: 0, CV_HEIGHT: 1,
     LAYOUT_ROOT: 200, LAYOUT_CONTENT: 201, LAYOUT_BOX: 202, LAYOUT_ROW: 203,
     LAYOUT_COLUMN: 204, LAYOUT_CANVAS: 205, LAYOUT_CANVAS_CONTENT: 207,
@@ -313,6 +313,30 @@ export class Writer {
         this.buffer.writeInt(pathId);
         this.buffer.writeInt(xBits);
         this.buffer.writeInt(yBits);
+        return pathId;
+    }
+
+    /**
+     * Emit a PATH_EXPRESSION; return the path id.
+     *
+     * The path is sampled `count` times with the parameter swept from `min` to `max`, and
+     * `a[0]` in either expression is that parameter. A null Y expression is written as a
+     * zero-length array, which is how the reference marks "X only".
+     *
+     * min/max/count go out as float32 *bits* rather than as floats, because each may be a
+     * NaN-boxed variable id - the same reason drawCircle takes bits.
+     */
+    pathExpression(flags: number, minBits: number, maxBits: number, countBits: number,
+                   xOps: number[], yOps: number[] | null): number {
+        const pathId = this.allocDataId();
+        this.buffer.start(OP.PATH_EXPRESSION);
+        this.buffer.writeInt(pathId);
+        this.buffer.writeInt(flags);
+        for (const b of [minBits, maxBits, countBits]) this.buffer.writeInt(b);
+        this.buffer.writeInt(xOps.length);
+        for (const b of xOps) this.buffer.writeInt(b);
+        this.buffer.writeInt(yOps ? yOps.length : 0);
+        for (const b of (yOps ?? [])) this.buffer.writeInt(b);
         return pathId;
     }
 

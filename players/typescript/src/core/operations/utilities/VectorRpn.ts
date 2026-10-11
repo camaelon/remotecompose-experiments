@@ -51,6 +51,8 @@ const MAX_STACK = 64;
 const MAX_PROGRAM = 512;
 const SOFT_DOMAIN_EPS = 1e-6;
 
+import { isNaNBits, idFromBits, intBitsToFloat, floatToRawIntBits } from '../Utils';
+
 const _dv = new DataView(new ArrayBuffer(4));
 
 /**
@@ -81,8 +83,26 @@ export function isVectorOp(v: number): boolean {
     return pos >= OP_VBUILD2 && pos <= OP_VNORM;
 }
 
+/**
+ * Bit-aware form of {@link isVectorOp}. Prefer this: a NaN that has been through a JS number
+ * may have lost its payload, and on Safari always has.
+ */
+export function isVectorOpBits(bits: number): boolean {
+    if (!isNaNBits(bits)) {
+        return false;
+    }
+    const pos = idFromBits(bits);
+    return pos >= OP_VBUILD2 && pos <= OP_VNORM;
+}
+
 export class VectorRpn {
-    private mProgram = new Float32Array(MAX_PROGRAM);
+    /**
+     * The program as RAW BITS. It mixes literals with NaN-boxed operator and variable ids,
+     * and a Float32Array cannot hold the latter two safely: copying through one canonicalizes
+     * every NaN on JavaScriptCore, which turned each operator into an unrecognised token and
+     * every vector expression into garbage in Safari.
+     */
+    private mProgram = new Int32Array(MAX_PROGRAM);
     private mStack = new Float32Array(MAX_STACK * MAX_DIM);
     /** Logical dimensionality of each stack value. */
     private mDim = new Int32Array(MAX_STACK);
@@ -97,20 +117,31 @@ export class VectorRpn {
      * Evaluate program[0..len) and write the result's components into out (length >= MAX_DIM).
      * Returns the logical dimensionality of the result (1 = scalar, 2/3/4 = vector).
      */
-    apply(program: Float32Array, len: number, out: Float32Array): number {
+    /**
+     * `program` is raw int32 bits. A Float32Array is still accepted for callers that have not
+     * been converted, but it cannot carry operator ids on every engine — see mProgram.
+     */
+    apply(program: Int32Array | Float32Array, len: number, out: Float32Array): number {
         if (len > MAX_PROGRAM) {
             // Java would throw out of arraycopy here. JS would silently truncate the copy and
             // evaluate a half-program, so the bound is made explicit.
             throw new Error(`VectorRpn: program length ${len} exceeds ${MAX_PROGRAM}`);
         }
-        this.mProgram.set(program.subarray(0, len), 0);
+        if (program instanceof Int32Array) {
+            this.mProgram.set(program.subarray(0, len), 0);
+        } else {
+            for (let i = 0; i < len; i++) {
+                this.mProgram[i] = floatToRawIntBits(program[i]);
+            }
+        }
         const s = this.mStack;
         let sp = -1;
         for (let i = 0; i < len; i++) {
-            const v = this.mProgram[i];
-            if (Number.isNaN(v)) {
-                sp = this.opEval(sp, fromNaN(v));
+            const bits = this.mProgram[i];
+            if (isNaNBits(bits)) {
+                sp = this.opEval(sp, idFromBits(bits));
             } else {
+                const v = intBitsToFloat(bits);
                 sp++;
                 if (sp >= MAX_STACK) {
                     // Writing past a Float32Array is a silent no-op in JS, where Java throws.

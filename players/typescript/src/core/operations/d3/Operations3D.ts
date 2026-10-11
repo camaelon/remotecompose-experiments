@@ -16,7 +16,7 @@ import type { PaintContext } from '../../PaintContext';
 import type { RemoteContext } from '../../RemoteContext';
 import type { VariableSupport } from '../../VariableSupport';
 import type { WireBuffer } from '../../WireBuffer';
-import { isVariable, idFromNan } from '../Utils';
+import { isVariableBits, idFromBits, intBitsToFloat } from '../Utils';
 import { isPaint3DContext, P3_CLEAR_DEPTH, P3_MATERIAL, P3_DEPTH_BIAS } from '../../d3/Paint3DContext';
 import { build as buildPrimitive, MeshData } from '../../d3/Primitive3D';
 
@@ -27,47 +27,75 @@ const MAX_LIGHTS = 32;
 const MAX_CHANNELS = 8;
 const MAX_PRIMITIVE_FLOATS = 200_000;
 
-/** `len` followed by the floats — the shape every variable-length 3D payload uses. */
-function writeArray(buffer: WireBuffer, a: Float32Array): void {
+// Every reactive payload below is held as RAW INT32 BITS, never as a float.
+//
+// A NaN-boxed variable id cannot survive a trip through a JavaScript number. The spec lets
+// an engine canonicalize any NaN, and JavaScriptCore does: Safari rewrites every NaN -
+// signaling or quiet, either sign - to 0x7FC00000, which erases the id in the mantissa.
+// V8 only sets the quiet bit, and since the id mask is 0x3FFFFF the payload happens to
+// survive there, so this reads as "works in Chrome, blank in Safari".
+//
+// Reading `buffer.readInt()` and keeping the bits removes the question entirely. That is
+// what the 2D draw ops have always done (see DrawBase4), and it is why they work in Safari.
+// Do not add a `readFloat()` here for anything that may carry a variable.
+
+/** `len` followed by the raw words — the shape every variable-length 3D payload uses. */
+function writeBits(buffer: WireBuffer, a: Int32Array): void {
     buffer.writeInt(a.length);
-    for (const v of a) {
-        buffer.writeFloat(v);
+    for (const b of a) {
+        // writeInt, not writeFloat: writeFloat would round-trip a NaN id through a number
+        // and lose it on the way out, exactly as readFloat loses it on the way in. For a
+        // literal the two emit identical bytes.
+        buffer.writeInt(b);
     }
 }
 
 /** An absent optional channel is encoded as a zero length, not as a missing field. */
-function writeOptional(buffer: WireBuffer, a: Float32Array | null): void {
+function writeOptionalFloats(buffer: WireBuffer, a: Float32Array | null): void {
     if (a === null) {
         buffer.writeInt(0);
     } else {
-        writeArray(buffer, a);
+        buffer.writeInt(a.length);
+        for (const v of a) {
+            buffer.writeFloat(v);
+        }
     }
 }
 
-function readFloats(buffer: WireBuffer, max: number, what: string): Float32Array {
+/** `len` followed by that many words, kept as bits. */
+function readBits(buffer: WireBuffer, max: number, what: string): Int32Array {
     const len = buffer.readInt();
     if (len < 0 || len > max) {
         throw new Error(`${what}: bad length ${len}`);
     }
-    const out = new Float32Array(len);
+    const out = new Int32Array(len);
     for (let i = 0; i < len; i++) {
-        out[i] = buffer.readFloat();
+        out[i] = buffer.readInt();
+    }
+    return out;
+}
+
+/** The literal value of each word, for a sensible `mOut` before the first resolve. */
+function literalsOf(bits: Int32Array): Float32Array {
+    const out = new Float32Array(bits.length);
+    for (let i = 0; i < bits.length; i++) {
+        out[i] = isVariableBits(bits[i]) ? 0 : intBitsToFloat(bits[i]);
     }
     return out;
 }
 
 /** Resolve NaN-boxed variable ids in `src` into `dst`, leaving literals alone. */
-function resolve(context: RemoteContext, src: Float32Array, dst: Float32Array): void {
+function resolve(context: RemoteContext, src: Int32Array, dst: Float32Array): void {
     for (let i = 0; i < src.length; i++) {
-        const v = src[i];
-        dst[i] = isVariable(v) ? context.getFloat(idFromNan(v)) : v;
+        const b = src[i];
+        dst[i] = isVariableBits(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
     }
 }
 
-function listen(context: RemoteContext, src: Float32Array, self: VariableSupport): void {
-    for (const v of src) {
-        if (isVariable(v)) {
-            context.listensTo(idFromNan(v), self);
+function listen(context: RemoteContext, src: Int32Array, self: VariableSupport): void {
+    for (const b of src) {
+        if (isVariableBits(b)) {
+            context.listensTo(idFromBits(b), self);
         }
     }
 }
@@ -102,8 +130,8 @@ export class DefineMesh3D extends PaintOperation {
         for (const v of this.mIndices) { buffer.writeInt(v); }
         buffer.writeInt(this.mVerts.length);
         for (const v of this.mVerts) { buffer.writeFloat(v); }
-        writeOptional(buffer, this.mNormals);
-        writeOptional(buffer, this.mUv);
+        writeOptionalFloats(buffer, this.mNormals);
+        writeOptionalFloats(buffer, this.mUv);
     }
 
     deepToString(indent: string): string {
@@ -168,12 +196,12 @@ export class SetCamera3D extends PaintOperation implements VariableSupport {
 
     constructor(
         readonly mProjection: number,
-        readonly mProjParams: Float32Array,
-        readonly mViewParams: Float32Array,
+        readonly mProjParams: Int32Array,
+        readonly mViewParams: Int32Array,
     ) {
         super();
-        this.mOutProj = mProjParams.slice();
-        this.mOutView = mViewParams.slice();
+        this.mOutProj = literalsOf(mProjParams);
+        this.mOutView = literalsOf(mViewParams);
     }
 
     updateVariables(context: RemoteContext): void {
@@ -195,8 +223,8 @@ export class SetCamera3D extends PaintOperation implements VariableSupport {
     write(buffer: WireBuffer): void {
         buffer.start(SetCamera3D.OP_CODE);
         buffer.writeInt(this.mProjection);
-        writeArray(buffer, this.mProjParams);
-        writeArray(buffer, this.mViewParams);
+        writeBits(buffer, this.mProjParams);
+        writeBits(buffer, this.mViewParams);
     }
 
     deepToString(indent: string): string {
@@ -210,8 +238,8 @@ export class SetCamera3D extends PaintOperation implements VariableSupport {
      */
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const projection = buffer.readInt();
-        const proj = readFloats(buffer, 16, 'SetCamera3D projParams');
-        const view = readFloats(buffer, 16, 'SetCamera3D viewParams');
+        const proj = readBits(buffer, 16, 'SetCamera3D projParams');
+        const view = readBits(buffer, 16, 'SetCamera3D viewParams');
         operations.push(new SetCamera3D(projection, proj, view));
     }
 }
@@ -225,9 +253,9 @@ export class Matrix3DOp extends PaintOperation implements VariableSupport {
 
     private mOut: Float32Array;
 
-    constructor(readonly mSub: number, readonly mArgs: Float32Array) {
+    constructor(readonly mSub: number, readonly mArgs: Int32Array) {
         super();
-        this.mOut = mArgs.slice();
+        this.mOut = literalsOf(mArgs);
     }
 
     updateVariables(context: RemoteContext): void {
@@ -247,7 +275,7 @@ export class Matrix3DOp extends PaintOperation implements VariableSupport {
     write(buffer: WireBuffer): void {
         buffer.start(Matrix3DOp.OP_CODE);
         buffer.writeInt(this.mSub);
-        writeArray(buffer, this.mArgs);
+        writeBits(buffer, this.mArgs);
     }
 
     deepToString(indent: string): string {
@@ -260,7 +288,7 @@ export class Matrix3DOp extends PaintOperation implements VariableSupport {
      */
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const sub = buffer.readInt();
-        const args = readFloats(buffer, 16, 'Matrix3DOp args');
+        const args = readBits(buffer, 16, 'Matrix3DOp args');
         operations.push(new Matrix3DOp(sub, args));
     }
 }
@@ -307,9 +335,9 @@ export class Paint3DState extends PaintOperation implements VariableSupport {
 
     private mOut: Float32Array;
 
-    constructor(readonly mSub: number, readonly mParams: Float32Array) {
+    constructor(readonly mSub: number, readonly mParams: Int32Array) {
         super();
-        this.mOut = mParams.slice();
+        this.mOut = literalsOf(mParams);
     }
 
     updateVariables(context: RemoteContext): void {
@@ -346,7 +374,7 @@ export class Paint3DState extends PaintOperation implements VariableSupport {
     write(buffer: WireBuffer): void {
         buffer.start(Paint3DState.OP_CODE);
         buffer.writeInt(this.mSub);
-        writeArray(buffer, this.mParams);
+        writeBits(buffer, this.mParams);
     }
 
     deepToString(indent: string): string {
@@ -356,7 +384,7 @@ export class Paint3DState extends PaintOperation implements VariableSupport {
     /** `sub, len+params[]` — CLEAR_DEPTH takes none, MATERIAL and DEPTH_BIAS two each. */
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const sub = buffer.readInt();
-        const params = readFloats(buffer, 8, 'Paint3DState params');
+        const params = readBits(buffer, 8, 'Paint3DState params');
         operations.push(new Paint3DState(sub, params));
     }
 }
@@ -373,10 +401,10 @@ export class SetLights3D extends PaintOperation implements VariableSupport {
     constructor(
         readonly mTypes: Int32Array,
         readonly mColors: Int32Array,
-        readonly mParams: Float32Array,
+        readonly mParams: Int32Array,
     ) {
         super();
-        this.mOut = mParams.slice();
+        this.mOut = literalsOf(mParams);
     }
 
     updateVariables(context: RemoteContext): void {
@@ -400,7 +428,7 @@ export class SetLights3D extends PaintOperation implements VariableSupport {
             buffer.writeInt(this.mTypes[i]);
             buffer.writeInt(this.mColors[i]);
         }
-        writeArray(buffer, this.mParams);
+        writeBits(buffer, this.mParams);
     }
 
     deepToString(indent: string): string {
@@ -423,7 +451,7 @@ export class SetLights3D extends PaintOperation implements VariableSupport {
             types[i] = buffer.readInt();
             colors[i] = buffer.readInt();
         }
-        const params = readFloats(buffer, MAX_LIGHTS * 4, 'SetLights3D params');
+        const params = readBits(buffer, MAX_LIGHTS * 4, 'SetLights3D params');
         operations.push(new SetLights3D(types, colors, params));
     }
 }
@@ -486,18 +514,19 @@ export class MeshPrimitive extends PaintOperation implements VariableSupport {
     constructor(
         readonly mId: number,
         readonly mType: number,
+        /** Raw bits: `segments` may itself be a NaN-boxed variable. */
         readonly mSegments: number,
         readonly mFlags: number,
-        readonly mData: Float32Array[],
+        readonly mData: Int32Array[],
     ) {
         super();
-        this.mOutSegments = mSegments;
-        this.mOutData = mData.map((c) => c.slice());
+        this.mOutSegments = isVariableBits(mSegments) ? 0 : intBitsToFloat(mSegments);
+        this.mOutData = mData.map((c) => literalsOf(c));
     }
 
     updateVariables(context: RemoteContext): void {
-        this.mOutSegments = isVariable(this.mSegments)
-            ? context.getFloat(idFromNan(this.mSegments)) : this.mSegments;
+        this.mOutSegments = isVariableBits(this.mSegments)
+            ? context.getFloat(idFromBits(this.mSegments)) : intBitsToFloat(this.mSegments);
         for (let c = 0; c < this.mData.length; c++) {
             resolve(context, this.mData[c], this.mOutData[c]);
         }
@@ -507,8 +536,8 @@ export class MeshPrimitive extends PaintOperation implements VariableSupport {
     }
 
     registerListening(context: RemoteContext): void {
-        if (isVariable(this.mSegments)) {
-            context.listensTo(idFromNan(this.mSegments), this);
+        if (isVariableBits(this.mSegments)) {
+            context.listensTo(idFromBits(this.mSegments), this);
         }
         for (const channel of this.mData) {
             listen(context, channel, this);
@@ -537,32 +566,32 @@ export class MeshPrimitive extends PaintOperation implements VariableSupport {
         buffer.start(MeshPrimitive.OP_CODE);
         buffer.writeInt(this.mId);
         buffer.writeInt(this.mType);
-        buffer.writeFloat(this.mSegments);
+        buffer.writeInt(this.mSegments);
         buffer.writeInt(this.mFlags);
         buffer.writeInt(this.mData.length);
         for (const ch of this.mData) {
-            writeArray(buffer, ch);
+            writeBits(buffer, ch);
         }
     }
 
     deepToString(indent: string): string {
         return `${indent}MeshPrimitive(id=${this.mId}, type=${this.mType}, `
-            + `segments=${this.mSegments}, channels=${this.mData.length})`;
+            + `segments=${this.mOutSegments}, channels=${this.mData.length})`;
     }
 
     /** `id, type, segments, flags, channelCount, (len + floats) x channelCount`. */
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const id = buffer.readInt();
         const type = buffer.readInt();
-        const segments = buffer.readFloat();
+        const segments = buffer.readInt();
         const flags = buffer.readInt();
         const channels = buffer.readInt();
         if (channels < 0 || channels > MAX_CHANNELS) {
             throw new Error(`MeshPrimitive: bad channel count ${channels}`);
         }
-        const data: Float32Array[] = [];
+        const data: Int32Array[] = [];
         for (let c = 0; c < channels; c++) {
-            data.push(readFloats(buffer, MAX_PRIMITIVE_FLOATS, 'MeshPrimitive channel'));
+            data.push(readBits(buffer, MAX_PRIMITIVE_FLOATS, 'MeshPrimitive channel'));
         }
         operations.push(new MeshPrimitive(id, type, segments, flags, data));
     }

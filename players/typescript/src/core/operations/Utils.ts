@@ -8,6 +8,11 @@ export function intBitsToFloat(bits: number): number {
     return _dv.getFloat32(0, false);
 }
 
+/**
+ * **Lossy for NaN.** Returns the bits of `value` *as the engine chose to represent it*,
+ * which for a NaN is not necessarily the bits it was read from. Safe for finite numbers.
+ * To recover a variable id, keep the bits from the wire and use {@link idFromBits}.
+ */
 export function floatToRawIntBits(value: number): number {
     _dv.setFloat32(0, value, false);
     return _dv.getInt32(0, false);
@@ -18,7 +23,23 @@ export function asNan(v: number): number {
     return intBitsToFloat((v | 0) | (-0x800000));
 }
 
-/** Extract an integer id from a NaN-encoded float */
+/**
+ * Encode an integer id as the raw float32 bits of a NaN — `asNan` without ever producing a
+ * JS number, so nothing can canonicalize it. Use this when the result is going back onto
+ * the wire or into a bits array.
+ */
+export function asNanBits(v: number): number {
+    return (v | 0) | (-0x800000);
+}
+
+/**
+ * Extract an integer id from a NaN-encoded float.
+ *
+ * **Do not use this on a value that came from `readFloat()`.** By then the engine may have
+ * canonicalized the NaN and destroyed the id — Safari always does, and this returns 0.
+ * Use {@link idFromBits} on the raw wire bits instead. The only legitimate callers are ones
+ * holding a NaN they built themselves in this same process, e.g. from {@link asNan}.
+ */
 export function idFromNan(value: number): number {
     return floatToRawIntBits(value) & 0x3FFFFF;
 }
@@ -69,7 +90,14 @@ export function isMacroLocal(id: number): boolean {
     return id >= 0x4000 && id <= 0x4FFF;
 }
 
-/** Check if a float is a variable (NaN-encoded ID that's not a system constant) */
+/**
+ * Check if a float is a variable (NaN-encoded ID that's not a system constant).
+ *
+ * **Do not use this on a value that came from `readFloat()`** — use {@link isVariableBits}
+ * on the raw wire bits. On an engine that canonicalizes NaN the id reads back as 0, this
+ * returns **false**, and the caller silently treats a variable as a literal NaN. That is
+ * not a visible error anywhere: the geometry simply becomes NaN and nothing draws.
+ */
 export function isVariable(v: number): boolean {
     if (Number.isNaN(v)) {
         const id = idFromNan(v);

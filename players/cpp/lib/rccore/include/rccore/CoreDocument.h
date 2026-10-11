@@ -98,7 +98,9 @@ private:
     int mMinorVersion = 0;
     int mPatchVersion = 0;
     int64_t mCapabilities = 0;
-    int64_t mFixedTimeMs = 0;
+    // -1 means "not pinned". It cannot be 0: epoch 0 is a legitimate instant to
+    // pin to, and a >0 test silently left the wall clock running for it.
+    int64_t mFixedTimeMs = -1;
     // Epoch-millis of the first frame, so animation time can be measured from playback start
     // rather than from the epoch. -1 until the first updateTimeVariables.
     int64_t mAnimationStartMs = -1;

@@ -367,12 +367,16 @@ export class BorderModifier extends Operation {
         const colorId = buffer.readId();
         buffer.readInt(); // reserve1
         buffer.readInt(); // reserve2
-        const borderWidth = buffer.readNanId();
-        const roundedCorner = buffer.readNanId();
-        const r = buffer.readNanId();
-        const g = buffer.readNanId();
-        const b = buffer.readNanId();
-        const a = buffer.readNanId();
+        // Bits, then literal — see PaddingModifier below, which has always done this.
+        // BorderModifier does not implement VariableSupport, so a variable here has never
+        // resolved; taking the literal gives 0 rather than a NaN that erases the border.
+        const lit = (bits: number) => (isNaNBits(bits) ? 0 : intBitsToFloat(bits));
+        const borderWidth = lit(buffer.readNanIdBits());
+        const roundedCorner = lit(buffer.readNanIdBits());
+        const r = lit(buffer.readNanIdBits());
+        const g = lit(buffer.readNanIdBits());
+        const b = lit(buffer.readNanIdBits());
+        const a = lit(buffer.readNanIdBits());
         const shapeType = buffer.readInt();
         operations.push(new BorderModifier(flags, colorId, borderWidth, roundedCorner, r, g, b, a, shapeType));
     }

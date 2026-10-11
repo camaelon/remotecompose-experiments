@@ -12,21 +12,89 @@
 #include "include/core/SkStream.h"
 
 #include <algorithm>
+#include "rccore/ExpressionEvaluator.h"
+#include <ctime>
+#include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <vector>
 #include <cstring>
 #include <cstdlib>
 #include <algorithm>
+#include "rccore/ExpressionEvaluator.h"
+#include <ctime>
+#include <cstdio>
+
+// Parse a --clock spec into epoch milliseconds, local time. Returns false if it is not a
+// spec this understands, so a bad string is reported rather than silently treated as "now".
+static bool parseClockSpec(const char* spec, int64_t& outMs) {
+    if (spec == nullptr || *spec == '\0') return false;
+    if (spec[0] == '@') {                       // raw epoch millis
+        char* end = nullptr;
+        long long v = std::strtoll(spec + 1, &end, 10);
+        if (end == spec + 1 || *end != '\0') return false;
+        outMs = static_cast<int64_t>(v);
+        return true;
+    }
+    int Y = 0, M = 0, D = 0, h = 0, m = 0, sec = 0;
+    bool haveDate = false, haveTime = false;
+    if (std::sscanf(spec, "%d-%d-%dT%d:%d:%d", &Y, &M, &D, &h, &m, &sec) == 6) {
+        haveDate = haveTime = true;
+    } else if (std::sscanf(spec, "%d-%d-%dT%d:%d", &Y, &M, &D, &h, &m) == 5) {
+        haveDate = haveTime = true; sec = 0;
+    } else if (std::sscanf(spec, "%d-%d-%d", &Y, &M, &D) == 3) {
+        haveDate = true; h = m = sec = 0;
+    } else if (std::sscanf(spec, "%d:%d:%d", &h, &m, &sec) == 3) {
+        haveTime = true;
+    } else if (std::sscanf(spec, "%d:%d", &h, &m) == 2) {
+        haveTime = true; sec = 0;
+    } else {
+        return false;
+    }
+    std::time_t nowT = std::time(nullptr);
+    std::tm tmv{};
+#if defined(_WIN32)
+    localtime_s(&tmv, &nowT);
+#else
+    localtime_r(&nowT, &tmv);
+#endif
+    if (haveDate) { tmv.tm_year = Y - 1900; tmv.tm_mon = M - 1; tmv.tm_mday = D; }
+    if (haveTime || haveDate) { tmv.tm_hour = h; tmv.tm_min = m; tmv.tm_sec = sec; }
+    tmv.tm_isdst = -1;
+    std::time_t t = std::mktime(&tmv);
+    if (t == static_cast<std::time_t>(-1)) return false;
+    outMs = static_cast<int64_t>(t) * 1000;
+    return true;
+}
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
         std::cerr << "Usage: rc2image input.rcd output.png [width height]"
-                     " [--fit W H] [--time epoch_ms] [--anim seconds]\n"
+                     " [--fit W H] [--clock SPEC] [--time epoch_ms] [--anim seconds]\n"
                      "  --fit W H  render onto a W x H surface with the document kept in its\n"
                      "             own coordinate space and scaled to fit, which is what every\n"
                      "             real player does. Without it the document is painted at its\n"
-                     "             native size and the fit transform is never exercised.\n";
+                     "             native size and the fit transform is never exercised.\n"
+                     "  --clock    LOCK THE CLOCK. Without it every date and time variable\n"
+                     "             reads the wall clock, so a document using continuousSec(),\n"
+                     "             timeInSec(), the hour, the weekday or the month renders\n"
+                     "             differently on every run and cannot be pixel-compared.\n"
+                     "             SPEC is one of:\n"
+                     "               HH:MM[:SS]            today at that local time\n"
+                     "               YYYY-MM-DD            that date at midnight\n"
+                     "               YYYY-MM-DDTHH:MM[:SS] that date and time\n"
+                     "               @MILLIS               raw epoch milliseconds\n"
+                     "             It pins the whole set together - continuousSec, seconds,\n"
+                     "             minutes, hours, month, weekday, day of year and year all\n"
+                     "             derive from the one instant, so they stay consistent.\n"
+                     "  --time     the same thing in raw epoch milliseconds. --time 0 now\n"
+                     "             pins to the epoch instead of silently not pinning.\n"
+                     "  --anim     pins animationTime only, which is a different clock.\n"
+                     "  --seed N   pin the random stream. rand() is seeded arbitrarily by\n"
+                     "             default (matching the reference's lazy `new Random()`),\n"
+                     "             so a document whose particles use rand() in their initial\n"
+                     "             values renders differently on every run even with the\n"
+                     "             clock pinned. A document that seeds itself still wins.\n";
         return 1;
     }
 
@@ -35,6 +103,12 @@ int main(int argc, char* argv[]) {
     int overrideWidth = 0, overrideHeight = 0;
     int fitWidth = 0, fitHeight = 0;   // --fit: surface size, document keeps its own space
     int64_t fixedTimeMs = 0;
+    int32_t randSeed = 0;
+    bool pinSeed = false;
+    bool pinClock = false;   // whether a clock flag was GIVEN, not whether it
+                             // was nonzero: --time 0 is a legitimate request
+                             // to pin to the epoch, and treating it as 'unset'
+                             // silently left the wall clock running.
     float animTimeSec = -1.0f;   // >=0 pins animationTime (seconds since first frame)
 
     // Parse remaining args
@@ -46,6 +120,20 @@ int main(int argc, char* argv[]) {
             i += 3;
         } else if (std::strcmp(argv[i], "--time") == 0 && i + 1 < argc) {
             fixedTimeMs = std::atoll(argv[i + 1]);
+            pinClock = true;
+            i += 2;
+        } else if (std::strcmp(argv[i], "--clock") == 0 && i + 1 < argc) {
+            if (!parseClockSpec(argv[i + 1], fixedTimeMs)) {
+                std::cerr << "Error: --clock does not understand \"" << argv[i + 1]
+                          << "\". Use HH:MM[:SS], YYYY-MM-DD, YYYY-MM-DDTHH:MM[:SS] "
+                             "or @EPOCHMILLIS.\n";
+                return 1;
+            }
+            pinClock = true;
+            i += 2;
+        } else if (std::strcmp(argv[i], "--seed") == 0 && i + 1 < argc) {
+            randSeed = static_cast<int32_t>(std::atoll(argv[i + 1]));
+            pinSeed = true;
             i += 2;
         } else if (std::strcmp(argv[i], "--anim") == 0 && i + 1 < argc) {
             animTimeSec = std::atof(argv[i + 1]);
@@ -83,8 +171,13 @@ int main(int argc, char* argv[]) {
         std::cerr << "Error: failed to parse " << inputPath << "\n";
         return 1;
     }
-    if (fixedTimeMs > 0) {
+    if (pinClock) {
         doc.setFixedTimeMs(fixedTimeMs);
+    }
+    // Seed before the first paint: particle initial values are drawn once, when the system
+    // is created, so seeding after that would change nothing.
+    if (pinSeed) {
+        rccore::JavaRandom::seedFromBits(randSeed);
     }
 
     int width = overrideWidth > 0 ? overrideWidth : doc.getWidth();

@@ -616,9 +616,22 @@ export class CanvasPaintContext extends PaintContext {
                     this.style = upper;
                     break;
                 case PaintBundle.SHADER: {
+                    // id 0 means SkPaint::setShader(nullptr), and in Skia a gradient IS a
+                    // shader - one slot, so clearing it has to clear a gradient too. This
+                    // player keeps gradients and runtime shaders in separate fields, so
+                    // clearing only `activeShaderData` left a gradient filling every later
+                    // draw with no way to turn it off: {"shader": 0} is the documented way to
+                    // clear, it works in the C++ port, and it silently did nothing here. An
+                    // author hit this and gave up on gradients rather than find it.
+                    //
+                    // Only the clear is mirrored. Making a *set* move both fields would be the
+                    // same one-slot argument, but no document reported a problem with it and
+                    // it measurably moved rc-json-particle-sphere further from the C++ render,
+                    // so it is left alone until something actually needs it.
                     const shaderId = arr[i++];
                     if (shaderId === 0) {
                         this.activeShaderData = null;
+                        this.gradientStyle = null;
                     } else {
                         const sd = this.getContext()?.getShader(shaderId);
                         this.activeShaderData = sd ?? null;

@@ -2558,9 +2558,29 @@ void ConditionalOp::registerListening(RemoteContext& context) {
 }
 
 void ConditionalOp::apply(RemoteContext& context) {
-    // TS ConditionalOperations only operates during PAINT (via paint() method)
-    // No apply() override in TS, so DATA mode does nothing
-    if (context.getMode() != ContextMode::PAINT) return;
+    // Outside PAINT, run the children anyway.
+    //
+    // The condition gates DRAWING, not data. A nested op that DEFINES something - an
+    // ANIMATED_FLOAT for an expression, a DATA_TEXT for a string - has to execute in the data
+    // pass or its id is never populated, and the writer puts those definitions wherever the
+    // value is first used, which for a value only referenced inside a branch is inside the
+    // branch. Returning early here meant such a definition never ran at all: the id resolved
+    // to nothing and the op that used it drew off-screen, silently.
+    //
+    // This was visible as a drawRect with VARIABLE coordinates inside a conditional rendering
+    // nothing while the same rect with literal coordinates rendered fine, and while the same
+    // variable coordinates outside a conditional also rendered fine. The TypeScript player
+    // draws all three, which is what says this is the defect and not the document.
+    //
+    // Safe because every draw op already gates its own apply() on PAINT, so running them in
+    // the data pass paints nothing.
+    if (context.getMode() != ContextMode::PAINT) {
+        for (auto& child : mChildren) {
+            if (child->isVariableSupport()) child->updateVariables(context);
+            child->apply(context);
+        }
+        return;
+    }
 
     // Update children's variables first (TS does this before evaluating condition)
     for (auto& child : mChildren) {

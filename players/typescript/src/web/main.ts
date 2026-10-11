@@ -543,6 +543,8 @@ export class RcdPlayer {
 import { createPlayer, RcPlayerElement, base64ToArrayBuffer } from './RcPlayerElement';
 export { createPlayer, RcPlayerElement, base64ToArrayBuffer };
 export { WebCustomHost, parseEmbedConfig, fitInto } from './CustomHosts';
+export { pinClock } from '../core/ClockPin';
+export { createSnapshot } from '../core/RemoteClock';
 export type { EmbedResolver } from './CustomHosts';
 export type { RcPlayerOptions, RcPlayerHandle } from './RcPlayerElement';
 export type { MeasurementSink, FrameMeasurement, TypeCount, InstanceCount } from '../core/OperationMeasurement';

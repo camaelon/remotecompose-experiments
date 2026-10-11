@@ -6,7 +6,8 @@
 //   Tier 2 — Macro-Local (0x4000..0x4FFF): always uniqueified.
 //   Regular IDs: uniqueified only when inside a macro expansion.
 
-import { isSystemGlobal, isMacroLocal, idFromNan, asNan, idFromLong } from '../Utils';
+import { isSystemGlobal, isMacroLocal, idFromNan, asNan, idFromLong,
+         isNaNBits, idFromBits, asNanBits } from '../Utils';
 
 /** Minimal document surface RemapContext needs (avoids a CoreDocument import cycle). */
 export interface LoomDocument {
@@ -81,13 +82,18 @@ export class RemapContext {
     }
 
     /** Resolve a NaN-encoded float id. Non-NaN values pass through. */
-    resolveNanId(v: number): number {
-        if (!Number.isNaN(v)) {
-            return v;
+    /**
+     * Remap a NaN-boxed id, in and out as RAW BITS. Was float-in/float-out, which lost the
+     * id on any engine that canonicalizes NaN (Safari) and silently disabled macro remapping
+     * for every float argument.
+     */
+    resolveNanIdBits(bits: number): number {
+        if (!isNaNBits(bits)) {
+            return bits;
         }
-        const id = idFromNan(v);
+        const id = idFromBits(bits);
         const mapped = this.resolveId(id);
-        return mapped === id ? v : asNan(mapped);
+        return mapped === id ? bits : asNanBits(mapped);
     }
 
     /** Resolve a NaN-encoded long id (see Utils.longIdFromNan). */
@@ -140,7 +146,7 @@ class IdentityRemapContext extends RemapContext {
     }
     declareId(id: number): number { return id; }
     resolveId(id: number): number { return id; }
-    resolveNanId(v: number): number { return v; }
+    resolveNanIdBits(bits: number): number { return bits; }
     resolveLongNanId(v: number): number { return v; }
     withInsideMacro(_insideMacro: boolean): RemapContext { return this; }
 }

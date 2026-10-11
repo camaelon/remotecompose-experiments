@@ -26,6 +26,44 @@ npx esbuild src/node-entry.ts --bundle --outfile=build-node/node-entry.js \
 Check this **before** believing any headless result that disagrees with a device or with
 the C++ player.
 
+## NaN-boxed ids must never pass through a JS float
+
+A variable reference is a float32 NaN with the id in the mantissa. **That payload does not
+survive being read as a float.** ECMAScript permits an implementation to canonicalize any
+NaN it produces, and JavaScriptCore does:
+
+| bits on the wire | V8 reads back | JSC reads back |
+| --- | --- | --- |
+| `0xff800005` signaling, as `asNan()` writes it | `0xffc00005` | `0x7fc00000` |
+| `0xffc00005` quiet | `0xffc00005` | `0x7fc00000` |
+| `0x7fc00005` quiet, positive | `0x7fc00005` | `0x7fc00000` |
+
+V8 only sets the quiet bit, and the id mask is `0x3FFFFF`, so the payload survives there by
+luck. Safari replaces the value outright and the id reads back as **0**. `isVariable()`
+returns false for id 0, so the caller treats the variable as a literal — and the literal is
+NaN. Nothing throws. A vertex, a rotation angle or a border width simply becomes NaN and the
+geometry disappears.
+
+There is no quiet-NaN workaround; JSC canonicalizes every NaN regardless of quiet bit or
+sign. The only fix is to keep the bits.
+
+**The rule.** Read with `readNanIdBits()` (or `readInt()`), keep the raw int32, and decode
+with `isNaNBits` / `idFromBits` / `isVariableBits`, turning literals into numbers with
+`intBitsToFloat`. Write back with `writeInt`, never `writeFloat` — for a literal the two
+emit identical bytes, and for an id only one of them is correct. `DrawBase4.ts` is the
+worked example; it is why the 2D draw ops have always worked in Safari.
+
+`readFloat()` is for values the format guarantees are literals. Its docstring used to claim
+`getFloat32` preserves NaN bit patterns, and the whole 3D surface was built on that.
+
+**Testing.** `node nanbits.mjs` runs the real decode path in both engines and fails if an id
+is lost; `--self-test` first demonstrates that it can tell the difference, which matters
+because the broken code passes on V8. Add a case when an op starts carrying a variable.
+Reaching JSC via `osascript -l JavaScript` is a proxy for Safari, not Safari itself.
+
+Fixed 2026-10-05 in Operations3D, MeshExpression, Mesh2D, VectorExpression/VectorRpn,
+SoundOperations, the border modifier and the Loom remap chain.
+
 ## Browser APIs the headless harnesses have to shim
 
 `render.mjs` sets `paint.loadBitmap = () => {}` because the real one needs `Blob`,

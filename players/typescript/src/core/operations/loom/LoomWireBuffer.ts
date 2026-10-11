@@ -1,6 +1,6 @@
 // LoomWireBuffer: a WireBuffer that applies ID remapping during pattern (loom)
 // expansion. Port of LoomWireBuffer.java. It wraps an existing WireBuffer and
-// delegates all reads/writes to it, overriding only declareId/readId/readNanId/
+// delegates all reads/writes to it, overriding only declareId/readId/readNanIdBits/
 // readLongNanId to route through a RemapContext.
 
 import { WireBuffer } from '../../WireBuffer';
@@ -21,7 +21,9 @@ export class LoomWireBuffer extends WireBuffer {
     // ---- ID-typed reads (the remapping hooks) ----
     override declareId(): number { return this.mContext.declareId(this.mWrapped.readInt()); }
     override readId(): number { return this.mContext.resolveId(this.mWrapped.readInt()); }
-    override readNanId(): number { return this.mContext.resolveNanId(this.mWrapped.readFloat()); }
+    override readNanIdBits(): number {
+        return this.mContext.resolveNanIdBits(this.mWrapped.readInt());
+    }
     override readLongNanId(): number { return this.mContext.resolveLongNanId(this.mWrapped.readLong()); }
 
     // ---- Delegation ----

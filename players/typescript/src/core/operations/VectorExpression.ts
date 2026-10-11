@@ -13,9 +13,9 @@ import { Operation } from '../Operation';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
 import type { WireBuffer } from '../WireBuffer';
-import { idFromNan, isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
 import { AnimatedFloatExpression } from './utilities/AnimatedFloatExpression';
-import { VectorRpn, MAX_DIM, isVectorOp } from './utilities/VectorRpn';
+import { VectorRpn, MAX_DIM, isVectorOp, isVectorOpBits } from './utilities/VectorRpn';
 
 const ID_REGION_MASK = 0x3 << 20;
 const ID_REGION_ARRAY = 0x2 << 20;
@@ -36,19 +36,20 @@ const ID_REGION_ARRAY = 0x2 << 20;
  * call it. Including the check here is what the reference documents as intended, and without it
  * the operation cannot do the one thing it is for. Reported upstream — see 3D_PLAN.md.
  */
-function isResolvable(v: number): boolean {
-    if (!Number.isNaN(v)) {
+function isResolvableBits(bits: number): boolean {
+    if (!isNaNBits(bits)) {
         return false;
     }
-    const bits = floatToRawIntBits(v);
-    const isArray = isNaNBits(bits) && (idFromBits(bits) & ID_REGION_MASK) === ID_REGION_ARRAY;
-    return !AnimatedFloatExpression.isMathOperator(v) && !isVectorOp(v) && !isArray;
+    const isArray = (idFromBits(bits) & ID_REGION_MASK) === ID_REGION_ARRAY;
+    return !AnimatedFloatExpression.isMathOperatorBits(bits) && !isVectorOpBits(bits)
+        && !isArray;
 }
 
 export class VectorExpression extends Operation implements VariableSupport {
     static readonly OP_CODE = 116;
 
-    private mPreCalc: Float32Array;
+    /** The program with globals resolved, as raw bits: it still carries operator ids. */
+    private mPreCalc: Int32Array;
     private mRpn = new VectorRpn();
     private mOut = new Float32Array(MAX_DIM);
 
@@ -56,7 +57,7 @@ export class VectorExpression extends Operation implements VariableSupport {
         readonly mId: number,
         readonly mDimension: number,
         readonly mFlags: number,
-        readonly mSrcValue: Float32Array,
+        readonly mSrcValue: Int32Array,
     ) {
         super();
         this.mPreCalc = mSrcValue.slice();
@@ -69,8 +70,9 @@ export class VectorExpression extends Operation implements VariableSupport {
 
     updateVariables(context: RemoteContext): void {
         for (let i = 0; i < this.mSrcValue.length; i++) {
-            const v = this.mSrcValue[i];
-            this.mPreCalc[i] = isResolvable(v) ? context.getFloat(idFromNan(v)) : v;
+            const b = this.mSrcValue[i];
+            this.mPreCalc[i] = isResolvableBits(b)
+                ? floatToRawIntBits(context.getFloat(idFromBits(b))) : b;
         }
     }
 
@@ -78,9 +80,9 @@ export class VectorExpression extends Operation implements VariableSupport {
         // Register as the object owning these ids, so another op can discover that this is a
         // vector and how wide it is.
         context.putObject(this.mId, this);
-        for (const v of this.mSrcValue) {
-            if (isResolvable(v)) {
-                context.listensTo(idFromNan(v), this);
+        for (const b of this.mSrcValue) {
+            if (isResolvableBits(b)) {
+                context.listensTo(idFromBits(b), this);
             }
         }
     }
@@ -140,9 +142,9 @@ export class VectorExpression extends Operation implements VariableSupport {
         const dimension = buffer.readByte();
         const flags = buffer.readByte();
         const len = buffer.readShort();
-        const values = new Float32Array(len);
+        const values = new Int32Array(len);
         for (let i = 0; i < len; i++) {
-            values[i] = buffer.readNanId();
+            values[i] = buffer.readNanIdBits();
         }
         operations.push(new VectorExpression(id, dimension, flags, values));
     }
