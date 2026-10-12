@@ -43,6 +43,9 @@ interface EmbedConfig {
     step: number;
     stepId: number;
     timeId: number;
+    // the slide before this one: its step and how long it ran, for a film to carry on from it
+    prevStepId: number;
+    prevTimeId: number;
     // time windows: play [from, to] of the document's own timeline at `speed`, hold at `to`
     hasWindow: boolean;
     from: number;
@@ -55,7 +58,7 @@ interface EmbedConfig {
 export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfig {
     const out: EmbedConfig = {
         kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], mirror: false, gate: 0,
-        persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1,
+        persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1, prevStepId: -1, prevTimeId: -1,
         hasWindow: false, from: 0, to: -1, speed: 1,
     };
     const colon = config.indexOf(':');
@@ -87,6 +90,8 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             else if (k === 'step') { out.hasStep = true; out.step = parseFloat(v) || 0; out.persist = true; }
             else if (k === 'stepid') out.stepId = parseInt(v, 10);
             else if (k === 'timeid') out.timeId = parseInt(v, 10);
+            else if (k === 'prevstepid') out.prevStepId = parseInt(v, 10);
+            else if (k === 'prevtimeid') out.prevTimeId = parseInt(v, 10);
             else if (k === 'from') { out.hasWindow = true; out.from = parseFloat(v) || 0; out.persist = true; }
             else if (k === 'to') { out.hasWindow = true; out.to = parseFloat(v); out.persist = true; }
             else if (k === 'speed') out.speed = parseFloat(v) || 1;
@@ -119,6 +124,9 @@ interface NestedDoc {
     paint: CanvasPaintContext | null;
     hostBase: number;        // persist: host seconds accumulated over earlier slides
     hostLast: number;        // persist: the host time last seen, to notice a new slide
+    curStep: number;         // the step it was last shown at
+    prevStep: number;        // ...and, once that changed, the step before and how long it ran
+    prevTime: number;
 }
 
 interface VideoEmbed {
@@ -256,7 +264,7 @@ export class WebCustomHost implements CustomComponentHost {
         let nested = this.docs.get(key);
         if (!nested) {
             nested = { persist: cfg.persist, ok: false, failed: false, doc: null, ctx: null,
-                       paint: null, hostBase: 0, hostLast: 0 };
+                       paint: null, hostBase: 0, hostLast: 0, curStep: -1, prevStep: -1, prevTime: 0 };
             this.docs.set(key, nested);
             this.load(nested, cfg.path, canvas);
         }
@@ -281,6 +289,10 @@ export class WebCustomHost implements CustomComponentHost {
         // it through `timeid`, and the slide's number through `stepid`. The same stitching
         // as RcDocumentHost.cpp, so a film cut for the desktop plays the same here.
         let docTime = timeSec;
+        if (cfg.hasStep && cfg.step !== nested.curStep) {              // a new step: remember the last
+            if (nested.curStep >= 0) { nested.prevStep = nested.curStep; nested.prevTime = nested.hostLast; }
+            nested.curStep = cfg.step;
+        }
         if (nested.persist) {
             if (timeSec + 1e-6 < nested.hostLast) nested.hostBase += nested.hostLast;
             nested.hostLast = timeSec;
@@ -300,6 +312,8 @@ export class WebCustomHost implements CustomComponentHost {
         ctx.setAnimationTime(docTime);
         if (cfg.hasStep && cfg.stepId >= 0) ctx.overrideFloat(cfg.stepId, cfg.step);
         if (cfg.timeId >= 0) ctx.overrideFloat(cfg.timeId, timeSec);
+        if (cfg.prevStepId >= 0) ctx.overrideFloat(cfg.prevStepId, nested.prevStep);
+        if (cfg.prevTimeId >= 0) ctx.overrideFloat(cfg.prevTimeId, nested.prevTime);
 
         // The engine has already translated the canvas so (0,0)..(w,h) is the component
         // box; clip to it, place the fitted document inside, and paint it in its own

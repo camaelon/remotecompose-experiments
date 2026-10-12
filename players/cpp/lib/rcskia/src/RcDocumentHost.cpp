@@ -42,6 +42,11 @@ struct RcDocumentHost::Nested {
     // in host time rather than wall time so an export that runs off the clock still agrees.
     double hostLast = 0.0;
     double hostBase = 0.0;
+    // The step it was last shown at and, when that changes, the step before and how long it
+    // was shown: a film can't remember on its own where an open-ended slide left it, so the
+    // host hands it over (`prevstepid` / `prevtimeid`) and the next slide carries on from there.
+    float curStep = -1.0f, prevStep = -1.0f;
+    double prevTime = 0.0;
     // The file a persistent document came from and its stamp when read: a deck rebuild
     // rewrites the file while the player is open, and the retire() on the next slide change
     // has to notice or the player keeps showing the old document indefinitely.
@@ -97,6 +102,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     // declared in its source; refract passes them through from the include options.
     bool persist = false;
     bool hasStep = false; float step = 0.0f; int stepId = -1, timeId = -1;
+    int prevStepId = -1, prevTimeId = -1;      // the slide before this one: its step, how long it ran
     // Time windows: `from`/`to` (seconds of the document's own timeline) and `speed`. The slide
     // plays that stretch of the document and holds at `to`; the document needs nothing special,
     // only to animate on its animation time. Implies `persist`. Independent of step/stepid/timeid.
@@ -120,6 +126,8 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 else if (k == "step") { hasStep = true; step = std::strtof(v.c_str(), nullptr); persist = true; }
                 else if (k == "stepid") stepId = std::atoi(v.c_str());
                 else if (k == "timeid") timeId = std::atoi(v.c_str());
+                else if (k == "prevstepid") prevStepId = std::atoi(v.c_str());
+                else if (k == "prevtimeid") prevTimeId = std::atoi(v.c_str());
                 else if (k == "from") { hasWindow = true; winFrom = std::strtod(v.c_str(), nullptr); persist = true; }
                 else if (k == "to") { hasWindow = true; winTo = std::strtod(v.c_str(), nullptr); persist = true; }
                 else if (k == "speed") winSpeed = std::strtod(v.c_str(), nullptr);
@@ -214,6 +222,10 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     // change neither restarts nor rewinds it; the host's slide clock still reaches it through
     // `timeid`, and the slide's number through `stepid`.
     double docTime = timeSec;
+    if (hasStep && step != n->curStep) {                                // a new step: remember the last
+        if (n->curStep >= 0.0f) { n->prevStep = n->curStep; n->prevTime = n->hostLast; }
+        n->curStep = step;
+    }
     if (n->persist) {
         if (timeSec + 1e-6 < n->hostLast) n->hostBase += n->hostLast;   // a new slide: carry on
         n->hostLast = timeSec;
@@ -229,6 +241,8 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                           static_cast<float>(docTime));
     if (hasStep && stepId >= 0) n->ctx->overrideFloat(stepId, step);
     if (timeId >= 0) n->ctx->overrideFloat(timeId, static_cast<float>(timeSec));
+    if (prevStepId >= 0) n->ctx->overrideFloat(prevStepId, n->prevStep);
+    if (prevTimeId >= 0) n->ctx->overrideFloat(prevTimeId, static_cast<float>(n->prevTime));
     if (std::getenv("RC_EMBED_TRACE")) {
         std::fprintf(stderr, "[rc-embed] %s persist=%d step=%g(id %d) time=%g(id %d) docTime=%g -> f42=%g f43=%g\n",
                      config.c_str(), (int)n->persist, step, stepId, timeSec, timeId, docTime,
