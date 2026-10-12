@@ -24,7 +24,9 @@ public:
         if (mSurface && mWidth == w && mHeight == h) return true;
         mWidth = w;
         mHeight = h;
-        SkImageInfo info = SkImageInfo::MakeN32Premul(w, h);
+        // RGBA, not N32: present() uploads the raw pixels as GL_RGBA, and N32 is BGRA on
+        // Linux, which swapped red and blue on screen.
+        SkImageInfo info = SkImageInfo::Make(w, h, kRGBA_8888_SkColorType, kPremul_SkAlphaType);
         mSurface = SkSurfaces::Raster(info);
         return mSurface != nullptr;
     }

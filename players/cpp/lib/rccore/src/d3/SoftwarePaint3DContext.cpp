@@ -1,6 +1,8 @@
 #include "rccore/d3/SoftwarePaint3DContext.h"
 #include <cstdio>
 #include <cstdlib>
+#include <atomic>
+#include <chrono>
 
 #include "rccore/d3/Matrix4.h"
 #include "rccore/d3/Paint3DContext.h"

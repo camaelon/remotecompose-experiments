@@ -319,6 +319,16 @@ public:
     void registerListening(RemoteContext& context) override;
     void updateVariables(RemoteContext& context) override;
 
+    static bool hasFlowLimits(WireBuffer& buf) {
+        if (buf.getIndex() + 8 > buf.getSize()) return false;
+        auto isCount = [](int32_t v) { return v == INT32_MAX || (v >= 0 && v <= 100000); };
+        int start = buf.getIndex();
+        int32_t a = buf.readInt();
+        int32_t b = buf.readInt();
+        buf.setIndex(start);
+        return isCount(a) && isCount(b);
+    }
+
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutFlow>();
         op->componentId = buf.readInt();
@@ -327,11 +337,16 @@ public:
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
         op->oSpacedBy = op->spacedBy;
-        // FlowLayout.apply() writes these two after spacedBy. Omitting them left the
-        // cursor 8 bytes short, so every operation after a flow was read from the wrong
-        // offset and the whole document rendered blank.
-        op->maxItemsInEachRow = buf.readInt();
-        op->maxLines = buf.readInt();
+        // Newer FlowLayout.apply() writes maxItemsInEachRow and maxLines after spacedBy;
+        // older documents (e.g. the API-7 corpus at hoford.github.io/RemoteCompose-Examples)
+        // end the op at spacedBy, and the header version does not tell the two apart.
+        // Reading the wrong length desyncs every op after the flow. The two ints are
+        // counts, INT32_MAX meaning unbounded; in the short form those bytes start the
+        // next op instead, whose opcode byte never makes a plausible count. So peek.
+        if (hasFlowLimits(buf)) {
+            op->maxItemsInEachRow = buf.readInt();
+            op->maxLines = buf.readInt();
+        }
         ops.push_back(std::move(op));
     }
 };

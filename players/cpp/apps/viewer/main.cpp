@@ -14,6 +14,7 @@
 //   --widget [x,y]  - Desktop widget mode (borderless, on desktop layer)
 //   --interactive   - Enable mouse interaction in widget mode
 //   --auto <sec>    - Auto-advance to next file every N seconds
+//   --fullscreen [N] - Fullscreen, no title bar, on monitor N (default: primary)
 
 #define GL_SILENCE_DEPRECATION
 #include <GLFW/glfw3.h>
@@ -37,6 +38,7 @@
 #include "include/docs/SkPDFJpegHelpers.h"
 
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -69,6 +71,8 @@ int main(int argc, char* argv[]) {
                   << "\nWidget mode:\n"
                   << "  --widget [x,y] Desktop widget (borderless, always on desktop)\n"
                   << "  --interactive  Enable mouse interaction in widget mode\n"
+                  << "\nFullscreen:\n"
+                  << "  --fullscreen [N] Fullscreen on monitor N (0 = primary, the default)\n"
                   << "\nSlideshow:\n"
                   << "  --auto <sec>   Auto-advance to next file every N seconds (default 5)\n"
                   << "  --auto-voice   Auto-advance to next file when the voice-over wav finishes\n"
@@ -86,6 +90,8 @@ int main(int argc, char* argv[]) {
         false;
 #endif
     int argOffset = 1;
+    bool fullscreen = false;
+    int fullscreenMonitor = 0;
 
     // Scan for flags
     while (argOffset < argc && argv[argOffset][0] == '-') {
@@ -121,6 +127,16 @@ int main(int argc, char* argv[]) {
                 argOffset++;
             } else {
                 g.autoAdvanceSec = 5.0;
+            }
+        } else if (arg == "--fullscreen") {
+            fullscreen = true;
+            argOffset++;
+            // Optional monitor index. A bare number is never a file name we would load,
+            // since inputs need a supported extension or must be a directory.
+            if (argOffset < argc && std::isdigit((unsigned char)argv[argOffset][0])
+                && !fs::exists(argv[argOffset])) {
+                fullscreenMonitor = std::atoi(argv[argOffset]);
+                argOffset++;
             }
         } else if (arg == "--auto-voice") {
             g.autoAdvanceOnVoice = true;
@@ -286,7 +302,35 @@ int main(int argc, char* argv[]) {
         glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_FALSE);
     }
 
-    GLFWwindow* window = glfwCreateWindow(initW, initH, "RemoteCompose Viewer", nullptr, nullptr);
+    GLFWmonitor* monitor = nullptr;
+    if (fullscreen) {
+        int count = 0;
+        GLFWmonitor** monitors = glfwGetMonitors(&count);
+        if (count == 0) {
+            std::cerr << "--fullscreen: no monitors found, using a window\n";
+        } else {
+            if (fullscreenMonitor < 0 || fullscreenMonitor >= count) {
+                std::cerr << "--fullscreen: no monitor " << fullscreenMonitor << " (have "
+                          << count << "), using 0\n";
+                fullscreenMonitor = 0;
+            }
+            for (int i = 0; i < count; i++) {
+                const GLFWvidmode* m = glfwGetVideoMode(monitors[i]);
+                std::cerr << "Monitor " << i << ": " << glfwGetMonitorName(monitors[i]) << " "
+                          << m->width << "x" << m->height
+                          << (i == fullscreenMonitor ? "  <- fullscreen" : "") << "\n";
+            }
+            monitor = monitors[fullscreenMonitor];
+            // GLFW minimises a fullscreen window when it loses focus. On a second screen
+            // that hides the slideshow the moment you click on the other one.
+            glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
+            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+            initW = mode->width;
+            initH = mode->height;
+        }
+    }
+
+    GLFWwindow* window = glfwCreateWindow(initW, initH, "RemoteCompose Viewer", monitor, nullptr);
     if (!window) {
         std::cerr << "Window creation failed\n";
         glfwTerminate();
@@ -295,9 +339,11 @@ int main(int argc, char* argv[]) {
     attachWindow(window);             // also gives the web host its content view
 
     if (g.widgetMode) {
+#ifdef GLFW_MOUSE_PASSTHROUGH  // GLFW 3.4+; Debian/Raspberry Pi OS ship 3.3
         if (!g.widgetInteractive) {
             glfwSetWindowAttrib(window, GLFW_MOUSE_PASSTHROUGH, GLFW_TRUE);
         }
+#endif
         configureDesktopWidget(window, g.widgetX, g.widgetY);
     }
 

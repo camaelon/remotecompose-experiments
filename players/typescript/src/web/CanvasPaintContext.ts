@@ -178,6 +178,19 @@ export class CanvasPaintContext extends PaintContext {
         // bytes each time. Decoding once is enough — and for an animated one, essential: a
         // fresh decoder every frame is one that never gets to its first picture.
         if (this.bitmapPromises.has(imageId)) return;
+        // ENCODING_EMPTY (3) and ENCODING_COMPONENT_OFFSCREEN_BUFFER (4) carry dimensions
+        // and no pixels — they exist to be drawn into, not decoded. Handing their empty
+        // payload to an <img> fails asynchronously and logs "failed to load bitmap N" on
+        // every document that uses an offscreen buffer, which reads like a real error.
+        // Record the size so drawToBitmap can allocate the surface at the declared
+        // resolution instead of falling back to its 256x256 default.
+        if (encoding === 3 || encoding === 4 || bitmap.length === 0) {
+            // Only ENCODING_EMPTY carries a real size. The component offscreen buffer
+            // writes 1x1 as a placeholder and takes its size from the component at paint
+            // time, so recording that would allocate a one-pixel buffer.
+            if (encoding === 3) this.emptyBitmapSizes.set(imageId, { width, height });
+            return;
+        }
         // A GIF: an <img> would draw its first frame forever, so its frames are decoded
         // separately where the browser can (WebCodecs' ImageDecoder), and the <img> below
         // stays as the still to show until they are, or on a browser that cannot.
@@ -283,6 +296,14 @@ export class CanvasPaintContext extends PaintContext {
     // the next one is asked for once the clock passes the end of this one — and a repaint
     // asked for so it follows.
     private bitmapToDraw(imageId: number): CanvasImageSource | undefined {
+        // An offscreen buffer is backed by a canvas, not by a decoded image, so it lives in
+        // a different cache. Without this a document that renders into a buffer with
+        // `drawToBitmap` and then blits it with `drawBitmap` draws nothing at all: the id
+        // resolves, the lookup misses, and the draw silently returns. The shader path
+        // already consults this cache first (see the texture uniforms in tryRenderShader),
+        // so before this the same buffer was reachable from a shader but not from a blit.
+        const offscreen = this.bitmapCanvasCache.get(imageId);
+        if (offscreen) return offscreen.canvas as CanvasImageSource;
         const video = this.bitmapVideos.get(imageId);
         if (video) {
             this.needsRepaint();
@@ -1919,6 +1940,8 @@ export class CanvasPaintContext extends PaintContext {
 
     private mainCanvas: CanvasRenderingContext2D | null = null;
     private bitmapCanvasCache = new Map<number, CanvasRenderingContext2D>();
+    /** Declared size of a pixel-less bitmap, so its buffer is allocated at that size. */
+    private emptyBitmapSizes = new Map<number, { width: number; height: number }>();
 
     drawToBitmap(bitmapId: number, mode: number, color: number): void {
         if (this.mainCanvas === null) {
@@ -1932,10 +1955,16 @@ export class CanvasPaintContext extends PaintContext {
         // Get or create an offscreen canvas for this bitmap
         let offCtx = this.bitmapCanvasCache.get(bitmapId);
         if (!offCtx) {
-            // Look up the bitmap dimensions
+            // Prefer the size the document declared. A bitmap created with
+            // createBitmap(w, h) has no decoded image to measure, so before this the
+            // buffer silently became 256x256 whatever the document asked for — a
+            // simulation writing a 512x256 state grid got two thirds of it discarded,
+            // with no error anywhere. The 256 default now applies only to a buffer whose
+            // size nothing declared.
+            const declared = this.emptyBitmapSizes.get(bitmapId);
             const img = this.bitmapCache.get(bitmapId);
-            const w = img ? (img as any).width || 256 : 256;
-            const h = img ? (img as any).height || 256 : 256;
+            const w = declared?.width || (img ? (img as any).width : 0) || 256;
+            const h = declared?.height || (img ? (img as any).height : 0) || 256;
             offCtx = this.createLayerCanvas(w, h);
             this.bitmapCanvasCache.set(bitmapId, offCtx);
         }
