@@ -789,6 +789,15 @@ void SkiaPaintContext::applyTypefaceByName(const std::string& family, int weight
         SkFontStyle style(weight > 0 ? weight : 400, SkFontStyle::kNormal_Width,
                           italic ? SkFontStyle::kItalic_Slant : SkFontStyle::kUpright_Slant);
         tf = sk_sp<SkTypeface>(mFontMgr->matchFamilyStyle(family.c_str(), style));
+        // A family that isn't installed: a sans that ships with the system, at the requested
+        // weight and slant, as the generic sans-serif path does. Not the null family: CoreText
+        // ignores weight for it, so every weight in a document styled for a missing font
+        // (a deck set in Google Sans on a machine without it) would come out regular.
+        static const char* const kFallbackSans[] = {
+            "Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans", "Liberation Sans", "sans-serif", nullptr,
+        };
+        for (int k = 0; !tf && kFallbackSans[k]; ++k)
+            tf = sk_sp<SkTypeface>(mFontMgr->matchFamilyStyle(kFallbackSans[k], style));
         mTypefaceCache[key] = tf;
     }
     if (tf) mFont.setTypeface(tf);
