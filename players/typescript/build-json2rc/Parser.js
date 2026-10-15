@@ -1395,6 +1395,50 @@ class Parser {
             w.drawPath(this.resolvePath(command.path));
             return;
         }
+        if (t === "clippath") {
+            w.clipPath(this.resolvePath(command.path));
+            return;
+        }
+        if (t === "drawtextonpath") {
+            // Keys match RemoteComposeJsonParser's `drawtextonpath` case exactly.
+            const off = (k) => (k in command
+                ? this.fbits(command[k]) : (0, WireBuffer_1.floatToRawIntBits)(0));
+            w.drawTextOnPath(this.resolveTextId(command.text), this.resolvePath(command.path), off("hOffset"), off("vOffset"));
+            return;
+        }
+        if (t === "adddatalist" || t === "idlist" || t === "datalistids") {
+            // `id` is ours, not the reference's: the reference parser builds the list and
+            // throws the id away, so a document parsed by it can never refer to the list
+            // afterwards and textLookup is unreachable. The key is bookkeeping only — the
+            // emitted ops are identical either way.
+            const ids = command.list.map((v) => this.resolveTextId(v));
+            const listId = w.addList(ids);
+            // The store holds raw float bits, as it does for every other variable.
+            if (command.id != null) {
+                this.variables.set(String(command.id), (0, WireBuffer_1.floatToRawIntBits)(listId));
+            }
+            return;
+        }
+        if (t === "textlookup") {
+            const arr = command.array;
+            const arrId = (typeof arr === "string" && arr.startsWith("@"))
+                ? Math.trunc((0, WireBuffer_1.f32FromBits)(this.variables.get(arr.slice(1)) ?? 0))
+                : Number(arr);
+            const idxBits = ("index" in command)
+                ? this.fbits(command.index) : (0, WireBuffer_1.floatToRawIntBits)(0);
+            const textId = w.textLookup(arrId, idxBits);
+            if (command.varName != null) {
+                this.variables.set(String(command.varName), (0, WireBuffer_1.floatToRawIntBits)(textId));
+            }
+            return;
+        }
+        if (t === "rem") {
+            // Four spellings, in the reference's order of preference; an absent one is an
+            // empty remark rather than an error — a comment is not worth failing a build over.
+            const m = command.text ?? command.value ?? command.message ?? command.comment ?? "";
+            w.rem(String(m));
+            return;
+        }
         if (t === "pathcreate") {
             const pid = w.pathCreate(f("x"), f("y"));
             if (command.id !== undefined && command.id !== null) {
