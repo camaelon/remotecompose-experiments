@@ -136,7 +136,15 @@ void mouseButtonCallback(GLFWwindow* /*window*/, int button, int action, int /*m
                 g.rcDocHost.pointerUp(g.mouseX, g.mouseY, dx, dy);
             } else if (g.doc && g.context) {
                 g.doc->touchUp(*g.context, touchX(g.mouseX), touchY(g.mouseY), dx, dy);
-                g.doc->onClick(*g.context, g.mouseX, g.mouseY);
+                // Document coordinates, like touchUp above — NOT window coordinates.
+                // CoreDocument::onClick looks willing to convert for us, but its fallback
+                // branch computes windowX * mWidth / context.mWidth, and the renderer sets
+                // context.mWidth to the DOCUMENT width (Player.cpp, docFit) — so that ratio
+                // is 1 and the "conversion" is a no-op. Passing window coordinates then put
+                // every click outside every component: fullscreen at 1920x1080 against a
+                // 400x800 document, nothing is ever hit. Component onClick handlers looked
+                // unimplemented when they were simply never reached.
+                g.doc->onClick(*g.context, touchX(g.mouseX), touchY(g.mouseY));
             }
         }
         g.needsRedraw = true;
