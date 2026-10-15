@@ -1993,11 +1993,15 @@ export class Parser {
                 "text without a `profiles` header tag — add \"profiles\": 513");
         }
         const value = component.value;
-        if (typeof value === "string" && (value.startsWith("$") || value.startsWith("@"))) {
-            throw new NotImplementedComponent(`text variable/resource reference ${value}`);
-        }
         let textId: number;
-        if (value !== undefined && value !== null) {
+        if (typeof value === "string" && (value.startsWith("$") || value.startsWith("@"))) {
+            // A value starting with $ or @ is a variable/resource reference, not literal
+            // text — the reference parser runs every text argument through resolveTextId,
+            // and this is the same call the draw commands already use. It is what lets a
+            // component show a string chosen at run time: `textLookup` puts a text id in a
+            // variable, and the component renders whatever that id currently names.
+            textId = this.resolveTextId(value);
+        } else if (value !== undefined && value !== null) {
             textId = this.writer.addText(String(value));
         } else if (component.textFromFloat && typeof component.textFromFloat === "object") {
             // A live float rather than a literal — the id is the same kind of thing, but
