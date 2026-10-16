@@ -1,12 +1,14 @@
 #include "rcplayer/VideoCustomHost.h"
 
 #include "rcplayer/AvfVideoPlayer.h"
+#include "rcplayer/VideoZoom.h"
 #include "rcskia/SkiaPaintContext.h"
 
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <vector>
 
 #include "include/core/SkCanvas.h"
 #include "include/core/SkImage.h"
@@ -30,7 +32,12 @@ void VideoCustomHost::setPaused(bool paused) {
 // Parse a "#k=v&k=v" option suffix on a media config: "crop=l,t,r,b" (source fractions 0–1,
 // default full frame), "start=S" (seconds: playback begins there and loops back to it) and
 // "still=T" (seconds: show that frame, frozen, instead of playing). Returns the bare path.
-struct VideoOpts { float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f}; double start = 0.0, still = -1.0; };
+struct VideoOpts {
+    float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+    double start = 0.0, still = -1.0, until = -1.0;   // "until=U": play [start, U] and hold
+    bool loop = true;                         // "loop=0" / "once": play through once and hold
+    std::vector<rcplayer::ZoomKey> zooms;     // "zooms=T@x,y,z;…", see VideoZoom.h
+};
 static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
     auto hash = s.find('#');
     if (hash == std::string::npos) return s;
@@ -39,6 +46,7 @@ static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
         size_t amp = opts.find('&', p0);
         std::string tok = opts.substr(p0, amp == std::string::npos ? std::string::npos : amp - p0);
         auto eq = tok.find('=');
+        if (tok == "once") o.loop = false;
         if (eq != std::string::npos) {
             std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
             if (k == "crop") {
@@ -49,6 +57,12 @@ static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
                 o.start = std::strtod(v.c_str(), nullptr);
             } else if (k == "still") {
                 o.still = std::strtod(v.c_str(), nullptr);
+            } else if (k == "until") {
+                o.until = std::strtod(v.c_str(), nullptr);
+            } else if (k == "loop") {
+                o.loop = !(v == "0" || v == "false" || v == "off" || v == "no" || v == "once");
+            } else if (k == "zooms") {
+                o.zooms = rcplayer::parseZooms(v);
             }
         }
         if (amp == std::string::npos) break;
@@ -103,7 +117,8 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     if (o.still >= 0.0) {
         sk_sp<SkImage> img = frameAt(o.still);
         if (!img) return false;
-        drawFitted(skpc->canvas(), img, w, h, o.crop);
+        float zc[4]; rcplayer::zoomCrop(o.zooms, o.still, o.crop, zc);
+        drawFitted(skpc->canvas(), img, w, h, zc);
         return true;
     }
 
@@ -111,7 +126,7 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     if (it == mPlayers.end()) {
         auto f = mFailed.find(componentId);
         if (f != mFailed.end() && f->second) return false;   // known-bad, don't retry
-        auto player = AvfVideoPlayer::Open(full.string(), o.start);
+        auto player = AvfVideoPlayer::Open(full.string(), o.start, o.loop, o.until);
         if (!player) { mFailed[componentId] = true; return false; }
         if (mPaused) player->setPaused(true);
         it = mPlayers.emplace(componentId, std::move(player)).first;
@@ -119,14 +134,18 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
 
     // The core has already translated the canvas to this component's content box, so
     // draw the frame at (0,0)..(w,h). Cast is safe: the viewer uses SkiaPaintContext.
+    // The zoom follows the picture: the view at the clip time of the frame being drawn (the one
+    // pulled last frame — a frame's lag, invisible at the speed a zoom moves).
+    float zc[4];
+    rcplayer::zoomCrop(o.zooms, it->second->hasFrame() ? it->second->frameTimeSec() : o.start, o.crop, zc);
     it->second->paint(skpc->canvas(), static_cast<int>(w), static_cast<int>(h),
-                       o.crop[0], o.crop[1], o.crop[2], o.crop[3]);
+                       zc[0], zc[1], zc[2], zc[3]);
     // Until AVFoundation hands over its first frame (a moment after the slide opens, or never
     // in an export that paints on a simulated clock), show the frame playback starts on: no
     // black box, and a still slide followed by its playing slide reads as one picture
     // starting to move.
     if (!it->second->hasFrame()) {
-        if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, o.crop);
+        if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, zc);
     }
     return true;
 }

@@ -49,6 +49,9 @@ interface EmbedConfig {
     // video: where playback starts (and loops back to), or the one frame to show, frozen
     start: number;
     still: number;
+    loop: boolean;                                   // false: play through once, hold the last frame
+    until: number;                                   // > start: play [start, until] once, hold there
+    zooms: ZoomKey[];                                // zoom keyframes, see zoomCrop
     // time windows: play [from, to] of the document's own timeline at `speed`, hold at `to`
     hasWindow: boolean;
     from: number;
@@ -62,7 +65,7 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
     const out: EmbedConfig = {
         kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], mirror: false, gate: 0,
         persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1, prevStepId: -1, prevTimeId: -1,
-        hasWindow: false, from: 0, to: -1, speed: 1, start: 0, still: -1,
+        hasWindow: false, from: 0, to: -1, speed: 1, start: 0, still: -1, loop: true, until: -1, zooms: [],
     };
     const colon = config.indexOf(':');
     if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
@@ -82,6 +85,7 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             const eq = tok.indexOf('=');
             if (eq < 0) {
                 if (tok === 'persist') out.persist = true;
+                else if (tok === 'once') out.loop = false;
                 else if (tok === 'mirror') out.mirror = true;
                 else if (tok) out.fit = tok;
                 continue;
@@ -99,6 +103,9 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             else if (k === 'to') { out.hasWindow = true; out.to = parseFloat(v); out.persist = true; }
             else if (k === 'speed') out.speed = parseFloat(v) || 1;
             else if (k === 'start') out.start = Math.max(0, parseFloat(v) || 0);
+            else if (k === 'until') out.until = parseFloat(v);
+            else if (k === 'loop') out.loop = !['0', 'false', 'off', 'no', 'once'].includes(v);
+            else if (k === 'zooms') out.zooms = parseZooms(v);
             else if (k === 'still') { const t = parseFloat(v); out.still = isNaN(t) ? -1 : Math.max(0, t); }
             else if (k === 'gate') out.gate = parseFloat(v) || 0;
             else if (k === 'crop') {
@@ -132,6 +139,45 @@ interface NestedDoc {
     curStep: number;         // the step it was last shown at
     prevStep: number;        // ...and, once that changed, the step before and how long it ran
     prevTime: number;
+}
+
+// Zoom keyframes on a video: "T@x,y,z;…" — T seconds of the clip, x,y the centre as fractions
+// of the (cropped) frame, z the zoom. Before the first key the whole frame shows; at each key the
+// view eases from where it is to the new centre and zoom over ZOOM_DUR seconds (quart ease-out,
+// zoom in log space); z = 1 zooms back out; the view never leaves the frame. The same as
+// rcplayer/VideoZoom.h, so the desktop and the web frame a clip alike.
+export interface ZoomKey { t: number; x: number; y: number; z: number; }
+const ZOOM_DUR = 0.55;
+
+export function parseZooms(v: string): ZoomKey[] {
+    const keys: ZoomKey[] = [];
+    for (const k of v.split(';')) {
+        const at = k.indexOf('@');
+        if (at < 0) continue;
+        const [x, y, z] = k.slice(at + 1).split(',').map(parseFloat);
+        keys.push({ t: parseFloat(k.slice(0, at)) || 0, x: isNaN(x) ? 0.5 : x, y: isNaN(y) ? 0.5 : y,
+                    z: Math.max(1, isNaN(z) ? 1 : z) });
+    }
+    return keys.sort((a, b) => a.t - b.t);
+}
+
+export function zoomCrop(keys: ZoomKey[], t: number, base: number[]): number[] {
+    if (!keys.length) return base;
+    const ease = (u: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 4);
+    type V = { x: number; y: number; lz: number };
+    const mix = (a: V, b: V, e: number): V => ({ x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e,
+                                                  lz: a.lz + (b.lz - a.lz) * e });
+    let from: V = { x: 0.5, y: 0.5, lz: 0 }, to = from, t0 = -1e9;
+    for (const k of keys) {
+        if (k.t > t) break;
+        from = mix(from, to, ease((k.t - t0) / ZOOM_DUR));
+        to = { x: k.x, y: k.y, lz: Math.log(k.z) }; t0 = k.t;
+    }
+    const v = mix(from, to, ease((t - t0) / ZOOM_DUR));
+    const half = 0.5 / Math.exp(v.lz);
+    const cx = Math.min(1 - half, Math.max(half, v.x)), cy = Math.min(1 - half, Math.max(half, v.y));
+    const bw = base[2] - base[0], bh = base[3] - base[1];
+    return [base[0] + (cx - half) * bw, base[1] + (cy - half) * bh, base[0] + (cx + half) * bw, base[1] + (cy + half) * bh];
 }
 
 interface VideoEmbed {
@@ -385,13 +431,14 @@ export class WebCustomHost implements CustomComponentHost {
         // A still (`still=T`) is its own element, paused on that frame; a playing clip starts at
         // `start=S` and loops back there rather than to its first frame.
         const still = cfg.still >= 0;
-        const key = still ? cfg.path + '@' + cfg.still : cfg.path + (cfg.start > 0 ? '#' + cfg.start : '');
+        const stretch = cfg.until > cfg.start;
+        const key = still ? cfg.path + '@' + cfg.still : cfg.path + '#' + cfg.start + (stretch ? '-' + cfg.until : '');
         let video = this.videos.get(key);
         if (!video) {
             const element = document.createElement('video');
             element.src = cfg.path;
             element.muted = true;
-            element.loop = !still && cfg.start <= 0;
+            element.loop = !still && !stretch && cfg.loop && cfg.start <= 0;
             element.playsInline = true;
             element.preload = 'auto';
             const v: VideoEmbed = { element, ready: false };
@@ -404,7 +451,7 @@ export class WebCustomHost implements CustomComponentHost {
                 element.addEventListener('loadeddata', () => { v.ready = true; });
             }
             if (!still) {
-                if (cfg.start > 0) element.addEventListener('ended', () => {
+                if (cfg.loop && !stretch && cfg.start > 0) element.addEventListener('ended', () => {
                     element.currentTime = cfg.start; element.play().catch(() => {});
                 });
                 element.play().catch(() => { /* until the page has been clicked */ });
@@ -414,9 +461,15 @@ export class WebCustomHost implements CustomComponentHost {
         const vw = video.element.videoWidth, vh = video.element.videoHeight;
         if (!still || !video.ready) pc.needsRepaint();      // a playing video is a new frame every frame
         if (!video.ready || vw <= 0 || vh <= 0) return true;
-        if (!still && video.element.paused) video.element.play().catch(() => {});
-        const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
-        let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
+        // A stretch ends at `until`: stop there and hold the frame (checked every paint, which a
+        // playing video asks for every frame).
+        const held = stretch && video.element.currentTime >= cfg.until;
+        if (held && !video.element.paused) { video.element.pause(); video.element.currentTime = cfg.until; }
+        if (!still && !held && video.element.paused && !video.element.ended) video.element.play().catch(() => {});
+        const zc = zoomCrop(cfg.zooms, still ? cfg.still : video.element.currentTime, cfg.crop);
+        if (cfg.zooms.length && !still) pc.needsRepaint();
+        const cropX = zc[0] * vw, cropY = zc[1] * vh;
+        let cropW = (zc[2] - zc[0]) * vw, cropH = (zc[3] - zc[1]) * vh;
         if (cropW <= 0 || cropH <= 0) { cropW = vw; cropH = vh; }
         const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
         canvas.save();

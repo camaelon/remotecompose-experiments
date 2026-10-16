@@ -1,6 +1,7 @@
 #include "rcplayer/StillHosts.h"
 
 #include "rcplayer/AvfVideoPlayer.h"
+#include "rcplayer/VideoZoom.h"
 #include "rcplayer/CameraCustomHost.h"
 #include "rcplayer/WebCustomHost.h"
 #include "rcplayer/CameraStandIn.h"
@@ -79,6 +80,14 @@ struct VideoFrameHost : rccore::CustomComponentHost {
             };
             double still = opt("still"), start = opt("start");
             at = still >= 0.0 ? still : (start > 0.0 ? start : 0.0);
+            // zoom keyframes: frame the still as the live clip is framed at that time
+            auto zp = rest.find("zooms=", hash);
+            if (zp != std::string::npos && (rest[zp - 1] == '#' || rest[zp - 1] == '&')) {
+                std::string zv = rest.substr(zp + 6);
+                zv = zv.substr(0, zv.find('&'));
+                float zc[4]; rcplayer::zoomCrop(rcplayer::parseZooms(zv), at, crop, zc);
+                for (int i = 0; i < 4; i++) crop[i] = zc[i];
+            }
         }
         if (path.empty()) return false;
         fs::path p(path);

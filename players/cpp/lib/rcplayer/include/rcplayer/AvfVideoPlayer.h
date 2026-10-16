@@ -19,7 +19,11 @@ class SkImage;
 class AvfVideoPlayer {
 public:
     // `startSec` > 0 starts playback there, and the loop comes back to it rather than to 0.
-    static std::unique_ptr<AvfVideoPlayer> Open(const std::string& path, double startSec = 0.0);
+    // `loop` false plays once, from the start, and holds on the last frame. `untilSec` > start
+    // plays once from the start to that time and holds there (a guided walk through a clip
+    // pauses on each slide's last frame until the next slide).
+    static std::unique_ptr<AvfVideoPlayer> Open(const std::string& path, double startSec = 0.0,
+                                                bool loop = true, double untilSec = -1.0);
     ~AvfVideoPlayer();
 
     // Extract the first video frame synchronously as an SkImage.
@@ -42,6 +46,8 @@ public:
     // True once a decoded frame has been drawn: until then paint() draws nothing, and a host
     // can show a poster in its place.
     bool hasFrame() const;
+    // The clip time of the frame last drawn (seconds), for anything that follows the picture.
+    double frameTimeSec() const;
 
     // Pause / resume playback. AVPlayer drives its own clock so we have to
     // call this explicitly when the host viewer toggles its pause flag.

@@ -45,14 +45,14 @@
 @property (nonatomic, assign) int  height;
 @property (nonatomic, assign) double durationSec;
 
-- (instancetype)initWithPath:(NSString*)path start:(double)startSec;
+- (instancetype)initWithPath:(NSString*)path start:(double)startSec loop:(BOOL)loop until:(double)untilSec;
 - (void)attachOutputTo:(AVPlayerItem*)item;
-- (CVPixelBufferRef)copyCurrentPixelBufferCF; // caller owns
+- (CVPixelBufferRef)copyCurrentPixelBufferCF:(double*)itemTimeSec; // caller owns
 @end
 
 @implementation AvfPlayerObjc
 
-- (instancetype)initWithPath:(NSString*)path start:(double)startSec {
+- (instancetype)initWithPath:(NSString*)path start:(double)startSec loop:(BOOL)loop until:(double)untilSec {
     self = [super init];
     if (!self) return nil;
 
@@ -83,7 +83,18 @@
     AVPlayerItem* templateItem = [AVPlayerItem playerItemWithAsset:asset];
     self.player = [AVQueuePlayer queuePlayerWithItems:@[ templateItem ]];
     self.player.actionAtItemEnd = AVPlayerActionAtItemEndAdvance;
-    if (startSec > 0.0 && startSec < self.durationSec) {
+    if (untilSec > startSec && untilSec < self.durationSec) {
+        // A stretch: play [start, until] once and hold there — the item ends at `until`.
+        templateItem.forwardPlaybackEndTime = CMTimeMakeWithSeconds(untilSec, 600);
+        loop = NO;
+    }
+    if (!loop) {
+        // Once: play from the start to the end and stop there, the last frame held on screen.
+        self.player.actionAtItemEnd = AVPlayerActionAtItemEndNone;
+        if (startSec > 0.0 && startSec < self.durationSec)
+            [templateItem seekToTime:CMTimeMakeWithSeconds(startSec, 600)
+                     toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
+    } else if (startSec > 0.0 && startSec < self.durationSec) {
         // Start part-way in: loop the range [start, end], so the clip comes back to where the
         // slide asked it to begin rather than to its first frame.
         CMTime t0 = CMTimeMakeWithSeconds(startSec, 600);
@@ -147,13 +158,15 @@
     }
 }
 
-- (CVPixelBufferRef)copyCurrentPixelBufferCF {
+- (CVPixelBufferRef)copyCurrentPixelBufferCF:(double*)itemTimeSec {
     AVPlayerItemVideoOutput* out = self.currentOutput;
     if (!out) return nullptr;
     CMTime hostTime = [out itemTimeForHostTime:CACurrentMediaTime()];
     if (![out hasNewPixelBufferForItemTime:hostTime]) return nullptr;
-    return [out copyPixelBufferForItemTime:hostTime
-                        itemTimeForDisplay:nullptr];
+    CMTime shown = kCMTimeInvalid;
+    CVPixelBufferRef pb = [out copyPixelBufferForItemTime:hostTime itemTimeForDisplay:&shown];
+    if (pb && itemTimeSec) *itemTimeSec = CMTIME_IS_NUMERIC(shown) ? CMTimeGetSeconds(shown) : CMTimeGetSeconds(hostTime);
+    return pb;
 }
 
 @end
@@ -162,21 +175,23 @@
 struct AvfVideoPlayer::Impl {
     AvfPlayerObjc* objc = nil;        // strong (ARC manages it)
     sk_sp<SkImage> lastImage;
+    double lastTime = 0.0;            // clip time of lastImage
 };
 
 AvfVideoPlayer::AvfVideoPlayer() : mImpl(std::make_unique<Impl>()) {}
 AvfVideoPlayer::~AvfVideoPlayer() { /* ARC releases mImpl->objc */ }
 
-std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& path, double startSec) {
+std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& path, double startSec, bool loop, double untilSec) {
     @autoreleasepool {
         NSString* nsPath = [NSString stringWithUTF8String:path.c_str()];
-        AvfPlayerObjc* objc = [[AvfPlayerObjc alloc] initWithPath:nsPath start:startSec];
+        AvfPlayerObjc* objc = [[AvfPlayerObjc alloc] initWithPath:nsPath start:startSec loop:loop until:untilSec];
         if (!objc || !objc.player) return nullptr;
 
         auto p = std::unique_ptr<AvfVideoPlayer>(new AvfVideoPlayer());
         p->mImpl->objc = objc;
         std::cerr << "AvfVideoPlayer: " << objc.width << "x" << objc.height
-                  << ", " << objc.durationSec << "s, looping\n";
+                  << ", " << objc.durationSec << "s, "
+                  << (untilSec > startSec ? "until " + std::to_string(untilSec) + "s" : loop ? "looping" : "once") << "\n";
         return p;
     }
 }
@@ -251,6 +266,7 @@ int    AvfVideoPlayer::height()      const { return mImpl->objc ? mImpl->objc.he
 double AvfVideoPlayer::durationSec() const { return mImpl->objc ? mImpl->objc.durationSec : 0.0; }
 
 bool AvfVideoPlayer::hasFrame() const { return mImpl->lastImage != nullptr; }
+double AvfVideoPlayer::frameTimeSec() const { return mImpl->lastTime; }
 
 void AvfVideoPlayer::setPaused(bool paused) {
     if (!mImpl->objc) return;
@@ -263,7 +279,8 @@ void AvfVideoPlayer::paint(SkCanvas* canvas, int dstW, int dstH,
     if (!mImpl->objc) return;
 
     @autoreleasepool {
-        CVPixelBufferRef pb = [mImpl->objc copyCurrentPixelBufferCF];
+        double shownAt = mImpl->lastTime;
+        CVPixelBufferRef pb = [mImpl->objc copyCurrentPixelBufferCF:&shownAt];
         if (pb) {
             CVPixelBufferLockBaseAddress(pb, kCVPixelBufferLock_ReadOnly);
             const size_t w  = CVPixelBufferGetWidth(pb);
@@ -284,6 +301,7 @@ void AvfVideoPlayer::paint(SkCanvas* canvas, int dstW, int dstH,
                 bm.writePixels(src, 0, 0);
                 bm.setImmutable();
                 mImpl->lastImage = bm.asImage();
+                mImpl->lastTime = shownAt;
             }
             CVPixelBufferUnlockBaseAddress(pb, kCVPixelBufferLock_ReadOnly);
             CVPixelBufferRelease(pb);
