@@ -27,6 +27,8 @@ export const OP = {
     VALUE_INTEGER_CHANGE_ACTION: 212, VALUE_STRING_CHANGE_ACTION: 213,
     VALUE_INTEGER_EXPRESSION_CHANGE_ACTION: 218, CONDITIONAL_OPERATIONS: 178,
     DATA_PATH: 123, DRAW_PATH: 124, PATH_CREATE: 159, PATH_EXPRESSION: 193,
+    CLIP_PATH: 38, DRAW_TEXT_ON_PATH: 53, DATA_LIST_IDS: 146, TEXT_LOOKUP: 151,
+    REM: 185,
     PATH_APPEND: 160, TEXT_FROM_FLOAT: 135, FLOAT_LIST: 147, CV_WIDTH: 0, CV_HEIGHT: 1,
     LAYOUT_ROOT: 200, LAYOUT_CONTENT: 201, LAYOUT_BOX: 202, LAYOUT_ROW: 203,
     LAYOUT_COLUMN: 204, LAYOUT_CANVAS: 205, LAYOUT_CANVAS_CONTENT: 207,
@@ -356,6 +358,56 @@ export class Writer {
         this.buffer.writeInt(pathId);
         this.buffer.writeInt(1);
         this.buffer.writeInt(asNanBits(15));                    // PATH_CLOSE
+    }
+
+    /** CLIP_PATH (38). */
+    clipPath(pathId: number): void {
+        this.buffer.start(OP.CLIP_PATH);
+        this.buffer.writeInt(pathId);
+    }
+
+    /**
+     * DRAW_TEXT_ON_PATH (53). The offsets go on the wire **vOffset first**, which is the
+     * reverse of the argument order everywhere else in this family — that is the
+     * reference's own byte order, and getting it backwards is quiet: the text still draws,
+     * just offset across the path instead of along it.
+     */
+    drawTextOnPath(textId: number, pathId: number, hBits: number, vBits: number): void {
+        this.buffer.start(OP.DRAW_TEXT_ON_PATH);
+        this.buffer.writeInt(textId);
+        this.buffer.writeInt(pathId);
+        this.buffer.writeInt(vBits);
+        this.buffer.writeInt(hBits);
+    }
+
+    /** DATA_LIST_IDS (146): a list of data ids — here text ids — that textLookup indexes. */
+    addList(ids: number[]): number {
+        const listId = this.allocDataId();
+        this.buffer.start(OP.DATA_LIST_IDS);
+        this.buffer.writeInt(listId);
+        this.buffer.writeInt(ids.length);
+        for (const id of ids) this.buffer.writeInt(id);
+        return listId;
+    }
+
+    /**
+     * TEXT_LOOKUP (151): a text id whose string is `list[index]`, resolved live.
+     * This is what lets one drawTextOnPath inside a loop print a different string each
+     * iteration instead of needing N unrolled draws.
+     */
+    textLookup(dataSetId: number, indexBits: number): number {
+        const textId = this.allocDataId();
+        this.buffer.start(OP.TEXT_LOOKUP);
+        this.buffer.writeInt(textId);
+        this.buffer.writeInt(dataSetId);
+        this.buffer.writeInt(indexBits);
+        return textId;
+    }
+
+    /** REM (185): a remark carried in the document. No visual effect. */
+    rem(message: string): void {
+        this.buffer.start(OP.REM);
+        this.buffer.writeUtf8(message);
     }
 
     drawPath(pathId: number): void {

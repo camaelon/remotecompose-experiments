@@ -1395,6 +1395,50 @@ class Parser {
             w.drawPath(this.resolvePath(command.path));
             return;
         }
+        if (t === "clippath") {
+            w.clipPath(this.resolvePath(command.path));
+            return;
+        }
+        if (t === "drawtextonpath") {
+            // Keys match RemoteComposeJsonParser's `drawtextonpath` case exactly.
+            const off = (k) => (k in command
+                ? this.fbits(command[k]) : (0, WireBuffer_1.floatToRawIntBits)(0));
+            w.drawTextOnPath(this.resolveTextId(command.text), this.resolvePath(command.path), off("hOffset"), off("vOffset"));
+            return;
+        }
+        if (t === "adddatalist" || t === "idlist" || t === "datalistids") {
+            // `id` is ours, not the reference's: the reference parser builds the list and
+            // throws the id away, so a document parsed by it can never refer to the list
+            // afterwards and textLookup is unreachable. The key is bookkeeping only — the
+            // emitted ops are identical either way.
+            const ids = command.list.map((v) => this.resolveTextId(v));
+            const listId = w.addList(ids);
+            // The store holds raw float bits, as it does for every other variable.
+            if (command.id != null) {
+                this.variables.set(String(command.id), (0, WireBuffer_1.floatToRawIntBits)(listId));
+            }
+            return;
+        }
+        if (t === "textlookup") {
+            const arr = command.array;
+            const arrId = (typeof arr === "string" && arr.startsWith("@"))
+                ? Math.trunc((0, WireBuffer_1.f32FromBits)(this.variables.get(arr.slice(1)) ?? 0))
+                : Number(arr);
+            const idxBits = ("index" in command)
+                ? this.fbits(command.index) : (0, WireBuffer_1.floatToRawIntBits)(0);
+            const textId = w.textLookup(arrId, idxBits);
+            if (command.varName != null) {
+                this.variables.set(String(command.varName), (0, WireBuffer_1.floatToRawIntBits)(textId));
+            }
+            return;
+        }
+        if (t === "rem") {
+            // Four spellings, in the reference's order of preference; an absent one is an
+            // empty remark rather than an error — a comment is not worth failing a build over.
+            const m = command.text ?? command.value ?? command.message ?? command.comment ?? "";
+            w.rem(String(m));
+            return;
+        }
         if (t === "pathcreate") {
             const pid = w.pathCreate(f("x"), f("y"));
             if (command.id !== undefined && command.id !== null) {
@@ -2017,11 +2061,16 @@ class Parser {
             throw new NotImplementedComponent("text without a `profiles` header tag — add \"profiles\": 513");
         }
         const value = component.value;
-        if (typeof value === "string" && (value.startsWith("$") || value.startsWith("@"))) {
-            throw new NotImplementedComponent(`text variable/resource reference ${value}`);
-        }
         let textId;
-        if (value !== undefined && value !== null) {
+        if (typeof value === "string" && (value.startsWith("$") || value.startsWith("@"))) {
+            // A value starting with $ or @ is a variable/resource reference, not literal
+            // text — the reference parser runs every text argument through resolveTextId,
+            // and this is the same call the draw commands already use. It is what lets a
+            // component show a string chosen at run time: `textLookup` puts a text id in a
+            // variable, and the component renders whatever that id currently names.
+            textId = this.resolveTextId(value);
+        }
+        else if (value !== undefined && value !== null) {
             textId = this.writer.addText(String(value));
         }
         else if (component.textFromFloat && typeof component.textFromFloat === "object") {

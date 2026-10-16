@@ -324,17 +324,24 @@ int main(int argc, char* argv[]) {
             // GLFW minimises a fullscreen window when it loses focus. On a second screen
             // that hides the slideshow the moment you click on the other one.
             glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_FALSE);
-            const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-            initW = mode->width;
-            initH = mode->height;
         }
     }
 
-    GLFWwindow* window = glfwCreateWindow(initW, initH, "RemoteCompose Viewer", monitor, nullptr);
+    // Created windowed even when a monitor was asked for, then moved fullscreen below.
+    // Creating directly on the monitor asks GLFW to do the mode set and the context
+    // creation in one step, which is the step that misbehaves on a second screen.
+    GLFWwindow* window = glfwCreateWindow(initW, initH, "RemoteCompose Viewer", nullptr, nullptr);
     if (!window) {
         std::cerr << "Window creation failed\n";
         glfwTerminate();
         return 1;
+    }
+    if (monitor) {
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+        // xpos/ypos are ignored when a monitor is given — they only apply when moving
+        // back to windowed mode — but the parameters are not optional.
+        glfwSetWindowMonitor(window, monitor, 0, 0,
+                             mode->width, mode->height, mode->refreshRate);
     }
     attachWindow(window);             // also gives the web host its content view
 

@@ -1,4 +1,7 @@
-"use strict";
+<!doctype html>
+<meta charset="utf-8">
+<body><div id="result">RUNNING</div>
+<script>"use strict";
 var RC = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -18,16 +21,19 @@ var RC = (() => {
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // players/typescript/src/web/main.ts
+  // src/web/main.ts
   var main_exports = {};
   __export(main_exports, {
     RcPlayerElement: () => RcPlayerElement,
     RcdPlayer: () => RcdPlayer,
+    WebCustomHost: () => WebCustomHost,
     base64ToArrayBuffer: () => base64ToArrayBuffer,
-    createPlayer: () => createPlayer
+    createPlayer: () => createPlayer,
+    fitInto: () => fitInto,
+    parseEmbedConfig: () => parseEmbedConfig
   });
 
-  // players/typescript/src/core/operations/Utils.ts
+  // src/core/operations/Utils.ts
   var _dv = new DataView(new ArrayBuffer(4));
   function intBitsToFloat(bits) {
     _dv.setInt32(0, bits, false);
@@ -142,7 +148,7 @@ var RC = (() => {
     return a << 24 | r << 16 | g << 8 | b | 0;
   }
 
-  // players/typescript/src/core/operations/utilities/IntMap.ts
+  // src/core/operations/utilities/IntMap.ts
   var NOT_PRESENT = -2147483648;
   var DEFAULT_CAPACITY = 16;
   var LOAD_FACTOR = 0.75;
@@ -249,7 +255,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/IntFloatMap.ts
+  // src/core/operations/utilities/IntFloatMap.ts
   var NOT_PRESENT2 = -2147483648;
   var DEFAULT_CAPACITY2 = 16;
   var LOAD_FACTOR2 = 0.75;
@@ -328,7 +334,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/IntIntMap.ts
+  // src/core/operations/utilities/IntIntMap.ts
   var NOT_PRESENT3 = -2147483648;
   var DEFAULT_CAPACITY3 = 16;
   var LOAD_FACTOR3 = 0.75;
@@ -400,7 +406,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/RemoteComposeState.ts
+  // src/core/RemoteComposeState.ts
   var _RemoteComposeState = class _RemoteComposeState {
     constructor() {
       this.mIntDataMap = new IntMap();
@@ -713,7 +719,7 @@ var RC = (() => {
   _RemoteComposeState.MAX_DATA = 1e4;
   var RemoteComposeState = _RemoteComposeState;
 
-  // players/typescript/src/core/RemoteClock.ts
+  // src/core/RemoteClock.ts
   function createSnapshot(millis) {
     const d = new Date(millis);
     const year = d.getFullYear();
@@ -756,7 +762,7 @@ var RC = (() => {
   };
   var SYSTEM_CLOCK = SystemClock;
 
-  // players/typescript/src/core/OperationMeasurement.ts
+  // src/core/OperationMeasurement.ts
   var INSTANCE_ID = /* @__PURE__ */ Symbol("rcMeasureId");
   var OperationMeasurement = class {
     constructor(sink) {
@@ -879,7 +885,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/RemoteContext.ts
+  // src/core/RemoteContext.ts
   var _RemoteContext = class _RemoteContext {
     constructor(clock = SYSTEM_CLOCK) {
       this.mRemoteComposeState = new RemoteComposeState();
@@ -909,9 +915,18 @@ var RC = (() => {
        * TouchExpression inside a component rejected touches that were within it.
        */
       this.mTouchVersion = 1;
+      // Whoever draws custom components (LAYOUT_CUSTOM) for this platform, or null: with no
+      // host a custom component is an empty box, exactly as it was before hosts existed.
+      this.mCustomHost = null;
       this.mDensityBehavior = _RemoteContext.DENSITY_BEHAVIOR_LEGACY;
       this.mClock = clock;
       this.mDocLoadTime = clock.millis();
+    }
+    setCustomHost(host) {
+      this.mCustomHost = host;
+    }
+    getCustomHost() {
+      return this.mCustomHost;
     }
     supportsVersion(major, minor, patch) {
       return this.mDocument?.mVersion?.supportsVersion(major, minor, patch) ?? false;
@@ -1180,7 +1195,7 @@ var RC = (() => {
   _RemoteContext.LAST_BASELINE = asNan(37);
   var RemoteContext = _RemoteContext;
 
-  // players/typescript/src/core/Operation.ts
+  // src/core/Operation.ts
   var _Operation = class _Operation {
     constructor() {
       this.mDirty = true;
@@ -1218,7 +1233,7 @@ var RC = (() => {
   _Operation.ENABLE_DIRTY_FLAG_OPTIMIZATION = true;
   var Operation = _Operation;
 
-  // players/typescript/src/core/operations/Header.ts
+  // src/core/operations/Header.ts
   var _Header = class _Header extends Operation {
     constructor(majorVersion, minorVersion, patchVersion, properties = null, width = 256, height = 256, capabilities = 0) {
       super();
@@ -1389,7 +1404,7 @@ var RC = (() => {
   _Header.DATA_TYPE_STRING = 3;
   var Header = _Header;
 
-  // players/typescript/src/core/operations/layout/ContainerEnd.ts
+  // src/core/operations/layout/ContainerEnd.ts
   var _ContainerEnd = class _ContainerEnd extends Operation {
     write(buffer) {
       buffer.start(_ContainerEnd.OP_CODE);
@@ -1406,7 +1421,7 @@ var RC = (() => {
   _ContainerEnd.OP_CODE = 214;
   var ContainerEnd = _ContainerEnd;
 
-  // players/typescript/src/core/PaintOperation.ts
+  // src/core/PaintOperation.ts
   var PTR_DEREFERENCE = 1 << 30;
   var VALUE_MASK = 65535;
   function isContainer(op) {
@@ -1450,7 +1465,7 @@ var RC = (() => {
   PaintOperation.PTR_DEREFERENCE = PTR_DEREFERENCE;
   PaintOperation.VALUE_MASK = VALUE_MASK;
 
-  // players/typescript/src/core/operations/utilities/easing/Easing.ts
+  // src/core/operations/utilities/easing/Easing.ts
   var Easing = class {
     constructor() {
       this.mType = 0;
@@ -1470,7 +1485,7 @@ var RC = (() => {
   Easing.EASE_OUT_BOUNCE = 13;
   Easing.EASE_OUT_ELASTIC = 14;
 
-  // players/typescript/src/core/operations/utilities/easing/CubicEasing.ts
+  // src/core/operations/utilities/easing/CubicEasing.ts
   var STANDARD = [0.4, 0, 0.2, 1];
   var ACCELERATE = [0.4, 0.05, 0.8, 0.7];
   var DECELERATE = [0, 0, 0.2, 0.95];
@@ -1563,7 +1578,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/BounceCurve.ts
+  // src/core/operations/utilities/easing/BounceCurve.ts
   var N1 = 7.5625;
   var D1 = 2.75;
   var BounceCurve = class extends Easing {
@@ -1603,7 +1618,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/ElasticOutCurve.ts
+  // src/core/operations/utilities/easing/ElasticOutCurve.ts
   var C4 = 2 * Math.PI / 3;
   var TWENTY_PI = 20 * Math.PI;
   var LOG_8 = Math.log(8);
@@ -1619,7 +1634,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/MonotonicCurveFit.ts
+  // src/core/operations/utilities/easing/MonotonicCurveFit.ts
   var MonotonicCurveFit = class _MonotonicCurveFit {
     constructor(time, y) {
       // same shape as mY
@@ -1733,7 +1748,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/StepCurve.ts
+  // src/core/operations/utilities/easing/StepCurve.ts
   var StepCurve = class _StepCurve extends Easing {
     constructor(params, offset, len) {
       super();
@@ -1770,7 +1785,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/FloatAnimation.ts
+  // src/core/operations/utilities/easing/FloatAnimation.ts
   var _dv2 = new DataView(new ArrayBuffer(4));
   function floatToRawIntBits2(v) {
     _dv2.setFloat32(0, v, false);
@@ -1929,7 +1944,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/utilities/easing/SpringStopEngine.ts
+  // src/core/operations/utilities/easing/SpringStopEngine.ts
   var SpringStopEngine = class {
     constructor(parameters) {
       this.mDamping = 0.5;
@@ -2020,7 +2035,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/FloatExpression.ts
+  // src/core/operations/FloatExpression.ts
   var ARR_SENTINEL = 2 ** 42;
   function arrIdFromStack(x) {
     return x >= ARR_SENTINEL ? x - ARR_SENTINEL | 0 : idFromNan(x);
@@ -2666,7 +2681,7 @@ var RC = (() => {
   _FloatExpression.ID_REGION_ARRAY = 2097152;
   var FloatExpression = _FloatExpression;
 
-  // players/typescript/src/core/operations/utilities/AnimatedFloatExpression.ts
+  // src/core/operations/utilities/AnimatedFloatExpression.ts
   var ARR_SENTINEL2 = 2 ** 42;
   function arrIdFromStack2(x) {
     return x >= ARR_SENTINEL2 ? x - ARR_SENTINEL2 | 0 : idFromNan(x);
@@ -3131,7 +3146,7 @@ var RC = (() => {
   _AnimatedFloatExpression.ID_REGION_ARRAY = 2097152;
   var AnimatedFloatExpression = _AnimatedFloatExpression;
 
-  // players/typescript/src/core/operations/utilities/touch/VelocityEasing.ts
+  // src/core/operations/utilities/touch/VelocityEasing.ts
   var Stage = class {
     constructor(n) {
       this.mStartV = 0;
@@ -3355,7 +3370,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/TouchExpression.ts
+  // src/core/operations/TouchExpression.ts
   var _TouchExpression = class _TouchExpression extends Operation {
     constructor(id, exp, defValueBits, minBits, maxBits, touchEffects, velocityId, stopMode, stopSpec, easingSpec) {
       super();
@@ -3799,7 +3814,7 @@ var RC = (() => {
   _TouchExpression.STOP_NOTCHES_SINGLE_EVEN = 7;
   var TouchExpression = _TouchExpression;
 
-  // players/typescript/src/core/operations/layout/measure/ComponentMeasure.ts
+  // src/core/operations/layout/measure/ComponentMeasure.ts
   var _ComponentMeasure = class _ComponentMeasure {
     constructor(id, x, y, w, h, visibility = _ComponentMeasure.VISIBLE) {
       this.mAllowsAnimation = true;
@@ -3892,7 +3907,7 @@ var RC = (() => {
   _ComponentMeasure.INVISIBLE = 2;
   var ComponentMeasure = _ComponentMeasure;
 
-  // players/typescript/src/core/operations/layout/animation/AnimationSpec.ts
+  // src/core/operations/layout/animation/AnimationSpec.ts
   function intToAnimation(v) {
     switch (v) {
       case 0:
@@ -3990,7 +4005,7 @@ var RC = (() => {
   _AnimationSpec.DISABLED = new _AnimationSpec(0, 0, Easing.CUBIC_STANDARD, 0, Easing.CUBIC_STANDARD, 0 /* FADE_IN */, 1 /* FADE_OUT */);
   var AnimationSpec = _AnimationSpec;
 
-  // players/typescript/src/core/operations/paint/PaintBundle.ts
+  // src/core/operations/paint/PaintBundle.ts
   var _f32dv = new DataView(new ArrayBuffer(4));
   function intBitsToFloat2(bits) {
     _f32dv.setInt32(0, bits);
@@ -4148,8 +4163,6 @@ var RC = (() => {
               listenFloatVar(arr[i], context, op);
               i++;
             }
-            listenFloatVar(arr[i], context, op);
-            i++;
             break;
           }
           default:
@@ -4269,8 +4282,6 @@ var RC = (() => {
               out[i] = fixFloatVar(arr[i], context);
               i++;
             }
-            out[i] = fixFloatVar(arr[i], context);
-            i++;
             break;
           }
           default:
@@ -4361,7 +4372,7 @@ var RC = (() => {
   _PaintBundle.FILL_AND_STROKE = 2;
   var PaintBundle = _PaintBundle;
 
-  // players/typescript/src/core/operations/layout/animation/AnimateMeasure.ts
+  // src/core/operations/layout/animation/AnimateMeasure.ts
   var AnimateMeasure = class {
     constructor(startTime, component, original, target, duration, durationVisibilityChange, enterAnimation = 0 /* FADE_IN */, exitAnimation = 1 /* FADE_OUT */, motionEasingType = Easing.CUBIC_STANDARD, visibilityEasingType = Easing.CUBIC_ACCELERATE) {
       this.mP = 0;
@@ -4681,7 +4692,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/Component.ts
+  // src/core/operations/layout/Component.ts
   var _Visibility = class _Visibility {
     static isGone(v) {
       if (v >> 4 > 0) return (v & _Visibility.OVERRIDE_GONE) === _Visibility.OVERRIDE_GONE;
@@ -5162,7 +5173,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/measure/MeasurePass.ts
+  // src/core/operations/layout/measure/MeasurePass.ts
   var MeasurePass = class {
     constructor() {
       this.mList = /* @__PURE__ */ new Map();
@@ -5204,7 +5215,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/RootLayoutComponent.ts
+  // src/core/operations/layout/RootLayoutComponent.ts
   var _RootLayoutComponent = class _RootLayoutComponent extends Component {
     constructor(componentId = -1) {
       super(componentId);
@@ -5356,7 +5367,7 @@ var RC = (() => {
   _RootLayoutComponent.OP_CODE = 200;
   var RootLayoutComponent = _RootLayoutComponent;
 
-  // players/typescript/src/core/TimeVariables.ts
+  // src/core/TimeVariables.ts
   var TimeVariables = class {
     constructor(clock) {
       this.mLastAnimationTime = -1;
@@ -5393,7 +5404,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/modifiers/ModifierOperations.ts
+  // src/core/operations/layout/modifiers/ModifierOperations.ts
   var _WidthModifier = class _WidthModifier extends Operation {
     constructor(type, valueBits) {
       super();
@@ -6654,7 +6665,7 @@ var RC = (() => {
   _AccessibilitySemantics.OP_CODE = 250;
   var AccessibilitySemantics = _AccessibilitySemantics;
 
-  // players/typescript/src/core/operations/DataOperations.ts
+  // src/core/operations/DataOperations.ts
   var NANMAP_PATH_BASE = 3145728;
   function isPathMarkerBits(b) {
     if (!isNaNBits(b)) return false;
@@ -7046,7 +7057,7 @@ var RC = (() => {
   _RootContentBehavior.LAYOUT_WRAP_CONTENT = 1;
   var RootContentBehavior = _RootContentBehavior;
 
-  // players/typescript/src/core/operations/StubOperations.ts
+  // src/core/operations/StubOperations.ts
   var _ImpulseOperation = class _ImpulseOperation extends PaintOperation {
     constructor(duration, startAt) {
       super();
@@ -7425,7 +7436,7 @@ var RC = (() => {
   _TimeAttribute.TIME_DAY_OF_YEAR = 15;
   var TimeAttribute = _TimeAttribute;
 
-  // players/typescript/src/core/operations/loom/PatternOperations.ts
+  // src/core/operations/loom/PatternOperations.ts
   var _ReferencedOperations = class _ReferencedOperations extends Operation {
     constructor(id) {
       super();
@@ -7773,7 +7784,7 @@ var RC = (() => {
     return new Ctor(loomManager, parent.getDocument(), ctx, blocks, parent.isSafeMode(), depth);
   }
 
-  // players/typescript/src/core/WireBuffer.ts
+  // src/core/WireBuffer.ts
   var _WireBuffer = class _WireBuffer {
     constructor(size = _WireBuffer.BUFFER_SIZE) {
       this.mIndex = 0;
@@ -8024,7 +8035,7 @@ var RC = (() => {
   _WireBuffer.BUFFER_SIZE = 1024 * 1024;
   var WireBuffer = _WireBuffer;
 
-  // players/typescript/src/core/operations/DrawBase4.ts
+  // src/core/operations/DrawBase4.ts
   var DrawBase4 = class extends PaintOperation {
     // Constructed from the raw int32 bits of each coordinate (see read()).
     constructor(x1Bits, y1Bits, x2Bits, y2Bits) {
@@ -8057,7 +8068,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/DrawRect.ts
+  // src/core/operations/DrawRect.ts
   var _DrawRect = class _DrawRect extends DrawBase4 {
     paintBase4(context, x1, y1, x2, y2) {
       context.drawRect(x1, y1, x2, y2);
@@ -8077,7 +8088,7 @@ var RC = (() => {
   _DrawRect.OP_CODE = 42;
   var DrawRect = _DrawRect;
 
-  // players/typescript/src/core/operations/DrawBase3.ts
+  // src/core/operations/DrawBase3.ts
   var DrawBase3 = class extends PaintOperation {
     constructor(v1Bits, v2Bits, v3Bits) {
       super();
@@ -8105,7 +8116,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/DrawCircle.ts
+  // src/core/operations/DrawCircle.ts
   var _DrawCircle = class _DrawCircle extends DrawBase3 {
     paintBase3(context, v1, v2, v3) {
       context.drawCircle(v1, v2, v3);
@@ -8120,7 +8131,7 @@ var RC = (() => {
   _DrawCircle.OP_CODE = 46;
   var DrawCircle = _DrawCircle;
 
-  // players/typescript/src/core/operations/DrawOval.ts
+  // src/core/operations/DrawOval.ts
   var _DrawOval = class _DrawOval extends DrawBase4 {
     paintBase4(context, x1, y1, x2, y2) {
       context.drawOval(x1, y1, x2, y2);
@@ -8140,7 +8151,7 @@ var RC = (() => {
   _DrawOval.OP_CODE = 56;
   var DrawOval = _DrawOval;
 
-  // players/typescript/src/core/operations/DrawBase6.ts
+  // src/core/operations/DrawBase6.ts
   var DrawBase6 = class extends PaintOperation {
     constructor(v1Bits, v2Bits, v3Bits, v4Bits, v5Bits, v6Bits) {
       super();
@@ -8180,7 +8191,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/DrawRoundRect.ts
+  // src/core/operations/DrawRoundRect.ts
   var _DrawRoundRect = class _DrawRoundRect extends DrawBase6 {
     paintBase6(context, v1, v2, v3, v4, v5, v6) {
       context.drawRoundRect(v1, v2, v3, v4, v5, v6);
@@ -8202,7 +8213,7 @@ var RC = (() => {
   _DrawRoundRect.OP_CODE = 51;
   var DrawRoundRect = _DrawRoundRect;
 
-  // players/typescript/src/core/operations/DrawArc.ts
+  // src/core/operations/DrawArc.ts
   var _DrawArc = class _DrawArc extends DrawBase6 {
     paintBase6(context, v1, v2, v3, v4, v5, v6) {
       context.drawArc(v1, v2, v3, v4, v5, v6);
@@ -8224,7 +8235,7 @@ var RC = (() => {
   _DrawArc.OP_CODE = 152;
   var DrawArc = _DrawArc;
 
-  // players/typescript/src/core/operations/DrawSector.ts
+  // src/core/operations/DrawSector.ts
   var _DrawSector = class _DrawSector extends DrawBase6 {
     paintBase6(context, v1, v2, v3, v4, v5, v6) {
       context.drawSector(v1, v2, v3, v4, v5, v6);
@@ -8246,7 +8257,905 @@ var RC = (() => {
   _DrawSector.OP_CODE = 52;
   var DrawSector = _DrawSector;
 
-  // players/typescript/src/core/operations/DrawPath.ts
+  // src/core/operations/Mesh2DGenerator.ts
+  var LAYOUT_POLAR = 1;
+  var LAYOUT_RING = 2;
+  var LAYOUT_FAN = 4;
+  var LAYOUT_PATH_STRIP = 5;
+  var TYPE_EXPRESSION = 0;
+  var TYPE_F16_VALUES = 2;
+  var TYPE_PATH_SPLINE_STRIP = 3;
+  var TYPE_SPLINE_ROUND_STRIP = 4;
+  var BLEND_MODULATE = 1;
+  var FLAG_ORIGIN = 0;
+  var FLAG_ROTATION = 1;
+  var FLAG_SCALE = 2;
+  var FLAG_FULL = 3;
+  var EXPRESSION_GROUPS = 9;
+  var EXP_X = 0;
+  var EXP_Y = 1;
+  var EXP_TEX_U = 2;
+  var EXP_TEX_V = 3;
+  var EXP_COLOR_A = 4;
+  var EXP_COLOR_R = 5;
+  var EXP_COLOR_G = 6;
+  var EXP_COLOR_B = 7;
+  var EXP_WIDTH = 8;
+  var DEFAULT_RING_INNER_RADIUS = 0.5;
+  var TWO_PI = 6.2831855;
+  var HALF_PI = 1.5707964;
+  var DEGENERATE_EPSILON = 1e-6;
+  var MAX_MESH_2D_VERTICES = 16384;
+  function wrapsU(layout) {
+    return layout === LAYOUT_POLAR || layout === LAYOUT_RING || layout === LAYOUT_FAN;
+  }
+  function vertexCount(layout, uCount, vCount) {
+    if (layout === LAYOUT_FAN) return uCount + 1;
+    return uCount * vCount;
+  }
+  function indexCount(layout, uCount, vCount) {
+    if (layout === LAYOUT_FAN) return uCount * 3;
+    if (vCount < 2 || uCount < 2) return 0;
+    const columns = wrapsU(layout) ? uCount : uCount - 1;
+    return columns * (vCount - 1) * 6;
+  }
+  function domainU(layout, i, uCount) {
+    if (uCount <= 1) return 0;
+    if (wrapsU(layout)) return i / uCount;
+    return i / (uCount - 1);
+  }
+  function domainV(j, vCount) {
+    if (vCount <= 1) return 0;
+    return j / (vCount - 1);
+  }
+  function generateIndices(layout, uCount, vCount) {
+    const out = new Int32Array(Math.max(0, indexCount(layout, uCount, vCount)));
+    let k = 0;
+    if (layout === LAYOUT_FAN) {
+      for (let i = 0; i < uCount; i++) {
+        out[k++] = 0;
+        out[k++] = 1 + i;
+        out[k++] = 1 + (i + 1) % uCount;
+      }
+      return out;
+    }
+    if (vCount < 2 || uCount < 2) return out;
+    const wrap = wrapsU(layout);
+    const columns = wrap ? uCount : uCount - 1;
+    for (let j = 0; j < vCount - 1; j++) {
+      for (let i = 0; i < columns; i++) {
+        const i1 = wrap ? (i + 1) % uCount : i + 1;
+        const topLeft = j * uCount + i;
+        const topRight = j * uCount + i1;
+        const bottomLeft = (j + 1) * uCount + i;
+        const bottomRight = (j + 1) * uCount + i1;
+        out[k++] = topLeft;
+        out[k++] = bottomLeft;
+        out[k++] = topRight;
+        out[k++] = topRight;
+        out[k++] = bottomLeft;
+        out[k++] = bottomRight;
+      }
+    }
+    return out;
+  }
+  function defaultPosition(layout, u, v, out) {
+    switch (layout) {
+      case LAYOUT_POLAR:
+      case LAYOUT_FAN: {
+        const angle = u * TWO_PI;
+        out[0] = v * Math.cos(angle);
+        out[1] = v * Math.sin(angle);
+        break;
+      }
+      case LAYOUT_RING: {
+        const angle = u * TWO_PI;
+        const radius = DEFAULT_RING_INNER_RADIUS + (1 - DEFAULT_RING_INNER_RADIUS) * v;
+        out[0] = radius * Math.cos(angle);
+        out[1] = radius * Math.sin(angle);
+        break;
+      }
+      default:
+        out[0] = u;
+        out[1] = v;
+        break;
+    }
+  }
+  var _f32 = new Float32Array(1);
+  var _i32 = new Int32Array(_f32.buffer);
+  function halfToFloat(half) {
+    const sign = (half & 32768) << 16;
+    const exponent = half >> 10 & 31;
+    let mantissa = half & 1023;
+    let bits;
+    if (exponent === 0) {
+      if (mantissa === 0) {
+        bits = sign;
+      } else {
+        let shift = 0;
+        while ((mantissa & 1024) === 0) {
+          mantissa <<= 1;
+          shift++;
+        }
+        mantissa &= 1023;
+        bits = sign | 127 - 15 - shift << 23 | mantissa << 13;
+      }
+    } else if (exponent === 31) {
+      bits = sign | 2139095040 | mantissa << 13;
+    } else {
+      bits = sign | exponent - 15 + 127 << 23 | mantissa << 13;
+    }
+    _i32[0] = bits;
+    return _f32[0];
+  }
+  var PATH_MOVE = 10;
+  var PATH_LINE = 11;
+  var PATH_QUAD = 12;
+  var PATH_CONIC = 13;
+  var PATH_CUBIC = 14;
+  var PATH_CLOSE = 15;
+  var PATH_DONE = 16;
+  var PATH_CURVE_STEPS = 16;
+  function pathNanId(v) {
+    _f32[0] = v;
+    return _i32[0] & 4194303;
+  }
+  function isPathCommand(v) {
+    if (!Number.isNaN(v)) return false;
+    const id = pathNanId(v);
+    return id >= PATH_MOVE && id <= PATH_DONE;
+  }
+  function flattenPath(data, resolve2) {
+    const out = [];
+    let startX = 0, startY = 0, curX = 0, curY = 0, open = false;
+    const push = (x, y) => {
+      const n2 = out.length;
+      if (n2 >= 2 && out[n2 - 2] === x && out[n2 - 1] === y) return;
+      out.push(x, y);
+    };
+    let i = 0;
+    const n = data.length;
+    while (i < n) {
+      if (!isPathCommand(data[i])) {
+        i++;
+        continue;
+      }
+      switch (pathNanId(data[i])) {
+        case PATH_MOVE:
+          i++;
+          if (i + 1 < n) {
+            curX = startX = resolve2(data[i]);
+            curY = startY = resolve2(data[i + 1]);
+            push(curX, curY);
+            open = true;
+            i += 2;
+          }
+          break;
+        case PATH_LINE:
+          i += 3;
+          if (i + 1 < n) {
+            curX = resolve2(data[i]);
+            curY = resolve2(data[i + 1]);
+            push(curX, curY);
+            i += 2;
+          }
+          break;
+        case PATH_QUAD:
+          i += 3;
+          if (i + 3 < n) {
+            const cx = resolve2(data[i]), cy = resolve2(data[i + 1]);
+            const x = resolve2(data[i + 2]), y = resolve2(data[i + 3]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              push(
+                mt * mt * curX + 2 * mt * t * cx + t * t * x,
+                mt * mt * curY + 2 * mt * t * cy + t * t * y
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 4;
+          }
+          break;
+        case PATH_CONIC:
+          i += 3;
+          if (i + 4 < n) {
+            const cx = resolve2(data[i]), cy = resolve2(data[i + 1]);
+            const x = resolve2(data[i + 2]), y = resolve2(data[i + 3]);
+            const w = resolve2(data[i + 4]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              const w0 = mt * mt, w1 = 2 * mt * t * w, w2 = t * t;
+              const denom = w0 + w1 + w2;
+              if (denom === 0) continue;
+              push(
+                (w0 * curX + w1 * cx + w2 * x) / denom,
+                (w0 * curY + w1 * cy + w2 * y) / denom
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 5;
+          }
+          break;
+        case PATH_CUBIC:
+          i += 3;
+          if (i + 5 < n) {
+            const c1x = resolve2(data[i]), c1y = resolve2(data[i + 1]);
+            const c2x = resolve2(data[i + 2]), c2y = resolve2(data[i + 3]);
+            const x = resolve2(data[i + 4]), y = resolve2(data[i + 5]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              const a = mt * mt * mt, b = 3 * mt * mt * t;
+              const c = 3 * mt * t * t, d = t * t * t;
+              push(
+                a * curX + b * c1x + c * c2x + d * x,
+                a * curY + b * c1y + c * c2y + d * y
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 6;
+          }
+          break;
+        case PATH_CLOSE:
+          i++;
+          if (open) push(startX, startY);
+          curX = startX;
+          curY = startY;
+          break;
+        case PATH_DONE:
+        default:
+          return new Float32Array(out);
+      }
+    }
+    return new Float32Array(out);
+  }
+  function samplePolyline(poly, pointCount, fraction, out) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 1;
+    out[3] = 0;
+    if (pointCount < 2) {
+      if (pointCount === 1) {
+        out[0] = poly[0];
+        out[1] = poly[1];
+      }
+      return;
+    }
+    let total = 0;
+    for (let i = 0; i + 1 < pointCount; i++) {
+      const dx = poly[(i + 1) * 2] - poly[i * 2];
+      const dy = poly[(i + 1) * 2 + 1] - poly[i * 2 + 1];
+      total += Math.sqrt(dx * dx + dy * dy);
+    }
+    if (total <= 0) {
+      out[0] = poly[0];
+      out[1] = poly[1];
+      return;
+    }
+    const target = Math.min(Math.max(fraction, 0), 1) * total;
+    let walked = 0;
+    for (let i = 0; i + 1 < pointCount; i++) {
+      const x0 = poly[i * 2], y0 = poly[i * 2 + 1];
+      const x1 = poly[(i + 1) * 2], y1 = poly[(i + 1) * 2 + 1];
+      const dx = x1 - x0, dy = y1 - y0;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len <= 0) continue;
+      if (walked + len >= target || i + 2 === pointCount) {
+        const t = Math.min(Math.max((target - walked) / len, 0), 1);
+        out[0] = x0 + dx * t;
+        out[1] = y0 + dy * t;
+        out[2] = dx / len;
+        out[3] = dy / len;
+        return;
+      }
+      walked += len;
+    }
+  }
+  function roundCapPoint(sample, halfWidth, t, v, direction, out) {
+    const tx = sample[2] * direction, ty = sample[3] * direction;
+    const nx = -sample[3], ny = sample[2];
+    const angle = (1 - t) * HALF_PI;
+    const along = Math.sin(angle) * halfWidth;
+    const across = Math.cos(angle) * halfWidth;
+    const side = (v - 0.5) * 2;
+    out[0] = sample[0] + tx * along + nx * across * side;
+    out[1] = sample[1] + ty * along + ny * across * side;
+  }
+  var MonotonicSpline = class {
+    constructor() {
+      this.x = [];
+      this.y = [];
+      this.m = [];
+    }
+    fit(xs, ys) {
+      this.x = xs;
+      this.y = ys;
+      const n = xs.length;
+      this.m = new Array(n).fill(0);
+      if (n < 2) return;
+      const d = new Array(n - 1).fill(0);
+      for (let i = 0; i + 1 < n; i++) {
+        const dx = xs[i + 1] - xs[i];
+        d[i] = dx !== 0 ? (ys[i + 1] - ys[i]) / dx : 0;
+      }
+      this.m[0] = d[0];
+      this.m[n - 1] = d[n - 2];
+      for (let i = 1; i + 1 < n; i++) {
+        this.m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) * 0.5;
+      }
+      for (let i = 0; i + 1 < n; i++) {
+        if (d[i] === 0) {
+          this.m[i] = 0;
+          this.m[i + 1] = 0;
+          continue;
+        }
+        const a = this.m[i] / d[i], b = this.m[i + 1] / d[i];
+        const s = a * a + b * b;
+        if (s > 9) {
+          const t = 3 / Math.sqrt(s);
+          this.m[i] = t * a * d[i];
+          this.m[i + 1] = t * b * d[i];
+        }
+      }
+    }
+    get isEmpty() {
+      return this.x.length === 0;
+    }
+    at(x) {
+      const n = this.x.length;
+      if (n === 0) return 0;
+      if (n === 1 || x <= this.x[0]) return this.y[0];
+      if (x >= this.x[n - 1]) return this.y[n - 1];
+      let i = 0;
+      while (i + 2 < n && x > this.x[i + 1]) i++;
+      const h = this.x[i + 1] - this.x[i];
+      if (h <= 0) return this.y[i];
+      const t = (x - this.x[i]) / h, t2 = t * t, t3 = t2 * t;
+      return (2 * t3 - 3 * t2 + 1) * this.y[i] + (t3 - 2 * t2 + t) * h * this.m[i] + (-2 * t3 + 3 * t2) * this.y[i + 1] + (t3 - t2) * h * this.m[i + 1];
+    }
+  };
+  function bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, c) {
+    const v00 = verts[(j0 * uCount + i0) * 2 + c];
+    const v10 = verts[(j0 * uCount + i1) * 2 + c];
+    const v01 = verts[(j1 * uCount + i0) * 2 + c];
+    const v11 = verts[(j1 * uCount + i1) * 2 + c];
+    const top = v00 + (v10 - v00) * tu;
+    const bottom = v01 + (v11 - v01) * tu;
+    return top + (bottom - top) * tv;
+  }
+  function sampleMeshPosition(layout, uCount, vCount, verts, u, v, out) {
+    const vc = verts.length / 2;
+    if (vc === 0) {
+      out[0] = 0;
+      out[1] = 0;
+      return;
+    }
+    if (layout === LAYOUT_FAN && uCount >= 1 && vc === uCount + 1) {
+      const uNorm = (u % 1 + 1) % 1;
+      const fu = uNorm * uCount;
+      const i0 = Math.floor(fu) % uCount;
+      const i1 = (i0 + 1) % uCount;
+      const tu = fu - Math.floor(fu);
+      const rimX = (1 - tu) * verts[(1 + i0) * 2] + tu * verts[(1 + i1) * 2];
+      const rimY = (1 - tu) * verts[(1 + i0) * 2 + 1] + tu * verts[(1 + i1) * 2 + 1];
+      const vClamp = Math.min(Math.max(v, 0), 1);
+      out[0] = (1 - vClamp) * verts[0] + vClamp * rimX;
+      out[1] = (1 - vClamp) * verts[1] + vClamp * rimY;
+      return;
+    }
+    if (uCount >= 2 && vCount >= 2 && uCount * vCount === vc) {
+      let i0, i1, tu;
+      if (wrapsU(layout)) {
+        const uNorm = (u % 1 + 1) % 1;
+        const fu = uNorm * uCount;
+        i0 = Math.floor(fu) % uCount;
+        i1 = (i0 + 1) % uCount;
+        tu = fu - Math.floor(fu);
+      } else {
+        const fu = Math.min(Math.max(u, 0), 1) * (uCount - 1);
+        i0 = Math.floor(fu);
+        i1 = Math.min(uCount - 1, i0 + 1);
+        tu = fu - i0;
+      }
+      const fv = Math.min(Math.max(v, 0), 1) * (vCount - 1);
+      const j0 = Math.floor(fv);
+      const j1 = Math.min(vCount - 1, j0 + 1);
+      const tv = fv - j0;
+      out[0] = bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, 0);
+      out[1] = bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, 1);
+      return;
+    }
+    const nearest = Math.max(0, Math.min(
+      vc - 1,
+      Math.round(Math.min(Math.max(u, 0), 1) * (vc - 1))
+    ));
+    out[0] = verts[nearest * 2];
+    out[1] = verts[nearest * 2 + 1];
+  }
+  function sampleFrame(layout, uCount, vCount, verts, u, v, out) {
+    if (verts.length < 2) return false;
+    const uc = Math.max(2, uCount);
+    const vc = Math.max(2, vCount);
+    const wrap = wrapsU(layout);
+    const du = 1 / (wrap ? uc : uc - 1);
+    const dv = 1 / (vc - 1);
+    const centre = new Float32Array(2), uPlus = new Float32Array(2);
+    const uMinus = new Float32Array(2), vPlus = new Float32Array(2), vMinus = new Float32Array(2);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, v, centre);
+    let uSpan;
+    if (wrap) {
+      sampleMeshPosition(layout, uCount, vCount, verts, u + du * 0.5, v, uPlus);
+      sampleMeshPosition(layout, uCount, vCount, verts, u - du * 0.5, v, uMinus);
+      uSpan = du;
+    } else {
+      const uHi = Math.min(1, u + du * 0.5), uLo = Math.max(0, u - du * 0.5);
+      sampleMeshPosition(layout, uCount, vCount, verts, uHi, v, uPlus);
+      sampleMeshPosition(layout, uCount, vCount, verts, uLo, v, uMinus);
+      uSpan = uHi - uLo;
+      if (uSpan <= 0) uSpan = du;
+    }
+    const vHi = Math.min(1, v + dv * 0.5), vLo = Math.max(0, v - dv * 0.5);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, vHi, vPlus);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, vLo, vMinus);
+    let vSpan = vHi - vLo;
+    if (vSpan <= 0) vSpan = dv;
+    out[0] = (uPlus[0] - uMinus[0]) / uSpan;
+    out[1] = (uPlus[1] - uMinus[1]) / uSpan;
+    out[2] = (vPlus[0] - vMinus[0]) / vSpan;
+    out[3] = (vPlus[1] - vMinus[1]) / vSpan;
+    out[4] = centre[0];
+    out[5] = centre[1];
+    return true;
+  }
+  function buildMatrix(frame, flags, out) {
+    const duX = frame[0], duY = frame[1], dvX = frame[2], dvY = frame[3];
+    const originX = frame[4], originY = frame[5];
+    const duLength = Math.hypot(duX, duY);
+    const dvLength = Math.hypot(dvX, dvY);
+    const cross2 = duX * dvY - duY * dvX;
+    let effective = flags;
+    if (effective >= FLAG_FULL && Math.abs(cross2) < DEGENERATE_EPSILON) effective = FLAG_SCALE;
+    if (effective >= FLAG_SCALE && (duLength < DEGENERATE_EPSILON || dvLength < DEGENERATE_EPSILON)) {
+      effective = FLAG_ROTATION;
+    }
+    if (effective >= FLAG_ROTATION && duLength < DEGENERATE_EPSILON) effective = FLAG_ORIGIN;
+    switch (effective) {
+      case FLAG_FULL:
+        out[0] = duX;
+        out[1] = duY;
+        out[2] = dvX;
+        out[3] = dvY;
+        break;
+      case FLAG_SCALE: {
+        const ux = duX / duLength, uy = duY / duLength;
+        const sign = cross2 < 0 ? -1 : 1;
+        out[0] = ux * duLength;
+        out[1] = uy * duLength;
+        out[2] = -uy * dvLength * sign;
+        out[3] = ux * dvLength * sign;
+        break;
+      }
+      case FLAG_ROTATION: {
+        const ux = duX / duLength, uy = duY / duLength;
+        const sign = cross2 < 0 ? -1 : 1;
+        out[0] = ux;
+        out[1] = uy;
+        out[2] = -uy * sign;
+        out[3] = ux * sign;
+        break;
+      }
+      case FLAG_ORIGIN:
+      default:
+        out[0] = 1;
+        out[1] = 0;
+        out[2] = 0;
+        out[3] = 1;
+        break;
+    }
+    out[4] = originX;
+    out[5] = originY;
+  }
+  function clamp255(f) {
+    const i = Math.trunc(f * 255 + 0.5);
+    return i < 0 ? 0 : i > 255 ? 255 : i;
+  }
+  function packColor(a, r, g, b) {
+    return clamp255(a) << 24 | clamp255(r) << 16 | clamp255(g) << 8 | clamp255(b) | 0;
+  }
+
+  // src/core/operations/Mesh2D.ts
+  var MESH_OP_OFFSET = 3211264;
+  var MESH_ID_REGION_MASK = 7340032;
+  var MESH_ID_REGION_ARRAY = 2097152;
+  function isResolvable(v) {
+    return Number.isNaN(v);
+  }
+  var _AddMesh2D = class _AddMesh2D extends Operation {
+    constructor(mMeshId, mType, mLayout, mUCount, mVCount, mFlags, mAux, mExpressions, mSrcIndices, mSrcVerts, mSrcUv, mSrcColors, mWidths, mWidthPositions) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mType = mType;
+      this.mLayout = mLayout;
+      this.mUCount = mUCount;
+      this.mVCount = mVCount;
+      this.mFlags = mFlags;
+      this.mAux = mAux;
+      this.mExpressions = mExpressions;
+      this.mSrcIndices = mSrcIndices;
+      this.mSrcVerts = mSrcVerts;
+      this.mSrcUv = mSrcUv;
+      this.mSrcColors = mSrcColors;
+      this.mWidths = mWidths;
+      this.mWidthPositions = mWidthPositions;
+      // expanded geometry, in the layout drawVertices wants
+      this.mVerts = new Float32Array(0);
+      this.mUv = new Float32Array(0);
+      this.mColors = new Int32Array(0);
+      this.mIndices = new Int32Array(0);
+      // u and v ride in the VAR1/VAR2 slots, which is exactly how the reference binds them.
+      this.mVars = [0, 0, 0];
+      this.mPolyline = new Float32Array(0);
+      this.mWidthSpline = new MonotonicSpline();
+      // Renamed off the base class: Operation already declares a private field of the
+      // original name, and TypeScript treats two separate private declarations of one
+      // name as a type conflict, which reads as "incorrectly extends".
+      this.mMeshDirty = true;
+      this.mScratchPos = new Float32Array(2);
+      this.mScratchSample = new Float32Array(4);
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    registerListening(context) {
+      const watch = (bits) => {
+        if (!isNaNBits(bits)) return;
+        const id = idFromBits(bits);
+        if (id > MESH_OP_OFFSET && id <= MESH_OP_OFFSET + 79) return;
+        if ((id & MESH_ID_REGION_MASK) === MESH_ID_REGION_ARRAY) return;
+        context.listensTo(id, this);
+      };
+      for (const g of this.mExpressions) {
+        for (let i = 0; i < g.length; i++) watch(g[i]);
+      }
+      for (const arr of [this.mSrcVerts, this.mWidths, this.mWidthPositions]) {
+        for (let i = 0; i < arr.length; i++) {
+          if (Number.isNaN(arr[i])) context.listensTo(idFromNan(arr[i]), this);
+        }
+      }
+    }
+    markDirty() {
+      this.mMeshDirty = true;
+    }
+    updateVariables(_context) {
+      this.mMeshDirty = true;
+    }
+    apply(context) {
+      if (this.mMeshDirty) {
+        this.expand(context);
+        this.mMeshDirty = false;
+      }
+      const pc = context.getPaintContext();
+      if (pc) {
+        pc.setMesh(
+          this.mMeshId,
+          this.mLayout,
+          this.mUCount,
+          this.mVCount,
+          this.mVerts,
+          this.mUv,
+          this.mColors,
+          this.mIndices
+        );
+      }
+    }
+    deepToString(indent) {
+      return indent + "AddMesh2D id=" + this.mMeshId + " type=" + this.mType + " layout=" + this.mLayout;
+    }
+    get isSplineStrip() {
+      return this.mType === TYPE_PATH_SPLINE_STRIP || this.mType === TYPE_SPLINE_ROUND_STRIP;
+    }
+    val(context, f) {
+      return isResolvable(f) ? context.getFloat(idFromNan(f)) : f;
+    }
+    expand(context) {
+      if (this.mType === TYPE_EXPRESSION || this.isSplineStrip) {
+        this.expandParametric(context);
+      } else {
+        this.expandLiteral(context);
+      }
+    }
+    expandLiteral(context) {
+      const n = this.mSrcVerts.length;
+      const verts = new Float32Array(n);
+      for (let i = 0; i < n; i++) verts[i] = this.val(context, this.mSrcVerts[i]);
+      this.mVerts = verts;
+      const vertexCount2 = n / 2;
+      this.mUv = this.mSrcUv.length === n ? new Float32Array(this.mSrcUv) : new Float32Array(0);
+      this.mColors = this.mSrcColors.length === vertexCount2 ? new Int32Array(this.mSrcColors) : new Int32Array(0);
+      this.mIndices = new Int32Array(this.mSrcIndices);
+    }
+    roundCapColumns() {
+      if (this.mType !== TYPE_SPLINE_ROUND_STRIP) return 0;
+      const cap = this.mFlags;
+      if (cap <= 0) return 0;
+      return Math.max(0, Math.min(cap, Math.trunc((this.mUCount - 2) / 2)));
+    }
+    evaluate(context, group, u, v, fallback) {
+      const e = this.mExpressions[group];
+      if (!e || e.length === 0) return fallback;
+      if (e.length === 1 && !isNaNBits(e[0])) return intBitsToFloat(e[0]);
+      this.mVars[0] = u;
+      this.mVars[1] = v;
+      return FloatExpression.evalRPN(context, e, this.mVars);
+    }
+    strokeWidthAt(context, fraction, v) {
+      if (this.isSplineStrip) {
+        return this.mWidthSpline.isEmpty ? 1 : this.mWidthSpline.at(fraction);
+      }
+      return this.evaluate(context, EXP_WIDTH, fraction, v, 1);
+    }
+    buildWidthSpline(context) {
+      const n = this.mWidths.length;
+      if (n === 0) return;
+      const xs = [];
+      const ys = [];
+      for (let i = 0; i < n; i++) {
+        const pos = this.mWidthPositions.length === n ? this.val(context, this.mWidthPositions[i]) : n === 1 ? 0 : i / (n - 1);
+        xs.push(pos);
+        ys.push(this.val(context, this.mWidths[i]));
+      }
+      this.mWidthSpline.fit(xs, ys);
+    }
+    positionOnPath(context, u, v, points, out) {
+      const sample = this.mScratchSample;
+      let fraction = u;
+      const capColumns = this.roundCapColumns();
+      if (capColumns > 0 && this.mUCount > 1) {
+        const capSpan = capColumns / (this.mUCount - 1);
+        if (u <= capSpan) {
+          samplePolyline(this.mPolyline, points, 0, sample);
+          const hw = this.strokeWidthAt(context, 0, v) * 0.5;
+          roundCapPoint(sample, hw, capSpan > 0 ? u / capSpan : 0, v, -1, out);
+          return;
+        }
+        if (u >= 1 - capSpan) {
+          samplePolyline(this.mPolyline, points, 1, sample);
+          const hw = this.strokeWidthAt(context, 1, v) * 0.5;
+          roundCapPoint(sample, hw, capSpan > 0 ? (1 - u) / capSpan : 0, v, 1, out);
+          return;
+        }
+        fraction = (u - capSpan) / (1 - 2 * capSpan);
+      }
+      samplePolyline(this.mPolyline, points, fraction, sample);
+      const halfWidth = this.strokeWidthAt(context, fraction, v) * 0.5;
+      const offset = (v - 0.5) * 2 * halfWidth;
+      const nx = -sample[3];
+      const ny = sample[2];
+      out[0] = sample[0] + nx * offset;
+      out[1] = sample[1] + ny * offset;
+    }
+    expandParametric(context) {
+      const uc = Math.max(1, this.mUCount);
+      const vc = Math.max(1, this.mVCount);
+      const total = vertexCount(this.mLayout, uc, vc);
+      if (total <= 0 || total > MAX_MESH_2D_VERTICES) return;
+      const verts = new Float32Array(total * 2);
+      const uv = new Float32Array(total * 2);
+      const texU = this.mExpressions[EXP_TEX_U];
+      const texV = this.mExpressions[EXP_TEX_V];
+      const hasTex = (texU ? texU.length : 0) > 0 || (texV ? texV.length : 0) > 0;
+      const ca = this.mExpressions[EXP_COLOR_A];
+      const cr = this.mExpressions[EXP_COLOR_R];
+      const cg = this.mExpressions[EXP_COLOR_G];
+      const cb = this.mExpressions[EXP_COLOR_B];
+      const hasColor = (ca ? ca.length : 0) > 0 || (cr ? cr.length : 0) > 0 || (cg ? cg.length : 0) > 0 || (cb ? cb.length : 0) > 0;
+      const colors = hasColor ? new Int32Array(total) : new Int32Array(0);
+      let points = 0;
+      if (this.mLayout === LAYOUT_PATH_STRIP) {
+        const raw = context.getPathData(this.mAux);
+        if (raw) {
+          const asFloats = new Float32Array(
+            raw.buffer,
+            raw.byteOffset,
+            raw.length
+          );
+          this.mPolyline = flattenPath(asFloats, (f) => {
+            if (!Number.isNaN(f)) return f;
+            const id = pathNanId(f);
+            if (id >= PATH_MOVE && id <= PATH_DONE) return f;
+            return context.getFloat(id);
+          });
+          points = this.mPolyline.length / 2;
+        }
+        if (this.isSplineStrip) this.buildWidthSpline(context);
+      }
+      const fan = this.mLayout === LAYOUT_FAN;
+      const pos = this.mScratchPos;
+      for (let index = 0; index < total; index++) {
+        let u;
+        let v;
+        if (fan) {
+          if (index === 0) {
+            u = 0;
+            v = 0;
+          } else {
+            u = domainU(this.mLayout, index - 1, uc);
+            v = 1;
+          }
+        } else {
+          u = domainU(this.mLayout, index % uc, uc);
+          v = domainV(Math.trunc(index / uc), vc);
+        }
+        if (this.mLayout === LAYOUT_PATH_STRIP && points > 0) {
+          this.positionOnPath(context, u, v, points, pos);
+        } else {
+          defaultPosition(this.mLayout, u, v, pos);
+        }
+        verts[index * 2] = this.evaluate(context, EXP_X, u, v, pos[0]);
+        verts[index * 2 + 1] = this.evaluate(context, EXP_Y, u, v, pos[1]);
+        if (hasTex) {
+          uv[index * 2] = this.evaluate(context, EXP_TEX_U, u, v, u);
+          uv[index * 2 + 1] = this.evaluate(context, EXP_TEX_V, u, v, v);
+        } else {
+          uv[index * 2] = u;
+          uv[index * 2 + 1] = v;
+        }
+        if (hasColor) {
+          colors[index] = packColor(
+            this.evaluate(context, EXP_COLOR_A, u, v, 1),
+            this.evaluate(context, EXP_COLOR_R, u, v, 1),
+            this.evaluate(context, EXP_COLOR_G, u, v, 1),
+            this.evaluate(context, EXP_COLOR_B, u, v, 1)
+          );
+        }
+      }
+      this.mVerts = verts;
+      this.mUv = uv;
+      this.mColors = colors;
+      this.mIndices = generateIndices(this.mLayout, uc, vc);
+    }
+    static read(buffer, operations) {
+      const meshId = buffer.readInt();
+      const type = buffer.readInt();
+      const layout = buffer.readInt();
+      const uCount = buffer.readInt();
+      const vCount = buffer.readInt();
+      const flags = buffer.readInt();
+      const aux = buffer.readInt();
+      const expressions = [];
+      let srcIndices = new Int32Array(0);
+      let srcVerts = new Float32Array(0);
+      let srcUv = new Float32Array(0);
+      let srcColors = new Int32Array(0);
+      let widths = new Float32Array(0);
+      let widthPositions = new Float32Array(0);
+      if (type === TYPE_EXPRESSION) {
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) {
+          const len = buffer.readInt();
+          const arr = new Int32Array(Math.max(0, len));
+          for (let i = 0; i < len; i++) arr[i] = buffer.readInt();
+          expressions.push(arr);
+        }
+      } else if (type === TYPE_PATH_SPLINE_STRIP || type === TYPE_SPLINE_ROUND_STRIP) {
+        const wn = buffer.readInt();
+        widths = new Float32Array(Math.max(0, wn));
+        for (let i = 0; i < wn; i++) widths[i] = buffer.readFloat();
+        const pn = buffer.readInt();
+        widthPositions = new Float32Array(Math.max(0, pn));
+        for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readFloat();
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
+      } else {
+        const indexCount2 = buffer.readInt();
+        srcIndices = new Int32Array(Math.max(0, indexCount2));
+        for (let i = 0; i < indexCount2; i++) srcIndices[i] = buffer.readShort() & 65535;
+        const vertCount = buffer.readInt();
+        const uvCount = buffer.readInt();
+        const colorCount = buffer.readInt();
+        srcVerts = new Float32Array(Math.max(0, vertCount));
+        srcUv = new Float32Array(Math.max(0, uvCount));
+        srcColors = new Int32Array(Math.max(0, colorCount));
+        if (type === TYPE_F16_VALUES) {
+          for (let i = 0; i < vertCount; i++) {
+            srcVerts[i] = halfToFloat(buffer.readShort() & 65535);
+          }
+          for (let i = 0; i < uvCount; i++) {
+            srcUv[i] = halfToFloat(buffer.readShort() & 65535);
+          }
+        } else {
+          for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readFloat();
+          for (let i = 0; i < uvCount; i++) srcUv[i] = buffer.readFloat();
+        }
+        for (let i = 0; i < colorCount; i++) srcColors[i] = buffer.readInt();
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
+      }
+      operations.push(new _AddMesh2D(
+        meshId,
+        type,
+        layout,
+        uCount,
+        vCount,
+        flags,
+        aux,
+        expressions,
+        srcIndices,
+        srcVerts,
+        srcUv,
+        srcColors,
+        widths,
+        widthPositions
+      ));
+    }
+  };
+  _AddMesh2D.OP_CODE = 104;
+  var AddMesh2D = _AddMesh2D;
+  var _DrawMesh2D = class _DrawMesh2D extends PaintOperation {
+    constructor(mMeshId, mBlend, mImageId) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mBlend = mBlend;
+      this.mImageId = mImageId;
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    paint(context) {
+      context.drawMesh(this.mMeshId, this.mBlend, this.mImageId);
+    }
+    deepToString(indent) {
+      return indent + "DrawMesh2D " + this.mMeshId;
+    }
+    static read(buffer, operations) {
+      operations.push(new _DrawMesh2D(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+    }
+  };
+  _DrawMesh2D.OP_CODE = 105;
+  var DrawMesh2D = _DrawMesh2D;
+  var _MatrixFromMesh2D = class _MatrixFromMesh2D extends PaintOperation {
+    constructor(mMeshId, mU, mV, mFlags) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mU = mU;
+      this.mV = mV;
+      this.mFlags = mFlags;
+      this.mOutU = 0;
+      this.mOutV = 0;
+      this.mOutU = mU;
+      this.mOutV = mV;
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    registerListening(context) {
+      if (isResolvable(this.mU)) context.listensTo(idFromNan(this.mU), this);
+      if (isResolvable(this.mV)) context.listensTo(idFromNan(this.mV), this);
+    }
+    markDirty() {
+    }
+    updateVariables(context) {
+      this.mOutU = isResolvable(this.mU) ? context.getFloat(idFromNan(this.mU)) : this.mU;
+      this.mOutV = isResolvable(this.mV) ? context.getFloat(idFromNan(this.mV)) : this.mV;
+    }
+    paint(context) {
+      context.matrixFromMesh(this.mMeshId, this.mOutU, this.mOutV, this.mFlags);
+    }
+    deepToString(indent) {
+      return indent + "MatrixFromMesh2D " + this.mMeshId;
+    }
+    static read(buffer, operations) {
+      operations.push(new _MatrixFromMesh2D(
+        buffer.readInt(),
+        buffer.readFloat(),
+        buffer.readFloat(),
+        buffer.readInt()
+      ));
+    }
+  };
+  _MatrixFromMesh2D.OP_CODE = 106;
+  var MatrixFromMesh2D = _MatrixFromMesh2D;
+
+  // src/core/operations/DrawPath.ts
   var _DrawPath = class _DrawPath extends PaintOperation {
     constructor(pathId, start, end) {
       super();
@@ -8270,7 +9179,7 @@ var RC = (() => {
   _DrawPath.OP_CODE = 124;
   var DrawPath = _DrawPath;
 
-  // players/typescript/src/core/operations/DrawTweenPath.ts
+  // src/core/operations/DrawTweenPath.ts
   var _DrawTweenPath = class _DrawTweenPath extends PaintOperation {
     constructor(path1Id, path2Id, tweenBits, startBits, endBits) {
       super();
@@ -8314,7 +9223,7 @@ var RC = (() => {
   _DrawTweenPath.OP_CODE = 125;
   var DrawTweenPath = _DrawTweenPath;
 
-  // players/typescript/src/core/operations/DrawContent.ts
+  // src/core/operations/DrawContent.ts
   var _DrawContent = class _DrawContent extends PaintOperation {
     constructor() {
       super(...arguments);
@@ -8345,7 +9254,7 @@ var RC = (() => {
   _DrawContent.OP_CODE = 139;
   var DrawContent = _DrawContent;
 
-  // players/typescript/src/core/operations/DrawBitmap.ts
+  // src/core/operations/DrawBitmap.ts
   var _DrawBitmap = class _DrawBitmap extends PaintOperation {
     constructor(imageId, leftBits, topBits, rightBits, bottomBits, cdId) {
       super();
@@ -8399,7 +9308,7 @@ var RC = (() => {
   _DrawBitmap.OP_CODE = 44;
   var DrawBitmap = _DrawBitmap;
 
-  // players/typescript/src/core/operations/DrawBitmapInt.ts
+  // src/core/operations/DrawBitmapInt.ts
   var _DrawBitmapInt = class _DrawBitmapInt extends PaintOperation {
     constructor(imageId, srcL, srcT, srcR, srcB, dstL, dstT, dstR, dstB, cdId) {
       super();
@@ -8451,7 +9360,7 @@ var RC = (() => {
   _DrawBitmapInt.OP_CODE = 66;
   var DrawBitmapInt = _DrawBitmapInt;
 
-  // players/typescript/src/core/operations/utilities/ImageScaling.ts
+  // src/core/operations/utilities/ImageScaling.ts
   var _ImageScaling = class _ImageScaling {
     constructor() {
       this.mFinalDstLeft = 0;
@@ -8563,7 +9472,7 @@ var RC = (() => {
   _ImageScaling.SCALE_FIXED_SCALE = 7;
   var ImageScaling = _ImageScaling;
 
-  // players/typescript/src/core/operations/DrawBitmapScaled.ts
+  // src/core/operations/DrawBitmapScaled.ts
   var _DrawBitmapScaled = class _DrawBitmapScaled extends PaintOperation {
     // Args are raw int32 bits for the float fields (see read()).
     constructor(imageId, srcL, srcT, srcR, srcB, dstL, dstT, dstR, dstB, scaleType, scaleFactor, cdId) {
@@ -8674,7 +9583,7 @@ var RC = (() => {
   _DrawBitmapScaled.OP_CODE = 149;
   var DrawBitmapScaled = _DrawBitmapScaled;
 
-  // players/typescript/src/core/operations/DrawText.ts
+  // src/core/operations/DrawText.ts
   var _DrawText = class _DrawText extends PaintOperation {
     constructor(textId, start, end, contextStart, contextEnd, xBits, yBits, rtl) {
       super();
@@ -8731,7 +9640,7 @@ var RC = (() => {
   _DrawText.OP_CODE = 43;
   var DrawText = _DrawText;
 
-  // players/typescript/src/core/operations/DrawTextOnPath.ts
+  // src/core/operations/DrawTextOnPath.ts
   var _DrawTextOnPath = class _DrawTextOnPath extends PaintOperation {
     constructor(textId, pathId, hOffsetBits, vOffsetBits) {
       super();
@@ -8770,7 +9679,7 @@ var RC = (() => {
   _DrawTextOnPath.OP_CODE = 53;
   var DrawTextOnPath = _DrawTextOnPath;
 
-  // players/typescript/src/core/operations/DrawToBitmap.ts
+  // src/core/operations/DrawToBitmap.ts
   var _DrawToBitmap = class _DrawToBitmap extends PaintOperation {
     constructor(bitmapId, mode, color) {
       super();
@@ -8793,7 +9702,7 @@ var RC = (() => {
   _DrawToBitmap.OP_CODE = 190;
   var DrawToBitmap = _DrawToBitmap;
 
-  // players/typescript/src/core/operations/DrawLine.ts
+  // src/core/operations/DrawLine.ts
   var _DrawLine = class _DrawLine extends DrawBase4 {
     paintBase4(context, x1, y1, x2, y2) {
       context.drawLine(x1, y1, x2, y2);
@@ -8813,7 +9722,7 @@ var RC = (() => {
   _DrawLine.OP_CODE = 47;
   var DrawLine = _DrawLine;
 
-  // players/typescript/src/core/PaintContext.ts
+  // src/core/PaintContext.ts
   var PaintContext = class {
     constructor(context) {
       this.mNeedsRepaint = false;
@@ -8886,6 +9795,19 @@ var RC = (() => {
     wakeIn(seconds) {
       this.mContext.mRemoteComposeState.wakeIn(seconds);
     }
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Deliberately not abstract: a backend that has not implemented meshes still compiles and
+    // draws nothing. Geometry arrives already in the layout drawVertices wants. An empty `uv`
+    // or `colors` means the channel is absent.
+    //
+    // drawMesh must leave the paint exactly as it found it.
+    setMesh(_meshId, _layout, _uCount, _vCount, _verts, _uv, _colors, _indices) {
+    }
+    drawMesh(_meshId, _blend, _imageId) {
+    }
+    matrixFromMesh(_meshId, _u, _v, _flags) {
+    }
   };
   PaintContext.TEXT_MEASURE_MONOSPACE_WIDTH = 1;
   PaintContext.TEXT_MEASURE_FONT_HEIGHT = 2;
@@ -8893,7 +9815,7 @@ var RC = (() => {
   PaintContext.TEXT_COMPLEX = 8;
   PaintContext.TEXT_MEASURE_AUTOSIZE = 16;
 
-  // players/typescript/src/core/operations/DrawTextAnchored.ts
+  // src/core/operations/DrawTextAnchored.ts
   var _DrawTextAnchored = class _DrawTextAnchored extends PaintOperation {
     constructor(textId, xBits, yBits, panXBits, panYBits, flags) {
       super();
@@ -8988,7 +9910,7 @@ var RC = (() => {
   _DrawTextAnchored.BASELINE_RELATIVE = 8;
   var DrawTextAnchored = _DrawTextAnchored;
 
-  // players/typescript/src/core/operations/MatrixOperations.ts
+  // src/core/operations/MatrixOperations.ts
   function listenFloat(bits, context, op) {
     if (isNaNBits(bits)) context.listensTo(idFromBits(bits), op);
   }
@@ -9247,7 +10169,7 @@ var RC = (() => {
   _ClipPath.OP_CODE = 38;
   var ClipPath = _ClipPath;
 
-  // players/typescript/src/core/d3/Paint3DContext.ts
+  // src/core/d3/Paint3DContext.ts
   var PROJECTION_PERSPECTIVE = 0;
   var M3_IDENTITY = 0;
   var M3_TRANSLATE = 1;
@@ -9273,7 +10195,7 @@ var RC = (() => {
     return !!ctx && typeof ctx.drawMesh3D === "function";
   }
 
-  // players/typescript/src/core/d3/MonotonicCurveFit.ts
+  // src/core/d3/MonotonicCurveFit.ts
   var MonotonicCurveFit2 = class {
     constructor(time, y) {
       this.mExtrapolate = true;
@@ -9475,7 +10397,7 @@ var RC = (() => {
     return -6 * x2 * y2 + 6 * x * y2 + 6 * x2 * y1 - 6 * x * y1 + 3 * h * t2 * x2 + 3 * h * t1 * x2 - 2 * h * t2 * x - 4 * h * t1 * x + h * t1;
   }
 
-  // players/typescript/src/core/d3/Primitive3D.ts
+  // src/core/d3/Primitive3D.ts
   var SPHERE = 0;
   var CYLINDER = 1;
   var CONE = 2;
@@ -11544,7 +12466,7 @@ var RC = (() => {
     }
   }
 
-  // players/typescript/src/core/operations/d3/Operations3D.ts
+  // src/core/operations/d3/Operations3D.ts
   var MAX_INDICES = 6e5;
   var MAX_VERTS_FLOATS = 3 * 2e5;
   var MAX_LIGHTS = 32;
@@ -11988,7 +12910,7 @@ var RC = (() => {
   _MeshPrimitive.OP_CODE = 120;
   var MeshPrimitive = _MeshPrimitive;
 
-  // players/typescript/src/core/operations/d3/MeshExpression.ts
+  // src/core/operations/d3/MeshExpression.ts
   var SURFACE_HEIGHT_FIELD = 1;
   var SURFACE_SPHERE = 2;
   var SURFACE_CYLINDER = 3;
@@ -12004,7 +12926,7 @@ var RC = (() => {
     }
     return (idFromBits(b) & ID_REGION_MASK) === ID_REGION_ARRAY;
   }
-  function isResolvable(v) {
+  function isResolvable2(v) {
     if (!Number.isNaN(v)) {
       return false;
     }
@@ -12043,7 +12965,7 @@ var RC = (() => {
     // ----- variable support -------------------------------------------------
     updateVariables(context) {
       for (let i = 0; i < this.mParams.length; i++) {
-        this.mOutParams[i] = isResolvable(this.mParams[i]) ? context.getFloat(idFromNan(this.mParams[i])) : this.mParams[i];
+        this.mOutParams[i] = isResolvable2(this.mParams[i]) ? context.getFloat(idFromNan(this.mParams[i])) : this.mParams[i];
       }
       _MeshExpression.resolveGroup(context, this.mPos, this.mOutPos);
       _MeshExpression.resolveGroup(context, this.mNormal, this.mOutNormal);
@@ -12054,13 +12976,13 @@ var RC = (() => {
         const inArr = src[e];
         const out = dst[e];
         for (let i = 0; i < inArr.length; i++) {
-          out[i] = isResolvable(inArr[i]) ? context.getFloat(idFromNan(inArr[i])) : inArr[i];
+          out[i] = isResolvable2(inArr[i]) ? context.getFloat(idFromNan(inArr[i])) : inArr[i];
         }
       }
     }
     registerListening(context) {
       for (const v of this.mParams) {
-        if (isResolvable(v)) {
+        if (isResolvable2(v)) {
           context.listensTo(idFromNan(v), this);
         }
       }
@@ -12071,7 +12993,7 @@ var RC = (() => {
     listenGroup(context, group) {
       for (const e of group) {
         for (const v of e) {
-          if (isResolvable(v)) {
+          if (isResolvable2(v)) {
             context.listensTo(idFromNan(v), this);
           }
         }
@@ -12352,7 +13274,7 @@ var RC = (() => {
     return g;
   }
 
-  // players/typescript/src/core/operations/utilities/VectorRpn.ts
+  // src/core/operations/utilities/VectorRpn.ts
   var fround2 = Math.fround;
   function fm2(a, b) {
     return fround2(a * b);
@@ -12674,10 +13596,10 @@ var RC = (() => {
     return r;
   }
 
-  // players/typescript/src/core/operations/VectorExpression.ts
+  // src/core/operations/VectorExpression.ts
   var ID_REGION_MASK2 = 3 << 20;
   var ID_REGION_ARRAY2 = 2 << 20;
-  function isResolvable2(v) {
+  function isResolvable3(v) {
     if (!Number.isNaN(v)) {
       return false;
     }
@@ -12703,13 +13625,13 @@ var RC = (() => {
     updateVariables(context) {
       for (let i = 0; i < this.mSrcValue.length; i++) {
         const v = this.mSrcValue[i];
-        this.mPreCalc[i] = isResolvable2(v) ? context.getFloat(idFromNan(v)) : v;
+        this.mPreCalc[i] = isResolvable3(v) ? context.getFloat(idFromNan(v)) : v;
       }
     }
     registerListening(context) {
       context.putObject(this.mId, this);
       for (const v of this.mSrcValue) {
-        if (isResolvable2(v)) {
+        if (isResolvable3(v)) {
           context.listensTo(idFromNan(v), this);
         }
       }
@@ -12774,7 +13696,7 @@ var RC = (() => {
   _VectorExpression.OP_CODE = 116;
   var VectorExpression = _VectorExpression;
 
-  // players/typescript/src/core/operations/ColorExpression.ts
+  // src/core/operations/ColorExpression.ts
   var _ColorExpression = class _ColorExpression extends Operation {
     constructor(id, param1, param2, param3, param4) {
       super();
@@ -12935,7 +13857,7 @@ var RC = (() => {
   _ColorExpression.IDARGB_MODE = 6;
   var ColorExpression = _ColorExpression;
 
-  // players/typescript/src/core/operations/IntegerExpression.ts
+  // src/core/operations/IntegerExpression.ts
   var _IntegerExpression = class _IntegerExpression extends Operation {
     constructor(id, mask, values) {
       super();
@@ -13134,7 +14056,7 @@ var RC = (() => {
   _IntegerExpression.OFFSET = 65536;
   var IntegerExpression = _IntegerExpression;
 
-  // players/typescript/src/core/operations/IntegerConstant.ts
+  // src/core/operations/IntegerConstant.ts
   var _IntegerConstant = class _IntegerConstant extends Operation {
     constructor(id, value) {
       super();
@@ -13159,7 +14081,7 @@ var RC = (() => {
   _IntegerConstant.OP_CODE = 140;
   var IntegerConstant = _IntegerConstant;
 
-  // players/typescript/src/core/operations/BooleanConstant.ts
+  // src/core/operations/BooleanConstant.ts
   var _BooleanConstant = class _BooleanConstant extends Operation {
     constructor(id, value) {
       super();
@@ -13180,7 +14102,7 @@ var RC = (() => {
   _BooleanConstant.OP_CODE = 143;
   var BooleanConstant = _BooleanConstant;
 
-  // players/typescript/src/core/operations/LongConstant.ts
+  // src/core/operations/LongConstant.ts
   var _LongConstant = class _LongConstant extends Operation {
     constructor(id, value) {
       super();
@@ -13208,7 +14130,7 @@ var RC = (() => {
   _LongConstant.OP_CODE = 148;
   var LongConstant = _LongConstant;
 
-  // players/typescript/src/core/operations/ShaderData.ts
+  // src/core/operations/ShaderData.ts
   var _ShaderData = class _ShaderData extends Operation {
     constructor(shaderId, shaderTextId, floatMap, intMap, bitmapMap) {
       super();
@@ -13344,7 +14266,7 @@ var RC = (() => {
   _ShaderData.OP_CODE = 45;
   var ShaderData = _ShaderData;
 
-  // players/typescript/src/core/operations/utilities/StringUtils.ts
+  // src/core/operations/utilities/StringUtils.ts
   var GROUPING_NONE = 0;
   var GROUPING_BY3 = 1;
   var GROUPING_BY4 = 2;
@@ -13558,7 +14480,7 @@ var RC = (() => {
     return "-" + integerPartString + decSep + fact;
   }
 
-  // players/typescript/src/core/operations/TextFromFloat.ts
+  // src/core/operations/TextFromFloat.ts
   var PAD_AFTER_NONE = 1;
   var PAD_AFTER_ZERO = 3;
   var PAD_PRE_NONE = 4;
@@ -13680,7 +14602,7 @@ var RC = (() => {
   _TextFromFloat.OP_CODE = 135;
   var TextFromFloat = _TextFromFloat;
 
-  // players/typescript/src/core/operations/TextMerge.ts
+  // src/core/operations/TextMerge.ts
   var _TextMerge = class _TextMerge extends Operation {
     constructor(textId, srcId1, srcId2) {
       super();
@@ -13712,7 +14634,7 @@ var RC = (() => {
   _TextMerge.OP_CODE = 136;
   var TextMerge = _TextMerge;
 
-  // players/typescript/src/core/operations/ComponentValue.ts
+  // src/core/operations/ComponentValue.ts
   var _ComponentValue = class _ComponentValue extends Operation {
     constructor(type, componentId, valueId) {
       super();
@@ -13799,7 +14721,7 @@ var RC = (() => {
   _ComponentValue.CONTENT_HEIGHT = 7;
   var ComponentValue = _ComponentValue;
 
-  // players/typescript/src/core/operations/DataMapIds.ts
+  // src/core/operations/DataMapIds.ts
   var DataMap = class {
     constructor(names, types, ids) {
       this.mNames = names;
@@ -13841,7 +14763,7 @@ var RC = (() => {
   _DataMapIds.OP_CODE = 145;
   var DataMapIds = _DataMapIds;
 
-  // players/typescript/src/core/operations/DataListIds.ts
+  // src/core/operations/DataListIds.ts
   var _DataListIds = class _DataListIds extends Operation {
     constructor(id, ids) {
       super();
@@ -13878,7 +14800,7 @@ var RC = (() => {
   _DataListIds.OP_CODE = 146;
   var DataListIds = _DataListIds;
 
-  // players/typescript/src/core/operations/DataListFloat.ts
+  // src/core/operations/DataListFloat.ts
   var _DataListFloat = class _DataListFloat extends Operation {
     constructor(id, bits) {
       super();
@@ -13932,7 +14854,7 @@ var RC = (() => {
   _DataListFloat.OP_CODE = 147;
   var DataListFloat = _DataListFloat;
 
-  // players/typescript/src/core/operations/layout/LayoutComponentContent.ts
+  // src/core/operations/layout/LayoutComponentContent.ts
   var _LayoutComponentContent = class _LayoutComponentContent extends Component {
     constructor(componentId) {
       super(componentId);
@@ -13954,7 +14876,7 @@ var RC = (() => {
   _LayoutComponentContent.OP_CODE = 201;
   var LayoutComponentContent = _LayoutComponentContent;
 
-  // players/typescript/src/core/operations/layout/CanvasContent.ts
+  // src/core/operations/layout/CanvasContent.ts
   var _CanvasContent = class _CanvasContent extends Component {
     constructor(componentId) {
       super(componentId);
@@ -13976,7 +14898,7 @@ var RC = (() => {
   _CanvasContent.OP_CODE = 207;
   var CanvasContent = _CanvasContent;
 
-  // players/typescript/src/core/operations/DataDynamicListFloat.ts
+  // src/core/operations/DataDynamicListFloat.ts
   var _DataDynamicListFloat = class _DataDynamicListFloat extends Operation {
     constructor(id, nbValuesBits) {
       super();
@@ -14044,7 +14966,7 @@ var RC = (() => {
   _DataDynamicListFloat.MAX_FLOAT_ARRAY = 2e3;
   var DataDynamicListFloat = _DataDynamicListFloat;
 
-  // players/typescript/src/core/operations/layout/modifiers/LayoutComputeOperation.ts
+  // src/core/operations/layout/modifiers/LayoutComputeOperation.ts
   var _LayoutComputeOperation = class _LayoutComputeOperation extends Operation {
     constructor(type, boundsId, animateChanges) {
       super();
@@ -14155,7 +15077,7 @@ var RC = (() => {
   _LayoutComputeOperation.TYPE_POSITION = 1;
   var LayoutComputeOperation = _LayoutComputeOperation;
 
-  // players/typescript/src/core/operations/layout/LayoutComponent.ts
+  // src/core/operations/layout/LayoutComponent.ts
   var LayoutComponent = class _LayoutComponent extends Component {
     constructor() {
       super(...arguments);
@@ -14842,7 +15764,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/measure/Size.ts
+  // src/core/operations/layout/measure/Size.ts
   var Size = class {
     constructor(width = 0, height = 0) {
       this.mWidth = width;
@@ -14866,7 +15788,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/managers/LayoutManager.ts
+  // src/core/operations/layout/managers/LayoutManager.ts
   var LayoutManager = class extends LayoutComponent {
     constructor() {
       super(...arguments);
@@ -14913,8 +15835,10 @@ var RC = (() => {
       }
       selfMeasure.setW(w);
       selfMeasure.setH(h);
-      const horizontalWrap = wMod?.getType() === WidthModifier.WRAP;
-      const verticalWrap = hMod?.getType() === HeightModifier.WRAP;
+      const widthWeightUnpinned = wMod?.getType() === WidthModifier.WEIGHT && minWidth <= this.mPadBeforeWidth;
+      const heightWeightUnpinned = hMod?.getType() === HeightModifier.WEIGHT && minHeight <= this.mPadBeforeHeight;
+      const horizontalWrap = wMod?.getType() === WidthModifier.WRAP || widthWeightUnpinned;
+      const verticalWrap = hMod?.getType() === HeightModifier.WRAP || heightWeightUnpinned;
       if (horizontalWrap || verticalWrap) {
         this.mCachedWrapSize.clear();
         const childMaxW = (horizontalWrap ? maxWidth : w) - padding_w;
@@ -15046,7 +15970,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/layout/managers/BoxLayout.ts
+  // src/core/operations/layout/managers/BoxLayout.ts
   var _BoxLayout = class _BoxLayout extends LayoutManager {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning) {
       super(componentId, animationId);
@@ -15154,7 +16078,7 @@ var RC = (() => {
   _BoxLayout.BOTTOM = 5;
   var BoxLayout = _BoxLayout;
 
-  // players/typescript/src/core/operations/layout/managers/RowLayout.ts
+  // src/core/operations/layout/managers/RowLayout.ts
   var _RowLayout = class _RowLayout extends LayoutManager {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy) {
       super(componentId, animationId);
@@ -15445,7 +16369,7 @@ var RC = (() => {
   _RowLayout.SPACE_AROUND = 8;
   var RowLayout = _RowLayout;
 
-  // players/typescript/src/core/operations/layout/managers/ColumnLayout.ts
+  // src/core/operations/layout/managers/ColumnLayout.ts
   var _ColumnLayout = class _ColumnLayout extends LayoutManager {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy) {
       super(componentId, animationId);
@@ -15706,7 +16630,7 @@ var RC = (() => {
   _ColumnLayout.SPACE_AROUND = 8;
   var ColumnLayout = _ColumnLayout;
 
-  // players/typescript/src/core/operations/layout/managers/CanvasLayout.ts
+  // src/core/operations/layout/managers/CanvasLayout.ts
   var _CanvasLayout = class _CanvasLayout extends BoxLayout {
     constructor(componentId, animationId) {
       super(componentId, animationId, 0, 0);
@@ -15747,7 +16671,7 @@ var RC = (() => {
   _CanvasLayout.OP_CODE = 205;
   var CanvasLayout = _CanvasLayout;
 
-  // players/typescript/src/core/operations/Skip.ts
+  // src/core/operations/Skip.ts
   var sLibraryApiLevel = 7;
   var sProfile = 0;
   var _Skip = class _Skip extends Operation {
@@ -15797,7 +16721,7 @@ var RC = (() => {
   _Skip.SKIP_IF_PROFILE_EXCLUDES = 6;
   var Skip = _Skip;
 
-  // players/typescript/src/core/operations/layout/managers/TextStyle.ts
+  // src/core/operations/layout/managers/TextStyle.ts
   var P_ID = 1;
   var P_ANIMATION_ID = 2;
   var P_COLOR = 3;
@@ -15965,7 +16889,7 @@ var RC = (() => {
   _TextStyle.OP_CODE = 242;
   var TextStyle = _TextStyle;
 
-  // players/typescript/src/core/operations/ConditionalOperations.ts
+  // src/core/operations/ConditionalOperations.ts
   var _ConditionalOperations = class _ConditionalOperations extends PaintOperation {
     constructor(type, aBits, bBits) {
       super();
@@ -16054,7 +16978,7 @@ var RC = (() => {
   _ConditionalOperations.TYPE_GTE = 5;
   var ConditionalOperations = _ConditionalOperations;
 
-  // players/typescript/src/core/operations/PathCreate.ts
+  // src/core/operations/PathCreate.ts
   function isPathMarkerBits2(b) {
     if (!isNaNBits(b)) return false;
     const id = idFromBits(b);
@@ -16106,7 +17030,7 @@ var RC = (() => {
   _PathCreate.MOVE_NAN_BITS = 10 | -8388608 | 0;
   var PathCreate = _PathCreate;
 
-  // players/typescript/src/core/operations/PathAppend.ts
+  // src/core/operations/PathAppend.ts
   function isPathMarkerBits3(b) {
     if (!isNaNBits(b)) return false;
     const id = idFromBits(b);
@@ -16175,7 +17099,7 @@ var RC = (() => {
   _PathAppend.OP_CODE = 160;
   var PathAppend = _PathAppend;
 
-  // players/typescript/src/core/operations/utilities/PathGenerator.ts
+  // src/core/operations/utilities/PathGenerator.ts
   var MOVE_BITS = 10 | -8388608 | 0;
   var CUBIC_BITS = 14 | -8388608 | 0;
   var CLOSE_BITS = 15 | -8388608 | 0;
@@ -16405,7 +17329,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/PathExpression.ts
+  // src/core/operations/PathExpression.ts
   var ARR_SENTINEL3 = 2 ** 42;
   var _PathExpression = class _PathExpression extends Operation {
     constructor(id, flags, minBits, maxBits, countBits, exprX, exprY) {
@@ -16767,7 +17691,7 @@ var RC = (() => {
   _PathExpression.ID_REGION_ARRAY = 2097152;
   var PathExpression = _PathExpression;
 
-  // players/typescript/src/core/operations/utilities/Matrix.ts
+  // src/core/operations/utilities/Matrix.ts
   var _Matrix = class _Matrix {
     constructor(dim0 = 4, dim1 = 4) {
       this.mDim0 = 4;
@@ -17048,7 +17972,7 @@ var RC = (() => {
   _Matrix.sTempInVec = null;
   var Matrix = _Matrix;
 
-  // players/typescript/src/core/operations/utilities/MatrixOperations.ts
+  // src/core/operations/utilities/MatrixOperations.ts
   var OFFSET2 = 3276800;
   function asNan2(v) {
     return intBitsToFloat(v | -8388608);
@@ -17234,7 +18158,7 @@ var RC = (() => {
   _MatrixOperations.OP_PROJECTION = OFFSET2 + 18;
   var MatrixOperations = _MatrixOperations;
 
-  // players/typescript/src/core/operations/MatrixExpression.ts
+  // src/core/operations/MatrixExpression.ts
   var _MatrixExpression = class _MatrixExpression extends Operation {
     constructor(matrixId, type, bits) {
       super();
@@ -17292,7 +18216,7 @@ var RC = (() => {
   _MatrixExpression.OP_CODE = 187;
   var MatrixExpression = _MatrixExpression;
 
-  // players/typescript/src/core/operations/MatrixConstant.ts
+  // src/core/operations/MatrixConstant.ts
   var _MatrixConstant = class _MatrixConstant extends Operation {
     constructor(matrixId, type, values) {
       super();
@@ -17324,7 +18248,7 @@ var RC = (() => {
   _MatrixConstant.OP_CODE = 186;
   var MatrixConstant = _MatrixConstant;
 
-  // players/typescript/src/core/operations/MatrixVectorMath.ts
+  // src/core/operations/MatrixVectorMath.ts
   var _MatrixVectorMath = class _MatrixVectorMath extends Operation {
     constructor(type, outputs, matrixId, inputBits) {
       super();
@@ -17385,7 +18309,7 @@ var RC = (() => {
   _MatrixVectorMath.OP_CODE = 188;
   var MatrixVectorMath = _MatrixVectorMath;
 
-  // players/typescript/src/core/operations/TextTransform.ts
+  // src/core/operations/TextTransform.ts
   var _TextTransform = class _TextTransform extends Operation {
     constructor(textId, srcId, startBits, lenBits, operation) {
       super();
@@ -17443,7 +18367,7 @@ var RC = (() => {
   _TextTransform.TEXT_UPPERCASE_FIRST_CHAR = 5;
   var TextTransform = _TextTransform;
 
-  // players/typescript/src/core/operations/TextLookup.ts
+  // src/core/operations/TextLookup.ts
   var _TextLookup = class _TextLookup extends Operation {
     constructor(textId, dataSetId, indexBits) {
       super();
@@ -17487,7 +18411,7 @@ var RC = (() => {
   _TextLookup.OP_CODE = 151;
   var TextLookup = _TextLookup;
 
-  // players/typescript/src/core/operations/ColorTheme.ts
+  // src/core/operations/ColorTheme.ts
   var _ColorTheme = class _ColorTheme extends Operation {
     constructor(id, colorGroupId, lightModeIndex, darkModeIndex, lightModeFallback, darkModeFallback) {
       super();
@@ -17539,7 +18463,7 @@ var RC = (() => {
   _ColorTheme.THEME_DARK = -2;
   var ColorTheme = _ColorTheme;
 
-  // players/typescript/src/core/operations/ColorAttribute.ts
+  // src/core/operations/ColorAttribute.ts
   var _ColorAttribute = class _ColorAttribute extends Operation {
     constructor(outputId, colorId, type) {
       super();
@@ -17620,7 +18544,7 @@ var RC = (() => {
   _ColorAttribute.COLOR_ALPHA = 6;
   var ColorAttribute = _ColorAttribute;
 
-  // players/typescript/src/core/operations/DataMapLookup.ts
+  // src/core/operations/DataMapLookup.ts
   var TYPE_STRING = 0;
   var TYPE_INT = 1;
   var TYPE_FLOAT = 2;
@@ -17677,7 +18601,7 @@ var RC = (() => {
   _DataMapLookup.OP_CODE = 154;
   var DataMapLookup = _DataMapLookup;
 
-  // players/typescript/src/core/operations/TextMeasure.ts
+  // src/core/operations/TextMeasure.ts
   var MEASURE_WIDTH = 0;
   var MEASURE_HEIGHT = 1;
   var MEASURE_LEFT = 2;
@@ -17731,7 +18655,7 @@ var RC = (() => {
   _TextMeasure.OP_CODE = 155;
   var TextMeasure = _TextMeasure;
 
-  // players/typescript/src/core/operations/TextAttribute.ts
+  // src/core/operations/TextAttribute.ts
   var MEASURE_WIDTH2 = 0;
   var MEASURE_HEIGHT2 = 1;
   var MEASURE_LEFT2 = 2;
@@ -17794,7 +18718,7 @@ var RC = (() => {
   _TextAttribute.OP_CODE = 170;
   var TextAttribute = _TextAttribute;
 
-  // players/typescript/src/core/operations/TextLength.ts
+  // src/core/operations/TextLength.ts
   var _TextLength = class _TextLength extends Operation {
     constructor(lengthId, textId) {
       super();
@@ -17824,7 +18748,7 @@ var RC = (() => {
   _TextLength.OP_CODE = 156;
   var TextLength = _TextLength;
 
-  // players/typescript/src/core/operations/TextSubtext.ts
+  // src/core/operations/TextSubtext.ts
   var _TextSubtext = class _TextSubtext extends Operation {
     constructor(textId, srcId, startBits, lenBits) {
       super();
@@ -17884,7 +18808,7 @@ var RC = (() => {
   _TextSubtext.OP_CODE = 182;
   var TextSubtext = _TextSubtext;
 
-  // players/typescript/src/core/operations/ParticleOperations.ts
+  // src/core/operations/ParticleOperations.ts
   var OFFSET3 = 3211264;
   var ID_REGION_MASK3 = 7340032;
   var ID_REGION_ARRAY4 = 2097152;
@@ -18270,7 +19194,7 @@ var RC = (() => {
   _ParticlesCompareOp.OP_CODE = 194;
   var ParticlesCompareOp = _ParticlesCompareOp;
 
-  // players/typescript/src/core/operations/layout/managers/FlowLayout.ts
+  // src/core/operations/layout/managers/FlowLayout.ts
   var _FlowLayout = class _FlowLayout extends RowLayout {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy) {
       super(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy);
@@ -18429,7 +19353,7 @@ var RC = (() => {
   _FlowLayout.OP_CODE = 240;
   var FlowLayout = _FlowLayout;
 
-  // players/typescript/src/core/operations/layout/LoopOperation.ts
+  // src/core/operations/layout/LoopOperation.ts
   var _LoopOperation = class _LoopOperation extends Operation {
     constructor(indexId, fromBits, stepBits, untilBits) {
       super();
@@ -18507,7 +19431,7 @@ var RC = (() => {
   _LoopOperation.OP_CODE = 215;
   var LoopOperation = _LoopOperation;
 
-  // players/typescript/src/core/operations/layout/managers/CoreText.ts
+  // src/core/operations/layout/managers/CoreText.ts
   var P_INT = 1;
   var P_FLOAT = 2;
   var P_SHORT = 3;
@@ -18842,7 +19766,8 @@ var RC = (() => {
         context.getTextBounds(this.mTextId, 0, this.mCachedString.length, flags, bounds);
         this.mBaseline = -bounds[1];
       }
-      if (forceComplex || bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0) {
+      const wantsComplex = forceComplex || bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0;
+      if (wantsComplex) {
         if (inAutosize) {
           flags |= 1;
         }
@@ -18871,8 +19796,13 @@ var RC = (() => {
           bounds[2] = this.mComputedTextLayout.width;
           bounds[3] = this.mComputedTextLayout.height;
         }
-      } else {
+      } else if (maxWidth > 0) {
         this.mComputedTextLayout = null;
+      } else if (this.mComputedTextLayout) {
+        bounds[0] = 0;
+        bounds[1] = 0;
+        bounds[2] = this.mComputedTextLayout.width;
+        bounds[3] = this.mComputedTextLayout.height;
       }
     }
     paintingComponent(paintContext) {
@@ -19092,7 +20022,7 @@ var RC = (() => {
   _CoreText.OP_CODE = 239;
   var CoreText = _CoreText;
 
-  // players/typescript/src/core/operations/layout/managers/TextLayout.ts
+  // src/core/operations/layout/managers/TextLayout.ts
   var FLAG_IS_DYNAMIC_COLOR = 1;
   var _TextLayout = class _TextLayout extends CoreText {
     deepToString(indent) {
@@ -19158,7 +20088,7 @@ var RC = (() => {
   _TextLayout.OP_CODE = 208;
   var TextLayout = _TextLayout;
 
-  // players/typescript/src/core/operations/layout/managers/FitBoxLayout.ts
+  // src/core/operations/layout/managers/FitBoxLayout.ts
   var _FitBoxLayout = class _FitBoxLayout extends LayoutManager {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning) {
       super(componentId, animationId);
@@ -19282,7 +20212,7 @@ var RC = (() => {
   _FitBoxLayout.BOTTOM = 5;
   var FitBoxLayout = _FitBoxLayout;
 
-  // players/typescript/src/core/operations/layout/managers/CollapsiblePriority.ts
+  // src/core/operations/layout/managers/CollapsiblePriority.ts
   var _CollapsiblePriority = class _CollapsiblePriority {
     static getPriority(c, orientation) {
       if (c instanceof LayoutComponent) {
@@ -19307,7 +20237,7 @@ var RC = (() => {
   _CollapsiblePriority.VERTICAL = 1;
   var CollapsiblePriority = _CollapsiblePriority;
 
-  // players/typescript/src/core/operations/layout/managers/CollapsibleRowLayout.ts
+  // src/core/operations/layout/managers/CollapsibleRowLayout.ts
   var _CollapsibleRowLayout = class _CollapsibleRowLayout extends RowLayout {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy) {
       super(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy);
@@ -19418,7 +20348,7 @@ var RC = (() => {
   _CollapsibleRowLayout.OP_CODE = 230;
   var CollapsibleRowLayout = _CollapsibleRowLayout;
 
-  // players/typescript/src/core/operations/layout/managers/CollapsibleColumnLayout.ts
+  // src/core/operations/layout/managers/CollapsibleColumnLayout.ts
   var _CollapsibleColumnLayout = class _CollapsibleColumnLayout extends ColumnLayout {
     constructor(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy) {
       super(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy);
@@ -19529,7 +20459,7 @@ var RC = (() => {
   _CollapsibleColumnLayout.OP_CODE = 233;
   var CollapsibleColumnLayout = _CollapsibleColumnLayout;
 
-  // players/typescript/src/core/operations/IdLookup.ts
+  // src/core/operations/IdLookup.ts
   var _IdLookup = class _IdLookup extends Operation {
     constructor(textId, dataSetId, indexBits) {
       super();
@@ -19571,7 +20501,7 @@ var RC = (() => {
   _IdLookup.OP_CODE = 192;
   var IdLookup = _IdLookup;
 
-  // players/typescript/src/core/operations/UpdateDynamicFloatList.ts
+  // src/core/operations/UpdateDynamicFloatList.ts
   var _UpdateDynamicFloatList = class _UpdateDynamicFloatList extends Operation {
     constructor(arrayId, indexBits, valueBits) {
       super();
@@ -19623,7 +20553,7 @@ var RC = (() => {
   _UpdateDynamicFloatList.OP_CODE = 198;
   var UpdateDynamicFloatList = _UpdateDynamicFloatList;
 
-  // players/typescript/src/core/operations/layout/managers/ImageLayout.ts
+  // src/core/operations/layout/managers/ImageLayout.ts
   var _ImageLayout = class _ImageLayout extends LayoutManager {
     constructor(componentId, animationId, bitmapId, scaleType, alphaBits) {
       super(componentId, animationId);
@@ -19732,7 +20662,7 @@ var RC = (() => {
   _ImageLayout.OP_CODE = 234;
   var ImageLayout = _ImageLayout;
 
-  // players/typescript/src/core/operations/layout/managers/StateLayout.ts
+  // src/core/operations/layout/managers/StateLayout.ts
   var _StateLayout = class _StateLayout extends LayoutManager {
     constructor(componentId, animationId, indexId) {
       super(componentId, animationId);
@@ -19902,7 +20832,7 @@ var RC = (() => {
   _StateLayout.OP_CODE = 217;
   var StateLayout = _StateLayout;
 
-  // players/typescript/src/core/operations/layout/modifiers/ActionOperations.ts
+  // src/core/operations/layout/modifiers/ActionOperations.ts
   var _HostActionOperation = class _HostActionOperation extends Operation {
     constructor(actionId) {
       super();
@@ -20054,7 +20984,7 @@ var RC = (() => {
   _ValueFloatChangeAction.OP_CODE = 222;
   var ValueFloatChangeAction = _ValueFloatChangeAction;
 
-  // players/typescript/src/core/operations/utilities/ToneSynthesizer.ts
+  // src/core/operations/utilities/ToneSynthesizer.ts
   var _ToneSynthesizer = class _ToneSynthesizer {
     /**
      * Synthesize raw 16-bit little-endian mono PCM bytes.
@@ -20143,7 +21073,7 @@ var RC = (() => {
   _ToneSynthesizer.SAMPLE_RATE = 22050;
   var ToneSynthesizer = _ToneSynthesizer;
 
-  // players/typescript/src/core/operations/SoundOperations.ts
+  // src/core/operations/SoundOperations.ts
   var _SoundData = class _SoundData extends Operation {
     constructor(soundId, data) {
       super();
@@ -20232,7 +21162,7 @@ var RC = (() => {
   _PlaySound.OP_CODE = 141;
   var PlaySound = _PlaySound;
 
-  // players/typescript/src/core/operations/layout/managers/Custom.ts
+  // src/core/operations/layout/managers/Custom.ts
   var _Custom = class _Custom extends LayoutManager {
     constructor(componentId, animationId, configId, properties) {
       super(componentId, animationId);
@@ -20258,6 +21188,42 @@ var RC = (() => {
     apply(context) {
       super.apply(context);
     }
+    // The same modifier pass as any layout component, then the host draws the content —
+    // what the C++ engine does for opcode 93 in LayoutOperations.cpp.
+    paintingComponent(paintContext) {
+      const context = paintContext.getContext();
+      const host = context.getCustomHost();
+      if (!host) {
+        super.paintingComponent(paintContext);
+        return;
+      }
+      if (Visibility.isGone(this.mVisibility) && this.mAnimateMeasure === null) return;
+      paintContext.matrixSave();
+      paintContext.matrixTranslate(this.mX, this.mY);
+      let tx = 0;
+      let ty = 0;
+      for (const mod of this.mComponentModifiers) {
+        context.incrementOpCount(mod);
+        if (mod.isDirty() && typeof mod.updateVariables === "function") {
+          mod.markNotDirty();
+          mod.updateVariables(context);
+        }
+        if (mod instanceof PaddingModifier) {
+          paintContext.matrixTranslate(mod.mLeftValue, mod.mTopValue);
+          tx += mod.mLeftValue;
+          ty += mod.mTopValue;
+        } else {
+          mod.apply(context);
+        }
+      }
+      paintContext.matrixTranslate(-tx, -ty);
+      paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
+      const config = this.mConfigId >= 0 ? context.getText(this.mConfigId) ?? "" : "";
+      const w = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+      const h = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
+      host.drawCustom(this.getComponentId(), config, paintContext, w, h, context.getAnimationTime());
+      paintContext.matrixRestore();
+    }
     deepToString(indent) {
       return `${indent}Custom(${this.getComponentId()}, config=${this.mConfigId}, ${this.mProperties.length} props)`;
     }
@@ -20279,7 +21245,7 @@ var RC = (() => {
   _Custom.OP_CODE = 93;
   var Custom = _Custom;
 
-  // players/typescript/src/core/operations/UnsupportedOperations.ts
+  // src/core/operations/UnsupportedOperations.ts
   var UnsupportedOperation = class extends Operation {
     write(_buffer) {
     }
@@ -20558,7 +21524,7 @@ var RC = (() => {
   _RemStub.OP_CODE = 185;
   var RemStub = _RemStub;
 
-  // players/typescript/src/core/Operations.ts
+  // src/core/Operations.ts
   var _Operations = class _Operations {
     static init() {
       if (_Operations.initialized) return;
@@ -20572,6 +21538,9 @@ var RC = (() => {
       m.set(DrawRoundRect.OP_CODE, DrawRoundRect.read);
       m.set(DrawArc.OP_CODE, DrawArc.read);
       m.set(DrawSector.OP_CODE, DrawSector.read);
+      m.set(AddMesh2D.OP_CODE, AddMesh2D.read);
+      m.set(DrawMesh2D.OP_CODE, DrawMesh2D.read);
+      m.set(MatrixFromMesh2D.OP_CODE, MatrixFromMesh2D.read);
       m.set(DrawPath.OP_CODE, DrawPath.read);
       m.set(DrawTweenPath.OP_CODE, DrawTweenPath.read);
       m.set(DrawContent.OP_CODE, DrawContent.read);
@@ -20755,7 +21724,7 @@ var RC = (() => {
   _Operations.initialized = false;
   var Operations = _Operations;
 
-  // players/typescript/src/core/operations/loom/LoomWireBuffer.ts
+  // src/core/operations/loom/LoomWireBuffer.ts
   var LoomWireBuffer = class extends WireBuffer {
     constructor(wrapped, context) {
       super(1);
@@ -20892,7 +21861,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/RemoteComposeBuffer.ts
+  // src/core/RemoteComposeBuffer.ts
   var RemoteComposeBuffer = class _RemoteComposeBuffer {
     constructor(buffer) {
       this.mBuffer = buffer;
@@ -20934,7 +21903,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/loom/nestContainers.ts
+  // src/core/operations/loom/nestContainers.ts
   function isContainer2(op) {
     return typeof op.getList === "function" && !(op instanceof ContainerEnd);
   }
@@ -20991,7 +21960,7 @@ var RC = (() => {
     return finalOps;
   }
 
-  // players/typescript/src/core/operations/loom/ExpansionContext.ts
+  // src/core/operations/loom/ExpansionContext.ts
   var MAX_EXPANSION_DEPTH = 64;
   var ExpansionContext = class _ExpansionContext {
     constructor(loomManager, document2, remapContext, blocks, safeMode = false, depth = 0) {
@@ -21091,7 +22060,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/loom/RemapContext.ts
+  // src/core/operations/loom/RemapContext.ts
   var RemapContext = class _RemapContext {
     constructor(a, document2, isInsideMacro) {
       if (a instanceof Map) {
@@ -21213,7 +22182,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/operations/loom/LoomManager.ts
+  // src/core/operations/loom/LoomManager.ts
   var LoomManager = class {
     constructor() {
       this.mMacros = /* @__PURE__ */ new Map();
@@ -21267,7 +22236,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/core/CoreDocument.ts
+  // src/core/CoreDocument.ts
   var Version = class {
     constructor(major, minor, patch) {
       this.mMajorVersion = major;
@@ -22128,7 +23097,7 @@ var RC = (() => {
   _CoreDocument.DOCUMENT_API_LEVEL = 8;
   var CoreDocument = _CoreDocument;
 
-  // players/typescript/src/core/d3/Matrix4.ts
+  // src/core/d3/Matrix4.ts
   var fround3 = Math.fround;
   function fm3(a, b) {
     return fround3(a * b);
@@ -22334,7 +23303,7 @@ var RC = (() => {
     out3[2] = fa3(fa3(fm3(m[2], x), fm3(m[6], y)), fm3(m[10], z));
   }
 
-  // players/typescript/src/core/d3/Rasterizer.ts
+  // src/core/d3/Rasterizer.ts
   var fround4 = Math.fround;
   function f2i(v) {
     if (Number.isNaN(v)) {
@@ -22690,7 +23659,7 @@ var RC = (() => {
     }
   }
 
-  // players/typescript/src/core/d3/SoftwarePaint3DContext.ts
+  // src/core/d3/SoftwarePaint3DContext.ts
   var fround5 = Math.fround;
   function fm4(a, b) {
     return fround5(a * b);
@@ -23393,12 +24362,12 @@ var RC = (() => {
         }
         order[j + 1] = cur;
       }
-      const vertexCount = kept * 3;
-      if (out.positions.length < vertexCount * 2) {
-        out.positions = new Float32Array(vertexCount * 2);
-        out.uvs = new Float32Array(vertexCount * 2);
-        out.colors = new Int32Array(vertexCount);
-        out.depths = new Float32Array(vertexCount);
+      const vertexCount2 = kept * 3;
+      if (out.positions.length < vertexCount2 * 2) {
+        out.positions = new Float32Array(vertexCount2 * 2);
+        out.uvs = new Float32Array(vertexCount2 * 2);
+        out.colors = new Int32Array(vertexCount2);
+        out.depths = new Float32Array(vertexCount2);
       }
       for (let k = 0; k < kept; k++) {
         const tri = order[k];
@@ -23413,8 +24382,8 @@ var RC = (() => {
           out.depths[v + i] = this.cvTriZ[srcC + i];
         }
       }
-      out.vertexCount = vertexCount;
-      return vertexCount;
+      out.vertexCount = vertexCount2;
+      return vertexCount2;
     }
     projectTriangle(idx, verts, normals, smooth, computeInvW, t, baseColor, w, h) {
       const i0 = idx[t] * 3;
@@ -23514,7 +24483,7 @@ var RC = (() => {
     }
   };
 
-  // players/typescript/src/web/WebGL3DRenderer.ts
+  // src/web/WebGL3DRenderer.ts
   var VERT = `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 aPos;      // window pixels, y down
@@ -23736,7 +24705,7 @@ void main() {
     }
   };
 
-  // players/typescript/src/core/shader/AgslTokenizer.ts
+  // src/core/shader/AgslTokenizer.ts
   var IDENT_START = /[a-zA-Z_]/;
   var IDENT_CONT = /[a-zA-Z0-9_]/;
   var DIGIT = /[0-9]/;
@@ -23842,7 +24811,7 @@ void main() {
     return tokens;
   }
 
-  // players/typescript/src/core/shader/AgslTranspiler.ts
+  // src/core/shader/AgslTranspiler.ts
   var TYPE_MAP = {
     "half4": "vec4",
     "half3": "vec3",
@@ -24076,7 +25045,7 @@ void main() {
     return tok.value;
   }
 
-  // players/typescript/src/web/shader/WebGLShaderRenderer.ts
+  // src/web/shader/WebGLShaderRenderer.ts
   var VERTEX_SHADER = `#version 300 es
 in vec2 a_position;
 void main() {
@@ -24295,7 +25264,7 @@ void main() {
     }
   };
 
-  // players/typescript/src/web/CanvasPaintContext.ts
+  // src/web/CanvasPaintContext.ts
   function argbToRgba(argb) {
     const a = (argb >>> 24 & 255) / 255;
     const r = argb >>> 16 & 255;
@@ -24348,6 +25317,18 @@ void main() {
       this.pathWindingCache = /* @__PURE__ */ new Map();
       // Bitmap cache: id -> ImageBitmap or HTMLImageElement
       this.bitmapCache = /* @__PURE__ */ new Map();
+      // Animated bitmaps (a GIF embedded whole), streamed: one frame decoded at a time, the
+      // next asked for when the document's clock passes the end of the one showing. A long
+      // GIF at full size is hundreds of megabytes as bitmaps, so nothing is decoded ahead —
+      // the C++ player streams through one working buffer for the same reason.
+      this.animatedBitmaps = /* @__PURE__ */ new Map();
+      this.disposed = false;
+      // Bitmaps a host has supplied as video instead: a GIF transcoded once at export time,
+      // decoded by the browser's own video pipeline and drawn frame by frame from the element.
+      // Far cheaper than decoding GIF frames, and the preferred way to animate a bitmap.
+      this.bitmapVideos = /* @__PURE__ */ new Map();
+      /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
+      this.meshCache = /* @__PURE__ */ new Map();
       this.bitmapPromises = /* @__PURE__ */ new Map();
       /** Bitmaps converted to ARGB for 3D texturing, kept so the readback happens once. */
       this.texturePixels = /* @__PURE__ */ new Map();
@@ -24402,6 +25383,11 @@ void main() {
     getCanvas() {
       return this.ctx;
     }
+    // An embedded document paints on whatever canvas its host is painting on, which can
+    // change between frames (a resize, a new host document on the same page).
+    setCanvas(canvas) {
+      this.ctx = canvas;
+    }
     // --- Text cache ---
     loadText(id, text) {
       this.textCache.set(id, text);
@@ -24411,6 +25397,11 @@ void main() {
     }
     // --- Bitmap cache ---
     loadBitmap(imageId, encoding, type, width, height, bitmap) {
+      if (this.bitmapPromises.has(imageId)) return;
+      const isGif = bitmap.length > 6 && bitmap[0] === 71 && bitmap[1] === 73 && bitmap[2] === 70 && bitmap[3] === 56;
+      if (isGif && !this.bitmapVideos.has(imageId) && typeof globalThis.ImageDecoder !== "undefined") {
+        this.loadAnimatedBitmap(imageId, bitmap);
+      }
       const blob = new Blob([bitmap.buffer], { type: "image/png" });
       const url = URL.createObjectURL(blob);
       const img = new Image();
@@ -24428,6 +25419,132 @@ void main() {
         img.src = url;
       });
       this.bitmapPromises.set(imageId, promise);
+    }
+    // `videos` maps image ids to video URLs. Called before the document's data pass, so a
+    // bitmap with a video never starts a GIF decoder.
+    setBitmapVideos(videos) {
+      for (const v of this.bitmapVideos.values()) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+        v.remove();
+      }
+      this.bitmapVideos.clear();
+      if (!videos || typeof document === "undefined") return;
+      const entries = videos instanceof Map ? [...videos.entries()] : Object.entries(videos).map(([k, v]) => [Number(k), v]);
+      for (const [id, url] of entries) {
+        const video = document.createElement("video");
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.src = url;
+        video.style.cssText = "position:fixed;left:-4px;top:-4px;width:2px;height:2px;opacity:0;pointer-events:none";
+        document.body.appendChild(video);
+        video.play().catch(() => {
+        });
+        this.bitmapVideos.set(id, video);
+      }
+    }
+    async loadAnimatedBitmap(imageId, bytes) {
+      try {
+        const Decoder = globalThis.ImageDecoder;
+        const decoder = new Decoder({ data: bytes, type: "image/gif" });
+        await decoder.tracks.ready;
+        const track = decoder.tracks.selectedTrack;
+        const count = track ? track.frameCount : 0;
+        if (count < 2 || this.disposed) {
+          decoder.close();
+          return;
+        }
+        const anim = {
+          decoder,
+          count,
+          index: -1,
+          frame: null,
+          frameEnds: 0,
+          decoding: false,
+          failed: false
+        };
+        this.animatedBitmaps.set(imageId, anim);
+        this.needsRepaint();
+      } catch (e) {
+        console.warn(`CanvasPaintContext: cannot animate bitmap ${imageId}`, e);
+      }
+    }
+    // Decode the frame after the one showing, and make it the one showing when it lands.
+    // One decode in flight at a time: a clock that has run ahead is not chased through the
+    // frames in between (a GIF's frames build on each other, so every one would cost), the
+    // picture just plays late until it catches up.
+    advanceAnimated(anim, now) {
+      if (anim.decoding || anim.failed || anim.count < 1) return;
+      anim.decoding = true;
+      const next = (anim.index + 1) % anim.count;
+      anim.decoder.decode({ frameIndex: next }).then((result) => {
+        const image = result.image;
+        let seconds = (image.duration ?? 0) / 1e6;
+        if (!(seconds >= 0.02)) seconds = 0.1;
+        if (this.disposed) {
+          image.close();
+          return;
+        }
+        if (anim.frame) anim.frame.close();
+        anim.frame = image;
+        anim.index = next;
+        anim.frameEnds = Math.max(now, anim.frameEnds) + seconds;
+        anim.decoding = false;
+        this.needsRepaint();
+      }).catch((e) => {
+        anim.failed = true;
+        anim.decoding = false;
+        console.warn("CanvasPaintContext: animated bitmap frame failed", e);
+      });
+    }
+    // The bitmap to draw now: for an animated one, the frame the document's clock is on —
+    // the next one is asked for once the clock passes the end of this one — and a repaint
+    // asked for so it follows.
+    bitmapToDraw(imageId) {
+      const video = this.bitmapVideos.get(imageId);
+      if (video) {
+        this.needsRepaint();
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          if (video.paused) video.play().catch(() => {
+          });
+          return video;
+        }
+        return this.bitmapCache.get(imageId);
+      }
+      const anim = this.animatedBitmaps.get(imageId);
+      if (!anim) return this.bitmapCache.get(imageId);
+      const context = this.getContext();
+      const now = context ? context.getAnimationTime() : 0;
+      if (anim.index < 0 || now >= anim.frameEnds) this.advanceAnimated(anim, now);
+      this.needsRepaint();
+      return anim.frame ?? this.bitmapCache.get(imageId);
+    }
+    // Let go of what animated bitmaps hold — decoders and frames are not cheap, and a paint
+    // context outlives its document only as garbage.
+    dispose() {
+      this.disposed = true;
+      for (const v of this.bitmapVideos.values()) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+        v.remove();
+      }
+      this.bitmapVideos.clear();
+      for (const anim of this.animatedBitmaps.values()) {
+        try {
+          anim.decoder.close();
+        } catch {
+        }
+        if (anim.frame) anim.frame.close();
+      }
+      this.animatedBitmaps.clear();
+      for (const img of this.bitmapCache.values()) {
+        if (typeof img.close === "function") img.close();
+      }
+      this.bitmapCache.clear();
     }
     // --- Path cache ---
     loadPathData(id, winding, data) {
@@ -24669,6 +25786,11 @@ void main() {
     applyPaint(paintData) {
       const arr = paintData.getArray();
       const len = paintData.getLength();
+      const context = this.getContext();
+      const floatArg = (bits) => {
+        if (isNaNBits(bits) && context) return context.getFloat(idFromBits(bits));
+        return intBitsToFloat2(bits);
+      };
       let i = 0;
       while (i < len) {
         const cmd = arr[i++];
@@ -24676,7 +25798,7 @@ void main() {
         const upper = cmd >> 16 & 65535;
         switch (tag) {
           case PaintBundle.TEXT_SIZE:
-            this.textSize = intBitsToFloat2(arr[i++]);
+            this.textSize = floatArg(arr[i++]);
             this.setFont();
             break;
           case PaintBundle.COLOR: {
@@ -24687,10 +25809,10 @@ void main() {
             break;
           }
           case PaintBundle.STROKE_WIDTH:
-            this.strokeWidth = intBitsToFloat2(arr[i++]);
+            this.strokeWidth = floatArg(arr[i++]);
             break;
           case PaintBundle.STROKE_MITER:
-            this.miterLimit = intBitsToFloat2(arr[i++]);
+            this.miterLimit = floatArg(arr[i++]);
             break;
           case PaintBundle.STROKE_CAP:
             this.lineCap = upper === 0 ? "butt" : upper === 1 ? "round" : "square";
@@ -24766,7 +25888,7 @@ void main() {
             break;
           }
           case PaintBundle.ALPHA:
-            this.alpha = intBitsToFloat2(arr[i++]);
+            this.alpha = floatArg(arr[i++]);
             break;
           case PaintBundle.COLOR_FILTER: {
             const cfArgb = arr[i++];
@@ -24859,12 +25981,23 @@ void main() {
             if (count === 0) {
               this.ctx.setLineDash([]);
               this.ctx.lineDashOffset = 0;
-            } else {
+            } else if (count >= 3) {
+              const type = arr[i];
+              const phase = floatArg(arr[i + 1]);
+              const len2 = arr[i + 2];
+              i += 3;
               const intervals = [];
-              for (let k = 0; k < count; k++) {
-                intervals.push(intBitsToFloat2(arr[i++]));
+              for (let k = 0; k < len2 && k < count - 3; k++) intervals.push(floatArg(arr[i++]));
+              for (let k = 3 + len2; k < count; k++) i++;
+              if (type === 1 && intervals.length >= 2 && intervals.length % 2 === 0) {
+                this.ctx.setLineDash(intervals);
+                this.ctx.lineDashOffset = phase;
+              } else {
+                this.ctx.setLineDash([]);
+                this.ctx.lineDashOffset = 0;
               }
-              this.ctx.setLineDash(intervals);
+            } else {
+              i += count;
             }
             break;
           }
@@ -25166,8 +26299,8 @@ void main() {
     drawOval(left, top, right, bottom) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       this.ctx.beginPath();
       this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
       this.fillOrStroke(
@@ -25196,8 +26329,8 @@ void main() {
     drawArc(left, top, right, bottom, startAngle, sweepAngle) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       const start = startAngle * Math.PI / 180;
       const end = (startAngle + sweepAngle) * Math.PI / 180;
       this.ctx.beginPath();
@@ -25214,8 +26347,8 @@ void main() {
     drawSector(left, top, right, bottom, startAngle, sweepAngle) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       const start = startAngle * Math.PI / 180;
       const end = (startAngle + sweepAngle) * Math.PI / 180;
       this.ctx.beginPath();
@@ -25230,6 +26363,101 @@ void main() {
           this.ctx.stroke();
         }
       );
+    }
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Canvas2D has no drawVertices and no Gouraud shading, so the triangle list is walked
+    // here. Two consequences worth stating rather than discovering:
+    //
+    //   * Per-vertex colour is approximated by filling each triangle with the AVERAGE of its
+    //     three vertex colours. Skia and Android interpolate across the face, so a mesh used
+    //     as a smooth gradient shows faceting here, more visibly as uCount/vCount drop.
+    //   * A textured triangle is drawn by clipping to it and applying the affine that takes
+    //     its uv triangle to its screen triangle — three corresponding points determine that
+    //     exactly, which makes it a real texture map rather than a stretched blit.
+    setMesh(meshId, layout, uCount, vCount, verts, uv, colors, indices) {
+      this.meshCache.set(meshId, { layout, uCount, vCount, verts, uv, colors, indices });
+    }
+    drawMesh(meshId, blend, imageId) {
+      const m = this.meshCache.get(meshId);
+      if (!m) return;
+      const vertexCount2 = m.verts.length / 2;
+      if (vertexCount2 < 3 || m.indices.length < 3) return;
+      let texture;
+      if (blend === BLEND_MODULATE && imageId !== 0 && m.uv.length === m.verts.length) {
+        texture = this.bitmapCache.get(imageId);
+      }
+      this.ctx.save();
+      const texW = texture ? texture.width : 0;
+      const texH = texture ? texture.height : 0;
+      if (!texture && m.colors.length !== vertexCount2) {
+        const all = new Path2D();
+        for (let t = 0; t + 2 < m.indices.length; t += 3) {
+          const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+          if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+          if (i0 >= vertexCount2 || i1 >= vertexCount2 || i2 >= vertexCount2) continue;
+          all.moveTo(m.verts[i0 * 2], m.verts[i0 * 2 + 1]);
+          all.lineTo(m.verts[i1 * 2], m.verts[i1 * 2 + 1]);
+          all.lineTo(m.verts[i2 * 2], m.verts[i2 * 2 + 1]);
+          all.closePath();
+        }
+        this.applyFillStyle();
+        this.ctx.fill(all);
+        this.ctx.restore();
+        return;
+      }
+      for (let t = 0; t + 2 < m.indices.length; t += 3) {
+        const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+        if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+        if (i0 >= vertexCount2 || i1 >= vertexCount2 || i2 >= vertexCount2) continue;
+        const x0 = m.verts[i0 * 2], y0 = m.verts[i0 * 2 + 1];
+        const x1 = m.verts[i1 * 2], y1 = m.verts[i1 * 2 + 1];
+        const x2 = m.verts[i2 * 2], y2 = m.verts[i2 * 2 + 1];
+        const tri = new Path2D();
+        tri.moveTo(x0, y0);
+        tri.lineTo(x1, y1);
+        tri.lineTo(x2, y2);
+        tri.closePath();
+        if (texture) {
+          const u0 = m.uv[i0 * 2] * texW, v0 = m.uv[i0 * 2 + 1] * texH;
+          const u1 = m.uv[i1 * 2] * texW, v1 = m.uv[i1 * 2 + 1] * texH;
+          const u2 = m.uv[i2 * 2] * texW, v2 = m.uv[i2 * 2 + 1] * texH;
+          const det = (u1 - u0) * (v2 - v0) - (u2 - u0) * (v1 - v0);
+          if (Math.abs(det) < 1e-9) continue;
+          const a = ((x1 - x0) * (v2 - v0) - (x2 - x0) * (v1 - v0)) / det;
+          const b = ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) / det;
+          const c = ((x2 - x0) * (u1 - u0) - (x1 - x0) * (u2 - u0)) / det;
+          const d = ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) / det;
+          const e = x0 - a * u0 - c * v0;
+          const f = y0 - b * u0 - d * v0;
+          this.ctx.save();
+          this.ctx.clip(tri);
+          this.ctx.transform(a, b, c, d, e, f);
+          this.ctx.drawImage(texture, 0, 0);
+          this.ctx.restore();
+          continue;
+        }
+        if (m.colors.length === vertexCount2) {
+          const c0 = m.colors[i0], c1 = m.colors[i1], c2 = m.colors[i2];
+          const av = (sh) => Math.round(((c0 >>> sh & 255) + (c1 >>> sh & 255) + (c2 >>> sh & 255)) / 3);
+          const alpha = av(24) / 255;
+          this.ctx.fillStyle = "rgba(" + av(16) + "," + av(8) + "," + av(0) + "," + alpha + ")";
+          this.ctx.fill(tri);
+        } else {
+          this.applyFillStyle();
+          this.ctx.fill(tri);
+        }
+      }
+      this.ctx.restore();
+    }
+    matrixFromMesh(meshId, u, v, flags) {
+      const m = this.meshCache.get(meshId);
+      if (!m) return;
+      const frame = new Float32Array(6);
+      if (!sampleFrame(m.layout, m.uCount, m.vCount, m.verts, u, v, frame)) return;
+      const out = new Float32Array(6);
+      buildMatrix(frame, flags, out);
+      this.ctx.transform(out[0], out[1], out[2], out[3], out[4], out[5]);
     }
     drawPath(id, start, end) {
       const data = this.pathDataCache.get(id);
@@ -25445,7 +26673,7 @@ void main() {
       }
     }
     drawBitmap(imageId, srcLeft, srcTop, srcRight, srcBottom, dstLeft, dstTop, dstRight, dstBottom, _cdId) {
-      const img = this.bitmapCache.get(imageId);
+      const img = this.bitmapToDraw(imageId);
       if (!img) return;
       this.ctx.globalAlpha = this.alpha;
       this.ctx.globalCompositeOperation = this.blendMode;
@@ -25461,7 +26689,7 @@ void main() {
       }
     }
     drawBitmapSimple(id, left, top, right, bottom) {
-      const img = this.bitmapCache.get(id);
+      const img = this.bitmapToDraw(id);
       if (!img) return;
       this.ctx.globalAlpha = this.alpha;
       this.ctx.globalCompositeOperation = this.blendMode;
@@ -25993,7 +27221,7 @@ void main() {
   _CanvasPaintContext.GL_SHAPE_RADIUS = 21;
   var CanvasPaintContext = _CanvasPaintContext;
 
-  // players/typescript/src/core/DefaultSystemColors.ts
+  // src/core/DefaultSystemColors.ts
   function C(c) {
     return c | 0;
   }
@@ -26208,7 +27436,7 @@ void main() {
     return DEFAULT_SYSTEM_COLORS[name];
   }
 
-  // players/typescript/src/web/WebRemoteContext.ts
+  // src/web/WebRemoteContext.ts
   var WebRemoteContext = class extends RemoteContext {
     constructor(paintContext, clock = SYSTEM_CLOCK) {
       super(clock);
@@ -26467,7 +27695,357 @@ void main() {
     }
   };
 
-  // players/typescript/src/web/RcPlayerElement.ts
+  // src/web/CustomHosts.ts
+  function parseEmbedConfig(config, defaultFit = "fit") {
+    const out = {
+      kind: "",
+      path: config,
+      fit: defaultFit,
+      crop: [0, 0, 1, 1],
+      mirror: false,
+      gate: 0,
+      persist: false,
+      hasStep: false,
+      step: 0,
+      stepId: -1,
+      timeId: -1
+    };
+    const colon = config.indexOf(":");
+    if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
+      out.kind = config.slice(0, colon);
+      out.path = config.slice(colon + 1);
+    }
+    if (out.kind === "camera") {
+      out.fit = "fill";
+      if (!out.path || out.path.startsWith("#")) out.path = "default" + out.path;
+    }
+    const hash = out.path.indexOf("#");
+    if (hash >= 0) {
+      const opts = out.path.slice(hash + 1);
+      out.path = out.path.slice(0, hash);
+      for (const tok of opts.split("&")) {
+        const eq = tok.indexOf("=");
+        if (eq < 0) {
+          if (tok === "persist") out.persist = true;
+          else if (tok === "mirror") out.mirror = true;
+          else if (tok) out.fit = tok;
+          continue;
+        }
+        const k = tok.slice(0, eq), v = tok.slice(eq + 1);
+        if (k === "fit") out.fit = v;
+        else if (k === "mirror") out.mirror = !(v === "0" || v === "false" || v === "off");
+        else if (k === "persist") out.persist = !(v === "0" || v === "false" || v === "off");
+        else if (k === "step") {
+          out.hasStep = true;
+          out.step = parseFloat(v) || 0;
+          out.persist = true;
+        } else if (k === "stepid") out.stepId = parseInt(v, 10);
+        else if (k === "timeid") out.timeId = parseInt(v, 10);
+        else if (k === "gate") out.gate = parseFloat(v) || 0;
+        else if (k === "crop") {
+          const t = v.split(",").map(parseFloat);
+          if (t.length === 4 && t.every((x) => !isNaN(x))) out.crop = [t[0], t[1], t[2], t[3]];
+        }
+      }
+    }
+    return out;
+  }
+  function fitInto(w, h, cropW, cropH, fit) {
+    let s;
+    if (fit === "fill") s = Math.max(w / cropW, h / cropH);
+    else if (fit === "native") s = 1;
+    else s = Math.min(w / cropW, h / cropH);
+    const dw = cropW * s, dh = cropH * s;
+    return { s, ox: (w - dw) * 0.5, oy: (h - dh) * 0.5 };
+  }
+  var WebCustomHost = class {
+    constructor(resolver) {
+      this.docs = /* @__PURE__ */ new Map();
+      this.videos = /* @__PURE__ */ new Map();
+      this.camera = null;
+      this.defaultFit = "fit";
+      // Something asked to be painted before it was ready; the page is told so it paints again.
+      this.pending = 0;
+      this.resolver = resolver ?? (async (path) => {
+        try {
+          const response = await fetch(path);
+          return response.ok ? await response.arrayBuffer() : null;
+        } catch {
+          return null;
+        }
+      });
+    }
+    setResolver(resolver) {
+      this.resolver = resolver;
+    }
+    setDefaultFit(fit) {
+      this.defaultFit = fit;
+    }
+    // A new host document: embeds that do not persist go with the old one. The persistent
+    // ones — a film running across slides — carry on, clock and all.
+    retire() {
+      for (const [key, nested] of this.docs) {
+        if (!nested.persist) {
+          if (nested.paint) nested.paint.dispose();
+          this.docs.delete(key);
+        }
+      }
+      for (const [key, video] of this.videos) {
+        video.element.pause();
+        video.element.removeAttribute("src");
+        this.videos.delete(key);
+      }
+    }
+    reset() {
+      for (const nested of this.docs.values()) if (nested.paint) nested.paint.dispose();
+      this.docs.clear();
+      this.retire();
+    }
+    drawCustom(_componentId, config, pc, w, h, timeSec) {
+      if (w <= 0 || h <= 0) return false;
+      const cfg = parseEmbedConfig(config, this.defaultFit);
+      if (!cfg.path) return false;
+      if (cfg.kind === "video") return this.drawVideo(cfg, pc, w, h);
+      if (cfg.kind === "camera") return this.drawCamera(cfg, pc, w, h);
+      if (cfg.kind === "web") return this.drawWebFrame(cfg, pc, w, h);
+      if (cfg.kind && cfg.kind !== "rc") return false;
+      return this.drawRc(cfg, config, pc, w, h, timeSec);
+    }
+    // ── Embedded documents ────────────────────────────────────────────
+    drawRc(cfg, config, pc, w, h, timeSec) {
+      if (cfg.gate > 0 && timeSec < cfg.gate) return true;
+      const host = pc;
+      if (typeof host.getCanvas !== "function") return false;
+      const canvas = host.getCanvas();
+      const key = cfg.persist ? "persist:" + cfg.path : config;
+      let nested = this.docs.get(key);
+      if (!nested) {
+        nested = {
+          persist: cfg.persist,
+          ok: false,
+          failed: false,
+          doc: null,
+          ctx: null,
+          paint: null,
+          hostBase: 0,
+          hostLast: 0
+        };
+        this.docs.set(key, nested);
+        this.load(nested, cfg.path, canvas);
+      }
+      if (!nested.ok) {
+        if (!nested.failed) pc.needsRepaint();
+        return true;
+      }
+      const doc = nested.doc, ctx = nested.ctx, paint = nested.paint;
+      let docW = doc.getWidth(), docH = doc.getHeight();
+      if (docW <= 0) docW = w;
+      if (docH <= 0) docH = h;
+      const cropX = cfg.crop[0] * docW, cropY = cfg.crop[1] * docH;
+      let cropW = (cfg.crop[2] - cfg.crop[0]) * docW, cropH = (cfg.crop[3] - cfg.crop[1]) * docH;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = docW;
+        cropH = docH;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      let docTime = timeSec;
+      if (nested.persist) {
+        if (timeSec + 1e-6 < nested.hostLast) nested.hostBase += nested.hostLast;
+        nested.hostLast = timeSec;
+        docTime = nested.hostBase + timeSec;
+      }
+      paint.setCanvas(canvas);
+      ctx.mWidth = docW;
+      ctx.mHeight = docH;
+      ctx.currentTime = Date.now();
+      ctx.overrideFloat(RemoteContext.ID_ANIMATION_TIME, docTime);
+      ctx.setAnimationTime(docTime);
+      if (cfg.hasStep && cfg.stepId >= 0) ctx.overrideFloat(cfg.stepId, cfg.step);
+      if (cfg.timeId >= 0) ctx.overrideFloat(cfg.timeId, timeSec);
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.translate(ox, oy);
+      canvas.scale(s, s);
+      canvas.translate(-cropX, -cropY);
+      canvas.beginPath();
+      canvas.rect(0, 0, docW, docH);
+      canvas.clip();
+      paint.reset();
+      paint.clearNeedsRepaint();
+      try {
+        doc.paint(ctx, Theme.DARK);
+      } finally {
+        canvas.restore();
+      }
+      if (doc.needsRepaint() >= 0 || paint.doesNeedsRepaint()) pc.needsRepaint();
+      return true;
+    }
+    async load(nested, path, canvas) {
+      this.pending++;
+      try {
+        const data = await this.resolver(path);
+        if (!data || data.byteLength === 0) {
+          nested.failed = true;
+          return;
+        }
+        const doc = new CoreDocument();
+        doc.initFromBuffer(RemoteComposeBuffer.fromArrayBuffer(data));
+        const paint = new CanvasPaintContext(null, canvas);
+        const ctx = new WebRemoteContext(paint);
+        doc.initializeContext(ctx);
+        ctx.setPaintContext(paint);
+        paint.setContext(ctx);
+        ctx.mWidth = doc.getWidth();
+        ctx.mHeight = doc.getHeight();
+        ctx.setDensity(1);
+        ctx.setCustomHost(this);
+        doc.applyDataOperations(ctx);
+        await new Promise((resolve2) => setTimeout(resolve2, 50));
+        nested.doc = doc;
+        nested.ctx = ctx;
+        nested.paint = paint;
+        nested.ok = true;
+      } catch (e) {
+        console.error("embed: cannot load " + path, e);
+        nested.failed = true;
+      } finally {
+        this.pending--;
+      }
+    }
+    // ── Videos ────────────────────────────────────────────────────────
+    drawVideo(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function" || typeof document === "undefined") return false;
+      const canvas = host.getCanvas();
+      let video = this.videos.get(cfg.path);
+      if (!video) {
+        const element = document.createElement("video");
+        element.src = cfg.path;
+        element.muted = true;
+        element.loop = true;
+        element.playsInline = true;
+        element.preload = "auto";
+        video = { element, ready: false };
+        element.addEventListener("loadeddata", () => {
+          video.ready = true;
+        });
+        element.play().catch(() => {
+        });
+        this.videos.set(cfg.path, video);
+      }
+      pc.needsRepaint();
+      const vw = video.element.videoWidth, vh = video.element.videoHeight;
+      if (!video.ready || vw <= 0 || vh <= 0) return true;
+      if (video.element.paused) video.element.play().catch(() => {
+      });
+      const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
+      let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = vw;
+        cropH = vh;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.drawImage(video.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+      canvas.restore();
+      return true;
+    }
+    // ── The camera ────────────────────────────────────────────────────
+    // The viewer's own camera in the box, the way the desktop player puts the speaker's
+    // there. The stream is asked for once, on the first camera embed, and kept for the
+    // page; the browser's own prompt does the asking. Until it arrives — or when it is
+    // refused — the box is a dark plate, as on the desktop.
+    drawCamera(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function" || typeof document === "undefined") return false;
+      const canvas = host.getCanvas();
+      if (!this.camera) {
+        const element = document.createElement("video");
+        element.muted = true;
+        element.playsInline = true;
+        element.autoplay = true;
+        element.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+        document.body.appendChild(element);
+        const feed2 = { element, ready: false, failed: false, stream: null };
+        this.camera = feed2;
+        const media = typeof navigator !== "undefined" ? navigator.mediaDevices : void 0;
+        if (!media || !media.getUserMedia) {
+          feed2.failed = true;
+        } else {
+          media.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }).then((stream) => {
+            feed2.stream = stream;
+            element.srcObject = stream;
+            element.addEventListener("loadeddata", () => {
+              feed2.ready = true;
+            });
+            element.play().catch(() => {
+            });
+          }).catch((e) => {
+            console.warn("camera: not available", e);
+            feed2.failed = true;
+          });
+        }
+      }
+      const feed = this.camera;
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      const vw = feed.element.videoWidth, vh = feed.element.videoHeight;
+      if (!feed.ready || vw <= 0 || vh <= 0) {
+        canvas.fillStyle = "#101318";
+        canvas.fillRect(0, 0, w, h);
+        canvas.restore();
+        if (!feed.failed) pc.needsRepaint();
+        return true;
+      }
+      const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
+      let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = vw;
+        cropH = vh;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      if (cfg.mirror) {
+        canvas.translate(w, 0);
+        canvas.scale(-1, 1);
+      }
+      canvas.drawImage(feed.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+      canvas.restore();
+      pc.needsRepaint();
+      return true;
+    }
+    // ── Web pages ─────────────────────────────────────────────────────
+    drawWebFrame(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function") return false;
+      const canvas = host.getCanvas();
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.fillStyle = "#171a20";
+      canvas.fillRect(0, 0, w, h);
+      canvas.strokeStyle = "#2a2f38";
+      canvas.lineWidth = 2;
+      canvas.strokeRect(1, 1, w - 2, h - 2);
+      canvas.fillStyle = "#868d9c";
+      const size = Math.max(12, Math.min(w * 0.03, h * 0.08));
+      canvas.font = `${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
+      canvas.textAlign = "center";
+      canvas.textBaseline = "middle";
+      canvas.fillText(cfg.path, w * 0.5, h * 0.5, w * 0.9);
+      canvas.restore();
+      return true;
+    }
+  };
+
+  // src/web/RcPlayerElement.ts
   function base64ToArrayBuffer(base64) {
     const binary = atob(base64);
     const bytes = new Uint8Array(binary.length);
@@ -26525,7 +28103,7 @@ void main() {
         player.resize(width, height);
       },
       destroy() {
-        player.stop();
+        player.destroy();
         canvas.remove();
       },
       player,
@@ -26599,7 +28177,7 @@ void main() {
   };
   RcPlayerElement.observedAttributes = ["src", "data", "width", "height", "theme", "background"];
 
-  // players/typescript/src/web/main.ts
+  // src/web/main.ts
   var TOUCH_SLOP = 8;
   var RcdPlayer = class {
     constructor(canvas) {
@@ -26640,6 +28218,12 @@ void main() {
       this.mContentOffsetX = 0;
       this.mContentOffsetY = 0;
       this.isPaused = false;
+      // Draws the custom components — embedded documents, videos — for every document this
+      // player shows. It outlives the documents, so an embed marked `persist` carries across
+      // them; a new document retires the rest.
+      this.customHost = new WebCustomHost();
+      // Bitmaps the page supplies as video (see setBitmapVideos), for the next document.
+      this.bitmapVideos = null;
       this.onPointerDown = (e) => {
         if (!this.document || !this.remoteContext) return;
         this.pointerIsDown = true;
@@ -26857,11 +28441,15 @@ void main() {
       const docHeight = this.canvas.height;
       doc.setWidth(docWidth);
       doc.setHeight(docHeight);
+      if (this.paintContext) this.paintContext.dispose();
       this.paintContext = new CanvasPaintContext(null, this.ctx);
+      this.paintContext.setBitmapVideos(this.bitmapVideos);
       this.remoteContext = new WebRemoteContext(this.paintContext);
       doc.initializeContext(this.remoteContext);
       this.remoteContext.setPaintContext(this.paintContext);
       this.paintContext.setContext(this.remoteContext);
+      this.customHost.retire();
+      this.remoteContext.setCustomHost(this.customHost);
       this.remoteContext.mWidth = docWidth;
       this.remoteContext.mHeight = docHeight;
       this.remoteContext.setDensity(density);
@@ -26931,6 +28519,25 @@ void main() {
       }
       this.repaint();
     }
+    /**
+     * How embedded documents and videos are fetched: by path, relative to the page, unless
+     * a page supplies its own — a deck opened off the disk cannot fetch, so its embeds
+     * travel inside the page and this hands them over.
+     */
+    setEmbedResolver(resolver) {
+      this.customHost.setResolver(resolver);
+    }
+    /**
+     * Bitmaps of the *next* document to load that should be drawn from a video instead of
+     * their own bytes: image id → URL. An exporter transcodes an animated GIF once and hands
+     * the page the result; the browser's video pipeline then does the decoding.
+     */
+    setBitmapVideos(videos) {
+      this.bitmapVideos = videos;
+    }
+    getCustomHost() {
+      return this.customHost;
+    }
     getDocument() {
       return this.document;
     }
@@ -26989,3 +28596,38 @@ void main() {
   }
   return __toCommonJS(main_exports);
 })();
+</script>
+<script>
+const B64 = "AASMAAEAAAABAAAAAAAAAAQABQAEAAAB9AAGAAQAAAH0DAkAGwAAABdBR1NMIEF1cm9yYSBTaGFkZXIgRGVtbwAOAAQAAAIAyP////7K/////f////8AAAABAAAABBAAAAABP4AAAEMAAAABP4AAADcAAAAAAAAAAAAAAAAAAAAAPXDw8T24uLk+KKipP4AAAAAAAAA6QcAAAEHAAABBwAAAQcAAAMn////8zP////v/////AAAAAgAAAAIAAAAAEAAAAAE/gAAAQwAAAAE/gAAAyf////rK////+f////8AAAABAAAABBAAAAABP4AAAEMAAAAAQ6oAAMn////4zf////f/////EAAAAAE/gAAAQwAAAAE/gAAAyf////bP////9WYAAAAqAAAByXVuaWZvcm0gZmxvYXQyIGlSZXNvbHV0aW9uOwp1bmlmb3JtIGZsb2F0IGlUaW1lOwpoYWxmNCBtYWluKGZsb2F0MiBmcmFnQ29vcmQpIHsKICAgIGZsb2F0MiB1diA9IChmcmFnQ29vcmQgLSAwLjUgKiBpUmVzb2x1dGlvbikgLyBtaW4oaVJlc29sdXRpb24ueCwgaVJlc29sdXRpb24ueSk7CiAgICBmbG9hdCB0ID0gaVRpbWUgKiAwLjg7CiAgICBmbG9hdCBjb2wxID0gc2luKHV2LnggKiA2LjAgKyB0KSArIGNvcyh1di55ICogNi4wIC0gdCk7CiAgICBmbG9hdCBjb2wyID0gc2luKGxlbmd0aCh1dikgKiA4LjAgLSB0ICogMS41KTsKICAgIGZsb2F0IHIgPSAwLjUgKyAwLjUgKiBzaW4oY29sMSArIHQpOwogICAgZmxvYXQgZyA9IDAuMyArIDAuNSAqIGNvcyhjb2wyICsgdCk7CiAgICBmbG9hdCBiID0gMC44ICsgMC4yICogc2luKHQgKiAyLjApOwogICAgcmV0dXJuIGhhbGY0KHIsIGcsIGIsIDEuMCk7Cn2WAAAAAP////UAAAArlgAAAAH////1AAAALC0AAAAtAAAAKgAAAAIAAAALaVJlc29sdXRpb24AAAAC/4AAK/+AACwAAAAFaVRpbWUAAAAB/4AAASgAAAADAAAACQAAAC0AAAAIKgAAAAAAAAAA/4AAK/+AACzW1tbM////9P////8AAAACAAAAAgAAAAAQAAAAAT+AAABDAAAAAT+AAAA6QcAAAEHAAABBwAAAQcAAAMn////zZgAAAC4AAAALQUdTTCBBVVJPUkHvAAAALgAFAf////ID/////wVB4AAAB0QvAAAJAAAABcn////x1tZmAAAALwAAAB1SZWFsLXRpbWUgQUdTTCBTaGFkZXIgaW4gSlNPTu8AAAAvAAQB////8AP/8fX5BUFgAAAJAAAABToAAAAAQQAAAAAAAAAAAAAAyf///+/W1tbW1tbW1tbW1g==";
+function bytes() {
+  const s = atob(B64), a = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+  return a.buffer;
+}
+(async () => {
+  const kept = [];                 // hold everything: GC must not influence the result
+  let drew = 0, released = 0, stillHeld = 0;
+  for (let i = 0; i < 24; i++) {
+    const host = document.createElement('div');
+    document.body.appendChild(host);
+    const h = RC.createPlayer(host, { width: 128, height: 128 });
+    kept.push(h);
+    await h.loadFromArrayBuffer(bytes());
+    h.player.repaint();
+    await new Promise(r => setTimeout(r, 40));    // shader compile needs a beat
+    h.player.repaint();
+
+    // Confirm this document actually exercised WebGL, else the test proves nothing.
+    const pc = h.player.paintContext;
+    if (pc && pc.shaderRenderer) drew++;
+
+    h.destroy();
+
+    const after = h.player.paintContext;
+    if (!after || after.shaderRenderer == null) released++;
+    else stillHeld++;
+  }
+  document.getElementById('result').textContent =
+    `RESULT usedGL=${drew} released=${released} stillHeld=${stillHeld} of 24`;
+})();
+</script>

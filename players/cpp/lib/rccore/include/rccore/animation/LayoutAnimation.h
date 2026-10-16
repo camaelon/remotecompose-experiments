@@ -89,7 +89,16 @@ inline bool animUpdate(LayoutAnimStore& store, int cid, ComponentMeasure& target
         return false;
     }
 
-    if (!target.sameBounds(st.live)) {
+    // Restart only when the *destination* changes. While an animation is in flight,
+    // st.live is a held or interpolated frame rather than a layout result: an exit fade
+    // deliberately keeps the component VISIBLE at its old bounds while the measure pass
+    // goes on reporting GONE every frame. Comparing the fresh measurement against st.live
+    // therefore never matched, so startTime was pushed forward on every frame and the fade
+    // could not finish — a component that became GONE stayed on screen for good, which is
+    // what made filter chips look dead while the list never filtered. (Entering escaped
+    // this: it holds st.to, which does compare equal.)
+    const ComponentMeasure& destination = st.animating ? st.to : st.live;
+    if (!target.sameBounds(destination)) {
         st.from = st.live;
         st.to = target;
         st.startTime = timeSec;

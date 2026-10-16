@@ -459,7 +459,11 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawTextOnPath>();
         op->textId = buf.readInt(); op->pathId = buf.readInt();
-        op->hOffset = buf.readFloat(); op->vOffset = buf.readFloat();
+        // vOffset is written FIRST, ahead of hOffset — the reverse of the constructor
+        // and of every signature in this family. Both the reference reader and the
+        // TypeScript player read it in this order; reading h first silently swaps the
+        // two, which shifts text across the path instead of along it.
+        op->vOffset = buf.readFloat(); op->hOffset = buf.readFloat();
         op->oHOffset = op->hOffset; op->oVOffset = op->vOffset;
         ops.push_back(std::move(op));
     }

@@ -64,6 +64,16 @@ export class CanvasPaintContext extends PaintContext {
     private filterBitmap = true;
     private letterSpacing = 0;
     private gradientStyle: CanvasGradient | CanvasPattern | null = null;
+    // The geometry the gradient was built from, kept so it can be rebuilt in a
+    // transformed space. A CanvasGradient resolves against the user space in force when
+    // it is USED, and text on a path is filled one glyph at a time inside a translate +
+    // rotate — so the gradient has to be re-expressed per glyph. See fillStyleUnderGlyph.
+    private gradientSpec: {
+        kind: 'sweep' | 'radial' | 'linear';
+        colors: number[]; stops: number[];
+        cx: number; cy: number; radius: number;
+        x1: number; y1: number; x2: number; y2: number;
+    } | null = null;
     private fontFamily = 'sans-serif';
     private fontWeight = 400;
     private fontItalic = false;
@@ -538,14 +548,72 @@ export class CanvasPaintContext extends PaintContext {
         }
     }
 
-    private applyFillStyle(): void {
-        this.ctx.fillStyle = this.getEffectiveColor();
+    /**
+     * A fill style that still lands correctly when the canvas has been translated to
+     * (x, y) and rotated by `angle`.
+     *
+     * Text on a path is drawn one glyph at a time inside exactly that transform, and a
+     * CanvasGradient resolves against the user space in force when it is USED — so a
+     * gradient authored in document coordinates is sampled, for every glyph, from a space
+     * that has been moved and spun. The glyphs come out filled from whatever part of the
+     * gradient happens to land under them, which for a mostly-transparent gradient means
+     * they do not appear at all. The C++ player has no such problem because Skia applies
+     * the shader's own local matrix.
+     *
+     * The cure is to re-express the gradient in glyph-local space: compose the inverse of
+     * translate(x, y) * rotate(angle) and map the gradient's geometry through it. A
+     * pattern (what the sweep polyfill produces where createConicGradient is missing)
+     * carries its own matrix and only needs that inverse handed to it.
+     */
+    private fillStyleUnderGlyph(x: number, y: number, angle: number):
+            CanvasGradient | CanvasPattern | null {
+        const style = this.gradientStyle;
+        if (!style) return null;
+        const cos = Math.cos(angle), sin = Math.sin(angle);
+        // Inverse of translate(x, y) * rotate(angle).
+        const a = cos, b = -sin, c = sin, d = cos;
+        const e = -(x * cos + y * sin), f = x * sin - y * cos;
+
+        if (typeof (style as CanvasPattern).setTransform === 'function') {
+            const m = this.ctx.getTransform();
+            m.a = a; m.b = b; m.c = c; m.d = d; m.e = e; m.f = f;
+            (style as CanvasPattern).setTransform(m);
+            return style;
+        }
+
+        const spec = this.gradientSpec;
+        if (!spec) return style;            // nothing to rebuild from; no worse than before
+        const local = (px: number, py: number): [number, number] =>
+            [a * px + c * py + e, b * px + d * py + f];
+        let g: CanvasGradient | null = null;
+        if (spec.kind === 'sweep') {
+            if (typeof (this.ctx as any).createConicGradient !== 'function') return style;
+            const [qx, qy] = local(spec.cx, spec.cy);
+            // The sweep's own start angle has to turn back by the same rotation.
+            g = (this.ctx as any).createConicGradient(-angle, qx, qy);
+        } else if (spec.kind === 'radial') {
+            const [qx, qy] = local(spec.cx, spec.cy);
+            g = this.ctx.createRadialGradient(qx, qy, 0, qx, qy, spec.radius);
+        } else {
+            const [ax, ay] = local(spec.x1, spec.y1);
+            const [bx, by] = local(spec.x2, spec.y2);
+            g = this.ctx.createLinearGradient(ax, ay, bx, by);
+        }
+        if (!g) return style;
+        for (let s = 0; s < spec.stops.length && s < spec.colors.length; s++) {
+            g.addColorStop(Math.max(0, Math.min(1, spec.stops[s])), argbToRgba(spec.colors[s]));
+        }
+        return g;
+    }
+
+    private applyFillStyle(override?: CanvasGradient | CanvasPattern | null): void {
+        this.ctx.fillStyle = override ?? this.getEffectiveColor();
         this.ctx.globalAlpha = this.alpha;
         this.ctx.globalCompositeOperation = this.blendMode;
     }
 
-    private applyStrokeStyle(): void {
-        this.ctx.strokeStyle = this.getEffectiveColor();
+    private applyStrokeStyle(override?: CanvasGradient | CanvasPattern | null): void {
+        this.ctx.strokeStyle = override ?? this.getEffectiveColor();
         this.ctx.lineWidth = this.strokeWidth;
         this.ctx.lineCap = this.lineCap;
         this.ctx.lineJoin = this.lineJoin;
@@ -653,6 +721,7 @@ export class CanvasPaintContext extends PaintContext {
                     if (shaderId === 0) {
                         this.activeShaderData = null;
                         this.gradientStyle = null;
+                        this.gradientSpec = null;
                     } else {
                         const sd = this.getContext()?.getShader(shaderId);
                         this.activeShaderData = sd ?? null;
@@ -686,6 +755,8 @@ export class CanvasPaintContext extends PaintContext {
                         const cx = intBitsToFloat(arr[i++]);
                         const cy = intBitsToFloat(arr[i++]);
                         // Sweep gradient has NO tileMode
+                        this.gradientSpec = { kind: 'sweep', colors, stops, cx, cy,
+                                              radius: 0, x1: 0, y1: 0, x2: 0, y2: 0 };
                         if (typeof (this.ctx as any).createConicGradient === 'function') {
                             gradient = (this.ctx as any).createConicGradient(0, cx, cy);
                         } else {
@@ -700,6 +771,8 @@ export class CanvasPaintContext extends PaintContext {
                         const cy = intBitsToFloat(arr[i++]);
                         const radius = intBitsToFloat(arr[i++]);
                         i++; // tileMode
+                        this.gradientSpec = { kind: 'radial', colors, stops, cx, cy,
+                                              radius, x1: 0, y1: 0, x2: 0, y2: 0 };
                         gradient = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
                     } else {
                         // LINEAR_GRADIENT (upper=0)
@@ -708,6 +781,9 @@ export class CanvasPaintContext extends PaintContext {
                         const endX = intBitsToFloat(arr[i++]);
                         const endY = intBitsToFloat(arr[i++]);
                         i++; // tileMode
+                        this.gradientSpec = { kind: 'linear', colors, stops, cx: 0, cy: 0,
+                                              radius: 0, x1: startX, y1: startY,
+                                              x2: endX, y2: endY };
                         gradient = this.ctx.createLinearGradient(startX, startY, endX, endY);
                     }
                     if (gradient) {
@@ -1333,10 +1409,13 @@ export class CanvasPaintContext extends PaintContext {
 
             if (charCenter >= 0 && charCenter <= totalLen) {
                 this.ctx.save();
-                this.positionOnPath(segments, charCenter, vOffset);
+                const at = this.positionOnPath(segments, charCenter, vOffset);
+                // Re-express any gradient in this glyph's own space, or it is sampled from
+                // a rotated, displaced one and the glyph fills with the wrong colour.
+                const g = at ? this.fillStyleUnderGlyph(at.x, at.y, at.angle) : null;
                 this.fillOrStroke(
-                    () => { this.applyFillStyle(); this.ctx.fillText(ch, -charWidth / 2, 0); },
-                    () => { this.applyStrokeStyle(); this.ctx.strokeText(ch, -charWidth / 2, 0); }
+                    () => { this.applyFillStyle(g); this.ctx.fillText(ch, -charWidth / 2, 0); },
+                    () => { this.applyStrokeStyle(g); this.ctx.strokeText(ch, -charWidth / 2, 0); }
                 );
                 this.ctx.restore();
             }
@@ -1792,7 +1871,7 @@ export class CanvasPaintContext extends PaintContext {
     private positionOnPath(
         segments: { x1: number; y1: number; x2: number; y2: number; len: number }[],
         distance: number, vOffset: number
-    ): void {
+    ): { x: number; y: number; angle: number } | null {
         let accum = 0;
         for (const s of segments) {
             if (accum + s.len >= distance || s === segments[segments.length - 1]) {
@@ -1805,10 +1884,11 @@ export class CanvasPaintContext extends PaintContext {
                 const ny =  Math.cos(angle) * vOffset;
                 this.ctx.translate(px + nx, py + ny);
                 this.ctx.rotate(angle);
-                return;
+                return { x: px + nx, y: py + ny, angle };
             }
             accum += s.len;
         }
+        return null;
     }
 
     // --- Clipping ---

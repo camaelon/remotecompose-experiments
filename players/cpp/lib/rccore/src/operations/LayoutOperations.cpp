@@ -2523,9 +2523,13 @@ void LoopOperationOp::apply(RemoteContext& context) {
     }
 
     // PAINT mode: resolve loop bounds and iterate
-    float fromVal = Utils::isVariable(from) ? context.getFloat(Utils::idFromNan(from)) : from;
-    float stepVal = Utils::isVariable(step) ? context.getFloat(Utils::idFromNan(step)) : step;
-    float untilVal = Utils::isVariable(until) ? context.getFloat(Utils::idFromNan(until)) : until;
+    // Plain NaN tests, matching LoopOperation.updateVariables in the reference. The same
+    // substitution as in ConditionalOp above: Utils::isVariable rejects ids 10..40, so a
+    // loop bound reading one of those system variables kept its raw NaN and the loop then
+    // ran zero times, or forever, depending which bound it was.
+    float fromVal = std::isnan(from) ? context.getFloat(Utils::idFromNan(from)) : from;
+    float stepVal = std::isnan(step) ? context.getFloat(Utils::idFromNan(step)) : step;
+    float untilVal = std::isnan(until) ? context.getFloat(Utils::idFromNan(until)) : until;
 
     if (stepVal <= 0 || !std::isfinite(fromVal) || !std::isfinite(untilVal) || !std::isfinite(stepVal)) return;
     int maxIter = 10000;
@@ -2589,8 +2593,17 @@ void ConditionalOp::apply(RemoteContext& context) {
         }
     }
 
-    float aVal = Utils::isVariable(a) ? context.getFloat(Utils::idFromNan(a)) : a;
-    float bVal = Utils::isVariable(b) ? context.getFloat(Utils::idFromNan(b)) : b;
+    // A PLAIN NaN test, not Utils::isVariable. The reference resolves these operands with
+    // `Float.isNaN(mVarA) ? context.getFloat(...)` — any NaN-boxed id resolves.
+    // Utils::isVariable additionally rejects ids 10..40 (`id > 40 || id < 10`), which is
+    // correct for whatever that helper is for but silently wrong here: it covers weekDay
+    // (11), dayOfMonth (12), dayOfYear (34), year (35) and the whole touch/sensor range.
+    // Those operands were left as raw NaN, and since every comparison against NaN is
+    // false, the conditional never ran — for ANY value. A ladder testing `weekDay eq 1`
+    // through `eq 7` fired on none of them, while `calendarMonth eq 10` (id 9, under the
+    // threshold) worked in the same document.
+    float aVal = std::isnan(a) ? context.getFloat(Utils::idFromNan(a)) : a;
+    float bVal = std::isnan(b) ? context.getFloat(Utils::idFromNan(b)) : b;
 
     bool condition = false;
     switch (type) {
