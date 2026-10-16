@@ -1,7 +1,7 @@
 #include "rcplayer/VideoCustomHost.h"
 
 #include "rcplayer/AvfVideoPlayer.h"
-#include "rcplayer/VideoZoom.h"
+#include "rcskia/MediaZoom.h"
 #include "rcskia/SkiaPaintContext.h"
 
 #include <algorithm>
@@ -36,7 +36,7 @@ struct VideoOpts {
     float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
     double start = 0.0, still = -1.0, until = -1.0;   // "until=U": play [start, U] and hold
     bool loop = true;                         // "loop=0" / "once": play through once and hold
-    std::vector<rcplayer::ZoomKey> zooms;     // "zooms=T@x,y,z;…", see VideoZoom.h
+    std::vector<rczoom::ZoomKey> zooms;     // "zooms=T@x,y,z;…", see rcskia/MediaZoom.h
 };
 static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
     auto hash = s.find('#');
@@ -62,7 +62,7 @@ static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
             } else if (k == "loop") {
                 o.loop = !(v == "0" || v == "false" || v == "off" || v == "no" || v == "once");
             } else if (k == "zooms") {
-                o.zooms = rcplayer::parseZooms(v);
+                o.zooms = rczoom::parseZooms(v);
             }
         }
         if (amp == std::string::npos) break;
@@ -117,7 +117,7 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     if (o.still >= 0.0) {
         sk_sp<SkImage> img = frameAt(o.still);
         if (!img) return false;
-        float zc[4]; rcplayer::zoomCrop(o.zooms, o.still, o.crop, zc);
+        float zc[4]; rczoom::zoomCrop(o.zooms, o.still, o.crop, zc);
         drawFitted(skpc->canvas(), img, w, h, zc);
         return true;
     }
@@ -137,7 +137,7 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     // The zoom follows the picture: the view at the clip time of the frame being drawn (the one
     // pulled last frame — a frame's lag, invisible at the speed a zoom moves).
     float zc[4];
-    rcplayer::zoomCrop(o.zooms, it->second->hasFrame() ? it->second->frameTimeSec() : o.start, o.crop, zc);
+    rczoom::zoomCrop(o.zooms, it->second->hasFrame() ? it->second->frameTimeSec() : o.start, o.crop, zc);
     it->second->paint(skpc->canvas(), static_cast<int>(w), static_cast<int>(h),
                        zc[0], zc[1], zc[2], zc[3]);
     // Until AVFoundation hands over its first frame (a moment after the slide opens, or never

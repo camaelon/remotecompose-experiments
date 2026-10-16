@@ -1,7 +1,7 @@
 #include "rcplayer/StillHosts.h"
 
 #include "rcplayer/AvfVideoPlayer.h"
-#include "rcplayer/VideoZoom.h"
+#include "rcskia/MediaZoom.h"
 #include "rcplayer/CameraCustomHost.h"
 #include "rcplayer/WebCustomHost.h"
 #include "rcplayer/CameraStandIn.h"
@@ -85,7 +85,7 @@ struct VideoFrameHost : rccore::CustomComponentHost {
             if (zp != std::string::npos && (rest[zp - 1] == '#' || rest[zp - 1] == '&')) {
                 std::string zv = rest.substr(zp + 6);
                 zv = zv.substr(0, zv.find('&'));
-                float zc[4]; rcplayer::zoomCrop(rcplayer::parseZooms(zv), at, crop, zc);
+                float zc[4]; rczoom::zoomCrop(rczoom::parseZooms(zv), at, crop, zc);
                 for (int i = 0; i < 4; i++) crop[i] = zc[i];
             }
         }

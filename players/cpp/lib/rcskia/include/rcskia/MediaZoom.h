@@ -1,11 +1,13 @@
-// Zoom keyframes on an embedded video: "zooms=T@x,y,z;T@x,y,z…" (T in seconds of the clip, x,y
-// the centre as fractions of the — cropped — frame, z the zoom factor). Before the first key
-// the whole frame shows; at each key the view eases from wherever it is to the new centre and
-// zoom over `dur` seconds, a snappy ease-out, zoom interpolated in log space so it doesn't
-// lurch. z = 1 zooms back out. The view never leaves the frame.
+// Zoom keyframes on embedded media: "zooms=T@x,y,z;T@x,y,z…". T is in seconds: of the clip for
+// a video, since the slide opened for a nested document. x,y is the centre as fractions of the
+// (cropped) frame, z the zoom factor. Before the first key the whole frame shows; at each key
+// the view eases from wherever it is to the new centre and zoom over `dur` seconds, a snappy
+// ease-out, zoom interpolated in log space so it doesn't lurch. z = 1 zooms back out. The view
+// never leaves the frame. An empty T ("@x,y,z") is 0.
 //
-// Shared by the live video host and the still hosts, so a still and the clip it stands for
-// frame the same way at the same time. Mirrored in the web player (CustomHosts.ts).
+// Shared by the live video host, the still hosts and the nested-document host, so a still and
+// the clip it stands for frame the same way at the same time. Mirrored in the web player
+// (CustomHosts.ts), and — for images, which the slide itself animates — in refract's images.py.
 #pragma once
 
 #include <algorithm>
@@ -14,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace rcplayer {
+namespace rczoom {
 
 struct ZoomKey { double t, x, y, z; };
 
@@ -37,7 +39,7 @@ inline std::vector<ZoomKey> parseZooms(const std::string& s) {
         if (semi == std::string::npos) break;
         p0 = semi + 1;
     }
-    std::sort(keys.begin(), keys.end(), [](const ZoomKey& a, const ZoomKey& b) { return a.t < b.t; });
+    std::stable_sort(keys.begin(), keys.end(), [](const ZoomKey& a, const ZoomKey& b) { return a.t < b.t; });  // ties keep the written order
     return keys;
 }
 
@@ -66,4 +68,4 @@ inline void zoomCrop(const std::vector<ZoomKey>& keys, double t, const float bas
     out[1] = (float)(base[1] + (cy - half) * bh); out[3] = (float)(base[1] + (cy + half) * bh);
 }
 
-}  // namespace rcplayer
+}  // namespace rczoom

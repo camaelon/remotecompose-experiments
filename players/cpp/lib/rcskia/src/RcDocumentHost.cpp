@@ -1,4 +1,5 @@
 #include "rcskia/RcDocumentHost.h"
+#include "rcskia/MediaZoom.h"
 
 #include "rcskia/SkiaPaintContext.h"
 #include "rccore/CoreDocument.h"
@@ -103,6 +104,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     bool persist = false;
     bool hasStep = false; float step = 0.0f; int stepId = -1, timeId = -1;
     int prevStepId = -1, prevTimeId = -1;      // the slide before this one: its step, how long it ran
+    std::vector<rczoom::ZoomKey> zooms;        // "zooms=T@x,y,z;…" on the slide's clock, see MediaZoom.h
     // Time windows: `from`/`to` (seconds of the document's own timeline) and `speed`. The slide
     // plays that stretch of the document and holds at `to`; the document needs nothing special,
     // only to animate on its animation time. Implies `persist`. Independent of step/stepid/timeid.
@@ -128,6 +130,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 else if (k == "timeid") timeId = std::atoi(v.c_str());
                 else if (k == "prevstepid") prevStepId = std::atoi(v.c_str());
                 else if (k == "prevtimeid") prevTimeId = std::atoi(v.c_str());
+                else if (k == "zooms") zooms = rczoom::parseZooms(v);
                 else if (k == "from") { hasWindow = true; winFrom = std::strtod(v.c_str(), nullptr); persist = true; }
                 else if (k == "to") { hasWindow = true; winTo = std::strtod(v.c_str(), nullptr); persist = true; }
                 else if (k == "speed") winSpeed = std::strtod(v.c_str(), nullptr);
@@ -201,6 +204,15 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     if (docW <= 0) docW = w;
     if (docH <= 0) docH = h;
 
+    // Zoom keyframes narrow the crop, on the slide's own clock (seconds since it opened).
+    if (!zooms.empty()) {
+        float zc[4];
+        rczoom::zoomCrop(zooms, timeSec, crop, zc);
+        for (int i = 0; i < 4; i++) crop[i] = zc[i];
+        // A still document asks for no frames of its own: keep them coming until the last
+        // key has settled, or the zoom freezes part-way.
+        if (timeSec < zooms.back().t + 0.6) pc->needsRepaint();
+    }
     // Source crop (fractions → nested coords). Only this region is shown, fitted to the box.
     const float cropX = crop[0] * docW, cropY = crop[1] * docH;
     float cropW = (crop[2] - crop[0]) * docW, cropH = (crop[3] - crop[1]) * docH;

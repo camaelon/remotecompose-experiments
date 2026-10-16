@@ -141,7 +141,8 @@ interface NestedDoc {
     prevTime: number;
 }
 
-// Zoom keyframes on a video: "T@x,y,z;…" — T seconds of the clip, x,y the centre as fractions
+// Zoom keyframes on a video or a nested document: "T@x,y,z;…" — T seconds (of the clip for a
+// video, since the slide opened for a document), x,y the centre as fractions
 // of the (cropped) frame, z the zoom. Before the first key the whole frame shows; at each key the
 // view eases from where it is to the new centre and zoom over ZOOM_DUR seconds (quart ease-out,
 // zoom in log space); z = 1 zooms back out; the view never leaves the frame. The same as
@@ -330,8 +331,11 @@ export class WebCustomHost implements CustomComponentHost {
         let docW = doc.getWidth(), docH = doc.getHeight();
         if (docW <= 0) docW = w;
         if (docH <= 0) docH = h;
-        const cropX = cfg.crop[0] * docW, cropY = cfg.crop[1] * docH;
-        let cropW = (cfg.crop[2] - cfg.crop[0]) * docW, cropH = (cfg.crop[3] - cfg.crop[1]) * docH;
+        // Zoom keyframes narrow the crop, on the slide's own clock (seconds since it opened).
+        const zc = zoomCrop(cfg.zooms, timeSec, cfg.crop);
+        if (cfg.zooms.length) pc.needsRepaint();
+        const cropX = zc[0] * docW, cropY = zc[1] * docH;
+        let cropW = (zc[2] - zc[0]) * docW, cropH = (zc[3] - zc[1]) * docH;
         if (cropW <= 0 || cropH <= 0) { cropW = docW; cropH = docH; }
         const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
 
