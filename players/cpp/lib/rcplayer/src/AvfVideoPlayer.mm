@@ -45,14 +45,14 @@
 @property (nonatomic, assign) int  height;
 @property (nonatomic, assign) double durationSec;
 
-- (instancetype)initWithPath:(NSString*)path;
+- (instancetype)initWithPath:(NSString*)path start:(double)startSec;
 - (void)attachOutputTo:(AVPlayerItem*)item;
 - (CVPixelBufferRef)copyCurrentPixelBufferCF; // caller owns
 @end
 
 @implementation AvfPlayerObjc
 
-- (instancetype)initWithPath:(NSString*)path {
+- (instancetype)initWithPath:(NSString*)path start:(double)startSec {
     self = [super init];
     if (!self) return nil;
 
@@ -83,8 +83,18 @@
     AVPlayerItem* templateItem = [AVPlayerItem playerItemWithAsset:asset];
     self.player = [AVQueuePlayer queuePlayerWithItems:@[ templateItem ]];
     self.player.actionAtItemEnd = AVPlayerActionAtItemEndAdvance;
-    self.looper = [AVPlayerLooper playerLooperWithPlayer:self.player
-                                           templateItem:templateItem];
+    if (startSec > 0.0 && startSec < self.durationSec) {
+        // Start part-way in: loop the range [start, end], so the clip comes back to where the
+        // slide asked it to begin rather than to its first frame.
+        CMTime t0 = CMTimeMakeWithSeconds(startSec, 600);
+        CMTimeRange range = CMTimeRangeMake(t0, CMTimeSubtract(d, t0));
+        self.looper = [AVPlayerLooper playerLooperWithPlayer:self.player
+                                               templateItem:templateItem
+                                                  timeRange:range];
+    } else {
+        self.looper = [AVPlayerLooper playerLooperWithPlayer:self.player
+                                               templateItem:templateItem];
+    }
 
     // KVO so we can swap the video output across the loop seam.
     [self.player addObserver:self
@@ -157,10 +167,10 @@ struct AvfVideoPlayer::Impl {
 AvfVideoPlayer::AvfVideoPlayer() : mImpl(std::make_unique<Impl>()) {}
 AvfVideoPlayer::~AvfVideoPlayer() { /* ARC releases mImpl->objc */ }
 
-std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& path) {
+std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& path, double startSec) {
     @autoreleasepool {
         NSString* nsPath = [NSString stringWithUTF8String:path.c_str()];
-        AvfPlayerObjc* objc = [[AvfPlayerObjc alloc] initWithPath:nsPath];
+        AvfPlayerObjc* objc = [[AvfPlayerObjc alloc] initWithPath:nsPath start:startSec];
         if (!objc || !objc.player) return nullptr;
 
         auto p = std::unique_ptr<AvfVideoPlayer>(new AvfVideoPlayer());
@@ -172,6 +182,10 @@ std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& path) {
 }
 
 sk_sp<SkImage> AvfVideoPlayer::ExtractFirstFrame(const std::string& path) {
+    return ExtractFrameAt(path, 0.0);
+}
+
+sk_sp<SkImage> AvfVideoPlayer::ExtractFrameAt(const std::string& path, double sec) {
     @autoreleasepool {
         NSURL* url = [NSURL fileURLWithPath:[NSString stringWithUTF8String:path.c_str()]];
         AVURLAsset* asset = [AVURLAsset assetWithURL:url];
@@ -186,11 +200,12 @@ sk_sp<SkImage> AvfVideoPlayer::ExtractFirstFrame(const std::string& path) {
 
         NSError* err = nil;
         CMTime actual;
-        CGImageRef cg = [gen copyCGImageAtTime:kCMTimeZero
+        CMTime at = sec > 0.0 ? CMTimeMakeWithSeconds(sec, 600) : kCMTimeZero;
+        CGImageRef cg = [gen copyCGImageAtTime:at
                                     actualTime:&actual
                                          error:&err];
         if (!cg) {
-            std::cerr << "AvfVideoPlayer::ExtractFirstFrame: "
+            std::cerr << "AvfVideoPlayer::ExtractFrameAt: "
                       << (err ? err.localizedDescription.UTF8String : "failed")
                       << "\n";
             return nullptr;
@@ -234,6 +249,8 @@ sk_sp<SkImage> AvfVideoPlayer::ExtractFirstFrame(const std::string& path) {
 int    AvfVideoPlayer::width()       const { return mImpl->objc ? mImpl->objc.width  : 0; }
 int    AvfVideoPlayer::height()      const { return mImpl->objc ? mImpl->objc.height : 0; }
 double AvfVideoPlayer::durationSec() const { return mImpl->objc ? mImpl->objc.durationSec : 0.0; }
+
+bool AvfVideoPlayer::hasFrame() const { return mImpl->lastImage != nullptr; }
 
 void AvfVideoPlayer::setPaused(bool paused) {
     if (!mImpl->objc) return;

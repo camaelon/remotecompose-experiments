@@ -9,11 +9,15 @@ struct AvfVideoPlayer::Impl {};
 AvfVideoPlayer::AvfVideoPlayer() : mImpl(std::make_unique<Impl>()) {}
 AvfVideoPlayer::~AvfVideoPlayer() = default;
 
-std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& /*path*/) {
+std::unique_ptr<AvfVideoPlayer> AvfVideoPlayer::Open(const std::string& /*path*/, double /*startSec*/) {
     return nullptr;
 }
 
 sk_sp<SkImage> AvfVideoPlayer::ExtractFirstFrame(const std::string& /*path*/) {
+    return nullptr;
+}
+
+sk_sp<SkImage> AvfVideoPlayer::ExtractFrameAt(const std::string& /*path*/, double /*sec*/) {
     return nullptr;
 }
 
@@ -31,5 +35,7 @@ double AvfVideoPlayer::durationSec() const {
 
 void AvfVideoPlayer::paint(SkCanvas* /*canvas*/, int /*dstW*/, int /*dstH*/,
                            float, float, float, float) {}
+
+bool AvfVideoPlayer::hasFrame() const { return false; }
 
 void AvfVideoPlayer::setPaused(bool /*paused*/) {}

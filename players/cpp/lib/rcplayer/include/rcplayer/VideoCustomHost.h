@@ -9,7 +9,10 @@
 #include <memory>
 #include <string>
 
+#include "include/core/SkRefCnt.h"
+
 class AvfVideoPlayer;
+class SkImage;
 
 class VideoCustomHost : public rccore::CustomComponentHost {
 public:
@@ -27,5 +30,6 @@ private:
     std::string mBaseDir;
     std::map<int, std::unique_ptr<AvfVideoPlayer>> mPlayers;
     std::map<int, bool> mFailed;      // ids that failed to open (don't retry every frame)
+    std::map<std::string, sk_sp<SkImage>> mStills;   // `still=T` frames, by path and time
     bool mPaused = false;
 };

@@ -18,13 +18,16 @@ class SkImage;
 
 class AvfVideoPlayer {
 public:
-    static std::unique_ptr<AvfVideoPlayer> Open(const std::string& path);
+    // `startSec` > 0 starts playback there, and the loop comes back to it rather than to 0.
+    static std::unique_ptr<AvfVideoPlayer> Open(const std::string& path, double startSec = 0.0);
     ~AvfVideoPlayer();
 
     // Extract the first video frame synchronously as an SkImage.
     // Uses AVAssetImageGenerator — does not spin up a player. Returns null on
     // failure. Used by the PDF export path.
     static sk_sp<SkImage> ExtractFirstFrame(const std::string& path);
+    // The frame at `sec` (exact, not the nearest keyframe), as ExtractFirstFrame does for 0.
+    static sk_sp<SkImage> ExtractFrameAt(const std::string& path, double sec);
 
     int width()  const;
     int height() const;
@@ -35,6 +38,10 @@ public:
     // frame before fitting — e.g. to remove black bars around a portrait recording.
     void paint(SkCanvas* canvas, int dstW, int dstH,
                float cropL = 0.0f, float cropT = 0.0f, float cropR = 1.0f, float cropB = 1.0f);
+
+    // True once a decoded frame has been drawn: until then paint() draws nothing, and a host
+    // can show a poster in its place.
+    bool hasFrame() const;
 
     // Pause / resume playback. AVPlayer drives its own clock so we have to
     // call this explicitly when the host viewer toggles its pause flag.

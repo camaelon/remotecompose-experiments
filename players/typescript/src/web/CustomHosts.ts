@@ -46,6 +46,9 @@ interface EmbedConfig {
     // the slide before this one: its step and how long it ran, for a film to carry on from it
     prevStepId: number;
     prevTimeId: number;
+    // video: where playback starts (and loops back to), or the one frame to show, frozen
+    start: number;
+    still: number;
     // time windows: play [from, to] of the document's own timeline at `speed`, hold at `to`
     hasWindow: boolean;
     from: number;
@@ -59,7 +62,7 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
     const out: EmbedConfig = {
         kind: '', path: config, fit: defaultFit, crop: [0, 0, 1, 1], mirror: false, gate: 0,
         persist: false, hasStep: false, step: 0, stepId: -1, timeId: -1, prevStepId: -1, prevTimeId: -1,
-        hasWindow: false, from: 0, to: -1, speed: 1,
+        hasWindow: false, from: 0, to: -1, speed: 1, start: 0, still: -1,
     };
     const colon = config.indexOf(':');
     if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
@@ -95,6 +98,8 @@ export function parseEmbedConfig(config: string, defaultFit = 'fit'): EmbedConfi
             else if (k === 'from') { out.hasWindow = true; out.from = parseFloat(v) || 0; out.persist = true; }
             else if (k === 'to') { out.hasWindow = true; out.to = parseFloat(v); out.persist = true; }
             else if (k === 'speed') out.speed = parseFloat(v) || 1;
+            else if (k === 'start') out.start = Math.max(0, parseFloat(v) || 0);
+            else if (k === 'still') { const t = parseFloat(v); out.still = isNaN(t) ? -1 : Math.max(0, t); }
             else if (k === 'gate') out.gate = parseFloat(v) || 0;
             else if (k === 'crop') {
                 const t = v.split(',').map(parseFloat);
@@ -377,23 +382,39 @@ export class WebCustomHost implements CustomComponentHost {
         const host = pc as CanvasPaintContext;
         if (typeof host.getCanvas !== 'function' || typeof document === 'undefined') return false;
         const canvas = host.getCanvas();
-        let video = this.videos.get(cfg.path);
+        // A still (`still=T`) is its own element, paused on that frame; a playing clip starts at
+        // `start=S` and loops back there rather than to its first frame.
+        const still = cfg.still >= 0;
+        const key = still ? cfg.path + '@' + cfg.still : cfg.path + (cfg.start > 0 ? '#' + cfg.start : '');
+        let video = this.videos.get(key);
         if (!video) {
             const element = document.createElement('video');
             element.src = cfg.path;
             element.muted = true;
-            element.loop = true;
+            element.loop = !still && cfg.start <= 0;
             element.playsInline = true;
             element.preload = 'auto';
-            video = { element, ready: false };
-            element.addEventListener('loadeddata', () => { video!.ready = true; });
-            element.play().catch(() => { /* until the page has been clicked */ });
-            this.videos.set(cfg.path, video);
+            const v: VideoEmbed = { element, ready: false };
+            video = v;
+            const at = still ? cfg.still : cfg.start;
+            if (at > 0) {
+                element.addEventListener('loadedmetadata', () => { element.currentTime = at; }, { once: true });
+                element.addEventListener('seeked', () => { v.ready = true; }, { once: true });
+            } else {
+                element.addEventListener('loadeddata', () => { v.ready = true; });
+            }
+            if (!still) {
+                if (cfg.start > 0) element.addEventListener('ended', () => {
+                    element.currentTime = cfg.start; element.play().catch(() => {});
+                });
+                element.play().catch(() => { /* until the page has been clicked */ });
+            }
+            this.videos.set(key, video);
         }
-        pc.needsRepaint();      // a playing video is a new frame every frame
         const vw = video.element.videoWidth, vh = video.element.videoHeight;
+        if (!still || !video.ready) pc.needsRepaint();      // a playing video is a new frame every frame
         if (!video.ready || vw <= 0 || vh <= 0) return true;
-        if (video.element.paused) video.element.play().catch(() => {});
+        if (!still && video.element.paused) video.element.play().catch(() => {});
         const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
         let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
         if (cropW <= 0 || cropH <= 0) { cropW = vw; cropH = vh; }

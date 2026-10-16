@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <filesystem>
+#include <cstdlib>
 #include <map>
 
 namespace fs = std::filesystem;
@@ -55,8 +56,10 @@ struct VideoFrameHost : rccore::CustomComponentHost {
         auto colon = config.find(':');
         if (colon != std::string::npos && config.compare(0, colon, "video") == 0)
             rest = config.substr(colon + 1);
-        // Split "<path>#crop=l,t,r,b".
+        // Split "<path>#crop=l,t,r,b&start=S&still=T". The frame shown is the one the slide
+        // would show first: a still's own frame, else where playback starts, else the first.
         float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+        double at = 0.0;
         std::string path = rest;
         auto hash = rest.find('#');
         if (hash != std::string::npos) {
@@ -68,15 +71,23 @@ struct VideoFrameHost : rccore::CustomComponentHost {
                                 &t[0], &t[1], &t[2], &t[3]) == 4)
                     for (int i = 0; i < 4; i++) crop[i] = t[i];
             }
+            auto opt = [&](const char* k) -> double {
+                std::string key = std::string(k) + "=";
+                for (size_t q = hash; (q = rest.find(key, q)) != std::string::npos; q += key.size())
+                    if (rest[q - 1] == '#' || rest[q - 1] == '&') return std::strtod(rest.c_str() + q + key.size(), nullptr);
+                return -1.0;
+            };
+            double still = opt("still"), start = opt("start");
+            at = still >= 0.0 ? still : (start > 0.0 ? start : 0.0);
         }
         if (path.empty()) return false;
         fs::path p(path);
         if (p.is_relative() && !baseDir.empty()) p = fs::path(baseDir) / p;
 
-        auto key = p.string();
+        auto key = p.string() + "@" + std::to_string(at);
         auto it = frames.find(key);
         if (it == frames.end())
-            it = frames.emplace(key, AvfVideoPlayer::ExtractFirstFrame(key)).first;
+            it = frames.emplace(key, AvfVideoPlayer::ExtractFrameAt(p.string(), at)).first;
         sk_sp<SkImage> img = it->second;
         if (!img) return false;
 

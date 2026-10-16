@@ -3,14 +3,21 @@
 #include "rcplayer/AvfVideoPlayer.h"
 #include "rcskia/SkiaPaintContext.h"
 
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <filesystem>
+
+#include "include/core/SkCanvas.h"
+#include "include/core/SkImage.h"
+#include "include/core/SkSamplingOptions.h"
 
 namespace fs = std::filesystem;
 
 void VideoCustomHost::reset() {
     mPlayers.clear();
     mFailed.clear();
+    mStills.clear();
 }
 
 void VideoCustomHost::setPaused(bool paused) {
@@ -20,24 +27,47 @@ void VideoCustomHost::setPaused(bool paused) {
     }
 }
 
-// Parse a "#k=v&k=v" option suffix on a media config for a "crop=l,t,r,b" (source fractions
-// 0–1). Fills crop[4] (default full frame 0,0,1,1) and returns the bare path before '#'.
-static std::string parsePathAndCrop(const std::string& s, float crop[4]) {
-    crop[0] = 0.0f; crop[1] = 0.0f; crop[2] = 1.0f; crop[3] = 1.0f;
+// Parse a "#k=v&k=v" option suffix on a media config: "crop=l,t,r,b" (source fractions 0–1,
+// default full frame), "start=S" (seconds: playback begins there and loops back to it) and
+// "still=T" (seconds: show that frame, frozen, instead of playing). Returns the bare path.
+struct VideoOpts { float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f}; double start = 0.0, still = -1.0; };
+static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
     auto hash = s.find('#');
     if (hash == std::string::npos) return s;
-    std::string path = s.substr(0, hash);
     std::string opts = s.substr(hash + 1);
-    auto pos = opts.find("crop=");
-    if (pos != std::string::npos) {
-        std::string v = opts.substr(pos + 5);
-        auto amp = v.find('&');
-        if (amp != std::string::npos) v = v.substr(0, amp);
-        float t[4];
-        if (std::sscanf(v.c_str(), "%f,%f,%f,%f", &t[0], &t[1], &t[2], &t[3]) == 4)
-            for (int i = 0; i < 4; i++) crop[i] = t[i];
+    for (size_t p0 = 0; p0 <= opts.size(); ) {
+        size_t amp = opts.find('&', p0);
+        std::string tok = opts.substr(p0, amp == std::string::npos ? std::string::npos : amp - p0);
+        auto eq = tok.find('=');
+        if (eq != std::string::npos) {
+            std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
+            if (k == "crop") {
+                float t[4];
+                if (std::sscanf(v.c_str(), "%f,%f,%f,%f", &t[0], &t[1], &t[2], &t[3]) == 4)
+                    for (int i = 0; i < 4; i++) o.crop[i] = t[i];
+            } else if (k == "start") {
+                o.start = std::strtod(v.c_str(), nullptr);
+            } else if (k == "still") {
+                o.still = std::strtod(v.c_str(), nullptr);
+            }
+        }
+        if (amp == std::string::npos) break;
+        p0 = amp + 1;
     }
-    return path;
+    return s.substr(0, hash);
+}
+
+// An image aspect-fit-centred into (0,0)..(w,h) through a source crop: how a playing frame is
+// framed too, so a still and the clip it stands for line up exactly.
+static void drawFitted(SkCanvas* canvas, const sk_sp<SkImage>& img, float w, float h, const float crop[4]) {
+    float iw = (float)img->width(), ih = (float)img->height();
+    SkRect src = SkRect::MakeLTRB(crop[0] * iw, crop[1] * ih, crop[2] * iw, crop[3] * ih);
+    if (src.width() <= 0 || src.height() <= 0) src = SkRect::MakeWH(iw, ih);
+    float sc = std::min(w / src.width(), h / src.height());
+    float dw = src.width() * sc, dh = src.height() * sc;
+    SkRect dst = SkRect::MakeXYWH((w - dw) * 0.5f, (h - dh) * 0.5f, dw, dh);
+    canvas->drawImageRect(img, src, dst, SkSamplingOptions(SkFilterMode::kLinear, SkMipmapMode::kNone),
+                          nullptr, SkCanvas::kFast_SrcRectConstraint);
 }
 
 bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
@@ -50,17 +80,38 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     if (colon != std::string::npos && config.compare(0, colon, "video") == 0) {
         rest = config.substr(colon + 1);
     }
-    float crop[4];
-    std::string path = parsePathAndCrop(rest, crop);
+    VideoOpts o;
+    std::string path = parseVideoConfig(rest, o);
     if (path.empty()) return false;
+    fs::path full(path);
+    if (full.is_relative() && !mBaseDir.empty()) full = fs::path(mBaseDir) / full;
+
+    auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
+    if (!skpc || !skpc->canvas()) return false;
+
+    // The clip's frame at `t`, decoded once and kept.
+    auto frameAt = [&](double t) -> sk_sp<SkImage> {
+        std::string key = full.string() + "@" + std::to_string(t);
+        auto si = mStills.find(key);
+        if (si == mStills.end())
+            si = mStills.emplace(key, AvfVideoPlayer::ExtractFrameAt(full.string(), t)).first;
+        return si->second;
+    };
+
+    // A still: the clip's frame at `still`, frozen. No player is opened, so nothing plays and
+    // nothing is heard until the next slide shows the same clip live.
+    if (o.still >= 0.0) {
+        sk_sp<SkImage> img = frameAt(o.still);
+        if (!img) return false;
+        drawFitted(skpc->canvas(), img, w, h, o.crop);
+        return true;
+    }
 
     auto it = mPlayers.find(componentId);
     if (it == mPlayers.end()) {
         auto f = mFailed.find(componentId);
         if (f != mFailed.end() && f->second) return false;   // known-bad, don't retry
-        fs::path p(path);
-        if (p.is_relative() && !mBaseDir.empty()) p = fs::path(mBaseDir) / p;
-        auto player = AvfVideoPlayer::Open(p.string());
+        auto player = AvfVideoPlayer::Open(full.string(), o.start);
         if (!player) { mFailed[componentId] = true; return false; }
         if (mPaused) player->setPaused(true);
         it = mPlayers.emplace(componentId, std::move(player)).first;
@@ -68,9 +119,14 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
 
     // The core has already translated the canvas to this component's content box, so
     // draw the frame at (0,0)..(w,h). Cast is safe: the viewer uses SkiaPaintContext.
-    auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
-    if (!skpc || !skpc->canvas()) return false;
     it->second->paint(skpc->canvas(), static_cast<int>(w), static_cast<int>(h),
-                       crop[0], crop[1], crop[2], crop[3]);
+                       o.crop[0], o.crop[1], o.crop[2], o.crop[3]);
+    // Until AVFoundation hands over its first frame (a moment after the slide opens, or never
+    // in an export that paints on a simulated clock), show the frame playback starts on: no
+    // black box, and a still slide followed by its playing slide reads as one picture
+    // starting to move.
+    if (!it->second->hasFrame()) {
+        if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, o.crop);
+    }
     return true;
 }
