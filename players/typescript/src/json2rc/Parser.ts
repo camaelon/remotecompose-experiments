@@ -5,7 +5,7 @@
  * Java `RemoteComposeJsonParser`. So correctness here means: the same JSON in, the same bytes
  * out, and `tools/compare_rcj.py` checks exactly that against the corpus.
  */
-import { Writer, Emit, TYPE_EXACT, TYPE_FILL, modBorder, modScroll, modClipRect, modVisibility, modClipRoundedRect, TYPE_WEIGHT, modWidthIn, modHeightIn, modWidth, modHeight, modPadding, modOffset, modBackground, modBackgroundId, modSemantics, modClick, SEMANTICS_MODE_SET, hostNamedAction,
+import { Writer, Emit, hostAction, TYPE_EXACT, TYPE_FILL, modBorder, modScroll, modClipRect, modVisibility, modClipRoundedRect, TYPE_WEIGHT, modWidthIn, modHeightIn, modWidth, modHeight, modPadding, modOffset, modBackground, modBackgroundId, modSemantics, modClick, SEMANTICS_MODE_SET, hostNamedAction,
     HOST_ACTION_STRING_TYPE, valueFloatExpressionChange, valueFloatChange,
     valueIntegerChange, valueStringChange, valueIntegerExpressionChange }
     from "./Writer";
@@ -1129,10 +1129,25 @@ export class Parser {
             const a = item as Record<string, J>;
             const t = String(a.type ?? "").toLowerCase();
             const target = a.targetId !== undefined ? a.targetId : a.target;
-            if (t === "hostnamedaction" || t === "hostmetadataaction") {
-                if (!("name" in a)) {
-                    throw new NotImplementedComponent(`${t} without a name is not supported yet`);
+            const isHost = t === "hostaction" || t === "hostnamedaction"
+                || t === "hostmetadataaction";
+            if (isHost && !("name" in a)) {
+                // DefaultModifierParsers: no name means HostAction(actionId[, metadataId]).
+                // "metadata" (a literal string) is an EXTENSION, proposed in m5Tab
+                // docs/RC_SYSTEM_VARIABLES.md: {"type": "hostAction", "actionId": 0,
+                // "metadata": "system.backlight=cycle"}.
+                if (!("actionId" in a)) {
+                    throw new NotImplementedComponent(`${t} needs a "name" or an "actionId"`);
                 }
+                const actionId = Number(a.actionId);
+                if ("metadata" in a) {
+                    const metadata = String(a.metadata);
+                    actions.push((w2) => hostAction(actionId, w2.addText(metadata))(w2));
+                } else {
+                    actions.push(hostAction(actionId,
+                        "metadataId" in a ? Number(a.metadataId) : -1));
+                }
+            } else if (isHost) {
                 const name = String(a.name);
                 const value = "value" in a ? String(a.value) : null;
                 // HostAction(name) leaves both mType and mValueId at -1; STRING_TYPE is only
@@ -1839,7 +1854,7 @@ export class Parser {
             return;
         }
         if (t === "conditionaloperations") {
-            const COND: Record<string, number> = { gt: 4, ge: 5, lt: 2, le: 3, eq: 0 };
+            const COND: Record<string, number> = { gt: 4, ge: 5, lt: 2, le: 3, eq: 0, ne: 1 };   // ne: EXTENSION
             // An unrecognised condition falls back to eq (0) rather than raising — that is
             // the reference's behaviour, and a document relying on it must not diverge here.
             const cond = COND[String(command.condition).toLowerCase()] ?? 0;
@@ -1960,6 +1975,16 @@ export class Parser {
         if ("variables" in section) {
             for (const [name, cfg, value] of eachResource(section.variables)) {
                 const named = cfg ? Boolean(cfg.export) : false;
+                if (cfg && String(cfg.type ?? "").toLowerCase() === "string") {
+                    // {"name": "wifiSsid", "type": "string", "value": "", "export": true};
+                    // EXTENSION. Held as a plain float carrying the text id, as for
+                    // textFromFloat, so "@wifiSsid" works wherever text is expected.
+                    const text = String(cfg.value ?? "");
+                    const id = named ? this.writer.addNamedString(name, text)
+                                     : this.writer.addText(text);
+                    this.variables.set(name, floatToRawIntBits(id));
+                    continue;
+                }
                 let val = value;
                 if (val && typeof val === "object" && "value" in val && !("anim" in val)) {
                     val = val.value;

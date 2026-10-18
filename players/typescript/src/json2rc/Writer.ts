@@ -13,7 +13,7 @@ import { applyHeader, Tag } from "./Header";
 
 export const OP = {
     COMPONENT_VALUE: 150, MODIFIER_OFFSET: 221, ACCESSIBILITY_SEMANTICS: 250,
-    MODIFIER_CLICK: 59, HOST_NAMED_ACTION: 210,
+    MODIFIER_CLICK: 59, HOST_NAMED_ACTION: 210, HOST_ACTION: 209, HOST_ACTION_METADATA: 216,
     MODIFIER_WIDTH_IN: 231, MODIFIER_HEIGHT_IN: 232,
     DEFINE_MESH_3D: 110, SET_CAMERA_3D: 111, MATRIX_3D_OP: 112, DRAW_MESH_3D: 113,
     PAINT_3D_STATE: 114, SET_LIGHTS_3D: 115, VECTOR_EXPRESSION: 116,
@@ -764,6 +764,24 @@ export class Writer {
         return id;
     }
 
+    /**
+     * A string the host can read and write by name: NAMED_VARIABLE (STRING_TYPE 0), then
+     * DATA_TEXT — RemoteComposeWriter.addNamedString. Not interned — two variables with the same initial text must still
+     * be two ids, or setting one would set both. EXTENSION: not in the reference JSON
+     * parser yet (m5Tab docs/RC_SYSTEM_VARIABLES.md).
+     */
+    addNamedString(name: string, value: string): number {
+        const id = this.allocDataId();
+        this.buffer.start(OP.NAMED_VARIABLE);   // before the text, as RemoteComposeWriter does
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(0);            // NV_STRING_TYPE
+        this.buffer.writeUtf8(name);
+        this.buffer.start(OP.DATA_TEXT);
+        this.buffer.writeInt(id);
+        this.buffer.writeUtf8(value);
+        return id;
+    }
+
     /** FloatConstant (DATA_FLOAT); returns asNan(id) bits. */
     addFloatConstant(value: number): number {
         const dataId = this.allocDataId();
@@ -1031,6 +1049,23 @@ export function hostNamedAction(textId: number, type: number, valueId: number): 
     };
 }
 export const HOST_ACTION_STRING_TYPE = 2;
+
+/**
+ * HOST_ACTION (209) with no metadata, HostActionMetadata (216) with it: the host's
+ * RemoteContext.runAction(id, metadata) — HostAction(actionId[, metadataId]) in the reference.
+ */
+export function hostAction(actionId: number, metadataId: number): Emit {
+    return (w) => {
+        if (metadataId === -1) {
+            w.buffer.start(OP.HOST_ACTION);
+            w.buffer.writeInt(actionId);
+        } else {
+            w.buffer.start(OP.HOST_ACTION_METADATA);
+            w.buffer.writeInt(actionId);
+            w.buffer.writeInt(metadataId);
+        }
+    };
+}
 
 /**
  * VALUE_FLOAT_EXPRESSION_CHANGE_ACTION (227): on click, set the target variable to the

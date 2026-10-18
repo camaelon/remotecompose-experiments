@@ -177,6 +177,9 @@ void CoreDocument::updateTimeVariables(RemoteContext& context) {
     long gmtoff = 0;
     _get_timezone(&gmtoff);
     gmtoff = -gmtoff;
+#elif defined(ESP_PLATFORM)
+    // newlib's struct tm has no tm_gmtoff; _timezone is seconds WEST of UTC (set by tzset).
+    long gmtoff = -_timezone + (local.tm_isdst > 0 ? 3600 : 0);
 #else
     long gmtoff = local.tm_gmtoff;
 #endif

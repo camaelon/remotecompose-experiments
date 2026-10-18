@@ -9,11 +9,18 @@
 namespace rccore {
 
 void RemoteContext::loadText(int id, const std::string& text) {
+    if (mTextOverrides.count(id)) return;   // RemoteComposeState.updateData: !mDataOverride[id]
     mTexts[id] = text;
     notifyListeners(id);
     if (mPaintContext) {
         mPaintContext->loadText(id, text);
     }
+}
+
+void RemoteContext::overrideText(int id, const std::string& text) {
+    mTextOverrides.erase(id);
+    loadText(id, text);
+    mTextOverrides.insert(id);
 }
 
 std::string RemoteContext::getText(int id) const {

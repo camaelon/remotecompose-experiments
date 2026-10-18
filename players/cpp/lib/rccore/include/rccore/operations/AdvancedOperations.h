@@ -881,6 +881,9 @@ public:
         op->actionId = buf.readInt();
         ops.push_back(std::move(op));
     }
+    void runAction(RemoteContext& context, float, float) override {
+        context.runAction(actionId, "");
+    }
 };
 
 class ValueFloatChangeOp : public Operation {
@@ -993,6 +996,9 @@ public:
         op->metadataId = buf.readInt();
         ops.push_back(std::move(op));
     }
+    void runAction(RemoteContext& context, float, float) override {
+        context.runAction(actionId, context.getText(metadataId));
+    }
 };
 
 // ── HostNamedAction (210) ─────────────────────────────────────────────
@@ -1020,6 +1026,18 @@ public:
         op->type = buf.readInt();
         op->valueId = buf.readInt();
         ops.push_back(std::move(op));
+    }
+    void runAction(RemoteContext& context, float, float) override {
+        std::string value;
+        if (valueId != -1) {
+            switch (type) {
+                case 0: value = std::to_string(context.getFloat(valueId)); break;
+                case 1: value = std::to_string(context.getInteger(valueId)); break;
+                case 2: value = context.getText(valueId); break;
+                default: break;   // float arrays: not passed on yet
+            }
+        }
+        context.runNamedAction(context.getText(textId), valueId == -1 ? -1 : type, value);
     }
 };
 
