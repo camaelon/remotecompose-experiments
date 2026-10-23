@@ -807,6 +807,9 @@ public:
 
 class ModifierRipple : public Operation {
 public:
+    // The ripple in flight (RippleModifierOperation): started on touch down at (x, y) in the
+    // component's own coordinates, at animation time `start` seconds; -1 when idle.
+    float start = -1.0f, x = 0.0f, y = 0.0f;
     std::string name() const override { return "MODIFIER_RIPPLE"; }
     int opcode() const override { return 229; }
     std::vector<Field> fields() const override { return {}; }

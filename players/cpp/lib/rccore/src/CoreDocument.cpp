@@ -325,6 +325,9 @@ void CoreDocument::applyOperations(RemoteContext& context,
 
 // ── Touch dispatch ────────────────────────────────────────────────────
 
+static bool rippleRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
+                            float x, float y, float parentX, float parentY);
+
 void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
     context.loadFloat(RemoteContext::ID_TOUCH_POS_X, x);
     context.loadFloat(RemoteContext::ID_TOUCH_POS_Y, y);
@@ -334,6 +337,37 @@ void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
             touch->touchDown(context, x, y);
         }
     }
+    rippleRecursive(context, mOperations, x, y, 0, 0);
+}
+
+// The topmost visible component under (x, y) that carries a ripple starts one there — the
+// reference's RippleModifierOperation.onTouchDown. Same walk as onClickRecursive.
+static bool rippleRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
+                            float x, float y, float parentX, float parentY) {
+    for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+        const auto& op = *it;
+        int cid = op->getOpComponentId();
+        const RemoteContext::ComponentDim* dim = cid != -1 ? context.getComponentDimension(cid) : nullptr;
+        if (cid != -1 && !dim) continue;
+        if (dim && !dim->visible) continue;
+        float absX = dim ? parentX + dim->x : parentX, absY = dim ? parentY + dim->y : parentY;
+        if (!op->mChildren.empty() &&
+            rippleRecursive(context, op->mChildren, x, y,
+                            dim ? absX + dim->padX : absX, dim ? absY + dim->padY : absY))
+            return true;
+        if (!dim || x < absX || x > absX + dim->w || y < absY || y > absY + dim->h) continue;
+        for (const auto& child : op->mChildren) {
+            if (child->opcode() == Operations::MODIFIER_RIPPLE) {
+                auto* r = static_cast<ModifierRipple*>(child.get());
+                r->start = context.getFloat(RemoteContext::ID_ANIMATION_TIME);
+                r->x = x - absX;
+                r->y = y - absY;
+                context.needsRepaint();
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 void CoreDocument::touchDrag(RemoteContext& context, float x, float y) {

@@ -127,6 +127,8 @@ struct LayoutState {
     // Offset modifier
     float offsetX = 0, offsetY = 0;
     bool hasOffset = false;
+    Operation* ripple = nullptr;     // the component's ModifierRipple, if it has one
+    Operation* animSpec = nullptr;   // its ANIMATION_SPEC modifier (14), if it has one
 
     // GraphicsLayer opacity (attrId 11); may be a NaN-encoded expression variable.
     float glAlpha = 1.0f;

@@ -1,4 +1,5 @@
 #include "rccore/operations/LayoutOperations.h"
+#include "rccore/easing/CubicEasing.h"
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/LayoutSystem.h"
 #include "rccore/RemoteContext.h"
@@ -240,6 +241,8 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
     ls.canvasContentIds.clear();
     ls.padBeforeWidth = 0;
     ls.padBeforeHeight = 0;
+    ls.ripple = nullptr;
+    ls.animSpec = nullptr;
     bool sawWidth = false;
     bool sawHeight = false;
 
@@ -327,6 +330,12 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     }
                     break;
                 }
+                case 229: // ModifierRipple
+                    ls.ripple = child;
+                    break;
+                case 14: // AnimationSpec
+                    ls.animSpec = child;
+                    break;
                 case 221: { // ModifierOffset
                     auto* m = static_cast<ModifierOffset*>(child);
                     ls.hasOffset = true;
@@ -1904,6 +1913,34 @@ static void paintBackground(const LayoutState& ls, PaintContext* pc, RemoteConte
     pc->restorePaint();
 }
 
+// ── Paint ripple modifier ────────────────────────────────────────────
+// RippleModifierOperation.paint: from the touch point a circle grows to the component's
+// larger side in half a second while it fades from translucent white to nothing over one,
+// both on the standard cubic curve, clipped to the component (and any rounded clip before).
+static void paintRipple(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
+                        float w, float h) {
+    auto* r = static_cast<ModifierRipple*>(ls.ripple);
+    if (!r || r->start < 0.0f || !pc) return;
+    float progress = ctx.getFloat(RemoteContext::ID_ANIMATION_TIME) - r->start;   // over 1 s
+    if (progress > 1.0f || progress < 0.0f) { r->start = -1.0f; return; }
+    ctx.needsRepaint();
+    static CubicEasing ease(Easing::CUBIC_STANDARD);
+    float tween = ease.get(progress);
+    float tweenRadius = ease.get(std::min(1.0f, progress / 0.5f));
+    auto mix = [&](int a, int b) { return (int)std::lround(a + (b - a) * tween); };
+    int col = (mix(180, 0) << 24) | (mix(250, 200) << 16) | (mix(250, 200) << 8) | mix(250, 200);
+    pc->matrixSave();
+    pc->clipRect(0, 0, w, h);
+    pc->savePaint();
+    PaintBundle paint;
+    paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
+    paint.addTag(PaintBundle::COLOR, col);
+    pc->applyPaint(paint);
+    pc->drawCircle(r->x, r->y, std::max(w, h) * tweenRadius);
+    pc->restorePaint();
+    pc->matrixRestore();
+}
+
 // ── Paint border modifier ────────────────────────────────────────────
 static void paintBorder(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
                         float w, float h) {
@@ -2005,6 +2042,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 
     // Paint border
     paintBorder(ls, pc, ctx, m.w, m.h);
+    paintRipple(ls, pc, ctx, m.w, m.h);
 
     // Translate for padding
     pc->matrixTranslate(ls.paddingLeft, ls.paddingTop);
@@ -2172,11 +2210,40 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 // measures identically every frame, so this is a no-op there.
 static bool gLayoutAnimationEnabled = true;
 
+// How an ancestor's visibility bears on a component's own animation.
+//  ANIM_NORMAL  — every ancestor is shown: animate as measured.
+//  ANIM_HIDDEN  — an ancestor is GONE and not fading: the component is not on screen, so its
+//                 bounds are no position anyone saw. Forget them; when the ancestor appears the
+//                 component appears in place with it instead of sliding in from wherever the
+//                 hidden measure put it (the top-left corner, for a label in a state swapped in).
+//  ANIM_FROZEN  — an ancestor is fading out: hold the component where it was shown.
+enum AnimAncestry { ANIM_NORMAL, ANIM_HIDDEN, ANIM_FROZEN };
+
 static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& measure,
-                              double timeSec) {
+                              double timeSec, AnimAncestry ancestry = ANIM_NORMAL) {
     int cid = getComponentId(op);
-    if (cid != -1 && measure.contains(cid)) {
-        AnimSpecParams spec;  // default 300ms standard/fade; per-component spec: TODO
+    AnimAncestry childAncestry = ancestry;
+    if (cid != -1 && measure.contains(cid) && ancestry != ANIM_NORMAL) {
+        static thread_local LayoutAnimStore sDetachedStoreH;
+        LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore()
+                                                   : sDetachedStoreH;
+        if (ancestry == ANIM_HIDDEN) {
+            store.erase(cid);
+        } else {
+            auto it = store.find(cid);
+            if (it != store.end() && it->second.hasLive) measure.get(cid) = it->second.live;
+        }
+    } else if (cid != -1 && measure.contains(cid)) {
+        AnimSpecParams spec;
+        // The component's own spec when it has one: durations on the wire are milliseconds.
+        if (auto* as = static_cast<AnimationSpec*>(getLS(ctx, op).animSpec)) {
+            spec.motionDuration = as->motionDuration / 1000.0f;
+            spec.visDuration = as->visibilityDuration / 1000.0f;
+            spec.motionEasing = as->motionEasingType;
+            spec.visEasing = as->visibilityEasingType;
+            spec.enter = static_cast<AnimEffect>(as->enterAnimation);
+            spec.exit = static_cast<AnimEffect>(as->exitAnimation);
+        }
         ComponentMeasure& m = measure.get(cid);
         // The store belongs to the document being laid out. A context with no document
         // (measuring in isolation) gets a scratch one — per thread, so two threads measuring
@@ -2184,8 +2251,10 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
         static thread_local LayoutAnimStore sDetachedStore;
         LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore()
                                                    : sDetachedStore;
+        const bool targetVisible = m.isVisible();
         if (animUpdate(store, cid, m, timeSec, gLayoutAnimationEnabled, spec))
             sSawActiveAnim = true;   // still animating → layout depends on animationTime
+        if (!targetVisible) childAncestry = m.isVisible() ? ANIM_FROZEN : ANIM_HIDDEN;
     }
     if (op->opcode() == 217) sSawStateLayout = true;   // index can flip → keep re-laying out
     auto& ls = getLS(ctx, op);
@@ -2207,7 +2276,7 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
     }
 
     for (auto* child : ls.layoutChildren) {
-        animateLayoutTree(child, ctx, measure, timeSec);
+        animateLayoutTree(child, ctx, measure, timeSec, childAncestry);
     }
 }
 

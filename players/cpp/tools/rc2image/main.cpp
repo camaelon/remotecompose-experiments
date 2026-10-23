@@ -290,6 +290,9 @@ int main(int argc, char* argv[]) {
             float t = animTimeSec * (float)i / (float)(sweep - 1);
             context.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME, t);
             while (nextClick < clicks.size() && clicks[nextClick][0] <= t) {
+                // As the viewer does it: press (touch down — where a ripple starts), release, click.
+                doc.touchDown(context, clicks[nextClick][1], clicks[nextClick][2]);
+                doc.touchUp(context, clicks[nextClick][1], clicks[nextClick][2], 0.0f, 0.0f);
                 bool hit = doc.onClick(context, clicks[nextClick][1], clicks[nextClick][2]);
                 std::cerr << "click t=" << t << " (" << clicks[nextClick][1] << "," << clicks[nextClick][2] << ") " << (hit ? "hit" : "miss") << "\n";
                 nextClick++;
