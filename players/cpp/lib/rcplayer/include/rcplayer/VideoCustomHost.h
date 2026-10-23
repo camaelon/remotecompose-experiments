@@ -20,7 +20,7 @@ class VideoCustomHost : public rccore::CustomComponentHost {
 public:
     // Directory the slide was loaded from; relative video paths resolve against it.
     void setBaseDir(const std::string& dir) { mBaseDir = dir; }
-    // Drop all players (call when leaving a slide).
+    // Drop all players (call when leaving a slide). Decoded frames are kept (bounded).
     void reset();
     // Pause / resume every video.
     void setPaused(bool paused);

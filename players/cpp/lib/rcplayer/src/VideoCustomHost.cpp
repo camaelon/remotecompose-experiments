@@ -20,9 +20,13 @@ namespace fs = std::filesystem;
 void VideoCustomHost::reset() {
     mPlayers.clear();
     mFailed.clear();
-    mStills.clear();
     mOpening.clear();      // the threads keep their own reference; nothing here waits for them
-    mDecoding.clear();
+    // Decoded frames outlive the slide: they are keyed by file and time, and a `cue` still
+    // slide is followed by its playing slide, which stands in that very frame until playback
+    // delivers one. Dropping it here left the video box empty for the redecode, a visible gap.
+    // In-flight decodes are kept for the same reason. Bounded, so a long deck doesn't hoard.
+    if (mStills.size() > 16) mStills.clear();
+    if (mDecoding.size() > 16) mDecoding.clear();
 }
 
 void VideoCustomHost::setPaused(bool paused) {
