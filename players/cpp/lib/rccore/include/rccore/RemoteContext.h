@@ -177,6 +177,9 @@ public:
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
         mIntegerOverrides.insert(id);
+        // Both slots are written, so both stick: an integer the document declared as a float
+        // constant (json2rc does that) is otherwise put back by its own loadFloat next frame.
+        mFloatOverrides.insert(id);
         notifyListeners(id);
     }
     int getInteger(int id) const {
@@ -302,9 +305,17 @@ public:
                 int width, int height, int64_t capabilities);
 
     // Component dimension storage (for COMPONENT_VALUE resolution after layout)
-    struct ComponentDim { float w = 0, h = 0, x = 0, y = 0; };
+    // padX/padY: where the component's children are placed from, relative to (x, y) — its
+    // padding (and offset). Children's (x, y) are relative to that, not to the component's
+    // own corner. visible: false for GONE / INVISIBLE, which take no clicks.
+    struct ComponentDim { float w = 0, h = 0, x = 0, y = 0, padX = 0, padY = 0; bool visible = true; };
     void setComponentDimension(int componentId, float w, float h, float x = 0, float y = 0) {
-        mComponentDims[componentId] = {w, h, x, y};
+        auto& d = mComponentDims[componentId];
+        d.w = w; d.h = h; d.x = x; d.y = y;
+    }
+    void setComponentContent(int componentId, float padX, float padY, bool visible) {
+        auto& d = mComponentDims[componentId];
+        d.padX = padX; d.padY = padY; d.visible = visible;
     }
     const ComponentDim* getComponentDimension(int componentId) const {
         auto it = mComponentDims.find(componentId);
@@ -343,9 +354,9 @@ public:
     void classifyPaintOnlyVars();
     bool isPaintOnlyVar(int id) const {
         if (!mClassified) return false;
-        // Nothing reads it — the pointer position in a document without touch, say: a change
-        // to it cannot reach the layout either.
-        if (mVarListeners.find(id) == mVarListeners.end()) return true;
+        // Only what is proven paint-only. A variable with no listeners is NOT safe to skip:
+        // layout reads some ids without listening to them — a visibility modifier's integer,
+        // set by a click — and skipping the epoch left those buttons stuck in their old state.
         return mPaintOnlyVars.count(id) != 0;
     }
 

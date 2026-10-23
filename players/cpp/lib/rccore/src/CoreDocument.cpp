@@ -455,13 +455,15 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
         int cid = op->getOpComponentId();
         if (cid != -1) {
             auto* dim = context.getComponentDimension(cid);
+            if (dim && !dim->visible) continue;     // GONE / INVISIBLE: neither it nor its children
             if (dim) {
                 float absX = parentX + dim->x;
                 float absY = parentY + dim->y;
                 
-                // Check children first (back to front)
+                // Check children first (back to front). They are placed inside this one's
+                // padding (and offset), so that is their origin, not its corner.
                 if (!op->mChildren.empty()) {
-                    if (onClickRecursive(context, op->mChildren, x, y, absX, absY)) {
+                    if (onClickRecursive(context, op->mChildren, x, y, absX + dim->padX, absY + dim->padY)) {
                         return true;
                     }
                 }

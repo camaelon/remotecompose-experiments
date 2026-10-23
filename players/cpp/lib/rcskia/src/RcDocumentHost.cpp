@@ -332,6 +332,9 @@ void RcDocumentHost::pointerUp(float winX, float winY, float velX, float velY) {
     // Velocity is in window points/sec; scale into nested-doc units for a consistent fling.
     n->doc->touchUp(*n->ctx, p.x(), p.y(),
                     velX * n->winToNested.getScaleX(), velY * n->winToNested.getScaleY());
+    // A release is a click too, as it is for the top-level document (Callbacks.cpp): without
+    // this an embedded document's onClick modifiers — its buttons — never fire.
+    n->doc->onClick(*n->ctx, p.x(), p.y());
 }
 
 } // namespace rcskia

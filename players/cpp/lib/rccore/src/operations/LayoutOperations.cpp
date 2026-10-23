@@ -1853,6 +1853,14 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
         auto& m = measure.get(cid);
         // Store outer dimensions for the component itself
         ctx.setComponentDimension(cid, m.w, m.h, m.x, m.y);
+        {
+            float ox = ls.paddingLeft, oy = ls.paddingTop;
+            if (ls.hasOffset) {
+                auto res = [&](float v) { return std::isnan(v) ? ctx.getFloat(Utils::idFromNan(v)) : v; };
+                ox += res(ls.offsetX); oy += res(ls.offsetY);
+            }
+            ctx.setComponentContent(cid, ox, oy, m.isVisible());
+        }
         LTRACE("    storeDim cid=%d w=%.1f h=%.1f x=%.1f y=%.1f\n", cid, m.w, m.h, m.x, m.y);
 
         // Also store inner dimensions (after padding) for canvas content IDs

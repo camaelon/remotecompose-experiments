@@ -11,6 +11,7 @@
 #include "include/encode/SkPngEncoder.h"
 #include "include/core/SkStream.h"
 
+#include <array>
 #include <algorithm>
 #include "rccore/ExpressionEvaluator.h"
 #include <ctime>
@@ -269,10 +270,30 @@ int main(int argc, char* argv[]) {
     // freeze it). The final frame is at animTimeSec, so it should match a single paint there.
     int sweep = 0;
     if (const char* s = std::getenv("RC_ANIM_SWEEP")) sweep = std::max(0, std::atoi(s));
+    // RC_CLICKS="t:x,y;t:x,y" (with RC_ANIM_SWEEP): click at document point (x, y) on the first
+    // swept frame at or past animation time t — to exercise an interactive document headless.
+    std::vector<std::array<float, 3>> clicks;
+    if (const char* c = std::getenv("RC_CLICKS")) {
+        std::string spec(c);
+        for (size_t p0 = 0; p0 < spec.size();) {
+            size_t semi = spec.find(';', p0);
+            std::string tok = spec.substr(p0, semi == std::string::npos ? std::string::npos : semi - p0);
+            float ct, cx, cy;
+            if (std::sscanf(tok.c_str(), "%f:%f,%f", &ct, &cx, &cy) == 3) clicks.push_back({ct, cx, cy});
+            if (semi == std::string::npos) break;
+            p0 = semi + 1;
+        }
+    }
+    size_t nextClick = 0;
     if (sweep > 1 && animTimeSec >= 0.0f) {
         for (int i = 0; i < sweep; i++) {
             float t = animTimeSec * (float)i / (float)(sweep - 1);
             context.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME, t);
+            while (nextClick < clicks.size() && clicks[nextClick][0] <= t) {
+                bool hit = doc.onClick(context, clicks[nextClick][1], clicks[nextClick][2]);
+                std::cerr << "click t=" << t << " (" << clicks[nextClick][1] << "," << clicks[nextClick][2] << ") " << (hit ? "hit" : "miss") << "\n";
+                nextClick++;
+            }
             doc.paint(context, -2);
         }
     } else {
