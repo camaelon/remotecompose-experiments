@@ -9,8 +9,11 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkMatrix.h"
 #include "include/core/SkRect.h"
+#include "include/core/SkPaint.h"
 
 #include <algorithm>
+#include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -21,6 +24,46 @@
 namespace fs = std::filesystem;
 
 namespace rcskia {
+
+// A scripted touch on an embedded document (`events=` on the include): at `t` seconds into the
+// script, `kind` at (x, y) in the document's own coordinates.
+struct TouchEvent { double t = 0; std::string kind; float x = 0, y = 0; };
+
+// "1@click(588,542) wait(2) click(312,542) 9.5@touchdown(10,10) …" — separated by spaces or ';'.
+// `T@` puts an action at T seconds; one without follows the step before it; `wait(s)` moves
+// that cursor on. Returns the events in time order, and the script's length (its last
+// moment: an event's time or the end of a trailing wait), which is its loop period.
+static std::vector<TouchEvent> parseEvents(const std::string& src, double& length) {
+    std::vector<TouchEvent> out;
+    double cursor = 0.0;
+    length = 0.0;
+    size_t i = 0;
+    while (i < src.size()) {
+        while (i < src.size() && (std::isspace((unsigned char)src[i]) || src[i] == ';')) i++;
+        if (i >= src.size()) break;
+        size_t open = src.find('(', i), close = src.find(')', i);
+        if (open == std::string::npos || close == std::string::npos || close < open) break;
+        std::string head = src.substr(i, open - i), args = src.substr(open + 1, close - open - 1);
+        i = close + 1;
+        auto at = head.find('@');
+        if (at != std::string::npos) {
+            cursor = std::strtod(head.substr(0, at).c_str(), nullptr);
+            head = head.substr(at + 1);
+        }
+        for (auto& c : head) c = (char)std::tolower((unsigned char)c);
+        if (head == "wait") {
+            cursor += std::strtod(args.c_str(), nullptr);
+        } else {
+            TouchEvent e;
+            e.t = cursor; e.kind = head;
+            std::sscanf(args.c_str(), "%f , %f", &e.x, &e.y);
+            out.push_back(e);
+        }
+        length = std::max(length, cursor);
+    }
+    std::stable_sort(out.begin(), out.end(), [](const TouchEvent& a, const TouchEvent& b) { return a.t < b.t; });
+    return out;
+}
 
 // A loaded nested document: its bytes, the document, its own context, and a paint context
 // wrapping the host's canvas. Cached per component so we parse + build the font manager once.
@@ -52,6 +95,15 @@ struct RcDocumentHost::Nested {
     // rewrites the file while the player is open, and the retire() on the next slide change
     // has to notice or the player keeps showing the old document indefinitely.
     std::filesystem::path file;
+    // The touch script (`events=`), played on the document's clock: the next event to fire,
+    // the loop it belongs to, and the last touch, drawn as a fading fingertip.
+    std::vector<TouchEvent> script;
+    double scriptLength = 0.0;
+    bool scriptOnce = false;
+    size_t nextEvent = 0;
+    long scriptLoop = 0;
+    float touchX = 0, touchY = 0;
+    double touchAt = -1.0;
     std::filesystem::file_time_type fileTime{};
     std::uintmax_t fileSize = 0;
 
@@ -109,6 +161,8 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     // plays that stretch of the document and holds at `to`; the document needs nothing special,
     // only to animate on its animation time. Implies `persist`. Independent of step/stepid/timeid.
     bool hasWindow = false; double winFrom = 0.0, winTo = -1.0, winSpeed = 1.0;
+    std::string events;                         // a touch script, see parseEvents
+    bool once = false;                          // play it once rather than loop
     std::string path = rest;
     auto hash = rest.find('#');
     if (hash != std::string::npos) {
@@ -120,6 +174,7 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
             auto eq = tok.find('=');
             if (eq == std::string::npos) {
                 if (tok == "persist") persist = true;
+                else if (tok == "once") once = true;
                 else if (!tok.empty()) fit = tok;                              // legacy bare fit
             } else {
                 std::string k = tok.substr(0, eq), v = tok.substr(eq + 1);
@@ -135,6 +190,8 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 else if (k == "to") { hasWindow = true; winTo = std::strtod(v.c_str(), nullptr); persist = true; }
                 else if (k == "speed") winSpeed = std::strtod(v.c_str(), nullptr);
                 else if (k == "gate") gate = std::strtof(v.c_str(), nullptr);
+                else if (k == "events") events = v;
+                else if (k == "once") once = (v != "0" && v != "false" && v != "off");
                 else if (k == "crop") {
                     float t[4];
                     if (std::sscanf(v.c_str(), "%f,%f,%f,%f", &t[0], &t[1], &t[2], &t[3]) == 4)
@@ -192,6 +249,10 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
                 nested->doc->applyDataOperations(*nested->ctx, THEME_DARK);  // load text/bitmaps once
                 nested->ok = true;
             }
+        }
+        if (!events.empty()) {
+            nested->script = parseEvents(events, nested->scriptLength);
+            nested->scriptOnce = once;
         }
         it = mDocs.emplace(key, std::move(nested)).first;
     }
@@ -270,6 +331,35 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
         }
     }
 
+    // The touch script: fire what is due, on the document's own clock, once it has been laid out
+    // (a click needs the components' bounds). Looping restarts it each `scriptLength` seconds.
+    if (!n->script.empty()) {
+        pc->needsRepaint();
+        double local = docTime;
+        long loop = 0;
+        if (!n->scriptOnce && n->scriptLength > 0.0) {
+            loop = static_cast<long>(std::floor(docTime / n->scriptLength));
+            local = docTime - loop * n->scriptLength;
+        }
+        if (loop != n->scriptLoop) { n->scriptLoop = loop; n->nextEvent = 0; }
+        while (n->painted && n->nextEvent < n->script.size() && n->script[n->nextEvent].t <= local) {
+            const TouchEvent& e = n->script[n->nextEvent++];
+            if (e.kind == "touchdown" || e.kind == "down") {
+                n->doc->touchDown(*n->ctx, e.x, e.y);
+            } else if (e.kind == "touchup" || e.kind == "up") {
+                n->doc->touchUp(*n->ctx, e.x, e.y, 0.0f, 0.0f);
+                n->doc->onClick(*n->ctx, e.x, e.y);            // a release is a click, as for a pointer
+            } else if (e.kind == "drag" || e.kind == "move") {
+                n->doc->touchDrag(*n->ctx, e.x, e.y);
+            } else {                                            // click / tap: down, up, click
+                n->doc->touchDown(*n->ctx, e.x, e.y);
+                n->doc->touchUp(*n->ctx, e.x, e.y, 0.0f, 0.0f);
+                n->doc->onClick(*n->ctx, e.x, e.y);
+            }
+            if (e.kind != "touchup" && e.kind != "up") { n->touchX = e.x; n->touchY = e.y; n->touchAt = docTime; }
+        }
+    }
+
     // The core has already translated the canvas so (0,0)..(w,h) is the component box; clip
     // to it and place the fitted document inside, then paint it in its own coordinate space.
     canvas->save();
@@ -286,6 +376,25 @@ bool RcDocumentHost::drawCustom(int componentId, const std::string& config,
     canvas->clipRect(SkRect::MakeWH(docW, docH));
     n->painted = true;
     n->doc->paint(*n->ctx, THEME_DARK);
+    // The scripted finger: a soft disc where the last touch landed, fading over half a second,
+    // so an audience can see what is being pressed.
+    if (n->touchAt >= 0.0) {
+        double age = docTime - n->touchAt;
+        if (age >= 0.0 && age < 0.55) {
+            float a = static_cast<float>(1.0 - age / 0.55);
+            float r = std::max(docW, docH) * 0.03f * (1.0f + 0.25f * static_cast<float>(age / 0.55));
+            SkPaint fill;
+            fill.setAntiAlias(true);
+            fill.setColor(SkColorSetARGB(static_cast<U8CPU>(70 * a), 255, 255, 255));
+            canvas->drawCircle(n->touchX, n->touchY, r, fill);
+            SkPaint ring;
+            ring.setAntiAlias(true);
+            ring.setStyle(SkPaint::kStroke_Style);
+            ring.setStrokeWidth(r * 0.12f);
+            ring.setColor(SkColorSetARGB(static_cast<U8CPU>(200 * a), 255, 255, 255));
+            canvas->drawCircle(n->touchX, n->touchY, r, ring);
+        }
+    }
     canvas->restore();
     return true;
 }

@@ -847,7 +847,7 @@ void SkiaPaintContext::clipRect(float left, float top, float right, float bottom
 void SkiaPaintContext::clipPath(int pathId, int regionOp) {
     auto it = mPaths.find(pathId);
     if (it != mPaths.end()) {
-        mCanvas->clipPath(it->second);
+        mCanvas->clipPath(it->second, /*doAntiAlias=*/true);   // curved clips: no stair-stepped edges
     }
 }
 
@@ -864,7 +864,9 @@ void SkiaPaintContext::roundedClipRect(float w, float h, float topStart, float t
     };
     SkRRect rrect;
     rrect.setRectRadii(SkRect::MakeWH(w, h), radii);
-    mCanvas->clipRRect(rrect);
+    // Anti-aliased: Skia's default is a hard, pixel-aligned clip, which cuts everything inside a
+    // rounded box — its background, its border — along a visible staircase at the corners.
+    mCanvas->clipRRect(rrect, /*doAntiAlias=*/true);
 }
 
 // ── Data ──────────────────────────────────────────────────────────────
