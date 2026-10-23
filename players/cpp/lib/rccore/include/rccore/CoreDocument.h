@@ -11,6 +11,11 @@ class WireBuffer;
 
 class CoreDocument {
 public:
+    // Restart the animation clock: the next paint is time 0. A document painted ahead of time
+    // (a slide prepared off-screen before it is shown) would otherwise count its animation from
+    // that first, unseen paint, and arrive with its opening animation already played.
+    void resetAnimationClock() { mAnimationStartMs = -1; mLastAnimationTime = 0.0f; }
+
     static constexpr int DOCUMENT_API_LEVEL = 8;
 
     CoreDocument() = default;

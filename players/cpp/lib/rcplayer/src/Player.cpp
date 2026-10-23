@@ -23,6 +23,7 @@
 #include <cmath>
 #include <exception>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 
@@ -280,6 +281,7 @@ std::unique_ptr<Prepared> takePrepared(const std::string& path) {
 
 void preloadFile(const std::string& path) {
     if (path.empty() || !isRcExt(getExt(path))) return;
+    if (std::getenv("RC_NO_PRELOAD")) return;      // env: A/B the preparation
     Preloader& p = preloader();
     {
         std::lock_guard<std::mutex> lock(p.m);
@@ -372,6 +374,7 @@ bool loadFile(const std::string& path) {
     if (auto prep = takePrepared(path)) {
         g.fileData = std::move(prep->data);
         g.doc = std::move(prep->doc);
+        g.doc->resetAnimationClock();      // its warm-up paint started it; it starts now
         g.context = std::move(prep->context);
         g.paintCtx = std::move(prep->paintCtx);
         // Its canvas was the worker's surface, which goes with `prep`: point it somewhere that
@@ -384,6 +387,7 @@ bool loadFile(const std::string& path) {
         g.customRouter.rcdoc = &g.rcDocHost;
         g.context->setCustomHost(&g.customRouter);
         g.context->mDebug = g.debug;
+        g.context->setDocLoadTime(0);       // "since load" is since it is shown, taken at next paint
         g.timeVars = rccore::TimeVariables();
         g.animTime = 0.0;
         g.needsRedraw = true;

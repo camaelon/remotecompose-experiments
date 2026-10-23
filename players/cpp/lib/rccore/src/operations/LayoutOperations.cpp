@@ -1971,8 +1971,12 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 
     // Apply offset modifier
     if (ls.hasOffset) {
-        float ox = resolveVar(ls.offsetX, ctx);
-        float oy = resolveVar(ls.offsetY, ctx);
+        // Resolved as ModifierOffset::updateVariables resolves them (any NaN is a reference),
+        // not with resolveVar, which leaves system ids 10–40 unresolved — and a NaN offset
+        // translates the whole component off the page.
+        auto res = [&](float v) { return std::isnan(v) ? ctx.getFloat(Utils::idFromNan(v)) : v; };
+        float ox = res(ls.offsetX);
+        float oy = res(ls.offsetY);
         pc->matrixTranslate(ox, oy);
         ctx.pushTranslate(ox, oy);
     }
