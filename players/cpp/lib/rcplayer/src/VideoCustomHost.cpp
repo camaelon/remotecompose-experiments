@@ -43,6 +43,7 @@ struct VideoOpts {
     float crop[4] = {0.0f, 0.0f, 1.0f, 1.0f};
     double start = 0.0, still = -1.0, until = -1.0;   // "until=U": play [start, U] and hold
     bool loop = true;                         // "loop=0" / "once": play through once and hold
+    bool fill = false;                        // "fit=fill": cover the box (crop the overflow), not letterbox
     std::vector<rczoom::ZoomKey> zooms;     // "zooms=T@x,y,z;…", see rcskia/MediaZoom.h
 };
 static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
@@ -68,6 +69,8 @@ static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
                 o.until = std::strtod(v.c_str(), nullptr);
             } else if (k == "loop") {
                 o.loop = !(v == "0" || v == "false" || v == "off" || v == "no" || v == "once");
+            } else if (k == "fit") {
+                o.fill = (v == "fill" || v == "cover" || v == "crop");
             } else if (k == "zooms") {
                 o.zooms = rczoom::parseZooms(v);
             }
@@ -76,6 +79,22 @@ static std::string parseVideoConfig(const std::string& s, VideoOpts& o) {
         p0 = amp + 1;
     }
     return s.substr(0, hash);
+}
+
+// `fit=fill`: narrow a source crop (fractions) about its centre to the box's aspect, so the
+// aspect-fit draw below covers the box — what a device frame's screen wants of a recording.
+static void coverCrop(float c[4], float srcW, float srcH, float w, float h) {
+    if (srcW <= 0 || srcH <= 0 || w <= 0 || h <= 0) return;
+    float cw = (c[2] - c[0]) * srcW, ch = (c[3] - c[1]) * srcH;
+    if (cw <= 0 || ch <= 0) return;
+    float box = w / h;
+    if (cw / ch > box) {
+        float nw = ch * box / srcW, mid = (c[0] + c[2]) * 0.5f;
+        c[0] = mid - nw * 0.5f; c[2] = mid + nw * 0.5f;
+    } else {
+        float nh = cw / box / srcH, mid = (c[1] + c[3]) * 0.5f;
+        c[1] = mid - nh * 0.5f; c[3] = mid + nh * 0.5f;
+    }
 }
 
 // An image aspect-fit-centred into (0,0)..(w,h) through a source crop: how a playing frame is
@@ -145,6 +164,7 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
         sk_sp<SkImage> img = frameAt(o.still);
         if (!img) return false;
         float zc[4]; rczoom::zoomCrop(o.zooms, o.still, o.crop, zc);
+        if (o.fill) coverCrop(zc, (float)img->width(), (float)img->height(), w, h);
         drawFitted(skpc->canvas(), img, w, h, zc);
         return true;
     }
@@ -177,7 +197,10 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
             if (!done) {
                 float zc[4];
                 rczoom::zoomCrop(o.zooms, o.start, o.crop, zc);
-                if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, zc);
+                if (sk_sp<SkImage> img = frameAt(o.start)) {
+                    if (o.fill) coverCrop(zc, (float)img->width(), (float)img->height(), w, h);
+                    drawFitted(skpc->canvas(), img, w, h, zc);
+                }
                 pc->needsRepaint();
                 return true;
             }
@@ -194,6 +217,8 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     // pulled last frame — a frame's lag, invisible at the speed a zoom moves).
     float zc[4];
     rczoom::zoomCrop(o.zooms, it->second->hasFrame() ? it->second->frameTimeSec() : o.start, o.crop, zc);
+    float zcStill[4] = {zc[0], zc[1], zc[2], zc[3]};
+    if (o.fill) coverCrop(zc, (float)it->second->width(), (float)it->second->height(), w, h);
     it->second->paint(skpc->canvas(), static_cast<int>(w), static_cast<int>(h),
                        zc[0], zc[1], zc[2], zc[3]);
     // Until AVFoundation hands over its first frame (a moment after the slide opens, or never
@@ -201,7 +226,10 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     // black box, and a still slide followed by its playing slide reads as one picture
     // starting to move.
     if (!it->second->hasFrame()) {
-        if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, zc);
+        if (sk_sp<SkImage> img = frameAt(o.start)) {
+            if (o.fill) coverCrop(zcStill, (float)img->width(), (float)img->height(), w, h);
+            drawFitted(skpc->canvas(), img, w, h, o.fill ? zcStill : zc);
+        }
     }
     return true;
 }
