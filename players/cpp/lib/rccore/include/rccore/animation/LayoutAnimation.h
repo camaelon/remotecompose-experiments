@@ -43,6 +43,7 @@ struct AnimState {
     bool animating = false;
     ComponentMeasure from, to;
     double startTime = 0;          // ID_ANIMATION_TIME seconds when the animation began
+    double lastChange = -1e9;      // when the destination last changed (continuous drivers)
     AnimSpecParams spec;
 };
 
@@ -99,6 +100,18 @@ inline bool animUpdate(LayoutAnimStore& store, int cid, ComponentMeasure& target
     // this: it holds st.to, which does compare equal.)
     const ComponentMeasure& destination = st.animating ? st.to : st.live;
     if (!target.sameBounds(destination)) {
+        // A destination that moves again within a moment of the last move is being driven —
+        // a width from an expression on the clock, say. Tweening each step restarts the
+        // animation every frame at progress 0, which holds the component still forever; follow
+        // the driver instead. Only a change that stands alone (a click, a state flip) animates.
+        const bool driven = (timeSec - st.lastChange) < 0.1 && target.isVisible() == destination.isVisible();
+        st.lastChange = timeSec;
+        if (driven) {
+            st.animating = false;
+            st.live = target;
+            target.alpha = target.isVisible() ? 1.0f : 0.0f;
+            return false;
+        }
         st.from = st.live;
         st.to = target;
         st.startTime = timeSec;

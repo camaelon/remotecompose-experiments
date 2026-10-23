@@ -129,6 +129,10 @@ struct LayoutState {
     bool hasOffset = false;
     Operation* ripple = nullptr;     // the component's ModifierRipple, if it has one
     Operation* animSpec = nullptr;   // its ANIMATION_SPEC modifier (14), if it has one
+    // MODIFIER_COLLAPSIBLE_PRIORITY (235): how long it stays in a collapsible row/column.
+    bool hasCollapsePriority = false;
+    int collapseOrientation = 0;     // 0 horizontal, 1 vertical
+    float collapsePriority = 0.0f;
 
     // GraphicsLayer opacity (attrId 11); may be a NaN-encoded expression variable.
     float glAlpha = 1.0f;

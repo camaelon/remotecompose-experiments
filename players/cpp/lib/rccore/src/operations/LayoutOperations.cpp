@@ -11,6 +11,7 @@
 #include "rccore/CoreDocument.h"
 
 #include <algorithm>
+#include <limits>
 #include <cmath>
 #include <cstdio>
 #include <memory>
@@ -243,6 +244,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
     ls.padBeforeHeight = 0;
     ls.ripple = nullptr;
     ls.animSpec = nullptr;
+    ls.hasCollapsePriority = false;
     bool sawWidth = false;
     bool sawHeight = false;
 
@@ -259,7 +261,10 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 case 16: { // ModifierWidth
                     auto* mw = static_cast<ModifierWidth*>(child);
                     ls.widthType = static_cast<DimType>(mw->type);
-                    ls.widthValue = mw->oWidth;
+                    // An exact width keeps its variable reference, resolved at each measure:
+                    // inflate runs once, so the resolved oWidth would freeze a width driven by
+                    // an expression at whatever it was on the first frame.
+                    ls.widthValue = (mw->type == 0 || mw->type == 6) ? mw->width : mw->oWidth;
                     sawWidth = true;
                     break;
                 }
@@ -267,7 +272,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     sawHeight = true;
                     auto* mh = static_cast<ModifierHeight*>(child);
                     ls.heightType = static_cast<DimType>(mh->type);
-                    ls.heightValue = mh->oHeight;
+                    ls.heightValue = (mh->type == 0 || mh->type == 6) ? mh->height : mh->oHeight;   // see width
                     break;
                 }
                 case 58: { // ModifierPadding
@@ -336,6 +341,13 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 case 14: // AnimationSpec
                     ls.animSpec = child;
                     break;
+                case 235: { // ModifierCollapsiblePriority
+                    auto* cp = static_cast<ModifierCollapsiblePriority*>(child);
+                    ls.hasCollapsePriority = true;
+                    ls.collapseOrientation = cp->orientation;
+                    ls.collapsePriority = cp->priority;
+                    break;
+                }
                 case 221: { // ModifierOffset
                     auto* m = static_cast<ModifierOffset*>(child);
                     ls.hasOffset = true;
@@ -482,6 +494,10 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
 // cache a layout that is still moving.
 thread_local bool sSawStateLayout = false;
 thread_local bool sSawActiveAnim = false;
+
+static void collapseChildren(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
+                             float avail, int axis);
+static void unhide(Operation* child, RemoteContext& ctx, MeasurePass& measure);
 
 static float resolveVar(float v, const RemoteContext& ctx) {
     if (Utils::isVariable(v)) {
@@ -1201,11 +1217,15 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             // Row: simple sequential pass - no special weight handling here
             // (weight redistribution happens in layoutManager positioning pass)
             float mw = childMaxW;
+            if (oc == 230) for (auto* child : ls.layoutChildren) unhide(child, ctx, measure);
             for (auto* child : ls.layoutChildren) {
-                measureComponent(child, pc, ctx, 0, mw, 0, childMaxH, measure);
+                // A collapsible row measures each child at its own width, then drops what
+                // does not fit (rather than squeezing it into what is left).
+                measureComponent(child, pc, ctx, 0, oc == 230 ? 1e9f : mw, 0, childMaxH, measure);
                 auto& cm = measure.get(getComponentId(child));
                 if (!cm.isGone()) mw -= cm.w;
             }
+            if (oc == 230) collapseChildren(ls, ctx, measure, childMaxW, 0);
         } else if (oc == 204 || oc == 233) {
             // Column: handle WEIGHT children (matching TS Column.computeSize)
             float totalWeights = 0;
@@ -1251,8 +1271,31 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                     if (!cm.isGone()) mh -= cm.h;
                 }
             }
+            if (oc == 233) {
+                // A collapsible column: each child at its own height, then drop what overflows.
+                for (auto* child : ls.layoutChildren) {
+                    unhide(child, ctx, measure);
+                    measureComponent(child, pc, ctx, 0, childMaxW, 0, 1e9f, measure);
+                }
+                collapseChildren(ls, ctx, measure, childMaxH, 1);
+            }
+        } else if (oc == 176) {
+            // FitBox (FitBoxLayout, priority fix): the first child, in order, whose own size fits
+            // the box is shown; every other child is GONE.
+            bool found = false;
+            for (auto* child : ls.layoutChildren) {
+                unhide(child, ctx, measure);
+                measureComponent(child, pc, ctx, 0, 1e9f, 0, 1e9f, measure);
+                auto& cm = measure.get(getComponentId(child));
+                if (!found && !cm.isGone() && cm.w <= childMaxW + 0.5f && cm.h <= childMaxH + 0.5f) {
+                    found = true;
+                    measureComponent(child, pc, ctx, 0, childMaxW, 0, childMaxH, measure);
+                } else {
+                    cm.visibility = VIS_GONE;
+                }
+            }
         } else {
-            // Box/Canvas/FitBox/FlowLayout: simple re-measure
+            // Box/Canvas/FlowLayout: simple re-measure
             ComponentMeasure parentM;
             parentM.w = childMaxW;
             parentM.h = childMaxH;
@@ -1911,6 +1954,46 @@ static void paintBackground(const LayoutState& ls, PaintContext* pc, RemoteConte
     pc->applyPaint(paint);
     pc->drawRect(0, 0, w, h);
     pc->restorePaint();
+}
+
+// A child a collapsible layout or a fit box hid last frame comes back visible before it is
+// measured again — the measure is cached across frames, and its own visibility modifier (if
+// any) is re-applied by the measure itself.
+static void unhide(Operation* child, RemoteContext& ctx, MeasurePass& measure) {
+    int cid = getComponentId(child);
+    if (cid == -1) return;
+    auto& cls = getLS(ctx, child);
+    inflateLayout(child, cls);
+    if (cls.visibilityId < 0) measure.get(cid).visibility = VIS_VISIBLE;
+}
+
+// ── Collapsible row / column ─────────────────────────────────────────
+// CollapsibleRowLayout.computeVisibleChildren: the children, already measured at their own
+// size, are taken highest priority first (a child without a priority for this axis counts as
+// the highest; ties keep document order) and kept while they fit in `avail`; the first that
+// does not fit, and every one after it, is GONE. Spacing is not counted, as in the reference.
+static void collapseChildren(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
+                             float avail, int axis) {
+    std::vector<std::pair<float, Operation*>> kids;
+    for (auto* child : ls.layoutChildren) {
+        auto& cls = getLS(ctx, child);
+        float p = (cls.hasCollapsePriority && cls.collapseOrientation == axis)
+                      ? cls.collapsePriority : std::numeric_limits<float>::max();
+        kids.push_back({p, child});
+    }
+    std::stable_sort(kids.begin(), kids.end(),
+                     [](const auto& a, const auto& b) { return a.first > b.first; });
+    float used = 0.0f;
+    bool overflow = false;
+    for (auto& [p, child] : kids) {
+        int cid = getComponentId(child);
+        if (!measure.contains(cid)) continue;
+        auto& cm = measure.get(cid);
+        if (overflow || cm.isGone()) { cm.visibility = VIS_GONE; continue; }
+        float size = axis == 0 ? cm.w : cm.h;
+        if (used + size > avail + 0.5f) { cm.visibility = VIS_GONE; overflow = true; }
+        else used += size;
+    }
 }
 
 // ── Paint ripple modifier ────────────────────────────────────────────
