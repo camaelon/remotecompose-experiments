@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <thread>
 #include <vector>
 
 #include "include/core/SkCanvas.h"
@@ -20,6 +21,8 @@ void VideoCustomHost::reset() {
     mPlayers.clear();
     mFailed.clear();
     mStills.clear();
+    mOpening.clear();      // the threads keep their own reference; nothing here waits for them
+    mDecoding.clear();
 }
 
 void VideoCustomHost::setPaused(bool paused) {
@@ -103,13 +106,33 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     auto* skpc = static_cast<rcskia::SkiaPaintContext*>(pc);
     if (!skpc || !skpc->canvas()) return false;
 
-    // The clip's frame at `t`, decoded once and kept.
+    // The clip's frame at `t`, decoded once and kept. Async, it is null until the background
+    // decode lands; the frame asks for the next one meanwhile so the result is picked up.
     auto frameAt = [&](double t) -> sk_sp<SkImage> {
         std::string key = full.string() + "@" + std::to_string(t);
         auto si = mStills.find(key);
-        if (si == mStills.end())
-            si = mStills.emplace(key, AvfVideoPlayer::ExtractFrameAt(full.string(), t)).first;
-        return si->second;
+        if (si != mStills.end()) return si->second;
+        if (!mAsync) return mStills.emplace(key, AvfVideoPlayer::ExtractFrameAt(full.string(), t)).first->second;
+        auto& job = mDecoding[key];
+        if (!job) {
+            job = std::make_shared<Job<sk_sp<SkImage>>>();
+            std::thread([job, file = full.string(), t] {
+                sk_sp<SkImage> img = AvfVideoPlayer::ExtractFrameAt(file, t);
+                std::lock_guard<std::mutex> lock(job->m);
+                job->value = std::move(img);
+                job->done = true;
+            }).detach();
+        }
+        {
+            std::lock_guard<std::mutex> lock(job->m);
+            if (job->done) {
+                sk_sp<SkImage> img = job->value;
+                mDecoding.erase(key);
+                return mStills.emplace(key, img).first->second;
+            }
+        }
+        pc->needsRepaint();
+        return nullptr;
     };
 
     // A still: the clip's frame at `still`, frozen. No player is opened, so nothing plays and
@@ -126,8 +149,37 @@ bool VideoCustomHost::drawCustom(int componentId, const std::string& config,
     if (it == mPlayers.end()) {
         auto f = mFailed.find(componentId);
         if (f != mFailed.end() && f->second) return false;   // known-bad, don't retry
-        auto player = AvfVideoPlayer::Open(full.string(), o.start, o.loop, o.until);
-        if (!player) { mFailed[componentId] = true; return false; }
+        std::unique_ptr<AvfVideoPlayer> player;
+        if (!mAsync) {
+            player = AvfVideoPlayer::Open(full.string(), o.start, o.loop, o.until);
+            if (!player) { mFailed[componentId] = true; return false; }
+        } else {
+            // Opened on a background thread; until it is, the frame playback starts on stands in.
+            auto& job = mOpening[componentId];
+            if (!job) {
+                job = std::make_shared<Job<std::unique_ptr<AvfVideoPlayer>>>();
+                std::thread([job, file = full.string(), start = o.start, loop = o.loop, until = o.until] {
+                    auto opened = AvfVideoPlayer::Open(file, start, loop, until);
+                    std::lock_guard<std::mutex> lock(job->m);
+                    job->value = std::move(opened);
+                    job->done = true;
+                }).detach();
+            }
+            bool done = false;
+            {
+                std::lock_guard<std::mutex> lock(job->m);
+                if (job->done) { player = std::move(job->value); done = true; }
+            }
+            if (!done) {
+                float zc[4];
+                rczoom::zoomCrop(o.zooms, o.start, o.crop, zc);
+                if (sk_sp<SkImage> img = frameAt(o.start)) drawFitted(skpc->canvas(), img, w, h, zc);
+                pc->needsRepaint();
+                return true;
+            }
+            mOpening.erase(componentId);
+            if (!player) { mFailed[componentId] = true; return false; }
+        }
         if (mPaused) player->setPaused(true);
         it = mPlayers.emplace(componentId, std::move(player)).first;
     }
