@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <string>
 #include <memory>
@@ -68,6 +69,12 @@ public:
     static constexpr int ID_FONT_SIZE           = 33;
     static constexpr int ID_DAY_OF_YEAR         = 34;
     static constexpr int ID_YEAR                = 35;
+    // Proposed, not yet in androidx (see m5Tab docs/RC_SYSTEM_VARIABLES.md): the last four
+    // ids below the first document id (42), for the most universal device state.
+    static constexpr int ID_BATTERY_LEVEL       = 38;   // 0..100 %, -1 = no battery / unknown
+    static constexpr int ID_POWER_STATE         = 39;   // 0 battery, 1 charging, 2 external power, -1 unknown
+    static constexpr int ID_MEMORY_FREE         = 40;   // free memory in MB
+    static constexpr int ID_NETWORK_SIGNAL      = 41;   // 0..100 %, 0 = offline
 
     // Mode
     ContextMode getMode() const { return mMode; }
@@ -88,6 +95,17 @@ public:
     // custom component draws nothing.
     void setCustomHost(CustomComponentHost* h) { mCustomHost = h; }
     CustomComponentHost* getCustomHost() { return mCustomHost; }
+
+    // Host actions (RemoteContext.runAction / runNamedAction in the reference). HOST_ACTION
+    // (209) and HostActionMetadata (216) call `hostAction` with an id and a metadata string;
+    // HostNamedAction (210) calls `hostNamedAction` with the name, the value's type
+    // (-1 none, 0 float, 1 int, 2 string, 3 float array) and the value as text.
+    std::function<void(int id, const std::string& metadata)> hostAction;
+    std::function<void(const std::string& name, int type, const std::string& value)> hostNamedAction;
+    void runAction(int id, const std::string& metadata) { if (hostAction) hostAction(id, metadata); }
+    void runNamedAction(const std::string& name, int type, const std::string& value) {
+        if (hostNamedAction) hostNamedAction(name, type, value);
+    }
 
     // Animation time (seconds since animation start)
     float getAnimationTime() const { return getFloat(ID_ANIMATION_TIME); }
@@ -233,6 +251,8 @@ public:
 
     // Text store (delegated to paint context for actual storage)
     void loadText(int id, const std::string& text);
+    /** Set a text from the host and make it stick (RemoteComposeState.overrideData). */
+    void overrideText(int id, const std::string& text);
     std::string getText(int id) const;
 
     // Bitmap store (delegated to paint context)
@@ -376,6 +396,7 @@ private:
     std::unordered_map<int, int> mColors;
     std::unordered_set<int> mColorOverrides;  // IDs overridden by system theme defaults
     std::unordered_set<int> mFloatOverrides;
+    std::unordered_set<int> mTextOverrides;
     std::unordered_set<int> mIntegerOverrides;
     std::unordered_map<int, std::string> mTexts;
     std::unordered_map<int, std::vector<float>> mFloatLists;

@@ -1153,7 +1153,13 @@ class Parser {
             const a = item;
             const t = String(a.type ?? "").toLowerCase();
             const target = a.targetId !== undefined ? a.targetId : a.target;
-            if (t === "hostnamedaction" || t === "hostmetadataaction") {
+            if (t === "hostaction") {
+                // {"type": "hostAction", "id": 0, "metadata": "backlight=0.5"}; EXTENSION.
+                const actionId = Number(a.id ?? 0);
+                const metadata = "metadata" in a ? String(a.metadata) : null;
+                actions.push((w2) => (0, Writer_1.hostAction)(actionId, metadata === null ? -1 : w2.addText(metadata))(w2));
+            }
+            else if (t === "hostnamedaction" || t === "hostmetadataaction") {
                 if (!("name" in a)) {
                     throw new NotImplementedComponent(`${t} without a name is not supported yet`);
                 }
@@ -2028,6 +2034,16 @@ class Parser {
         if ("variables" in section) {
             for (const [name, cfg, value] of eachResource(section.variables)) {
                 const named = cfg ? Boolean(cfg.export) : false;
+                if (cfg && String(cfg.type ?? "").toLowerCase() === "string") {
+                    // {"name": "wifiSsid", "type": "string", "value": "", "export": true};
+                    // EXTENSION. Held as a plain float carrying the text id, as for
+                    // textFromFloat, so "@wifiSsid" works wherever text is expected.
+                    const text = String(cfg.value ?? "");
+                    const id = named ? this.writer.addNamedString(name, text)
+                        : this.writer.addText(text);
+                    this.variables.set(name, (0, WireBuffer_1.floatToRawIntBits)(id));
+                    continue;
+                }
                 let val = value;
                 if (val && typeof val === "object" && "value" in val && !("anim" in val)) {
                     val = val.value;
