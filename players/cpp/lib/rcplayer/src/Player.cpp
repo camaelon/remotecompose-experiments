@@ -4,6 +4,8 @@
 
 #include "rccore/WireBuffer.h"
 
+#include "include/core/SkCanvas.h"
+
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkStream.h"
 #include "include/core/SkSurface.h"
@@ -14,6 +16,9 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
 #include <cctype>
 #include <cmath>
 #include <exception>
@@ -165,6 +170,133 @@ bool readFileBytes(const std::string& name, std::vector<uint8_t>& out) {
     return !out.empty();
 }
 
+// ── Next-slide preparation ───────────────────────────────────────────
+
+namespace {
+
+struct Prepared {
+    std::string path;
+    std::uintmax_t size = 0;                 // the file as it was read, to notice a rebuild
+    fs::file_time_type mtime{};
+    std::vector<uint8_t> data;               // the document's bytes; it reads from them
+    std::unique_ptr<rccore::CoreDocument> doc;
+    std::unique_ptr<rccore::RemoteContext> context;
+    std::unique_ptr<rcskia::SkiaPaintContext> paintCtx;
+    sk_sp<SkSurface> surface;                // the paint context's canvas until adopted
+};
+
+struct Preloader {
+    std::mutex m;
+    std::condition_variable cv;
+    std::unique_ptr<Prepared> request;       // waiting for the worker
+    std::unique_ptr<Prepared> ready;         // done, waiting to be adopted
+    std::string working;                     // the path the worker has in hand
+    std::thread thread;
+    bool started = false;
+};
+
+Preloader& preloader() {
+    static Preloader* p = new Preloader();   // never destroyed: the worker may outlive main
+    return *p;
+}
+
+// On the worker: everything loadFile + the first paint would do, against a private surface and
+// with no custom-component host (the live video/web/document hosts are not shared with it).
+void prepare(Prepared& job) {
+    job.doc = std::make_unique<rccore::CoreDocument>();
+    rccore::WireBuffer buffer(job.data.data(), job.data.size());
+    bool parsed = false;
+    try {
+        parsed = job.doc->initFromBuffer(buffer);
+    } catch (const std::exception&) {}
+    if (!parsed) { job.doc.reset(); return; }
+    float dw = static_cast<float>(job.doc->getWidth()), dh = static_cast<float>(job.doc->getHeight());
+    if (dw <= 0 || dh <= 0) { dw = 1600; dh = 900; }
+    // A quarter-size surface: what is being warmed is the layout and the decoded images, and
+    // the layout is done at the design size whatever the canvas.
+    const int sw = std::max(1, static_cast<int>(dw / 4)), sh = std::max(1, static_cast<int>(dh / 4));
+    job.surface = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(sw, sh));
+    if (!job.surface) { job.doc.reset(); return; }
+    job.context = std::make_unique<rccore::RemoteContext>();
+    job.paintCtx = std::make_unique<rcskia::SkiaPaintContext>(*job.context, job.surface->getCanvas());
+    job.context->setPaintContext(job.paintCtx.get());
+    job.context->setDocument(job.doc.get());
+    job.context->mWidth = dw;
+    job.context->mHeight = dh;
+    job.doc->registerListeners(*job.context);
+    job.doc->applyDataOperations(*job.context);
+    rccore::TimeVariables tv;
+    tv.updateTime(*job.context, 0.0, 0.0);
+    SkCanvas* canvas = job.surface->getCanvas();
+    canvas->save();
+    canvas->scale(static_cast<float>(sw) / dw, static_cast<float>(sh) / dh);
+    job.doc->paint(*job.context);
+    canvas->restore();
+}
+
+void workerLoop() {
+    Preloader& p = preloader();
+    for (;;) {
+        std::unique_ptr<Prepared> job;
+        {
+            std::unique_lock<std::mutex> lock(p.m);
+            p.cv.wait(lock, [&] { return p.request != nullptr; });
+            job = std::move(p.request);
+            p.working = job->path;
+        }
+        prepare(*job);
+        std::lock_guard<std::mutex> lock(p.m);
+        p.working.clear();
+        if (job->doc && !p.request) p.ready = std::move(job);   // a newer request supersedes it
+    }
+}
+
+bool fileStamp(const std::string& path, std::uintmax_t& size, fs::file_time_type& mtime) {
+    std::error_code ec;
+    size = fs::file_size(path, ec);
+    if (ec) return false;
+    mtime = fs::last_write_time(path, ec);
+    return !ec;
+}
+
+// The prepared document for `path`, if it is ready and the file has not changed since.
+std::unique_ptr<Prepared> takePrepared(const std::string& path) {
+    Preloader& p = preloader();
+    std::unique_ptr<Prepared> got;
+    {
+        std::lock_guard<std::mutex> lock(p.m);
+        if (!p.ready || p.ready->path != path) return nullptr;
+        got = std::move(p.ready);
+    }
+    if (!g.zip) {
+        std::uintmax_t size = 0;
+        fs::file_time_type mtime{};
+        if (!fileStamp(path, size, mtime) || size != got->size || mtime != got->mtime) return nullptr;
+    }
+    return got;
+}
+
+}  // namespace
+
+void preloadFile(const std::string& path) {
+    if (path.empty() || !isRcExt(getExt(path))) return;
+    Preloader& p = preloader();
+    {
+        std::lock_guard<std::mutex> lock(p.m);
+        if ((p.ready && p.ready->path == path) || p.working == path
+            || (p.request && p.request->path == path)) return;     // already in hand
+    }
+    auto job = std::make_unique<Prepared>();
+    job->path = path;
+    if (!g.zip && !fileStamp(path, job->size, job->mtime)) return;
+    if (!readFileBytes(path, job->data) || job->data.empty()) return;
+    std::lock_guard<std::mutex> lock(p.m);
+    p.request = std::move(job);
+    p.ready.reset();
+    if (!p.started) { p.thread = std::thread(workerLoop); p.thread.detach(); p.started = true; }
+    p.cv.notify_one();
+}
+
 bool loadFile(const std::string& path) {
     // Drop any state left over from the previous file so we start clean. Embedded web
     // views persist across slides (hidden when off-slide via the frame bracket); only
@@ -231,6 +363,29 @@ bool loadFile(const std::string& path) {
         }
         if (g.paused) player->setPaused(true);
         g.avfPlayer = std::move(player);
+        g.needsRedraw = true;
+        return true;
+    }
+
+    // Prepared ahead (preloadFile): already parsed, its data pass run, laid out and painted
+    // once — adopt it, with the live hosts, as initDocument would have built it.
+    if (auto prep = takePrepared(path)) {
+        g.fileData = std::move(prep->data);
+        g.doc = std::move(prep->doc);
+        g.context = std::move(prep->context);
+        g.paintCtx = std::move(prep->paintCtx);
+        // Its canvas was the worker's surface, which goes with `prep`: point it somewhere that
+        // lives until renderFrame hands it the window's canvas.
+        static sk_sp<SkSurface> parked = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(1, 1));
+        g.paintCtx->setCanvas(parked->getCanvas());
+        g.customRouter.video = &g.videoHost;
+        g.customRouter.web = &g.webHost;
+        g.customRouter.camera = &g.cameraHost;
+        g.customRouter.rcdoc = &g.rcDocHost;
+        g.context->setCustomHost(&g.customRouter);
+        g.context->mDebug = g.debug;
+        g.timeVars = rccore::TimeVariables();
+        g.animTime = 0.0;
         g.needsRedraw = true;
         return true;
     }

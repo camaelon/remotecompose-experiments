@@ -121,7 +121,7 @@ public:
     void loadFloat(int id, float value) {
         if (mFloatOverrides.count(id)) return;
         auto it = mFloats.find(id);
-        if ((it == mFloats.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
+        if ((it == mFloats.end() || it->second != value) && !isClockVar(id) && !isPaintOnlyVar(id)) mLayoutEpoch++;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
         notifyListeners(id);
@@ -133,7 +133,7 @@ public:
      */
     void overrideFloat(int id, float value) {
         auto it = mFloats.find(id);
-        if ((it == mFloats.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
+        if ((it == mFloats.end() || it->second != value) && !isClockVar(id) && !isPaintOnlyVar(id)) mLayoutEpoch++;
         mFloats[id] = value;
         mIntegers[id] = static_cast<int>(value);
         mFloatOverrides.insert(id);
@@ -147,7 +147,7 @@ public:
     void loadInteger(int id, int value) {
         if (mIntegerOverrides.count(id)) return;
         auto it = mIntegers.find(id);
-        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
+        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id) && !isPaintOnlyVar(id)) mLayoutEpoch++;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
         notifyListeners(id);
@@ -155,7 +155,7 @@ public:
     /** As overrideFloat, for integers. */
     void overrideInteger(int id, int value) {
         auto it = mIntegers.find(id);
-        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id)) mLayoutEpoch++;
+        if ((it == mIntegers.end() || it->second != value) && !isClockVar(id) && !isPaintOnlyVar(id)) mLayoutEpoch++;
         mIntegers[id] = value;
         mFloats[id] = static_cast<float>(value);
         mIntegerOverrides.insert(id);
@@ -311,7 +311,23 @@ public:
     }
 
     // Clear all listener registrations (for re-init).
-    void clearListeners() { mVarListeners.clear(); mTouchListeners.clear(); }
+    void clearListeners() { mVarListeners.clear(); mTouchListeners.clear(); mPaintOnlyVars.clear(); mClassified = false; }
+
+    // Variables that only paint-time operations read — draw/matrix/clip/paint/path operations,
+    // an offset or a graphicsLayer modifier, or an expression whose own result is one of
+    // these. A change to one cannot move or resize anything, so it does not invalidate the
+    // layout cache (mLayoutEpoch): a push transition, a fade or a canvas animation over a static
+    // layout then re-paints without re-measuring every text on the slide. Computed once the
+    // listeners are registered (CoreDocument::registerListeners); anything read by an operation
+    // not known to be paint-only stays a layout input.
+    void classifyPaintOnlyVars();
+    bool isPaintOnlyVar(int id) const {
+        if (!mClassified) return false;
+        // Nothing reads it — the pointer position in a document without touch, say: a change
+        // to it cannot reach the layout either.
+        if (mVarListeners.find(id) == mVarListeners.end()) return true;
+        return mPaintOnlyVars.count(id) != 0;
+    }
 
     // ── Touch listener system ────────────────────────────────────────
     void addTouchListener(Operation* op) { mTouchListeners.push_back(op); }
@@ -373,6 +389,8 @@ private:
 
     // Variable → list of operations listening to it
     std::unordered_map<int, std::vector<Operation*>> mVarListeners;
+    std::unordered_set<int> mPaintOnlyVars;
+    bool mClassified = false;                 // classifyPaintOnlyVars has run for these listeners
 
     // Operations registered as touch listeners (e.g. TouchExpressionOp)
     std::vector<Operation*> mTouchListeners;

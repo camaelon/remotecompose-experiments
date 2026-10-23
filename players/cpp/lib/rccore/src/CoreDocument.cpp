@@ -122,6 +122,7 @@ void CoreDocument::prunePatternDefinitions(
 void CoreDocument::registerListeners(RemoteContext& context) {
     context.clearListeners();
     registerListenersRecursive(context, mOperations);
+    if (!std::getenv("RC_NO_PAINT_ONLY")) context.classifyPaintOnlyVars();   // env: A/B the layout cache
 }
 
 void CoreDocument::registerListenersRecursive(

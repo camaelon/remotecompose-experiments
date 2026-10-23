@@ -187,6 +187,15 @@ bool loadFile(const std::string& path);
 // Load g.files[g.currentIndex] (wrapping the index) and start its voice-over.
 void loadCurrentFile();
 
+// Prepare an .rc slide ahead of time, on a worker thread: parse it, build its context, run its
+// data pass and paint it once off-screen at its design size, so its images are decoded and its
+// layout (every text measured) is cached. The next loadFile() of that same file adopts it and
+// skips all of that — a slide program goes to the next slide, so the player prepares it while
+// the current one is being talked over. One preparation at a time: a new request replaces an
+// older one. Anything other than an .rc document is ignored. The file's bytes are read here,
+// on the caller's thread (a zip archive is not shared with the worker).
+void preloadFile(const std::string& path);
+
 // ── Voice-over ───────────────────────────────────────────────────────
 
 void stopVoiceOver();

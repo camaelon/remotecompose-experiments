@@ -330,8 +330,10 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 case 221: { // ModifierOffset
                     auto* m = static_cast<ModifierOffset*>(child);
                     ls.hasOffset = true;
-                    ls.offsetX = m->oX;
-                    ls.offsetY = m->oY;
+                    // The variable itself (or the constant), resolved at paint: with the layout
+                    // cached across frames, a resolved value would hold the offset still.
+                    ls.offsetX = m->x;
+                    ls.offsetY = m->y;
                     break;
                 }
                 case 224: { // GraphicsLayerModifier — opacity + blur

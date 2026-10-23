@@ -1,4 +1,5 @@
 #include "rccore/RemoteContext.h"
+#include "rccore/operations/AdvancedOperations.h"
 #include "rccore/PaintContext.h"
 #include "rccore/Operation.h"
 #include "rccore/CoreDocument.h"
@@ -344,6 +345,46 @@ void RemoteContext::listensTo(int variableId, Operation* op) {
     if (std::find(listeners.begin(), listeners.end(), op) == listeners.end()) {
         listeners.push_back(op);
     }
+}
+
+// The operations that read a variable only to draw: a change to what they read cannot change
+// what anything measures. Names, as Operation::name() spells them.
+static bool paintTimeConsumer(const std::string& n) {
+    if (n.rfind("DRAW_", 0) == 0 || n.rfind("MATRIX_", 0) == 0) return true;
+    static const std::unordered_set<std::string> names = {
+        "DrawContent", "DrawBitmapFontText", "CLIP_PATH", "CLIP_RECT", "PAINT_VALUES",
+        "PATH_DATA", "PathData", "PATH_CREATE", "PathAppend", "PATH_TWEEN", "PATH_COMBINE",
+        "PathExpression", "MODIFIER_OFFSET", "GraphicsLayerModifier",
+    };
+    return names.count(n) != 0;
+}
+
+void RemoteContext::classifyPaintOnlyVars() {
+    // Start from every listened-to variable and strike out any read by something that is not
+    // paint-time, until nothing changes. An expression passes its reader's verdict through:
+    // it is paint-only exactly when the variable it writes is.
+    std::unordered_set<int> paintOnly;
+    for (const auto& [id, listeners] : mVarListeners)
+        if (!listeners.empty()) paintOnly.insert(id);
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (auto it = paintOnly.begin(); it != paintOnly.end();) {
+            bool ok = true;
+            for (Operation* op : mVarListeners[*it]) {
+                const std::string n = op->name();
+                if (paintTimeConsumer(n)) continue;
+                if (n == "ANIMATED_FLOAT") {
+                    auto* fe = dynamic_cast<FloatExpression*>(op);
+                    if (fe && fe->id != *it && paintOnly.count(fe->id)) continue;
+                }
+                ok = false;
+                break;
+            }
+            if (ok) { ++it; } else { it = paintOnly.erase(it); changed = true; }
+        }
+    }
+    mPaintOnlyVars = std::move(paintOnly);
+    mClassified = true;
 }
 
 void RemoteContext::notifyListeners(int variableId) {
