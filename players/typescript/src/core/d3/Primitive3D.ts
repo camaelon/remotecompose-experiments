@@ -292,7 +292,7 @@ export function plane(width: number, height: number,
         fround(cx - hw), fa(cy, hh), cz,
     ]);
     const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]);
-    const indices = new Int32Array([0, 1, 2, 0, 2, 3]);   // CCW from +Z
+    const indices = new Int32Array([0, 1, 2, 2, 3, 0]);   // CCW from +Z, diagonal last in both
     const uv = uvm !== 0 ? new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]) : null;
     return { verts, normals, indices, uv };
 }
@@ -335,8 +335,15 @@ export function cube(dx: number, dy: number, dz: number,
                 qp += 2;
             }
         }
+        // Both triangles put the shared diagonal LAST, matching every other quad
+        // primitive here (see lathe: "edge0 = around the revolution, edge1 = along the
+        // profile, diagonal last"). The second triangle is the cyclic rotation
+        // (base, base+2, base+3) -> (base+2, base+3, base), so winding and normals are
+        // untouched; only which edge index the diagonal occupies changes. Before this it
+        // sat at edge 0 in the second triangle, which meant no wireframe edge mask could
+        // select a quad's four sides without also drawing its diagonal.
         indices[ip++] = base; indices[ip++] = base + 1; indices[ip++] = base + 2;
-        indices[ip++] = base; indices[ip++] = base + 2; indices[ip++] = base + 3;
+        indices[ip++] = base + 2; indices[ip++] = base + 3; indices[ip++] = base;
     }
     return { verts, normals, indices, uv };
 }

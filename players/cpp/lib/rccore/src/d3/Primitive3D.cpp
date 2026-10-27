@@ -164,7 +164,7 @@ MeshData planeM(float width, float height, float cx, float cy, float cz, int uvm
     m.verts = {cx - hw, cy - hh, cz, cx + hw, cy - hh, cz,
                cx + hw, cy + hh, cz, cx - hw, cy + hh, cz};
     m.normals = {0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1};
-    m.indices = {0, 1, 2, 0, 2, 3};   // CCW from +Z
+    m.indices = {0, 1, 2, 2, 3, 0};   // CCW from +Z, diagonal last in both
     if (uvm != 0) m.uv = {0, 0, 1, 0, 1, 1, 0, 1};
     return m;
 }
@@ -195,8 +195,15 @@ MeshData cubeM(float dx, float dy, float dz, float cx, float cy, float cz, int u
             vp += 3;
             if (uvm != 0) { m.uv[qp] = faceUv[c][0]; m.uv[qp + 1] = faceUv[c][1]; qp += 2; }
         }
+        // Both triangles put the shared diagonal LAST, matching every other quad
+        // primitive here (see latheM: "edge0 = around the revolution, edge1 = along the
+        // profile, diagonal last"). The second triangle is the cyclic rotation
+        // (base, base+2, base+3) -> (base+2, base+3, base), so winding and normals are
+        // untouched; only which edge index the diagonal occupies changes. Before this it
+        // sat at edge 0 in the second triangle, which meant no wireframe edge mask could
+        // select a quad's four sides without also drawing its diagonal.
         m.indices[ip++] = base; m.indices[ip++] = base + 1; m.indices[ip++] = base + 2;
-        m.indices[ip++] = base; m.indices[ip++] = base + 2; m.indices[ip++] = base + 3;
+        m.indices[ip++] = base + 2; m.indices[ip++] = base + 3; m.indices[ip++] = base;
     }
     return m;
 }
