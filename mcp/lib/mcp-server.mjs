@@ -87,8 +87,12 @@ export function isMain(metaUrl) {
 
 export function serve(def) {
     const handle = createHandler(def);
+    // `--http PORT`, or `--http` alone with the port from MCP_HTTP_PORT (what the systemd unit
+    // does), or MCP_HTTP_PORT alone. A bare --http must not fall through to the default port:
+    // every server would then try the same one and all but the first would fail to bind.
     const i = process.argv.indexOf("--http");
-    const port = i >= 0 ? Number(process.argv[i + 1] ?? NaN) : Number(process.env.MCP_HTTP_PORT ?? NaN);
+    const argPort = i >= 0 && /^\d+$/.test(process.argv[i + 1] ?? "") ? Number(process.argv[i + 1]) : NaN;
+    const port = Number.isFinite(argPort) ? argPort : Number(process.env.MCP_HTTP_PORT ?? NaN);
     if (i >= 0 || process.env.MCP_HTTP_PORT) serveHttp(def.name, handle, port);
     else serveStdio(handle);
 }
@@ -194,6 +198,12 @@ function serveHttp(name, handle, port) {
         const out = (await Promise.all((batch ? msg : [msg]).map(handle))).filter(Boolean);
         if (!out.length) return reply(res, 202);   // only notifications / responses
         reply(res, 200, batch ? out : out[0]);
+    });
+    server.on("error", (e) => {
+        log(e.code === "EADDRINUSE"
+            ? `refusing to start: port ${port} on ${host} is already in use (set MCP_HTTP_PORT)`
+            : `cannot listen on ${host}:${port}: ${e.message}`);
+        process.exit(1);
     });
     server.requestTimeout = 300_000;
     server.listen(port, host, () =>

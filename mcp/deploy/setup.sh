@@ -86,8 +86,16 @@ sed "s/DOMAIN/$DOMAIN/" "$DEST/mcp/deploy/Caddyfile" > /etc/caddy/sites/rcmcp.ca
 grep -q 'import sites/\*' /etc/caddy/Caddyfile 2>/dev/null || echo 'import sites/*' >> /etc/caddy/Caddyfile
 systemctl reload caddy || systemctl restart caddy
 
-sleep 1
-for p in 8808 8809 8810; do curl -fsS "http://127.0.0.1:$p/healthz" >/dev/null || { echo "server on :$p is not up — journalctl -u 'rcmcp@*'" >&2; exit 1; }; done
+# Give each server a few seconds to come up; on failure show why, rather than pointing at logs.
+for svc in json2rc:8808 rc-render:8809 guide:8810; do
+    name="${svc%%:*}" port="${svc##*:}"
+    for _ in $(seq 20); do curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
+    if ! curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
+        echo "rcmcp@$name is not answering on :$port. Its last log lines:" >&2
+        journalctl -u "rcmcp@$name" -n 30 --no-pager >&2 || true
+        exit 1
+    fi
+done
 
 TOKEN="$(sed -n 's/^MCP_TOKEN=//p' /etc/rcmcp/common.env)"
 cat <<EOF
