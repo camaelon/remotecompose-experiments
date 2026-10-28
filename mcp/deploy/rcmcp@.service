@@ -1,0 +1,32 @@
+# One unit per server: rcmcp@json2rc, rcmcp@rc-render and rcmcp@guide.
+# Shared settings (token, workspace) in /etc/rcmcp/common.env, the port in /etc/rcmcp/%i.env.
+[Unit]
+Description=RemoteCompose MCP server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=rcmcp
+Group=rcmcp
+EnvironmentFile=/etc/rcmcp/common.env
+EnvironmentFile=/etc/rcmcp/%i.env
+ExecStart=/usr/bin/env node /opt/remotecompose-experiments/mcp/%i-server.mjs --http
+Restart=on-failure
+RestartSec=2
+
+# The tools only need to read the checkout and write the workspace.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/var/lib/rcmcp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=2G
+
+[Install]
+WantedBy=multi-user.target

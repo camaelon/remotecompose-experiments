@@ -1,0 +1,23 @@
+# Caddy fetches and renews the TLS certificate for the domain by itself; the domain's DNS
+# A/AAAA record must point at this machine and ports 80/443 must be open.
+#
+#   https://DOMAIN/json2rc/mcp     ->  json2rc   (127.0.0.1:8808)
+#   https://DOMAIN/rc-render/mcp   ->  rc-render (127.0.0.1:8809)
+#   https://DOMAIN/guide/mcp       ->  rc-guide  (127.0.0.1:8810)
+#
+# No `log` directive on purpose: an access log would record the token for clients that pass
+# it in the URL.
+DOMAIN {
+	handle_path /json2rc/* {
+		reverse_proxy 127.0.0.1:8808
+	}
+	handle_path /rc-render/* {
+		reverse_proxy 127.0.0.1:8809
+	}
+	handle_path /guide/* {
+		reverse_proxy 127.0.0.1:8810
+	}
+	handle {
+		respond 404
+	}
+}

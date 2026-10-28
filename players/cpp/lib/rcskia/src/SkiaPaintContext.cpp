@@ -115,6 +115,10 @@ static sk_sp<SkFontMgr> SharedFontMgr() {
     return sMgr;
 }
 
+int SkiaPaintContext::fontFamilyCount() const {
+    return mFontMgr ? mFontMgr->countFamilies() : 0;
+}
+
 SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
     : PaintContext(context), mCanvas(canvas) {
     mPaint.setAntiAlias(true);
