@@ -195,7 +195,8 @@ disk. Animation, touch and clicks all work.
 
 | option | meaning |
 | :--- | :--- |
-| `layout` | `fill` (default): the document fills the window and re-lays out on resize. `fixed`: a `width` x `height` CSS-px box, centred (default: the document's own size) |
+| `controls` | default true: the playground page described below. `false`: the bare player, with only the document on the page |
+| `layout` | `fill`: the document fills the window (or the playground's stage) and re-lays out on resize. `fixed`: a `width` x `height` CSS-px box (default: the document's own size). Default: `fill` for the bare player. The playground starts at the document's own size when it fits, and fills otherwise |
 | `title`, `background` | page title; page background colour |
 | `theme` | `light`, `dark` or `auto` (default `auto`, which follows the viewer's system setting) |
 | `density` | `device` (default) uses the viewer's devicePixelRatio, which is sharp and right for documents authored in dp. A number pins it; use 1 for documents drawn in raw pixels, which otherwise look smaller on high-DPI screens |
@@ -203,6 +204,27 @@ disk. Animation, touch and clicks all work.
 | `url_variables` | default true: `?name=value` in the page URL overrides any declared variable, so one page can show many variants |
 | `publish` | host the page (default on a deployment), see below |
 | `output_path` | also write the HTML file |
+
+**The playground** (`controls`, on by default) is for seeing how a document *behaves*,
+not just how it looks:
+
+- **Size.** Drag the frame's right, bottom or corner handle, type a width and height, swap
+  them, pick a preset (the document's own size, watch, phones, tablet, laptop, desktop,
+  2×2 / 4×2 / 4×1 widgets), or press **Fill** to follow the window. A label shows the CSS
+  size and the device pixels it lays out at.
+- **Host variables.** The page has one `<rc-variable>` web component per declared variable:
+  - float and int get a slider and a number field. The slider's range grows to fit what is typed.
+  - colour gets a picker, an alpha slider and `#AARRGGBB` text.
+  - string gets a text field.
+  - long and float-array variables are shown read-only, since the web player can't set them.
+
+  Each variable has its own reset button, and there is a **Reset all**. Edits re-run layout
+  as well as paint, so a longer string or a size variable reflows the document.
+- **Density, theme, Pause/Play, Restart.** Restart reloads the document, which replays
+  animations and clears touch state.
+- **State in the URL.** Variables that differ from their defaults go in `?name=value`, which
+  the bare page reads the same way. The view goes in `#w=&h=&d=&t=` (or `#fill=1`).
+  **Copy link** therefore shares exactly what is on screen, and a reload keeps it.
 
 Before building, the C++ engine reads the document once (`rc2image --check --report`).
 That rejects documents that don't parse and gets the document's size and each host

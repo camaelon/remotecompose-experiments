@@ -50,11 +50,14 @@ const WORKFLOWS = [
                 "The captured frame is the last one, at `clock`."],
     },
     {
-        title: "Share a document as a web page",
+        title: "Share a document as a web page, or explore how it behaves",
         steps: ["rc-render.validate first — package only what validates.",
                 "rc-deploy.package_web — one self-contained HTML page (TypeScript player + document). " +
                 "On a deployment it is published and the public link returned; ?name=value in that " +
                 "link sets host variables.",
+                "By default the page is a playground: resize freely, try device presets, edit host " +
+                "variables live, change density/theme — then copy a link to exactly that state. " +
+                "controls: false for the bare player (embedding, kiosks).",
                 "Open the page to check it: it runs the TypeScript engine, which can differ from rc-render's C++ one.",
                 "rc-deploy.list_pages / unpublish_page to manage what is live."],
     },

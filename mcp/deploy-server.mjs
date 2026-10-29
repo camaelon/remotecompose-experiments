@@ -86,16 +86,29 @@ function publicRoute(req, url, res) {
 const PACKAGE_WEB_PROPS = {
     ...DOCUMENT_PROPS,
     title: { type: "string", description: "Page title (default: the file name, or \"RemoteCompose document\")." },
+    controls: {
+        type: "boolean",
+        description:
+            "true (default): a playground page — the document in a frame that can be resized " +
+            "freely (drag handles, typed sizes, phone/tablet/desktop/widget presets, or fill the " +
+            "window), with an editor for every host variable (slider + number, colour picker, " +
+            "text), density, theme, pause/restart, and a copy-link button; the view's state is " +
+            "kept in the URL. false: the bare player, just the document.",
+    },
     layout: {
         type: "string", enum: ["fill", "fixed"],
         description:
-            "\"fill\" (default): the document fills the browser window and re-lays out on resize, " +
-            "like an app screen. \"fixed\": a box of width x height CSS px (default: the document's " +
-            "own size), centred.",
+            "\"fill\": the document fills the browser window (or, with controls, the stage) and " +
+            "re-lays out on resize, like an app screen. \"fixed\": a box of width x height CSS px " +
+            "(default: the document's own size). Default: fill for the bare player; with controls, " +
+            "the document's own size when it fits the window, else fill.",
     },
-    width: { type: "number", description: "Box width in CSS px, for layout \"fixed\"." },
-    height: { type: "number", description: "Box height in CSS px, for layout \"fixed\"." },
-    background: { type: "string", description: "Page background, any CSS colour (default black for fill, light grey for fixed)." },
+    width: { type: "number", description: "Box width in CSS px: layout \"fixed\", or the playground's starting size." },
+    height: { type: "number", description: "Box height in CSS px: layout \"fixed\", or the playground's starting size." },
+    background: {
+        type: "string",
+        description: "Page background, any CSS colour (default: black for fill, light grey for fixed; a checkerboard behind the frame with controls).",
+    },
     theme: { type: "string", enum: ["light", "dark", "auto"], description: "Colour theme; \"auto\" follows the viewer's system setting. Default auto." },
     density: {
         description:
@@ -116,7 +129,8 @@ const PACKAGE_WEB_PROPS = {
         type: "boolean",
         description:
             "Let the page's URL override host variables: ?name=value for any declared variable " +
-            "(default true). One published page can then show many variants.",
+            "(default true). One published page can then show many variants; the playground " +
+            "writes the values being edited into its URL the same way.",
     },
     output_path: { type: "string", description: "Also write the HTML file here." },
     publish: {
@@ -129,7 +143,7 @@ const PACKAGE_WEB_PROPS = {
 
 export const definition = {
     name: "rc-deploy",
-    version: "1.0.0",
+    version: "1.1.0",
     // Read by the guide server (guide-server.mjs); not part of the MCP protocol.
     guide: {
         summary: "Packages RemoteCompose documents for delivery — first as a self-contained web page played by the TypeScript engine, optionally hosted at a public link.",
@@ -137,6 +151,7 @@ export const definition = {
             "you want to share a document as something people can open and interact with in a browser",
             "you need a single HTML file that plays a document with no server or install",
             "you want one link that shows different variants through URL parameters (?name=value)",
+            "you want to explore how a document behaves: resize it freely and edit its host variables live (the default playground page)",
         ],
         notFor: [
             "a still image: rc-render's render_rc",
@@ -167,9 +182,12 @@ export const definition = {
         description:
             "Package a RemoteCompose document (.rc or JSON) as one self-contained HTML page that " +
             "plays it in the browser with the TypeScript engine — animation, touch and clicks " +
-            "included; no server or install needed to open it. Options: layout (fill the window, " +
-            "or a fixed box), title, background, theme, density, initial host variables, and " +
-            "whether ?name=value in the URL may override them. " +
+            "included; no server or install needed to open it. By default it is a playground: " +
+            "the viewer can resize the document freely or pick device presets, edit each host " +
+            "variable live, and switch density and theme — a quick way to see how the document " +
+            "responds; controls: false gives the bare player. Options: controls, layout (fill " +
+            "the window, or a fixed box), title, background, theme, density, initial host " +
+            "variables, and whether ?name=value in the URL may override them. " +
             (CAN_PUBLISH
                 ? "By default the page is also published at a public, unguessable URL on this server, which is returned."
                 : "Returns the HTML file's path.") +
@@ -181,6 +199,7 @@ export const definition = {
                 throw new Error("publishing is not available on this server (it needs HTTP mode and MCP_PUBLIC_URL); " +
                                 "pass publish: false and output_path to get the file");
             }
+            const controls = a.controls !== false;
             const layout = a.layout ?? "fill";
             if (layout !== "fill" && layout !== "fixed") throw new Error('layout is "fill" or "fixed"');
             if (a.density !== undefined && a.density !== "device" && !(typeof a.density === "number" && a.density > 0)) {
@@ -226,7 +245,11 @@ export const definition = {
                     bundle: await playerBundle(),
                     rcBase64: readFileSync(doc.rcPath).toString("base64"),
                     config: {
-                        title, layout, width, height,
+                        title, layout, width, height, controls,
+                        start: a.width !== undefined || a.height !== undefined || a.layout === "fixed" ? "size"
+                             : a.layout === "fill" ? "fill" : "auto",
+                        document: { width: docW, height: docH },
+                        info: (report.namedVariables ?? []).map(({ name, type, value }) => ({ name, type, value })),
                         background: a.background,
                         theme: a.theme ?? "auto",
                         density: a.density ?? "device",
@@ -236,7 +259,7 @@ export const definition = {
                     },
                 });
 
-                const result = { title, bytes: Buffer.byteLength(html), layout,
+                const result = { title, bytes: Buffer.byteLength(html), controls, layout,
                                  document: { width: docW, height: docH }, variables: settable };
                 if (a.output_path !== undefined) {
                     const out = resolvePath(a.output_path, "output_path");
