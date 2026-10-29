@@ -1,19 +1,25 @@
 // CollapsibleColumnLayout: a column that hides children that don't fit vertically.
-// Port of Java CollapsibleColumnLayout.java.
+// Port of Java CollapsibleColumnLayout.java (computeVisibleChildren is shared, in CollapsiblePriority.ts).
 
 import { ColumnLayout } from './ColumnLayout';
-import { LayoutComponent } from '../LayoutComponent';
 import { Component, Visibility } from '../Component';
-import { CollapsiblePriority } from './CollapsiblePriority';
-import { CollapsiblePriorityModifier } from '../modifiers/ModifierOperations';
+import { CollapsiblePriority, computeVisibleChildren } from './CollapsiblePriority';
 import type { Operation } from '../../../Operation';
 import type { WireBuffer } from '../../../WireBuffer';
 import type { PaintContext } from '../../../PaintContext';
 import type { MeasurePass } from '../measure/MeasurePass';
 import type { Size } from '../measure/Size';
+import { Header } from '../../Header';
 
 export class CollapsibleColumnLayout extends ColumnLayout {
     static override readonly OP_CODE = 233;
+
+    // Set by a wrapping measure of the cross axis: the incoming minimum, so that
+    // internalLayoutMeasure can settle the cross size on the children kept.
+    private mSettleCrossMin: number | null = null;
+    // FEATURE_PRIORITY_FIX (23, on by default), read at measure: the intrinsic size is that
+    // of the child that stays last rather than of the first child.
+    private mPriorityFix = true;
 
     constructor(componentId: number, animationId: number,
                 horizontalPositioning: number, verticalPositioning: number,
@@ -21,95 +27,84 @@ export class CollapsibleColumnLayout extends ColumnLayout {
         super(componentId, animationId, horizontalPositioning, verticalPositioning, spacedBy);
     }
 
-    override computeWrapSize(context: PaintContext, _minWidth: number, maxWidth: number,
-                    _minHeight: number, maxHeight: number,
-                    _horizontalWrap: boolean, _verticalWrap: boolean,
-                    measure: MeasurePass, size: Size): void {
-        this.computeVisibleChildren(context, maxWidth, maxHeight, true, measure, size);
+    private axis(): number { return CollapsiblePriority.VERTICAL; }
+
+    override minIntrinsicHeight(): number {
+        let v = this.modifierDefinedHeight(true);
+        const exact = this.getHeightModifier();
+        if (exact && (exact.getType() === 0 || exact.getType() === 6)) return v;
+        const c = this.mPriorityFix
+            ? CollapsiblePriority.findLastStanding(this.mChildrenComponents, this.axis())
+            : this.mChildrenComponents[0];
+        if (c) v += c.minIntrinsicHeight();
+        return v;
+    }
+
+    override minIntrinsicWidth(): number {
+        let v = this.modifierDefinedWidth(true);
+        const exact = this.getWidthModifier();
+        if (exact && (exact.getType() === 0 || exact.getType() === 6)) return v;
+        const c = this.mPriorityFix
+            ? CollapsiblePriority.findLastStanding(this.mChildrenComponents, this.axis())
+            : this.mChildrenComponents[0];
+        if (c) v += c.minIntrinsicWidth();
+        return v;
+    }
+
+    override measure(context: PaintContext, minWidth: number, maxWidth: number,
+                     minHeight: number, maxHeight: number, measure: MeasurePass): void {
+        this.mSettleCrossMin = null;
+        const doc = context.getContext().getDocument?.();
+        this.mPriorityFix = doc ? doc.useFeature(Header.FEATURE_PRIORITY_FIX, 1) : true;
+        super.measure(context, minWidth, maxWidth, minHeight, maxHeight, measure);
+    }
+
+    override computeWrapSize(context: PaintContext, minWidth: number, maxWidth: number,
+                             minHeight: number, maxHeight: number,
+                             horizontalWrap: boolean, verticalWrap: boolean,
+                             measure: MeasurePass, size: Size): void {
+        const r = computeVisibleChildren(this, this.axis(), context, maxHeight, maxWidth,
+            measure, true, (c) => c instanceof CollapsibleColumnLayout);
+        // The first frame wraps the cross axis to every child not GONE before the drop, the
+        // main axis to the sum of those plus the spacing, or, wrapping, to what was kept
+        // (at most the space, and without the spacing).
+        size.setWidth(r.preDropCross);
+        size.setHeight(verticalWrap ? Math.min(maxHeight, r.keptMain)
+            : r.preDropMain + this.spacedByPx(context, this.mSpacedBy) * (r.preDropCount - 1));
+        if (horizontalWrap) this.mSettleCrossMin = minWidth;
+        if (r.preDropCount + r.kept === 0 || ((verticalWrap ? Math.min(maxHeight, r.keptMain)
+            : r.preDropMain) <= 0)) {
+            measure.get(this).addVisibilityOverride(Visibility.OVERRIDE_GONE);
+        }
     }
 
     override computeSize(context: PaintContext, _minWidth: number, maxWidth: number,
-                _minHeight: number, maxHeight: number, measure: MeasurePass): void {
-        this.computeVisibleChildren(context, maxWidth, maxHeight, false, measure, null);
+                         _minHeight: number, maxHeight: number, measure: MeasurePass): void {
+        const r = computeVisibleChildren(this, this.axis(), context, maxHeight, maxWidth,
+            measure, true, (c) => c instanceof CollapsibleColumnLayout);
+        if (r.preDropCount + r.kept === 0) measure.get(this).addVisibilityOverride(Visibility.OVERRIDE_GONE);
     }
 
     override internalLayoutMeasure(context: PaintContext, measure: MeasurePass): void {
         const m = measure.get(this);
-        this.computeVisibleChildren(context, m.getW(), m.getH(), false, measure, null);
+        // The reference measures the children again against its own measured size (padding
+        // included), the dropped ones staying GONE.
+        const r = computeVisibleChildren(this, this.axis(), context, m.getH(), m.getW(),
+            measure, false, (c) => c instanceof CollapsibleColumnLayout);
+        if (r.preDropCount + r.kept === 0) m.addVisibilityOverride(Visibility.OVERRIDE_GONE);
+        // On the next frame its children keep that GONE, so a wrapping cross axis settles on
+        // the largest child kept.
+        if (this.mSettleCrossMin !== null) {
+            let cross = r.keptCross + this.mPaddingLeft + this.mPaddingRight;
+            const cIn = this.getWidthInModifier();
+            if (cIn) {
+                if (cIn.getMin() >= 0) cross = Math.max(cross, cIn.getMin());
+                if (cIn.getMax() >= 0) cross = Math.min(cross, cIn.getMax());
+            }
+            cross = Math.max(cross, this.mSettleCrossMin);
+            m.setW(Math.min(m.getW(), cross));
+        }
         super.internalLayoutMeasure(context, measure);
-    }
-
-    private computeVisibleChildren(context: PaintContext, maxWidth: number, maxHeight: number,
-                                   verticalWrap: boolean, measure: MeasurePass,
-                                   size: Size | null): void {
-        let visibleChildren = 0;
-        const self = measure.get(this);
-        self.addVisibilityOverride(Visibility.OVERRIDE_VISIBLE);
-        let currentMaxHeight = maxHeight;
-        let hasPriorities = false;
-
-        for (const c of this.mChildrenComponents) {
-            if (!measure.contains(c.getComponentId())) {
-                if (c instanceof CollapsibleColumnLayout) {
-                    c.measure(context, 0, maxWidth, 0, currentMaxHeight, measure);
-                } else {
-                    c.measure(context, 0, maxWidth, 0, Number.MAX_VALUE, measure);
-                }
-            }
-            const m = measure.get(c);
-            m.clearVisibilityOverride();
-            if (!m.isGone()) {
-                if (size !== null) {
-                    size.setWidth(Math.max(size.getWidth(), m.getW()));
-                    size.setHeight(size.getHeight() + m.getH());
-                }
-                visibleChildren++;
-                currentMaxHeight -= m.getH();
-            }
-            if (c instanceof LayoutComponent) {
-                const priority = c.selfOrModifier(CollapsiblePriorityModifier);
-                if (priority) hasPriorities = true;
-            }
-        }
-        if (this.mChildrenComponents.length > 0 && size !== null) {
-            size.setHeight(size.getHeight()
-                + (this.spacedByPx(context, this.mSpacedBy) * (visibleChildren - 1)));
-        }
-
-        let childrenWidth = 0;
-        let childrenHeight = 0;
-        let overflow = false;
-
-        let children: Component[] = this.mChildrenComponents;
-        if (hasPriorities) {
-            children = CollapsiblePriority.sortWithPriorities(
-                this.mChildrenComponents, CollapsiblePriority.VERTICAL);
-        }
-
-        for (const child of children) {
-            const childMeasure = measure.get(child);
-            if (overflow || childMeasure.isGone()) {
-                childMeasure.addVisibilityOverride(Visibility.OVERRIDE_GONE);
-                continue;
-            }
-            const childHeight = childMeasure.getH();
-            if (childrenHeight + childHeight > maxHeight) {
-                childMeasure.addVisibilityOverride(Visibility.OVERRIDE_GONE);
-                overflow = true;
-            } else {
-                childMeasure.addVisibilityOverride(Visibility.OVERRIDE_VISIBLE);
-                childrenHeight += childHeight;
-                childrenWidth = Math.max(childrenWidth, childMeasure.getW());
-                visibleChildren++;
-            }
-        }
-
-        if (verticalWrap && size !== null) {
-            size.setHeight(Math.min(maxHeight, childrenHeight));
-        }
-        if (visibleChildren === 0 || (size !== null && size.getHeight() <= 0)) {
-            self.addVisibilityOverride(Visibility.OVERRIDE_GONE);
-        }
     }
 
     override write(buffer: WireBuffer): void {
@@ -126,8 +121,8 @@ export class CollapsibleColumnLayout extends ColumnLayout {
     }
 
     static override read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();   // declared, as every layout component
+        const animationId = buffer.declareId();
         const horizontalPositioning = buffer.readInt();
         const verticalPositioning = buffer.readInt();
         const spacedBy = buffer.readFloat();

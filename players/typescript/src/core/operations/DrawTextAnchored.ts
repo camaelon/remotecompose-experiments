@@ -120,8 +120,8 @@ export class DrawTextAnchored extends PaintOperation implements VariableSupport 
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawTextAnchored(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt(), buffer.readInt()
+            buffer.readId(), buffer.readNanIdBits(), buffer.readNanIdBits(),
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readInt()
         ));
     }
 }

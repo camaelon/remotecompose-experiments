@@ -61,15 +61,15 @@ export class MatrixVectorMath extends Operation {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readShort();
-        const matrixId = buffer.readInt();
+        const matrixId = buffer.readId();
         const lenOut = buffer.readInt();
         if (lenOut > 4 || lenOut < 1) throw new Error(`Invalid output length ${lenOut}`);
         const out = new Int32Array(lenOut);
-        for (let i = 0; i < lenOut; i++) out[i] = buffer.readInt();
+        for (let i = 0; i < lenOut; i++) out[i] = buffer.readId();
         const lenIn = buffer.readInt();
         if (lenIn > 4 || lenIn < 1) throw new Error(`Invalid input length ${lenIn}`);
         const inputBits = new Int32Array(lenIn);
-        for (let i = 0; i < lenIn; i++) inputBits[i] = buffer.readInt();
+        for (let i = 0; i < lenIn; i++) inputBits[i] = buffer.readNanIdBits();
         operations.push(new MatrixVectorMath(type, out, matrixId, inputBits));
     }
 }

@@ -14,7 +14,8 @@ import { RootLayoutComponent } from './operations/layout/RootLayoutComponent';
 import type { Component } from './operations/layout/Component';
 import type { Container } from './operations/layout/Container';
 import { TimeVariables } from './TimeVariables';
-import { BackgroundModifier } from './operations/layout/modifiers/ModifierOperations';
+import { BackgroundModifier, ClickModifier, MultiClickModifier, TouchDownModifier, TouchUpModifier,
+         TouchCancelModifier } from './operations/layout/modifiers/ModifierOperations';
 import { LoopOperation } from './operations/layout/LoopOperation';
 import { Theme, TextData, BitmapData, FloatConstant, RootContentBehavior } from './operations/DataOperations';
 import { LoomManager } from './operations/loom/LoomManager';
@@ -284,18 +285,18 @@ export class CoreDocument implements ExpansionDocument {
 
         // Compute the starting id counter above the max existing variable id,
         // mirroring Java initFromBuffer's maxId computation (START_VARIABLE_ID-ish).
-        let maxId = 42; // above the system-global tier
+        // CoreDocument.initFromBuffer: START_VARIABLE_ID + 1, raised to the largest
+        // VariableProvider id below ID_REGION_ARRAY (0x200000), then + 10.
+        let maxId = 43;
         this.mTextData.clear();
         this.mReferencedOperations.clear();
         this.mProfileMask = 0;
         for (const op of this.mOperations) {
-            const vid = (op as unknown as { getId?: () => number }).getId;
-            if (typeof vid === 'function') {
-                const id = vid.call(op);
-                // ID_REGION_ARRAY (Java) ~ 0x40000000; ignore array-region ids
-                if (typeof id === 'number' && id < 0x40000000 && id > maxId) {
-                    maxId = id;
-                }
+            const component = (op as unknown as { getComponentId?: () => number }).getComponentId;
+            const id = typeof component === 'function' ? component.call(op)
+                : (op as unknown as { _providerId?: number })._providerId;
+            if (typeof id === 'number' && id < 0x200000 && id > maxId) {
+                maxId = id;
             }
             if (op instanceof Header) {
                 this.mHeader = op;
@@ -344,6 +345,13 @@ export class CoreDocument implements ExpansionDocument {
         const nested = nestContainers(expanded);
         this.mOperations.length = 0;
         for (const op of nested) this.mOperations.push(op);
+
+        // Index the expressions again: expansion created new ones (each inflation declares its
+        // own copy of a template's expressions), and actions evaluate them by id on demand.
+        this.mFloatExpressions.clear();
+        this.indexFloatExpressions(this.mOperations);
+        this.mIntegerExpressions.clear();
+        this.indexIntegerExpressions(this.mOperations);
 
         // Re-resolve the root after expansion.
         this.mRootLayoutComponent = null;
@@ -424,6 +432,33 @@ export class CoreDocument implements ExpansionDocument {
         }
         this.mFloatExpressions.clear();
         this.indexFloatExpressions(operations);
+        this.mIntegerExpressions.clear();
+        this.indexIntegerExpressions(operations);
+    }
+
+    /** Integer expressions by id. Mirrors `CoreDocument.mIntegerExpressions`. */
+    mIntegerExpressions: Map<number, any> = new Map();
+
+    indexIntegerExpressions(operations: Operation[]): void {
+        for (const op of operations) {
+            if ((op as any).constructor?.OP_CODE === 144 && typeof (op as any).getId === 'function') {
+                this.mIntegerExpressions.set((op as any).getId(), op);
+            }
+            if (typeof (op as any).getList === 'function') {
+                this.indexIntegerExpressions((op as any).getList());
+            }
+        }
+    }
+
+    /**
+     * CoreDocument.evaluateIntExpression: the expression id may arrive long-encoded, so look it
+     * up as given, then decoded (id - 2^32), then by its low 32 bits.
+     */
+    evaluateIntExpression(expressionId: number, targetId: number, context: RemoteContext): void {
+        const expression = this.mIntegerExpressions.get(expressionId)
+            ?? this.mIntegerExpressions.get(expressionId - 0x100000000)
+            ?? this.mIntegerExpressions.get(Number(BigInt.asUintN(32, BigInt(Math.trunc(expressionId)))));
+        if (expression) context.overrideInteger(targetId, expression.evaluateNow(context));
     }
 
     /**
@@ -537,12 +572,25 @@ export class CoreDocument implements ExpansionDocument {
             }
             op.markNotDirty();
             context.incrementOpCount(op);
+            if (CoreDocument.isEventModifier(op)) {
+                // Its children are actions, which run on input only. The reference recurses
+                // here too, but its actions' apply() is empty (they run in runAction());
+                // ours do their work in apply(), so descending would fire every click action
+                // at load, leaving a "last tapped" variable at the last button's value.
+                continue;
+            }
             if (this.isContainer(op)) {
                 this.applyOperations(context, (op as any).getList());
             } else {
                 op.apply(context);
             }
         }
+    }
+
+    private static isEventModifier(op: Operation): boolean {
+        return op instanceof ClickModifier || op instanceof MultiClickModifier
+            || op instanceof TouchDownModifier || op instanceof TouchUpModifier
+            || op instanceof TouchCancelModifier;
     }
 
     private registerVariables(context: RemoteContext, ops: Operation[]): void {

@@ -30,7 +30,7 @@ export class DrawPath extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         operations.push(new DrawPath(id, 0, 1));
     }
 }

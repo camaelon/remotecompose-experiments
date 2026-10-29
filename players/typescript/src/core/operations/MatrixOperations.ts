@@ -22,7 +22,9 @@ export class MatrixSave extends Operation {
     apply(context: RemoteContext): void {
         if (context.mMode === ContextMode.DATA) return;
         const pc = context.getPaintContext();
-        if (pc) { pc.matrixSave(); pc.savePaint(); }
+        // MatrixSave.paint: canvas.save() only. The paint is not part of it, so paint set
+        // between a save and its restore stays in effect after the restore (as on Android).
+        if (pc) pc.matrixSave();
     }
     deepToString(indent: string): string { return `${indent}MatrixSave`; }
     static read(_buffer: WireBuffer, operations: Operation[]): void {
@@ -36,7 +38,7 @@ export class MatrixRestore extends Operation {
     apply(context: RemoteContext): void {
         if (context.mMode === ContextMode.DATA) return;
         const pc = context.getPaintContext();
-        if (pc) { pc.restorePaint(); pc.matrixRestore(); }
+        if (pc) pc.matrixRestore();   // MatrixRestore.paint: canvas.restore() only
     }
     deepToString(indent: string): string { return `${indent}MatrixRestore`; }
     static read(_buffer: WireBuffer, operations: Operation[]): void {
@@ -62,7 +64,7 @@ export class MatrixTranslate extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixTranslate(${this.mTranslateX}, ${this.mTranslateY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixTranslate(buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixTranslate(buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -90,7 +92,7 @@ export class MatrixScale extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixScale(${this.mScaleX}, ${this.mScaleY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixScale(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixScale(buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -116,7 +118,7 @@ export class MatrixRotate extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixRotate(${this.mAngle})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixRotate(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixRotate(buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -138,7 +140,7 @@ export class MatrixSkew extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixSkew`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixSkew(buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixSkew(buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -164,7 +166,7 @@ export class MatrixFromPath extends Operation {
     }
     deepToString(indent: string): string { return `${indent}MatrixFromPath`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new MatrixFromPath(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixFromPath(buffer.readId(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readInt()));
     }
 }
 
@@ -192,7 +194,7 @@ export class ClipRect extends Operation {
     }
     deepToString(indent: string): string { return `${indent}ClipRect`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ClipRect(buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new ClipRect(buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -210,7 +212,9 @@ export class ClipPath extends Operation {
     deepToString(indent: string): string { return `${indent}ClipPath`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const pack = buffer.readInt();
-        const id = pack & 0xFFFFF;
+        // The path id is packed with the region op; inside a pattern it is resolved (ClipPath.read).
+        const remap = (buffer as any).getRemapContext?.();
+        const id = remap ? remap.resolveId(pack & 0xFFFFF) : pack & 0xFFFFF;
         const regionOp = pack >> 24;
         operations.push(new ClipPath(id, regionOp));
     }

@@ -59,8 +59,8 @@ export class TextMeasure extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const textId = buffer.readInt();
+        const id = buffer.declareId();
+        const textId = buffer.readId();
         const type = buffer.readInt();
         operations.push(new TextMeasure(id, textId, type));
     }

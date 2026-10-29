@@ -940,7 +940,7 @@ class DrawMesh2D : public Operation {
 
     static void read(WireBuffer& buffer, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawMesh2D>();
-        op->meshId = buffer.readInt();
+        op->meshId = buffer.readId();   // DrawMesh2D.read: readId (remapped in a pattern)
         op->blend = buffer.readInt();
         op->imageId = buffer.readInt();
         ops.push_back(std::move(op));
@@ -973,9 +973,9 @@ class MatrixFromMesh2D : public Operation {
 
     static void read(WireBuffer& buffer, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixFromMesh2D>();
-        op->meshId = buffer.readInt();
-        op->u = buffer.readFloat();
-        op->v = buffer.readFloat();
+        op->meshId = buffer.readId();   // MatrixFromMesh2D.read: readId, readNanId x2
+        op->u = buffer.readNanId();
+        op->v = buffer.readNanId();
         op->flags = buffer.readInt();
         ops.push_back(std::move(op));
     }

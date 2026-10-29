@@ -47,8 +47,8 @@ export class CanvasLayout extends BoxLayout {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
         operations.push(new CanvasLayout(componentId, animationId));
     }
 }

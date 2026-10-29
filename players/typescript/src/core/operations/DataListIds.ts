@@ -26,11 +26,11 @@ export class DataListIds extends Operation {
     deepToString(indent: string): string { return `${indent}DataListIds(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const count = buffer.readInt();
         const ids = new Int32Array(count);
         for (let i = 0; i < count; i++) {
-            ids[i] = buffer.readInt();
+            ids[i] = buffer.readId();
         }
         operations.push(new DataListIds(id, ids));
     }

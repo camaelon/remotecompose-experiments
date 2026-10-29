@@ -38,6 +38,20 @@ export class ColumnLayout extends LayoutManager {
         this.mSpacedBy = spacedBy;
     }
 
+    // Java ColumnLayout.minIntrinsicHeight: children stack, so their heights add up.
+    override minIntrinsicHeight(): number {
+        const height = this.modifierDefinedHeight(true);
+        let componentHeights = 0;
+        for (const c of this.mChildrenComponents) {
+            componentHeights += c.minIntrinsicHeight();
+        }
+        return Math.max(height, componentHeights);
+    }
+
+    protected override weightFill(): [boolean, boolean] {
+        return [false, this.mChildrenComponents.some((c) => c instanceof LayoutComponent && c.hasHeightWeight())];
+    }
+
     computeWrapSize(context: PaintContext, _minWidth: number, maxWidth: number,
                     _minHeight: number, maxHeight: number,
                     _horizontalWrap: boolean, _verticalWrap: boolean,

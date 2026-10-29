@@ -37,6 +37,6 @@ export class TextMerge extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}TextMerge(${this.mTextId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new TextMerge(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new TextMerge(buffer.declareId(), buffer.readId(), buffer.readId()));
     }
 }

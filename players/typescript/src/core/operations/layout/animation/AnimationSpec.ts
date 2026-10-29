@@ -18,7 +18,8 @@ export enum ANIMATION {
 }
 
 export function intToAnimation(v: number): ANIMATION {
-    switch (v) {
+    // The low byte is the animation; the next carries the sequence (AnimationSpec.intToAnimation).
+    switch (v & 0xFF) {
         case 0: return ANIMATION.FADE_IN;
         case 1: return ANIMATION.FADE_OUT;
         case 2: return ANIMATION.SLIDE_LEFT;
@@ -96,13 +97,21 @@ export class AnimationSpec extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const animationId = buffer.readInt();
+        const animationId = buffer.readId();
         const motionDuration = buffer.readFloat();
         const motionEasingType = buffer.readInt();
         const visibilityDuration = buffer.readFloat();
         const visibilityEasingType = buffer.readInt();
-        const enterAnimation = intToAnimation(buffer.readInt());
-        const exitAnimation = intToAnimation(buffer.readInt());
+        const rawEnter = buffer.readInt();
+        const rawExit = buffer.readInt();
+        const enterAnimation = intToAnimation(rawEnter);
+        const exitAnimation = intToAnimation(rawExit);
+        // A CUSTOM (8) enter or exit animation carries two function ids. Not reading them left
+        // the stream eight bytes behind, and every following operation misparsed.
+        if ((rawEnter & 0xFF) === 8 || (rawExit & 0xFF) === 8) {
+            buffer.readId();   // enter function id (custom animations are not implemented here)
+            buffer.readId();   // exit function id
+        }
         const op = new AnimationSpec(
             animationId,
             motionDuration,

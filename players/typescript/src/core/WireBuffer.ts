@@ -107,8 +107,10 @@ export class WireBuffer {
     // ---- ID-typed reads ----
     // Identity defaults: a plain WireBuffer treats these as ordinary reads.
     // LoomWireBuffer overrides them to apply RemapContext during macro expansion.
-    declareId(): number { return this.readInt(); }
-    readId(): number { return this.readInt(); }
+    declareId(): number { const v = this.readInt(); if (this.mIdTrace) this.mIdTrace.push(v); return v; }
+    readId(): number { const v = this.readInt(); if (this.mIdTrace) this.mIdTrace.push(v); return v; }
+    /** When set, declareId/readId append what they read: see RemoteComposeBuffer's provider ids. */
+    mIdTrace: number[] | null = null;
     /**
      * A word that may be a NaN-boxed variable id, returned as RAW INT32 BITS.
      *

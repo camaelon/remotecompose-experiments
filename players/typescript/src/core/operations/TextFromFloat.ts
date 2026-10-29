@@ -130,8 +130,8 @@ export class TextFromFloat extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
-        const valueBits = buffer.readInt();  // raw bits; NaN-with-payload => variable ref
+        const textId = buffer.declareId();
+        const valueBits = buffer.readNanIdBits();  // raw bits; NaN-with-payload => variable ref
         const tmp = buffer.readInt();
         const digitsAfter = tmp & 0xFFFF;
         const digitsBefore = (tmp >> 16) & 0xFFFF;

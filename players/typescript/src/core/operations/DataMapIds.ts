@@ -38,7 +38,7 @@ export class DataMapIds extends Operation {
     deepToString(indent: string): string { return `${indent}DataMapIds(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const len = buffer.readInt();
         const names = new Array<string>(len);
         const types = new Int8Array(len);
@@ -46,7 +46,7 @@ export class DataMapIds extends Operation {
         for (let i = 0; i < len; i++) {
             names[i] = buffer.readUTF8();
             types[i] = buffer.readByte();
-            ids[i] = buffer.readInt();
+            ids[i] = buffer.readId();
         }
         operations.push(new DataMapIds(id, new DataMap(names, types, ids)));
     }

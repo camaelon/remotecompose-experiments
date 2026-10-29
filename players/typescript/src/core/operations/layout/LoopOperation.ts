@@ -89,10 +89,10 @@ export class LoopOperation extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const indexId = buffer.readInt();
-        const from = buffer.readInt();   // raw bits; NaN-with-payload => variable ref
-        const step = buffer.readInt();
-        const until = buffer.readInt();
+        const indexId = buffer.readId();
+        const from = buffer.readNanIdBits();   // raw bits; NaN-with-payload => variable ref
+        const step = buffer.readNanIdBits();
+        const until = buffer.readNanIdBits();
         operations.push(new LoopOperation(indexId, from, step, until));
     }
 }

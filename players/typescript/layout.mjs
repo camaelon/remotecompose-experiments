@@ -56,12 +56,34 @@ const flag = (name, dflt) => {
     return i >= 0 ? (args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : true) : dflt;
 };
 
-const { RemoteComposeBuffer, CoreDocument, CanvasPaintContext, WebRemoteContext } =
+const { RemoteComposeBuffer, CoreDocument, CanvasPaintContext, WebRemoteContext, createSnapshot } =
     await import('./build-node/node-entry.js');
+
+// Interactive steps (layout-specs' cases), applied in order after the first layout, on a
+// manual clock that only moves when a step moves it (16 ms per painted frame when settling):
+//   --click X Y, --click-frame X Y (one frame, the animation left in flight), --advance MS,
+//   --settle, --resize W H; --anim enables layout animations (off otherwise, as the spec
+//   harness does). With any of these the first layout settles too.
+const STEPS = [];
+let ANIM = false;
+for (let i = 1; i < args.length; i++) {
+    const a = args[i];
+    if (a === '--anim') ANIM = true;
+    else if (a === '--click' || a === '--click-frame' || a === '--resize') { STEPS.push([a, +args[i + 1], +args[i + 2]]); i += 2; }
+    else if (a === '--advance') { STEPS.push([a, +args[i + 1]]); i++; }
+    else if (a === '--settle') STEPS.push([a]);
+}
+const SCRIPTED = ANIM || STEPS.length > 0;
+let clockMs = Date.UTC(2025, 0, 1);
+const manualClock = { millis: () => clockMs, snapshot: () => createSnapshot(clockMs) };
+// animationTime (TimeVariables.getElapsedSeconds) reads performance.now(), not the clock: on the
+// manual clock it would barely move, and an animated expression ({value, anim}) would never
+// progress. Drive it from the manual clock too.
+if (SCRIPTED) { const t0 = clockMs; performance.now = () => clockMs - t0; }
 
 const data = readFileSync(file);
 const ab = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-const doc = new CoreDocument();
+const doc = SCRIPTED ? new CoreDocument(manualClock) : new CoreDocument();
 doc.initFromBuffer(RemoteComposeBuffer.fromArrayBuffer(ab));
 
 const W = Number(flag('width', 0)) || doc.getWidth?.() || 400;
@@ -90,19 +112,59 @@ doc.applyDataOperations(remote);
 // Two passes by default: the first frame is where measure happens, and a document whose
 // size depends on a measured child is not settled until the pass after that.
 const FRAMES = Number(flag('frames', 2));
-for (let f = 0; f < FRAMES; f++) {
-    remote.setAnimationTime?.(f / 60);
-    paint.reset?.();
-    paint.clearNeedsRepaint?.();
-    doc.paint(remote, -1);
+if (!SCRIPTED) {
+    for (let f = 0; f < FRAMES; f++) {
+        remote.setAnimationTime?.(f / 60);
+        paint.reset?.();
+        paint.clearNeedsRepaint?.();
+        doc.paint(remote, -1);
+    }
+} else {
+    remote.setAnimationEnabled(ANIM);
+    remote.setClock?.(manualClock);
+    const frame = () => {
+        paint.reset?.();
+        paint.clearNeedsRepaint?.();
+        doc.paint(remote, -1);
+        return doc.needsRepaint() === 1;
+    };
+    const settle = () => {
+        let again = frame();
+        for (let n = 0; again && n < 200; n++) { clockMs += 16; again = frame(); }
+    };
+    frame();
+    settle();
+    for (const [kind, a, b] of STEPS) {
+        if (kind === '--click' || kind === '--click-frame') {
+            doc.onClick(remote, a, b);
+            if (kind === '--click') settle(); else frame();
+        } else if (kind === '--advance') { clockMs += a; frame(); }
+        else if (kind === '--settle') settle();
+        else if (kind === '--resize') {
+            canvas.width = a; canvas.height = b;
+            remote.mWidth = a; remote.mHeight = b;
+            doc.setWidth?.(a); doc.setHeight?.(b);
+            remote.loadFloat(5, a); remote.loadFloat(6, b);
+            doc.invalidateMeasure?.();
+            settle();
+        }
+    }
 }
 
-const num = (v) => (Number.isFinite(v) ? (Math.round(v * 100) / 100).toFixed(2) : 'nan');
+// toFixed switches to exponent notation from 1e21 (a gone child measured against an unbounded
+// Number.MAX_VALUE); print those as plain integers so the line format stays parseable.
+const num = (v) => (!Number.isFinite(v) ? 'nan'
+    : Math.abs(v) >= 1e21 ? `${BigInt(Math.trunc(v))}.00` : (Math.round(v * 100) / 100).toFixed(2));
 
 // A component is anything carrying the bounds quadruple; the class name is the kind.
 // Containers expose children through getList(), which is also how the paint pass walks.
 const seen = new Set();
 const found = new Map();     // id -> {kind, depth, x, y, w, h}
+// --all: every component in tree order, duplicate ids included. Ids are not unique in every
+// document (the reference itself shares a CoreText id across pattern inflations), and a map
+// keyed by id keeps only the last; conformance/compare.mjs uses this form.
+const ALL = process.argv.includes('--all');
+const inOrder = [];
 function walk(op, depth) {
     if (!op || seen.has(op) || depth > 24) return;
     seen.add(op);
@@ -110,9 +172,9 @@ function walk(op, depth) {
     const isComponent = typeof op.getComponentId === 'function'
         && typeof op.getWidth === 'function' && typeof op.getX === 'function';
     if (isComponent) {
-        found.set(op.getComponentId(), {
-            kind, depth, x: op.getX(), y: op.getY(), w: op.getWidth(), h: op.getHeight(),
-        });
+        const entry = { id: op.getComponentId(), kind, depth, x: op.getX(), y: op.getY(), w: op.getWidth(), h: op.getHeight() };
+        found.set(entry.id, entry);
+        inOrder.push(entry);
         depth++;
     }
     if (typeof op.getList === 'function') for (const c of op.getList() || []) walk(c, depth);
@@ -123,6 +185,10 @@ for (const op of doc.mOperations || []) walk(op, 0);
 // stdout is the canonical comparison form, sorted by id and identical across the three
 // engines. The readable tree goes to stderr so a human can see structure without the
 // diff having to care about it.
+if (ALL) {
+    console.log(inOrder.map((c) => `LAYOUT id=${c.id} x=${num(c.x)} y=${num(c.y)} w=${num(c.w)} h=${num(c.h)} ${c.kind.replace(/^_/, '')}`).join('\n'));
+    process.exit(0);
+}
 const ids = [...found.keys()].sort((a, b) => a - b);
 console.log(ids.map((id) => {
     const c = found.get(id);

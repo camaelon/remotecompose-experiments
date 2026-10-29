@@ -62,9 +62,9 @@ export class PathCreate extends Operation {
     deepToString(indent: string): string { return `${indent}PathCreate(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const startX = buffer.readInt();
-        const startY = buffer.readInt();
+        const id = buffer.declareId();
+        const startX = buffer.readNanIdBits();
+        const startY = buffer.readNanIdBits();
         operations.push(new PathCreate(id, startX, startY));
     }
 }

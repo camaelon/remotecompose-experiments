@@ -64,9 +64,9 @@ export class UpdateDynamicFloatList extends Operation implements VariableSupport
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const index = buffer.readInt();
-        const value = buffer.readInt();
+        const id = buffer.readId();
+        const index = buffer.readNanIdBits();
+        const value = buffer.readNanIdBits();
         operations.push(new UpdateDynamicFloatList(id, index, value));
     }
 }

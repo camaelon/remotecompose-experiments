@@ -218,7 +218,7 @@ export class CoreText extends LayoutManager implements VariableSupport {
         this.mFontSize = fontSize;
         this.mMinFontSize = minFontSize;
         this.mMaxFontSize = maxFontSize;
-        this.mFontSizeValue = isNaNBits(fontSize) ? 16 : intBitsToFloat(fontSize);
+        this.mFontSizeValue = isNaNBits(fontSize) ? 36 : intBitsToFloat(fontSize);
         this.mMeasureFontSize = this.mFontSizeValue;
         this.mFontStyle = fontStyle;
         this.mFontWeight = fontWeight;
@@ -299,6 +299,10 @@ export class CoreText extends LayoutManager implements VariableSupport {
     private mLastMaxH = -1;
     private mLastSizeW = 0;
     private mLastSizeH = 0;
+
+    // Java CoreText: the intrinsic size is the last measured text size.
+    override minIntrinsicHeight(): number { return this.mTextH; }
+    override minIntrinsicWidth(): number { return this.mTextW; }
 
     computeWrapSize(context: PaintContext, _minWidth: number, maxWidth: number,
                     _minHeight: number, maxHeight: number,
@@ -457,19 +461,39 @@ export class CoreText extends LayoutManager implements VariableSupport {
             if (inAutosize) {
                 flags |= 0x01; // TEXT_MEASURE_AUTOSIZE
             }
-            this.mComputedTextLayout = context.layoutComplexText(
-                this.mTextId, 0, this.mCachedString!.length,
-                this.mTextAlign, this.mOverflow, this.mMaxLines,
-                maxWidth, maxHeight,
-                this.mLetterSpacing, this.mLineHeightAdd, this.mLineHeightMultiplier,
-                this.mLineBreakStrategy, this.mHyphenationFrequency, this.mJustificationMode,
-                this.mUnderline, this.mStrikethrough, flags
-            );
-            if (this.mComputedTextLayout) {
-                bounds[0] = 0;
-                bounds[1] = 0;
-                bounds[2] = this.mComputedTextLayout.width;
-                bounds[3] = this.mComputedTextLayout.height;
+            // Java CoreText.textLayout: an OVERFLOW_ELLIPSIS layout taller than the space is
+            // laid out again with fewer lines, so the ellipsis lands on the last line that
+            // shows instead of being clipped away with the lines below it.
+            let maxLines = this.mMaxLines;
+            let done = false;
+            while (!done) {
+                this.mComputedTextLayout = context.layoutComplexText(
+                    this.mTextId, 0, this.mCachedString!.length,
+                    this.mTextAlign, this.mOverflow, maxLines,
+                    maxWidth, maxHeight,
+                    this.mLetterSpacing, this.mLineHeightAdd, this.mLineHeightMultiplier,
+                    this.mLineBreakStrategy, this.mHyphenationFrequency, this.mJustificationMode,
+                    this.mUnderline, this.mStrikethrough, flags
+                );
+                const layout = this.mComputedTextLayout;
+                if (layout) {
+                    bounds[0] = 0;
+                    bounds[1] = 0;
+                    bounds[2] = layout.width;
+                    bounds[3] = layout.height;
+                }
+                if (layout && !inAutosize && layout.height > maxHeight
+                    && this.mOverflow === OVERFLOW_ELLIPSIS
+                    && typeof layout.visibleLines === 'number') {
+                    if (layout.visibleLines !== maxLines) {
+                        maxLines = layout.visibleLines;
+                    } else {
+                        maxLines--;
+                    }
+                    if (maxLines < 1) done = true;
+                } else {
+                    done = true;
+                }
             }
         } else if (maxWidth > 0) {
             // A real width that the text fits inside: the wrapped layout is genuinely
@@ -488,6 +512,10 @@ export class CoreText extends LayoutManager implements VariableSupport {
 
         paintContext.save();
         paintContext.translate(this.mX, this.mY);
+        // Background, border, clip...: CoreText.paintingComponent runs
+        // mComponentModifiers.paint before its text (the graphics layer is already open,
+        // LayoutComponent.paint starts it).
+        this.paintModifiers(paintContext);
 
         // Apply padding
         const tx = this.mPaddingLeft;
@@ -581,22 +609,29 @@ export class CoreText extends LayoutManager implements VariableSupport {
         let fontStyle = 0, fontFamilyId = -1, textAlign = 1, overflow = 1;
         let maxLines = 0x7FFFFFFF, lineBreakStrategy = 0, hyphenationFrequency = 0;
         let justificationMode = 0, flags = 0;
-        // fontSize / fontWeight are kept as raw float32 int bits (default 16.0 / 400.0).
-        let fontSize = floatToRawIntBits(16), minFontSize = -1, maxFontSize = -1;
+        // fontSize / fontWeight are kept as raw float32 int bits (default TextStyle.DEFAULT_FONT_SIZE 36.0 / 400.0).
+        let fontSize = floatToRawIntBits(36), minFontSize = -1, maxFontSize = -1;
         let fontWeight = floatToRawIntBits(400), letterSpacing = 0, lineHeightAdd = 0, lineHeightMultiplier = 1;
         let underline = false, strikethrough = false, autosize = false;
         let fontAxis: number[] | null = null;
         let fontAxisValues: number[] | null = null;
 
+        // Inside a pattern these ids go through the macro remapping, as in the reference:
+        // CoreText.read declares P_ID and P_ANIMATION_ID (the component's own ids, as every
+        // other layout component's declareId, so each inflation gets fresh ones) and resolves
+        // P_COLOR_ID, P_FONT_FAMILY and P_PARENT_ID.
+        const remap = (buffer as any).getRemapContext?.();
+        const rid = (v: number) => (remap ? remap.resolveId(v) : v);
+        const did = (v: number) => (remap ? remap.declareId(v) : v);
         readCommandParams(buffer, paramsLength, {
             intValue(id: number, value: number) {
                 switch (id) {
-                    case P_COMPONENT_ID: componentId = value; break;
-                    case P_ANIMATION_ID: animationId = value; break;
+                    case P_COMPONENT_ID: componentId = did(value); break;
+                    case P_ANIMATION_ID: animationId = did(value); break;
                     case P_COLOR: color = value; break;
-                    case P_COLOR_ID: colorId = value; break;
+                    case P_COLOR_ID: colorId = rid(value); break;
                     case P_FONT_STYLE: fontStyle = value; break;
-                    case P_FONT_FAMILY: fontFamilyId = value; break;
+                    case P_FONT_FAMILY: fontFamilyId = rid(value); break;
                     case P_TEXT_ALIGN: textAlign = value; break;
                     case P_OVERFLOW: overflow = value; break;
                     case P_MAX_LINES: maxLines = value; break;

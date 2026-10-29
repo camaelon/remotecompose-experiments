@@ -182,9 +182,28 @@ export class ColorExpression extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}ColorExpression(${this.mId}, mode=${this.mMode})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ColorExpression(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt()
-        ));
+        const id = buffer.declareId();
+        let p1 = buffer.readInt(), p2 = buffer.readInt(), p3 = buffer.readInt(), p4 = buffer.readInt();
+        // Inside a pattern, remap the ids the mode packs into the parameters, as the reference's
+        // ColorExpression.read does: IDARGB (6) an alpha id in p1's top 16 bits and three
+        // NaN-boxed floats; ARGB (5) and HSV (4) three floats; the interpolations (0-3) a colour
+        // id in p2 (mode bit 1) and/or p3 (mode bit 2), and a float tween. Kept as raw words, so
+        // the rest of this class decodes them unchanged.
+        const remap = (buffer as any).getRemapContext?.();
+        if (remap) {
+            const mode = p1 & 0xFF;
+            const f = (bits: number) => remap.resolveNanIdBits(bits);
+            if (mode === 6) {
+                p1 = (remap.resolveId(p1 >> 16) << 16) | (p1 & 0xFFFF);
+                p2 = f(p2); p3 = f(p3); p4 = f(p4);
+            } else if (mode === 5 || mode === 4) {
+                p2 = f(p2); p3 = f(p3); p4 = f(p4);
+            } else if (mode <= 3) {
+                if (mode & 1) p2 = remap.resolveId(p2);
+                if (mode & 2) p3 = remap.resolveId(p3);
+                p4 = f(p4);
+            }
+        }
+        operations.push(new ColorExpression(id, p1, p2, p3, p4));
     }
 }

@@ -53,9 +53,9 @@ export class IdLookup extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
-        const dataSetId = buffer.readInt();
-        const index = buffer.readInt();
+        const textId = buffer.readId();
+        const dataSetId = buffer.readId();
+        const index = buffer.readNanIdBits();
         operations.push(new IdLookup(textId, dataSetId, index));
     }
 }

@@ -1,3 +1,4 @@
+import { intBitsToFloat } from './Utils';
 // ParticleOperations: particle system operations for RemoteCompose.
 // Implements ParticlesCreateOp (161), ParticlesLoopOp (163), ParticlesCompareOp (194).
 
@@ -8,7 +9,7 @@ import type { RemoteContext } from '../RemoteContext';
 import { ContextMode } from '../RemoteContext';
 import type { PaintContext } from '../PaintContext';
 import type { VariableSupport } from '../VariableSupport';
-import { isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits, isRemappableExpressionWord } from './Utils';
 import { FloatExpression } from './FloatExpression';
 
 // Constants matching FloatExpression
@@ -177,16 +178,20 @@ export class ParticlesCreateOp extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        // As the reference (ParticlesCreate.read): ids resolved, and inside a pattern every
+        // equation word that is a variable (not an operator or data variable) remapped.
+        const remap = (buffer as any).getRemapContext?.();
+        const word = (b: number) => (remap && isRemappableExpressionWord(b) ? remap.resolveNanIdBits(b) : b);
+        const id = buffer.readId();
         const particleCount = buffer.readInt();
         const varLen = buffer.readInt();
         const varIds: number[] = [];
         const equations: Int32Array[] = [];
         for (let i = 0; i < varLen; i++) {
-            varIds.push(buffer.readInt());
+            varIds.push(buffer.readId());
             const equLen = buffer.readInt();
             const eq = new Int32Array(equLen);
-            for (let j = 0; j < equLen; j++) eq[j] = buffer.readInt();
+            for (let j = 0; j < equLen; j++) eq[j] = word(buffer.readInt());
             equations.push(eq);
         }
         operations.push(new ParticlesCreateOp(id, particleCount, varIds, equations));
@@ -302,16 +307,19 @@ export class ParticlesLoopOp extends PaintOperation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        // As ParticlesLoop.read: id resolved, expression variables remapped inside a pattern.
+        const remap = (buffer as any).getRemapContext?.();
+        const word = (b: number) => (remap && isRemappableExpressionWord(b) ? remap.resolveNanIdBits(b) : b);
+        const id = buffer.readId();
         const restartLen = buffer.readInt();
         const restart = new Int32Array(restartLen);
-        for (let i = 0; i < restartLen; i++) restart[i] = buffer.readInt();
+        for (let i = 0; i < restartLen; i++) restart[i] = word(buffer.readInt());
         const varLen = buffer.readInt();
         const equations: Int32Array[] = [];
         for (let i = 0; i < varLen; i++) {
             const equLen = buffer.readInt();
             const eq = new Int32Array(equLen);
-            for (let j = 0; j < equLen; j++) eq[j] = buffer.readInt();
+            for (let j = 0; j < equLen; j++) eq[j] = word(buffer.readInt());
             equations.push(eq);
         }
         operations.push(new ParticlesLoopOp(id, restart, equations));
@@ -509,10 +517,10 @@ export class ParticlesCompareOp extends PaintOperation implements VariableSuppor
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         const flags = buffer.readShort();
-        const min = buffer.readFloat();
-        const max = buffer.readFloat();
+        const min = intBitsToFloat(buffer.readNanIdBits());
+        const max = intBitsToFloat(buffer.readNanIdBits());
         const condition = ParticlesCompareOp.readEquationBits(buffer);
         const result1Len = buffer.readInt();
         const equations1: Int32Array[] = [];

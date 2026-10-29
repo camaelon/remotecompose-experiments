@@ -27,6 +27,24 @@
 
 namespace rccore {
 
+// ── Density behaviour of the layout pass in progress ───────────────────
+// Set by LayoutRoot::apply from the document's DOC_DENSITY_BEHAVIOR. With DENSITY_BEHAVIOR_DP
+// (2) the reference multiplies exact sizes, padding, spacedBy, border, rounded clip, offset
+// and constant font sizes by the density (DimensionModifierOperation, PaddingModifierOperation,
+// RowLayout/ColumnLayout/FlowLayout, BorderModifierOperation, RoundedClipRectModifierOperation,
+// OffsetModifierOperation, CoreText/TextLayout.updateVariables). EXACT_DP sizes always scale,
+// and widthIn/heightIn scale unless the behaviour is PIXELS (DimensionInModifierOperation).
+static float gDpScale = 1.0f;     // the density under DENSITY_BEHAVIOR_DP, otherwise 1
+static float gDensity = 1.0f;     // the display density
+static int gDensityBehavior = 0;
+
+static float dimScale(DimType t) {
+    return t == DimType::EXACT_DP ? gDensity : gDpScale;
+}
+static float dimInScale(float v) {
+    return (gDensityBehavior != 1 && v != -1.0f) ? v * gDensity : v;
+}
+
 // ── Modifier variable support ──────────────────────────────────────────
 
 void ModifierWidth::registerListening(RemoteContext& context) {
@@ -240,9 +258,12 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
     ls.canvasOps.clear();
     ls.dataOps.clear();
     ls.canvasContentIds.clear();
+    ls.layoutContentIds.clear();
     ls.padBeforeWidth = 0;
     ls.padBeforeHeight = 0;
     ls.ripple = nullptr;
+    ls.graphicsLayer = nullptr;
+    ls.paintMods.clear();
     ls.animSpec = nullptr;
     ls.hasCollapsePriority = false;
     bool sawWidth = false;
@@ -277,15 +298,19 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 }
                 case 58: { // ModifierPadding
                     auto* mp = static_cast<ModifierPadding*>(child);
-                    if (!sawWidth)  ls.padBeforeWidth  += mp->oLeft + mp->oRight;
-                    if (!sawHeight) ls.padBeforeHeight += mp->oTop + mp->oBottom;
-                    ls.paddingLeft += mp->oLeft;
-                    ls.paddingTop += mp->oTop;
-                    ls.paddingRight += mp->oRight;
-                    ls.paddingBottom += mp->oBottom;
+                    const float pl = mp->oLeft * gDpScale, pt = mp->oTop * gDpScale;
+                    const float pr = mp->oRight * gDpScale, pb = mp->oBottom * gDpScale;
+                    if (!sawWidth)  ls.padBeforeWidth  += pl + pr;
+                    if (!sawHeight) ls.padBeforeHeight += pt + pb;
+                    ls.paddingLeft += pl;
+                    ls.paddingTop += pt;
+                    ls.paddingRight += pr;
+                    ls.paddingBottom += pb;
+                    ls.paintMods.push_back({child, pl, pt, pr, pb});
                     break;
                 }
                 case 55: { // ModifierBackground
+                    ls.paintMods.push_back({child});
                     auto* mb = static_cast<ModifierBackground*>(child);
                     ls.hasBg = true;
                     ls.bgFlags = mb->flags;
@@ -296,12 +321,13 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     break;
                 }
                 case 107: { // ModifierBorder
+                    ls.paintMods.push_back({child});
                     auto* mb = static_cast<ModifierBorder*>(child);
                     ls.hasBorder = true;
                     ls.borderFlags = mb->flags;
                     ls.borderColorId = mb->colorId;
-                    ls.borderWidth = mb->oBorderWidth;
-                    ls.borderCorner = mb->oRoundedCorner;
+                    ls.borderWidth = mb->oBorderWidth * gDpScale;
+                    ls.borderCorner = mb->oRoundedCorner * gDpScale;
                     ls.borderR = mb->oR; ls.borderG = mb->oG;
                     ls.borderB = mb->oB; ls.borderA = mb->oA;
                     ls.borderShape = mb->shapeType;
@@ -309,14 +335,14 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                 }
                 case 231: { // ModifierWidthIn
                     auto* m = static_cast<ModifierWidthIn*>(child);
-                    ls.widthInMin = m->oMin;
-                    ls.widthInMax = m->oMax;
+                    ls.widthInMin = dimInScale(m->oMin);
+                    ls.widthInMax = dimInScale(m->oMax);
                     break;
                 }
                 case 232: { // ModifierHeightIn
                     auto* m = static_cast<ModifierHeightIn*>(child);
-                    ls.heightInMin = m->oMin;
-                    ls.heightInMax = m->oMax;
+                    ls.heightInMin = dimInScale(m->oMin);
+                    ls.heightInMax = dimInScale(m->oMax);
                     break;
                 }
                 case 243: { // ModifierDimensionConstraints
@@ -329,14 +355,23 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                                == ModifierDimensionConstraints::REQUIRED_HORIZONTAL) {
                         ls.widthInMin = m->minVal;
                         ls.widthInMax = m->maxVal;
+                        ls.widthInRequired = m->constraintType
+                                == ModifierDimensionConstraints::REQUIRED_HORIZONTAL;
                     } else {
                         ls.heightInMin = m->minVal;
                         ls.heightInMax = m->maxVal;
+                        ls.heightInRequired = m->constraintType
+                                == ModifierDimensionConstraints::REQUIRED_VERTICAL;
                     }
                     break;
                 }
                 case 229: // ModifierRipple
                     ls.ripple = child;
+                    ls.paintMods.push_back({child});
+                    break;
+                case 59:  // ModifierClick: its click ripple is painted in modifier order
+                case 83:  // ModifierMultiClick
+                    ls.paintMods.push_back({child});
                     break;
                 case 14: // AnimationSpec
                     ls.animSpec = child;
@@ -349,6 +384,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     break;
                 }
                 case 221: { // ModifierOffset
+                    ls.paintMods.push_back({child});
                     auto* m = static_cast<ModifierOffset*>(child);
                     ls.hasOffset = true;
                     // The variable itself (or the constant), resolved at paint: with the layout
@@ -361,6 +397,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     auto* m = static_cast<ModifierGraphicsLayer*>(child);
                     ls.glAlpha = m->alpha;
                     ls.hasGlAlpha = true;
+                    ls.graphicsLayer = m;
                     if (m->hasBlur) {
                         ls.hasGlBlur = true;
                         ls.glBlurX = m->blurX;
@@ -369,16 +406,18 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     break;
                 }
                 case 108: { // ClipRectModifier
+                    ls.paintMods.push_back({child});
                     ls.hasClipRect = true;
                     break;
                 }
                 case 54: { // RoundedClipRectModifier
+                    ls.paintMods.push_back({child});
                     auto* m = static_cast<ModifierRoundedClipRect*>(child);
                     ls.hasRoundedClipRect = true;
-                    ls.clipTopStart = m->oTopStart;
-                    ls.clipTopEnd = m->oTopEnd;
-                    ls.clipBottomStart = m->oBottomStart;
-                    ls.clipBottomEnd = m->oBottomEnd;
+                    ls.clipTopStart = m->oTopStart * gDpScale;
+                    ls.clipTopEnd = m->oTopEnd * gDpScale;
+                    ls.clipBottomStart = m->oBottomStart * gDpScale;
+                    ls.clipBottomEnd = m->oBottomEnd * gDpScale;
                     break;
                 }
                 case 226: { // ScrollModifier
@@ -388,6 +427,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                     ls.scrollPosition = m->position; // may be NaN-encoded
                     ls.scrollMaxNan = m->max;        // original NaN-encoded max scroll var ID
                     ls.scrollNotchNan = m->notchMax;  // original NaN-encoded content dim var ID
+                    ls.scrollOp = m;
                     break;
                 }
                 case 237: { // ModifierAlignBy
@@ -428,7 +468,7 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
             if (child->opcode() == 201) {
                 auto* lcc = static_cast<LayoutComponentContent*>(child);
                 if (lcc->componentId != 0) {
-                    ls.canvasContentIds.push_back(lcc->componentId);
+                    ls.layoutContentIds.push_back(lcc->componentId);
                     LTRACE("      initial LCC cid=%d registered\n", lcc->componentId);
                 }
             }
@@ -461,10 +501,16 @@ static void inflateLayout(Operation* self, LayoutState& ls) {
                         // Nested LayoutComponentContent - process its children too
                         auto* lcc = static_cast<LayoutComponentContent*>(sub.get());
                         if (lcc->componentId != 0) {
-                            ls.canvasContentIds.push_back(lcc->componentId);
+                            ls.layoutContentIds.push_back(lcc->componentId);
                         }
                         LTRACE("        nested content wrapper cid=%d with %d subs\n", lcc->componentId, (int)sub->mChildren.size());
                         contentStack.push_back(sub.get());
+                    } else if (sub->opcode() == 142) {
+                        // REFERENCED_OPERATIONS at its definition site: neither laid out nor
+                        // drawn. The reference's LayoutComponentContent.getComponents takes
+                        // only direct Component children, and ReferencedOperations.apply just
+                        // registers the group; IncludeReferencedOperations re-reads its bytes
+                        // where it is included.
                     } else if (isLayoutComponent(sub.get())) {
                         LTRACE("        layout child opcode=%d\n", sub->opcode());
                         ls.layoutChildren.push_back(sub.get());
@@ -498,6 +544,13 @@ thread_local bool sSawActiveAnim = false;
 static void collapseChildren(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
                              float avail, int axis);
 static void unhide(Operation* child, RemoteContext& ctx, MeasurePass& measure);
+static void collapsedWrapSize(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
+                              int axis, float availMain, bool hasHWrap, bool hasVWrap,
+                              float& measuredW, float& measuredH);
+static void measureCollapsibleChildren(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
+                                       MeasurePass& measure, int axis, float mainMax,
+                                       float crossMax, float& measuredW, float& measuredH,
+                                       bool hasHWrap, bool hasVWrap);
 
 static float resolveVar(float v, const RemoteContext& ctx) {
     if (Utils::isVariable(v)) {
@@ -648,14 +701,14 @@ static float computeModifierDefinedWidth(const LayoutState& ls, const RemoteCont
     // rule. Using total padding here makes `.width(200).padding(30)` 260 wide instead
     // of 200 with 140 of content.
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        return ls.padBeforeWidth + resolveVar(ls.widthValue, ctx);
+        return ls.padBeforeWidth + resolveVar(ls.widthValue, ctx) * dimScale(ls.widthType);
     }
     return ls.paddingLeft + ls.paddingRight;
 }
 
 static float computeModifierDefinedHeight(const LayoutState& ls, const RemoteContext& ctx) {
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        return ls.padBeforeHeight + resolveVar(ls.heightValue, ctx);
+        return ls.padBeforeHeight + resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType);
     }
     return ls.paddingTop + ls.paddingBottom;
 }
@@ -668,6 +721,11 @@ static void measureComponent(Operation* op, PaintContext* pc, RemoteContext& ctx
 static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& measure);
 
 static void paintComponent(Operation* op, RemoteContext& ctx);
+static void measureStateLayout(Operation* op, PaintContext* pc, RemoteContext& ctx,
+                               float minW, float maxW, float minH, float maxH,
+                               MeasurePass& measure);
+static void layoutStateLayout(Operation* op, RemoteContext& ctx, MeasurePass& measure);
+static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& measure);
 
 // ── Per-document layout cache ────────────────────────────────────────
 #include <unordered_map>
@@ -685,6 +743,7 @@ struct LayoutCache {
     bool animating = false;        // a layout animation was in flight last measure
     float w = -1.0f, h = -1.0f;
     uint64_t epoch = 0;            // RemoteContext.mLayoutEpoch at the last layout
+    float dpScale = 1.0f, density = 1.0f;   // the density scales the states were inflated with
 };
 
 static LayoutCache& cacheFor(RemoteContext& ctx) {
@@ -720,16 +779,59 @@ static int getComponentId(const Operation* op) {
 // re-evaluates unconditionally (ComponentVisibilityOperation.evaluateInLayout) and maps
 // anything it cannot resolve to GONE, which is what makes a document that switches
 // between mutually exclusive branches show exactly one of them.
+static bool gLayoutAnimationEnabled = true;
 static void applyVisibility(const LayoutState& ls, RemoteContext& ctx, ComponentMeasure& m) {
+    m.holdExit = false;
     if (ls.visibilityId < 0) return;
     int v = ctx.getInteger(ls.visibilityId);
     m.visibility = (v == VIS_VISIBLE) ? VIS_VISIBLE
                  : (v == VIS_INVISIBLE) ? VIS_INVISIBLE
                  : VIS_GONE;
+    // An exit with SEQUENCE BEFORE plays before the layout changes: while the component is
+    // still on screen it keeps its place (measured visible), the animation pass turning it
+    // GONE at those bounds; the layout closes up once it is off.
+    auto* as = static_cast<AnimationSpec*>(ls.animSpec);
+    if (m.visibility != VIS_VISIBLE && as && ((as->exitAnimation >> 8) & 0xFF) == 1
+        && gLayoutAnimationEnabled && ctx.getDocument()) {
+        auto& store = ctx.getDocument()->animStore();
+        auto it = store.find(m.id);
+        if (it != store.end() && it->second.hasLive && it->second.live.isVisible()) {
+            m.visibility = VIS_VISIBLE;
+            m.holdExit = true;
+        }
+    }
 }
 
 
 // ── Measure a text component ─────────────────────────────────────────
+// ── Letter spacing and line spacing (CoreText P_LETTER_SPACING / P_LINE_HEIGHT_*) ──
+// As Android's TextPaint.setLetterSpacing: every character's advance grows by the spacing
+// (in em), half before it and half after. As StaticLayout.setLineSpacing(add, multiplier):
+// each line but the last is (height × multiplier + add) tall.
+static int utf8Count(const std::string& s) {
+    int n = 0;
+    for (unsigned char c : s) if ((c & 0xC0) != 0x80) n++;
+    return n;
+}
+static float lineGap(float lineH, float add, float mul) {
+    return lineH * (mul - 1.0f) + add;   // the extra space below every line but the last
+}
+static constexpr int kSpacedTextId = INT32_MIN + 0x2027;   // scratch text slot
+static void drawSpaced(PaintContext* pc, const std::string& s, float x, float y, float fsize,
+                       float lsPx) {
+    int i = 0;
+    for (size_t b = 0; b < s.size(); i++) {
+        size_t e = b + 1;
+        while (e < s.size() && ((unsigned char)s[e] & 0xC0) == 0x80) e++;
+        float px = x + pc->measureTextWidth(s.substr(0, b), fsize) + lsPx * (i + 0.5f);
+        std::string ch = s.substr(b, e - b);
+        pc->loadText(kSpacedTextId, ch);
+        int units = utf8ByteToUtf16Index(ch, (int) ch.size());
+        pc->drawTextRun(kSpacedTextId, 0, units, 0, units, px, y, false);
+        b = e;
+    }
+}
+
 static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
                         float minW, float maxW, float minH, float maxH,
                         MeasurePass& measure) {
@@ -743,6 +845,7 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     int col = 0;
     int maxLines = INT32_MAX;
     int mWeight = 400, mStyle = 0, mFamilyId = 0;
+    float lsEm = 0, lhAdd = 0, lhMul = 1;
     if (op->opcode() == 208) {
         auto* lt = static_cast<LayoutText*>(op);
         tid = lt->textId;
@@ -757,11 +860,18 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
         col = ct->color;
         maxLines = ct->maxLines;
         mWeight = (int)ct->fontWeight; mStyle = ct->fontStyle; mFamilyId = ct->fontFamilyId;
+        lsEm = ct->letterSpacing; lhAdd = ct->lineHeightAdd; lhMul = ct->lineHeightMultiplier;
     }
     if (maxLines <= 0) maxLines = INT32_MAX;
 
-    // Resolve NaN-encoded variable references (fallback for unresolved)
-    fsize = resolveVar(fsize, ctx);
+    // Resolve NaN-encoded variable references (fallback for unresolved). A constant size is
+    // in dp under DENSITY_BEHAVIOR_DP; a variable one is used as is (CoreText.updateVariables).
+    {
+        float rawSize = op->opcode() == 208 ? static_cast<LayoutText*>(op)->fontSize
+                                            : static_cast<CoreTextOp*>(op)->fontSize;
+        fsize = resolveVar(fsize, ctx);
+        if (!std::isnan(rawSize)) fsize *= gDpScale;
+    }
     if (fsize <= 0 || std::isnan(fsize)) fsize = 16;
 
     // Measure with the same typeface used for painting (weight/italic/family) so
@@ -794,7 +904,9 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     } guard{pc, styledMeasure};
 
     std::string text = ctx.getText(tid);
-    float textW = pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size();
+    const float lsPx = lsEm * fsize;
+    float textW = (pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size())
+                  + lsPx * utf8Count(text);
     float lineH = pc ? pc->measureTextHeight(text, fsize) : fsize * 1.2f;
     // Capture the baseline with this component's own typeface applied (the guard is
     // still active here), so getAlignByValue can align mixed styles on one baseline.
@@ -818,12 +930,14 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
         if ((int) wrappedLines.size() > maxLines) {
             wrappedLines.resize(maxLines);
         }
-        textH = lineH * wrappedLines.size();
+        textH = lineH * wrappedLines.size()
+                + lineGap(lineH, lhAdd, lhMul) * (float)(wrappedLines.size() - 1);
         // Compute actual max line width for proper sizing
         float maxLineW = 0;
         for (auto& line : wrappedLines) {
             std::string lineStr = text.substr(line.start, line.end - line.start);
-            float lw = pc ? pc->measureTextWidth(lineStr, fsize) : fsize * 0.6f * lineStr.size();
+            float lw = (pc ? pc->measureTextWidth(lineStr, fsize) : fsize * 0.6f * lineStr.size())
+                       + lsPx * utf8Count(lineStr);
             maxLineW = std::max(maxLineW, lw);
         }
         textW = std::min(maxLineW, contentMaxW > 0 ? contentMaxW : maxLineW);
@@ -836,14 +950,14 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     // (e.g. an animated height); resolve them before use. A FILL fraction that is
     // still NaN after resolution means "fill completely".
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        measuredW = resolveVar(ls.widthValue, ctx) + ls.padBeforeWidth;
+        measuredW = resolveVar(ls.widthValue, ctx) * dimScale(ls.widthType) + ls.padBeforeWidth;
     } else if (ls.widthType == DimType::FILL) {
         float wv = resolveVar(ls.widthValue, ctx);
         measuredW = std::isnan(wv) ? maxW : maxW * wv;
     }
 
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        measuredH = resolveVar(ls.heightValue, ctx) + ls.padBeforeHeight;
+        measuredH = resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType) + ls.padBeforeHeight;
     } else if (ls.heightType == DimType::FILL) {
         float hv = resolveVar(ls.heightValue, ctx);
         measuredH = std::isnan(hv) ? maxH : maxH * hv;
@@ -858,6 +972,55 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     m.w = measuredW;
     m.h = measuredH;
     LTRACE("    measureText DONE cid=%d w=%.1f h=%.1f (text='%.20s' fsize=%.1f)\n", cid, m.w, m.h, text.c_str(), fsize);
+}
+
+// ── Min intrinsic size (Component.minIntrinsicWidth / minIntrinsicHeight) ──
+// Text: its unconstrained size. A row sums its children's widths (a column their heights)
+// and takes the largest on the other axis; any other layout takes the largest child. Each is
+// at least what its modifiers define (padding plus an exact size).
+static void minIntrinsicSize(Operation* op, PaintContext* pc, RemoteContext& ctx,
+                             MeasurePass& measure, float& w, float& h) {
+    int oc = op->opcode();
+    if (oc == 208 || oc == 239) {
+        measureComponent(op, pc, ctx, 0, 1e9f, 0, 1e9f, measure);
+        auto& cm = measure.get(getComponentId(op));
+        w = cm.w; h = cm.h;
+        return;
+    }
+    auto& ls = getLS(ctx, op);
+    inflateLayout(op, ls);
+    if (oc == 230 || oc == 233) {
+        // CollapsibleRow/ColumnLayout.minIntrinsicWidth/Height (FEATURE_PRIORITY_FIX, on by
+        // default): the modifier-defined size plus the child that stays last (the highest
+        // priority number, the first on ties); an exact size is just itself.
+        int axis = oc == 230 ? 0 : 1;
+        Operation* last = nullptr;
+        float best = 0.0f;
+        for (auto* child : ls.layoutChildren) {
+            auto& cls = getLS(ctx, child);
+            inflateLayout(child, cls);
+            float p = (cls.hasCollapsePriority && cls.collapseOrientation == axis)
+                          ? cls.collapsePriority : std::numeric_limits<float>::max();
+            if (!last || p > best) { last = child; best = p; }
+        }
+        float iw = 0.0f, ih = 0.0f;
+        if (last) minIntrinsicSize(last, pc, ctx, measure, iw, ih);
+        auto exact = [](DimType t) { return t == DimType::EXACT || t == DimType::EXACT_DP; };
+        w = computeModifierDefinedWidth(ls, ctx) + (exact(ls.widthType) ? 0.0f : iw);
+        h = computeModifierDefinedHeight(ls, ctx) + (exact(ls.heightType) ? 0.0f : ih);
+        return;
+    }
+    float cw = 0.0f, ch = 0.0f;
+    bool row = oc == 203 || oc == 230, column = oc == 204 || oc == 233;
+    for (auto* child : ls.layoutChildren) {
+        float iw = 0.0f, ih = 0.0f;
+        minIntrinsicSize(child, pc, ctx, measure, iw, ih);
+        cw = row ? cw + iw : std::max(cw, iw);
+        ch = column ? ch + ih : std::max(ch, ih);
+    }
+    float mw = computeModifierDefinedWidth(ls, ctx), mh = computeModifierDefinedHeight(ls, ctx);
+    w = std::max(mw, cw);
+    h = std::max(mh, ch);
 }
 
 // ── Measure a layout manager (Box, Row, Column, etc.) ────────────────
@@ -888,14 +1051,37 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     bool hasHWrap = false;
     bool hasVWrap = false;
 
-    if (ls.widthType == DimType::FILL) {
+    // RowLayout.isInHorizontalFill / ColumnLayout.isInVerticalFill: a row (or flow) with a
+    // horizontally weighted child fills horizontally, a column with a vertically weighted
+    // child fills vertically, whatever its own size modifier says (an exact size, whose
+    // value is not a fraction, fills completely).
+    bool weightFillW = false, weightFillH = false;
+    {
+        int o = op->opcode();
+        bool rowish = o == 203 || o == 230 || o == 240, colish = o == 204 || o == 233;
+        if (rowish || colish) {
+            for (auto* child : ls.layoutChildren) {
+                if (!isLayoutComponent(child)) continue;
+                auto& cls = getLS(ctx, child);
+                inflateLayout(child, cls);
+                if (rowish && cls.widthType == DimType::WEIGHT) weightFillW = true;
+                if (colish && cls.heightType == DimType::WEIGHT) weightFillH = true;
+            }
+        }
+    }
+    if (weightFillW && ls.widthType != DimType::FILL) {
+        measuredW = maxW;
+        minW = insetMaxW;
+    } else if (ls.widthType == DimType::FILL) {
         // A fill may carry a fraction of the parent; NaN means fill completely.
         float wv = resolveVar(ls.widthValue, ctx);
         measuredW = std::isnan(wv) ? maxW : maxW * wv;
         minW = std::isnan(wv) ? insetMaxW
                               : measuredW - ls.paddingLeft - ls.paddingRight;
     } else if (ls.widthType != DimType::WEIGHT) {
-        measuredW = std::clamp(measuredW, minW, maxW);
+        // max then min, as the reference: a widthIn minimum above the parent's maximum
+        // gives the maximum (std::clamp is undefined when min > max).
+        measuredW = std::min(std::max(measuredW, minW), maxW);
         hasHWrap = (ls.widthType == DimType::WRAP);
         // Measure version 2 tightening: non-WRAP gets exact inset
         if (!hasHWrap) {
@@ -903,13 +1089,16 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         }
     }
 
-    if (ls.heightType == DimType::FILL) {
+    if (weightFillH && ls.heightType != DimType::FILL) {
+        measuredH = maxH;
+        minH = insetMaxH;
+    } else if (ls.heightType == DimType::FILL) {
         float hv = resolveVar(ls.heightValue, ctx);
         measuredH = std::isnan(hv) ? maxH : maxH * hv;
         minH = std::isnan(hv) ? insetMaxH
                               : measuredH - ls.paddingTop - ls.paddingBottom;
     } else if (ls.heightType != DimType::WEIGHT) {
-        measuredH = std::clamp(measuredH, minH, maxH);
+        measuredH = std::min(std::max(measuredH, minH), maxH);
         hasVWrap = (ls.heightType == DimType::WRAP);
         // Measure version 2 tightening
         if (!hasVWrap) {
@@ -927,7 +1116,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
     if (oc == 240) {
         // FlowLayout: wrap children into rows based on available width
-        float spacedBy = static_cast<LayoutFlow*>(op)->spacedBy;
+        float spacedBy = static_cast<LayoutFlow*>(op)->spacedBy * gDpScale;
 
         // Inflate and measure all children first
         for (auto* child : ls.layoutChildren) {
@@ -985,8 +1174,8 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     } else if (oc == 203 || oc == 230) {
         // Row: children laid out horizontally
         float spacedBy = 0;
-        if (oc == 203) spacedBy = static_cast<LayoutRow*>(op)->spacedBy;
-        else if (oc == 230) spacedBy = static_cast<CollapsibleRowLayout*>(op)->spacedBy;
+        if (oc == 203) spacedBy = static_cast<LayoutRow*>(op)->spacedBy * gDpScale;
+        else if (oc == 230) spacedBy = static_cast<CollapsibleRowLayout*>(op)->spacedBy * gDpScale;
 
         // Check for WEIGHT width children (two-pass measurement)
         float totalWeights = 0;
@@ -1059,8 +1248,8 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     } else if (oc == 204 || oc == 233) {
         // Column: children laid out vertically
         float spacedBy = 0;
-        if (oc == 204) spacedBy = static_cast<LayoutColumn*>(op)->spacedBy;
-        else if (oc == 233) spacedBy = static_cast<CollapsibleColumnLayout*>(op)->spacedBy;
+        if (oc == 204) spacedBy = static_cast<LayoutColumn*>(op)->spacedBy * gDpScale;
+        else if (oc == 233) spacedBy = static_cast<CollapsibleColumnLayout*>(op)->spacedBy * gDpScale;
 
         // Check for WEIGHT height children (two-pass measurement)
         float totalWeights = 0;
@@ -1142,13 +1331,16 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     }
 
     // STEP 8: Apply wrap sizes (Java)
+    // The maximum is enforced here already (the reference does it after the wrap, in
+    // STEP 10), because the children are re-measured below at the final size: a collapsible
+    // column held to a heightIn maximum drops what does not fit in it.
     if (hasHWrap) {
         measuredW = wrapW + ls.paddingLeft + ls.paddingRight;
-        measuredW = std::max(measuredW, minW);
+        measuredW = std::min(std::max(measuredW, minW), maxW);
     }
     if (hasVWrap) {
         measuredH = wrapH + ls.paddingTop + ls.paddingBottom;
-        measuredH = std::max(measuredH, minH);
+        measuredH = std::min(std::max(measuredH, minH), maxH);
     }
 
     // Scroll-aware measurement (matching Java LayoutManager.measure_v1_1_0 scroll logic)
@@ -1216,16 +1408,17 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         if (oc == 203 || oc == 230) {
             // Row: simple sequential pass - no special weight handling here
             // (weight redistribution happens in layoutManager positioning pass)
-            float mw = childMaxW;
-            if (oc == 230) for (auto* child : ls.layoutChildren) unhide(child, ctx, measure);
-            for (auto* child : ls.layoutChildren) {
-                // A collapsible row measures each child at its own width, then drops what
-                // does not fit (rather than squeezing it into what is left).
-                measureComponent(child, pc, ctx, 0, oc == 230 ? 1e9f : mw, 0, childMaxH, measure);
-                auto& cm = measure.get(getComponentId(child));
-                if (!cm.isGone()) mw -= cm.w;
+            if (oc == 230) {
+                measureCollapsibleChildren(ls, pc, ctx, measure, 0, childMaxW, childMaxH,
+                                           measuredW, measuredH, hasHWrap, hasVWrap);
+            } else {
+                float mw = childMaxW;
+                for (auto* child : ls.layoutChildren) {
+                    measureComponent(child, pc, ctx, 0, mw, 0, childMaxH, measure);
+                    auto& cm = measure.get(getComponentId(child));
+                    if (!cm.isGone()) mw -= cm.w;
+                }
             }
-            if (oc == 230) collapseChildren(ls, ctx, measure, childMaxW, 0);
         } else if (oc == 204 || oc == 233) {
             // Column: handle WEIGHT children (matching TS Column.computeSize)
             float totalWeights = 0;
@@ -1272,27 +1465,31 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                 }
             }
             if (oc == 233) {
-                // A collapsible column: each child at its own height, then drop what overflows.
-                for (auto* child : ls.layoutChildren) {
-                    unhide(child, ctx, measure);
-                    measureComponent(child, pc, ctx, 0, childMaxW, 0, 1e9f, measure);
-                }
-                collapseChildren(ls, ctx, measure, childMaxH, 1);
+                measureCollapsibleChildren(ls, pc, ctx, measure, 1, childMaxH, childMaxW,
+                                           measuredW, measuredH, hasHWrap, hasVWrap);
             }
         } else if (oc == 176) {
-            // FitBox (FitBoxLayout, priority fix): the first child, in order, whose own size fits
-            // the box is shown; every other child is GONE.
+            // FitBoxLayout.computeWrapSizePriorityFix (FEATURE_PRIORITY_FIX is on by default):
+            // the first child, in order, whose min intrinsic size fits and which, measured
+            // from that minimum up to the box, still fits, is shown; every other child is GONE.
             bool found = false;
             for (auto* child : ls.layoutChildren) {
                 unhide(child, ctx, measure);
-                measureComponent(child, pc, ctx, 0, 1e9f, 0, 1e9f, measure);
                 auto& cm = measure.get(getComponentId(child));
-                if (!found && !cm.isGone() && cm.w <= childMaxW + 0.5f && cm.h <= childMaxH + 0.5f) {
-                    found = true;
-                    measureComponent(child, pc, ctx, 0, childMaxW, 0, childMaxH, measure);
-                } else {
-                    cm.visibility = VIS_GONE;
+                if (!found) {
+                    float iw = 0.0f, ih = 0.0f;
+                    minIntrinsicSize(child, pc, ctx, measure, iw, ih);
+                    if (iw <= childMaxW + 0.5f && ih <= childMaxH + 0.5f) {
+                        measureComponent(child, pc, ctx, iw, childMaxW, ih, childMaxH, measure);
+                        auto& cm2 = measure.get(getComponentId(child));
+                        if (!cm2.isGone() && cm2.w <= childMaxW + 0.5f
+                            && cm2.h <= childMaxH + 0.5f) {
+                            found = true;
+                            continue;
+                        }
+                    }
                 }
+                cm.visibility = VIS_GONE;
             }
         } else {
             // Box/Canvas/FlowLayout: simple re-measure
@@ -1313,9 +1510,17 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         }
     }
 
-    // STEP 10: Enforce min constraints one more time (Java)
+    // STEP 10: Enforce the constraints one more time (Java; ENFORCE_CONSTRAINTS, the default
+    // measure version): the min, then the max — so a widthIn minimum above the parent's
+    // maximum gives the maximum — then a required widthIn/heightIn, which may exceed it.
     measuredW = std::max(measuredW, minW);
     measuredH = std::max(measuredH, minH);
+    measuredW = std::min(measuredW, maxW);
+    measuredH = std::min(measuredH, maxH);
+    if (ls.widthInRequired)
+        measuredW = std::max(ls.widthInMin, std::min(measuredW, ls.widthInMax));
+    if (ls.heightInRequired)
+        measuredH = std::max(ls.heightInMin, std::min(measuredH, ls.heightInMax));
 
     // A canvas (LAYOUT_CANVAS) is an explicitly-sized drawing surface: honour its exact
     // height even when it exceeds the parent's maxHeight. A canvas doesn't clip its own
@@ -1325,7 +1530,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     // viewport (tall code panels inside a scroll viewport).
     if (op->opcode() == 205 &&
         (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP)) {
-        measuredH = resolveVar(ls.heightValue, ctx) + ls.padBeforeHeight;
+        measuredH = resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType) + ls.padBeforeHeight;
     }
 
     applyVisibility(ls, ctx, m);
@@ -1404,7 +1609,7 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         // FlowLayout: position children in wrapped rows
         int hPos = static_cast<LayoutFlow*>(op)->horizontal;
         int vPos = static_cast<LayoutFlow*>(op)->vertical;
-        float spacedBy = static_cast<LayoutFlow*>(op)->spacedBy;
+        float spacedBy = static_cast<LayoutFlow*>(op)->spacedBy * gDpScale;
 
         // Segment children into rows (WEIGHT children use WidthIn min, matching TS)
         std::vector<std::vector<Operation*>> rows;
@@ -1573,11 +1778,11 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         if (oc == 203) {
             hPos = static_cast<LayoutRow*>(op)->horizontal;
             vPos = static_cast<LayoutRow*>(op)->vertical;
-            spacedBy = static_cast<LayoutRow*>(op)->spacedBy;
+            spacedBy = static_cast<LayoutRow*>(op)->spacedBy * gDpScale;
         } else {
             hPos = static_cast<CollapsibleRowLayout*>(op)->horizontal;
             vPos = static_cast<CollapsibleRowLayout*>(op)->vertical;
-            spacedBy = static_cast<CollapsibleRowLayout*>(op)->spacedBy;
+            spacedBy = static_cast<CollapsibleRowLayout*>(op)->spacedBy * gDpScale;
         }
 
         // Weight redistribution (matching TS internalLayoutMeasure)
@@ -1668,7 +1873,6 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         float tx = startX;
         for (auto* child : ls.layoutChildren) {
             auto& cm = measure.get(getComponentId(child));
-            if (cm.isGone()) continue;
 
             float alignByOffset = 0;
             if (hasAlignBy) {
@@ -1707,6 +1911,9 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             }
             cm.x = tx;
             cm.y = ty;
+            // RowLayout positions a GONE child too (where the next one goes), and lays it
+            // out, but does not advance past it.
+            if (cm.isGone()) { layoutComponent(child, ctx, measure); continue; }
             tx += cm.w;
             // Java: both mSpacedBy and distribution gap are added
             if (hPos == POS_SPACE_BETWEEN || hPos == POS_SPACE_AROUND || hPos == POS_SPACE_EVENLY) {
@@ -1722,11 +1929,11 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         if (oc == 204) {
             hPos = static_cast<LayoutColumn*>(op)->horizontal;
             vPos = static_cast<LayoutColumn*>(op)->vertical;
-            spacedBy = static_cast<LayoutColumn*>(op)->spacedBy;
+            spacedBy = static_cast<LayoutColumn*>(op)->spacedBy * gDpScale;
         } else {
             hPos = static_cast<CollapsibleColumnLayout*>(op)->horizontal;
             vPos = static_cast<CollapsibleColumnLayout*>(op)->vertical;
-            spacedBy = static_cast<CollapsibleColumnLayout*>(op)->spacedBy;
+            spacedBy = static_cast<CollapsibleColumnLayout*>(op)->spacedBy * gDpScale;
         }
 
         // Weight redistribution (matching TS internalLayoutMeasure)
@@ -1799,7 +2006,6 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         float ty = startY;
         for (auto* child : ls.layoutChildren) {
             auto& cm = measure.get(getComponentId(child));
-            if (cm.isGone()) continue;
 
             float tx = 0;
             switch (hPos) {
@@ -1810,6 +2016,8 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
             }
             cm.x = tx;
             cm.y = ty;
+            // ColumnLayout positions a GONE child too, without advancing past it.
+            if (cm.isGone()) { layoutComponent(child, ctx, measure); continue; }
             ty += cm.h;
             if (vPos == POS_SPACE_BETWEEN || vPos == POS_SPACE_AROUND || vPos == POS_SPACE_EVENLY) {
                 ty += gap;
@@ -1823,6 +2031,11 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         if (oc == 202) {
             hPos = static_cast<LayoutBox*>(op)->horizontal;
             vPos = static_cast<LayoutBox*>(op)->vertical;
+        } else if (oc == 176) {
+            // FitBoxLayout.internalLayoutMeasure positions the shown child by its own
+            // horizontal/vertical positioning, like a box.
+            hPos = static_cast<FitBoxLayout*>(op)->horizontal;
+            vPos = static_cast<FitBoxLayout*>(op)->vertical;
         } else if (oc == 217) {
             hPos = static_cast<StateLayout*>(op)->horizontalPositioning;
             vPos = static_cast<StateLayout*>(op)->verticalPositioning;
@@ -1833,9 +2046,9 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
         parentM.w = selfW;
         parentM.h = selfH;
 
+        // BoxLayout positions every child, GONE ones included.
         for (auto* child : ls.layoutChildren) {
             auto& cm = measure.get(getComponentId(child));
-            if (cm.isGone()) continue;
 
             float tx = 0, ty = 0;
             switch (hPos) {
@@ -1866,11 +2079,253 @@ static void layoutManager(Operation* op, RemoteContext& ctx, MeasurePass& measur
     // Write scroll max/notch variables to context (matching Java ScrollModifierOperation.layout())
     if (ls.hasScroll) {
         float maxScroll = std::max(0.0f, ls.scrollContentDimension - ls.scrollHostDimension);
+        if (ls.scrollOp) {
+            auto* so = static_cast<ModifierScroll*>(ls.scrollOp);
+            so->maxScroll = maxScroll;
+            so->scrollOffset = std::min(so->scrollOffset, maxScroll);
+        }
         if (Utils::isVariable(ls.scrollMaxNan)) {
             ctx.loadFloat(Utils::idFromNan(ls.scrollMaxNan), maxScroll);
         }
         if (Utils::isVariable(ls.scrollNotchNan)) {
             ctx.loadFloat(Utils::idFromNan(ls.scrollNotchNan), ls.scrollContentDimension);
+        }
+    }
+}
+
+// ── StateLayout (217) ────────────────────────────────────────────────
+// Port of StateLayout.java. Only the current state (the child at the index the variable
+// holds) is measured, with the constraints the StateLayout was given -- its own modifiers
+// play no part in its size -- and the StateLayout takes that state's size. The other states
+// are GONE and are neither measured nor laid out again: they keep the bounds they were last
+// laid out at (their modifier-defined size, at 0,0, if never).
+//
+// Components carrying an animation id (an ANIMATION_SPEC modifier, or the component's own
+// animationId) are shared across states: when the state changes, the one in the new state
+// starts from the bounds its counterpart in the previous state was shown at, so it moves and
+// resizes into place, while the previous state's other children are kept on screen for their
+// exit (fade) animation (layoutStateLayout / the 217 branch of paintLayoutComponent).
+
+static int getOpAnimationId(const Operation* op) {
+    switch (op->opcode()) {
+        case 202: return static_cast<const LayoutBox*>(op)->animationId;
+        case 203: return static_cast<const LayoutRow*>(op)->animationId;
+        case 204: return static_cast<const LayoutColumn*>(op)->animationId;
+        case 205: return static_cast<const LayoutCanvas*>(op)->animationId;
+        case 208: return static_cast<const LayoutText*>(op)->animationId;
+        case 239: return static_cast<const CoreTextOp*>(op)->animationId;
+        case 240: return static_cast<const LayoutFlow*>(op)->animationId;
+        case 176: return static_cast<const FitBoxLayout*>(op)->animationId;
+        case 230: return static_cast<const CollapsibleRowLayout*>(op)->animationId;
+        case 233: return static_cast<const CollapsibleColumnLayout*>(op)->animationId;
+        case 217: return static_cast<const StateLayout*>(op)->animationId;
+        default: return -1;
+    }
+}
+
+// Component.mAnimationId: the ANIMATION_SPEC modifier's id when it has one (inflate), else
+// the id the component was declared with.
+static int animationIdOf(Operation* op, RemoteContext& ctx) {
+    auto& ls = getLS(ctx, op);
+    inflateLayout(op, ls);
+    if (ls.animSpec) return static_cast<AnimationSpec*>(ls.animSpec)->animationId;
+    int a = getOpAnimationId(op);
+    return a == 0 ? -1 : a;
+}
+
+static void collectAnimated(Operation* op, RemoteContext& ctx, std::vector<Operation*>& out) {
+    if (getComponentId(op) == -1) return;
+    if (animationIdOf(op, ctx) != -1) out.push_back(op);
+    auto& ls = getLS(ctx, op);
+    for (auto* child : ls.layoutChildren) collectAnimated(child, ctx, out);
+}
+
+// The bounds LayoutComponent.inflate gives a component before it is ever measured: its
+// modifier-defined size (the paddings before its size modifier plus an exact size; a fill is
+// 0), at 0,0. A state that was never shown keeps these.
+static void seedUnmeasured(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
+    int cid = getComponentId(op);
+    if (cid == -1) return;
+    auto& ls = getLS(ctx, op);
+    inflateLayout(op, ls);
+    if (!measure.contains(cid)) {
+        auto& m = measure.get(cid);
+        auto exact = [](DimType t) { return t == DimType::EXACT || t == DimType::EXACT_DP; };
+        float w = exact(ls.widthType) ? resolveVar(ls.widthValue, ctx) * dimScale(ls.widthType) : 0.0f;
+        float h = exact(ls.heightType) ? resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType) : 0.0f;
+        m.x = 0; m.y = 0;
+        m.w = ls.padBeforeWidth + w;
+        m.h = ls.padBeforeHeight + h;
+        m.visibility = VIS_VISIBLE;
+    }
+    for (auto* child : ls.layoutChildren) seedUnmeasured(child, ctx, measure);
+}
+
+static Operation* stateAt(const LayoutState& ls, int idx) {
+    if (ls.layoutChildren.empty()) return nullptr;
+    if (idx >= 0 && idx < (int)ls.layoutChildren.size()) return ls.layoutChildren[idx];
+    return ls.layoutChildren[0];   // getLayout: the first child when the index is out of range
+}
+
+static void measureStateLayout(Operation* op, PaintContext* pc, RemoteContext& ctx,
+                               float minW, float maxW, float minH, float maxH,
+                               MeasurePass& measure) {
+    auto* sl = static_cast<StateLayout*>(op);
+    int cid = getComponentId(op);
+    auto& ls = getLS(ctx, op);
+    inflateLayout(op, ls);
+    auto& self = measure.get(cid);
+    if (ls.layoutChildren.empty()) { self.w = 0; self.h = 0; return; }
+
+    // The index moves at paint (stateLayoutReadIndex), as StateLayout.paint does, so a new
+    // state is measured on the frame after the one that saw the variable change. The first
+    // index is taken as is (the reference starts from state 0 and switches on its first
+    // paint, which with animations on plays the first state's exit).
+    if (!sl->indexInitialized) {
+        sl->indexInitialized = true;
+        sl->currentIndex = sl->previousIndex = sl->indexId != 0 ? ctx.getInteger(sl->indexId) : 0;
+    }
+    Operation* layout = stateAt(ls, sl->currentIndex);
+    Operation* previous = stateAt(ls, sl->previousIndex);
+
+    // The states not shown: GONE, at the bounds they had (inflate's when never laid out).
+    // The previous state stays up for the length of the transition.
+    for (auto* pane : ls.layoutChildren) {
+        if (pane == layout) continue;
+        seedUnmeasured(pane, ctx, measure);
+        if (!(sl->inTransition && pane == previous) && getComponentId(pane) != getComponentId(layout))
+            measure.get(getComponentId(pane)).visibility = VIS_GONE;
+    }
+
+    int paneId = getComponentId(layout);
+    measure.get(paneId).visibility = VIS_VISIBLE;      // layout.setVisibility(VISIBLE)
+    measureComponent(layout, pc, ctx, minW, maxW, minH, maxH, measure);
+
+    // statePaintedComponents: per animation id, its component in each state.
+    std::unordered_map<int, std::vector<Operation*>> painted;
+    std::vector<std::vector<Operation*>> animatedIn(ls.layoutChildren.size());
+    for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
+        collectAnimated(ls.layoutChildren[i], ctx, animatedIn[i]);
+        for (auto* c : animatedIn[i]) {
+            auto& v = painted[animationIdOf(c, ctx)];
+            if (v.empty()) v.assign(ls.layoutChildren.size(), nullptr);
+            v[i] = c;
+        }
+    }
+    int curPos = -1, prevPos = -1;
+    for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
+        if (ls.layoutChildren[i] == layout) curPos = (int)i;
+        if (ls.layoutChildren[i] == previous) prevPos = (int)i;
+    }
+
+    // In a transition, a shared component of the new state starts from the bounds its
+    // counterpart was shown at (c.setX(prev.getX()) ..., mFirstLayout = false).
+    static thread_local LayoutAnimStore sDetached;
+    LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore() : sDetached;
+    if (sl->inTransition && curPos != prevPos && prevPos >= 0) {
+        for (auto* c : animatedIn[curPos]) {
+            auto& v = painted[animationIdOf(c, ctx)];
+            Operation* prev = v[prevPos];
+            if (!prev || prev == c) continue;
+            auto pit = store.find(getComponentId(prev));
+            if (pit == store.end() || !pit->second.hasLive) continue;
+            auto& st = store[getComponentId(c)];
+            if (st.hasLive && st.live.isVisible() && st.animating) continue;   // already moving
+            st.hasLive = true;
+            st.live = pit->second.live;
+            st.live.id = getComponentId(c);
+            st.live.visibility = VIS_VISIBLE;
+            st.animating = false;
+            st.lastChange = -1e9;
+        }
+    }
+
+    // Recopy to the animation ids: the reference keeps the measure of each animated component
+    // of the current state in the same MeasurePass as the components, keyed by the animation
+    // id, so a component whose id equals an animation id gets that measure too. (The copies
+    // to the same component in the other states are made at layout, layoutStateLayout.)
+    for (auto* c : animatedIn[curPos]) {
+        int aid = animationIdOf(c, ctx);
+        auto& own = measure.get(getComponentId(c));
+        own.visibility = VIS_VISIBLE;
+        ComponentMeasure cm = own;
+        auto& am = measure.get(aid);
+        am.x = cm.x; am.y = cm.y; am.w = cm.w; am.h = cm.h; am.visibility = VIS_VISIBLE;
+    }
+
+    // The previous state's children not in the new one are GONE (at their bounds).
+    if (prevPos >= 0 && prevPos != curPos) {
+        // A component whose id is also in the new state shares its measure (the reference's
+        // MeasurePass is keyed by id), and the new state's one wins: the reference re-measures
+        // that subtree on its own once its state is laid out.
+        std::vector<int> curIds;
+        std::vector<Operation*> stack{layout};
+        while (!stack.empty()) {
+            auto* o = stack.back(); stack.pop_back();
+            curIds.push_back(getComponentId(o));
+            for (auto* k : getLS(ctx, o).layoutChildren) stack.push_back(k);
+        }
+        auto& pls = getLS(ctx, previous);
+        for (auto* c : pls.layoutChildren) {
+            if (std::find(curIds.begin(), curIds.end(), getComponentId(c)) != curIds.end()) continue;
+            int aid = animationIdOf(c, ctx);
+            bool inNew = false;
+            if (aid != -1) {
+                auto it = painted.find(aid);
+                inNew = it != painted.end() && it->second[curPos] != nullptr;
+            }
+            int ccid = getComponentId(c);
+            if (!inNew && ccid != -1) measure.get(ccid).visibility = VIS_GONE;
+        }
+    }
+
+    const auto& pm = measure.get(paneId);
+    self.x = pm.x; self.y = pm.y; self.w = pm.w; self.h = pm.h;
+    self.visibility = pm.visibility;
+    sl->measuredIndex = sl->currentIndex;
+}
+
+static void layoutStateLayout(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
+    auto* sl = static_cast<StateLayout*>(op);
+    auto& ls = getLS(ctx, op);
+    Operation* layout = stateAt(ls, sl->currentIndex);
+    if (!layout) return;
+    const auto& self = measure.get(getComponentId(op));
+    auto& lm = measure.get(getComponentId(layout));
+    lm.w = self.w; lm.h = self.h; lm.visibility = self.visibility;
+    lm.x = 0; lm.y = 0;
+    layoutComponent(layout, ctx, measure);
+
+    // Every component sharing an animation id with one of the current state takes its
+    // measure (measured at exactly that size), but only shows it once laid out, which
+    // StateLayout.layout does in a transition for the animated direct children of the
+    // previous state. (The reference makes the copies in measure, where its children are
+    // already positioned; here positions come from the layout above.)
+    Operation* previous = stateAt(ls, sl->previousIndex);
+    if (!sl->inTransition || !previous || previous == layout) return;
+    std::vector<int> relaid;
+    for (auto* c : getLS(ctx, previous).layoutChildren) {
+        int aid = animationIdOf(c, ctx);
+        if (aid != -1) relaid.push_back(aid);
+    }
+    if (relaid.empty()) return;
+    std::vector<Operation*> current;
+    collectAnimated(layout, ctx, current);
+    std::vector<Operation*> others;
+    for (auto* pane : ls.layoutChildren)
+        if (pane != layout) collectAnimated(pane, ctx, others);
+    auto* pc = ctx.getPaintContext();
+    for (auto* c : current) {
+        int aid = animationIdOf(c, ctx);
+        if (std::find(relaid.begin(), relaid.end(), aid) == relaid.end()) continue;
+        ComponentMeasure cm = measure.get(getComponentId(c));
+        for (auto* ac : others) {
+            if (animationIdOf(ac, ctx) != aid) continue;
+            auto& m2 = measure.get(getComponentId(ac));
+            m2.x = cm.x; m2.y = cm.y; m2.w = cm.w; m2.h = cm.h; m2.visibility = VIS_VISIBLE;
+            measureComponent(ac, pc, ctx, cm.w, cm.w, cm.h, cm.h, measure);
+            m2.x = cm.x; m2.y = cm.y;
+            layoutComponent(ac, ctx, measure);
         }
     }
 }
@@ -1882,6 +2337,8 @@ static void measureComponent(Operation* op, PaintContext* pc, RemoteContext& ctx
     int oc = op->opcode();
     if (oc == 208 || oc == 239) {
         measureText(op, pc, ctx, minW, maxW, minH, maxH, measure);
+    } else if (oc == 217) {
+        measureStateLayout(op, pc, ctx, minW, maxW, minH, maxH, measure);
     } else if (isLayoutComponent(op)) {
         measureLayoutManager(op, pc, ctx, minW, maxW, minH, maxH, measure);
     }
@@ -1891,7 +2348,9 @@ static void measureComponent(Operation* op, PaintContext* pc, RemoteContext& ctx
 
 // ── Generic layout dispatcher ────────────────────────────────────────
 static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
-    if (isLayoutComponent(op) && op->opcode() != 208 && op->opcode() != 239) {
+    if (op->opcode() == 217) {
+        layoutStateLayout(op, ctx, measure);
+    } else if (isLayoutComponent(op) && op->opcode() != 208 && op->opcode() != 239) {
         layoutManager(op, ctx, measure);
     }
 }
@@ -1919,40 +2378,53 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
         // These are separate components that should have the content area dimensions
         float innerW = std::max(0.0f, m.w - ls.paddingLeft - ls.paddingRight);
         float innerH = std::max(0.0f, m.h - ls.paddingTop - ls.paddingBottom);
+        // A LayoutComponentContent id (what componentWidth() in a child's modifier names)
+        // reads the component's full size in the reference (ANM-02: a spacer of
+        // @go * (componentWidth() - 22) inside a track padded by 22), not its inner one.
+        for (int lcid : ls.layoutContentIds) ctx.setComponentDimension(lcid, m.w, m.h, m.x, m.y);
         for (int ccid : ls.canvasContentIds) {
             ctx.setComponentDimension(ccid, innerW, innerH, m.x, m.y);
             LTRACE("    storeDim canvasContent cid=%d w=%.1f h=%.1f\n", ccid, innerW, innerH);
         }
     }
 
+    // A StateLayout's current state last, so that where states share ids its bounds (and
+    // visibility, which is what hit testing reads) are the ones kept.
+    Operation* cur = op->opcode() == 217
+        ? stateAt(ls, static_cast<StateLayout*>(op)->measuredIndex) : nullptr;
     for (auto* child : ls.layoutChildren) {
-        storeMeasuredDimensions(child, ctx, measure);
+        if (child != cur) storeMeasuredDimensions(child, ctx, measure);
     }
+    if (cur) storeMeasuredDimensions(cur, ctx, measure);
 }
 
 // ── Paint background modifier ────────────────────────────────────────
-static void paintBackground(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
-                            float w, float h) {
-    if (!ls.hasBg || !pc) return;
+static int modifierColor(int flags, int colorId, float r, float g, float b, float a,
+                         RemoteContext& ctx) {
+    if (flags == 2) return ctx.getColor(colorId);   // COLOR_REF
+    int ia = std::clamp((int)(a * 255), 0, 255);
+    int ir = std::clamp((int)(r * 255), 0, 255);
+    int ig = std::clamp((int)(g * 255), 0, 255);
+    int ib = std::clamp((int)(b * 255), 0, 255);
+    return (ia << 24) | (ir << 16) | (ig << 8) | ib;
+}
 
+// BackgroundModifierOperation.paint: a rectangle or a circle (any other shape draws nothing)
+// at the size the modifier was laid out at.
+static void paintBackground(const ModifierBackground* mb, PaintContext* pc, RemoteContext& ctx,
+                            float w, float h) {
+    if (!pc) return;
     pc->savePaint();
     PaintBundle paint;
-    // Set fill style and color
     paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
-    if (ls.bgFlags == 2) {
-        // COLOR_REF: use color ID from context
-        int col = ctx.getColor(ls.bgColorId);
-        paint.addTag(PaintBundle::COLOR, col);
-    } else {
-        int a = std::clamp((int)(ls.bgA * 255), 0, 255);
-        int r = std::clamp((int)(ls.bgR * 255), 0, 255);
-        int g = std::clamp((int)(ls.bgG * 255), 0, 255);
-        int b = std::clamp((int)(ls.bgB * 255), 0, 255);
-        int col = (a << 24) | (r << 16) | (g << 8) | b;
-        paint.addTag(PaintBundle::COLOR, col);
-    }
+    paint.addTag(PaintBundle::COLOR,
+                 modifierColor(mb->flags, mb->colorId, mb->oR, mb->oG, mb->oB, mb->oA, ctx));
     pc->applyPaint(paint);
-    pc->drawRect(0, 0, w, h);
+    if (mb->shapeType == 0) {
+        pc->drawRect(0, 0, w, h);
+    } else if (mb->shapeType == 1) {
+        pc->drawCircle(w / 2.0f, h / 2.0f, std::min(w, h) / 2.0f);
+    }
     pc->restorePaint();
 }
 
@@ -1969,20 +2441,61 @@ static void unhide(Operation* child, RemoteContext& ctx, MeasurePass& measure) {
 
 // ── Collapsible row / column ─────────────────────────────────────────
 // CollapsibleRowLayout.computeVisibleChildren: the children, already measured at their own
-// size, are taken highest priority first (a child without a priority for this axis counts as
-// the highest; ties keep document order) and kept while they fit in `avail`; the first that
+// size, are taken highest priority first and kept while they fit in `avail`; the first that
 // does not fit, and every one after it, is GONE. Spacing is not counted, as in the reference.
+// The order is CollapsiblePriority.sortWithPriorities: a child without a priority for this
+// axis counts as Float.MAX_VALUE, and the list is sorted (stably, by Java's List.sort) with
+// the comparator (int) (p2 - p1) -- so priorities less than 1 apart tie and keep document
+// order. Java's TimSort on fewer than 32 elements is a binary insertion sort after the
+// leading run; it is reproduced here so a non-transitive tie orders the same way.
+static int javaPriorityCompare(float p1, float p2) {
+    float d = p2 - p1;
+    if (std::isnan(d)) return 0;
+    if (d >= 2147483647.0f) return INT32_MAX;
+    if (d <= -2147483648.0f) return INT32_MIN;
+    return (int)d;
+}
+
+template <typename T, typename Cmp>
+static void javaSmallSort(std::vector<T>& a, Cmp cmp) {
+    int n = (int)a.size();
+    if (n < 2) return;
+    // countRunAndMakeAscending
+    int runHi = 1;
+    if (cmp(a[runHi++], a[0]) < 0) {
+        while (runHi < n && cmp(a[runHi], a[runHi - 1]) < 0) runHi++;
+        std::reverse(a.begin(), a.begin() + runHi);
+    } else {
+        while (runHi < n && cmp(a[runHi], a[runHi - 1]) >= 0) runHi++;
+    }
+    // binarySort
+    for (int start = runHi; start < n; start++) {
+        T pivot = a[start];
+        int left = 0, right = start;
+        while (left < right) {
+            int mid = (left + right) >> 1;
+            if (cmp(pivot, a[mid]) < 0) right = mid; else left = mid + 1;
+        }
+        for (int k = start; k > left; k--) a[k] = a[k - 1];
+        a[left] = pivot;
+    }
+}
+
 static void collapseChildren(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
                              float avail, int axis) {
     std::vector<std::pair<float, Operation*>> kids;
+    bool hasPriorities = false;
     for (auto* child : ls.layoutChildren) {
         auto& cls = getLS(ctx, child);
+        if (cls.hasCollapsePriority) hasPriorities = true;
         float p = (cls.hasCollapsePriority && cls.collapseOrientation == axis)
                       ? cls.collapsePriority : std::numeric_limits<float>::max();
         kids.push_back({p, child});
     }
-    std::stable_sort(kids.begin(), kids.end(),
-                     [](const auto& a, const auto& b) { return a.first > b.first; });
+    if (hasPriorities)
+        javaSmallSort(kids, [](const auto& a, const auto& b) {
+            return javaPriorityCompare(a.first, b.first);
+        });
     float used = 0.0f;
     bool overflow = false;
     for (auto& [p, child] : kids) {
@@ -1991,21 +2504,96 @@ static void collapseChildren(const LayoutState& ls, RemoteContext& ctx, MeasureP
         auto& cm = measure.get(cid);
         if (overflow || cm.isGone()) { cm.visibility = VIS_GONE; continue; }
         float size = axis == 0 ? cm.w : cm.h;
-        if (used + size > avail + 0.5f) { cm.visibility = VIS_GONE; overflow = true; }
+        if (used + size > avail) { cm.visibility = VIS_GONE; overflow = true; }
         else used += size;
     }
+}
+
+// The size a collapsible row (axis 0) / column (axis 1) wraps to once it has settled. The
+// reference measures the children, drops what overflows, and on the next frame (its children
+// keep the GONE it gave them, see Component.setVisibility / getMeasureVisibility) wraps to
+// what is left: the cross axis to the largest child kept, the main axis to the sum of the kept
+// children, at most `availMain`, without the spacing (computeVisibleChildren's
+// size.setWidth(Math.min(maxWidth, childrenWidth))). The children keep the measure they had.
+static void collapsedWrapSize(const LayoutState& ls, RemoteContext& ctx, MeasurePass& measure,
+                              int axis, float availMain, bool hasHWrap, bool hasVWrap,
+                              float& measuredW, float& measuredH) {
+    float mainSum = 0.0f, crossMax = 0.0f;
+    for (auto* child : ls.layoutChildren) {
+        int cid = getComponentId(child);
+        if (cid == -1 || !measure.contains(cid)) continue;
+        auto& cm = measure.get(cid);
+        if (cm.isGone()) continue;
+        mainSum += axis == 0 ? cm.w : cm.h;
+        crossMax = std::max(crossMax, axis == 0 ? cm.h : cm.w);
+    }
+    float mainSize = std::min(availMain, mainSum);
+    if (axis == 0) {
+        if (hasHWrap) measuredW = mainSize + ls.paddingLeft + ls.paddingRight;
+        if (hasVWrap) measuredH = crossMax + ls.paddingTop + ls.paddingBottom;
+    } else {
+        if (hasVWrap) measuredH = mainSize + ls.paddingTop + ls.paddingBottom;
+        if (hasHWrap) measuredW = crossMax + ls.paddingLeft + ls.paddingRight;
+    }
+}
+
+// CollapsibleRowLayout / CollapsibleColumnLayout.computeVisibleChildren, as the reference
+// runs it within a frame and settles on the next:
+//  1. every child, visible again, is measured at its own size along the main axis
+//     (Float.MAX_VALUE; a weighted child or a nested collapsible of the same kind gets what
+//     the children before it left), then what overflows `mainMax` is dropped;
+//  2. internalLayoutMeasure measures the children again against the measured size (padding
+//     included, as m.getW()/m.getH()), the dropped ones staying GONE and no longer taking
+//     space from the ones after them, and drops again;
+//  3. the next frame wraps to what is left (collapsedWrapSize).
+static void measureCollapsibleChildren(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
+                                       MeasurePass& measure, int axis, float mainMax,
+                                       float crossMax, float& measuredW, float& measuredH,
+                                       bool hasHWrap, bool hasVWrap) {
+    const int sameKind = axis == 0 ? 230 : 233;
+    auto measureAll = [&](float mMax, float cMax, const std::vector<char>* dropped) {
+        float cur = mMax;
+        for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
+            auto* child = ls.layoutChildren[i];
+            auto& cls = getLS(ctx, child);
+            bool weighted = (axis == 0 ? cls.widthType : cls.heightType) == DimType::WEIGHT;
+            float lim = (child->opcode() == sameKind || weighted)
+                            ? cur : std::numeric_limits<float>::max();
+            if (axis == 0) measureComponent(child, pc, ctx, 0, lim, 0, cMax, measure);
+            else measureComponent(child, pc, ctx, 0, cMax, 0, lim, measure);
+            int cid = getComponentId(child);
+            if (cid == -1) continue;
+            auto& cm = measure.get(cid);
+            if (dropped && (*dropped)[i]) cm.visibility = VIS_GONE;
+            if (!cm.isGone()) cur -= axis == 0 ? cm.w : cm.h;
+        }
+    };
+    for (auto* child : ls.layoutChildren) unhide(child, ctx, measure);
+    measureAll(mainMax, crossMax, nullptr);
+    collapseChildren(ls, ctx, measure, mainMax, axis);
+    std::vector<char> dropped(ls.layoutChildren.size(), 0);
+    for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
+        int cid = getComponentId(ls.layoutChildren[i]);
+        dropped[i] = cid != -1 && measure.contains(cid) && measure.get(cid).isGone();
+    }
+    float fullMain = axis == 0 ? measuredW : measuredH;
+    float fullCross = axis == 0 ? measuredH : measuredW;
+    measureAll(fullMain, fullCross, &dropped);
+    collapseChildren(ls, ctx, measure, mainMax, axis);
+    collapsedWrapSize(ls, ctx, measure, axis, mainMax, hasHWrap, hasVWrap, measuredW, measuredH);
 }
 
 // ── Paint ripple modifier ────────────────────────────────────────────
 // RippleModifierOperation.paint: from the touch point a circle grows to the component's
 // larger side in half a second while it fades from translucent white to nothing over one,
 // both on the standard cubic curve, clipped to the component (and any rounded clip before).
-static void paintRipple(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
-                        float w, float h) {
-    auto* r = static_cast<ModifierRipple*>(ls.ripple);
-    if (!r || r->start < 0.0f || !pc) return;
-    float progress = ctx.getFloat(RemoteContext::ID_ANIMATION_TIME) - r->start;   // over 1 s
-    if (progress > 1.0f || progress < 0.0f) { r->start = -1.0f; return; }
+// ClickModifierOperation and MultiClickModifier paint the same ripple from a click (in the
+// component's own coordinates and full size, the paddings backed out).
+static void paintRippleAt(float& start, float rx, float ry, PaintContext* pc, RemoteContext& ctx,
+                          float w, float h) {
+    if (start < 0.0f || !pc) return;
+    float progress = ctx.getFloat(RemoteContext::ID_ANIMATION_TIME) - start;   // over 1 s
+    if (progress > 1.0f || progress < 0.0f) { start = -1.0f; return; }
     ctx.needsRepaint();
     static CubicEasing ease(Easing::CUBIC_STANDARD);
     float tween = ease.get(progress);
@@ -2019,42 +2607,169 @@ static void paintRipple(const LayoutState& ls, PaintContext* pc, RemoteContext& 
     paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
     paint.addTag(PaintBundle::COLOR, col);
     pc->applyPaint(paint);
-    pc->drawCircle(r->x, r->y, std::max(w, h) * tweenRadius);
+    pc->drawCircle(rx, ry, std::max(w, h) * tweenRadius);
     pc->restorePaint();
     pc->matrixRestore();
 }
 
-// ── Paint border modifier ────────────────────────────────────────────
-static void paintBorder(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
+static void paintRipple(const LayoutState& ls, PaintContext* pc, RemoteContext& ctx,
                         float w, float h) {
-    if (!ls.hasBorder || !pc) return;
+    auto* r = static_cast<ModifierRipple*>(ls.ripple);
+    if (r) paintRippleAt(r->start, r->x, r->y, pc, ctx, w, h);
+}
 
+// ── Paint border modifier ────────────────────────────────────────────
+// BorderModifierOperation.paint. The legacy drawing (first reserved int 0) strokes centred on
+// the bounds; the default one insets the stroke by half its width (shrinking the corner radii)
+// and fills the shape when the border is at least half the smaller side.
+static void paintBorder(const ModifierBorder* mb, PaintContext* pc, RemoteContext& ctx,
+                        float w, float h) {
+    if (!pc) return;
+    const float bw = mb->oBorderWidth * gDpScale;
+    const float corner = mb->oRoundedCorner * gDpScale;
+    const bool legacy = mb->reserve1 == 0;
     pc->savePaint();
     PaintBundle paint;
-    paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_STROKE);
-    paint.addTagFloat(PaintBundle::STROKE_WIDTH, ls.borderWidth);
-    if (ls.borderFlags == 2) {
-        // COLOR_REF: use color ID from context
-        int col = ctx.getColor(ls.borderColorId);
-        paint.addTag(PaintBundle::COLOR, col);
+    paint.addTag(PaintBundle::COLOR,
+                 modifierColor(mb->flags, mb->colorId, mb->oR, mb->oG, mb->oB, mb->oA, ctx));
+    float size = mb->shapeType == 1 ? std::min(w, h) / 2.0f : corner;
+    if (!legacy && bw >= std::min(w, h) / 2.0f) {
+        paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
+        pc->applyPaint(paint);
+        if (mb->shapeType == 0) pc->drawRect(0, 0, w, h);
+        else pc->drawRoundRect(0, 0, w, h, size, size);
     } else {
-        int a = std::clamp((int)(ls.borderA * 255), 0, 255);
-        int r = std::clamp((int)(ls.borderR * 255), 0, 255);
-        int g = std::clamp((int)(ls.borderG * 255), 0, 255);
-        int b = std::clamp((int)(ls.borderB * 255), 0, 255);
-        int col = (a << 24) | (r << 16) | (g << 8) | b;
-        paint.addTag(PaintBundle::COLOR, col);
-    }
-    pc->applyPaint(paint);
-    if (ls.borderCorner > 0) {
-        pc->drawRoundRect(0, 0, w, h, ls.borderCorner, ls.borderCorner);
-    } else {
-        pc->drawRect(0, 0, w, h);
+        paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_STROKE);
+        paint.addTagFloat(PaintBundle::STROKE_WIDTH, bw);
+        pc->applyPaint(paint);
+        float hs = legacy ? 0.0f : bw / 2.0f;
+        if (mb->shapeType == 0) {
+            pc->drawRect(hs, hs, w - hs, h - hs);
+        } else {
+            float rr = std::max(0.0f, size - hs);
+            pc->drawRoundRect(hs, hs, w - hs, h - hs, rr, rr);
+        }
     }
     pc->restorePaint();
 }
 
 // ── Paint a layout component with transforms ─────────────────────────
+// ── Text painting: wrapping, maxLines, clip and ellipsis ─────────────
+// CoreText.paintingComponent / textLayout: the text is wrapped only when it overflows and more
+// than one line is allowed (or a newline forces it); at most maxLines lines are drawn; with
+// any overflow but VISIBLE the text is clipped to the content box; and an ELLIPSIS overflow
+// (3 end, 4 start, 5 middle) ends the last shown line with "…" when text was cut, as
+// StaticLayout's ellipsize does. An end ellipsis also drops the lines that do not fit the
+// height (textLayout lowers maxLines until the layout fits).
+static constexpr int kEllipsisTextId = INT32_MIN + 0x2026;   // scratch text slot
+
+static std::vector<int> utf8Boundaries(const std::string& s, int from, int to) {
+    std::vector<int> b;
+    for (int i = from; i < to; i++) {
+        if ((static_cast<unsigned char>(s[i]) & 0xC0) != 0x80) b.push_back(i);
+    }
+    b.push_back(to);
+    return b;
+}
+
+static std::string ellipsize(PaintContext* pc, const std::string& text, int from, int to,
+                             float fsize, float width, int mode) {
+    static const std::string kDots = "\xE2\x80\xA6";   // U+2026
+    while (from < to && text[from] == ' ') from++;
+    while (to > from && text[to - 1] == ' ') to--;
+    auto b = utf8Boundaries(text, from, to);
+    int nChars = (int) b.size() - 1;
+    auto prefix = [&](int k) { return text.substr(from, b[k] - from); };
+    auto suffix = [&](int k) { return text.substr(b[nChars - k], to - b[nChars - k]); };
+    auto fits = [&](const std::string& str) { return pc->measureTextWidth(str, fsize) <= width; };
+    if (mode == 4) {                      // START: "…" + the longest suffix that fits
+        int k = nChars;
+        while (k > 0 && !fits(kDots + suffix(k))) k--;
+        return kDots + suffix(k);
+    }
+    if (mode == 5) {                      // MIDDLE: head + "…" + tail, the tail as long or shorter
+        int total = nChars;
+        while (total > 0) {
+            int head = (total + 1) / 2, tail = total / 2;
+            std::string t = prefix(head) + kDots + suffix(tail);
+            if (fits(t)) return t;
+            total--;
+        }
+        return kDots;
+    }
+    int k = nChars;                       // END: the longest prefix that fits, then "…"
+    while (k > 0 && !fits(prefix(k) + kDots)) k--;
+    std::string head = prefix(k);
+    while (!head.empty() && head.back() == ' ') head.pop_back();
+    return head + kDots;
+}
+
+static void paintTextLines(PaintContext* pc, int tid, const std::string& text, float fsize,
+                           float contentW, float contentH, float lineH, float fullW,
+                           float ascent, int tAlign, int maxLines, int overflow,
+                           float lsPx = 0.0f, float lhAdd = 0.0f, float lhMul = 1.0f) {
+    if (maxLines <= 0) maxLines = INT32_MAX;
+    const float lineStep = lineH + lineGap(lineH, lhAdd, lhMul);
+    const bool ellipsis = overflow == 3 || overflow == 4 || overflow == 5;
+    const bool hasNewlines = text.find('\n') != std::string::npos;
+    std::vector<TextLine> lines;
+    if (contentW > 0 && ((fullW > contentW && maxLines > 1) || hasNewlines)) {
+        lines = wrapText(pc, text, fsize, contentW);
+    } else {
+        lines.push_back({0, (int) text.size()});
+    }
+    bool truncated = false;
+    if ((int) lines.size() > maxLines) { lines.resize(maxLines); truncated = true; }
+    if (overflow == 3 && lineH > 0 && contentH > 0 && lines.size() > 1) {
+        int fit = std::max(1, (int) std::floor((contentH - lineH) / lineStep + 1.01f));
+        if ((int) lines.size() > fit) { lines.resize(fit); truncated = true; }
+    }
+
+    // Java clips whenever overflow is not VISIBLE; here only when the text measurably
+    // overflows, since a fallback font (CJK, emoji) can draw a little wider than it measured.
+    const float textH = lineH + lineStep * (float)(lines.size() - 1);
+    bool overflows = truncated || fullW > contentW + 0.5f || textH > contentH + 0.5f;
+    const bool clip = overflow != 2 && overflows;
+    if (clip) { pc->matrixSave(); pc->clipRect(0, 0, contentW, contentH); }
+    for (size_t li = 0; li < lines.size(); li++) {
+        const auto& line = lines[li];
+        if (line.start >= line.end) continue;
+        const bool last = li + 1 == lines.size();
+        std::string lineStr = text.substr(line.start, line.end - line.start);
+        float lineW = lines.size() == 1
+                ? fullW : pc->measureTextWidth(lineStr, fsize) + lsPx * utf8Count(lineStr);
+        bool cut = ellipsis && last && contentW > 0 && (truncated || lineW > contentW + 0.5f);
+        std::string drawn;
+        if (cut) {
+            // An end ellipsis runs on from this line through the rest of the text.
+            int to = overflow == 3 ? (int) text.size() : line.end;
+            if (overflow == 3 && hasNewlines) {
+                size_t nl = text.find('\n', line.start);
+                if (nl != std::string::npos) to = (int) nl;
+            }
+            drawn = ellipsize(pc, text, line.start, to, fsize, contentW, overflow);
+            lineW = pc->measureTextWidth(drawn, fsize) + lsPx * utf8Count(drawn);
+        }
+        float x = 0;
+        if (tAlign == 3) x = (contentW - lineW) / 2;                  // CENTER
+        else if (tAlign == 2 || tAlign == 6) x = contentW - lineW;    // RIGHT / END
+        float y = ascent + lineStep * (float) li;
+        if (lsPx != 0.0f) {
+            drawSpaced(pc, cut ? drawn : lineStr, x, y, fsize, lsPx);
+        } else if (cut) {
+            pc->loadText(kEllipsisTextId, drawn);
+            int units = utf8ByteToUtf16Index(drawn, (int) drawn.size());
+            pc->drawTextRun(kEllipsisTextId, 0, units, 0, units, x, y, false);
+        } else {
+            // wrapText gives byte offsets; drawTextRun wants UTF-16 indices.
+            int cs = utf8ByteToUtf16Index(text, line.start);
+            int ce = utf8ByteToUtf16Index(text, line.end);
+            pc->drawTextRun(tid, cs, ce, cs, ce, x, y, false);
+        }
+    }
+    if (clip) pc->matrixRestore();
+}
+
 static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
     auto* pc = ctx.getPaintContext();
     if (!pc) return;
@@ -2066,7 +2781,85 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     // GONE components are not rendered. During a StateLayout transition the exiting
     // state is kept VISIBLE (with a fading alpha) by the animation pass, so only a
     // settled-GONE component is skipped here.
-    if (m.isGone()) return;
+    // Component.paint: `if (isGone() || isInvisible()) return;` — an INVISIBLE component
+    // keeps its space but draws nothing (nor do its children).
+    if (m.isGone() || m.visibility == VIS_INVISIBLE) return;
+
+    // A CUSTOM enter/exit animation: the visibility function draws the component this frame
+    // (AnimateMeasure.executeCustomAnimation), from the parent's origin, with
+    // (progress, w, h, x, y, id); its DrawContent draws the component as usual.
+    if (m.customFn != -1) {
+        int fnId = m.customFn;
+        float progress = m.customProgress;
+        auto* fn = dynamic_cast<FunctionDefineOp*>(ctx.getObject(fnId));
+        m.customFn = -1;
+        if (!fn) { paintLayoutComponent(op, ctx, measure); measure.get(cid).customFn = fnId; return; }
+        const float x = std::floor(m.x), y = std::floor(m.y);
+        const float w = std::ceil(m.x - x + m.w), h = std::ceil(m.y - y + m.h);
+        const float vals[6] = {progress, w, h, x, y, (float)cid};
+        std::vector<float> saved;
+        for (size_t i = 0; i < fn->args.size() && i < 6; i++) {
+            saved.push_back(ctx.getFloat(fn->args[i]));
+            ctx.loadFloat(fn->args[i], vals[i]);
+        }
+        // DrawContent.paint: saveLayer with the current paint (its alpha), then the component.
+        std::function<void()> draw = [&]() {
+            float a = pc->currentPaintAlpha();
+            const auto& cm = measure.get(cid);
+            bool layer = a < 0.999f;
+            if (layer) pc->saveLayerAlpha(std::max(0.0f, a), cm.x, cm.y, cm.x + cm.w, cm.y + cm.h);
+            paintLayoutComponent(op, ctx, measure);
+            if (layer) pc->restoreLayer();
+        };
+        auto* prevHook = DrawContentOp::sDrawComponent;
+        DrawContentOp::sDrawComponent = &draw;
+        pc->matrixSave();
+        pc->savePaint();
+        {
+            PaintBundle paint;   // black, opaque, fill, as the reference resets it
+            paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
+            paint.addTag(PaintBundle::COLOR, (int)0xFF000000);
+            pc->applyPaint(paint);
+        }
+        fn->execute(ctx);
+        pc->restorePaint();
+        pc->matrixRestore();
+        DrawContentOp::sDrawComponent = prevHook;
+        for (size_t i = 0; i < saved.size(); i++) ctx.loadFloat(fn->args[i], saved[i]);
+        measure.get(cid).customFn = fnId;
+        return;
+    }
+
+    // ParticleAnimation.animate: the component itself is not drawn; 20 light grey discs at
+    // random places over its start bounds fade out, drift down by 1% of its height and grow.
+    // The reference draws its positions from Math.random() once per component; here they
+    // come from a generator seeded by the component id, so a render is reproducible.
+    if (m.particle >= 0.0f) {
+        const float progress = m.particle;
+        uint32_t seed = 0x9E3779B9u ^ (uint32_t)cid;
+        auto rnd = [&]() {
+            seed ^= seed << 13; seed ^= seed >> 17; seed ^= seed << 5;
+            return (seed >> 8) / 16777216.0f;
+        };
+        pc->matrixSave();
+        pc->savePaint();
+        for (int i = 0; i < 20; i++) {
+            float px = rnd(), py = rnd(), pr = rnd();
+            PaintBundle paint;   // reset: fill
+            paint.addUpperTag(PaintBundle::STYLE, PaintBundle::STYLE_FILL);
+            int a = (int)std::lround(200.0f * (1.0f - progress));
+            a = std::max(0, std::min(255, a));
+            paint.addTag(PaintBundle::COLOR, (int)(((uint32_t)a << 24) | 0xDCDCDCu));
+            pc->applyPaint(paint);
+            float dx = m.x + m.w * px;
+            float dy = m.y + m.h * py + progress * 0.01f * m.h;
+            float dr = (m.h + 60.0f) * 0.15f * pr + 30.0f * progress;
+            pc->drawCircle(dx, dy, dr);
+        }
+        pc->restorePaint();
+        pc->matrixRestore();
+        return;
+    }
 
     LTRACE("  paint cid=%d opcode=%d pos=(%.1f,%.1f) size=(%.1f,%.1f) bg=%d children=%d\n",
            cid, op->opcode(), m.x, m.y, m.w, m.h, ls.hasBg, (int)ls.layoutChildren.size());
@@ -2083,6 +2876,26 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         float ga = resolveVar(ls.glAlpha, ctx);
         if (!std::isnan(ga)) effAlpha *= std::max(0.0f, std::min(1.0f, ga));
     }
+    // graphicsLayer transform (as Android's RenderNode, and the TypeScript player): translated,
+    // then rotated and scaled about the transform origin (a fraction of the size, default
+    // the centre). It moves the drawing only, not the layout or the hit area.
+    if (auto* gl = static_cast<ModifierGraphicsLayer*>(ls.graphicsLayer)) {
+        auto val = [&](float v, float d) { float r = resolveVar(v, ctx); return std::isnan(r) ? d : r; };
+        float sx = val(gl->scaleX, 1.0f), sy = val(gl->scaleY, 1.0f), rz = val(gl->rotationZ, 0.0f);
+        float tx = val(gl->translationX, 0.0f) * gDpScale, ty = val(gl->translationY, 0.0f) * gDpScale;
+        float px = m.x + val(gl->originX, 0.5f) * m.w, py = m.y + val(gl->originY, 0.5f) * m.h;
+        if (tx != 0.0f || ty != 0.0f) pc->matrixTranslate(tx, ty);
+        if (rz != 0.0f) pc->matrixRotate(rz, px, py);
+        if (sx != 1.0f || sy != 1.0f) pc->matrixScale(sx, sy, px, py);
+    }
+    // An enter/exit effect: a slide moves the component, ROTATE spins and scales it about its
+    // centre (AnimateMeasure.paint).
+    if (m.effTx != 0.0f || m.effTy != 0.0f) pc->matrixTranslate(m.effTx, m.effTy);
+    if (m.effRot != 0.0f || m.effScale != 1.0f) {
+        const float px = m.x + m.w / 2.0f, py = m.y + m.h / 2.0f;
+        if (m.effRot != 0.0f) pc->matrixRotate(m.effRot, px, py);
+        if (m.effScale != 1.0f) pc->matrixScale(m.effScale, m.effScale, px, py);
+    }
     bool animLayer = m.isVisible() && effAlpha < 0.999f;
     if (animLayer) {
         pc->saveLayerAlpha(effAlpha, m.x, m.y, m.x + m.w, m.y + m.h);
@@ -2097,42 +2910,92 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     pc->matrixTranslate(m.x, m.y);
     ctx.pushTranslate(m.x, m.y);
 
-    // Apply offset modifier
-    if (ls.hasOffset) {
-        // Resolved as ModifierOffset::updateVariables resolves them (any NaN is a reference),
-        // not with resolveVar, which leaves system ids 10–40 unresolved — and a NaN offset
-        // translates the whole component off the page.
-        auto res = [&](float v) { return std::isnan(v) ? ctx.getFloat(Utils::idFromNan(v)) : v; };
-        float ox = res(ls.offsetX);
-        float oy = res(ls.offsetY);
-        pc->matrixTranslate(ox, oy);
-        ctx.pushTranslate(ox, oy);
-    }
 
-    // Apply clip modifiers (TS only clips when a modifier is present)
-    if (ls.hasRoundedClipRect) {
-        pc->roundedClipRect(m.w, m.h, ls.clipTopStart, ls.clipTopEnd,
-                            ls.clipBottomStart, ls.clipBottomEnd);
-    } else if (ls.hasClipRect) {
-        pc->clipRect(0, 0, m.w, m.h);
-    } else if (ls.hasScroll) {
-        // Scroll containers must clip to prevent overflow
+    // A scroll container clips at its full bounds unless a clip modifier says otherwise.
+    if (ls.hasScroll && !ls.hasRoundedClipRect && !ls.hasClipRect) {
         pc->clipRect(0, 0, m.w, m.h);
     }
 
-    // Paint background
-    paintBackground(ls, pc, ctx, m.w, m.h);
-
-    // Paint border
-    paintBorder(ls, pc, ctx, m.w, m.h);
-    paintRipple(ls, pc, ctx, m.w, m.h);
-
-    // Translate for padding
-    pc->matrixTranslate(ls.paddingLeft, ls.paddingTop);
+    // ComponentModifiers.paint: the modifiers in list order. Each padding translates by its
+    // start/top and shrinks the size the decorators after it are laid out at
+    // (ComponentModifiers.layout), so a padding before a background is a margin and a clip
+    // after a padding is inset. The paddings' translation is then backed out, and the
+    // content is placed at the summed padding.
+    int offsetsPushed = 0;
+    {
+        float tx = 0.0f, ty = 0.0f;
+        float dw = m.w, dh = m.h;
+        // StateLayout.paint paints its states only, not its own modifiers.
+        static const std::vector<LayoutState::PaintMod> kNoMods;
+        for (auto& pm : op->opcode() == 217 ? kNoMods : ls.paintMods) {
+            switch (pm.op->opcode()) {
+                case 58:   // padding
+                    pc->matrixTranslate(pm.l, pm.t);
+                    tx += pm.l; ty += pm.t;
+                    dw -= pm.l + pm.r; dh -= pm.t + pm.b;
+                    break;
+                case 55:   // background
+                    paintBackground(static_cast<ModifierBackground*>(pm.op), pc, ctx, dw, dh);
+                    break;
+                case 107:  // border
+                    paintBorder(static_cast<ModifierBorder*>(pm.op), pc, ctx, dw, dh);
+                    break;
+                case 108:  // clip rect
+                    pc->clipRect(0, 0, dw, dh);
+                    break;
+                case 54: { // rounded clip rect
+                    auto* rc = static_cast<ModifierRoundedClipRect*>(pm.op);
+                    pc->roundedClipRect(dw, dh, rc->oTopStart * gDpScale, rc->oTopEnd * gDpScale,
+                                        rc->oBottomStart * gDpScale, rc->oBottomEnd * gDpScale);
+                    break;
+                }
+                case 221: { // offset: a translate that stays for the content
+                    // Resolved as ModifierOffset::updateVariables resolves them (any NaN is a
+                    // reference), not with resolveVar, which leaves system ids 10–40
+                    // unresolved — and a NaN offset translates the component off the page.
+                    auto* mo = static_cast<ModifierOffset*>(pm.op);
+                    auto res = [&](float v) {
+                        return std::isnan(v) ? ctx.getFloat(Utils::idFromNan(v)) : v;
+                    };
+                    float ox = res(mo->x) * gDpScale;
+                    float oy = res(mo->y) * gDpScale;
+                    pc->matrixTranslate(ox, oy);
+                    ctx.pushTranslate(ox, oy);
+                    offsetsPushed++;
+                    break;
+                }
+                case 229:  // ripple
+                    paintRipple(ls, pc, ctx, dw, dh);
+                    break;
+                case 59: { // click: ComponentModifiers.paint backs the paddings out for it
+                    auto* c = static_cast<ModifierClick*>(pm.op);
+                    pc->matrixTranslate(-tx, -ty);
+                    paintRippleAt(c->rippleStart, c->rippleX, c->rippleY, pc, ctx, m.w, m.h);
+                    pc->matrixTranslate(tx, ty);
+                    break;
+                }
+                case 83: {
+                    auto* c = static_cast<ModifierMultiClick*>(pm.op);
+                    pc->matrixTranslate(-tx, -ty);
+                    paintRippleAt(c->rippleStart, c->rippleX, c->rippleY, pc, ctx, m.w, m.h);
+                    pc->matrixTranslate(tx, ty);
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        pc->matrixTranslate(ls.paddingLeft - tx, ls.paddingTop - ty);
+    }
 
     // Apply scroll translation (direction: 0=vertical, 1=horizontal, matching Java)
     if (ls.hasScroll) {
-        float scrollPos = resolveVar(ls.scrollPosition, ctx);
+        // A variable position is driven by the document (its TouchExpression); a constant one
+        // is ignored and the modifier's own drag offset is used (ScrollModifierOperation keeps
+        // mScrollX/Y itself when the position is not a variable).
+        float scrollPos = Utils::isVariable(ls.scrollPosition) || !ls.scrollOp
+                ? resolveVar(ls.scrollPosition, ctx)
+                : static_cast<ModifierScroll*>(ls.scrollOp)->scrollOffset;
         if (ls.scrollDirection == 0) {
             pc->matrixTranslate(0, -scrollPos);  // vertical scroll
         } else {
@@ -2150,14 +3013,20 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         int colId = -1;
         int tAlign = 1; // TEXT_ALIGN_LEFT
         int fWeight = 400, fStyle = 0, fFamilyId = 0;
+        int tMaxLines = INT32_MAX, tOverflow = 1;
+        float tLetterSpacing = 0, tLineAdd = 0, tLineMul = 1;
         if (oc == 208) {
             auto* lt = static_cast<LayoutText*>(op);
+            tMaxLines = lt->maxLines; tOverflow = lt->overflow;
             tid = lt->textId; fsize = lt->fontSize; col = lt->color;
             tAlign = lt->textAlign & 0xFFFF;
             fWeight = (int)resolveVar(lt->fontWeight, ctx); fStyle = lt->fontStyle;
             fFamilyId = lt->fontFamilyId;
         } else {
             auto* ct = static_cast<CoreTextOp*>(op);
+            tMaxLines = ct->maxLines; tOverflow = ct->overflow;
+            tLetterSpacing = ct->letterSpacing;
+            tLineAdd = ct->lineHeightAdd; tLineMul = ct->lineHeightMultiplier;
             tid = ct->textId; fsize = ct->fontSize; col = ct->color;
             colId = ct->colorId;
             tAlign = ct->textAlign & 0xFFFF;
@@ -2176,8 +3045,10 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             else if (!fFamName.empty()) fFamily = -1;   // a named family
         }
 
-        // Resolve NaN-encoded variable references
+        // Resolve NaN-encoded variable references; a constant size is dp under DP behaviour
+        const bool constSize = !std::isnan(fsize);
         fsize = resolveVar(fsize, ctx);
+        if (constSize) fsize *= gDpScale;
         if (fsize <= 0 || std::isnan(fsize)) fsize = 16;
 
         // Resolve color
@@ -2205,38 +3076,13 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             }
 
             float contentW = m.w - ls.paddingLeft - ls.paddingRight;
+            float contentH = m.h - ls.paddingTop - ls.paddingBottom;
             float lineH = pc->measureTextHeight(text, fsize);
-            float fullW = pc->measureTextWidth(text, fsize);
-
-            // Compute textAlign X offset (1=LEFT, 2=RIGHT, 3=CENTER, 5=START, 6=END)
-            float textX = 0;
-            if (tAlign == 3) { // CENTER
-                textX = (contentW - fullW) / 2;
-            } else if (tAlign == 2 || tAlign == 6) { // RIGHT or END
-                textX = contentW - fullW;
-            }
-
+            const float lsPx = tLetterSpacing * fsize;
+            float fullW = pc->measureTextWidth(text, fsize) + lsPx * utf8Count(text);
             float ascent = pc->measureTextAscent(text, fsize);
-
-            if (contentW > 0 && fullW > contentW) {
-                // Draw wrapped text line by line
-                auto wrappedLines = wrapText(pc, text, fsize, contentW);
-                for (size_t li = 0; li < wrappedLines.size(); li++) {
-                    auto& line = wrappedLines[li];
-                    if (line.start < line.end) {
-                        // wrapText gives byte offsets; drawTextRun wants UTF-16 indices.
-                        int cs = utf8ByteToUtf16Index(text, line.start);
-                        int ce = utf8ByteToUtf16Index(text, line.end);
-                        pc->drawTextRun(tid, cs, ce, cs, ce,
-                                        0, ascent + lineH * (float)li, false);
-                    }
-                }
-            } else {
-                // Single line: draw at baseline with alignment offset
-                // Use drawTextRun (not drawTextAnchored) since position is already computed
-                pc->drawTextRun(tid, 0, (int)text.size(), 0, (int)text.size(),
-                                textX, ascent, false);
-            }
+            paintTextLines(pc, tid, text, fsize, contentW, contentH, lineH, fullW, ascent,
+                           tAlign, tMaxLines, tOverflow, lsPx, tLineAdd, tLineMul);
             pc->restorePaint();
         }
     } else if (oc == 93) {
@@ -2251,6 +3097,45 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             host->drawCustom(cu->componentId, config, pc, cw, ch,
                              ctx.getAnimationTime());
         }
+    } else if (oc == 217) {
+        // StateLayout.paint: the index variable is read here; a new value starts a transition,
+        // laid out from the next frame on.
+        {
+            auto* sl = static_cast<StateLayout*>(op);
+            int idx = sl->indexId != 0 ? ctx.getInteger(sl->indexId) : 0;
+            if (sl->indexInitialized && idx != sl->currentIndex) {
+                sl->previousIndex = sl->currentIndex;
+                sl->currentIndex = idx;
+                sl->inTransition = true;
+                ctx.needsRepaint();
+            }
+        }
+        // StateLayout.paint: during a transition, first the previous state's children that
+        // are not in the new one (by paint id: the animation id, else the component id), so
+        // they can play their exit animation; then the current state.
+        ctx.pushCanvasBounds(m.w, m.h);
+        auto* sl = static_cast<StateLayout*>(op);
+        Operation* cur = stateAt(ls, sl->measuredIndex);
+        Operation* prev = stateAt(ls, sl->previousIndex);
+        if (sl->inTransition && prev && prev != cur) {
+            auto paintId = [&](Operation* c) {
+                int a = animationIdOf(c, ctx);
+                return a != -1 ? a : getComponentId(c);
+            };
+            std::vector<int> curIds;
+            for (auto* c : getLS(ctx, cur).layoutChildren) curIds.push_back(paintId(c));
+            const auto& pm = measure.get(getComponentId(prev));
+            pc->matrixSave();
+            pc->matrixTranslate(pm.x, pm.y);
+            ctx.pushTranslate(pm.x, pm.y);
+            for (auto* c : getLS(ctx, prev).layoutChildren) {
+                if (std::find(curIds.begin(), curIds.end(), paintId(c)) == curIds.end())
+                    paintLayoutComponent(c, ctx, measure);
+            }
+            ctx.popTranslate();
+            pc->matrixRestore();
+        }
+        if (cur) paintLayoutComponent(cur, ctx, measure);
     } else {
         // Push canvas bounds for touch hit-testing (uses current translate position)
         ctx.pushCanvasBounds(m.w, m.h);
@@ -2282,7 +3167,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     if (blurLayer) pc->restoreLayer();   // LIFO: blur pushed after alpha
     if (animLayer) pc->restoreLayer();
     pc->matrixRestore();
-    if (ls.hasOffset) ctx.popTranslate();
+    for (int i = 0; i < offsetsPushed; i++) ctx.popTranslate();
     ctx.popTranslate();
 }
 
@@ -2291,7 +3176,8 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
 // each component toward its target (position/size/opacity) over time, rewriting
 // the measure with the values to actually paint this frame. Static content
 // measures identically every frame, so this is a no-op there.
-static bool gLayoutAnimationEnabled = true;
+void setLayoutAnimationEnabled(bool enabled) { gLayoutAnimationEnabled = enabled; }
+bool isLayoutAnimationEnabled() { return gLayoutAnimationEnabled; }
 
 // How an ancestor's visibility bears on a component's own animation.
 //  ANIM_NORMAL  — every ancestor is shown: animate as measured.
@@ -2302,9 +3188,19 @@ static bool gLayoutAnimationEnabled = true;
 //  ANIM_FROZEN  — an ancestor is fading out: hold the component where it was shown.
 enum AnimAncestry { ANIM_NORMAL, ANIM_HIDDEN, ANIM_FROZEN };
 
+// While a StateLayout's previous state is animated, the ids also in its current state: those
+// components share one measure with the current state's, which alone animates it.
+static thread_local const std::vector<int>* sSkipIds = nullptr;
+// The parent's own animation spec (inherited by a child without one) and size (slides move
+// by it), while its children are animated.
+static thread_local AnimationSpec* sParentSpec = nullptr;
+static thread_local float sParentW = 0.0f, sParentH = 0.0f;
+
 static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& measure,
                               double timeSec, AnimAncestry ancestry = ANIM_NORMAL) {
     int cid = getComponentId(op);
+    if (sSkipIds && cid != -1
+        && std::find(sSkipIds->begin(), sSkipIds->end(), cid) != sSkipIds->end()) return;
     AnimAncestry childAncestry = ancestry;
     if (cid != -1 && measure.contains(cid) && ancestry != ANIM_NORMAL) {
         static thread_local LayoutAnimStore sDetachedStoreH;
@@ -2318,14 +3214,22 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
         }
     } else if (cid != -1 && measure.contains(cid)) {
         AnimSpecParams spec;
-        // The component's own spec when it has one: durations on the wire are milliseconds.
-        if (auto* as = static_cast<AnimationSpec*>(getLS(ctx, op).animSpec)) {
+        // The component's own spec when it has one, else its parent's (LayoutComponent.inflate
+        // hands a layout's spec to the children that have none): durations on the wire are
+        // milliseconds.
+        auto* as = static_cast<AnimationSpec*>(getLS(ctx, op).animSpec);
+        if (!as) as = sParentSpec;
+        if (as) {
             spec.motionDuration = as->motionDuration / 1000.0f;
             spec.visDuration = as->visibilityDuration / 1000.0f;
             spec.motionEasing = as->motionEasingType;
             spec.visEasing = as->visibilityEasingType;
-            spec.enter = static_cast<AnimEffect>(as->enterAnimation);
-            spec.exit = static_cast<AnimEffect>(as->exitAnimation);
+            spec.enter = static_cast<AnimEffect>(as->enterAnimation & 0xFF);
+            spec.exit = static_cast<AnimEffect>(as->exitAnimation & 0xFF);
+            spec.enterSequence = (as->enterAnimation >> 8) & 0xFF;
+            spec.exitSequence = (as->exitAnimation >> 8) & 0xFF;
+            spec.enterFunctionId = as->enterFunctionId;
+            spec.exitFunctionId = as->exitFunctionId;
         }
         ComponentMeasure& m = measure.get(cid);
         // The store belongs to the document being laid out. A context with no document
@@ -2334,32 +3238,77 @@ static void animateLayoutTree(Operation* op, RemoteContext& ctx, MeasurePass& me
         static thread_local LayoutAnimStore sDetachedStore;
         LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore()
                                                    : sDetachedStore;
+        const bool held = m.holdExit;
+        if (held) m.visibility = VIS_GONE;   // held in the layout, leaving the screen
         const bool targetVisible = m.isVisible();
-        if (animUpdate(store, cid, m, timeSec, gLayoutAnimationEnabled, spec))
+        if (animUpdate(store, cid, m, timeSec, gLayoutAnimationEnabled, spec, sParentW, sParentH))
             sSawActiveAnim = true;   // still animating → layout depends on animationTime
+        else if (held)
+            // The held exit (SEQUENCE BEFORE) ended in this pass, which measured the component
+            // still in place: measure once more so the layout closes up (and the siblings
+            // move into the gap), as the reference re-measures when the hold is released.
+            sSawActiveAnim = true;
         if (!targetVisible) childAncestry = m.isVisible() ? ANIM_FROZEN : ANIM_HIDDEN;
     }
     if (op->opcode() == 217) sSawStateLayout = true;   // index can flip → keep re-laying out
     auto& ls = getLS(ctx, op);
 
-    // StateLayout: mark only the current-index state visible. When the index flips,
-    // the previous state's target becomes GONE (exit fade) and the new one's becomes
-    // VISIBLE (enter fade); the general animation turns that into a crossfade. This
-    // target visibility is set before recursing so each state's animUpdate sees it.
-    if (op->opcode() == 217) {
-        int indexId = static_cast<StateLayout*>(op)->indexId;
-        int currentIndex = (indexId != 0) ? ctx.getInteger(indexId) : 0;
-        for (size_t i = 0; i < ls.layoutChildren.size(); i++) {
-            int childCid = getComponentId(ls.layoutChildren[i]);
-            if (childCid != -1 && measure.contains(childCid)) {
-                measure.get(childCid).visibility =
-                    ((int)i == currentIndex) ? VIS_VISIBLE : VIS_GONE;
+    // A StateLayout's transition lasts while anything in it still animates
+    // (checkEndOfTransition); then the previous state goes.
+    const bool saw = sSawActiveAnim;
+    if (op->opcode() == 217) sSawActiveAnim = false;
+    AnimationSpec* savedSpec = sParentSpec;
+    const float savedPW = sParentW, savedPH = sParentH;
+    sParentSpec = static_cast<AnimationSpec*>(ls.animSpec);
+    if (cid != -1 && measure.contains(cid)) {
+        sParentW = measure.get(cid).w;
+        sParentH = measure.get(cid).h;
+    }
+    {
+        // A StateLayout animates its current state, and its previous one during a transition;
+        // the others are not on screen (and may share ids with the current one). The current
+        // state goes last, so that where ids are shared its bounds are the ones kept.
+        auto* sl = op->opcode() == 217 ? static_cast<StateLayout*>(op) : nullptr;
+        Operation* cur = sl ? stateAt(ls, sl->measuredIndex) : nullptr;
+        Operation* prev = sl && sl->inTransition ? stateAt(ls, sl->previousIndex) : nullptr;
+        std::vector<int> curIds;
+        if (sl && prev && cur) {
+            std::vector<Operation*> stack{cur};
+            while (!stack.empty()) {
+                auto* o = stack.back(); stack.pop_back();
+                curIds.push_back(getComponentId(o));
+                for (auto* k : getLS(ctx, o).layoutChildren) stack.push_back(k);
             }
         }
+        for (auto* child : ls.layoutChildren) {
+            if (sl && (child == cur || child != prev)) continue;
+            const auto* savedSkip = sSkipIds;
+            if (sl) sSkipIds = &curIds;
+            animateLayoutTree(child, ctx, measure, timeSec, childAncestry);
+            sSkipIds = savedSkip;
+        }
+        if (cur) animateLayoutTree(cur, ctx, measure, timeSec, childAncestry);
     }
-
-    for (auto* child : ls.layoutChildren) {
-        animateLayoutTree(child, ctx, measure, timeSec, childAncestry);
+    sParentSpec = savedSpec;
+    sParentW = savedPW; sParentH = savedPH;
+    if (op->opcode() == 217) {
+        auto* sl = static_cast<StateLayout*>(op);
+        if (sl->inTransition && !sSawActiveAnim) {
+            sl->inTransition = false;
+            Operation* prev = stateAt(ls, sl->previousIndex);
+            Operation* cur = stateAt(ls, sl->currentIndex);
+            int pid = prev ? getComponentId(prev) : -1;
+            if (prev && prev != cur && pid != getComponentId(cur)) {
+                measure.get(pid).visibility = VIS_GONE;
+                // It leaves the screen: shown again later, it enters (fades in).
+                static thread_local LayoutAnimStore sDetachedE;
+                LayoutAnimStore& store = ctx.getDocument() ? ctx.getDocument()->animStore() : sDetachedE;
+                auto it = store.find(pid);
+                if (it != store.end()) it->second.live.visibility = VIS_GONE;
+            }
+        }
+        if (sl->inTransition) sSawActiveAnim = true;   // keep the frames coming
+        sSawActiveAnim = sSawActiveAnim || saw;
     }
 }
 
@@ -2406,6 +3355,26 @@ void LayoutRoot::apply(RemoteContext& context) {
     if (context.getMode() != ContextMode::PAINT) return;
     auto* pc = context.getPaintContext();
     if (!pc) return;
+
+    // Density behaviour for this pass (restored on exit: a nested document may lay out
+    // inside our paint). A change of scale invalidates every inflated layout state.
+    struct DensityScope {
+        float s, d; int b;
+        DensityScope() : s(gDpScale), d(gDensity), b(gDensityBehavior) {}
+        ~DensityScope() { gDpScale = s; gDensity = d; gDensityBehavior = b; }
+    } densityScope;
+    gDensity = (context.mDensity > 0 && !std::isnan(context.mDensity)) ? context.mDensity : 1.0f;
+    gDensityBehavior = context.mDensityBehavior;
+    gDpScale = gDensityBehavior == 2 ? gDensity : 1.0f;
+    {
+        auto& cache = cacheFor(context);
+        if (cache.dpScale != gDpScale || cache.density != gDensity) {
+            cache.states.clear();
+            cache.laid = false;
+            cache.dpScale = gDpScale;
+            cache.density = gDensity;
+        }
+    }
 
     LTRACE("LayoutRoot::apply PAINT mode, canvas=%.0fx%.0f\n", context.mWidth, context.mHeight);
     context.setComponentDimension(componentId, context.mWidth, context.mHeight, 0, 0);
@@ -2508,10 +3477,15 @@ void LayoutRoot::apply(RemoteContext& context) {
         double animTime = context.getAnimationTime();
         for (auto* layoutChild : layoutChildren) {
             animateLayoutTree(layoutChild, context, measure, animTime);
+            // The bounds shown, mid-animation included, are the component's bounds (the
+            // reference's Component.layout applies the AnimateMeasure before
+            // updateComponentValues).
+            storeMeasuredDimensions(layoutChild, context, measure);
         }
 
         cache.hasStateLayout = cache.hasStateLayout || sSawStateLayout;
         cache.animating = sSawActiveAnim;
+        if (sSawActiveAnim) context.needsRepaint();   // the next frame moves it on
         cache.epoch = context.mLayoutEpoch;   // snapshot: re-lay-out when a non-clock var moves
         cache.laid = true;
         cache.w = maxW;

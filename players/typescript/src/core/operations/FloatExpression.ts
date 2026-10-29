@@ -687,7 +687,7 @@ export class FloatExpression extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}FloatExpression(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const len = buffer.readInt();
         const valueLen = len & 0xFFFF;
         const animLen = (len >> 16) & 0xFFFF;
@@ -695,13 +695,13 @@ export class FloatExpression extends Operation implements VariableSupport {
         // never canonicalizes), so NaN-encoded operator/variable ids survive.
         const bits = new Int32Array(valueLen);
         for (let i = 0; i < valueLen; i++) {
-            bits[i] = buffer.readInt();
+            bits[i] = buffer.readNanIdBits();
         }
         let animation: Float32Array | null = null;
         if (animLen > 0) {
             animation = new Float32Array(animLen);
             for (let i = 0; i < animLen; i++) {
-                animation[i] = buffer.readFloat();
+                animation[i] = intBitsToFloat(buffer.readNanIdBits());
             }
         }
         operations.push(new FloatExpression(id, bits, animation));

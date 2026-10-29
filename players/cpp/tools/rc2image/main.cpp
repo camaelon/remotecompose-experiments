@@ -296,7 +296,11 @@ static int run(int argc, char* argv[]) {
     }
 
     const char* inputPath = argv[1];
-    const char* outputPath = argv[2];
+    // The output is the second positional argument, unless that is already an option: then
+    // there is none (fine with --check). Taking `--check` as the output path wrote a PNG
+    // named "--check" whenever the flags came right after the input.
+    const bool haveOutput = argc > 2 && std::strncmp(argv[2], "--", 2) != 0;
+    const char* outputPath = haveOutput ? argv[2] : nullptr;
     int overrideWidth = 0, overrideHeight = 0;
     int fitWidth = 0, fitHeight = 0;   // --fit: surface size, document keeps its own space
     int64_t fixedTimeMs = 0;
@@ -318,7 +322,7 @@ static int run(int argc, char* argv[]) {
     bool checkOnly = false;
 
     // Parse remaining args
-    int i = 3;
+    int i = haveOutput ? 3 : 2;
     while (i < argc) {
         if (std::strcmp(argv[i], "--report") == 0 && i + 1 < argc) {
             reportPath = argv[i + 1];
@@ -492,6 +496,11 @@ static int run(int argc, char* argv[]) {
 
     int width = overrideWidth > 0 ? overrideWidth : doc.getWidth();
     int height = overrideHeight > 0 ? overrideHeight : doc.getHeight();
+    // RemoteContext.header: under DENSITY_BEHAVIOR_DP the document size is in dp.
+    if (doc.getDensityBehavior() == 2) {
+        if (overrideWidth <= 0) width = (int)std::lround(width * density);
+        if (overrideHeight <= 0) height = (int)std::lround(height * density);
+    }
     if (width <= 0) width = 600;
     if (height <= 0) height = 600;
 
@@ -599,7 +608,7 @@ static int run(int argc, char* argv[]) {
                     while (ok && std::getline(ss, tok, ',')) {
                         float f; ok = parseFloatStrict(tok, f); list.push_back(f);
                     }
-                    if (ok) context.loadFloatList(nv.id, list);
+                    if (ok) context.overrideFloatList(nv.id, list);
                     break;
                 }
                 default:
@@ -764,6 +773,10 @@ static int run(int argc, char* argv[]) {
         return 1;
     }
 
+    if (!outputPath) {
+        std::cerr << "Error: no output path (give one after the input, or use --check)\n";
+        return 1;
+    }
     SkFILEWStream stream(outputPath);
     if (!stream.isValid()) {
         std::cerr << "Error: cannot write " << outputPath << "\n";

@@ -24,7 +24,7 @@ export class CanvasContent extends Component {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
+        const componentId = buffer.declareId();
         operations.push(new CanvasContent(componentId));
     }
 }

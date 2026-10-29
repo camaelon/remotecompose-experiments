@@ -133,7 +133,7 @@ export class LayoutComputeOperation extends Operation implements Container, Vari
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readInt();
-        const boundsId = buffer.readInt();
+        const boundsId = buffer.readId();
         const animateChanges = buffer.readBoolean();
         operations.push(new LayoutComputeOperation(type, boundsId, animateChanges));
     }

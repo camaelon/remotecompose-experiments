@@ -72,7 +72,8 @@ export class ImageLayout extends LayoutManager implements VariableSupport {
         paintContext.save();
         paintContext.translate(this.mX, this.mY);
 
-        // Paint modifiers (background, border, clip, etc.)
+        // Paint modifiers (background, border, clip, etc.), as ImageLayout.paintingComponent
+        this.paintModifiers(paintContext);
         const context = paintContext.getContext();
         const tx = this.mPaddingLeft;
         const ty = this.mPaddingTop;
@@ -129,11 +130,11 @@ export class ImageLayout extends LayoutManager implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
-        const bitmapId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
+        const bitmapId = buffer.readId();
         const scaleType = buffer.readInt();
-        const alpha = buffer.readInt();
+        const alpha = buffer.readNanIdBits();
         operations.push(new ImageLayout(componentId, animationId, bitmapId, scaleType, alpha));
     }
 }

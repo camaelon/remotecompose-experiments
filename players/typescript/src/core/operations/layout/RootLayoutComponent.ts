@@ -173,7 +173,7 @@ export class RootLayoutComponent extends Component {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
+        const componentId = buffer.declareId();
         const component = new RootLayoutComponent(componentId);
         operations.push(component);
     }

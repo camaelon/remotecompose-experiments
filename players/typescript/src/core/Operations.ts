@@ -80,6 +80,7 @@ import { MatrixExpression } from './operations/MatrixExpression';
 import { MatrixConstant } from './operations/MatrixConstant';
 import { MatrixVectorMath } from './operations/MatrixVectorMath';
 import { TextTransform } from './operations/TextTransform';
+import { FloatFunctionCall, FloatFunctionDefine } from './operations/FloatFunction';
 import { TextLookup } from './operations/TextLookup';
 import { ColorTheme } from './operations/ColorTheme';
 import { ColorAttribute } from './operations/ColorAttribute';
@@ -132,8 +133,6 @@ import {
     DrawBitmapTextAnchoredStub,
     BitmapFontDataStub,
     FontDataStub,
-    FloatFunctionCallStub,
-    FloatFunctionDefineStub,
     DrawTextOnCircleStub,
     TextLookupIntStub,
     ImageAttributeStub,
@@ -370,8 +369,8 @@ export class Operations {
         m.set(DrawBitmapTextAnchoredStub.OP_CODE, DrawBitmapTextAnchoredStub.read);
         m.set(BitmapFontDataStub.OP_CODE, BitmapFontDataStub.read);
         m.set(FontDataStub.OP_CODE, FontDataStub.read);
-        m.set(FloatFunctionCallStub.OP_CODE, FloatFunctionCallStub.read);
-        m.set(FloatFunctionDefineStub.OP_CODE, FloatFunctionDefineStub.read);
+        m.set(FloatFunctionCall.OP_CODE, FloatFunctionCall.read);
+        m.set(FloatFunctionDefine.OP_CODE, FloatFunctionDefine.read);
         m.set(DrawTextOnCircleStub.OP_CODE, DrawTextOnCircleStub.read);
         m.set(TextLookupIntStub.OP_CODE, TextLookupIntStub.read);
         m.set(ImageAttributeStub.OP_CODE, ImageAttributeStub.read);

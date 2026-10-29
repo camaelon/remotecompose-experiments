@@ -46,6 +46,18 @@ struct ComponentMeasure {
     // Opacity applied at paint time. Driven by the layout-animation subsystem
     // (enter/exit fades); 1.0 for everything not currently fading.
     float alpha = 1.0f;
+    // The enter/exit effect drawn this frame (AnimateMeasure.paint): a translation (slides),
+    // a rotation and scale about the centre (ROTATE), or a custom visibility function run
+    // with this progress (customFn != -1). Paint-time only, like alpha.
+    float effTx = 0.0f, effTy = 0.0f, effRot = 0.0f, effScale = 1.0f;
+    int customFn = -1;
+    // An exit drawn as ParticleAnimation (PARTICLE, and any exit effect AnimateMeasure.paint
+    // has no case for): its visibility progress, -1 when not.
+    float particle = -1.0f;
+    float customProgress = 0.0f;
+    // GONE, but kept in the layout for the length of its exit animation (an exit SEQUENCE
+    // BEFORE: Component.isHoldingLayoutForBeforeAnimation).
+    bool holdExit = false;
 
     bool isGone() const { return visibility == VIS_GONE; }
     bool isVisible() const { return visibility == VIS_VISIBLE; }
@@ -108,6 +120,9 @@ struct LayoutState {
     // WidthIn/HeightIn constraints
     float widthInMin = -1, widthInMax = -1;
     float heightInMin = -1, heightInMax = -1;
+    // requiredWidthIn / requiredHeightIn (DimensionConstraints REQUIRED_*): re-applied after
+    // the parent's maximum, so they may exceed it (applyWidthConstraints).
+    bool widthInRequired = false, heightInRequired = false;
 
     // Background modifier (for painting)
     float bgR = 0, bgG = 0, bgB = 0, bgA = 0;
@@ -137,6 +152,7 @@ struct LayoutState {
     // GraphicsLayer opacity (attrId 11); may be a NaN-encoded expression variable.
     float glAlpha = 1.0f;
     bool hasGlAlpha = false;
+    Operation* graphicsLayer = nullptr;   // its GraphicsLayerModifier (224), for the transform
     // GraphicsLayer blur render effect (attrId 17/18).
     float glBlurX = 0.0f, glBlurY = 0.0f;
     bool hasGlBlur = false;
@@ -152,6 +168,7 @@ struct LayoutState {
     float scrollPosition = 0; // NaN-encoded variable reference
     float scrollMaxNan = 0;   // NaN-encoded ID for max scroll variable
     float scrollNotchNan = 0; // NaN-encoded ID for notch/content dimension variable
+    Operation* scrollOp = nullptr; // the ModifierScroll (holds the drag offset)
     // Computed during scroll-aware measurement
     float scrollContentDimension = 0;
     float scrollHostDimension = 0;
@@ -164,6 +181,7 @@ struct LayoutState {
 
     // CanvasContent component IDs (to inherit parent canvas dimensions)
     std::vector<int> canvasContentIds;
+    std::vector<int> layoutContentIds;   // LayoutComponentContent ids: the full size
 
     // All data/expression operations (to run in DATA mode)
     std::vector<Operation*> dataOps;
@@ -181,6 +199,16 @@ struct LayoutState {
     // mixed-style text on a common baseline (see getAlignByValue).
     float textBaseline = 0;
     bool hasTextBaseline = false;
+
+    // The modifiers that paint or move the canvas, in list order (padding, background,
+    // border, clip, rounded clip, offset, ripple). ComponentModifiers.paint walks them in
+    // order: each padding translates by its start/top and shrinks the size the later
+    // decorators are laid out at, so a padding before a background is a margin.
+    struct PaintMod {
+        Operation* op = nullptr;
+        float l = 0, t = 0, r = 0, b = 0;   // a padding's insets (px), else 0
+    };
+    std::vector<PaintMod> paintMods;
 
     bool inflated = false;
 };

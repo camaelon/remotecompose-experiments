@@ -46,6 +46,7 @@ public:
 
     // Update the canvas pointer (e.g. after surface resize)
     void setCanvas(SkCanvas* canvas) { mCanvas = canvas; }
+    float currentPaintAlpha() const override { return mPaint.getAlphaf(); }
     SkCanvas* canvas() const { return mCanvas; }   // for custom-component hosts
 
     // Drawing

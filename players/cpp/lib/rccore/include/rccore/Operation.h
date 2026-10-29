@@ -35,6 +35,8 @@ public:
     // ── Variable support ─────────────────────────────────────────────
     /** The component this operation belongs to, or -1. Used to hit-test a click. */
     virtual int getOpComponentId() const { return -1; }
+    /** Renumber the component (Loom, for a second inclusion of one referenced group). */
+    virtual void setOpComponentId(int /*id*/) {}
 
     /**
      * Run this operation as the result of an interaction. Separate from apply() on purpose:

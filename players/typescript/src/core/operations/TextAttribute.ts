@@ -68,8 +68,8 @@ export class TextAttribute extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const textId = buffer.readInt();
+        const id = buffer.readId();
+        const textId = buffer.readId();
         const type = buffer.readShort();
         buffer.readShort(); // unused
         operations.push(new TextAttribute(id, textId, type));

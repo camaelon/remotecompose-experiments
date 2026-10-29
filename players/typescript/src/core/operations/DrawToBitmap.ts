@@ -28,6 +28,6 @@ export class DrawToBitmap extends PaintOperation {
     deepToString(indent: string): string { return `${indent}DrawToBitmap(${this.mBitmapId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new DrawToBitmap(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new DrawToBitmap(buffer.readId(), buffer.readInt(), buffer.readInt()));
     }
 }

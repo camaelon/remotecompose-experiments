@@ -85,7 +85,7 @@ export class BitmapData extends Operation {
     deepToString(indent: string): string { return `${indent}BitmapData(${this.mImageId}, ${this.mWidth}x${this.mHeight})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         let rawWidth = buffer.readInt();
         let rawHeight = buffer.readInt();
         let type = 0; // TYPE_PNG_8888
@@ -191,14 +191,18 @@ export class PathData extends Operation implements VariableSupport {
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const rawId = buffer.readInt();
         const winding = rawId >> 24;
-        const id = rawId & 0xFFFFFF;
+        // As the reference: the path id is resolved (not declared) inside a pattern, and a
+        // NaN-boxed coordinate is remapped unless it is a path command (ids <= DONE = 16).
+        const remap = (buffer as any).getRemapContext?.();
+        const id = remap ? remap.resolveId(rawId & 0xFFFFFF) : rawId & 0xFFFFFF;
         const count = buffer.readInt();
         if (count < 0 || count > 20000) {
             throw new Error(`PathData: invalid path length ${count}`);
         }
         const data = new Int32Array(count);
         for (let i = 0; i < count; i++) {
-            data[i] = buffer.readInt();
+            const bits = buffer.readInt();
+            data[i] = remap && isNaNBits(bits) && idFromBits(bits) > 16 ? remap.resolveNanIdBits(bits) : bits;
         }
         operations.push(new PathData(id, winding, data));
     }
@@ -229,8 +233,8 @@ export class FloatConstant extends Operation {
     deepToString(indent: string): string { return `${indent}FloatConstant(${this.mId}, ${this.mValue})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const value = buffer.readInt();
+        const id = buffer.declareId();
+        const value = buffer.readNanIdBits();
         operations.push(new FloatConstant(id, value));
     }
 }
@@ -253,7 +257,7 @@ export class ColorConstant extends Operation {
     deepToString(indent: string): string { return `${indent}ColorConstant(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ColorConstant(buffer.readInt(), buffer.readInt()));
+        operations.push(new ColorConstant(buffer.declareId(), buffer.readInt()));
     }
 }
 
@@ -326,9 +330,9 @@ export class ClickArea extends Operation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new ClickArea(
-            buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt()
+            buffer.declareId(), buffer.readId(),
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(),
+            buffer.readId()
         ));
     }
 }
@@ -358,7 +362,7 @@ export class NamedVariable extends Operation {
     deepToString(indent: string): string { return `${indent}NamedVariable("${this.mVarName}", ${this.mVarId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const type = buffer.readInt();
         const name = buffer.readUTF8();
         operations.push(new NamedVariable(name, id, type));
@@ -382,7 +386,7 @@ export class RootContentDescription extends Operation {
     deepToString(indent: string): string { return `${indent}RootContentDescription(${this.mContentDescription})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new RootContentDescription(buffer.readInt()));
+        operations.push(new RootContentDescription(buffer.readId()));
     }
 }
 

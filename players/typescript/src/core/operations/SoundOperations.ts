@@ -23,7 +23,7 @@ export class SoundData extends Operation {
     deepToString(indent: string): string { return `${indent}SoundData(${this.mSoundId}, ${this.mData.length} bytes)`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const soundId = buffer.readInt();
+        const soundId = buffer.readId();
         const data = buffer.readBuffer();
         operations.push(new SoundData(soundId, data));
     }
@@ -66,7 +66,7 @@ export class SoundExpression extends Operation {
     deepToString(indent: string): string { return `${indent}SoundExpression(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         const leftVolume = buffer.readFloat();
         const rightVolume = buffer.readFloat();
         const rate = buffer.readFloat();
@@ -97,6 +97,6 @@ export class PlaySound extends Operation {
     deepToString(indent: string): string { return `${indent}PlaySound(${this.mSoundExpressionId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new PlaySound(buffer.readInt()));
+        operations.push(new PlaySound(buffer.readId()));
     }
 }

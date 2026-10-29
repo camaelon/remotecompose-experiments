@@ -79,10 +79,16 @@ export class PathAppend extends Operation {
     deepToString(indent: string): string { return `${indent}PathAppend(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         const len = buffer.readInt();
         const bits = new Int32Array(len);
-        for (let i = 0; i < len; i++) bits[i] = buffer.readInt();
+        // As PathData: remap NaN-boxed values inside a pattern, except path commands
+        // (ids <= RESET = 17).
+        const remap = (buffer as any).getRemapContext?.();
+        for (let i = 0; i < len; i++) {
+            const b = buffer.readInt();
+            bits[i] = remap && isNaNBits(b) && idFromBits(b) > 17 ? remap.resolveNanIdBits(b) : b;
+        }
         operations.push(new PathAppend(id, bits));
     }
 }

@@ -92,8 +92,10 @@ export class PathExpression extends Operation {
 
         const ca = context.getCollectionsAccess();
         if (polar) {
-            const cx = exprY.length > 0 ? exprY[0] : 0;
-            const cy = exprY.length > 1 ? exprY[1] : 0;
+            // The second array is the centre (coord[0], coord[1] in PathGenerator.getPolarPath),
+            // held as resolved float *bits* — decode them, or the centre lands at ~1e9.
+            const cx = exprY.length > 0 ? intBitsToFloat(exprY[0]) : 0;
+            const cy = exprY.length > 1 ? intBitsToFloat(exprY[1]) : 0;
             for (let i = 0; i < count; i++) {
                 const angle = min + i * step;
                 const r = this.evalRPN(exprX, angle, ca);
@@ -225,17 +227,17 @@ export class PathExpression extends Operation {
     deepToString(indent: string): string { return `${indent}PathExpression`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         const flags = buffer.readInt();
-        const min = buffer.readInt();
-        const max = buffer.readInt();
-        const count = buffer.readInt();
+        const min = buffer.readNanIdBits();
+        const max = buffer.readNanIdBits();
+        const count = buffer.readNanIdBits();
         const lenX = buffer.readInt();
         const exprX = new Int32Array(lenX);
-        for (let i = 0; i < lenX; i++) exprX[i] = buffer.readInt();
+        for (let i = 0; i < lenX; i++) exprX[i] = buffer.readNanIdBits();
         const lenY = buffer.readInt();
         const exprY = new Int32Array(lenY);
-        for (let i = 0; i < lenY; i++) exprY[i] = buffer.readInt();
+        for (let i = 0; i < lenY; i++) exprY[i] = buffer.readNanIdBits();
         operations.push(new PathExpression(id, flags, min, max, count, exprX, exprY));
     }
 }

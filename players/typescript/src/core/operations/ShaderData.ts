@@ -118,8 +118,8 @@ export class ShaderData extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}ShaderData(${this.mShaderId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const shaderId = buffer.readInt();
-        const shaderTextId = buffer.readInt();
+        const shaderId = buffer.declareId();
+        const shaderTextId = buffer.readId();
         const sizes = buffer.readInt();
         const floatMapSize = sizes & 0xFF;
         const intMapSize = (sizes >> 8) & 0xFF;
@@ -133,7 +133,7 @@ export class ShaderData extends Operation implements VariableSupport {
                 const len = buffer.readInt();
                 const val = new Int32Array(len);
                 for (let j = 0; j < len; j++) {
-                    val[j] = buffer.readInt();
+                    val[j] = buffer.readNanIdBits();
                 }
                 floatMap.set(name, val);
             }
@@ -158,7 +158,7 @@ export class ShaderData extends Operation implements VariableSupport {
             bitmapMap = new Map();
             for (let i = 0; i < bitmapMapSize; i++) {
                 const name = buffer.readUTF8();
-                const val = buffer.readInt();
+                const val = buffer.readId();
                 bitmapMap.set(name, val);
             }
         }

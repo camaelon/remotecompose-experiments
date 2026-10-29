@@ -307,7 +307,7 @@ export class AddMesh2D extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const meshId = buffer.readInt();
+        const meshId = buffer.readId();
         const type = buffer.readInt();
         const layout = buffer.readInt();
         const uCount = buffer.readInt();
@@ -329,16 +329,16 @@ export class AddMesh2D extends Operation implements VariableSupport {
             for (let g = 0; g < G.EXPRESSION_GROUPS; g++) {
                 const len = buffer.readInt();
                 const arr = new Int32Array(Math.max(0, len));
-                for (let i = 0; i < len; i++) arr[i] = buffer.readInt();
+                for (let i = 0; i < len; i++) arr[i] = buffer.readNanIdBits();
                 expressions.push(arr);
             }
         } else if (type === G.TYPE_PATH_SPLINE_STRIP || type === G.TYPE_SPLINE_ROUND_STRIP) {
             const wn = buffer.readInt();
             widths = new Int32Array(Math.max(0, wn));
-            for (let i = 0; i < wn; i++) widths[i] = buffer.readInt();
+            for (let i = 0; i < wn; i++) widths[i] = buffer.readNanIdBits();
             const pn = buffer.readInt();
             widthPositions = new Int32Array(Math.max(0, pn));
-            for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readInt();
+            for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readNanIdBits();
             for (let g = 0; g < G.EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
         } else {
             const indexCount = buffer.readInt();
@@ -360,7 +360,7 @@ export class AddMesh2D extends Operation implements VariableSupport {
                     srcUv[i] = G.halfToFloat(buffer.readShort() & 0xffff);
                 }
             } else {
-                for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readInt();
+                for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readNanIdBits();
                 for (let i = 0; i < uvCount; i++) srcUv[i] = buffer.readFloat();
             }
             for (let i = 0; i < colorCount; i++) srcColors[i] = buffer.readInt();
@@ -392,7 +392,7 @@ export class DrawMesh2D extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new DrawMesh2D(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+        operations.push(new DrawMesh2D(buffer.readId(), buffer.readInt(), buffer.readInt()));
     }
 }
 
@@ -436,7 +436,7 @@ export class MatrixFromMesh2D extends PaintOperation implements VariableSupport 
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         // u and v as raw bits: either may be a NaN-boxed variable.
-        operations.push(new MatrixFromMesh2D(buffer.readInt(), buffer.readInt(),
-                                             buffer.readInt(), buffer.readInt()));
+        operations.push(new MatrixFromMesh2D(buffer.readId(), buffer.readNanIdBits(),
+                                             buffer.readNanIdBits(), buffer.readInt()));
     }
 }

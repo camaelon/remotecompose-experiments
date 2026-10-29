@@ -115,6 +115,10 @@ public:
     virtual void matrixRotate(float degrees, float cx, float cy) = 0;
     virtual void matrixSkew(float sx, float sy) = 0;
 
+    // The alpha of the current paint (a visibility function's paint alpha is the layer's
+    // DrawContent composites the component with). 1 for backends that do not track it.
+    virtual float currentPaintAlpha() const { return 1.0f; }
+
     // Alpha compositing layer (for layout enter/exit fades). Default falls back to a
     // plain matrix save/restore (no alpha) so non-Skia backends stay balanced.
     virtual void saveLayerAlpha(float alpha, float left, float top, float right, float bottom) {

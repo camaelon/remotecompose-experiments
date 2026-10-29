@@ -80,8 +80,8 @@ export class DataDynamicListFloat extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const lenBits = buffer.readInt();
+        const id = buffer.declareId();
+        const lenBits = buffer.readNanIdBits();
         const len = isNaNBits(lenBits) ? NaN : intBitsToFloat(lenBits);
         if (len > DataDynamicListFloat.MAX_FLOAT_ARRAY) {
             throw new Error(`${len} entries exceeds max = ${DataDynamicListFloat.MAX_FLOAT_ARRAY}`);

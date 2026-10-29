@@ -49,9 +49,9 @@ export class TextLookup extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
-        const dataSetId = buffer.readInt();
-        const index = buffer.readInt();
+        const textId = buffer.declareId();
+        const dataSetId = buffer.readId();
+        const index = buffer.readNanIdBits();
         operations.push(new TextLookup(textId, dataSetId, index));
     }
 }

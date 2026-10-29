@@ -1,3 +1,4 @@
+import { intBitsToFloat } from './Utils';
 /**
  * Parsing stubs for operations the player does not implement.
  *
@@ -64,7 +65,7 @@ export class ComponentStartStub extends UnsupportedOperation {
     protected readonly opName = 'ComponentStart';
     static read(buffer: WireBuffer, operations: Operation[]): void {
         buffer.readInt();    // type
-        buffer.readInt();    // componentId
+        buffer.readId();    // componentId
         buffer.readFloat();  // width
         buffer.readFloat();  // height
         operations.push(new ComponentStartStub());
@@ -164,13 +165,13 @@ export class BitmapFontDataStub extends UnsupportedOperation {
     static readonly VERSION_2 = 2;
     protected readonly opName = 'BitmapFontData';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();                          // id
+        buffer.readId();                          // id
         const versionAndCount = buffer.readInt();
         const version = versionAndCount >>> 16;
         const numGlyphs = versionAndCount & 0xffff;
         for (let i = 0; i < numGlyphs; i++) {
             buffer.readUTF8();   // chars
-            buffer.readInt();    // bitmapId
+            buffer.readId();    // bitmapId
             buffer.readShort();  // marginLeft
             buffer.readShort();  // marginTop
             buffer.readShort();  // marginRight
@@ -194,42 +195,14 @@ export class FontDataStub extends UnsupportedOperation {
     static readonly OP_CODE = 189;
     protected readonly opName = 'FontData';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();     // imageId
+        buffer.readId();     // imageId
         buffer.readInt();     // type
         buffer.readBuffer();  // font bytes
         operations.push(new FontDataStub());
     }
 }
 
-// ── Functions ────────────────────────────────────────────────────────────────
-
-/** FUNCTION_CALL (166) — `FloatFunctionCall`: id then a counted float array. */
-export class FloatFunctionCallStub extends UnsupportedOperation {
-    static readonly OP_CODE = 166;
-    protected readonly opName = 'FloatFunctionCall';
-    static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();                     // id
-        const argLen = buffer.readInt();
-        for (let i = 0; i < argLen; i++) {
-            buffer.readFloat();               // arg
-        }
-        operations.push(new FloatFunctionCallStub());
-    }
-}
-
-/** FUNCTION_DEFINE (168) — `FloatFunctionDefine`: id then a counted int array. */
-export class FloatFunctionDefineStub extends UnsupportedOperation {
-    static readonly OP_CODE = 168;
-    protected readonly opName = 'FloatFunctionDefine';
-    static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();                     // id
-        const varLen = buffer.readInt();
-        for (let i = 0; i < varLen; i++) {
-            buffer.readInt();                 // varId
-        }
-        operations.push(new FloatFunctionDefineStub());
-    }
-}
+// FUNCTION_CALL (166) / FUNCTION_DEFINE (168) are implemented in FloatFunction.ts.
 
 // ── Data, images, paths ──────────────────────────────────────────────────────
 
@@ -243,12 +216,12 @@ export class DrawTextOnCircleStub extends UnsupportedOperation {
     static readonly OP_CODE = 57;
     protected readonly opName = 'DrawTextOnCircle';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();   // textId
-        buffer.readInt();   // centerX
-        buffer.readInt();   // centerY
-        buffer.readInt();   // radius
-        buffer.readInt();   // startAngle
-        buffer.readInt();   // sweep
+        buffer.readId();   // textId
+        buffer.readNanIdBits();   // centerX
+        buffer.readNanIdBits();   // centerY
+        buffer.readNanIdBits();   // radius
+        buffer.readNanIdBits();   // startAngle
+        buffer.readNanIdBits();   // sweep
         buffer.readByte();  // anchor
         buffer.readByte();  // flags
         operations.push(new DrawTextOnCircleStub());
@@ -260,9 +233,9 @@ export class TextLookupIntStub extends UnsupportedOperation {
     static readonly OP_CODE = 153;
     protected readonly opName = 'TextLookupInt';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();  // textId
-        buffer.readInt();  // dataSetId
-        buffer.readInt();  // indexId
+        buffer.declareId();  // textId
+        buffer.readId();  // dataSetId
+        buffer.readId();  // indexId
         operations.push(new TextLookupIntStub());
     }
 }
@@ -272,12 +245,12 @@ export class ImageAttributeStub extends UnsupportedOperation {
     static readonly OP_CODE = 171;
     protected readonly opName = 'ImageAttribute';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();                  // id
-        buffer.readInt();                  // imageId
+        buffer.readId();                  // id
+        buffer.readId();                  // imageId
         buffer.readShort();                // type
         const len = buffer.readShort();
         for (let i = 0; i < len; i++) {
-            buffer.readInt();              // arg
+            buffer.readId();              // arg
         }
         operations.push(new ImageAttributeStub());
     }
@@ -288,9 +261,9 @@ export class PathCombineStub extends UnsupportedOperation {
     static readonly OP_CODE = 175;
     protected readonly opName = 'PathCombine';
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();   // outId
-        buffer.readInt();   // pathId1
-        buffer.readInt();   // pathId2
+        buffer.readId();   // outId
+        buffer.readId();   // pathId1
+        buffer.readId();   // pathId2
         buffer.readByte();  // combine operator
         operations.push(new PathCombineStub());
     }

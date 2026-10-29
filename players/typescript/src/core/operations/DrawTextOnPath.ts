@@ -52,10 +52,10 @@ export class DrawTextOnPath extends PaintOperation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}DrawTextOnPath`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
-        const pathId = buffer.readInt();
-        const vOffsetBits = buffer.readInt();
-        const hOffsetBits = buffer.readInt();
+        const textId = buffer.readId();
+        const pathId = buffer.readId();
+        const vOffsetBits = buffer.readNanIdBits();
+        const hOffsetBits = buffer.readNanIdBits();
         operations.push(new DrawTextOnPath(textId, pathId, hOffsetBits, vOffsetBits));
     }
 }

@@ -85,8 +85,8 @@ export class ConditionalOperations extends PaintOperation {
     deepToString(indent: string): string { return `${indent}ConditionalOperations(type=${this.mType})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readByte();
-        const a = buffer.readInt();   // raw bits; NaN-with-payload => variable ref
-        const b = buffer.readInt();
+        const a = buffer.readNanIdBits();   // raw bits; NaN-with-payload => variable ref
+        const b = buffer.readNanIdBits();
         operations.push(new ConditionalOperations(type, a, b));
     }
 }

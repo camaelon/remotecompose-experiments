@@ -9,7 +9,6 @@
 
 import { LayoutManager } from './LayoutManager';
 import { Visibility } from '../Component';
-import { PaddingModifier } from '../modifiers/ModifierOperations';
 import type { Operation } from '../../../Operation';
 import type { WireBuffer } from '../../../WireBuffer';
 import type { RemoteContext } from '../../../RemoteContext';
@@ -62,23 +61,7 @@ export class Custom extends LayoutManager {
 
         paintContext.matrixSave();
         paintContext.matrixTranslate(this.mX, this.mY);
-        let tx = 0;
-        let ty = 0;
-        for (const mod of this.mComponentModifiers) {
-            context.incrementOpCount(mod);
-            if (mod.isDirty() && typeof (mod as any).updateVariables === 'function') {
-                mod.markNotDirty();
-                (mod as any).updateVariables(context);
-            }
-            if (mod instanceof PaddingModifier) {
-                paintContext.matrixTranslate(mod.mLeftValue, mod.mTopValue);
-                tx += mod.mLeftValue;
-                ty += mod.mTopValue;
-            } else {
-                mod.apply(context);
-            }
-        }
-        paintContext.matrixTranslate(-tx, -ty);
+        this.paintModifiers(paintContext);
         paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
 
         const config = this.mConfigId >= 0 ? (context.getText(this.mConfigId) ?? '') : '';
@@ -93,9 +76,11 @@ export class Custom extends LayoutManager {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.declareId();
-        const animationId = buffer.declareId();
-        const configId = buffer.readInt();
+        // The reference reads both as plain ints (Custom.read): declaring them would allocate
+        // ids the reference does not, and shift every id a pattern inflates after this one.
+        const componentId = buffer.readInt();
+        const animationId = buffer.readInt();
+        const configId = buffer.readId();
         const propCount = buffer.readInt();
         const properties: CustomProperty[] = [];
         for (let i = 0; i < propCount; i++) {

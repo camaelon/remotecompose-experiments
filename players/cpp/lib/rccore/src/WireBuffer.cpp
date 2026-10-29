@@ -1,4 +1,5 @@
 #include "rccore/WireBuffer.h"
+#include "rccore/RemapContext.h"
 #include <cmath>
 #include <stdexcept>
 
@@ -95,6 +96,63 @@ int32_t WireBuffer::peekInt() const {
     int32_t v3 = (mData[tmp++] & 0xFF) << 8;
     int32_t v4 = (mData[tmp++] & 0xFF);
     return v1 + v2 + v3 + v4;
+}
+
+int32_t WireBuffer::declareId() {
+    int32_t v = readInt();
+    if (mRemap) v = mRemap->declareId(v);
+    if (mIdTrace) mIdTrace->push_back(v);
+    return v;
+}
+
+int32_t WireBuffer::readId() {
+    int32_t v = readInt();
+    if (mRemap) v = mRemap->resolveId(v);
+    if (mIdTrace) mIdTrace->push_back(v);
+    return v;
+}
+
+int32_t WireBuffer::readNanIdBits() {
+    int32_t bits = readInt();
+    return mRemap ? mRemap->resolveNanIdBits(bits) : bits;
+}
+
+float WireBuffer::readNanId() {
+    int32_t bits = readNanIdBits();
+    float f;
+    memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+int64_t WireBuffer::readLongNanId() {
+    int64_t v = readLong();
+    return mRemap ? mRemap->resolveLongNanId(v) : v;
+}
+
+int32_t WireBuffer::remapId(int32_t id) const { return mRemap ? mRemap->resolveId(id) : id; }
+
+int32_t WireBuffer::declareIdValue(int32_t id) { return mRemap ? mRemap->declareId(id) : id; }
+
+int32_t WireBuffer::remapNanBits(int32_t bits) const { return mRemap ? mRemap->resolveNanIdBits(bits) : bits; }
+
+float WireBuffer::remapNan(float v) const {
+    if (!mRemap) return v;
+    int32_t bits; memcpy(&bits, &v, sizeof(bits));
+    bits = mRemap->resolveNanIdBits(bits);
+    float f; memcpy(&f, &bits, sizeof(f));
+    return f;
+}
+
+/** Whether an expression token is a variable to remap (not a math/matrix operator, not a data
+ *  variable): AnimatedFloatExpression.isMathOperator / MatrixOperations.isOperator /
+ *  NanMap.isDataVariable in the reference. */
+bool WireBuffer::isRemappableExpressionWord(float v, bool matrix) {
+    int32_t bits; memcpy(&bits, &v, sizeof(bits));
+    if (!RemapContext::isNaNBits(bits)) return false;
+    int id = bits & 0x3FFFFF;
+    if ((id >> 20) == 2) return false;
+    int lo = matrix ? 0x320000 : 0x310000, hi = matrix ? 0x320000 + 54 : 0x310000 + 79;
+    return !(id > lo && id <= hi);
 }
 
 } // namespace rccore

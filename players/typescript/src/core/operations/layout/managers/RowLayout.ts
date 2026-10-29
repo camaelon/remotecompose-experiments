@@ -49,7 +49,7 @@ export class RowLayout extends LayoutManager {
     }
 
     protected minIntrinsicWidthForComponents(components: Component[]): number {
-        const width = this.computeModifierDefinedWidth();
+        const width = this.modifierDefinedWidth(true);
         let componentWidths = 0;
         for (const c of components) {
             componentWidths += c.minIntrinsicWidth();
@@ -58,7 +58,7 @@ export class RowLayout extends LayoutManager {
     }
 
     protected minIntrinsicHeightForComponents(components: Component[]): number {
-        const height = this.computeModifierDefinedHeight();
+        const height = this.modifierDefinedHeight(true);
         let componentHeights = 0;
         for (const c of components) {
             componentHeights = Math.max(componentHeights, c.minIntrinsicHeight());
@@ -67,6 +67,10 @@ export class RowLayout extends LayoutManager {
     }
 
     // --- Wrap size ---
+
+    protected override weightFill(): [boolean, boolean] {
+        return [this.mChildrenComponents.some((c) => c instanceof LayoutComponent && c.hasWidthWeight()), false];
+    }
 
     computeWrapSize(context: PaintContext, minWidth: number, maxWidth: number,
                     minHeight: number, maxHeight: number,
@@ -308,8 +312,8 @@ export class RowLayout extends LayoutManager {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const componentId = buffer.readInt();
-        const animationId = buffer.readInt();
+        const componentId = buffer.declareId();
+        const animationId = buffer.declareId();
         const horizontalPositioning = buffer.readInt();
         const verticalPositioning = buffer.readInt();
         const spacedBy = buffer.readFloat();
