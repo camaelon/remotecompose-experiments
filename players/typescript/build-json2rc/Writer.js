@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HOST_ACTION_STRING_TYPE = exports.SEMANTICS_MODE_SET = exports.Writer = exports.TYPE_WRAP = exports.BITMAP_ENCODING_INLINE = exports.BITMAP_TYPE_PNG = exports.TYPE_WEIGHT = exports.TYPE_FILL = exports.TYPE_EXACT = exports.OP = void 0;
+exports.javaHashMapOrder = javaHashMapOrder;
 exports.modWidth = modWidth;
 exports.modHeight = modHeight;
 exports.modPadding = modPadding;
@@ -56,7 +57,7 @@ exports.OP = {
     PATH_APPEND: 160, TEXT_FROM_FLOAT: 135, FLOAT_LIST: 147, CV_WIDTH: 0, CV_HEIGHT: 1,
     LAYOUT_ROOT: 200, LAYOUT_CONTENT: 201, LAYOUT_BOX: 202, LAYOUT_ROW: 203,
     LAYOUT_COLUMN: 204, LAYOUT_CANVAS: 205, LAYOUT_CANVAS_CONTENT: 207,
-    CONTAINER_END: 214, DATA_TEXT: 102, CORE_TEXT: 239,
+    CONTAINER_END: 214, DATA_TEXT: 102, CORE_TEXT: 239, DATA_SHADER: 45,
     MODIFIER_WIDTH: 16, MODIFIER_HEIGHT: 67, MODIFIER_BACKGROUND: 55,
     MODIFIER_PADDING: 58, MODIFIER_CLIP_RECT: 108, MODIFIER_ROUNDED_CLIP_RECT: 54,
     DATA_FLOAT: 80, ANIMATED_FLOAT: 81, COLOR_CONSTANT: 138, NAMED_VARIABLE: 137,
@@ -88,6 +89,38 @@ const CORE_TEXT_PARAMS = [
 ];
 function toInt32(v) {
     return v | 0;
+}
+/** java.lang.String.hashCode: UTF-16 units, 32-bit wrap-around. */
+function javaStringHash(s) {
+    let h = 0;
+    for (let k = 0; k < s.length; k++)
+        h = (Math.imul(h, 31) + s.charCodeAt(k)) | 0;
+    return h;
+}
+/**
+ * Entries in the order a java.util.HashMap with default settings iterates them after
+ * inserting them in this order: by bucket, (h ^ h >>> 16) & (capacity - 1), and in insertion
+ * order within a bucket. The table starts at 16 and doubles past a 0.75 load; a resize keeps
+ * each bucket's relative order, so the final capacity alone decides. (Buckets only turn into
+ * trees at 8 colliding keys in a table of 64 or more, far past any shader's uniform count.)
+ */
+function javaHashMapOrder(entries) {
+    const seen = new Map();
+    const unique = [];
+    for (const [k, v] of entries) { // a repeated key replaces the value in place
+        if (seen.has(k))
+            unique[seen.get(k)][1] = v;
+        else {
+            seen.set(k, unique.length);
+            unique.push([k, v]);
+        }
+    }
+    let capacity = 16;
+    while (unique.length > capacity * 0.75)
+        capacity *= 2;
+    const bucket = (k) => { const h = javaStringHash(k); return (h ^ (h >>> 16)) & (capacity - 1); };
+    return unique.map((e, n) => ({ e, n, b: bucket(e[0]) }))
+        .sort((x, y) => x.b - y.b || x.n - y.n).map((x) => x.e);
 }
 class Writer {
     constructor(apiLevel, tags) {
@@ -739,20 +772,53 @@ class Writer {
         return id;
     }
     /**
-     * A string the host can read and write by name: DATA_TEXT, then NAMED_VARIABLE
-     * (STRING_TYPE 0). Not interned — two variables with the same initial text must still
+     * DATA_SHADER — RemoteComposeShader.commit / ShaderData.apply: the AGSL source as
+     * DATA_TEXT (interned, like any addText), then a fresh shader id and the uniforms.
+     * Float uniforms are raw float32 bits, so a NaN-boxed variable id animates the uniform.
+     * The reference holds each kind of uniform in a java.util.HashMap and writes it in that
+     * map's iteration order, so the same order is reproduced here (javaHashMapOrder).
+     */
+    addShader(source, floats, ints, bitmaps) {
+        const textId = this.addText(source);
+        const id = this.allocDataId();
+        const f = javaHashMapOrder(floats), i = javaHashMapOrder(ints), b = javaHashMapOrder(bitmaps);
+        this.buffer.start(exports.OP.DATA_SHADER);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(textId);
+        this.buffer.writeInt(f.length | (i.length << 8) | (b.length << 16));
+        for (const [name, bits] of f) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(bits.length);
+            for (const v of bits)
+                this.buffer.writeIntBitsAsFloat(v);
+        }
+        for (const [name, values] of i) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(values.length);
+            for (const v of values)
+                this.buffer.writeInt(v);
+        }
+        for (const [name, value] of b) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(value);
+        }
+        return id;
+    }
+    /**
+     * A string the host can read and write by name: NAMED_VARIABLE (STRING_TYPE 0), then
+     * DATA_TEXT — RemoteComposeWriter.addNamedString. Not interned — two variables with the same initial text must still
      * be two ids, or setting one would set both. EXTENSION: not in the reference JSON
      * parser yet (m5Tab docs/RC_SYSTEM_VARIABLES.md).
      */
     addNamedString(name, value) {
         const id = this.allocDataId();
-        this.buffer.start(exports.OP.DATA_TEXT);
-        this.buffer.writeInt(id);
-        this.buffer.writeUtf8(value);
-        this.buffer.start(exports.OP.NAMED_VARIABLE);
+        this.buffer.start(exports.OP.NAMED_VARIABLE); // before the text, as RemoteComposeWriter does
         this.buffer.writeInt(id);
         this.buffer.writeInt(0); // NV_STRING_TYPE
         this.buffer.writeUtf8(name);
+        this.buffer.start(exports.OP.DATA_TEXT);
+        this.buffer.writeInt(id);
+        this.buffer.writeUtf8(value);
         return id;
     }
     /** FloatConstant (DATA_FLOAT); returns asNan(id) bits. */
@@ -1017,8 +1083,7 @@ function hostNamedAction(textId, type, valueId) {
 exports.HOST_ACTION_STRING_TYPE = 2;
 /**
  * HOST_ACTION (209) with no metadata, HostActionMetadata (216) with it: the host's
- * RemoteContext.runAction(id, metadata). EXTENSION: the reference JSON parser has no spelling
- * for these yet (m5Tab docs/RC_SYSTEM_VARIABLES.md).
+ * RemoteContext.runAction(id, metadata) — HostAction(actionId[, metadataId]) in the reference.
  */
 function hostAction(actionId, metadataId) {
     return (w) => {
