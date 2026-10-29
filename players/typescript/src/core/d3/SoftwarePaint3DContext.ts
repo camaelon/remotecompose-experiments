@@ -56,7 +56,7 @@ const MAX_LIGHTS = 32;
  */
 const WIRE_DEPTH_BIAS = 6e-4;
 
-interface Mesh {
+export interface Mesh {
     indices: Int32Array;
     verts: Float32Array;
     normals: Float32Array | null;
@@ -68,6 +68,26 @@ interface Light {
     r: number; g: number; b: number;
     wx: number; wy: number; wz: number;
     intensity: number;
+}
+
+/** A light resolved into eye space, with intensity already folded into the colour. */
+export interface EyeLight {
+    type: number;
+    /** Directional: the unit vector *toward* the light. Point: eye-space position. */
+    x: number; y: number; z: number;
+    r: number; g: number; b: number;
+}
+
+/** The current 3D state, resolved for a backend that draws it on the GPU. */
+export interface Gl3DFrame {
+    mvp: Float32Array;
+    mv: Float32Array;
+    lights: EyeLight[];
+    specStrength: number;
+    shininess: number;
+    depthBiasC: number;
+    depthBiasS: number;
+    baseColorArgb: number;
 }
 
 /**
@@ -607,6 +627,42 @@ export class SoftwarePaint3DContext {
     /** The active texture, for a host that rasterizes textured triangles itself. */
     getTextureData(): { pixels: Int32Array | null; width: number; height: number } {
         return { pixels: this.mTexPixels, width: this.mTexW, height: this.mTexH };
+    }
+
+    /** A mesh as defined, for a host that uploads geometry to the GPU itself. */
+    getMesh(meshId: number): Mesh | undefined {
+        return this.mMeshes.get(meshId);
+    }
+
+    /**
+     * Everything a GPU backend needs to draw the current state, resolved the way the software
+     * path resolves it.
+     *
+     * This exists so the GL backend shades from the *same* numbers rather than re-deriving
+     * them: the lights are already in eye space with intensity folded into the colour, and the
+     * matrices are the same products the software path builds. Two renderers that each compute
+     * their own eye-space lights from the document will drift, and the drift shows up as a
+     * lighting difference that looks like a shader bug.
+     */
+    getGlFrame(): Gl3DFrame {
+        multiply(this.mPV, this.mProj, this.mView);
+        multiply(this.mMV, this.mView, this.mModel);
+        multiply(this.mMVP, this.mPV, this.mModel);
+        this.prepareLightsEyeSpace();
+        const lights: EyeLight[] = [];
+        for (let i = 0; i < this.mNumEyeLights; i++) {
+            lights.push({
+                type: this.mEType[i],
+                x: this.mElx[i], y: this.mEly[i], z: this.mElz[i],
+                r: this.mElr[i], g: this.mElg[i], b: this.mElb[i],
+            });
+        }
+        return {
+            mvp: this.mMVP, mv: this.mMV, lights,
+            specStrength: this.mSpecStrength, shininess: this.mShininess,
+            depthBiasC: this.mDepthBiasC, depthBiasS: this.mDepthBiasS,
+            baseColorArgb: this.mBaseColorArgb,
+        };
     }
 
     buildCanvasVertices(meshId: number, out: CanvasMesh, smooth: boolean): number {

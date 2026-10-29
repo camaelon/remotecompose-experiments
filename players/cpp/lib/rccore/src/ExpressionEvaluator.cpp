@@ -132,9 +132,13 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
 
         // Ternary
         case MAD: {
-            // Java: stack[sp-2] = stack[sp] + stack[sp-1] * stack[sp-2], i.e. mad(a, b, c) = a*b + c
-            float c = mStack[sp--]; float b = mStack[sp--];
-            mStack[sp] = c + b * mStack[sp];
+            // Java: mStack[sp-2] = mStack[sp] + mStack[sp-1] * mStack[sp-2], i.e. a*b + c
+            // for mad(a, b, c). This multiplied the wrong pair and computed a + b*c, so
+            // mad(3, 4, 5) came out 23 against the reference's 17. The names are spelled
+            // out here because the whole bug was a plausible-looking pop order.
+            float c = mStack[sp--];          // third argument
+            float b = mStack[sp--];          // second argument
+            mStack[sp] = c + b * mStack[sp]; // mStack[sp] is the first
             break;
         }
         case IFELSE: {

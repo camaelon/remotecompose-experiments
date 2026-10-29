@@ -331,3 +331,53 @@ the natural companion change to the CL.
 Phases 8 and 9 are deliberately late: primitives and expression-surfaces are *generators* that sit
 on top of `defineMesh3D`, so nothing else is blocked on them. A hand-built cube through
 `DEFINE_MESH_3D` exercises the entire pipeline first.
+
+## The GL backend on web (modes 6/7)
+
+Implemented in the TypeScript player. Before this, modes 6/7 were declared in the contract
+and fell back to software, and the only GPU work in the 3D path was the *canvas* backends'
+screen-space rasterizer — the CPU transformed, lit, clipped and projected every vertex each
+frame and the GPU only filled triangles.
+
+Modes 6/7 are now a real pipeline: geometry is uploaded once into VBOs and cached by mesh id,
+the matrices and the eye-space lights go down as uniforms, lighting runs in the vertex shader,
+and depth and back-face culling are the GPU's. A static mesh costs no per-frame CPU geometry
+at all. It reuses the 3D renderer's existing WebGL context rather than taking a second one —
+a browser allows only about 16 live contexts, and the player was already holding two.
+
+Three things are worth knowing before reading the code:
+
+* **Flat shading needs expanded geometry.** The face normal and the centroid belong to the
+  triangle, not the vertex, so a vertex shared between two faces would need two values. The
+  flat variant is therefore non-indexed and carries its triangle's two edges and centroid, and
+  the shader crosses the edges *in eye space* — transforming a precomputed model-space face
+  normal instead agrees only for a similarity transform. The variant is built on first use, so
+  a document that only ever asks for smooth never pays for it.
+
+* **Normals use the plain upper 3×3 of the modelview, not the inverse transpose.** That is
+  wrong in general and is what the software path does, so it is what this does. Under a
+  non-uniform scale the two disagree and the same document would light differently depending
+  on the backend.
+
+* **Colour interpolation has to be un-perspective-corrected by hand.** GLSL interpolates
+  varyings perspective-correct; the software Gouraud fill uses plain screen-space
+  barycentrics, and only its *texture* coordinates are perspective-correct. GLSL ES 3.00 has
+  no `noperspective` qualifier, so the shader interpolates `colour * w` and `w` and divides.
+  Skipping this is invisible as a shape error and was 64 8-bit levels in the middle of a face.
+
+What cannot match, and why, is listed as `GL_DIVERGENCES` at the foot of `WebGL3DRenderer.ts`:
+rounding, edge coverage, near-plane clipping versus rejection, and antialiasing. The parity
+test allows exactly those and nothing else — it masks out pixels near an edge and holds the
+flat interior to a tight bound, because a shading bug shifts whole faces and has no local
+gradient. It also asserts the GPU path actually ran: a backend that falls back to software
+produces a *correct picture*, so comparing images cannot distinguish "works" from "missing".
+
+Measured on a 400x400 render of a 64-segment torus, software against GL: 1.35% of painted
+pixels differ by more than 8 levels (all of it within a pixel or two of an edge), and the
+worst difference away from any edge is 11 levels. Corrupting the shader's ambient term moves
+those to 18.46% and 82, so the bound is not slack. Stripping the GL dispatch so the document
+falls back to software makes the two images *bit-identical* — 0 differing pixels — which is
+why the test asserts the draw counter and not only the picture.
+
+Modes 2/3 and 10/11 still use the screen-space rasterizer, and 4/5 and 8/9 still fall back to
+software.

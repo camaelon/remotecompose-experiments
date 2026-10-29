@@ -4,3 +4,4 @@ export * from './Rasterizer';
 export * from './Paint3DContext';
 export * from './Primitive3D';
 export { SoftwarePaint3DContext } from './SoftwarePaint3DContext';
+export type { Mesh, EyeLight, Gl3DFrame } from './SoftwarePaint3DContext';

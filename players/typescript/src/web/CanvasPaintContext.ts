@@ -5,10 +5,10 @@ import { SoftwarePaint3DContext, createCanvasMesh } from '../core/d3/SoftwarePai
 import type { CanvasMesh } from '../core/d3/SoftwarePaint3DContext';
 import { WebGL3DRenderer } from './WebGL3DRenderer';
 import {
-    MODE_BACKEND_CANVAS, MODE_BACKEND_CANVAS_ZBUF, MODE_SMOOTH_MASK, MODE_WIREFRAME,
+    MODE_BACKEND_CANVAS, MODE_BACKEND_CANVAS_ZBUF, MODE_BACKEND_GL,
+    MODE_SMOOTH_MASK, MODE_WIREFRAME,
 } from '../core/d3/Paint3DContext';
 import type { RemoteContext } from '../core/RemoteContext';
-import { SoftwarePaint3DContext } from '../core/d3/SoftwarePaint3DContext';
 import { PaintBundle, intBitsToFloat } from '../core/operations/paint/PaintBundle';
 import { isNaNBits, idFromBits, floatToRawIntBits } from '../core/operations/Utils';
 import { transpileAgslToGlsl } from '../core/shader/AgslTranspiler';
@@ -222,6 +222,14 @@ export class CanvasPaintContext extends PaintContext {
         if (this.shaderRenderer) {
             this.shaderRenderer.destroy();
             this.shaderRenderer = null;
+        }
+        // The 3D renderer holds a second WebGL context and used to keep it forever. A browser
+        // allows only about 16 live contexts and silently kills the oldest beyond that, so a
+        // gallery building a player per card blanked its earliest documents — the same leak
+        // the shader renderer was fixed for, with a second cause.
+        if (this.d3gl) {
+            this.d3gl.destroy();
+            this.d3gl = null;
         }
     }
     private glslCache = new Map<number, string>();  // shaderTextId -> transpiled GLSL
@@ -2367,6 +2375,9 @@ export class CanvasPaintContext extends PaintContext {
     defineMesh3D(id: number, indices: Int32Array, verts: Float32Array,
                  normals: Float32Array | null, uv: Float32Array | null = null): void {
         this.ensure3D().defineMesh3D(id, indices, verts, normals, uv);
+        // The GL backend uploads geometry once and keeps it; a redefinition under the same id
+        // has to drop that upload or the mesh keeps drawing its old shape.
+        if (this.d3gl) this.d3gl.invalidateMesh(id);
     }
 
     setCamera3D(projection: number, projParams: Float32Array | number[],
@@ -2380,6 +2391,11 @@ export class CanvasPaintContext extends PaintContext {
 
     clearDepth3D(): void {
         this.ensure3D().clearDepth3D();
+        // The GL backend accumulates colour and depth across the whole pass, exactly as the
+        // software buffers do, so this is where its buffers reset too.
+        if (this.d3gl && this.d3gl.isAvailable()) {
+            this.d3gl.beginPass(this.ctx.canvas.width, this.ctx.canvas.height);
+        }
     }
 
     setLights3D(types: Int32Array | number[], colors: Int32Array | number[],
@@ -2452,6 +2468,13 @@ export class CanvasPaintContext extends PaintContext {
         // contract forces software regardless of the backend bits.
         const backend = mode >> 1;
         const wire = (mode & MODE_WIREFRAME) !== 0;
+        if (!wire && backend === MODE_BACKEND_GL) {
+            if (this.drawMesh3DModelSpace(ctx3d, meshId, (mode & MODE_SMOOTH_MASK) !== 0)) {
+                return;
+            }
+            // WebGL2 unavailable — fall through to software, which is what the contract says
+            // an unimplemented backend does.
+        }
         if (!wire && (backend === MODE_BACKEND_CANVAS || backend === MODE_BACKEND_CANVAS_ZBUF)) {
             if (this.drawMesh3DGl(ctx3d, meshId, (mode & MODE_SMOOTH_MASK) !== 0,
                                   backend === MODE_BACKEND_CANVAS_ZBUF)) {
@@ -2461,6 +2484,43 @@ export class CanvasPaintContext extends PaintContext {
         }
         ctx3d.drawMesh3D(meshId, mode);
         this.blit3D();
+    }
+
+    /**
+     * GL backend (modes 6/7): the real GPU pipeline.
+     *
+     * The difference from the canvas backends is where the work happens. They transform,
+     * light, clip and project every vertex on the CPU each frame and hand the GPU a fresh
+     * screen-space triangle list; here the geometry is uploaded once and the matrices and
+     * lights go down as uniforms, so a static mesh costs no per-frame CPU geometry at all.
+     *
+     * Returns false if WebGL2 is unavailable, so the caller can fall back to software.
+     */
+    private drawMesh3DModelSpace(ctx3d: SoftwarePaint3DContext, meshId: number,
+                                 smooth: boolean): boolean {
+        if (this.d3gl === null) this.d3gl = new WebGL3DRenderer();
+        const gl = this.d3gl;
+        if (!gl.isAvailable()) return false;
+
+        const mesh = ctx3d.getMesh(meshId);
+        if (!mesh) return true;                 // undefined mesh draws nothing, as in software
+        // Smooth shading needs normals; without them the mode falls back to flat, which is
+        // what the software path does rather than refusing to draw.
+        const useSmooth = smooth && mesh.normals !== null;
+
+        const w = ctx3d.getWidth(), h = ctx3d.getHeight();
+        const tex = ctx3d.getTextureData();
+        gl.setTexture(tex.pixels, tex.width, tex.height);
+        if (!gl.drawModelSpace(meshId, mesh, ctx3d.getGlFrame(), useSmooth, w, h)) {
+            return false;
+        }
+        // Composite the accumulated GL canvas after every mesh, matching the software path's
+        // blit-after-every-mesh. That is what lets 3D interleave with 2D in document order
+        // while meshes still depth-test against each other.
+        this.ctx.drawImage(gl.getCanvas(), 0, 0, w, h);
+        (globalThis as unknown as { __rcGlModelDraws?: number }).__rcGlModelDraws =
+            gl.modelDrawCount;
+        return true;
     }
 
     /**
