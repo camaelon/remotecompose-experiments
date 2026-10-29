@@ -9,7 +9,8 @@
 #   - creates the `rcmcp` user and the workspace /var/lib/rcmcp,
 #   - writes /etc/rcmcp/*.env, generating a token the first time,
 #   - builds the TypeScript web player once (rc-deploy embeds it in the pages it makes),
-#   - installs and (re)starts rcmcp@json2rc, rcmcp@rc-render, rcmcp@guide and rcmcp@deploy,
+#   - installs and (re)starts rcmcp@json2rc, rcmcp@rc-render, rcmcp@guide, rcmcp@deploy and
+#     rcmcp@inspect,
 #     and the Caddy site.
 set -euo pipefail
 
@@ -86,12 +87,13 @@ printf 'MCP_HTTP_PORT=8809\nMCP_PUBLIC_URL=https://%s/rc-render\n' "$DOMAIN" > /
 printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/guide.env
 # rc-deploy publishes pages under its own public base.
 printf 'MCP_HTTP_PORT=8811\nMCP_PUBLIC_URL=https://%s/deploy\n' "$DOMAIN" > /etc/rcmcp/deploy.env
+echo "MCP_HTTP_PORT=8812" > /etc/rcmcp/inspect.env
 
 echo "== services"
 install -m 644 "$DEST/mcp/deploy/rcmcp@.service" /etc/systemd/system/rcmcp@.service
 systemctl daemon-reload
-systemctl enable --now rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy
-systemctl restart rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy
+systemctl enable --now rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect
+systemctl restart rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect
 
 echo "== caddy"
 install -d /etc/caddy/sites
@@ -100,7 +102,7 @@ grep -q 'import sites/\*' /etc/caddy/Caddyfile 2>/dev/null || echo 'import sites
 systemctl reload caddy || systemctl restart caddy
 
 # Give each server a few seconds to come up; on failure show why, rather than pointing at logs.
-for svc in json2rc:8808 rc-render:8809 guide:8810 deploy:8811; do
+for svc in json2rc:8808 rc-render:8809 guide:8810 deploy:8811 inspect:8812; do
     name="${svc%%:*}" port="${svc##*:}"
     for _ in $(seq 20); do curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
     if ! curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
@@ -117,12 +119,13 @@ Done. Endpoints:
   https://$DOMAIN/guide/mcp       start here: describes the others
   https://$DOMAIN/json2rc/mcp
   https://$DOMAIN/rc-render/mcp
-  https://$DOMAIN/deploy/mcp      published pages: https://$DOMAIN/deploy/pages/<id>/
+  https://$DOMAIN/deploy/mcp      published pages: https://$DOMAIN/pages
+  https://$DOMAIN/inspect/mcp
 Token (keep secret): $TOKEN
 
 Claude Code:  claude mcp add --transport http rc-render https://$DOMAIN/rc-render/mcp --header "Authorization: Bearer $TOKEN"
-              (same for json2rc, guide and deploy)
+              (same for json2rc, guide, deploy and inspect)
 claude.ai:    add a custom connector with URL https://$DOMAIN/rc-render/mcp/$TOKEN
-              (and the same for /json2rc/, /guide/ and /deploy/)
+              (and the same for /json2rc/, /guide/, /deploy/ and /inspect/)
 Logs:         journalctl -u 'rcmcp@*' -f
 EOF

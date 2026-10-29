@@ -8,6 +8,7 @@
 #   https://DOMAIN/deploy/pages/<id>/   which are public (no token) by design
 #   https://DOMAIN/pages           ->  rc-deploy's public index of those pages
 #                                      (off with MCP_PAGE_INDEX=0 in deploy.env)
+#   https://DOMAIN/inspect/mcp     ->  rc-inspect (127.0.0.1:8812)
 #
 # No `log` directive on purpose: an access log would record the token for clients that pass
 # it in the URL.
@@ -23,6 +24,9 @@ DOMAIN {
 	}
 	handle_path /deploy/* {
 		reverse_proxy 127.0.0.1:8811
+	}
+	handle_path /inspect/* {
+		reverse_proxy 127.0.0.1:8812
 	}
 	@pagesIndex path /pages /pages/
 	handle @pagesIndex {

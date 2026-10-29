@@ -8,6 +8,7 @@
 
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
+import { definition as inspector } from "./inspect-server.mjs";
 import { definition as json2rc } from "./json2rc-server.mjs";
 import { definition as rcRender } from "./rc-render-server.mjs";
 
@@ -16,6 +17,7 @@ import { definition as rcRender } from "./rc-render-server.mjs";
 const SERVERS = [
     { def: json2rc, file: "mcp/json2rc-server.mjs", route: "json2rc" },
     { def: rcRender, file: "mcp/rc-render-server.mjs", route: "rc-render" },
+    { def: inspector, file: "mcp/inspect-server.mjs", route: "inspect" },
     { def: deploy, file: "mcp/deploy-server.mjs", route: "deploy" },
 ];
 
@@ -37,6 +39,20 @@ const WORKFLOWS = [
         steps: ["rc-render.validate — conversion error, parse failure location, or sanity findings " +
                 "(blank image, missing fonts, single-frame particles).",
                 "Fix, then render_rc and read its findings before trusting the picture."],
+    },
+    {
+        title: "Review a document: what is wrong, what could be better",
+        steps: ["rc-inspect.inspect_summary — size, structure, variables, interactions, repaint, and the audit's top findings.",
+                "rc-inspect.audit — every finding with severity, explanation and the components or operations involved. " +
+                "Re-run at other sizes (width/height): many layout problems only show at some sizes.",
+                "Drill into a finding: inspect_layout for geometry, get_operation for an op index, " +
+                "inspect_variables with `variable` to trace a value."],
+    },
+    {
+        title: "Understand a document you did not write",
+        steps: ["rc-inspect.inspect_structure (component tree) and inspect_layout (geometry at a size).",
+                "rc-inspect.inspect_variables — every expression with its formula; `variable` traces one up and down.",
+                "rc-inspect.list_interactions, then interact — what each tap or drag actually changes."],
     },
     {
         title: "Drive a document's host variables",

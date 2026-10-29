@@ -1,6 +1,6 @@
 # MCP servers
 
-Four [MCP](https://modelcontextprotocol.io) servers. Over stdio they're registered for
+Five [MCP](https://modelcontextprotocol.io) servers. Over stdio they're registered for
 this repo in `../.mcp.json`. Over HTTP they're meant for a VPS (see below). Both are plain
 Node (18+) with no dependencies, so they run from a bare checkout on macOS or Linux.
 
@@ -8,8 +8,9 @@ Node (18+) with no dependencies, so they run from a bare checkout on macOS or Li
 | :--- | :--- | :--- |
 | `json2rc-server.mjs` | `json2rc` | the TypeScript converter in `players/typescript/build-json2rc` |
 | `rc-render-server.mjs` | `render_rc`, `validate` | the C++/Skia headless renderer `players/cpp/tools/rc2image` |
+| `inspect-server.mjs` | `inspect_summary`, `audit`, `list_operations`, `get_operation`, `inspect_layout`, `inspect_structure`, `inspect_variables`, `inspect_bytes`, `inspect_accessibility`, `list_interactions`, `interact`, `inspect_runtime`, `inspect_theme` | the inspector's analysis code (`inspector/src/panels`) on the TypeScript player, headless in Node |
 | `deploy-server.mjs` | `package_web`, `list_pages`, `unpublish_page` | the TypeScript web player (`players/typescript`), bundled with esbuild |
-| `guide-server.mjs` | `overview`, `describe` | the other two servers' own definitions: the single entry point |
+| `guide-server.mjs` | `overview`, `describe` | the other servers' own definitions: the single entry point |
 
 **Start with `rc-guide`.** `overview` explains what each server does, when to use it (and
 when not), how to connect, and which tool fits each common task. `describe` gives every
@@ -50,14 +51,16 @@ sudo mcp/deploy/setup.sh mcp.example.com
 ```
 
 The domain's DNS has to point at the VPS, with ports 80 and 443 open. The script installs
-the packages, builds `rc2image` under `/opt/remotecompose-experiments`, and sets up four
-systemd services, `rcmcp@json2rc`, `rcmcp@rc-render`, `rcmcp@guide` and `rcmcp@deploy`. All of them run as an unprivileged
+the packages, builds `rc2image` under `/opt/remotecompose-experiments`, and sets up five
+systemd services, `rcmcp@json2rc`, `rcmcp@rc-render`, `rcmcp@guide`, `rcmcp@deploy` and
+`rcmcp@inspect`. All of them run as an unprivileged
 `rcmcp` user and listen on 127.0.0.1 only. Caddy sits in front and provides TLS. The
 script prints the token and the endpoints:
 
 ```
 https://mcp.example.com/guide/mcp
 https://mcp.example.com/deploy/mcp
+https://mcp.example.com/inspect/mcp
 https://mcp.example.com/json2rc/mcp
 https://mcp.example.com/rc-render/mcp
 ```
@@ -185,6 +188,74 @@ Findings:
 
 rc2image does the measuring itself (`--report FILE|-`, `--check`), and `lib/analysis.mjs`
 decides what counts as suspicious, so thresholds can change without a rebuild.
+
+## rc-inspect
+
+`inspect-server.mjs` is the [inspector](../inspector/README.md) without its UI. It runs the
+inspector's own analysis functions (`inspector/src/panels`) on the TypeScript player,
+headless in Node. No browser is needed: `lib/inspector-env.mjs` provides the few browser
+APIs the panels and the player touch. Every tool takes a document the same way as the
+other servers (`rc_path`, `rc_base64`, `json`, `json_path`; JSON is converted with json2rc
+first), plus these view options:
+
+| option | meaning |
+| :--- | :--- |
+| `width`, `height` | layout size in dp (default: the document's declared size). Re-run at other sizes to see how the document responds |
+| `density` | layout space is `width × density` pixels; default 1, so coordinates are dp |
+| `theme` | `light` or `dark` |
+| `clock` | as for `render_rc`. Default: the time of the call. Pinned either way; frames advance it |
+| `variables` | host variables to set first |
+
+| tool | what it returns |
+| :--- | :--- |
+| `inspect_summary` | the overview: header, operation counts, byte categories, component tree size, variable statistics, host variables, interaction targets, accessibility, theme, repaint verdict, audit counts and top findings |
+| `audit` | findings with severity, code, explanation and examples (component ids and bounds, or op indices), listed below |
+| `list_operations` | the disassembly: index, name, opcode, byte offset and size, decoded parameters, expression formulas. Filters: `filter` (regex), `from`/`to`, `references` (a variable id). Paged with `offset`/`limit` |
+| `get_operation` | one op by `index`: parameters, variables read and written, the ops that read its output, formula and value |
+| `inspect_layout` | the laid-out tree with bounds, padding, modifiers, text and visibility, as an outline (default) or JSON (`format`), plus layout diagnostics. `max_depth` collapses deeper components |
+| `inspect_structure` | the document decompiled to a component tree with modifiers (the inspector's JSON view) |
+| `inspect_variables` | every variable with kind, formula, value, inputs, outputs, consuming ops and an unused flag, plus statistics. `variable` (an id or a name) traces one instead: upstream, downstream and the ops reading it |
+| `inspect_bytes` | bytes per category, per operation type, and the largest operations |
+| `inspect_accessibility` | the semantics tree: role, label, text, state, clickable, bounds; click areas |
+| `list_interactions` | click targets (with bounds, centre and the actions they run), click areas, touch-driven variables |
+| `interact` | runs `actions` and reports what they changed. Each action is `{wait: s}`, `{target: i}`, `{tap: [x, y]}`, `{drag: [x0, y0, x1, y1]}` or `{variables: {...}}` |
+| `inspect_runtime` | repaint verdict and causes; ops per frame over `frames` simulated frames (by type, hottest ops); execution coverage |
+| `inspect_theme` | named colours by Material role, named floats, light/dark theme sections |
+
+**`interact` compares against a baseline.** It runs a second copy of the document through
+the same timeline without the input. So `changed_variables`, `changed_host_variables` and
+`layout_changes` show what the input caused, not what time changed (clocks, animations). A
+result of "no difference" is a real answer: the input has no effect. For example, a click
+target whose modifier runs no actions.
+
+**Audit findings:**
+
+| code | severity | meaning |
+| :--- | :--- | :--- |
+| `empty_document` | error | no components and nothing that draws |
+| `layout_zero_size` | warning | a component with content, laid out at zero width or height |
+| `layout_overflow` | warning | components past the layout box that no scrolling or clipping parent explains |
+| `dead_code` | warning | expressions whose results reach no draw, layout or output (removable) |
+| `a11y_no_semantics` / `a11y_unlabeled_clickable` | warning | clickable components a screen reader cannot announce |
+| `layout_touch_target` | info | clickable components under 48×48 dp |
+| `layout_empty_container`, `layout_deep_nesting` | info | containers with nothing in them; nesting deeper than 8 |
+| `unused_variables` | info | variables defined and never read |
+| `repaint_continuous` | info | the document repaints every frame, with the cause |
+| `never_executed` | info | operations no frame of a short run executed |
+| `click_types` | info | long-press or double-tap targets, which the TypeScript player does not dispatch |
+| `deep_expressions`, `size_dominated`, `size_single_op` | info | long expression chains; one category or one op dominating the file |
+
+**Limits.**
+- **Text widths are estimates.** Text is measured with standard Helvetica advance widths
+  scaled by the font size, so sizes involving text are close to a browser's but not exact.
+- **Nothing is drawn.** Pixels come from `render_rc`.
+- **Clocks are pinned.** Both the clock and animation time are pinned and advanced frame by
+  frame, so results are reproducible.
+- **One worker per call.** Each call runs in its own worker thread, because the panels keep
+  module-level state. The thread is killed after `MCP_INSPECT_TIMEOUT_MS` (default 30 s), and
+  at most `MCP_MAX_INSPECTIONS` run at once (default 2).
+- **The inspector sources ship with the checkout.** `inspector/src/panels` is read in place,
+  or from `RC_INSPECTOR_PANELS`.
 
 ## `package_web` (rc-deploy)
 
