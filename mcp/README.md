@@ -137,6 +137,12 @@ measured from the previous event.
 The same options exist as `rc2image` flags (`--density`, `--theme`, `--var`, `--var-id`,
 `--events`, `--duration`, `--fps`); run it with no arguments for the full usage.
 
+**Image links.** Every render is returned as an MCP image block. Some clients (ChatGPT)
+can't display those, so in HTTP mode with `MCP_PUBLIC_URL` set (setup.sh sets it to
+`https://DOMAIN/rc-render`), the result also carries `image_url`. That's a public link to
+the PNG at `MCP_PUBLIC_URL/images/<id>.png` with a 128-bit random id and no token. It
+expires after `MCP_IMAGE_TTL_HOURS` (default 24). Pass `public_link: false` to skip it.
+
 Every render also comes back with **findings**, the sanity checks listed under `validate`
 below. Look at them before trusting the picture.
 

@@ -80,7 +80,8 @@ EOF
     chmod 600 /etc/rcmcp/common.env
 fi
 echo "MCP_HTTP_PORT=8808" > /etc/rcmcp/json2rc.env
-echo "MCP_HTTP_PORT=8809" > /etc/rcmcp/rc-render.env
+# rc-render returns public links to its renders under its own public base.
+printf 'MCP_HTTP_PORT=8809\nMCP_PUBLIC_URL=https://%s/rc-render\n' "$DOMAIN" > /etc/rcmcp/rc-render.env
 # The guide reports the public endpoints, so it needs to know the public name.
 printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/guide.env
 # rc-deploy publishes pages under its own public base.

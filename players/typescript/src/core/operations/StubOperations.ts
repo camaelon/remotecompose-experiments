@@ -68,6 +68,11 @@ export class ImpulseOperation extends PaintOperation {
             return;
         }
         if (now <= this.mOutStartAt + this.mOutDuration) {
+            // An open impulse window needs the next frame. The initial pass only runs the
+            // setup block and draws nothing that asks for one, so without this the web player
+            // (which paints only on request) stopped after it: a particle/impulse document
+            // showed its first frame — everything but the particles — and never moved.
+            context.needsRepaint();
             if (this.mInitialPass) {
                 for (const op of this.mList) {
                     if (op.isDirty() && typeof (op as any).updateVariables === 'function') {

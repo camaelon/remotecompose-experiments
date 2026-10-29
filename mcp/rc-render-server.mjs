@@ -4,12 +4,77 @@
 // build location is used, then `rc2image` on PATH.
 // stdio by default; `--http [PORT]` for Streamable HTTP (see lib/mcp-server.mjs).
 
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { randomBytes } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import path from "node:path";
 import { analyze, documentFeatures, formatFindings } from "./lib/analysis.mjs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
+
+// ── Public image links ───────────────────────────────────────────────
+// Some clients (ChatGPT) cannot turn an MCP image block into something they can show. In
+// HTTP mode with MCP_PUBLIC_URL (this server's public base, e.g. https://host/rc-render),
+// each render is also stored under MCP_ROOT/images and served WITHOUT auth at
+// <MCP_PUBLIC_URL>/images/<id>.png — 128 random bits per id, so only whoever has the link
+// can fetch it. Renders are throwaway: links expire after MCP_IMAGE_TTL_HOURS (default 24).
+const PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? "").replace(/\/+$/, "");
+const HTTP_MODE = process.argv.includes("--http") || Boolean(process.env.MCP_HTTP_PORT);
+const CAN_LINK = HTTP_MODE && Boolean(PUBLIC_URL) && Boolean(workspaceRoot());
+const IMAGES_DIR = workspaceRoot() ? path.join(workspaceRoot(), "images") : null;
+const IMAGE_TTL_MS = Number(process.env.MCP_IMAGE_TTL_HOURS ?? 24) * 3600_000;
+const IMAGE_FILE = /^[A-Za-z0-9_-]{22}\.png$/;
+
+let lastImagePrune = 0;
+function pruneImages() {
+    const now = Date.now();
+    if (now - lastImagePrune < 600_000) return;
+    lastImagePrune = now;
+    for (const f of readdirSync(IMAGES_DIR)) {
+        const p = path.join(IMAGES_DIR, f);
+        try { if (now - statSync(p).mtimeMs > IMAGE_TTL_MS) rmSync(p, { force: true }); } catch {}
+    }
+}
+
+/** Copy a render to the public folder; returns its URL. */
+function publishImage(pngPath) {
+    mkdirSync(IMAGES_DIR, { recursive: true });
+    pruneImages();
+    const name = `${randomBytes(16).toString("base64url")}.png`;
+    copyFileSync(pngPath, path.join(IMAGES_DIR, name));
+    return `${PUBLIC_URL}/images/${name}`;
+}
+
+/** GET <base>/images/<id>.png — no auth; see above. */
+function publicRoute(req, url, res) {
+    const m = /^\/images\/([^/]+)$/.exec(url.pathname);
+    if (!m || !IMAGES_DIR) return false;
+    const file = IMAGE_FILE.test(m[1]) ? path.join(IMAGES_DIR, m[1]) : null;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+        res.writeHead(405, { Allow: "GET, HEAD" });
+        res.end();
+        return true;
+    }
+    if (!file || !existsSync(file) || Date.now() - statSync(file).mtimeMs > IMAGE_TTL_MS) {
+        res.writeHead(404, { "Content-Type": "text/plain" });
+        res.end("not found (render links expire)\n");
+        return true;
+    }
+    const body = readFileSync(file);
+    res.writeHead(200, {
+        "Content-Type": "image/png",
+        "Content-Length": body.length,
+        "Cache-Control": "public, max-age=3600, immutable",
+        "X-Content-Type-Options": "nosniff",
+        "X-Robots-Tag": "noindex",
+        // Let clients' own pages embed it; it is just an image.
+        "Access-Control-Allow-Origin": "*",
+        "Cross-Origin-Resource-Policy": "cross-origin",
+    });
+    res.end(req.method === "HEAD" ? undefined : body);
+    return true;
+}
 
 const EVENT_TYPES = ["down", "move", "up", "tap"];
 const num = (v, what) => {
@@ -163,7 +228,8 @@ const analysisOpts = (a) => ({
 
 export const definition = {
     name: "rc-render",
-    version: "1.2.0",
+    version: "1.3.0",
+    publicRoute,
     // Read by the guide server (guide-server.mjs); not part of the MCP protocol.
     guide: {
         summary: "Renders RemoteCompose documents (.rc or JSON) to a PNG with the C++/Skia player, and validates them.",
@@ -210,6 +276,8 @@ export const definition = {
             "clock advancing, and the captured last frame lands at `clock`. The result " +
             "includes sanity findings: a blank or solid image, text with no fonts, a " +
             "particle document rendered as one frame, taps that hit nothing." +
+            (CAN_LINK ? " It also returns image_url, a public link to the PNG (24 h), for clients that cannot " +
+                        "display MCP image content." : "") +
             (workspaceRoot() ? " Paths are relative to the server's workspace." : ""),
         inputSchema: {
             type: "object",
@@ -217,6 +285,13 @@ export const definition = {
                 ...DOCUMENT_PROPS,
                 output_path: { type: "string", description: "Where to write the PNG (default: a generated file)." },
                 ...RENDER_PROPS,
+                public_link: {
+                    type: "boolean",
+                    description: CAN_LINK
+                        ? "Also return image_url, a public link to the PNG that expires in 24 h (default true). " +
+                          "Use it when the client cannot show the image content directly — e.g. as a markdown image."
+                        : "Return a public image link. Not available on this server (needs HTTP mode and MCP_PUBLIC_URL).",
+                },
             },
         },
         handler: async (a) => {
@@ -233,7 +308,11 @@ export const definition = {
                     const why = findings.length ? formatFindings(findings) : shown || err.message;
                     throw new Error(`rc2image failed${err.killed ? " (timed out)" : ""}:\n${why}`);
                 }
-                const text = [`png_path: ${displayPath(pngPath)}`, shown,
+                const link = CAN_LINK && a.public_link !== false ? publishImage(pngPath) : null;
+                const text = [link && `image_url: ${link}\n(public link to this render, valid for ` +
+                                      `${Math.round(IMAGE_TTL_MS / 3600_000)} h — show it as ![render](${link}) ` +
+                                      "if the image above does not display)",
+                              `png_path: ${displayPath(pngPath)} (on the server)`, shown,
                               findings.length ? "findings:\n" + formatFindings(findings) : "findings: none"]
                     .filter(Boolean).join("\n");
                 return [
