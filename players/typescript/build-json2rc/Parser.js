@@ -852,16 +852,11 @@ class Parser {
     /** One paint property, appended to the bundle as PaintBundle ints. */
     paintSetter(key, src, ints) {
         if (key === "shader") {
-            // Only a numeric shader id. An `{"agsl": …}` runtime shader needs DATA_SHADER
-            // and its uniforms, which is not implemented — `Number({...})` is NaN, and
-            // pushing that wrote shader id 0 and produced a document that drew the wrong
-            // thing without complaint.
-            const v = src[key];
-            if (typeof v !== "number") {
-                throw new NotImplementedComponent("paint shader: only a numeric shader id is supported; an AGSL runtime "
-                    + "shader needs DATA_SHADER, which this converter does not implement");
-            }
-            ints.push(PB.SHADER, v);
+            // Written as "shader" or "runtimeShader" (any case, which is how the alias got
+            // here); the reference takes runtimeShader first when both are present.
+            const keys = Object.keys(src);
+            const k = keys.find((x) => x.toLowerCase() === "runtimeshader") ?? keys.find((x) => x.toLowerCase() === "shader");
+            ints.push(PB.SHADER, this.parseShader(k === undefined ? undefined : src[k]));
         }
         else if (key === "color") {
             const c = src.color;
@@ -912,6 +907,61 @@ class Parser {
      * a tile mode. The two are the same op distinguished only by the type in the high half
      * of the leading int, which makes an accidental swap produce a valid-looking bundle.
      */
+    /**
+     * RemoteComposeJsonParser.parseShader. A number is a shader id (0 clears the shader).
+     * An AGSL runtime shader is a string, or {agsl | shader | source, uniforms}; it becomes
+     * DATA_SHADER and its id is returned. Uniforms: an array is a float vector, a value for
+     * a name declared `uniform shader <name>` is a bitmap (an input texture), anything else
+     * one float — a literal, a variable reference or an expression, which animates it.
+     */
+    parseShader(value) {
+        if (value === null || value === undefined)
+            return 0;
+        if (typeof value === "number")
+            return Math.trunc(value);
+        let source = "";
+        let uniforms = null;
+        if (typeof value === "string") {
+            source = value;
+        }
+        else if (typeof value === "object" && !Array.isArray(value)) {
+            const v = value;
+            source = String(v.agsl ?? v.shader ?? v.source ?? "");
+            if (v.uniforms && typeof v.uniforms === "object" && !Array.isArray(v.uniforms))
+                uniforms = v.uniforms;
+        }
+        else {
+            throw new NotImplementedComponent(`paint shader: expected a shader id, an AGSL string or {agsl, uniforms}, got ${JSON.stringify(value)}`);
+        }
+        if (!source)
+            return 0; // the reference returns 0 (no shader) for an empty source
+        const floats = [];
+        const bitmaps = [];
+        for (const [name, u] of Object.entries(uniforms ?? {})) {
+            if (Array.isArray(u))
+                floats.push([name, u.map((x) => this.fbits(x))]);
+            else if (source.includes("uniform shader " + name))
+                bitmaps.push([name, this.shaderBitmap(u)]);
+            else
+                floats.push([name, [this.fbits(u)]]);
+        }
+        return this.writer.addShader(source, floats, [], bitmaps);
+    }
+    /**
+     * A `uniform shader` input. The reference resolves it like a text id, so a number is the
+     * bitmap id as written. A name from resources.bitmaps ("@photo") is resolved to that
+     * bitmap here — the reference would intern the name as a string instead, which no
+     * document can mean — and anything else goes the reference's way.
+     */
+    shaderBitmap(value) {
+        if (typeof value === "string") {
+            const name = /^[@$]/.test(value) ? value.slice(1) : value;
+            const hit = this.bitmaps.get(name);
+            if (hit !== undefined)
+                return hit;
+        }
+        return this.resolveTextId(value);
+    }
     gradient(g, ints, sweep) {
         const colorsArr = (g.colors ?? []);
         const colors = [];
@@ -1153,16 +1203,26 @@ class Parser {
             const a = item;
             const t = String(a.type ?? "").toLowerCase();
             const target = a.targetId !== undefined ? a.targetId : a.target;
-            if (t === "hostaction") {
-                // {"type": "hostAction", "id": 0, "metadata": "backlight=0.5"}; EXTENSION.
-                const actionId = Number(a.id ?? 0);
-                const metadata = "metadata" in a ? String(a.metadata) : null;
-                actions.push((w2) => (0, Writer_1.hostAction)(actionId, metadata === null ? -1 : w2.addText(metadata))(w2));
-            }
-            else if (t === "hostnamedaction" || t === "hostmetadataaction") {
-                if (!("name" in a)) {
-                    throw new NotImplementedComponent(`${t} without a name is not supported yet`);
+            const isHost = t === "hostaction" || t === "hostnamedaction"
+                || t === "hostmetadataaction";
+            if (isHost && !("name" in a)) {
+                // DefaultModifierParsers: no name means HostAction(actionId[, metadataId]).
+                // "metadata" (a literal string) is an EXTENSION, proposed in m5Tab
+                // docs/RC_SYSTEM_VARIABLES.md: {"type": "hostAction", "actionId": 0,
+                // "metadata": "system.backlight=cycle"}.
+                if (!("actionId" in a)) {
+                    throw new NotImplementedComponent(`${t} needs a "name" or an "actionId"`);
                 }
+                const actionId = Number(a.actionId);
+                if ("metadata" in a) {
+                    const metadata = String(a.metadata);
+                    actions.push((w2) => (0, Writer_1.hostAction)(actionId, w2.addText(metadata))(w2));
+                }
+                else {
+                    actions.push((0, Writer_1.hostAction)(actionId, "metadataId" in a ? Number(a.metadataId) : -1));
+                }
+            }
+            else if (isHost) {
                 const name = String(a.name);
                 const value = "value" in a ? String(a.value) : null;
                 // HostAction(name) leaves both mType and mValueId at -1; STRING_TYPE is only
@@ -1919,7 +1979,7 @@ class Parser {
             return;
         }
         if (t === "conditionaloperations") {
-            const COND = { gt: 4, ge: 5, lt: 2, le: 3, eq: 0 };
+            const COND = { gt: 4, ge: 5, lt: 2, le: 3, eq: 0, ne: 1 }; // ne: EXTENSION
             // An unrecognised condition falls back to eq (0) rather than raising — that is
             // the reference's behaviour, and a document relying on it must not diverge here.
             const cond = COND[String(command.condition).toLowerCase()] ?? 0;

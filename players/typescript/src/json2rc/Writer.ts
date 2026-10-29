@@ -32,7 +32,7 @@ export const OP = {
     PATH_APPEND: 160, TEXT_FROM_FLOAT: 135, FLOAT_LIST: 147, CV_WIDTH: 0, CV_HEIGHT: 1,
     LAYOUT_ROOT: 200, LAYOUT_CONTENT: 201, LAYOUT_BOX: 202, LAYOUT_ROW: 203,
     LAYOUT_COLUMN: 204, LAYOUT_CANVAS: 205, LAYOUT_CANVAS_CONTENT: 207,
-    CONTAINER_END: 214, DATA_TEXT: 102, CORE_TEXT: 239,
+    CONTAINER_END: 214, DATA_TEXT: 102, CORE_TEXT: 239, DATA_SHADER: 45,
     MODIFIER_WIDTH: 16, MODIFIER_HEIGHT: 67, MODIFIER_BACKGROUND: 55,
     MODIFIER_PADDING: 58, MODIFIER_CLIP_RECT: 108, MODIFIER_ROUNDED_CLIP_RECT: 54,
     DATA_FLOAT: 80, ANIMATED_FLOAT: 81, COLOR_CONSTANT: 138, NAMED_VARIABLE: 137,
@@ -70,6 +70,34 @@ const CORE_TEXT_PARAMS: [string, number, "i" | "f" | "b", number | boolean][] = 
 
 function toInt32(v: number): number {
     return v | 0;
+}
+
+/** java.lang.String.hashCode: UTF-16 units, 32-bit wrap-around. */
+function javaStringHash(s: string): number {
+    let h = 0;
+    for (let k = 0; k < s.length; k++) h = (Math.imul(h, 31) + s.charCodeAt(k)) | 0;
+    return h;
+}
+
+/**
+ * Entries in the order a java.util.HashMap with default settings iterates them after
+ * inserting them in this order: by bucket, (h ^ h >>> 16) & (capacity - 1), and in insertion
+ * order within a bucket. The table starts at 16 and doubles past a 0.75 load; a resize keeps
+ * each bucket's relative order, so the final capacity alone decides. (Buckets only turn into
+ * trees at 8 colliding keys in a table of 64 or more, far past any shader's uniform count.)
+ */
+export function javaHashMapOrder<T>(entries: Array<[string, T]>): Array<[string, T]> {
+    const seen = new Map<string, number>();
+    const unique: Array<[string, T]> = [];
+    for (const [k, v] of entries) {          // a repeated key replaces the value in place
+        if (seen.has(k)) unique[seen.get(k)!][1] = v;
+        else { seen.set(k, unique.length); unique.push([k, v]); }
+    }
+    let capacity = 16;
+    while (unique.length > capacity * 0.75) capacity *= 2;
+    const bucket = (k: string) => { const h = javaStringHash(k); return (h ^ (h >>> 16)) & (capacity - 1); };
+    return unique.map((e, n) => ({ e, n, b: bucket(e[0]) }))
+        .sort((x, y) => x.b - y.b || x.n - y.n).map((x) => x.e);
 }
 
 export class Writer {
@@ -761,6 +789,39 @@ export class Writer {
         this.buffer.writeInt(id);
         this.buffer.writeUtf8(s);
         this.textCache.set(s, id);
+        return id;
+    }
+
+    /**
+     * DATA_SHADER — RemoteComposeShader.commit / ShaderData.apply: the AGSL source as
+     * DATA_TEXT (interned, like any addText), then a fresh shader id and the uniforms.
+     * Float uniforms are raw float32 bits, so a NaN-boxed variable id animates the uniform.
+     * The reference holds each kind of uniform in a java.util.HashMap and writes it in that
+     * map's iteration order, so the same order is reproduced here (javaHashMapOrder).
+     */
+    addShader(source: string, floats: Array<[string, number[]]>, ints: Array<[string, number[]]>,
+              bitmaps: Array<[string, number]>): number {
+        const textId = this.addText(source);
+        const id = this.allocDataId();
+        const f = javaHashMapOrder(floats), i = javaHashMapOrder(ints), b = javaHashMapOrder(bitmaps);
+        this.buffer.start(OP.DATA_SHADER);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(textId);
+        this.buffer.writeInt(f.length | (i.length << 8) | (b.length << 16));
+        for (const [name, bits] of f) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(bits.length);
+            for (const v of bits) this.buffer.writeIntBitsAsFloat(v);
+        }
+        for (const [name, values] of i) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(values.length);
+            for (const v of values) this.buffer.writeInt(v);
+        }
+        for (const [name, value] of b) {
+            this.buffer.writeUtf8(name);
+            this.buffer.writeInt(value);
+        }
         return id;
     }
 

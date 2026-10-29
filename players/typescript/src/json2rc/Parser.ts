@@ -832,17 +832,11 @@ export class Parser {
     /** One paint property, appended to the bundle as PaintBundle ints. */
     private paintSetter(key: string, src: J, ints: number[]): void {
         if (key === "shader") {
-            // Only a numeric shader id. An `{"agsl": …}` runtime shader needs DATA_SHADER
-            // and its uniforms, which is not implemented — `Number({...})` is NaN, and
-            // pushing that wrote shader id 0 and produced a document that drew the wrong
-            // thing without complaint.
-            const v = src[key];
-            if (typeof v !== "number") {
-                throw new NotImplementedComponent(
-                    "paint shader: only a numeric shader id is supported; an AGSL runtime "
-                    + "shader needs DATA_SHADER, which this converter does not implement");
-            }
-            ints.push(PB.SHADER, v);
+            // Written as "shader" or "runtimeShader" (any case, which is how the alias got
+            // here); the reference takes runtimeShader first when both are present.
+            const keys = Object.keys(src);
+            const k = keys.find((x) => x.toLowerCase() === "runtimeshader") ?? keys.find((x) => x.toLowerCase() === "shader");
+            ints.push(PB.SHADER, this.parseShader(k === undefined ? undefined : src[k]));
         }
         else if (key === "color") {
             const c = src.color;
@@ -884,6 +878,53 @@ export class Parser {
      * a tile mode. The two are the same op distinguished only by the type in the high half
      * of the leading int, which makes an accidental swap produce a valid-looking bundle.
      */
+    /**
+     * RemoteComposeJsonParser.parseShader. A number is a shader id (0 clears the shader).
+     * An AGSL runtime shader is a string, or {agsl | shader | source, uniforms}; it becomes
+     * DATA_SHADER and its id is returned. Uniforms: an array is a float vector, a value for
+     * a name declared `uniform shader <name>` is a bitmap (an input texture), anything else
+     * one float — a literal, a variable reference or an expression, which animates it.
+     */
+    private parseShader(value: J): number {
+        if (value === null || value === undefined) return 0;
+        if (typeof value === "number") return Math.trunc(value);
+        let source = "";
+        let uniforms: J = null;
+        if (typeof value === "string") {
+            source = value;
+        } else if (typeof value === "object" && !Array.isArray(value)) {
+            const v = value as J;
+            source = String(v.agsl ?? v.shader ?? v.source ?? "");
+            if (v.uniforms && typeof v.uniforms === "object" && !Array.isArray(v.uniforms)) uniforms = v.uniforms;
+        } else {
+            throw new NotImplementedComponent(`paint shader: expected a shader id, an AGSL string or {agsl, uniforms}, got ${JSON.stringify(value)}`);
+        }
+        if (!source) return 0;   // the reference returns 0 (no shader) for an empty source
+        const floats: Array<[string, number[]]> = [];
+        const bitmaps: Array<[string, number]> = [];
+        for (const [name, u] of Object.entries(uniforms ?? {})) {
+            if (Array.isArray(u)) floats.push([name, u.map((x) => this.fbits(x))]);
+            else if (source.includes("uniform shader " + name)) bitmaps.push([name, this.shaderBitmap(u)]);
+            else floats.push([name, [this.fbits(u)]]);
+        }
+        return this.writer.addShader(source, floats, [], bitmaps);
+    }
+
+    /**
+     * A `uniform shader` input. The reference resolves it like a text id, so a number is the
+     * bitmap id as written. A name from resources.bitmaps ("@photo") is resolved to that
+     * bitmap here — the reference would intern the name as a string instead, which no
+     * document can mean — and anything else goes the reference's way.
+     */
+    private shaderBitmap(value: J): number {
+        if (typeof value === "string") {
+            const name = /^[@$]/.test(value) ? value.slice(1) : value;
+            const hit = this.bitmaps.get(name);
+            if (hit !== undefined) return hit;
+        }
+        return this.resolveTextId(value);
+    }
+
     private gradient(g: J, ints: number[], sweep: boolean): void {
         const colorsArr = (g.colors ?? []) as J[];
         const colors: number[] = [];
