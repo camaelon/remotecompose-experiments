@@ -8,6 +8,8 @@
 // https://mcp.example.com/deploy). Pages are then served WITHOUT auth at
 // <MCP_PUBLIC_URL>/pages/<id>/ — the id is 128 random bits, so a page is reachable by
 // whoever has its link and by nobody else. They live in MCP_ROOT/pages until unpublished.
+// Unless MCP_PAGE_INDEX=0, <MCP_PUBLIC_URL>/pages/ is also a public index of every page,
+// which makes them all discoverable: the ids then no longer keep anything private.
 
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
@@ -24,6 +26,7 @@ const HTTP_MODE = process.argv.includes("--http") || Boolean(process.env.MCP_HTT
 const CAN_PUBLISH = HTTP_MODE && Boolean(PUBLIC_URL) && Boolean(workspaceRoot());
 const PAGES_DIR = workspaceRoot() ? path.join(workspaceRoot(), "pages") : null;
 const PAGE_ID = /^[A-Za-z0-9_-]{22}$/;
+const PAGE_INDEX = process.env.MCP_PAGE_INDEX !== "0";
 
 const pageUrl = (id) => `${PUBLIC_URL}/pages/${id}/`;
 
@@ -49,8 +52,87 @@ function readMeta(id) {
     try { return JSON.parse(readFileSync(path.join(PAGES_DIR, id, "meta.json"), "utf8")); } catch { return null; }
 }
 
-/** GET <base>/pages/<id>/ — the published page itself, no auth. */
+/** Every published page's metadata, newest first. */
+function publishedPages() {
+    if (!PAGES_DIR || !existsSync(PAGES_DIR)) return [];
+    return readdirSync(PAGES_DIR).filter((id) => PAGE_ID.test(id)).map(readMeta).filter(Boolean)
+        .map((m) => ({ ...m, url: pageUrl(m.id) }))
+        .sort((x, y) => (x.created < y.created ? 1 : -1));
+}
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+function kb(n) { return n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.round(n / 1e3)} KB`; }
+
+function indexHtml(pages) {
+    const rows = pages.map((p) => `<tr>
+  <td><a href="${esc(p.url)}">${esc(p.title || p.id)}</a></td>
+  <td>${esc(p.source)}</td>
+  <td>${p.controls === false ? "player" : p.controls ? "playground" : "–"}</td>
+  <td class="n">${p.bytes ? kb(p.bytes) : ""}</td>
+  <td class="n"><time datetime="${esc(p.created)}">${esc(String(p.created ?? "").replace("T", " ").slice(0, 16))}</time></td>
+</tr>`).join("\n");
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Published pages</title>
+<style>
+  :root { color-scheme: light dark; --bg: #f6f6f8; --text: #1d1d22; --muted: #6b6b76; --line: #dcdce2; --accent: #3a63e0; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #17171b; --text: #ececf0; --muted: #9a9aa6; --line: #34343c; --accent: #7c9cff; } }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  p { color: var(--muted); margin: 0 0 18px; }
+  .wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  td:first-child { white-space: normal; overflow-wrap: anywhere; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .n { text-align: right; font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<main>
+<h1>Published pages</h1>
+<p>${pages.length} page${pages.length === 1 ? "" : "s"} published with rc-deploy, newest first.</p>
+${pages.length ? `<div class="wrap"><table>
+<thead><tr><th>Title</th><th>Source</th><th>Kind</th><th class="n">Size</th><th class="n">Published (UTC)</th></tr></thead>
+<tbody>
+${rows}
+</tbody>
+</table></div>` : ""}
+</main>
+</body>
+</html>
+`;
+}
+
+/** GET <base>/pages/ — the index; GET <base>/pages/<id>/ — the published page itself. No auth. */
 function publicRoute(req, url, res) {
+    if (PAGE_INDEX && PAGES_DIR && (url.pathname === "/pages" || url.pathname === "/pages/")) {
+        if (req.method !== "GET" && req.method !== "HEAD") {
+            res.writeHead(405, { Allow: "GET, HEAD" });
+            res.end();
+            return true;
+        }
+        const body = Buffer.from(indexHtml(publishedPages()));
+        res.writeHead(200, {
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Length": body.length,
+            "Cache-Control": "no-cache",
+            "X-Content-Type-Options": "nosniff",
+            "Referrer-Policy": "no-referrer",
+            "X-Robots-Tag": "noindex",
+        });
+        res.end(req.method === "HEAD" ? undefined : body);
+        return true;
+    }
     const m = /^\/pages\/([^/]+)(\/(index\.html)?)?$/.exec(url.pathname);
     if (!m || !PAGES_DIR) return false;
     const [, id, slash] = m;
@@ -136,7 +218,8 @@ const PACKAGE_WEB_PROPS = {
     publish: {
         type: "boolean",
         description: CAN_PUBLISH
-            ? "Host the page at a public URL on this server (default true). Anyone with the link can open it."
+            ? "Host the page at a public URL on this server (default true). Anyone with the link can open it" +
+              (PAGE_INDEX ? `, and it is listed in the public index at ${PUBLIC_URL}/pages/.` : ".")
             : "Host the page at a public URL. Not available on this server (needs HTTP mode and MCP_PUBLIC_URL).",
     },
 };
@@ -161,7 +244,9 @@ export const definition = {
     instructions:
         "Packages RemoteCompose documents (.rc or JSON) for delivery. package_web builds a single " +
         "self-contained HTML page (TypeScript player + document inlined)" +
-        (CAN_PUBLISH ? " and publishes it at a public, unguessable URL; list_pages and unpublish_page manage those." : ".") +
+        (CAN_PUBLISH ? " and publishes it at a public URL" +
+         (PAGE_INDEX ? `, listed in a public index at ${PUBLIC_URL}/pages/` : ", unguessable and unlisted") +
+         "; list_pages and unpublish_page manage those." : ".") +
         " The page uses the TypeScript engine, which can differ from rc-render's C++ engine: " +
         "check the page itself, not only a render_rc picture.",
     publicRoute,
@@ -189,7 +274,8 @@ export const definition = {
             "the window, or a fixed box), title, background, theme, density, initial host " +
             "variables, and whether ?name=value in the URL may override them. " +
             (CAN_PUBLISH
-                ? "By default the page is also published at a public, unguessable URL on this server, which is returned."
+                ? "By default the page is also published at a public URL on this server, which is returned" +
+                  (PAGE_INDEX ? ` (and listed at ${PUBLIC_URL}/pages/).` : " (unguessable, unlisted).")
                 : "Returns the HTML file's path.") +
             (workspaceRoot() ? " Paths are relative to the server's workspace." : ""),
         inputSchema: { type: "object", properties: PACKAGE_WEB_PROPS },
@@ -272,7 +358,7 @@ export const definition = {
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
-                        id, title, created: new Date().toISOString(), bytes: result.bytes,
+                        id, title, created: new Date().toISOString(), bytes: result.bytes, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
                     }));
                     result.page_id = id;
@@ -295,16 +381,14 @@ export const definition = {
     }, {
         name: "list_pages",
         annotations: { title: "List published pages", readOnlyHint: true, openWorldHint: false },
-        description: "List the pages this server has published: id, title, URL, source, size and when.",
+        description: "List the pages this server has published: id, title, URL, source, size and when" +
+            (CAN_PUBLISH && PAGE_INDEX ? `; the same list is public at ${PUBLIC_URL}/pages/.` : "."),
         inputSchema: { type: "object", properties: {} },
         handler: async () => {
             if (!CAN_PUBLISH) return [{ type: "text", text: "This server does not publish pages (needs HTTP mode and MCP_PUBLIC_URL)." }];
-            const pages = existsSync(PAGES_DIR)
-                ? readdirSync(PAGES_DIR).filter((id) => PAGE_ID.test(id)).map(readMeta).filter(Boolean)
-                    .map((m) => ({ ...m, url: pageUrl(m.id) }))
-                    .sort((x, y) => (x.created < y.created ? 1 : -1))
-                : [];
-            return [{ type: "text", text: JSON.stringify({ pages }, null, 1) }];
+            const result = { pages: publishedPages() };
+            if (PAGE_INDEX) result.index_url = `${PUBLIC_URL}/pages/`;
+            return [{ type: "text", text: JSON.stringify(result, null, 1) }];
         },
     }, {
         name: "unpublish_page",

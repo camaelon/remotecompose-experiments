@@ -237,6 +237,13 @@ unguessable. Published pages are not pruned. Manage them with `list_pages` and
 `unpublish_page`, which deletes a page and stops its link working immediately. Pages are
 served with `noindex`, `nosniff` and `no-referrer`.
 
+**Page index.** `https://DOMAIN/pages` (also `MCP_PUBLIC_URL/pages/`) is a public,
+token-free list of every published page: title, source, kind (playground or bare player),
+size and date, each linking to its page. This makes every published page discoverable,
+so the random ids no longer keep anything private. To turn the index off, add
+`MCP_PAGE_INDEX=0` to `/etc/rcmcp/deploy.env` and restart `rcmcp@deploy`; `/pages` then
+returns 404 and unlisted links keep working.
+
 **The player bundle** is built from `players/typescript/src/web/main.ts` into
 `players/typescript/build-mcp/player.min.js` (gitignored), or `RC_PLAYER_BUNDLE`. Locally
 it's rebuilt automatically whenever a player source file is newer. On a deployment the
