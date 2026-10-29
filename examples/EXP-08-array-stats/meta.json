@@ -1,0 +1,287 @@
+{
+ "id": "EXP-08",
+ "name": "array-stats",
+ "version": 2,
+ "title": "Array statistics",
+ "summary": "A week of step counts from a float array: bars scaled by arrayMax, the best day highlighted by a step mask, an average line, and total, average, best and standard deviation computed with arraySum, arrayLength, arrayMax and arraySumSqr.",
+ "prompt": "Show a week of step counts as a bar chart with the best day highlighted and an average line, and summary stats on top: total, average, best day and standard deviation.",
+ "level": 3,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.array"
+  ],
+  "secondary": [
+   "expr.math",
+   "expr.select",
+   "expr.format",
+   "data.array",
+   "data.loop",
+   "data.expression",
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "chart",
+  "fitness"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "statistics",
+  "average",
+  "mean",
+  "total",
+  "sum",
+  "maximum",
+  "standard deviation",
+  "bar chart",
+  "weekly steps",
+  "summary stats"
+ ],
+ "teaches": [
+  "Aggregate an array inside expressions: arraySum(@a), arrayLength(@a), arrayMax(@a), arrayMin(@a), arrayGet(@a, i)",
+  "Compute an average once as a named variable (avg = arraySum / arrayLength) and a standard deviation as sqrt(arraySumSqr(@a) / arrayLength(@a) − square(@avg))",
+  "Highlight the maximum without a branch: alpha 0.45 + 0.55 * step(arrayGet(@a, i), arrayMax(@a) − 1)",
+  "Print large numbers with thousands separators (flags 21: 16 GROUPING_BY3 + 5) and round in the expression with round()"
+ ],
+ "pitfalls": [
+  "There is no arrayAvg in JSON (the runtime has one): divide arraySum by arrayLength",
+  "arrayGet takes (array, index), array first",
+  "textFromFloat with decimal 0 cuts the fraction (8385.7 prints 8385) unless the rounding flag 512 is set; round() in the expression does the same and keeps the flags simple",
+  "floatArrays are exported by default: a host can replace the week's values and every statistic follows",
+  "Bars placed at 29 + i * 45.714 only span the header width: derive the slot from componentWidth() ((@r - 20) / 7) so they spread over any width, and scale the chart down as a whole where the four figures would no longer fit"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/avg",
+   "shows": "expr.array",
+   "note": "avg = arraySum(@steps) / arrayLength(@steps)"
+  },
+  {
+   "pointer": "/root/commands/21/drawTextAnchored/text/value",
+   "shows": "expr.array",
+   "note": "std dev: round(sqrt(arraySumSqr / n − square(avg)))"
+  },
+  {
+   "pointer": "/root/commands/23",
+   "shows": "expr.array",
+   "note": "bars scaled by arrayGet / arrayMax; the best day's mask from step()"
+  },
+  {
+   "pointer": "/root/commands/9/drawTextAnchored/text",
+   "shows": "expr.format",
+   "note": "arraySum with flags 21 → 58,700"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Seven bars, Saturday tallest and brighter; a yellow average line at about 70 % of the tallest; the stats read 58,700 total, 8,386 average, 12,100 best day and 2,139 standard deviation. Resized, below the 360 design width the chart is scaled down as a whole (@s = min(1, w / 360)) and centred vertically, so the four figures still fit on one line at 234 wide; wider, the figures spread over quarters and the bars over sevenths of the live width (@r = componentWidth() / @s - 20), at 540 wide too.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 220
+   }
+  ]
+ },
+ "related": [
+  "VAR-06",
+  "HST-02"
+ ],
+ "prerequisites": [
+  "VAR-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2205,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 92,
+  "operations": {
+   "ANIMATED_FLOAT": 31,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 11,
+   "DRAW_LINE": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 16,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 13,
+   "TextFromFloat": 4
+  },
+  "host_variables": [
+   {
+    "name": "steps",
+    "type": "float_array",
+    "value": [
+     6200,
+     8400,
+     7100,
+     10300,
+     5600,
+     12100,
+     9000
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     220
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     220
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "avg",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "decimal",
+   "drawLine",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "flags",
+   "floatArrays",
+   "from",
+   "header",
+   "height",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "steps",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "expr.array": [
+    "arraySum(",
+    "arrayMax(",
+    "arrayLength(",
+    "arrayGet(",
+    "arraySumSqr("
+   ],
+   "expr.math": [
+    "sqrt(",
+    "round(",
+    "square(",
+    "min(",
+    "max("
+   ],
+   "expr.select": [
+    "step("
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawLine"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:35.526Z"
+ }
+}

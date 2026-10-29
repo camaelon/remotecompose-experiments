@@ -1,0 +1,242 @@
+{
+ "id": "STR-06",
+ "name": "pattern-slot",
+ "version": 1,
+ "title": "A template with a content slot",
+ "summary": "One Panel template (rounded surface, muted title) used twice with different content: the template marks where content goes with patternArgument, and each call passes its own components in a patternBlock for that parameter.",
+ "prompt": "Two dashboard panels in the same style: STORAGE with \"41.6 of 64 GB used\" and a usage bar, and RECENT DOWNLOADS with two files and their sizes; define the panel frame once and give each its own content.",
+ "level": 3,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.pattern_slot",
+   "struct.pattern"
+  ],
+  "secondary": [
+   "reuse.pattern",
+   "layout.stack",
+   "layout.decoration",
+   "text.basic",
+   "data.measure",
+   "draw.shapes"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "slot",
+  "children",
+  "content slot",
+  "card template",
+  "wrapper component",
+  "container",
+  "section",
+  "panel",
+  "layout template",
+  "pass children"
+ ],
+ "teaches": [
+  "Leave a hole in a template with {\"patternArgument\": {\"parameterIndex\": 1}}: parameter 1 (content) is a slot, not a value",
+  "Fill the slot at the call: the call's children hold {\"patternBlock\": {\"parameterIndex\": 1, \"children\": [...]}}, any components at all",
+  "Mix value parameters and slots: title is passed by name (\"title\": \"STORAGE\"), content as a block"
+ ],
+ "pitfalls": [
+  "parameterIndex counts the template's parameters from 0 (title is 0, content 1); the slot parameter still has to be declared in parameters",
+  "The block lands where patternArgument sits, inside the template's container: it is laid out by that column, so it is stacked, not overlaid",
+  "A slot that is not given renders nothing, with no error"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0/definePattern/children/0/column/children/2",
+   "shows": "struct.pattern_slot",
+   "note": "the slot: patternArgument parameterIndex 1"
+  },
+  {
+   "pointer": "/root/1/column/children/0/Panel/children/0",
+   "shows": "struct.pattern_slot",
+   "note": "the call's content: patternBlock parameterIndex 1"
+  },
+  {
+   "pointer": "/root/0",
+   "shows": "struct.pattern",
+   "note": "Panel template, parameters title and content"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Two identical rounded panels: STORAGE with 41.6 large, \"of 64 GB used\" and a 65 % blue bar; RECENT DOWNLOADS with two file names and their muted details. Resized (narrow 240, wide 540) both panels fill the width and the storage bar is drawn from componentWidth(), so it stays at 65 % of its panel.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 256
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 300
+   }
+  ]
+ },
+ "prerequisites": [
+  "RU-05"
+ ],
+ "related": [
+  "RU-05",
+  "STR-05",
+  "STR-07"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1174,
+  "header": {
+   "width": 360,
+   "height": 256
+  },
+  "op_count": 69,
+  "operations": {
+   "ANIMATED_FLOAT": 1,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "CoreText": 8,
+   "DATA_TEXT": 9,
+   "DRAW_ROUND_RECT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 13,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_WIDTH": 4,
+   "PAINT_VALUES": 2,
+   "RoundedClipRectModifierOperation": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_empty_container"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     256
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   }
+  },
+  "json_keys": [
+   "Panel",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "definePattern",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "padding",
+   "paint",
+   "parameterIndex",
+   "parameters",
+   "patternArgument",
+   "patternBlock",
+   "profiles",
+   "right",
+   "root",
+   "roundedRect",
+   "row",
+   "rx",
+   "ry",
+   "text",
+   "title",
+   "top",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "struct.pattern_slot": [
+    "patternBlock",
+    "patternArgument"
+   ],
+   "struct.pattern": [
+    "definePattern"
+   ],
+   "reuse.pattern": [
+    "definePattern"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "data.measure": [
+    "componentWidth()"
+   ],
+   "draw.shapes": [
+    "drawRoundRect"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:23.640Z"
+ }
+}

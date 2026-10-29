@@ -1,0 +1,244 @@
+{
+ "id": "VAR-02",
+ "name": "progress-bar",
+ "version": 2,
+ "title": "Width-relative progress bar",
+ "summary": "A rounded progress bar whose fill ends at 16 + (componentWidth() − 32) × @progress, so it stays proportional at any width, with the percentage shown live.",
+ "prompt": "Make a horizontal upload progress bar driven by a 0..1 progress variable, with the percentage shown.",
+ "level": 2,
+ "family": "VAR",
+ "capabilities": {
+  "primary": [
+   "data.expression"
+  ],
+  "secondary": [
+   "data.measure",
+   "host.variables",
+   "data.tokens",
+   "text.dynamic",
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "components": [
+  "ProgressBar"
+ ],
+ "use_cases": [
+  "loading-state",
+  "control",
+  "widget"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "progress bar",
+  "loading bar",
+  "percentage",
+  "completion",
+  "upload progress",
+  "linear progress"
+ ],
+ "teaches": [
+  "Size a shape from an expression that mixes componentWidth() and a variable",
+  "Expose the value as an exported host variable with a good default (0.65)",
+  "Show the same variable as a percentage with textFromFloat(@progress * 100)"
+ ],
+ "pitfalls": [
+  "Write the fill's right edge relative to the track (16 + (componentWidth() − 32) × @progress), not componentWidth() × @progress, or the fill overshoots the inset track"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/5",
+   "shows": "data.expression",
+   "note": "fill right edge: 16 + (componentWidth() - 32) * @progress"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "data.measure",
+   "note": "track spans to componentWidth() - 16"
+  },
+  {
+   "pointer": "/resources/variables/progress",
+   "shows": "host.variables",
+   "note": "exported float progress, default 0.65"
+  },
+  {
+   "pointer": "/root/commands/8",
+   "shows": "text.dynamic",
+   "note": "percentage via textFromFloat"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "progress": {
+    "type": "float",
+    "meaning": "completion 0..1",
+    "default": 0.65,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "At the default 300 dp the fill is 65% of the track; at 500 dp with progress 0.3 the fill is 30% of the wider track and the label reads 30%. Resized, the track spans the width and the fill stays at 30% of it; the label and percentage stay at the two ends.",
+  "render": {
+   "width": 500,
+   "height": 80,
+   "variables": {
+    "progress": 0.3
+   }
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 80
+   },
+   {
+    "name": "wide",
+    "width": 750,
+    "height": 80
+   }
+  ]
+ },
+ "related": [
+  "VAR-01",
+  "VAR-09"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 547,
+  "header": {
+   "width": 300,
+   "height": 80
+  },
+  "op_count": 29,
+  "operations": {
+   "ANIMATED_FLOAT": 5,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 2,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 2,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 4,
+   "TextFromFloat": 1
+  },
+  "host_variables": [
+   {
+    "name": "progress",
+    "type": "float",
+    "value": 0.649999976
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     80
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     750,
+     80
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "decimal",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "export",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "progress",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "value",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "data.measure": [
+    "componentWidth()",
+    "componentHeight()"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:46.843Z"
+ }
+}

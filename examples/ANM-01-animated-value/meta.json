@@ -1,0 +1,270 @@
+{
+ "id": "ANM-01",
+ "name": "animated-value",
+ "version": 2,
+ "title": "Animated value change",
+ "summary": "A brightness bar that glides to Low, Medium or High when a button is tapped: the bar's right edge is one animated expression {\"value\": \"8 + @level * (componentWidth() - 8)\", \"anim\": 0.6}.",
+ "prompt": "A brightness control: a horizontal bar with a round knob and three buttons (Low, Medium, High); tapping a button makes the bar glide smoothly to that level instead of jumping.",
+ "level": 2,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.value"
+  ],
+  "secondary": [
+   "input.tap",
+   "draw.shapes",
+   "layout.decoration",
+   "a11y.labels",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "smooth bar",
+  "animate width",
+  "glide",
+  "level selector",
+  "brightness",
+  "volume level",
+  "preset buttons",
+  "transition on tap"
+ ],
+ "teaches": [
+  "Animate any float by writing it as {\"value\": \"<expr>\", \"anim\": seconds}: the variable eases to each new result of the expression instead of jumping",
+  "Keep the animated value in a canvas `variable` command and let every shape read it (here the bar's right edge and the knob's centre)",
+  "Drive the target with plain valueFloatChange actions; the animation lives in the reader, not in the click"
+ ],
+ "pitfalls": [
+  "`anim` is ignored inside resources.variables (EXAMPLES_FINDINGS U19): put the {value, anim} object where a float is parsed, such as a `variable` command",
+  "The anim object takes only a duration; its easing is the default (standard cubic). For other curves use animationSpec on a component (ANM-02) or shape the value yourself",
+  "Don't write an infix anim(...) call in an expression: only the object form is portable",
+  "Draw the track from componentWidth(), not the header width: a literal 320 leaves a stub on a wide host and overflows a narrow one; an animated expression may read componentWidth()"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/column/children/1/canvas/commands/0",
+   "shows": "anim.value",
+   "note": "fill = {value: 8 + @level * (componentWidth() - 8), anim: 0.6}: the bar's right edge eases over 0.6 s, in whatever width the canvas gets"
+  },
+  {
+   "pointer": "/root/1/column/children/2/row/children/2/box/modifiers/5",
+   "shows": "input.tap",
+   "note": "High: valueFloatChange level = 1"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts at Low (a quarter of the bar). A tap on High at 0.1 s, captured 0.25 s later, shows the bar mid-glide at about 70 %; it settles full width by 0.7 s. Resized (narrow 240, wide 540) the track spans the width and the three buttons share it by weight, so the same High tap glides to the same fraction.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 290,
+     "y": 140
+    }
+   ],
+   "duration": 0.35
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 200,
+      "y": 140
+     }
+    ],
+    "duration": 0.35
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 440,
+      "y": 140
+     }
+    ],
+    "duration": 0.35
+   }
+  ]
+ },
+ "related": [
+  "INT-07",
+  "VAR-02",
+  "ANM-11"
+ ],
+ "prerequisites": [
+  "INT-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1142,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 68,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 2,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "CoreText": 4,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 7,
+   "DRAW_CIRCLE": 1,
+   "DRAW_ROUND_RECT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 10,
+   "MODIFIER_BACKGROUND": 4,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 5,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 6,
+   "PAINT_VALUES": 3,
+   "RoundedClipRectModifierOperation": 3,
+   "ValueFloatExpressionChangeActionOperation": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "left",
+   "modifiers",
+   "name",
+   "onClick",
+   "padding",
+   "paint",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "spacedBy",
+   "target",
+   "text",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "anim.value": [
+    "anim"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:29.214Z"
+ }
+}

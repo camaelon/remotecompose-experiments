@@ -1,0 +1,217 @@
+{
+ "id": "TIM-08",
+ "name": "countdown",
+ "version": 2,
+ "title": "Launch countdown",
+ "summary": "\"Launch in HH:MM:SS\" counting down to a fixed UTC instant, computed from the day of the year, the local time and offsetToUtc().",
+ "prompt": "Make a launch countdown timer showing hours, minutes and seconds left until a fixed date and time in UTC.",
+ "level": 3,
+ "family": "TIM",
+ "capabilities": {
+  "primary": [
+   "time.countdown"
+  ],
+  "secondary": [
+   "time.clock",
+   "time.date",
+   "text.dynamic",
+   "data.expression",
+   "data.tokens",
+   "layout.stack",
+   "layout.align"
+  ]
+ },
+ "use_cases": [
+  "widget",
+  "notification",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "timer",
+  "time remaining",
+  "time left",
+  "event countdown",
+  "deadline",
+  "launch",
+  "ETA",
+  "count down",
+  "hh:mm:ss remaining",
+  "time until",
+  "utc"
+ ],
+ "teaches": [
+  "Convert local time to UTC with offsetToUtc(): utc = local - offsetToUtc(), so remaining = target - local + offsetToUtc()",
+  "Keep float precision by subtracting day and second-of-day parts separately: (targetDay - dayOfYear()) * 86400 + (targetSec - secondOfDay)",
+  "Name the remaining seconds once in resources.variables and split it into hours, minutes and seconds with floor and %"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/remaining",
+   "shows": "time.countdown",
+   "note": "seconds to 2026-10-29 12:24:12 UTC (day 302, second 44652), clamped at 0"
+  },
+  {
+   "pointer": "/root/children/1/children/0/text/value",
+   "shows": "text.dynamic",
+   "note": "hours: floor(@remaining / 3600), zero padded"
+  },
+  {
+   "pointer": "/root/children/1/children/2/text/value",
+   "shows": "time.countdown",
+   "note": "minutes: floor(@remaining / 60) % 60"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "2026-10-29T10:10:05Z",
+  "touch": false
+ },
+ "check": {
+  "describe": "At 2026-10-29 10:10:05 UTC (epoch ms 1793268605000) it reads 02:14:07 in any time zone; at the launch instant and after, 00:00:00. Resized, the column stays centred both ways and keeps its three lines.",
+  "render": {
+   "clock": 1793268605000
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 300
+   }
+  ]
+ },
+ "pitfalls": [
+  "Pin the clock as epoch milliseconds: a \"YYYY-MM-DDTHH:MM\" clock is local time, so the instant, and a countdown to a UTC moment, shift with the renderer's time zone",
+  "epochSecond() converts with json2rc but the Java parser does not know it; build absolute time from dayOfYear(), timeInMin(), timeInSec() and offsetToUtc() instead",
+  "A float has 24 bits of mantissa: seconds-since-Jan-1 (~3e7) lose whole seconds, so subtract the target's day and second-of-day separately; the formula only works within one calendar year",
+  "Hours are floor(@remaining / 3600) with no % 24: past 99 hours whole 2 drops the leading digit, so add a days field (or whole 3) for a longer countdown"
+ ],
+ "related": [
+  "TIM-01",
+  "TXT-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 744,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 33,
+  "operations": {
+   "ANIMATED_FLOAT": 4,
+   "CoreText": 7,
+   "DATA_TEXT": 3,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 9,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "TextFromFloat": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": []
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     360,
+     300
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "color",
+   "contentDescription",
+   "decimal",
+   "flags",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "profiles",
+   "remaining",
+   "resources",
+   "root",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalArrangement",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "time.countdown": [
+    "offsetToUtc",
+    "timeInSec",
+    "dayOfYear"
+   ],
+   "time.clock": [
+    "timeInMin",
+    "timeInSec"
+   ],
+   "time.date": [
+    "year",
+    "dayOfYear"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalArrangement"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:35.416Z"
+ }
+}

@@ -1,0 +1,200 @@
+{
+ "id": "LAY-06",
+ "name": "padding-offset-border",
+ "version": 3,
+ "title": "Padding, offset and border",
+ "summary": "An outer card with a 2 dp rounded border and 16 dp padding, holding an inner card nudged by offset (8, 8) with rounded, clipped corners.",
+ "prompt": "A card with a 2 dp rounded outline and 16 dp padding containing a smaller rounded card nudged 8 dp right and down.",
+ "level": 2,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.spacing",
+   "layout.decoration"
+  ],
+  "secondary": [
+   "layout.stack",
+   "layout.size",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "margin",
+  "inset",
+  "rounded corners",
+  "outline",
+  "stroke border",
+  "translate",
+  "nudge"
+ ],
+ "teaches": [
+  "Draw a rounded outline with the border modifier {width, cornerRadius, color}, then inset the content with padding",
+  "Shift a child without changing the layout of its siblings with offset {x, y}",
+  "Round a card's corners with clip roundedRect before its background, so the background is clipped too"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/0/modifiers",
+   "shows": "layout.decoration",
+   "note": "border 2 dp, corner 16, then padding 16"
+  },
+  {
+   "pointer": "/root/children/0/children/0/modifiers/2",
+   "shows": "layout.spacing",
+   "note": "offset {x: 8, y: 8}"
+  },
+  {
+   "pointer": "/root/children/0/children/0/modifiers",
+   "shows": "layout.decoration",
+   "note": "clip roundedRect 12 then background: the order matters"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The purple inner card starts 8 px right and below the outer card's padded corner (at 44, 44 instead of 36, 36), with rounded corners. Resized (200, 450 wide) the bordered frame fills the document inside its padding; the offset card keeps its size and its (8, 8) shift.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 220
+   }
+  ]
+ },
+ "prerequisites": [
+  "DOC-01"
+ ],
+ "related": [
+  "LAY-05",
+  "LAY-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 485,
+  "header": {
+   "width": 300,
+   "height": 220
+  },
+  "op_count": 25,
+  "operations": {
+   "CoreText": 1,
+   "DATA_TEXT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 4,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_BORDER": 1,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_OFFSET": 1,
+   "MODIFIER_PADDING": 3,
+   "MODIFIER_WIDTH": 3,
+   "RoundedClipRectModifierOperation": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     220
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     220
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "border",
+   "children",
+   "clip",
+   "color",
+   "contentDescription",
+   "cornerRadius",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "offset",
+   "padding",
+   "profiles",
+   "root",
+   "roundedRect",
+   "shape",
+   "text",
+   "type",
+   "value",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "layout.spacing": [
+    "padding",
+    "offset"
+   ],
+   "layout.decoration": [
+    "background",
+    "border",
+    "clip"
+   ],
+   "layout.stack": [
+    "box"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:04.418Z"
+ },
+ "pitfalls": [
+  "border cannot take an @colors reference: give it a literal colour",
+  "Modifier order is the paint order: clip must come before background or the background corners stay square; padding after background insets the content, not the background",
+  "offset moves only the drawing: the inner card keeps its layout slot, so it can overflow the outer padding (here it ends 8 dp further right and down)",
+  "border's cornerRadius only rounds with \"shape\": 2 (ROUNDED_RECTANGLE); the default shape 0 is a plain rectangle in Java, whatever the radius"
+ ]
+}

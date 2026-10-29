@@ -223,8 +223,24 @@ const cleanLog = (log, doc, pngPath) =>
 
 const analysisOpts = (a) => ({
     simulated: Boolean(a.touch_events?.length) || a.duration !== undefined,
-    tapped: Boolean(a.touch_events?.some((e) => e.type === "tap" || e.type === "up")),
+    tapped: hasTap(a.touch_events),
 });
+
+/** Whether the events hold a tap: a "tap", or a down and up that stay within a few dp of
+ *  each other. A drag (down, moves, up) is not one, so it doesn't make `taps_missed` fire. */
+function hasTap(events = []) {
+    let down = null, moved = false;
+    for (const e of events ?? []) {
+        if (e.type === "tap") return true;
+        if (e.type === "down") { down = e; moved = false; }
+        else if (e.type === "move" && down && Math.hypot(e.x - down.x, e.y - down.y) > 10) moved = true;
+        else if (e.type === "up" && down) {
+            if (!moved && Math.hypot(e.x - down.x, e.y - down.y) <= 10) return true;
+            down = null;
+        }
+    }
+    return false;
+}
 
 export const definition = {
     name: "rc-render",

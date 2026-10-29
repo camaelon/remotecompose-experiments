@@ -1,0 +1,232 @@
+{
+ "id": "STR-09",
+ "name": "modifier-macro",
+ "version": 2,
+ "title": "Shared styles as modifier macros",
+ "summary": "Two style macros, a definePattern whose only child is a modifier list: ButtonStyle (height, pill clip, a fill colour parameter, padding) styles three buttons, TagStyle (no parameters) two tags; each box applies one with an includeMacro modifier, then adds its own ripple and semantics.",
+ "prompt": "A row of three pill buttons (Save in blue, Share in purple, Delete in red) and two small grey tags (draft, 3 attachments) below, with the button and tag styles each defined once and shared.",
+ "level": 3,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.macro"
+  ],
+  "secondary": [
+   "struct.pattern",
+   "reuse.macro",
+   "layout.decoration",
+   "layout.spacing",
+   "input.press",
+   "a11y.labels",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "style",
+  "shared style",
+  "css class",
+  "mixin",
+  "theme style",
+  "button style",
+  "modifier macro",
+  "reusable modifiers",
+  "pill button",
+  "tag"
+ ],
+ "teaches": [
+  "Define a style as a template holding only a modifier list: {\"definePattern\": {\"name\": \"ButtonStyle\", \"parameters\": [\"fill\"], \"children\": [{\"modifier\": {\"modifiers\": [...]}}]}}",
+  "Apply it with a modifier, among the component's own: {\"includeMacro\": {\"pattern\": \"ButtonStyle\", \"arguments\": [\"#FF4DA3FF\"]}}, then ripple and semantics after it",
+  "Parameterise only what varies (the fill colour) and keep the rest of the look in one place"
+ ],
+ "pitfalls": [
+  "arguments is positional and always required, even for a style with no parameters (\"arguments\": [])",
+  "The macro's modifiers are inserted where includeMacro sits in the list, so order still matters: padding in the macro, after its background, pads the content inside the pill",
+  "Small savings: about 73 B here (1113 B against 1186 B with the modifiers written out, measured on the one-row version). A macro is mainly for consistency; byte savings grow with the size of the shared list and the number of uses",
+  "A row of intrinsic-width buttons squeezes the last one to a sliver on a narrow host: a flow wraps it to the next line instead (a flow ignores spacedBy, so the gaps are spacer boxes, here 54 dp tall to space the lines too)"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "struct.macro",
+   "note": "ButtonStyle: a template whose body is a modifier list, fill as a parameter"
+  },
+  {
+   "pointer": "/root/2/column/children/0/flow/children/0/box/modifiers/0",
+   "shows": "struct.macro",
+   "note": "includeMacro ButtonStyle with the blue fill"
+  },
+  {
+   "pointer": "/root/1",
+   "shows": "struct.pattern",
+   "note": "TagStyle: a style with no parameters"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Three 44 dp pill buttons (blue Save with dark text, purple Share, red Delete) and below them two small rounded grey tags. Resized: the buttons sit in a flow, so on a narrow host (240×190) Delete wraps to a second line instead of being squeezed; the 10×54 spacers keep a gap between the lines. Below about 300 dp wide the widget needs the extra height.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 190
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 160
+   }
+  ]
+ },
+ "prerequisites": [
+  "LAY-06"
+ ],
+ "related": [
+  "STR-08",
+  "RU-05",
+  "CMP-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1139,
+  "header": {
+   "width": 360,
+   "height": 130
+  },
+  "op_count": 76,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "COLOR_CONSTANT": 3,
+   "CoreText": 5,
+   "DATA_TEXT": 7,
+   "HEADER": 1,
+   "LAYOUT_BOX": 9,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 13,
+   "MODIFIER_BACKGROUND": 6,
+   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_RIPPLE": 3,
+   "MODIFIER_WIDTH": 4,
+   "RoundedClipRectModifierOperation": 5
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     190
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "arguments",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "definePattern",
+   "flow",
+   "fontSize",
+   "header",
+   "height",
+   "includeMacro",
+   "modifier",
+   "modifiers",
+   "name",
+   "padding",
+   "parameters",
+   "pattern",
+   "profiles",
+   "role",
+   "root",
+   "roundedRect",
+   "row",
+   "semantics",
+   "size",
+   "text",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "struct.macro": [
+    "includeMacro"
+   ],
+   "struct.pattern": [
+    "definePattern"
+   ],
+   "reuse.macro": [
+    "includeMacro"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.spacing": [
+    "padding"
+   ],
+   "input.press": [
+    "ripple"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:26.926Z"
+ }
+}

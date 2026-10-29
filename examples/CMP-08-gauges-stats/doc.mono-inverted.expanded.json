@@ -1,0 +1,847 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 310,
+  "profiles": 513,
+  "contentDescription": "Gauges in their green, amber and red zones, and KPI tiles with a rising and a falling delta"
+ },
+ "resources": {
+  "variables": {
+   "cpu": {
+    "value": 42,
+    "export": true
+   },
+   "revenue": {
+    "value": 128,
+    "export": true
+   },
+   "revenueDelta": {
+    "value": 4.2,
+    "export": true
+   },
+   "_n0": 0,
+   "_n100": 100,
+   "_n72": 72,
+   "_n93": 93,
+   "stattile1_size": "abs(@revenueDelta)",
+   "stattile1_up": "step(@revenueDelta, 0)"
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "error": "#FF000000",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161",
+   "success": "#FF000000",
+   "surface": "#FFFFFFFF",
+   "track": "#FF616161"
+  }
+ },
+ "root": [
+  {
+   "definePattern": {
+    "name": "Gauge__fill",
+    "parameters": [
+     "value",
+     "min",
+     "max",
+     "label",
+     "warnAt",
+     "alertAt"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "semantics": {
+          "contentDescription": "@label"
+         }
+        }
+       ],
+       "commands": [
+        {
+         "translate": {
+          "dx": "(componentWidth() - 104) / 2",
+          "dy": "(componentHeight() - 104) / 2"
+         }
+        },
+        {
+         "scale": {
+          "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 104",
+          "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 104",
+          "pivotX": 52,
+          "pivotY": 52
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 9,
+          "top": 9,
+          "right": 95,
+          "bottom": 95,
+          "startAngle": 150,
+          "sweepAngle": 240
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "150 + @warnAt * 240",
+             "pivotX": 52,
+             "pivotY": 52
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 87.5,
+             "y1": 52,
+             "x2": 102.5,
+             "y2": 52
+            }
+           }
+          ]
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "150 + @alertAt * 240",
+             "pivotX": 52,
+             "pivotY": 52
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 87.5,
+             "y1": 52,
+             "x2": 102.5,
+             "y2": 52
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "strokeWidth": 4.5
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 9,
+          "top": 9,
+          "right": 95,
+          "bottom": 95,
+          "startAngle": 150,
+          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
+         }
+        },
+        {
+         "drawArc": {
+          "left": 9,
+          "top": 9,
+          "right": 95,
+          "bottom": 95,
+          "startAngle": 150,
+          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "textSize": 22.88
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@value",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 5
+          },
+          "x": 52,
+          "y": 52,
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 10.4
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "@label",
+          "x": 52,
+          "y": 74.88,
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 12
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "Gauge",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "height": 104
+           },
+           {
+            "padding": {
+             "end": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "Gauge__fill": {
+             "arguments": [
+              "@cpu",
+              "@_n0",
+              "@_n100",
+              "CPU %",
+              0.6,
+              0.85
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "height": 104
+           },
+           {
+            "padding": [
+             3,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "Gauge__fill": {
+             "arguments": [
+              "@_n72",
+              "@_n0",
+              "@_n100",
+              "Memory %",
+              0.6,
+              0.85
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "height": 104
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "Gauge__fill": {
+             "arguments": [
+              "@_n93",
+              "@_n0",
+              "@_n100",
+              "Disk %",
+              0.6,
+              0.85
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": "StatTile",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "clip": 14
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": 13
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": 13
+              },
+              {
+               "spacedBy": 4
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Revenue",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontSize": 12,
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "bottom",
+                "modifiers": [
+                 {
+                  "spacedBy": 4
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "@revenue",
+                    "whole": 6,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "fontSize": 28,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "k€",
+                   "fontSize": 15,
+                   "color": "@colors.muted",
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "bottom": 4
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "height": 18
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.success"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": 2
+                    },
+                    {
+                     "strokeCap": "round"
+                    },
+                    {
+                     "alpha": "@stattile1_up"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 1,
+                   "y1": 12,
+                   "x2": 6,
+                   "y2": 5
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 6,
+                   "y1": 5,
+                   "x2": 11,
+                   "y2": 12
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "textSize": 13
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawTextAnchored": {
+                   "text": {
+                    "type": "textFromFloat",
+                    "value": "@stattile1_size",
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "x": 16,
+                   "y": 9,
+                   "panX": -1,
+                   "panY": 0
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.error"
+                    },
+                    {
+                     "alpha": "1 - @stattile1_up"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawTextAnchored": {
+                   "text": {
+                    "type": "textFromFloat",
+                    "value": "@stattile1_size",
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "x": 16,
+                   "y": 9,
+                   "panX": -1,
+                   "panY": 0
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "style": "stroke"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 1,
+                   "y1": 5,
+                   "x2": 6,
+                   "y2": 12
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 6,
+                   "y1": 12,
+                   "x2": 11,
+                   "y2": 5
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 12
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "clip": 14
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": 13
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": 13
+              },
+              {
+               "spacedBy": 4
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Churn",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontSize": 12,
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "bottom",
+                "modifiers": [
+                 {
+                  "spacedBy": 4
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": 3.1,
+                    "whole": 6,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "fontSize": 28,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "%",
+                   "fontSize": 15,
+                   "color": "@colors.muted",
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "bottom": 4
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "height": 18
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.error"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": 2
+                    },
+                    {
+                     "strokeCap": "round"
+                    },
+                    {
+                     "alpha": 0
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 1,
+                   "y1": 12,
+                   "x2": 6,
+                   "y2": 5
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 6,
+                   "y1": 5,
+                   "x2": 11,
+                   "y2": 12
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "textSize": 13
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawTextAnchored": {
+                   "text": {
+                    "type": "textFromFloat",
+                    "value": 0.4,
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "x": 16,
+                   "y": 9,
+                   "panX": -1,
+                   "panY": 0
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.success"
+                    },
+                    {
+                     "alpha": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawTextAnchored": {
+                   "text": {
+                    "type": "textFromFloat",
+                    "value": 0.4,
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "x": 16,
+                   "y": 9,
+                   "panX": -1,
+                   "panY": 0
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "style": "stroke"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 1,
+                   "y1": 5,
+                   "x2": 6,
+                   "y2": 12
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 6,
+                   "y1": 12,
+                   "x2": 11,
+                   "y2": 5
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

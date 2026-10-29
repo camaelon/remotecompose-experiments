@@ -1,0 +1,169 @@
+{
+ "id": "DX-08",
+ "name": "blank",
+ "version": 1,
+ "title": "Diagnostic: blank render",
+ "summary": "Deliberately flawed: a notification badge drawn at (450, 320) in a 300×200 canvas, so nothing lands on screen and render_rc / validate warn blank.",
+ "prompt": "Content drawn entirely outside the canvas.",
+ "level": 1,
+ "family": "DX",
+ "capabilities": {
+  "primary": [
+   "draw.shapes"
+  ],
+  "secondary": [
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "notification"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "blank",
+  "empty render",
+  "nothing shows",
+  "off screen",
+  "wrong coordinates",
+  "diagnostic",
+  "validate fixture"
+ ],
+ "teaches": [
+  "Recognise blank: the render is entirely the background colour, here because every draw is outside the 300×200 canvas",
+  "Fix it by drawing in canvas coordinates (0..componentWidth(), 0..componentHeight())"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/1",
+   "shows": "draw.shapes",
+   "note": "the flaw: a circle centred at (450, 320), past both edges"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "expect_findings": [
+  "blank"
+ ],
+ "check": {
+  "describe": "render_rc and validate report only blank; the audit has no finding (it does not check where draw operations land). Resized it stays blank: the badge at (450, 320) is outside any box up to 410×280.",
+  "renders": [
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 240
+   },
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "DX-06",
+  "DX-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 222,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 12,
+  "operations": {
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 2
+  },
+  "host_variables": [],
+  "render_findings": [
+   "warning: blank"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [
+     "warning: blank"
+    ],
+    "size": [
+     450,
+     240
+    ],
+    "audit_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [
+     "warning: blank"
+    ],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawTextAnchored",
+   "header",
+   "height",
+   "modifiers",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "root",
+   "style",
+   "text",
+   "textSize",
+   "type",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "draw.shapes": [
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:25.671Z"
+ }
+}

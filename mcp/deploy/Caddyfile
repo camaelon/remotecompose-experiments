@@ -9,6 +9,9 @@
 #   https://DOMAIN/pages           ->  rc-deploy's public index of those pages
 #                                      (off with MCP_PAGE_INDEX=0 in deploy.env)
 #   https://DOMAIN/inspect/mcp     ->  rc-inspect (127.0.0.1:8812)
+#   https://DOMAIN/examples/mcp    ->  rc-examples (127.0.0.1:8813), and its public pages:
+#   https://DOMAIN/examples/            the example grid, /examples/components/ the component
+#                                      grid, /examples/play/<id>/ a playground for each
 #
 # No `log` directive on purpose: an access log would record the token for clients that pass
 # it in the URL.
@@ -27,6 +30,9 @@ DOMAIN {
 	}
 	handle_path /inspect/* {
 		reverse_proxy 127.0.0.1:8812
+	}
+	handle_path /examples/* {
+		reverse_proxy 127.0.0.1:8813
 	}
 	@pagesIndex path /pages /pages/
 	handle @pagesIndex {

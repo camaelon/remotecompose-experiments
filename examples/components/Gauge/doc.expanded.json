@@ -1,0 +1,331 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 196,
+  "profiles": 513,
+  "contentDescription": "Gauge component: a live CPU gauge in the green zone and a temperature gauge in the red zone"
+ },
+ "resources": {
+  "variables": {
+   "cpu": {
+    "value": 42,
+    "export": true
+   },
+   "_n0": 0,
+   "_n100": 100,
+   "_n91": 91
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "track": {
+    "light": "#FFB0B8C4",
+    "dark": "#FF2A3342"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": [
+  {
+   "definePattern": {
+    "name": "Gauge__fill",
+    "parameters": [
+     "value",
+     "min",
+     "max",
+     "label",
+     "warnAt",
+     "alertAt"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "semantics": {
+          "contentDescription": "@label"
+         }
+        }
+       ],
+       "commands": [
+        {
+         "translate": {
+          "dx": "(componentWidth() - 140) / 2",
+          "dy": "(componentHeight() - 140) / 2"
+         }
+        },
+        {
+         "scale": {
+          "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 140",
+          "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 140",
+          "pivotX": 70,
+          "pivotY": 70
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 12
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 12,
+          "top": 12,
+          "right": 128,
+          "bottom": 128,
+          "startAngle": 150,
+          "sweepAngle": 240
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 12,
+          "top": 12,
+          "right": 128,
+          "bottom": 128,
+          "startAngle": 150,
+          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.warning"
+           },
+           {
+            "alpha": "step((@value / @max), @warnAt)"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 12,
+          "top": 12,
+          "right": 128,
+          "bottom": 128,
+          "startAngle": 150,
+          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.error"
+           },
+           {
+            "alpha": "step((@value / @max), @alertAt)"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 12,
+          "top": 12,
+          "right": 128,
+          "bottom": 128,
+          "startAngle": 150,
+          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "textSize": 30.8
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@value",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 5
+          },
+          "x": 70,
+          "y": 70,
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 14
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "@label",
+          "x": 70,
+          "y": 100.8,
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 4
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "Gauge",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "weight": 1
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           "fillMaxHeight"
+          ],
+          "children": [
+           {
+            "Gauge__fill": {
+             "arguments": [
+              "@cpu",
+              "@_n0",
+              "@_n100",
+              "CPU %",
+              0.6,
+              0.85
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           "fillMaxHeight",
+           {
+            "padding": {
+             "start": 16
+            }
+           }
+          ],
+          "children": [
+           {
+            "Gauge__fill": {
+             "arguments": [
+              "@_n91",
+              "@_n0",
+              "@_n100",
+              "Temp °C",
+              0.6,
+              0.85
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

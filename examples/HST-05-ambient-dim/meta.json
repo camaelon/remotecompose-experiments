@@ -1,0 +1,223 @@
+{
+ "id": "HST-05",
+ "name": "ambient-dim",
+ "version": 3,
+ "title": "Ambient light dimming",
+ "summary": "A transit card that is a bright card in normal light and switches to black with white and yellow text when the ambient light sensor reads under 10 lux.",
+ "prompt": "Make a transit card that switches to a black, high-contrast look when the room is dark.",
+ "level": 3,
+ "family": "HST",
+ "capabilities": {
+  "primary": [
+   "host.system",
+   "data.condition"
+  ],
+  "secondary": [
+   "draw.shapes",
+   "text.anchor",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "transit",
+  "card",
+  "widget"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "ambient light",
+  "light sensor",
+  "lux",
+  "night mode",
+  "dim",
+  "high contrast",
+  "auto brightness"
+ ],
+ "teaches": [
+  "Read the ambient light sensor (lux) with lightLevel in an expression or a condition",
+  "Override a paint only in low light: conditionalOperations lt lightLevel 10 right after the normal paint",
+  "Keep the normal-light colours as the default path, so the card looks right when no sensor is present",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre; the background drawRect runs before it, to componentWidth() × componentHeight()"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/7",
+   "shows": "host.system",
+   "note": "card colour: black when lightLevel < 10"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "data.condition",
+   "note": "the label turns yellow in low light"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false,
+  "system_variables": {
+   "26": "lightLevel (lux)"
+  }
+ },
+ "check": {
+  "describe": "system_variables {26: 300} gives the light blue card; {26: 2} gives a black card with white and yellow text. Resized, the background fills the box and the card scales to fit, centred (bright at 540×180, light level 300).",
+  "render": {
+   "system_variables": {
+    "26": 2
+   }
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "bright",
+    "width": 540,
+    "height": 180,
+    "system_variables": {
+     "26": 300
+    }
+   }
+  ]
+ },
+ "related": [
+  "HST-04",
+  "HST-06"
+ ],
+ "pitfalls": [
+  "Write lightLevel (or light()), not lightLevel(): both the Java parser and json2rc reject lightLevel() with \"Unknown token in expression\", although accelerationX() takes parentheses",
+  "With no sensor value the player reads 0 lux, which is \"dark\": a document checked without system_variables shows the low-light variant",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: a background drawRect to the literal header size leaves the rest of a bigger box unpainted, and literal positions get cut off in a smaller one"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 701,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 37,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 5,
+   "DATA_TEXT": 3,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 10
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": []
+   },
+   "bright": {
+    "render": "render-bright.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "host.system": [
+    "lightLevel"
+   ],
+   "data.condition": [
+    "conditionalOperations"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "text.basic": [
+    "text",
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:48.589Z"
+ }
+}

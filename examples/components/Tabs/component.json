@@ -1,0 +1,171 @@
+{
+ "component": "Tabs",
+ "version": 2,
+ "summary": "A 48 dp tab bar of equal-width tabs from a static list of labels: a tap sets `selected` to the tab's index; the underline slides to the tapped tab while the labels cross-fade to `color`.",
+ "params": {
+  "labels": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The tab labels, e.g. [\"Day\", \"Week\", \"Month\"]; each is also its tab's accessibility label"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected index (0-based). Bind a document variable so panels can follow it; the bar animates the change itself (the underline slides, the labels cross-fade)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Selected label and underline; unselected labels are muted"
+  }
+ },
+ "locals": {
+  "n": {
+   "$count": "labels"
+  },
+  "s": {
+   "value": "@selected",
+   "anim": 0.25
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.weight",
+  "a11y.labels"
+ ],
+ "call": {
+  "Tabs": {
+   "labels": [
+    "Day",
+    "Week",
+    "Month"
+   ],
+   "selected": "@tab"
+  }
+ },
+ "pitfalls": [
+  "labels is static: the tabs are generated when the document is built ($each), and their number is the local n ({\"$count\": \"labels\"}); the selection is the runtime part",
+  "The motion is an animated local s = {\"value\": \"@selected\", \"anim\": 0.25}: it eases to the new index at paint time, and everything visible reads s, not @selected (the tap still sets @selected at once, so panels can switch immediately)",
+  "Each tab's highlight is a second, coloured copy of its label over the muted one, with graphicsLayer alpha 1 - min(1, abs(s - i)): 1 on the selected tab, 0 elsewhere, a cross-fade while s moves",
+  "The underline is one 2 dp canvas under the row: a rect from s * componentWidth() / n to (s + 1) * componentWidth() / n, so it slides between tabs",
+  "Mono themes have no motion: s is @selected, the underline and the highlight jump",
+  "Show the matching panel with the same alpha expression on stacked panels (or visibility); the tab bar does not switch content by itself"
+ ],
+ "body": {
+  "box": {
+   "verticalAlignment": "bottom",
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": 48
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "$each": "labels",
+        "as": "label",
+        "index": "i",
+        "do": {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "bottom",
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           "fillMaxHeight",
+           {
+            "semantics": {
+             "contentDescription": "@label",
+             "clickable": true
+            }
+           },
+           {
+            "onClick": {
+             "type": "valueFloatChange",
+             "target": "@selected",
+             "value": "@i"
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@label",
+             "fontSize": "@theme.text_md",
+             "color": "@colors.muted",
+             "modifiers": [
+              {
+               "padding": {
+                "bottom": 16
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@label",
+             "fontSize": "@theme.text_md",
+             "color": "@color",
+             "modifiers": [
+              {
+               "graphicsLayer": {
+                "alpha": "1 - min(1, abs(@s - @i))"
+               }
+              },
+              {
+               "padding": {
+                "bottom": 16
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 2
+       }
+      ],
+      "commands": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@color"
+          }
+         ]
+        }
+       },
+       {
+        "drawRect": {
+         "left": "@s * componentWidth() / @n",
+         "top": 0,
+         "right": "(@s + 1) * componentWidth() / @n",
+         "bottom": 2
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

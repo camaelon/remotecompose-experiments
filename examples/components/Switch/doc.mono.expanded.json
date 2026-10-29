@@ -1,0 +1,418 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "Switch: Wi-Fi on and Bluetooth off, bound to variables, and a green Battery saver switch that keeps its own state"
+ },
+ "resources": {
+  "variables": {
+   "wifi": 1,
+   "bluetooth": 0,
+   "switch3_checked": 0,
+   "switch3_x": "20 * @switch3_checked"
+  },
+  "colors": {
+   "background": "#FF000000",
+   "onSurface": "#FFFFFFFF",
+   "outline": "#FF9E9E9E",
+   "primary": "#FFFFFFFF",
+   "success": "#FFFFFFFF"
+  }
+ },
+ "root": [
+  {
+   "definePattern": {
+    "name": "Switch__p",
+    "parameters": [
+     "checked",
+     "label"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": [
+          52,
+          32
+         ]
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "clickable": true
+         }
+        },
+        {
+         "onClick": {
+          "type": "valueFloatExpressionChange",
+          "target": "@checked",
+          "value": "1 - @checked"
+         }
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 1,
+          "top": 1,
+          "right": 51,
+          "bottom": 31,
+          "rx": 15,
+          "ry": 15
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "alpha": "@checked"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 1,
+          "top": 1,
+          "right": 51,
+          "bottom": 31,
+          "rx": 15,
+          "ry": 15
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "alpha": "1 - @checked"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "16 + (20 * @checked)",
+          "cy": 16,
+          "radius": 8
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "@checked"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "16 + (20 * @checked)",
+          "cy": 16,
+          "radius": 10
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 56
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "end": 12
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Wi-Fi",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 15,
+             "color": "@colors.onSurface"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Switch__p": {
+          "arguments": [
+           "@wifi",
+           "Wi-Fi"
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 56
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "end": 12
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Bluetooth",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 15,
+             "color": "@colors.onSurface"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Switch__p": {
+          "arguments": [
+           "@bluetooth",
+           "Bluetooth"
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 56
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "end": 12
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Battery saver",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 15,
+             "color": "@colors.onSurface"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": [
+             52,
+             32
+            ]
+           },
+           {
+            "semantics": {
+             "contentDescription": "Battery saver",
+             "clickable": true
+            }
+           },
+           {
+            "onClick": {
+             "type": "valueFloatExpressionChange",
+             "target": "@switch3_checked",
+             "value": "1 - @switch3_checked"
+            }
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 2
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 1,
+             "top": 1,
+             "right": 51,
+             "bottom": 31,
+             "rx": 15,
+             "ry": 15
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.success"
+              },
+              {
+               "alpha": "@switch3_checked"
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 1,
+             "top": 1,
+             "right": 51,
+             "bottom": 31,
+             "rx": 15,
+             "ry": 15
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "alpha": "1 - @switch3_checked"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "16 + @switch3_x",
+             "cy": 16,
+             "radius": 8
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.success"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "@switch3_checked"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "16 + @switch3_x",
+             "cy": 16,
+             "radius": 10
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

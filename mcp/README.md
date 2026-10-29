@@ -10,6 +10,7 @@ Node (18+) with no dependencies, so they run from a bare checkout on macOS or Li
 | `rc-render-server.mjs` | `render_rc`, `validate` | the C++/Skia headless renderer `players/cpp/tools/rc2image` |
 | `inspect-server.mjs` | `inspect_summary`, `audit`, `list_operations`, `get_operation`, `inspect_layout`, `inspect_structure`, `inspect_variables`, `inspect_bytes`, `inspect_accessibility`, `list_interactions`, `interact`, `inspect_runtime`, `inspect_theme` | the inspector's analysis code (`inspector/src/panels`) on the TypeScript player, headless in Node |
 | `deploy-server.mjs` | `package_web`, `list_pages`, `unpublish_page` | the TypeScript web player (`players/typescript`), bundled with esbuild |
+| `examples-server.mjs` | `build_kit`, `find_examples`, `get_example`, `find_components`, `get_component`, `expand_components`, `resolve_terms`, `list_capabilities` | the example catalog (`examples/catalog.json`, built by `examples/tools/build.mjs`), its vocabulary (`docs/examples-vocabulary.json`) and the component library (`examples/components`) |
 | `guide-server.mjs` | `overview`, `describe` | the other servers' own definitions: the single entry point |
 
 **Start with `rc-guide`.** `overview` explains what each server does, when to use it (and
@@ -101,6 +102,106 @@ Known gap: an `.rc` that embeds a sub-document (`rc:<file>`) is resolved by `rc2
 relative to the document's folder, and that lookup isn't confined to the workspace. Such
 a file could only be parsed as a document; nothing outside the workspace is written or
 returned.
+
+## Components and the example catalog
+
+Any tool that takes JSON (json2rc, render_rc, validate, every rc-inspect tool, package_web)
+accepts **library component calls**, `{"Button": {"label": "Save", "onClick": {...}}}`, and
+expands them first (`lib/components.mjs`; the components are `examples/components/<Name>/component.json`,
+their syntax is described at the top of that file). `rc-examples.expand_components` shows the
+plain JSON a document becomes.
+
+**Two ways to the wire.** A top-level `"componentMode"` picks how calls are compiled (one call
+can override it with `"componentMode"` in its args):
+- `"expand"`: every call is replaced by its body.
+- `"pattern"`: each call that can be becomes a `definePattern` template, written once at the
+  head of a root array, plus a call of it. Numbers, `@variable`s, texts and colours are
+  pattern arguments; enum/static/bool params, `$if`/`$each`/`$count`, theme numbers and
+  actions are resolved per call, so each static combination used is one template
+  (`Button__outlined_icon`). Slots are `patternArgument`/`patternBlock`, per-call state is a
+  pattern local.
+- `"auto"` (default): a variant used two or more times becomes a pattern when the converted
+  document is smaller that way; both forms are converted and measured.
+
+Templates are only used where every player renders them like the expansion. A text component
+in a template (U7), a canvas command reading a parameter, local or expression (T22, C35),
+`graphicsLayer` on a parameter (C35, C++) and a colour parameter outside `background` (U22)
+either write the value into the template or expand the call (`PATTERN_TRAPS` in
+components.mjs). Until those are fixed, labelled components (Button, Chip, Card, ...) stay
+expanded and auto picks templates for repeated label-free pieces (Divider in CMP-05 and
+CMP-12). `expand_components` returns a `report` (per variant: mode, template name, calls,
+reason, measured bytes) and `modes` (per component); the build records them in
+`meta.derived.component_modes` / `component_patterns`.
+
+Inside a component's `body`, besides `@param`, `$slot`, `$if`, `@colors.*` and `@theme.*`:
+- `"locals"` names values private to each call. A number is per-call state (a variable of its
+  own). An expression (`"frac": "@value / @max"`, or a `{"$if"}` choosing one) is computed once
+  per call: it becomes one float expression in `resources.variables` that every `@frac` in the
+  body reads, or a literal when the arguments are static numbers. `{"$count": "labels"}` is the
+  length of a list param. Gauge, StatTile and Tabs use them.
+- A `string` param is text: `"Decrease @label"` gives `"Decrease guests"` (in an expression, a
+  non-trivial value is parenthesised instead).
+- `{"$each": "labels", "as": "label", "index": "i", "count": "n", "do": ...}` repeats over a
+  static list, with `@n` the number of items.
+
+**Light, dark and mono.** A top-level `"componentTheme"` picks the look (removed before
+conversion; `expand_components` takes it as `theme`):
+- `"auto"` (default): every theme colour is a themed `{"light", "dark"}` colour, and the
+  player picks the side from the system theme (`render_rc` `theme`, `rc2image --theme`, the
+  playground's look control). Each themed colour costs about 100 B more than a plain one; the
+  component demos grew by 30% on average, from 55.8 KB to 72.3 KB in total.
+- `"light"` / `"dark"`: that palette only, as plain colours. `"dark"` writes exactly what the
+  library wrote before themed colours.
+- `"mono"`: light on black, for always-on displays and OLED. It uses black, white and one
+  grey, and each component draws its `{"$if": "theme.mono"}` variant: state is shown by shape,
+  large surfaces are outlined, and strokes are thin. Animations are removed, and the clocks
+  drop their seconds. There is no mono mode in the format: `PROFILE_LOW_POWER` is declared but
+  nothing reads it.
+- `"mono-inverted"`: the same variants dark on white, for e-ink and other reflective
+  displays: the theme's `modes.mono-inverted` palette (white, black, grey `#616161`), so a
+  watch's always-on button (white outline and text on black) is the e-ink button (black on
+  white) without a change to any component.
+
+A document re-themes by defining a theme colour itself, with a plain value or `{light, dark}`,
+optionally with a `mono` and a `mono-inverted` value. `docs/COMPONENT_AUTHORING.md` has the
+mono rules.
+
+A document can also **define its own components** under a top-level `components` object
+(`{"components": {"PriceTag": {"params": ..., "body": ...}}, "root": ...}`); they are called
+the same way and win over a library component of the same name. `docs/COMPONENT_AUTHORING.md`
+(also served by `rc-examples.component_authoring_guide`) explains how to write one, and
+`rc-examples.check_component` lints a definition, expands a call, converts it, renders it and
+reports the bytes and the bytes each extra instance costs in both modes (`modes.expand`,
+`modes.pattern`, with the reason when a call can't be a template), and the bytes per theme
+(`themes`). It renders the call four times: light, dark, mono and mono-inverted.
+
+Each library component folder also holds a demo, built like an example: `doc.json` (a
+document calling it), `meta.json`, and the built `doc.expanded.json`, `doc.rc` and `render.png`
+(`node examples/tools/build.mjs <Name> --java`, or `components` for all of them). Its
+`meta.check.renders` adds `render-light.png`, `render-dark.png`, `render-mono.png` and
+`render-mono-inverted.png`. Each mono render converts its own expansion
+(`doc.mono.expanded.json`, `doc.mono.rc`; `doc.mono-inverted.*`), with its own Java byte check. Any example can list renders this way: an entry is render_rc arguments, plus
+`componentTheme` for a document of its own. `get_component` returns the demo and all of its
+renders.
+
+`rc-examples` answers "how do I build this": `build_kit({goal})` returns the components that
+fit and the smallest set of catalog examples covering the rest, each with the JSON snippet
+that shows each capability and the pitfalls found while verifying it. Every catalog example
+converts byte-identically with the Java reference parser (`examples/tools/build.mjs --java`),
+renders, and passes the audit; `docs/EXAMPLES_FINDINGS.md` lists what building them uncovered.
+
+Over HTTP, rc-examples also serves public pages (no token; the catalog is public content):
+`<base>/` is every example as a grid of renders, `<base>/components/` every component, and
+clicking one opens `<base>/play/<id>/`, the deploy server's playground for that document
+(`lib/examples-web.mjs`; also `<base>/img/<id>.png` and `<base>/json/<id>.json`). A card with
+other renders shows them as a light / dark / mono / mono-inverted strip, and a menu switches
+every card. The strip opens the playground in that theme (`#t=light`), or at
+`<base>/play/<id>/mono/` (`mono-inverted/`) for a mono document (`<base>/img/<id>/mono.png`,
+`<base>/json/<id>.mono.expanded.json`). In these playgrounds the look control has two more
+segments, **Mono** and **Mono inverted**, which go to the variant's page (only when the
+example has it; `#t=mono` on the main page goes there too), and the **JSON** buttons show
+`doc.json`, the **Expanded JSON** (`doc.expanded.json`, when the document calls components)
+and, on a variant's page, its expansion. On the VPS `<base>` is `https://DOMAIN/examples`.
 
 ## `json2rc`
 
@@ -294,7 +395,15 @@ not just how it looks:
 - **The document itself.** The `.rc` size is shown next to the title, and **Download** saves
   the `.rc`, named after the source file. The bytes are already embedded in the page, so the
   download makes no request and also works for a page opened from disk.
-- **Density, theme, Pause/Play, Restart.** Restart reloads the document, which replays
+- **Look.** A segmented control next to the title: **Auto** (the system's setting),
+  **Light** and **Dark** switch the player theme of the document (themed colours, THEME
+  sections). The examples' playgrounds add **Mono** / **Mono inverted**, which are documents
+  of their own (see rc-examples above); a `package_web` page has only the theme segments.
+- **JSON.** A page published from `json` / `json_path` has a **JSON** button (and **Expanded
+  JSON** when the document calls library components) opening a viewer: pretty-printed,
+  syntax-highlighted, with Copy and Download. A page made from an `.rc` has none. (Config:
+  `json: [{label, url | text, file}]` in `lib/web-page.mjs`.)
+- **Density, Pause/Play, Restart.** Restart reloads the document, which replays
   animations and clears touch state.
 - **State in the URL.** Variables that differ from their defaults go in `?name=value`, which
   the bare page reads the same way. The view goes in `#w=&h=&d=&t=` (or `#fill=1`).

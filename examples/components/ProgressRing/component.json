@@ -1,0 +1,159 @@
+{
+ "component": "ProgressRing",
+ "version": 3,
+ "summary": "A circular progress ring: a track circle and an arc of progress × 360° starting at 12 o'clock, with an optional percentage in the centre.",
+ "params": {
+  "progress": {
+   "type": "float",
+   "required": true,
+   "doc": "0..1: a number, a \"@variable\" or an expression. Not clamped: keep it in range; a change eases over 0.3 s (the bar or arc; a literal costs nothing)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Arc colour; the track is @colors.track"
+  },
+  "size": {
+   "type": "float",
+   "default": 64,
+   "static": true,
+   "doc": "Diameter in dp"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 6,
+   "static": true,
+   "doc": "Stroke width in dp"
+  },
+  "showLabel": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Draw the percentage (no % sign) in the centre, at 24% of the size"
+  }
+ },
+ "capabilities": [
+  "draw.arc",
+  "data.expression",
+  "text.dynamic"
+ ],
+ "call": {
+  "ProgressRing": {
+   "progress": 0.66
+  }
+ },
+ "pitfalls": [
+  "A literal progress costs nothing at run time: \"@progress * 360\" folds to a number when the component expands. Wrapping it in clamp() would turn it back into an expression",
+  "If you do clamp a live value, clamp takes (min, max, value): clamp(0, 1, @p). clamp(@p, 0, 1) is always 0",
+  "The label is textFromFloat with flags 5 (no padding): the default flags pad the number with spaces, which pushes it off centre",
+  "`size` is fixed dp and does not shrink: in a row whose width varies, spread the rings with horizontalAlignment spaceEvenly (or weighted boxes) rather than a spacedBy gap, and pick sizes that fit the narrowest host",
+  "A progress change animates: the drawing reads an animated local pa = {\"value\": \"@progress\", \"anim\": 0.3} (paint time). A literal progress folds to a number, so a static bar costs nothing extra; a value driven every frame just follows 0.3 s behind. Mono themes jump (the percentage label shows the true value at once)"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": "@size"
+    }
+   ],
+   "commands": [
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": {
+         "$if": "theme.mono",
+         "then": 1.5,
+         "else": "@thickness"
+        }
+       },
+       {
+        "strokeCap": "round"
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "@size / 2",
+      "cy": "@size / 2",
+      "radius": "@size / 2 - @thickness / 2"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "strokeWidth": "@thickness"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawArc": {
+      "left": "@thickness / 2",
+      "top": "@thickness / 2",
+      "right": "@size - @thickness / 2",
+      "bottom": "@size - @thickness / 2",
+      "startAngle": -90,
+      "sweepAngle": "@pa * 360"
+     }
+    },
+    {
+     "$if": "showLabel",
+     "then": {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.onSurface"
+        },
+        {
+         "style": "fill"
+        },
+        {
+         "textSize": "@size * 0.24"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "showLabel",
+     "then": {
+      "drawTextAnchored": {
+       "text": {
+        "type": "textFromFloat",
+        "value": "@progress * 100",
+        "whole": 3,
+        "decimal": 0,
+        "flags": 5
+       },
+       "x": "@size / 2",
+       "y": "@size / 2",
+       "panX": 0,
+       "panY": 0
+      }
+     }
+    }
+   ]
+  }
+ },
+ "locals": {
+  "pa": {
+   "value": "@progress",
+   "anim": 0.3
+  }
+ }
+}

@@ -1,0 +1,51 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 230, "profiles": 513,
+  "contentDescription": "Three readings mapped from their own units onto 0 to 1 tracks"},
+ "resources": {
+  "variables": {
+   "temp": {"value": 23, "export": true},
+   "gain": {"value": -18, "export": true},
+   "speed": {"value": 140, "export": true},
+   "tTemp": "clamp(0, 1, (@temp + 10) / 50)",
+   "tGain": "clamp(0, 1, (@gain + 60) / 60)",
+   "tSpeed": "clamp(0, 1, @speed / 120)"
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "r", "value": "componentWidth() - 20"}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 16}]}},
+   {"drawTextAnchored": {"text": "Map a range", "x": 20, "y": 22, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@r", "v2": 300, "commands": [
+    {"drawTextAnchored": {"text": "t = clamp(0, 1, (v - lo) / (hi - lo))", "x": "@r", "y": 22, "panX": 1, "panY": 0}}]}},
+   {"paint": {"ops": [{"textSize": 13}]}},
+   {"drawTextAnchored": {"text": "Temperature  −10 … 40 °C", "x": 20, "y": 56, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": "Gain  −60 … 0 dB", "x": 20, "y": 120, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": "Speed  0 … 120 km/h", "x": 20, "y": 184, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 15}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "@temp", "whole": 3, "decimal": 0, "flags": 7}, "x": "@r", "y": 56, "panX": 1, "panY": 0}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "@gain", "whole": 3, "decimal": 0, "flags": 7}, "x": "@r", "y": 120, "panX": 1, "panY": 0}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "@speed", "whole": 3, "decimal": 0, "flags": 7}, "x": "@r", "y": 184, "panX": 1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFEF5350"}, {"textSize": 11}]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@r", "v2": 300, "commands": [
+    {"drawTextAnchored": {"text": "over range, t = 1", "x": "@r - 34", "y": 185, "panX": 1, "panY": 0}}]}},
+   {"paint": {"ops": [{"color": "#FF2A3A4E"}]}},
+   {"drawRoundRect": {"left": 20, "top": 140, "right": "@r", "bottom": 150, "rx": 5, "ry": 5}},
+   {"drawRoundRect": {"left": 20, "top": 204, "right": "@r", "bottom": 214, "rx": 5, "ry": 5}},
+   {"paint": {"ops": [{"linearGradient": {"x1": 20, "y1": 0, "x2": "@r", "y2": 0,
+      "colors": ["#FF4DA3FF", "#FF26A69A", "#FFFFCA28", "#FFEF5350"]}}]}},
+   {"drawRoundRect": {"left": 20, "top": 76, "right": "@r", "bottom": 86, "rx": 5, "ry": 5}},
+   {"paint": {"ops": [{"shader": 0}, {"color": "#FFFFFFFF"}]}},
+   {"drawCircle": {"cx": "lerp(20, @r, @tTemp)", "cy": 81, "radius": 9}},
+   {"paint": {"ops": [{"color": "#FF7C4DFF"}]}},
+   {"drawRoundRect": {"left": 20, "top": 140, "right": "lerp(30, @r, @tGain)", "bottom": 150, "rx": 5, "ry": 5}},
+   {"paint": {"ops": [{"color": "#FFEF5350"}]}},
+   {"drawRoundRect": {"left": 20, "top": 204, "right": "lerp(30, @r, @tSpeed)", "bottom": 214, "rx": 5, "ry": 5}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}]}},
+   {"drawCircle": {"cx": "lerp(30, @r, @tSpeed) - 5", "cy": 209, "radius": 9}}
+  ]
+ }
+}

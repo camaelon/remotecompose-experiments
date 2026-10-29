@@ -1,0 +1,231 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 190,
+  "profiles": 513,
+  "contentDescription": "Heart rate today as a line, with the lowest, highest and latest readings marked and labelled"
+ },
+ "resources": {
+  "floatArrays": {
+   "bpm": [
+    62,
+    58,
+    55,
+    60,
+    72,
+    88,
+    95,
+    84,
+    76,
+    70,
+    74,
+    81,
+    68,
+    64
+   ]
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "#FF101828"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "px",
+     "value": "(componentWidth() - 48) / 13"
+    }
+   },
+   {
+    "variable": {
+     "name": "py",
+     "value": "(componentHeight() - 70) / 60"
+    }
+   },
+   {
+    "createFloatFunction": {
+     "name": "pin",
+     "params": [
+      "i",
+      "size",
+      "sx",
+      "sy"
+     ],
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF101828"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "20 + i * sx",
+        "cy": "70 + (95 - arrayGet(@bpm, i)) * sy",
+        "radius": "size + 2"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FFEF5350"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "20 + i * sx",
+        "cy": "70 + (95 - arrayGet(@bpm, i)) * sy",
+        "radius": "size"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FFE3E8EF"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "arrayGet(@bpm, i)",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 5
+        },
+        "x": "20 + i * sx",
+        "y": "56 + (95 - arrayGet(@bpm, i)) * sy - size",
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFFFFFFF"
+      },
+      {
+       "textSize": 15
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Heart rate",
+     "x": 16,
+     "y": 22,
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF8899AA"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "bpm · today",
+     "x": "componentWidth() - 16",
+     "y": 22,
+     "panX": 1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFEF5350"
+      },
+      {
+       "strokeWidth": 2.5
+      },
+      {
+       "strokeCap": "round"
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "k",
+     "from": 0,
+     "until": "arrayLength(@bpm) - 1",
+     "commands": [
+      {
+       "drawLine": {
+        "x1": "20 + k * @px",
+        "y1": "70 + (95 - arrayGet(@bpm, k)) * @py",
+        "x2": "20 + (k + 1) * @px",
+        "y2": "70 + (95 - arrayGet(@bpm, k + 1)) * @py"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "callFloatFunction": {
+     "id": "@pin",
+     "args": [
+      2,
+      3,
+      "@px",
+      "@py"
+     ]
+    }
+   },
+   {
+    "callFloatFunction": {
+     "id": "@pin",
+     "args": [
+      6,
+      3,
+      "@px",
+      "@py"
+     ]
+    }
+   },
+   {
+    "callFloatFunction": {
+     "id": "@pin",
+     "args": [
+      13,
+      5,
+      "@px",
+      "@py"
+     ]
+    }
+   }
+  ]
+ }
+}

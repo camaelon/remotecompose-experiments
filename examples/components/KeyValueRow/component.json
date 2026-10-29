@@ -1,0 +1,40 @@
+{
+ "component": "KeyValueRow",
+ "version": 3,
+ "summary": "A property line: a muted key on the left, its value pushed to the right end, with an optional trailing slot (a Switch, a chevron).",
+ "params": {
+  "key": { "type": "string", "required": true, "doc": "Left label, muted" },
+  "value": {
+   "type": "text",
+   "default": "",
+   "doc": "A string, a \"@textVariable\" or a text expression such as {\"type\": \"textFromFloat\", ...}; leave it out for a row that only has a trailing control"
+  }
+ },
+ "slots": { "trailing": { "optional": true, "doc": "After the value, 12 dp from it: a Switch, a Stepper, a chevron" } },
+ "capabilities": ["layout.weight", "text.basic"],
+ "call": { "KeyValueRow": { "key": "Storage", "value": "64 GB" } },
+ "pitfalls": [
+  "The key sits in the weighted box (weight 1; the text is one line with an ellipsis): it takes what the value and the trailing slot leave and shortens with … in a narrow row, instead of pushing them out; the box's end padding is the gap. Weight the box, not the text: the C++ player gives a weighted text its full width and squeezes the siblings after it to nothing. No spacedBy in a row holding a weight: weights ignore spacedBy, so the row overflows by the gaps (Java does this too). Fixed spacer boxes instead",
+  "A live number needs textFromFloat with enough `whole` digits (whole is the count of integer digits kept: whole 1 prints 12 as 2) and flags 5 (no padding)"
+ ],
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": ["fillMaxWidth", { "height": 44 }],
+   "children": [
+    {
+     "box": {
+      "modifiers": [{ "weight": 1 }, { "padding": { "end": "@theme.space_3" } }],
+      "children": [{ "text": { "value": "@key", "maxLines": 1, "overflow": "ellipsis", "fontSize": "@theme.text_md", "color": "@colors.muted" } }]
+     }
+    },
+    {
+     "$if": "value",
+     "then": { "text": { "value": "@value", "fontSize": "@theme.text_md", "color": "@colors.onSurface" } }
+    },
+    { "$if": "trailing", "then": { "box": { "modifiers": [{ "width": "@theme.space_3" }] } } },
+    { "$slot": "trailing" }
+   ]
+  }
+ }
+}

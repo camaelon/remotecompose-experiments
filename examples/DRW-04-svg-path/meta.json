@@ -1,0 +1,174 @@
+{
+ "id": "DRW-04",
+ "name": "svg-path",
+ "version": 3,
+ "title": "Heart icon from an SVG path",
+ "summary": "A filled red heart drawn from one SVG path string of six cubic curves.",
+ "prompt": "Draw a red heart icon from an SVG path string.",
+ "level": 1,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.path"
+  ],
+  "secondary": []
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-2x2",
+ "keywords": [
+  "svg",
+  "svg path",
+  "icon",
+  "vector",
+  "vector icon",
+  "heart",
+  "like",
+  "favourite",
+  "bezier",
+  "cubic",
+  "path data",
+  "d attribute"
+ ],
+ "teaches": [
+  "Draw a vector icon by passing SVG path data (M, C, Z) straight to drawPath",
+  "A path is filled with the current paint; the default paint style is fill",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre"
+ ],
+ "pitfalls": [
+  "Only drawPath takes an SVG string: the same string in resources.paths or a `path` command becomes an EMPTY path in the Java reference (and json2rc matches it), so nothing draws; use the op-list form there",
+  "The Java reference parser writes an SVG string path with a 1024-float zero-padded buffer (about 4 KB per path) and 0,0 as each segment's start point, so its bytes differ from json2rc's although both render the same; prefer primitives or pathCreate for small shapes",
+  "Path coordinates are canvas dp, not a 24x24 viewBox: scale the icon's numbers (or wrap it in a scale) to the canvas",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: literal coordinates sit in the top-left and get cut off when it is resized, so scale the drawing to fit (or derive positions from componentWidth()/componentHeight())"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/4",
+   "shows": "draw.path",
+   "note": "drawPath with an SVG d string: a heart from six cubic Bezier segments"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A symmetric red heart centred on a dark background. Resized, it scales to the shorter side and stays centred.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 130,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 320,
+    "height": 160
+   }
+  ]
+ },
+ "related": [
+  "DRW-05",
+  "DRW-01"
+ ],
+ "java_difference": "SVG path strings: the Java writer pads each to 1024 floats (RemotePathBase.getPath returns the backing array)",
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 554,
+  "header": {
+   "width": 200,
+   "height": 200
+  },
+  "op_count": 18,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DRAW_PATH": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 1,
+   "PATH_DATA": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": false,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     130,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "drawPath",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "modifiers",
+   "name",
+   "paint",
+   "path",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "root",
+   "scale",
+   "sx",
+   "sy",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width"
+  ],
+  "evidence": {
+   "draw.path": [
+    "drawPath"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:11.217Z"
+ }
+}

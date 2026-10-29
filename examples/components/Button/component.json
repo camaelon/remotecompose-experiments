@@ -1,0 +1,520 @@
+{
+ "component": "Button",
+ "version": 3,
+ "summary": "A tappable button: filled, outlined or text style, with an optional leading icon. Labelled for accessibility from its label; enabled: false dims it, drops the click and marks it disabled.",
+ "params": {
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Button text; also its accessibility label"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "filled",
+    "outlined",
+    "text"
+   ],
+   "default": "filled",
+   "static": true,
+   "doc": "filled: a solid pill (primary action); outlined: a 1.5 dp ring (secondary); text: label only (tertiary)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Fill (filled), or ring and label (outlined, text)"
+  },
+  "surface": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "outlined (and, in mono, filled and disabled): the colour the button sits on, which fills the inside of the ring. Pass @colors.surface for a button inside a Card"
+  },
+  "enabled": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false: dimmed, not clickable, announced as disabled"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Any click action (valueFloatChange, valueFloatExpressionChange, hostNamedAction, ...). Omitted: the button is not clickable"
+  }
+ },
+ "slots": {
+  "icon": {
+   "optional": true,
+   "doc": "A leading icon about 16 dp square, drawn in the label colour (onPrimary for filled). Without it the label is the only child"
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.decoration",
+  "a11y.labels"
+ ],
+ "call": {
+  "Button": {
+   "label": "Save",
+   "onClick": {
+    "type": "valueFloatChange",
+    "target": "@saved",
+    "value": 1
+   }
+  }
+ },
+ "pitfalls": [
+  "The outlined ring is two stacked backgrounds, not a border: `border` cannot take a theme colour (json2rc and the Java parser write the @colors id as a literal, transparent, colour). So the inside is painted with `surface`: set it to whatever the button sits on (@colors.surface in a Card), or the ring shows a background-coloured fill",
+  "The height is fixed (control_height, 40 dp); the width wraps the label, so give a row of buttons room or they overflow",
+  "The label is one line with an ellipsis (maxLines 1): in a slot narrower than the label it ends in … instead of wrapping and being clipped by the fixed height"
+ ],
+ "body": {
+  "$if": "theme.mono",
+  "then": {
+   "$if": "style == 'text'",
+   "then": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "height": "@theme.control_height"
+      },
+      {
+       "clip": "@theme.radius_md"
+      },
+      {
+       "$if": "style == 'filled'",
+       "then": {
+        "$if": "enabled",
+        "then": {
+         "background": "@color"
+        },
+        "else": {
+         "background": "@colors.disabled"
+        }
+       }
+      },
+      {
+       "padding": [
+        "@theme.space_4",
+        0
+       ]
+      },
+      {
+       "$if": "enabled",
+       "then": "ripple"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": "@enabled",
+        "clickable": "@enabled"
+       }
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "onClick": "@onClick"
+       }
+      }
+     ],
+     "children": [
+      {
+       "$if": "icon",
+       "then": {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "spacedBy": "@theme.space_2"
+          }
+         ],
+         "children": [
+          {
+           "$slot": "icon"
+          },
+          {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": "@theme.text_md",
+            "color": {
+             "$if": "enabled",
+             "then": {
+              "$if": "style == 'filled'",
+              "then": "@colors.onPrimary",
+              "else": "@color"
+             },
+             "else": "@colors.onDisabled"
+            }
+           }
+          }
+         ]
+        }
+       },
+       "else": {
+        "text": {
+         "value": "@label",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "fontSize": "@theme.text_md",
+         "color": {
+          "$if": "enabled",
+          "then": {
+           "$if": "style == 'filled'",
+           "then": "@colors.onPrimary",
+           "else": "@color"
+          },
+          "else": "@colors.onDisabled"
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "else": {
+    "box": {
+     "modifiers": [
+      {
+       "height": "@theme.control_height"
+      },
+      {
+       "clip": "@theme.radius_md"
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "background": "@color"
+       },
+       "else": {
+        "background": "@colors.disabled"
+       }
+      },
+      {
+       "padding": 1.5
+      },
+      {
+       "$if": "enabled",
+       "then": "ripple"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": "@enabled",
+        "clickable": "@enabled"
+       }
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "onClick": "@onClick"
+       }
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxHeight",
+         {
+          "clip": "@theme.radius_outline_inner"
+         },
+         {
+          "background": {
+           "$if": "enabled",
+           "then": {
+            "$if": "style == 'filled'",
+            "then": "@color",
+            "else": "@surface"
+           },
+           "else": "@surface"
+          }
+         },
+         {
+          "padding": [
+           "@theme.space_outline_inner",
+           0
+          ]
+         }
+        ],
+        "children": [
+         {
+          "$if": "icon",
+          "then": {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": "@theme.space_2"
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             },
+             {
+              "text": {
+               "value": "@label",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "fontSize": "@theme.text_md",
+               "color": {
+                "$if": "enabled",
+                "then": {
+                 "$if": "style == 'filled'",
+                 "then": "@colors.onPrimary",
+                 "else": "@color"
+                },
+                "else": "@colors.onDisabled"
+               }
+              }
+             }
+            ]
+           }
+          },
+          "else": {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": "@theme.text_md",
+            "color": {
+             "$if": "enabled",
+             "then": {
+              "$if": "style == 'filled'",
+              "then": "@colors.onPrimary",
+              "else": "@color"
+             },
+             "else": "@colors.onDisabled"
+            }
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "else": {
+   "$if": "style == 'outlined'",
+   "then": {
+    "box": {
+     "modifiers": [
+      {
+       "height": "@theme.control_height"
+      },
+      {
+       "clip": "@theme.radius_md"
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "background": "@color"
+       },
+       "else": {
+        "background": "@colors.disabled"
+       }
+      },
+      {
+       "padding": 1.5
+      },
+      {
+       "$if": "enabled",
+       "then": "ripple"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": "@enabled",
+        "clickable": "@enabled"
+       }
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "onClick": "@onClick"
+       }
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxHeight",
+         {
+          "clip": "@theme.radius_outline_inner"
+         },
+         {
+          "background": "@surface"
+         },
+         {
+          "padding": [
+           "@theme.space_outline_inner",
+           0
+          ]
+         }
+        ],
+        "children": [
+         {
+          "$if": "icon",
+          "then": {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": "@theme.space_2"
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             },
+             {
+              "text": {
+               "value": "@label",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "fontSize": "@theme.text_md",
+               "color": {
+                "$if": "enabled",
+                "then": "@color",
+                "else": "@colors.onDisabled"
+               }
+              }
+             }
+            ]
+           }
+          },
+          "else": {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": "@theme.text_md",
+            "color": {
+             "$if": "enabled",
+             "then": "@color",
+             "else": "@colors.onDisabled"
+            }
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "else": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "height": "@theme.control_height"
+      },
+      {
+       "clip": "@theme.radius_md"
+      },
+      {
+       "$if": "style == 'filled'",
+       "then": {
+        "$if": "enabled",
+        "then": {
+         "background": "@color"
+        },
+        "else": {
+         "background": "@colors.disabled"
+        }
+       }
+      },
+      {
+       "padding": [
+        "@theme.space_4",
+        0
+       ]
+      },
+      {
+       "$if": "enabled",
+       "then": "ripple"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": "@enabled",
+        "clickable": "@enabled"
+       }
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "onClick": "@onClick"
+       }
+      }
+     ],
+     "children": [
+      {
+       "$if": "icon",
+       "then": {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "spacedBy": "@theme.space_2"
+          }
+         ],
+         "children": [
+          {
+           "$slot": "icon"
+          },
+          {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": "@theme.text_md",
+            "color": {
+             "$if": "enabled",
+             "then": {
+              "$if": "style == 'filled'",
+              "then": "@colors.onPrimary",
+              "else": "@color"
+             },
+             "else": "@colors.onDisabled"
+            }
+           }
+          }
+         ]
+        }
+       },
+       "else": {
+        "text": {
+         "value": "@label",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "fontSize": "@theme.text_md",
+         "color": {
+          "$if": "enabled",
+          "then": {
+           "$if": "style == 'filled'",
+           "then": "@colors.onPrimary",
+           "else": "@color"
+          },
+          "else": "@colors.onDisabled"
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ }
+}

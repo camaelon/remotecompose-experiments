@@ -1,0 +1,200 @@
+{
+ "id": "LAY-08",
+ "name": "flow-chips",
+ "version": 3,
+ "title": "Wrapping tag chips",
+ "summary": "Twelve rounded tag chips of different lengths in a flow that wraps them onto as many lines as the width needs.",
+ "prompt": "A wrapping row of rounded tag chips of different lengths that flows onto new lines.",
+ "level": 2,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.flow"
+  ],
+  "secondary": [
+   "layout.spacing",
+   "layout.decoration",
+   "layout.size",
+   "text.basic",
+   "layout.scroll"
+  ]
+ },
+ "use_cases": [
+  "list"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "chips",
+  "tags",
+  "pills",
+  "wrap",
+  "flex wrap",
+  "flow row",
+  "badges"
+ ],
+ "teaches": [
+  "Wrap children onto new lines when the row is full with a flow",
+  "Make a pill chip from one text: clip roundedRect, a background and inner padding [12, 6]",
+  "Space flow items with padding on a wrapper box (end and bottom 8 dp), since a flow ignores spacedBy"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/0",
+   "shows": "layout.flow",
+   "note": "a fillMaxWidth flow of twelve chips"
+  },
+  {
+   "pointer": "/root/children/0/children/0",
+   "shows": "layout.decoration",
+   "note": "one chip: a padding [0, 0, 8, 8] gap box around a clipped, padded text pill"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Three lines of four chips at width 360; six lines at width 200 (C++ and TypeScript layouts agree). Resized: at 540 wide the chips fill two lines; at 240 wide they need five, more than 140 dp holds, so the root scrolls vertically (verticalScroll) instead of overflowing.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 140
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 140
+   }
+  ]
+ },
+ "pitfalls": [
+  "A flow ignores the spacedBy modifier (the Java reference and the C++ player both lay the chips edge to edge); give each item its own gap with padding on a wrapper",
+  "Do not fold the gap into the chip as a leading padding ([padding, clip, background, padding]): the Java player treats that first padding as a margin, but the C++ player paints the background over it, so keep the separate wrapper box",
+  "The Java layout reference measures text with a stub (100×10), so check line counts with the C++ or TypeScript layout, not java-layout.sh",
+  "A flow grows taller as its box narrows: in a fixed-height widget give the container a verticalScroll (or fewer items) or the last lines overflow the document"
+ ],
+ "prerequisites": [
+  "LAY-01",
+  "LAY-06"
+ ],
+ "related": [
+  "LAY-09",
+  "TXT-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2252,
+  "header": {
+   "width": 360,
+   "height": 140
+  },
+  "op_count": 123,
+  "operations": {
+   "ClipRectModifierOperation": 1,
+   "CoreText": 12,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 12,
+   "HEADER": 1,
+   "LAYOUT_BOX": 13,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 26,
+   "MODIFIER_BACKGROUND": 13,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 25,
+   "MODIFIER_WIDTH": 2,
+   "RoundedClipRectModifierOperation": 12,
+   "ScrollModifierOperation": 1,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     140
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     140
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "clip",
+   "color",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "scroll",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalScroll",
+   "width"
+  ],
+  "evidence": {
+   "layout.flow": [
+    "flow"
+   ],
+   "layout.spacing": [
+    "padding"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.scroll": [
+    "verticalScroll"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:06.540Z"
+ }
+}

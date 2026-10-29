@@ -1,0 +1,758 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 340,
+  "profiles": 513,
+  "contentDescription": "ProgressBar and ProgressRing at 0, 33, 66 and 100 percent, and one driven by a variable"
+ },
+ "resources": {
+  "variables": {
+   "download": {
+    "value": 0.42,
+    "export": true
+   },
+   "_n0": 0,
+   "_n1": 1
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "primary": "#FFFFFFFF",
+   "secondary": "#FFFFFFFF",
+   "success": "#FFFFFFFF",
+   "track": "#FF9E9E9E",
+   "warning": "#FFFFFFFF"
+  }
+ },
+ "root": [
+  {
+   "definePattern": {
+    "name": "ProgressBar__p",
+    "parameters": [
+     "progress"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 8
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 0.75,
+          "top": 0.75,
+          "right": "componentWidth() - 0.75",
+          "bottom": 7.25,
+          "rx": 3.25,
+          "ry": 3.25
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 0,
+          "top": 0,
+          "right": "max(8, componentWidth() * clamp(0, 1, @progress))",
+          "bottom": 8,
+          "rx": 4,
+          "ry": 4
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "definePattern": {
+    "name": "ProgressRing__p",
+    "parameters": [
+     "progress"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": 48
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 24,
+          "cy": 24,
+          "radius": 21
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "strokeWidth": 6
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 3,
+          "top": 3,
+          "right": 45,
+          "bottom": 45,
+          "startAngle": -90,
+          "sweepAngle": "@progress * 360"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 11.52
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@progress * 100",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "x": 24,
+          "y": 24,
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 12
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "ProgressBar",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "0%",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "width": 52
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "ProgressBar__p": {
+             "arguments": [
+              "@_n0"
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "33%",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "width": 52
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "ProgressBar__p": {
+             "arguments": [
+              0.33
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "66%",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "width": 52
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "ProgressBar__p": {
+             "arguments": [
+              0.66
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "100%",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "width": 52
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "ProgressBar__p": {
+             "arguments": [
+              "@_n1"
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": "ProgressRing",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "horizontalArrangement": "spaceEvenly",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "ProgressRing__p": {
+          "arguments": [
+           "@_n0"
+          ]
+         }
+        },
+        {
+         "ProgressRing__p": {
+          "arguments": [
+           0.33
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 48
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.5
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 24,
+             "cy": 24,
+             "radius": 21
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.success"
+              },
+              {
+               "strokeWidth": 6
+              }
+             ]
+            }
+           },
+           {
+            "drawArc": {
+             "left": 3,
+             "top": 3,
+             "right": 45,
+             "bottom": 45,
+             "startAngle": -90,
+             "sweepAngle": 237.6
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "textSize": 11.52
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textFromFloat",
+              "value": 66,
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "x": 24,
+             "y": 24,
+             "panX": 0,
+             "panY": 0
+            }
+           }
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 48
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.5
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 24,
+             "cy": 24,
+             "radius": 21
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.secondary"
+              },
+              {
+               "strokeWidth": 6
+              }
+             ]
+            }
+           },
+           {
+            "drawArc": {
+             "left": 3,
+             "top": 3,
+             "right": 45,
+             "bottom": 45,
+             "startAngle": -90,
+             "sweepAngle": 360
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "textSize": 11.52
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textFromFloat",
+              "value": 100,
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "x": 24,
+             "y": 24,
+             "panX": 0,
+             "panY": 0
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": "Bound to the host variable download (0.42)",
+       "fontSize": 12,
+       "color": "@colors.muted",
+       "maxLines": 1,
+       "overflow": "ellipsis"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 44
+           }
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.5
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 22,
+             "cy": 22,
+             "radius": 19.5
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.primary"
+              },
+              {
+               "strokeWidth": 5
+              }
+             ]
+            }
+           },
+           {
+            "drawArc": {
+             "left": 2.5,
+             "top": 2.5,
+             "right": 41.5,
+             "bottom": 41.5,
+             "startAngle": -90,
+             "sweepAngle": "@download * 360"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 12
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 12
+              }
+             ],
+             "commands": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.track"
+                 },
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": 1.5
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 0.75,
+                "top": 0.75,
+                "right": "componentWidth() - 0.75",
+                "bottom": 11.25,
+                "rx": 5.25,
+                "ry": 5.25
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.warning"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 0,
+                "top": 0,
+                "right": "max(12, componentWidth() * clamp(0, 1, @download))",
+                "bottom": 12,
+                "rx": 6,
+                "ry": 6
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

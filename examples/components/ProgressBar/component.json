@@ -1,0 +1,139 @@
+{
+ "component": "ProgressBar",
+ "version": 2,
+ "summary": "A horizontal progress bar filling its width: a rounded track with a fill of progress × width (progress 0..1, a number or a variable).",
+ "params": {
+  "progress": {
+   "type": "float",
+   "required": true,
+   "doc": "0..1; a number, a \"@variable\" or an expression; a change eases over 0.3 s (the bar or arc; a literal costs nothing)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Fill colour; the track is @colors.track"
+  },
+  "height": {
+   "type": "float",
+   "default": 8,
+   "static": true,
+   "doc": "Bar thickness in dp; the ends are fully rounded"
+  }
+ },
+ "capabilities": [
+  "data.measure",
+  "data.expression",
+  "draw.shapes"
+ ],
+ "call": {
+  "ProgressBar": {
+   "progress": "@downloaded"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": "@height"
+    }
+   ],
+   "commands": [
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1.5
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0.75,
+        "top": 0.75,
+        "right": "componentWidth() - 0.75",
+        "bottom": "@height - 0.75",
+        "rx": "@height / 2 - 0.75",
+        "ry": "@height / 2 - 0.75"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0,
+        "top": 0,
+        "right": "componentWidth()",
+        "bottom": "@height",
+        "rx": "@height / 2",
+        "ry": "@height / 2"
+       }
+      }
+     ]
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       }
+      ]
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": 0,
+      "top": 0,
+      "right": "max(@height, componentWidth() * clamp(0, 1, @pa))",
+      "bottom": "@height",
+      "rx": "@height / 2",
+      "ry": "@height / 2"
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "clamp takes (min, max, value): clamp(0, 1, @pa). clamp(@progress, 0, 1) is always 0 (the RPN is min max value CLAMP)",
+  "It fills its parent's width (componentWidth()): in a row put it in a weighted box, or it has no width",
+  "The fill is at least a round dot (max(height, width × progress)), so 0 % is not empty",
+  "A progress change animates: the drawing reads an animated local pa = {\"value\": \"@progress\", \"anim\": 0.3} (paint time). A literal progress folds to a number, so a static bar costs nothing extra; a value driven every frame just follows 0.3 s behind. Mono themes jump"
+ ],
+ "locals": {
+  "pa": {
+   "value": "@progress",
+   "anim": 0.3
+  }
+ }
+}

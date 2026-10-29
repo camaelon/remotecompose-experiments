@@ -1,0 +1,88 @@
+{
+ "component": "ListItem",
+ "version": 3,
+ "summary": "A 64 dp list row: optional leading content (an Avatar, an icon), a title with an optional subtitle, optional trailing content or a built-in chevron, and an optional click.",
+ "params": {
+  "title": { "type": "string", "required": true, "doc": "Also the accessibility label" },
+  "subtitle": { "type": "string", "doc": "Optional second line, muted, 12 sp" },
+  "chevron": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true: a muted › at the end (12 dp from the text or the trailing slot), for rows that open something"
+  },
+  "padding": {
+   "type": "float",
+   "default": 16,
+   "static": true,
+   "doc": "Start and end padding in dp. 0 inside a Card, which already pads its content, so the row lines up with the card title"
+  },
+  "onClick": { "type": "action", "doc": "Makes the whole row clickable, with a ripple" }
+ },
+ "slots": {
+  "leading": { "optional": true, "doc": "Before the text, 16 dp from it: an Avatar, a 24 dp icon" },
+  "trailing": { "optional": true, "doc": "After the text: a Switch, a Badge, a value" }
+ },
+ "capabilities": ["layout.stack", "layout.weight", "input.tap", "a11y.labels"],
+ "call": {
+  "ListItem": {
+   "title": "Ada Lovelace",
+   "subtitle": "Analyst",
+   "chevron": true,
+   "slots": { "leading": [{ "Avatar": { "initials": "AL" } }] }
+  }
+ },
+ "pitfalls": [
+  "Spacers, not spacedBy, separate the weighted text column from the slots: weights ignore spacedBy",
+  "Title and subtitle are one line each with an ellipsis: the text column is the weighted child, so in a narrow row it shortens with … and the slots and chevron keep their size, instead of the title wrapping out of the 64 dp row",
+  "Separate rows with a Divider whose inset is padding + 56 (lines it up with the text after a 40 dp Avatar): 72 by default, 56 with padding 0 in a Card"
+ ],
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    "fillMaxWidth",
+    { "height": 64 },
+    { "padding": ["@padding", 0] },
+    { "$if": "onClick", "then": "ripple" },
+    { "semantics": { "contentDescription": "@title" } },
+    { "onClick": "@onClick" }
+   ],
+   "children": [
+    { "$slot": "leading" },
+    { "$if": "leading", "then": { "box": { "modifiers": [{ "width": "@theme.space_4" }] } } },
+    {
+     "column": {
+      "modifiers": [{ "weight": 1 }],
+      "children": [
+       { "text": { "value": "@title", "maxLines": 1, "overflow": "ellipsis", "fontSize": "@theme.text_md", "color": "@colors.onSurface" } },
+       {
+        "$if": "subtitle",
+        "then": { "text": { "value": "@subtitle", "maxLines": 1, "overflow": "ellipsis", "fontSize": "@theme.text_sm", "color": "@colors.muted" } }
+       }
+      ]
+     }
+    },
+    { "$if": "trailing", "then": { "box": { "modifiers": [{ "width": "@theme.space_3" }] } } },
+    { "$slot": "trailing" },
+    {
+     "$if": "chevron",
+     "then": {
+      "canvas": {
+       "modifiers": [{ "width": 20 }, { "height": 14 }],
+       "commands": [
+        {
+         "paint": {
+          "ops": [{ "color": "@colors.muted" }, { "style": "stroke" }, { "strokeWidth": 2 }, { "strokeCap": "round" }]
+         }
+        },
+        { "drawLine": { "x1": 13, "y1": 1, "x2": 19, "y2": 7 } },
+        { "drawLine": { "x1": 19, "y1": 7, "x2": 13, "y2": 13 } }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

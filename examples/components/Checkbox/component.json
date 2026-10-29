@@ -1,0 +1,265 @@
+{
+ "component": "Checkbox",
+ "version": 2,
+ "summary": "A checkbox with its label: tapping the row flips its variable (0 or 1); the box fills and shows a tick when checked.",
+ "params": {
+  "checked": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The 0/1 state. Bind a document variable to read or drive it; omitted, the checkbox keeps its own"
+  },
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Shown next to the box; also the accessibility label"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Box fill when checked; the tick is white"
+  }
+ },
+ "capabilities": [
+  "input.toggle",
+  "a11y.labels",
+  "draw.shapes"
+ ],
+ "call": {
+  "Checkbox": {
+   "label": "Remember me",
+   "checked": "@remember"
+  }
+ },
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    {
+     "height": "@theme.control_height"
+    },
+    {
+     "spacedBy": "@theme.space_3"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label",
+      "clickable": true
+     }
+    },
+    {
+     "onClick": {
+      "type": "valueFloatExpressionChange",
+      "target": "@checked",
+      "value": "1 - @checked"
+     }
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "width": 22
+       },
+       {
+        "height": 22
+       }
+      ],
+      "commands": [
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.outline"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": "@theme.stroke"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 1,
+           "top": 1,
+           "right": 21,
+           "bottom": 21,
+           "rx": 5,
+           "ry": 5
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "alpha": "@checked"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 1,
+           "top": 1,
+           "right": 21,
+           "bottom": 21,
+           "rx": 5,
+           "ry": 5
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "strokeWidth": 2.5
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 5.5,
+           "y1": 11.5,
+           "x2": 9.5,
+           "y2": 15.5
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 9.5,
+           "y1": 15.5,
+           "x2": 16.5,
+           "y2": 7
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.outline"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 2
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 1,
+           "top": 1,
+           "right": 21,
+           "bottom": 21,
+           "rx": 5,
+           "ry": 5
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@p"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 0,
+           "top": 0,
+           "right": 22,
+           "bottom": 22,
+           "rx": 6,
+           "ry": 6
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FFFFFFFF"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 2.5
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "alpha": "@p"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 5.5,
+           "y1": 11.5,
+           "x2": 9.5,
+           "y2": 15.5
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 9.5,
+           "y1": 15.5,
+           "x2": 16.5,
+           "y2": 7
+          }
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": "@label",
+      "fontSize": "@theme.text_md",
+      "color": "@colors.onSurface"
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The tick is two drawLine calls, not an SVG path string: the Java JSON parser writes every path string padded to 1024 floats (about 4 KB)",
+  "The whole 40 dp row (box and label) is the touch target; give it room, it wraps its label",
+  "Checking animates at paint time: an animated local p = {\"value\": \"@checked\", \"anim\": 0.15} fades the fill and the tick in (paint alpha p); in mono they appear at once"
+ ],
+ "locals": {
+  "p": {
+   "value": "@checked",
+   "anim": 0.15
+  }
+ }
+}

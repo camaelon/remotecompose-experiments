@@ -1,0 +1,369 @@
+{
+ "component": "Gauge",
+ "version": 3,
+ "summary": "A 240° dial gauge: a value arc from min to max, green, then amber past warnAt and red past alertAt, with the value and a label in the centre.",
+ "params": {
+  "value": {
+   "type": "float",
+   "required": true,
+   "doc": "A number or a \"@variable\", in min..max (clamped for the arc)"
+  },
+  "min": {
+   "type": "float",
+   "default": 0,
+   "doc": "Value at the start of the arc; leave it 0 when you can (a shorter expression)"
+  },
+  "max": {
+   "type": "float",
+   "default": 100,
+   "doc": "Value at the end of the arc"
+  },
+  "label": {
+   "type": "string",
+   "default": "",
+   "doc": "Under the value, e.g. \"CPU %\"; also the accessibility label"
+  },
+  "warnAt": {
+   "type": "float",
+   "default": 0.6,
+   "doc": "Fraction of the range where amber starts"
+  },
+  "alertAt": {
+   "type": "float",
+   "default": 0.85,
+   "doc": "Fraction where red starts"
+  },
+  "size": {
+   "type": "float",
+   "default": 140,
+   "static": true,
+   "doc": "Width and height in dp (with fill, the design size the drawing is scaled from)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space the caller gives it (fillMaxSize) and scale the dial to fit, centred, instead of a fixed size; give it a parent with a size or a weight"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Arc stroke width in dp"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the centre value"
+  }
+ },
+ "locals": {
+  "frac": {
+   "$if": "min",
+   "then": "(@value - @min) / (@max - @min)",
+   "else": "@value / @max"
+  },
+  "sweep": "clamp(0, 240, @frac * 240)"
+ },
+ "capabilities": [
+  "draw.arc",
+  "text.dynamic",
+  "data.condition"
+ ],
+ "call": {
+  "Gauge": {
+   "value": "@cpu",
+   "label": "CPU %"
+  }
+ },
+ "pitfalls": [
+  "Zone colours without colour expressions: three arcs of the same sweep are drawn on top of each other, green always, amber with paint alpha step(f, warnAt), red with alpha step(f, alertAt); the topmost visible one wins. The text paint then resets alpha to 1",
+  "step(x, edge) is x > edge, and clamp takes (min, max, value)",
+  "The fraction and the sweep are locals: each is one float expression shared by the three arcs and both alphas (a literal value folds them to numbers, so nothing is computed at run time)",
+  "A fixed `size` does not shrink: two 140 dp gauges overflow a row narrower than about 300 dp. Where the space varies, pass fill: true and give the call a sized or weighted parent (weights ignore spacedBy: put the gap in a padding); the dial is still drawn at `size` and one translate + scale fits it, so every coordinate stays a folded number. The scale is min(width, height) written as (w + h - abs(w - h)) / 2: min() over componentWidth()/componentHeight() comes out wrong inside a pattern template (C++ and TS players)"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": {
+      "size": "@size"
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "$if": "fill",
+     "then": [
+      {
+       "translate": {
+        "dx": "(componentWidth() - @size) / 2",
+        "dy": "(componentHeight() - @size) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
+        "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
+        "pivotX": "@size / 2",
+        "pivotY": "@size / 2"
+       }
+      }
+     ]
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.track"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": {
+         "$if": "theme.mono",
+         "then": 1.5,
+         "else": "@thickness"
+        }
+       },
+       {
+        "strokeCap": "round"
+       }
+      ]
+     }
+    },
+    {
+     "drawArc": {
+      "left": "@thickness",
+      "top": "@thickness",
+      "right": "@size - @thickness",
+      "bottom": "@size - @thickness",
+      "startAngle": 150,
+      "sweepAngle": 240
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "strokeWidth": "@theme.stroke"
+         },
+         {
+          "strokeCap": "butt"
+         }
+        ]
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "150 + @warnAt * 240",
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size - @thickness * 1.5 - 3",
+           "y1": "@size / 2",
+           "x2": "@size - @thickness / 2 + 3",
+           "y2": "@size / 2"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "150 + @alertAt * 240",
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size - @thickness * 1.5 - 3",
+           "y1": "@size / 2",
+           "x2": "@size - @thickness / 2 + 3",
+           "y2": "@size / 2"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.success"
+         },
+         {
+          "strokeWidth": "@thickness / 2"
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawArc": {
+        "left": "@thickness",
+        "top": "@thickness",
+        "right": "@size - @thickness",
+        "bottom": "@size - @thickness",
+        "startAngle": 150,
+        "sweepAngle": "@sweep"
+       }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.success"
+         }
+        ]
+       }
+      },
+      {
+       "drawArc": {
+        "left": "@thickness",
+        "top": "@thickness",
+        "right": "@size - @thickness",
+        "bottom": "@size - @thickness",
+        "startAngle": 150,
+        "sweepAngle": "@sweep"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "alpha": "step(@frac, @warnAt)"
+         }
+        ]
+       }
+      },
+      {
+       "drawArc": {
+        "left": "@thickness",
+        "top": "@thickness",
+        "right": "@size - @thickness",
+        "bottom": "@size - @thickness",
+        "startAngle": 150,
+        "sweepAngle": "@sweep"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.error"
+         },
+         {
+          "alpha": "step(@frac, @alertAt)"
+         }
+        ]
+       }
+      }
+     ]
+    },
+    {
+     "drawArc": {
+      "left": "@thickness",
+      "top": "@thickness",
+      "right": "@size - @thickness",
+      "bottom": "@size - @thickness",
+      "startAngle": 150,
+      "sweepAngle": "@sweep"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.onSurface"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       },
+       {
+        "textSize": "@size * 0.22"
+       }
+      ]
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": {
+       "type": "textFromFloat",
+       "value": "@value",
+       "whole": 4,
+       "decimal": "@decimals",
+       "flags": 5
+      },
+      "x": "@size / 2",
+      "y": "@size / 2",
+      "panX": 0,
+      "panY": 0
+     }
+    },
+    {
+     "$if": "label",
+     "then": {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.muted"
+        },
+        {
+         "textSize": "@size * 0.1"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "label",
+     "then": {
+      "drawTextAnchored": {
+       "text": "@label",
+       "x": "@size / 2",
+       "y": "@size * 0.72",
+       "panX": 0,
+       "panY": 0
+      }
+     }
+    }
+   ]
+  }
+ }
+}

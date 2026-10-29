@@ -1,0 +1,188 @@
+{
+ "id": "DX-05",
+ "name": "needless-repaint",
+ "version": 3,
+ "title": "Diagnostic: needless repaint",
+ "summary": "Deliberately flawed: a static card whose corner radius is 20 + 0 * continuousSec(), a time read with no visible effect that still makes the document repaint every frame (audit repaint_continuous).",
+ "prompt": "A static card that reads continuousSec() in an expression with no visible effect.",
+ "level": 2,
+ "family": "DX",
+ "capabilities": {
+  "primary": [
+   "time.animation"
+  ],
+  "secondary": [
+   "data.expression",
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "repaint",
+  "redraw every frame",
+  "battery drain",
+  "continuous redraw",
+  "performance",
+  "frame loop",
+  "always animating",
+  "diagnostic",
+  "audit fixture"
+ ],
+ "teaches": [
+  "Recognise repaint_continuous: any operation that listens to continuousSec() puts the document on a repaint-every-frame loop, even when the value changes nothing on screen",
+  "Find the culprit in the finding's cause (the FloatExpression listening to $CONTINUOUS_SEC) and replace it with a constant"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/3/drawRoundRect/rx",
+   "shows": "time.animation",
+   "note": "the flaw: 20 + 0 * continuousSec()"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "expect_findings": [
+  "repaint_continuous"
+ ],
+ "check": {
+  "describe": "audit reports only repaint_continuous (info), whose cause is 1 operation listening to $CONTINUOUS_SEC (the FloatExpression for rx); the card itself renders as a static teal card. Resized, the background fills the box and the card stretches to the width with 30 dp margins, centred vertically; it still repaints every frame.",
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "DX-03"
+ ],
+ "pitfalls": [
+  "The plan's animationTime() does not trigger it: the engine's repaint schedule (RemoteComposeState.getOpsToUpdate) only looks at listeners on continuousSec, timeInSec and timeInMin, so a FloatExpression reading animationTime() alone is reported idle; continuousSec() is the read that costs a frame loop"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 456,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 22,
+  "operations": {
+   "ANIMATED_FLOAT": 6,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     200
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "time.animation": [
+    "continuousSec"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:23.627Z"
+ }
+}

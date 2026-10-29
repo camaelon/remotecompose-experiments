@@ -1,0 +1,276 @@
+{
+ "id": "LAY-14",
+ "name": "collapsible-column",
+ "version": 2,
+ "title": "Collapsible weather column",
+ "summary": "A narrow weather widget at four heights: a collapsibleColumn keeps city and temperature (no priority), then the icon, high/low and condition by vertical collapsiblePriority, and three tied forecast rows that drop from the bottom up.",
+ "prompt": "A tall, narrow weather widget (city, sun icon, temperature, condition, high/low, three hourly forecast rows) that sheds content as it gets shorter: the forecast rows go first from the bottom, then the condition, then high/low, then the icon; city and temperature always stay. Show it at 256, 208, 164 and 100 dp.",
+ "level": 3,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.responsive"
+  ],
+  "secondary": [
+   "layout.stack",
+   "layout.align",
+   "layout.size",
+   "layout.spacing",
+   "layout.decoration",
+   "draw.shapes",
+   "text.basic",
+   "layout.scroll"
+  ]
+ },
+ "use_cases": [
+  "widget",
+  "weather"
+ ],
+ "form_factor": "widget-2x2",
+ "keywords": [
+  "collapsible column",
+  "vertical priority",
+  "resizable widget",
+  "widget height",
+  "drop rows when short",
+  "hide on small screens",
+  "adaptive widget",
+  "forecast rows",
+  "progressive disclosure"
+ ],
+ "teaches": [
+  "Stack a widget's content in a collapsibleColumn so rows that don't fit the height are dropped instead of clipped",
+  "Rank the rows with collapsiblePriority {orientation: vertical, priority: N}; leave the rows that must stay (city, temperature) without one",
+  "Give repeated rows the same priority: tied children keep document order, so the forecast drops from the bottom row up",
+  "Put the padding and background on a wrapping box and give the collapsibleColumn fillMaxSize, so fillMaxWidth rows stay inside the padding"
+ ],
+ "pitfalls": [
+  "The priority's orientation must match the container: a horizontal collapsiblePriority on a collapsibleColumn child is ignored and the child counts as unprioritized (kept first)",
+  "A collapsibleColumn's own padding is not applied to its children's fill width: a fillMaxWidth row inside a padded collapsibleColumn comes out as wide as the column and offset by -padding (Java, matched by both players). Pad a wrapping box instead",
+  "Rows are kept in priority order, not document order: at 164 dp high/low (priority 3) stays while the condition above it (priority 2) goes, and the remaining rows close up",
+  "Dropping stops at the first row that does not fit: every row after it in priority order goes too, even one small enough for the space left (a 10 dp priority-1 row is dropped under a 40 dp priority-2 row that did not fit). Give similar-sized rows adjacent priorities",
+  "Give the rows fixed heights (here 20–48 dp boxes) when the result has to be predictable: a text's height depends on the font and the player",
+  "A row of fixed-width demo cards is wider than a narrow host: give the row a horizontalScroll (bound to a variable — a literal position leaves its touch expression unused, which the audit reports as dead code)"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/row/children/0/column/children/1/box/children/0",
+   "shows": "layout.responsive",
+   "note": "the collapsibleColumn with its eight rows, inside the padded card box"
+  },
+  {
+   "pointer": "/root/row/children/0/column/children/1/box/children/0/collapsibleColumn/children/3/box/modifiers/2",
+   "shows": "layout.responsive",
+   "note": "condition, vertical priority 2: goes before high/low (3) and the icon (4)"
+  },
+  {
+   "pointer": "/root/row/children/0/column/children/1/box/children/0/collapsibleColumn/children/5/row/modifiers/2",
+   "shows": "layout.responsive",
+   "note": "a forecast row, priority 1: the three tie and drop bottom-up"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Four cards: the first fills the height (256 dp at 300) and shows everything; 208 dp keeps one forecast row; 164 dp keeps city, icon, temperature and high/low (the condition and forecast are gone); 100 dp keeps city and temperature only. Verified against Java (java-layout.sh 360 300): the same rows are gone and the C++ and TS bounds match it. Resized: the full-height card is the live one — at 360×200 it (and the taller fixed cards, squeezed to the row) keep city, icon and temperature; at 360×400 it shows everything with room to spare; at 240 wide the row scrolls horizontally (horizontalScroll) rather than cutting the last card.",
+  "render": {},
+  "renders": [
+   {
+    "name": "short",
+    "width": 360,
+    "height": 200
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 400
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 300
+   }
+  ]
+ },
+ "prerequisites": [
+  "LAY-13"
+ ],
+ "related": [
+  "LAY-09",
+  "LAY-13",
+  "LAY-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 4995,
+  "header": {
+   "width": 360,
+   "height": 300
+  },
+  "op_count": 367,
+  "operations": {
+   "CanvasContent": 4,
+   "ClipRectModifierOperation": 1,
+   "CollapsibleColumnLayout": 4,
+   "CoreText": 44,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 14,
+   "DRAW_CIRCLE": 8,
+   "HEADER": 1,
+   "LAYOUT_BOX": 24,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 13,
+   "LayoutComponentContent": 93,
+   "MODIFIER_BACKGROUND": 5,
+   "MODIFIER_COLLAPSIBLE_PRIORITY": 24,
+   "MODIFIER_HEIGHT": 50,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_WIDTH": 49,
+   "PAINT_VALUES": 8,
+   "RoundedClipRectModifierOperation": 4,
+   "ScrollModifierOperation": 1,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "short": {
+    "render": "render-short.png",
+    "render_findings": [],
+    "size": [
+     360,
+     200
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     360,
+     400
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     300
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "collapsibleColumn",
+   "collapsiblePriority",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalScroll",
+   "modifiers",
+   "orientation",
+   "padding",
+   "paint",
+   "priority",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "row",
+   "scroll",
+   "size",
+   "spacedBy",
+   "text",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "layout.responsive": [
+    "collapsibleColumn",
+    "collapsiblePriority"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "fillMaxHeight"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.scroll": [
+    "horizontalScroll"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:13.704Z"
+ }
+}

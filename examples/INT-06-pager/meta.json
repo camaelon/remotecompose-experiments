@@ -1,0 +1,343 @@
+{
+ "id": "INT-06",
+ "name": "pager",
+ "version": 3,
+ "title": "Swipe pager with dots",
+ "summary": "Three full-width cards swiped horizontally; the strip snaps, animated, to the nearest page and a dot indicator follows.",
+ "prompt": "Make a horizontal pager of three cards I can swipe between; it should snap to the nearest card and show page dots.",
+ "level": 4,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.pager"
+  ],
+  "secondary": [
+   "data.expression",
+   "draw.shapes",
+   "text.anchor",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "onboarding",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "pager",
+  "carousel",
+  "swipe",
+  "slides",
+  "page indicator",
+  "view pager",
+  "snap",
+  "onboarding",
+  "dots"
+ ],
+ "components": [
+  "PagerDots",
+  "Card"
+ ],
+ "teaches": [
+  "Track a horizontal swipe in pixels with touchExpression [\"touchX()\"] (default and max 2 * @w with @w = componentWidth(), min 0, touchMode 1 so it stops where released)",
+  "Snap to a page by rounding: page = round((2 * @w - @px) / @w)",
+  "Slide to the snapped page with an animated expression {\"value\": \"@w * -@page\", \"anim\": 0.35} and translate the strip of pages by it",
+  "Move the active dot with the same animated value (cx = 160 - @shift / 18), so the dot and the strip stay in step"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/2",
+   "shows": "input.pager",
+   "note": "the swipe, in px: dragging left lowers px; it starts at, and is capped by, 2 * @w (page 0), so the range follows the live width"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "input.pager",
+   "note": "page index: the nearest whole page, in page widths of the live componentWidth()"
+  },
+  {
+   "pointer": "/root/commands/4",
+   "shows": "data.expression",
+   "note": "strip offset, animated over 0.35 s whenever page changes"
+  },
+  {
+   "pointer": "/root/commands/5/save/commands/7",
+   "shows": "draw.shapes",
+   "note": "page 2’s card: the strip is translated by the animated shift, then by one page width (@w) per card"
+  },
+  {
+   "pointer": "/root/commands/6/save/commands/6",
+   "shows": "draw.shapes",
+   "note": "the active dot, derived from the same animated shift: -20 - @shift / @w * 20 around the centred dots"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts on Today with the first dot lit; a 200 px swipe left lands on This week, with the second dot lit. Resized, a page is the live componentWidth() wide and the cards, labels and dots follow the box: at 234×200 a 140 px swipe (over half a page) lands on This week, at 540×260 a 300 px swipe does, with taller cards and the dots still at the bottom.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "down",
+     "x": 300,
+     "y": 80
+    },
+    {
+     "t": 0.3,
+     "type": "move",
+     "x": 200,
+     "y": 80
+    },
+    {
+     "t": 0.5,
+     "type": "move",
+     "x": 100,
+     "y": 80
+    },
+    {
+     "t": 0.6,
+     "type": "up",
+     "x": 100,
+     "y": 80
+    }
+   ],
+   "duration": 1.5
+  },
+  "interact": [
+   {
+    "drag": [
+     300,
+     80,
+     100,
+     80
+    ]
+   },
+   {
+    "wait": 1
+   }
+  ],
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 200,
+      "y": 80
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 130,
+      "y": 80
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 60,
+      "y": 80
+     },
+     {
+      "t": 0.6,
+      "type": "up",
+      "x": 60,
+      "y": 80
+     }
+    ],
+    "duration": 1.5
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 260,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 450,
+      "y": 80
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 300,
+      "y": 80
+     },
+     {
+      "t": 0.5,
+      "type": "move",
+      "x": 150,
+      "y": 80
+     },
+     {
+      "t": 0.6,
+      "type": "up",
+      "x": 150,
+      "y": 80
+     }
+    ],
+    "duration": 1.5
+   }
+  ]
+ },
+ "related": [
+  "INT-04",
+  "INT-05"
+ ],
+ "pitfalls": [
+  "The Java JSON parser does not read touchSpec, so the notch stop modes (notchesEven and friends) cannot be configured from JSON, and on Android they index an empty spec; snap the displayed value with round() instead",
+  "Delta touch modes (0–5) move the value by the drag distance, so a leftward swipe lowers px; start at max (2 * @w = page 0) so swiping left can reach the later pages",
+  "Only the display snaps: the touch value keeps the fractional position, so the next swipe starts from where the last one ended rather than from the page boundary",
+  "A touchExpression expression element that is an infix formula is compiled separately; keep [\"touchX()\"] and scale afterwards if you want a release velocity",
+  "A pager that hard-codes the page width (360, 720) breaks as soon as the host is narrower or wider: read componentWidth() into a variable and use it for the page width, the touch range (defaultValue and max accept expressions) and the page index"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1184,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 61,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 19,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 4,
+   "DRAW_CIRCLE": 4,
+   "DRAW_ROUND_RECT": 3,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_SAVE": 2,
+   "MATRIX_TRANSLATE": 4,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 8,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     200
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     260
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "defaultValue",
+   "drawCircle",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "expression",
+   "header",
+   "height",
+   "left",
+   "max",
+   "min",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "save",
+   "semantics",
+   "text",
+   "textSize",
+   "top",
+   "touchExpression",
+   "touchMode",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "input.pager": [
+    "touchExpression"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:57.037Z"
+ }
+}

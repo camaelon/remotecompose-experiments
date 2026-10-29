@@ -1,0 +1,306 @@
+{
+ "id": "EXP-10",
+ "name": "modifier-expressions",
+ "version": 2,
+ "title": "Expressions in layout modifiers",
+ "summary": "A download card where layout modifiers take expressions: the bar is fillMaxWidth(@p), the percent bubble is offset by clamp(0, 280, @p * 328 − 24), equalizer bars get height from an array, and the caption fades with graphicsLayer alpha.",
+ "prompt": "A download progress card: a bar filled to the progress, a percentage bubble that rides above the end of the bar, a row of level bars, and a caption that fades in as progress grows.",
+ "level": 3,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.modifiers"
+  ],
+  "secondary": [
+   "layout.size",
+   "layout.spacing",
+   "expr.shaping",
+   "expr.math",
+   "expr.format",
+   "expr.string",
+   "data.array",
+   "layout.decoration",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "loading-state",
+  "media-player"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "progress bar",
+  "download progress",
+  "percentage bubble",
+  "dynamic width",
+  "dynamic height",
+  "offset",
+  "fade",
+  "equalizer",
+  "data driven layout"
+ ],
+ "teaches": [
+  "Pass an expression to a size modifier: {\"fillMaxWidth\": \"@p\"} fills that fraction of the parent, {\"height\": \"10 + 54 * arrayGet(@eq, k)\"} sets pixels",
+  "Move a component with {\"offset\": {\"x\": expr, \"y\": 0}}, clamping the expression so it stays inside its box",
+  "Fade a component with {\"graphicsLayer\": {\"alpha\": \"0.2 + 0.8 * @p\"}}"
+ ],
+ "pitfalls": [
+  "spacedBy parses an expression but the layouts keep it as a constant: \"spacedBy\": \"@gap\" writes a variable id that is used as a number (NaN), and the children lose their positions. Use constant spacing",
+  "Padding takes an expression only in its single-number form ({\"padding\": \"@pad\"}); the list and object forms are read as constants",
+  "fillMaxWidth's fraction is of the parent's width after its padding; the bubble's offset is in pixels, so it multiplies by the track width (328) itself",
+  "Inside a modifier, componentWidth() is the width of the component being modified (the 48 dp bubble), not of its parent: for a position along the parent, derive it from windowWidth() minus the padding, or a weight/fraction",
+  "Ten 22 dp bars with 8 dp gaps overflow a narrower host: give each bar weight 1 with widthIn [0, 30] and an end padding for the gap, so they shrink but never grow past the design"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/2/box/children/0/box/modifiers/0",
+   "shows": "expr.modifiers",
+   "note": "fillMaxWidth: \"@p\" — the bar fills 65 %"
+  },
+  {
+   "pointer": "/root/children/1/box/children/0/box/modifiers/0",
+   "shows": "expr.modifiers",
+   "note": "offset x = clamp(0, windowWidth() - 80, @p * (windowWidth() - 32) - 24): the bubble follows the bar end at any width (the bar spans the window minus the 16 dp padding each side)"
+  },
+  {
+   "pointer": "/root/children/3/children/0/box/modifiers/2",
+   "shows": "layout.size",
+   "note": "height from an array element"
+  },
+  {
+   "pointer": "/root/children/4/text/modifiers/0",
+   "shows": "expr.modifiers",
+   "note": "graphicsLayer alpha 0.2 + 0.8 * @p"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "p": {
+    "type": "float",
+    "meaning": "progress 0..1",
+    "default": 0.65,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The blue bar is filled to 65 % with a 65 % bubble centred over its end, ten purple bars of different heights below, and a dimmed caption. Resized, the bubble stays centred over the bar end (65 % of the live width), and the ten bars share the row (weight 1, at most 30 dp each with an 8 dp end padding as the gap): thinner at 234 wide, as at 360 when wider.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 215
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 215
+   }
+  ]
+ },
+ "related": [
+  "LAY-05",
+  "LAY-06",
+  "VAR-02"
+ ],
+ "prerequisites": [
+  "LAY-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2624,
+  "header": {
+   "width": 360,
+   "height": 215
+  },
+  "op_count": 135,
+  "operations": {
+   "ANIMATED_FLOAT": 14,
+   "COMPONENT_VALUE": 1,
+   "CoreText": 3,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 3,
+   "DataListFloat": 1,
+   "GraphicsLayerModifier": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 14,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 8,
+   "MODIFIER_BACKGROUND": 14,
+   "MODIFIER_HEIGHT": 16,
+   "MODIFIER_OFFSET": 1,
+   "MODIFIER_PADDING": 11,
+   "MODIFIER_WIDTH": 16,
+   "MODIFIER_WIDTH_IN": 10,
+   "NAMED_VARIABLE": 2,
+   "RoundedClipRectModifierOperation": 13,
+   "TextFromFloat": 1,
+   "TextMerge": 1
+  },
+  "host_variables": [
+   {
+    "name": "eq",
+    "type": "float_array",
+    "value": [
+     0.300000012,
+     0.550000012,
+     0.899999976,
+     0.699999988,
+     1,
+     0.600000024,
+     0.800000012,
+     0.449999988,
+     0.649999976,
+     0.349999994
+    ]
+   },
+   {
+    "name": "p",
+    "type": "float",
+    "value": 0.649999976
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: unused_variables",
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     215
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     215
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables",
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "contentDescription",
+   "decimal",
+   "end",
+   "eq",
+   "export",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "graphicsLayer",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "modifiers",
+   "offset",
+   "p",
+   "padding",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "weight",
+   "whole",
+   "width",
+   "widthIn",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "expr.modifiers": [
+    "graphicsLayer",
+    "offset"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "fillMaxHeight",
+    "widthIn"
+   ],
+   "layout.spacing": [
+    "padding",
+    "offset",
+    "spacedBy"
+   ],
+   "expr.shaping": [
+    "clamp("
+   ],
+   "expr.math": [
+    "round("
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "expr.string": [
+    "textMerge"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:37.876Z"
+ }
+}

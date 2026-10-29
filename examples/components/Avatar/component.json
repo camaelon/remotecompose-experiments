@@ -1,0 +1,83 @@
+{
+ "component": "Avatar",
+ "version": 2,
+ "summary": "A round avatar showing initials on a colour.",
+ "params": {
+  "initials": {
+   "type": "string",
+   "required": true,
+   "doc": "One or two letters"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.secondary",
+   "doc": "Background; the initials are onPrimary"
+  },
+  "size": {
+   "type": "float",
+   "default": 40,
+   "static": true,
+   "doc": "Diameter in dp; the initials are 40% of it"
+  }
+ },
+ "capabilities": [
+  "layout.decoration",
+  "text.basic"
+ ],
+ "call": {
+  "Avatar": {
+   "initials": "AK"
+  }
+ },
+ "body": {
+  "box": {
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "modifiers": [
+    {
+     "size": "@size"
+    },
+    {
+     "clip": "@size / 2"
+    },
+    {
+     "background": "@color"
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "padding": "@theme.stroke"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "clip": "@size / 2 - @theme.stroke"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "background": "@colors.background"
+     }
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "@initials",
+      "fontSize": "@size * 0.4",
+      "color": {
+       "$if": "theme.mono",
+       "then": "@color",
+       "else": "@colors.onPrimary"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Round by clipping to a rounded rect of radius size / 2: a `clip` circle shape writes nothing (Java and json2rc alike)"
+ ]
+}

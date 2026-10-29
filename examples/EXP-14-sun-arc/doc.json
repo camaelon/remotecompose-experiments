@@ -1,0 +1,42 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 210, "profiles": 513, "contentDescription": "The sun's position on its arc between sunrise and sunset, with the daylight left"},
+ "resources": {"variables": {
+   "rise": {"value": 412, "export": true},
+   "set": {"value": 1094, "export": true},
+   "now": "timeInMin()",
+   "t": "clamp(0, 1, (@now - @rise) / (@set - @rise))",
+   "day": "step(@now, @rise) * (1 - step(@now, @set))",
+   "left": "floor(max(0, @set - @now))"
+ }},
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "fit", "value": "min(componentWidth() / 360, componentHeight() / 210)"}},
+   {"translate": {"dx": "(componentWidth() - 360 * @fit) / 2", "dy": "(componentHeight() - 210 * @fit) / 2"}},
+   {"scale": {"sx": "@fit", "sy": "@fit"}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 16}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "floor(@left / 60)", "whole": 2, "decimal": 0, "flags": 5}, "id2": {"type": "textMerge", "id1": " h ", "id2": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "@left % 60", "whole": 2, "decimal": 0, "flags": 5}, "id2": " min of daylight left"}}}, "x": 180, "y": 26, "panX": 0, "panY": 0}},
+   {"pathExpression": {"id": "arc", "expressionX": "180 - 130 * cos(a[0])", "expressionY": "160 - 105 * sin(a[0])", "start": 0, "end": 3.14159, "count": 64}},
+   {"pathExpression": {"id": "done", "expressionX": "180 - 130 * cos(a[0] * @t)", "expressionY": "160 - 105 * sin(a[0] * @t)", "start": 0, "end": 3.14159, "count": 64}},
+   {"paint": {"ops": [{"color": "#FF2A3A4E"}, {"style": "stroke"}, {"strokeWidth": 2}, {"strokeCap": "round"}]}},
+   {"drawPath": {"path": "arc"}},
+   {"paint": {"ops": [{"color": "#FFFFCA28"}, {"strokeWidth": 3}]}},
+   {"drawPath": {"path": "done"}},
+   {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"strokeWidth": 1}]}},
+   {"drawLine": {"x1": 20, "y1": 160, "x2": 340, "y2": 160}},
+   {"paint": {"ops": [{"style": "fill"}, {"color": "#FFFFCA28"}, {"alpha": "0.25 * @day"}]}},
+   {"drawCircle": {"cx": "180 - 130 * cos(@t * 3.14159)", "cy": "160 - 105 * sin(@t * 3.14159)", "radius": 22}},
+   {"paint": {"ops": [{"alpha": "0.35 + 0.65 * @day"}]}},
+   {"drawCircle": {"cx": "180 - 130 * cos(@t * 3.14159)", "cy": "160 - 105 * sin(@t * 3.14159)", "radius": 12}},
+   {"paint": {"ops": [{"alpha": 1}, {"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "Sunrise", "x": 50, "y": 178, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "Sunset", "x": 310, "y": 178, "panX": 0, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 15}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "floor(@rise / 60)", "whole": 2, "decimal": 0, "flags": 13}, "id2": {"type": "textMerge", "id1": ":", "id2": {"type": "textFromFloat", "value": "@rise % 60", "whole": 2, "decimal": 0, "flags": 13}}}, "x": 50, "y": 196, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "floor(@set / 60)", "whole": 2, "decimal": 0, "flags": 13}, "id2": {"type": "textMerge", "id1": ":", "id2": {"type": "textFromFloat", "value": "@set % 60", "whole": 2, "decimal": 0, "flags": 13}}}, "x": 310, "y": 196, "panX": 0, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFCA28"}, {"textSize": 13}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "floor(@now / 60)", "whole": 2, "decimal": 0, "flags": 13}, "id2": {"type": "textMerge", "id1": ":", "id2": {"type": "textFromFloat", "value": "@now % 60", "whole": 2, "decimal": 0, "flags": 13}}}, "x": 180, "y": 190, "panX": 0, "panY": 0}}
+  ]
+ }
+}

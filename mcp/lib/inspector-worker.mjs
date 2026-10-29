@@ -222,6 +222,8 @@ function header() {
     return {
         version: `${h.mMajorVersion ?? "?"}.${h.mMinorVersion ?? "?"}.${h.mPatchVersion ?? "?"}`,
         width: natural.width, height: natural.height, profiles: h.mProfiles ?? null,
+        // DOC_CONTENT_DESCRIPTION (9), the document-level accessibility description.
+        content_description: (() => { try { return h.get?.(9) ?? null; } catch { return null; } })(),
     };
 }
 
@@ -278,7 +280,7 @@ function interactionTargets() {
 function accessibility() {
     const a = ACC.buildAccessibilityTree(doc);
     return {
-        has_semantics: a.hasSemantics, document_description: a.documentDescription,
+        has_semantics: a.hasSemantics, document_description: a.documentDescription || header().content_description,
         nodes: a.nodes.map((n) => ({
             component: n.name, id: n.componentId, depth: n.depth, bounds: bounds(n.bounds),
             role: n.role, clickable: n.clickable || Boolean(n.semanticsClickable), enabled: n.enabled,
@@ -324,8 +326,35 @@ function layoutDiagnostics(comps) {
         if (!c) return true;
         if (d.type === "empty_container" && LEAF.test(c.name)) return false;
         if (d.type === "zero_size" && c.childCount === 0 && c.drawOpCount === 0 && !c.text) return false;
+        if (d.type === "zero_size" && inInactiveAlternative(c, byKey)) return false;
         return true;
     }).map((d) => (d.type === "deep_nesting" ? { ...d, severity: "info" } : d));
+}
+
+// Component.Visibility: GONE 0, VISIBLE 1, INVISIBLE 2, or an override in the high bits
+// (OVERRIDE_GONE 16, OVERRIDE_VISIBLE 32, OVERRIDE_INVISIBLE 64), which is how a FitBox hides
+// the alternatives it doesn't pick.
+function notShown(v) {
+    if (typeof v !== "number") return false;
+    if ((v >> 4) > 0) return (v & 16) === 16 || (v & 64) === 64;
+    return v === 0 || v === 2;
+}
+
+// Not shown, itself or through an ancestor (a CollapsibleRow/Column hides the children it drops
+// with an override GONE; they keep a position, in Java too, but are never drawn).
+function hiddenOrUnder(c, byKey) {
+    for (let n = c; n; n = byKey.get(n.parentKey)) if (notShown(n.op?.mVisibility)) return true;
+    return false;
+}
+
+// Inside a StateLayout state or FitBox alternative that isn't the one shown (gone, or laid
+// out 0×0 on purpose, in Java too; I10): its zero sizes are not a sizing bug.
+function inInactiveAlternative(c, byKey) {
+    for (let n = c, p = byKey.get(c.parentKey); p; n = p, p = byKey.get(p.parentKey)) {
+        const hidden = notShown(n.op?.mVisibility) || (n.width <= 0 && n.height <= 0);
+        if (/StateLayout|FitBox/i.test(p.name) && hidden) return true;
+    }
+    return false;
 }
 
 // Inside a scrolling or clipping ancestor: being outside the layout box is then expected.
@@ -372,7 +401,7 @@ function audit() {
 
     // Content that overflows the layout box.
     const W = width, H = height;
-    const outside = comps.filter((c) => c.depth > 0 && c.width > 0 && c.height > 0 && !insideViewport(c, byKey) &&
+    const outside = comps.filter((c) => c.depth > 0 && c.width > 0 && c.height > 0 && !insideViewport(c, byKey) && !inInactiveAlternative(c, byKey) && !hiddenOrUnder(c, byKey) &&
         (c.globalX + c.width > W + 0.5 || c.globalY + c.height > H + 0.5 || c.globalX < -0.5 || c.globalY < -0.5));
     if (outside.length) {
         add("warning", "layout_overflow", `${outside.length} component(s) extend past the ${W}×${H} layout box`,

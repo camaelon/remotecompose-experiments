@@ -1,0 +1,261 @@
+{
+ "id": "EXP-01",
+ "name": "operators",
+ "version": 2,
+ "title": "Operators and precedence",
+ "summary": "Seven formulas over two exported variables (a = 7, b = 3) with their live results: precedence, parentheses, left-to-right evaluation, float division, % and unary minus.",
+ "prompt": "Show a small cheat sheet of arithmetic formulas over a = 7 and b = 3 (a + b * 2, (a + b) * 2, a - b - 1, a / b, a % b, -a % b, -b * -2) with each computed result next to it.",
+ "level": 1,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.operators"
+  ],
+  "secondary": [
+   "data.expression",
+   "expr.format",
+   "text.basic",
+   "layout.stack",
+   "layout.decoration"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "arithmetic",
+  "operator precedence",
+  "order of operations",
+  "modulo",
+  "remainder",
+  "negative numbers",
+  "formula",
+  "calculator",
+  "infix expression",
+  "cheat sheet"
+ ],
+ "teaches": [
+  "Write a value as an infix formula string over @variables: \"@a + @b * 2\" compiles to one float expression that re-evaluates when a or b changes",
+  "Rely on the usual precedence (* / % before + -, unary minus binds tightest) and group with parentheses; equal operators run left to right",
+  "Expect % to truncate like Java's float %: the result takes the sign of the left operand, so -7 % 3 is -1, not 2"
+ ],
+ "pitfalls": [
+  "The infix parser knows only + - * / % and unary minus: no ^, no comparison (<, >, ==) and no && or ||; write pow(x, n), and step() or ifElse() for comparisons (EXP-06)",
+  "Write a variable as @name; a bare name also resolves when it is declared, but bare width and height mean componentWidth() and componentHeight(), so don't name your own variables that and drop the @",
+  "-3 directly after an operator, a comma or a parenthesis is folded into a negative literal; -@b is a CHANGE_SIGN operation on the variable",
+  "A device reader refuses an expression longer than 32 RPN tokens (numbers, variables, operators and functions each count); split a long formula into named resources.variables",
+  "When a row of formula, result and note no longer fits, a plain row squeezes the last child to 0 wide: make it a collapsibleRow and give the note a collapsiblePriority (1) so it is the one dropped; unprioritized children are kept first"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/a",
+   "shows": "expr.operators",
+   "note": "a exported (export: true) so the host can change it; every formula below follows"
+  },
+  {
+   "pointer": "/root/children/1/children/1/text/value/value",
+   "shows": "expr.operators",
+   "note": "@a + @b * 2 → 13: * binds before +"
+  },
+  {
+   "pointer": "/root/children/2/children/1/text/value/value",
+   "shows": "expr.operators",
+   "note": "(@a + @b) * 2 → 20"
+  },
+  {
+   "pointer": "/root/children/6/children/1/text/value/value",
+   "shows": "expr.operators",
+   "note": "-@a % @b → -1: % keeps the sign of the left side"
+  },
+  {
+   "pointer": "/root/children/4/children/1/text/value",
+   "shows": "expr.format",
+   "note": "textFromFloat with decimal 2 and flags 7 shows 2.33"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "a": {
+    "type": "float",
+    "meaning": "first operand",
+    "default": 7,
+    "min": 0,
+    "max": 9,
+    "step": 1
+   },
+   "b": {
+    "type": "float",
+    "meaning": "second operand (not 0: it divides)",
+    "default": 3,
+    "min": 1,
+    "max": 9,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Seven rows read 13, 20, 3, 2.33, 1, -1 and 6. Resized, the rows fill the width; each row is a collapsibleRow whose note has the lowest priority, so at 234 wide the notes are dropped while every formula keeps its result, and at 540 the notes have room to spare.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 320
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 320
+   }
+  ]
+ },
+ "related": [
+  "VAR-01",
+  "VAR-03",
+  "TXT-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2720,
+  "header": {
+   "width": 360,
+   "height": 320
+  },
+  "op_count": 155,
+  "operations": {
+   "ANIMATED_FLOAT": 7,
+   "CollapsibleRowLayout": 7,
+   "CoreText": 23,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 17,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 32,
+   "MODIFIER_BACKGROUND": 8,
+   "MODIFIER_COLLAPSIBLE_PRIORITY": 7,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 8,
+   "MODIFIER_WIDTH": 23,
+   "NAMED_VARIABLE": 2,
+   "RoundedClipRectModifierOperation": 7,
+   "TextFromFloat": 7
+  },
+  "host_variables": [
+   {
+    "name": "a",
+    "type": "float",
+    "value": 7
+   },
+   {
+    "name": "b",
+    "type": "float",
+    "value": 3
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     320
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     320
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "a",
+   "apiLevel",
+   "b",
+   "background",
+   "children",
+   "clip",
+   "collapsiblePriority",
+   "color",
+   "contentDescription",
+   "decimal",
+   "export",
+   "flags",
+   "fontFamily",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalArrangement",
+   "modifiers",
+   "orientation",
+   "padding",
+   "priority",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "expr.operators": [
+    "<arithmetic>"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:27.820Z"
+ }
+}

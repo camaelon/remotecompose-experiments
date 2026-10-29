@@ -1,0 +1,271 @@
+{
+ "id": "STR-03",
+ "name": "loop-bounds",
+ "version": 2,
+ "title": "Loops with variable bounds",
+ "summary": "A water-intake tracker whose glasses come from two loops bounded by host variables: filled glasses from 0 to min(drunk, goal), empty outlines from drunk to goal; an empty range simply draws nothing.",
+ "prompt": "A water tracker widget: a row of glasses for a daily goal of 8, the 5 already drunk filled blue and the rest as outlines, \"5 of 8 glasses\", a progress bar and \"3 to go\".",
+ "level": 2,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.loop"
+  ],
+  "secondary": [
+   "data.loop",
+   "data.expression",
+   "text.dynamic",
+   "text.anchor",
+   "draw.shapes",
+   "draw.stroke",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "fitness",
+  "widget",
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "water tracker",
+  "habit",
+  "goal",
+  "n of m",
+  "rating",
+  "filled and empty",
+  "segments",
+  "repeat n times",
+  "dynamic count",
+  "loop until variable"
+ ],
+ "teaches": [
+  "Repeat a drawing a variable number of times: loop until \"min(@drunk, @goal)\" (an expression bound is re-read whenever the variable changes)",
+  "Start a second loop where the first stopped (from \"@drunk\" until \"@goal\") to draw the remainder in another style",
+  "Rely on empty ranges instead of if: when from >= until the loop body never runs (0 drunk: no filled glasses; goal reached: no outlines)"
+ ],
+ "pitfalls": [
+  "Clamp a bound that can exceed the space you drew for: min(@drunk, @goal) keeps a ninth glass off the row",
+  "Set the paint before the loop when every iteration shares it; a paint inside the body is re-applied on every iteration",
+  "The index is a float: from \"@drunk\" = 4.5 gives 4.5, 5.5, …; floor the bound if the variable can be fractional",
+  "Space loop items by a pitch derived from the width and the item count, g = (componentWidth() - 40) / @goal, rather than a literal 40: a fixed pitch overflows a narrow host and leaves a gap on a wide one"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/6",
+   "shows": "struct.loop",
+   "note": "filled glasses: loop i from 0 until min(@drunk, @goal)"
+  },
+  {
+   "pointer": "/root/commands/8",
+   "shows": "struct.loop",
+   "note": "outlines: loop i from @drunk until @goal"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "drunk": {
+    "type": "float",
+    "meaning": "glasses drunk today",
+    "default": 5,
+    "min": 0,
+    "max": 12,
+    "step": 1
+   },
+   "goal": {
+    "type": "float",
+    "meaning": "daily goal in glasses (8 fit the row)",
+    "default": 8,
+    "min": 1,
+    "max": 8,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Five filled glasses then three outlines, \"5 of 8 glasses\", the bar at 62 %, \"3 to go\". drunk 0 gives eight outlines; drunk 9 gives eight filled glasses and \"0 to go\". Resized (narrow 240, wide 540) the row of glasses spans the canvas: the pitch is g = (componentWidth() - 40) / @goal and each glass is gw = min(28, 0.7 g) wide, so the goal's glasses always fill the row; the bar and the count follow the width.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 170
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 170
+   }
+  ]
+ },
+ "prerequisites": [
+  "VAR-05"
+ ],
+ "related": [
+  "VAR-05",
+  "STR-01",
+  "VAR-02"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1198,
+  "header": {
+   "width": 360,
+   "height": 170
+  },
+  "op_count": 56,
+  "operations": {
+   "ANIMATED_FLOAT": 13,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 5,
+   "DRAW_ROUND_RECT": 5,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 2,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 2,
+   "PAINT_VALUES": 8,
+   "TextFromFloat": 3,
+   "TextMerge": 4
+  },
+  "host_variables": [
+   {
+    "name": "drunk",
+    "type": "float",
+    "value": 5
+   },
+   {
+    "name": "goal",
+    "type": "float",
+    "value": 8
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     170
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     170
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "decimal",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "drunk",
+   "export",
+   "flags",
+   "from",
+   "goal",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "strokeWidth",
+   "style",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "struct.loop": [
+    "loop"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "draw.shapes": [
+    "drawRoundRect"
+   ],
+   "draw.stroke": [
+    "strokeWidth"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:20.393Z"
+ }
+}

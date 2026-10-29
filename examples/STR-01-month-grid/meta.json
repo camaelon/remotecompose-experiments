@@ -1,0 +1,289 @@
+{
+ "id": "STR-01",
+ "name": "month-grid",
+ "version": 2,
+ "title": "Month calendar from nested loops",
+ "summary": "A month calendar drawn by a week loop around a weekday loop: each cell's day number comes from the two indices and the month's first weekday, and step masks hide days outside the month, dim weekends and circle today.",
+ "prompt": "Draw a month calendar for October 2026 (starts on a Thursday, 31 days) with Monday-first weekday initials, weekends dimmed and today, the 29th, circled.",
+ "level": 3,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.loop"
+  ],
+  "secondary": [
+   "data.loop",
+   "expr.select",
+   "data.expression",
+   "text.dynamic",
+   "text.anchor",
+   "draw.shapes",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "calendar",
+  "widget"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "calendar",
+  "month view",
+  "date picker",
+  "grid",
+  "nested loop",
+  "for loop",
+  "rows and columns",
+  "cell index",
+  "day of month",
+  "highlight today"
+ ],
+ "teaches": [
+  "Nest two loops (week 0..6, weekday 0..7) and turn the two indices into one value: day = week * 7 + wd + 1 - @firstWeekday",
+  "Name a per-iteration value with a variable command inside the loop body and reuse it in later commands of the same iteration",
+  "Hide, dim or show an item per iteration without a branch: a 0/1 step mask as paint alpha (inside the month, weekends) or as a radius (today's circle)",
+  "Drive a loop's content from exported variables, so the same document renders any month"
+ ],
+ "pitfalls": [
+  "step(a, b) is 1 only when a > b (strict): test day >= 1 as step(@day, 0.5) and day <= 31 as step(31.5, @day)",
+  "Avoid conditionalOperations inside a loop for anything that reads the loop index through an expression: a block updates all its commands' inputs before running them, so an expression computed in the block is one iteration late, and a value computed before the block may not refresh at all (C++). Masks keep it right",
+  "There is no break: a loop always runs from..until. Make the bounds cover the worst case (6 weeks) and mask the cells you do not want",
+  "Derive the cell pitch from componentWidth()/componentHeight() once (two variable commands before the loops) instead of literal 41 × 38 cells: the loop body reads @cw and @rh every iteration, and the weekday letters step along with translate(@cw), which costs no new expression"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/6",
+   "shows": "struct.loop",
+   "note": "outer loop over weeks, inner loop over weekdays"
+  },
+  {
+   "pointer": "/root/commands/6/loop/commands/0/loop/commands/0",
+   "shows": "struct.loop",
+   "note": "day number from both indices and @firstWeekday"
+  },
+  {
+   "pointer": "/root/commands/6/loop/commands/0/loop/commands/1",
+   "shows": "expr.select",
+   "note": "inMonth: 1 for 1 <= day <= monthDays, else 0"
+  },
+  {
+   "pointer": "/root/commands/6/loop/commands/0/loop/commands/5",
+   "shows": "expr.select",
+   "note": "paint alpha = inMonth, dimmed on weekdays 5 and 6"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "firstWeekday": {
+    "type": "float",
+    "meaning": "weekday of the 1st, 0 = Monday … 6 = Sunday",
+    "default": 3,
+    "min": 0,
+    "max": 6,
+    "step": 1
+   },
+   "monthDays": {
+    "type": "float",
+    "meaning": "days in the month",
+    "default": 31,
+    "min": 28,
+    "max": 31,
+    "step": 1
+   },
+   "today": {
+    "type": "float",
+    "meaning": "day of the month to circle (0 for none)",
+    "default": 29,
+    "min": 0,
+    "max": 31,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "October 2026: 1 under Thursday, 31 under Saturday, Saturday and Sunday columns dimmed, 29 in a blue circle; no numbers before the 1st or after the 31st. Resized (small 200×220, large 450×450) the grid spreads over the canvas: cells are cw = (componentWidth() - 13) / 7 wide and rh = (componentHeight() - 72) / 6 high, and today's circle is 0.42 × the smaller of the two.",
+  "render": {},
+  "renders": [
+   {
+    "name": "small",
+    "width": 200,
+    "height": 220
+   },
+   {
+    "name": "large",
+    "width": 450,
+    "height": 450
+   }
+  ]
+ },
+ "prerequisites": [
+  "VAR-05"
+ ],
+ "related": [
+  "VAR-05",
+  "EXP-06",
+  "EXP-09",
+  "TIM-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1290,
+  "header": {
+   "width": 300,
+   "height": 300
+  },
+  "op_count": 62,
+  "operations": {
+   "ANIMATED_FLOAT": 12,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 8,
+   "DRAW_CIRCLE": 1,
+   "DRAW_TEXT_ANCHOR": 9,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 2,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_TRANSLATE": 7,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 3,
+   "PAINT_VALUES": 4,
+   "TextFromFloat": 1
+  },
+  "host_variables": [
+   {
+    "name": "firstWeekday",
+    "type": "float",
+    "value": 3
+   },
+   {
+    "name": "monthDays",
+    "type": "float",
+    "value": 31
+   },
+   {
+    "name": "today",
+    "type": "float",
+    "value": 29
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     200,
+     220
+    ],
+    "audit_findings": []
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     450,
+     450
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "export",
+   "firstWeekday",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "index",
+   "loop",
+   "modifiers",
+   "monthDays",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "save",
+   "text",
+   "textSize",
+   "today",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "struct.loop": [
+    "loop"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "expr.select": [
+    "step("
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:18.233Z"
+ }
+}

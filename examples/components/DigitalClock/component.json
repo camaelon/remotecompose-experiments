@@ -1,0 +1,154 @@
+{
+ "component": "DigitalClock",
+ "version": 2,
+ "summary": "HH:MM or HH:MM:SS from the host clock, in 24-hour or 12-hour format, with zero-padded fields.",
+ "params": {
+  "format": {
+   "type": "enum",
+   "values": [
+    "24h",
+    "12h"
+   ],
+   "default": "24h",
+   "static": true,
+   "doc": "24h: 00..23 zero-padded; 12h: 1..12 without a pad (no AM/PM marker)"
+  },
+  "showSeconds": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Append :SS (repaints every second instead of every minute)"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 40,
+   "static": true,
+   "doc": "Text size of every field, in sp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "The digits"
+  },
+  "accent": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The colons"
+  }
+ },
+ "capabilities": [
+  "time.clock",
+  "text.dynamic"
+ ],
+ "call": {
+  "DigitalClock": {
+   "format": "12h"
+  }
+ },
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    {
+     "semantics": {
+      "contentDescription": "Time"
+     }
+    }
+   ],
+   "children": [
+    {
+     "$if": "format == '24h'",
+     "then": {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "floor(timeInHr())",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 12
+       },
+       "fontSize": "@fontSize",
+       "fontWeight": 300,
+       "color": "@color"
+      }
+     },
+     "else": {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "(floor(timeInHr()) + 11) % 12 + 1",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 4
+       },
+       "fontSize": "@fontSize",
+       "fontWeight": 300,
+       "color": "@color"
+      }
+     }
+    },
+    {
+     "text": {
+      "value": ":",
+      "fontSize": "@fontSize",
+      "fontWeight": 300,
+      "color": "@accent"
+     }
+    },
+    {
+     "text": {
+      "value": {
+       "type": "textFromFloat",
+       "value": "timeInMin() % 60",
+       "whole": 2,
+       "decimal": 0,
+       "flags": 12
+      },
+      "fontSize": "@fontSize",
+      "fontWeight": 300,
+      "color": "@color"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "else": {
+      "$if": "showSeconds",
+      "then": {
+       "text": {
+        "value": ":",
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@accent"
+       }
+      }
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "else": {
+      "$if": "showSeconds",
+      "then": {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "timeInSec() % 60",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@color"
+       }
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "flags 12 (PAD_PRE_ZERO) makes 9 print as 09; flags 4 (PAD_PRE_NONE) drops the pad, for a 12-hour hour",
+  "12-hour hour: (floor(timeInHr()) + 11) % 12 + 1 gives 1..12",
+  "Each field is its own text in a row, so a proportional font makes the clock's width change as digits change; give the row a fixed width if it must not move"
+ ]
+}

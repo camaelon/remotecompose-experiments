@@ -1,0 +1,32 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 180, "profiles": 513,
+  "contentDescription": "A sparkline of a host-provided series of values"},
+ "resources": {
+  "floatArrays": {
+   "data": {"value": [12, 15, 14, 18, 17, 21, 19, 24, 23, 27, 26, 31], "export": true}
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize"],
+  "commands": [
+   {"variable": {"name": "last", "value": "arrayLength(@data) - 1"}},
+   {"variable": {"name": "lo", "value": "arrayMin(@data)"}},
+   {"variable": {"name": "span", "value": "max(arrayMax(@data) - @lo, 1)"}},
+   {"paint": {"ops": [{"color": "#FF101828"}]}},
+   {"drawRect": {"left": 0, "top": 0, "right": "componentWidth()", "bottom": "componentHeight()"}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 14}]}},
+   {"drawTextAnchored": {"text": "Weekly revenue", "x": 20, "y": 22, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF26A69A"}, {"style": "stroke"}, {"strokeWidth": 3}, {"strokeCap": "round"}]}},
+   {"loop": {"index": "i", "from": 0, "until": "@last", "commands": [
+     {"drawLine": {
+       "x1": "20 + i * (componentWidth() - 40) / @last",
+       "y1": "componentHeight() - 30 - (arrayGet(@data, i) - @lo) / @span * (componentHeight() - 80)",
+       "x2": "20 + (i + 1) * (componentWidth() - 40) / @last",
+       "y2": "componentHeight() - 30 - (arrayGet(@data, i + 1) - @lo) / @span * (componentHeight() - 80)"}}
+   ]}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"style": "fill"}]}},
+   {"drawCircle": {"cx": "componentWidth() - 20", "cy": "componentHeight() - 30 - (arrayGet(@data, @last) - @lo) / @span * (componentHeight() - 80)", "radius": 5}}
+  ]
+ }
+}

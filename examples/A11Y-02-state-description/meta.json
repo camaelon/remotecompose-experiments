@@ -1,0 +1,271 @@
+{
+ "id": "A11Y-02",
+ "name": "state-description",
+ "version": 2,
+ "title": "Switch that announces its state",
+ "summary": "A Bluetooth switch whose semantics carry a stateDescription, so a screen reader says \"Bluetooth, Off\" or \"Bluetooth, On\".",
+ "prompt": "Make an on/off switch for Bluetooth that a screen reader announces as \"On\" or \"Off\".",
+ "level": 2,
+ "family": "A11Y",
+ "capabilities": {
+  "primary": [
+   "a11y.state"
+  ],
+  "secondary": [
+   "a11y.labels",
+   "input.tap",
+   "layout.state",
+   "draw.shapes",
+   "layout.weight"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "accessibility",
+  "a11y",
+  "screen reader",
+  "talkback",
+  "state description",
+  "switch",
+  "toggle",
+  "announce",
+  "checked state"
+ ],
+ "components": [
+  "Switch"
+ ],
+ "teaches": [
+  "Announce a control's state with semantics stateDescription next to its contentDescription",
+  "Give each state its own component with a fixed stateDescription and swap them with visibility, since stateDescription takes a text, not an expression",
+  "Flip the two visibility integers from one onClick with two valueIntegerChange actions"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/2/row/children/1/box/children/0/canvas/modifiers/2",
+   "shows": "a11y.state",
+   "note": "semantics: contentDescription Bluetooth, stateDescription Off, clickable"
+  },
+  {
+   "pointer": "/root/2/row/children/1/box/children/1/canvas/modifiers/2",
+   "shows": "a11y.state",
+   "note": "the On variant"
+  },
+  {
+   "pointer": "/root/2/row/children/1/box/children/0/canvas/modifiers/3",
+   "shows": "input.tap",
+   "note": "onClick: showOn = 1, showOff = 0"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "inspect_accessibility shows the switch labelled Bluetooth with state Off (and the hidden On variant); a tap shows the teal On switch. Resized (240, 540 wide) the label takes the remaining width and the switch stays at the end; tapped at its new position it turns On.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 300,
+     "y": 50
+    }
+   ],
+   "duration": 1.2
+  },
+  "interact": [
+   {
+    "tap": [
+     300,
+     50
+    ]
+   }
+  ],
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 180,
+      "y": 50
+     }
+    ]
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 480,
+      "y": 50
+     }
+    ]
+   }
+  ]
+ },
+ "related": [
+  "A11Y-01",
+  "INT-02"
+ ],
+ "pitfalls": [
+  "stateDescription is resolved to a text id when the document is written; it cannot follow a float, so build one component per state and swap them with visibility",
+  "visibility reads an integer variable: declare it with \"vtype\": \"int\" and flip it with valueIntegerChange; each onClick must set both integers",
+  "Accessibility inspectors also list the component that visibility currently hides (the inspector does not yet drop GONE components)",
+  "Visibility changes cross-fade (about half a second in the C++ player); render a little after the tap to see the settled state"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 616,
+  "header": {
+   "width": 360,
+   "height": 100
+  },
+  "op_count": 46,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "CanvasContent": 2,
+   "CoreText": 1,
+   "DATA_INT": 2,
+   "DATA_TEXT": 3,
+   "DRAW_CIRCLE": 2,
+   "DRAW_ROUND_RECT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 5,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_VISIBILITY": 2,
+   "MODIFIER_WIDTH": 4,
+   "PAINT_VALUES": 4,
+   "VALUE_INTEGER_CHANGE_ACTION": 4
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "onClick",
+   "ops",
+   "padding",
+   "paint",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "size",
+   "stateDescription",
+   "target",
+   "text",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "visibility",
+   "vtype",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "a11y.state": [
+    "stateDescription"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueIntegerChange"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "layout.weight": [
+    "weight"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:26.039Z"
+ }
+}

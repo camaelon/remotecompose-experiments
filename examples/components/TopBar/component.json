@@ -1,0 +1,130 @@
+{
+ "component": "TopBar",
+ "version": 3,
+ "summary": "An app bar: optional navigation content, a title, and actions pushed to the end.",
+ "params": {
+  "title": {
+   "type": "string",
+   "required": true,
+   "doc": "App bar title, 20 sp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.surface",
+   "doc": "Bar background"
+  }
+ },
+ "slots": {
+  "navigation": {
+   "optional": true,
+   "doc": "Before the title, 12 dp from it: a back or menu icon button"
+  },
+  "actions": {
+   "optional": true,
+   "doc": "Icon buttons, in a row"
+  }
+ },
+ "capabilities": [
+  "layout.stack",
+  "layout.weight",
+  "layout.align"
+ ],
+ "call": {
+  "TopBar": {
+   "title": "Inbox"
+  }
+ },
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": 56
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "background": "@colors.outline"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "padding": {
+       "bottom": 1
+      }
+     }
+    },
+    {
+     "background": "@color"
+    },
+    {
+     "padding": {
+      "start": "@theme.space_4",
+      "end": "@theme.space_2"
+     }
+    }
+   ],
+   "children": [
+    {
+     "$slot": "navigation"
+    },
+    {
+     "$if": "navigation",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "width": "@theme.space_3"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "weight": 1
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "@title",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "fontSize": "@theme.text_lg",
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "actions",
+     "then": {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "spacedBy": "@theme.space_1"
+        }
+       ],
+       "children": [
+        {
+         "$slot": "actions"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The title sits in the weighted box (weight 1; the text is one line with an ellipsis): it pushes the actions to the end and, in a narrow bar, shortens with … instead of pushing them off the edge. Weight the box, not the text: the C++ player gives a weighted text its full width and squeezes the actions to nothing. The bar is 56 dp tall and fills its width",
+  "Icon buttons in the slots need their own semantics contentDescription and a 40 to 48 dp box: a bare canvas is neither labelled nor easy to hit"
+ ]
+}

@@ -1,0 +1,207 @@
+{
+ "id": "LAY-03",
+ "name": "box-alignment",
+ "version": 3,
+ "title": "Box alignment",
+ "summary": "Nine labelled tiles in one 300×300 box, each placed at one of the nine alignments from top-start to bottom-end.",
+ "prompt": "Place nine labelled tiles in one box, one at each corner, edge midpoint and the centre.",
+ "level": 1,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.align",
+   "layout.stack"
+  ],
+  "secondary": [
+   "layout.size",
+   "layout.spacing",
+   "layout.decoration",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "gravity",
+  "contentAlignment",
+  "corner",
+  "overlay",
+  "zstack",
+  "anchor"
+ ],
+ "teaches": [
+  "Overlap children by putting them in a box; each child is laid out on top of the previous one",
+  "Place a child at a corner, edge or centre with the box's horizontalAlignment (start/center/end) and verticalAlignment (top/center/bottom)",
+  "Give each child its own position by wrapping it in a fillMaxSize box with its own alignment",
+  "Make a fixed-width label tile from a single text: width, clip, background, vertical padding and textAlign center"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/0",
+   "shows": "layout.align",
+   "note": "top-start: a fillMaxSize box with horizontalAlignment start, verticalAlignment top"
+  },
+  {
+   "pointer": "/root/children/8",
+   "shows": "layout.align",
+   "note": "bottom-end: horizontalAlignment end, verticalAlignment bottom"
+  },
+  {
+   "pointer": "/root",
+   "shows": "layout.stack",
+   "note": "the outer box stacks nine full-size layers"
+  },
+  {
+   "pointer": "/root/children/0/children/0",
+   "shows": "layout.decoration",
+   "note": "a tile as one text: fillMaxWidth 0.3 (never overlaps when narrow), clip, background, padding [0, 11], textAlign center"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Tiles at the four corners, the four edge midpoints and the centre of the padded box. Resized (200×300, 450×220) the tiles stay at the nine anchors: each tile is 30 % of the width, so they never overlap, and labels that no longer fit end in an ellipsis.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 300
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 220
+   }
+  ]
+ },
+ "pitfalls": [
+  "Alignment belongs to the container, not the child: there is no per-child align modifier, and contentAlignment is not a JSON key. Wrap each child in its own fillMaxSize box to align children differently",
+  "A box with no children defaults to center/center but one with children defaults to start/top in the Java parser",
+  "textAlign centres text only inside the text's own width: give the text a width (or fillMaxWidth), otherwise it wraps its content and there is nothing to centre in",
+  "Fixed-width tiles in a box overlap once the box is narrower than three of them: size them as a fraction of the width ({\"fillMaxWidth\": 0.3}) and give the labels maxLines 1 with an ellipsis"
+ ],
+ "prerequisites": [
+  "DOC-01"
+ ],
+ "related": [
+  "LAY-01",
+  "LAY-02"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1861,
+  "header": {
+   "width": 300,
+   "height": 300
+  },
+  "op_count": 107,
+  "operations": {
+   "CoreText": 9,
+   "DATA_TEXT": 9,
+   "HEADER": 1,
+   "LAYOUT_BOX": 10,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 19,
+   "MODIFIER_BACKGROUND": 10,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 10,
+   "MODIFIER_WIDTH": 19,
+   "RoundedClipRectModifierOperation": 9
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     300
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     220
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "clip",
+   "color",
+   "contentDescription",
+   "fillMaxWidth",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "maxLines",
+   "modifiers",
+   "overflow",
+   "padding",
+   "profiles",
+   "root",
+   "roundedRect",
+   "text",
+   "textAlign",
+   "type",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment"
+   ],
+   "layout.stack": [
+    "box"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "layout.spacing": [
+    "padding"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:01.289Z"
+ }
+}

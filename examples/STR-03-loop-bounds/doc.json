@@ -1,0 +1,263 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 170,
+  "profiles": 513,
+  "contentDescription": "Water intake: 5 of 8 glasses drunk, 3 to go"
+ },
+ "resources": {
+  "variables": {
+   "drunk": {
+    "value": 5,
+    "export": true
+   },
+   "goal": {
+    "value": 8,
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "#FF101828"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "g",
+     "value": "(componentWidth() - 40) / @goal"
+    }
+   },
+   {
+    "variable": {
+     "name": "gw",
+     "value": "min(28, 0.7 * @g)"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFFFFFFF"
+      },
+      {
+       "textSize": 15
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Water",
+     "x": 20,
+     "y": 26,
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF8899AA"
+      },
+      {
+       "textSize": 12
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "@drunk",
+       "whole": 2,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": " of ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "@goal",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": " glasses"
+       }
+      }
+     },
+     "x": "componentWidth() - 20",
+     "y": 26,
+     "panX": 1,
+     "panY": 0
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": "min(@drunk, @goal)",
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF1E3A5F"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "20 + i * @g",
+        "top": 56,
+        "right": "20 + i * @g + @gw",
+        "bottom": 104,
+        "rx": 5,
+        "ry": 5
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF4DA3FF"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "22 + i * @g",
+        "top": 66,
+        "right": "18 + i * @g + @gw",
+        "bottom": 102,
+        "rx": 4,
+        "ry": 4
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF3A4A5E"
+      },
+      {
+       "style": "stroke"
+      },
+      {
+       "strokeWidth": 2
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": "@drunk",
+     "until": "@goal",
+     "commands": [
+      {
+       "drawRoundRect": {
+        "left": "21 + i * @g",
+        "top": 57,
+        "right": "19 + i * @g + @gw",
+        "bottom": 103,
+        "rx": 5,
+        "ry": 5
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF1E2A3A"
+      },
+      {
+       "style": "fill"
+      }
+     ]
+    }
+   },
+   {
+    "drawRoundRect": {
+     "left": 20,
+     "top": 126,
+     "right": "componentWidth() - 20",
+     "bottom": 134,
+     "rx": 4,
+     "ry": 4
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF4DA3FF"
+      }
+     ]
+    }
+   },
+   {
+    "drawRoundRect": {
+     "left": 20,
+     "top": 126,
+     "right": "20 + (componentWidth() - 40) * clamp(0, 1, @drunk / @goal)",
+     "bottom": 134,
+     "rx": 4,
+     "ry": 4
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF8899AA"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "max(0, @goal - @drunk)",
+       "whole": 2,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": " to go"
+     },
+     "x": 20,
+     "y": 152,
+     "panX": -1,
+     "panY": 0
+    }
+   }
+  ]
+ }
+}

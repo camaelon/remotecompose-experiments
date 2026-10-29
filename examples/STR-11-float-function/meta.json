@@ -1,0 +1,278 @@
+{
+ "id": "STR-11",
+ "name": "float-function",
+ "version": 2,
+ "title": "A drawing helper as a float function",
+ "summary": "A heart-rate sparkline whose lowest, highest and latest readings are marked by one helper, pin(i, size, sx, sy), defined once with createFloatFunction: it looks up the reading, draws a ringed dot and the value label, and is called three times with callFloatFunction.",
+ "prompt": "A heart-rate line chart for today (14 readings) with the lowest (55), highest (95) and latest (64) readings marked with a red dot and their value, the latest one larger; draw the marker with one reusable helper.",
+ "level": 3,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.function"
+  ],
+  "secondary": [
+   "data.function",
+   "struct.loop",
+   "data.array",
+   "data.loop",
+   "text.dynamic",
+   "text.anchor",
+   "draw.shapes",
+   "draw.stroke"
+  ]
+ },
+ "use_cases": [
+  "chart",
+  "fitness",
+  "widget"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "function",
+  "subroutine",
+  "procedure",
+  "helper",
+  "reusable drawing",
+  "call with arguments",
+  "sparkline",
+  "chart marker",
+  "data point label",
+  "heart rate"
+ ],
+ "teaches": [
+  "Define a helper once with {\"createFloatFunction\": {\"name\": \"pin\", \"params\": [\"i\", \"size\", \"sx\", \"sy\"], \"commands\": [...]}}: the params are plain names in the body's expressions",
+  "Call it with {\"callFloatFunction\": {\"id\": \"@pin\", \"args\": [6, 3, \"@px\", \"@py\"]}}: one call per marker, the latest one bigger (args [13, 5, …])",
+  "Read outer data in the body (arrayGet(@bpm, i)) so a call passes only what differs (which point, how big) plus the chart's scale (@px, @py, from componentWidth()/componentHeight())",
+  "Let a function return its result by drawing: the body's draw commands run at each call site, in order with the surrounding commands"
+ ],
+ "pitfalls": [
+  "A variable command inside the body is a new local binding, not an assignment: a function cannot set an outer variable (the Java parser restores the variables after the body), so return values by drawing, or compute them as expressions at the call site",
+  "Paint changes made in the body stay in effect after the call: set colours inside the function, and again after it if later commands need another one",
+  "Arguments are positional: args must list a value for every param, in the params order",
+  "An expression argument (\"arrayLength(@bpm) - 1\") converts and runs, but rc-inspect's audit then reports it as dead_code: the audit does not yet count function arguments as uses",
+  "Pass size-dependent values to the function as arguments (here the scale @px, @py): a body that reads componentWidth(), or a variable computed from it, breaks the C++ player's later drawing in the same canvas (the line and the right-aligned label vanish); TS draws it right"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/2",
+   "shows": "struct.function",
+   "note": "pin(i, size, sx, sy): ring, dot and value label at reading i, placed with the scale passed in"
+  },
+  {
+   "pointer": "/root/commands/11",
+   "shows": "struct.function",
+   "note": "call for the latest reading: args [13, 5, @px, @py]"
+  },
+  {
+   "pointer": "/root/commands/8",
+   "shows": "struct.loop",
+   "note": "the line: one segment per pair of readings, px apart"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A red line over 14 readings; red dots with dark rings and labels at 55 (third point), 95 (seventh) and a larger one at 64 (last). The C++ and TS players render it the same. Resized (narrow 240, large 540×260) the line spans the canvas: px = (componentWidth() - 48) / 13 per reading and py = (componentHeight() - 70) / 60 per bpm, passed to pin as its sx, sy arguments, so the markers stay on the line.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 190
+   },
+   {
+    "name": "large",
+    "width": 540,
+    "height": 260
+   }
+  ]
+ },
+ "prerequisites": [
+  "VAR-06"
+ ],
+ "related": [
+  "STR-02",
+  "EXP-08",
+  "VAR-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1289,
+  "header": {
+   "width": 360,
+   "height": 190
+  },
+  "op_count": 49,
+  "operations": {
+   "ANIMATED_FLOAT": 16,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 3,
+   "DRAW_CIRCLE": 2,
+   "DRAW_LINE": 1,
+   "DRAW_TEXT_ANCHOR": 3,
+   "DataListFloat": 1,
+   "FUNCTION_CALL": 3,
+   "FUNCTION_DEFINE": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 6,
+   "TextFromFloat": 1
+  },
+  "host_variables": [
+   {
+    "name": "bpm",
+    "type": "float_array",
+    "value": [
+     62,
+     58,
+     55,
+     60,
+     72,
+     88,
+     95,
+     84,
+     76,
+     70,
+     74,
+     81,
+     68,
+     64
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     190
+    ],
+    "audit_findings": []
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     540,
+     260
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "args",
+   "background",
+   "bpm",
+   "callFloatFunction",
+   "color",
+   "commands",
+   "contentDescription",
+   "createFloatFunction",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawLine",
+   "drawTextAnchored",
+   "flags",
+   "floatArrays",
+   "from",
+   "header",
+   "height",
+   "id",
+   "index",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "params",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "strokeCap",
+   "strokeWidth",
+   "text",
+   "textSize",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "struct.function": [
+    "createFloatFunction",
+    "callFloatFunction"
+   ],
+   "data.function": [
+    "createFloatFunction",
+    "callFloatFunction"
+   ],
+   "struct.loop": [
+    "loop"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:29.091Z"
+ }
+}

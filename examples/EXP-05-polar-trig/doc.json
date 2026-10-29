@@ -1,0 +1,57 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 230, "profiles": 513,
+  "contentDescription": "A compass dial whose needle points at a target, with its bearing and distance"},
+ "resources": {
+  "variables": {
+   "tx": {"value": 170, "export": true},
+   "ty": {"value": 70, "export": true},
+   "b": "atan2(@tx - 110, 115 - @ty)"
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "fit", "value": "min(componentWidth() / 360, componentHeight() / 230)"}},
+   {"translate": {"dx": "(componentWidth() - 360 * @fit) / 2", "dy": "(componentHeight() - 230 * @fit) / 2"}},
+   {"scale": {"sx": "@fit", "sy": "@fit"}},
+   {"paint": {"ops": [{"color": "#FF1E2A3A"}]}},
+   {"drawCircle": {"cx": 110, "cy": 115, "radius": 98}},
+   {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"style": "stroke"}, {"strokeWidth": 2}, {"strokeCap": "round"}]}},
+   {"loop": {"index": "i", "from": 0, "until": 60, "commands": [
+    {"drawLine": {
+      "x1": "110 + 86 * sin(i * 0.10472)", "y1": "115 - 86 * cos(i * 0.10472)",
+      "x2": "110 + (74 + 6 * step(i % 5, 0)) * sin(i * 0.10472)",
+      "y2": "115 - (74 + 6 * step(i % 5, 0)) * cos(i * 0.10472)"}}
+   ]}},
+   {"paint": {"ops": [{"color": "#FF2A3A4E"}, {"strokeWidth": 1}]}},
+   {"drawLine": {"x1": 110, "y1": 115, "x2": "@tx", "y2": "@ty"}},
+   {"paint": {"ops": [{"color": "#FFEF5350"}, {"strokeWidth": 4}]}},
+   {"drawLine": {"x1": 110, "y1": 115, "x2": "110 + 62 * sin(@b)", "y2": "115 - 62 * cos(@b)"}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}]}},
+   {"drawLine": {"x1": 110, "y1": 115, "x2": "110 - 30 * sin(@b)", "y2": "115 + 30 * cos(@b)"}},
+   {"paint": {"ops": [{"color": "#FFFFCA28"}, {"strokeWidth": 2}]}},
+   {"drawCircle": {"cx": "@tx", "cy": "@ty", "radius": 9}},
+   {"paint": {"ops": [{"style": "fill"}]}},
+   {"drawCircle": {"cx": "@tx", "cy": "@ty", "radius": 4}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}]}},
+   {"drawCircle": {"cx": 110, "cy": 115, "radius": 6}},
+   {"paint": {"ops": [{"textSize": 13}]}},
+   {"drawTextAnchored": {"text": "N", "x": 110, "y": 49, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "E", "x": 177, "y": 115, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "S", "x": 110, "y": 181, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "W", "x": 43, "y": 115, "panX": 0, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}]}},
+   {"drawTextAnchored": {"text": "bearing", "x": 232, "y": 60, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": "distance", "x": 232, "y": 130, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"textSize": 10}]}},
+   {"drawTextAnchored": {"text": "atan2(dx, -dy) · 57.3", "x": 232, "y": 104, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": "hypot(dx, dy)", "x": 232, "y": 174, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 30}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "(@b * 57.29578 + 360) % 360", "whole": 3, "decimal": 0, "flags": 5}, "id2": "°"},
+     "x": 232, "y": 84, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "hypot(@tx - 110, @ty - 115)", "whole": 3, "decimal": 0, "flags": 5}, "id2": " px"},
+     "x": 232, "y": 154, "panX": -1, "panY": 0}}
+  ]
+ }
+}

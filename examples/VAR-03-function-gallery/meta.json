@@ -1,0 +1,263 @@
+{
+ "id": "VAR-03",
+ "name": "function-gallery",
+ "version": 3,
+ "title": "Expression function gallery",
+ "summary": "Eight labelled mini-plots, one per expression function (sin, cos, clamp, lerp, step, fract, abs, pow), each a pathExpression over a[0] in −1..1, on cards laid out by a loop.",
+ "prompt": "Draw a cheat-sheet grid of small plots of sin, cos, clamp, lerp, step, fract, abs and pow, each labelled.",
+ "level": 3,
+ "family": "VAR",
+ "capabilities": {
+  "primary": [
+   "data.expression"
+  ],
+  "secondary": [
+   "draw.plot",
+   "draw.path",
+   "data.loop",
+   "draw.shapes",
+   "draw.stroke",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "chart"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "math functions",
+  "expression reference",
+  "cheat sheet",
+  "easing shapes",
+  "sawtooth",
+  "step function",
+  "clamp",
+  "interpolation",
+  "function plot",
+  "sine wave",
+  "sawtooth wave"
+ ],
+ "teaches": [
+  "Call the expression functions with the argument orders RemoteCompose uses: clamp(min, max, x), lerp(a, b, t), step(x, edge), pow(x, n)",
+  "Plot each function as a pathExpression in a[0] (start -1, end 1), with y = baseline − height·f",
+  "Lay out repeated cards from a loop index with i % 4 and floor(i / 4)",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre; the background drawRect runs before it, to componentWidth() × componentHeight()"
+ ],
+ "pitfalls": [
+  "clamp takes (min, max, value): clamp(x, -0.5, 0.5) clamps to the empty range and returns a constant",
+  "step(x, edge) is 1 when x > edge, so step(0, x) is the mirror image of the usual GLSL step(edge, x)",
+  "fract(x) is x − trunc(x), negative for negative x; shift the argument positive for a 0..1 sawtooth",
+  "flags 4 (LINEAR) joins the samples with straight segments; without it the path is splined and the step corners round off. A sharp jump also needs enough samples (count 201 here)",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: a background drawRect to the literal header size leaves the rest of a bigger box unpainted, and literal positions get cut off in a smaller one"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/9",
+   "shows": "data.expression",
+   "note": "68 - 56 * clamp(-0.5, 0.5, a[0] * 1.5): a ramp with flat ends"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "data.expression",
+   "note": "lerp(0.2, 0.9, t)"
+  },
+  {
+   "pointer": "/root/commands/11",
+   "shows": "data.expression",
+   "note": "step(a[0], 0): 1 for a[0] > 0"
+  },
+  {
+   "pointer": "/root/commands/12",
+   "shows": "data.expression",
+   "note": "fract((a[0] + 1) * 2): four sawtooth teeth"
+  },
+  {
+   "pointer": "/root/commands/7",
+   "shows": "draw.plot",
+   "note": "pathExpression with flags 4 (linear segments)"
+  },
+  {
+   "pointer": "/root/commands/6",
+   "shows": "data.loop",
+   "note": "eight cards from one loop: left 6 + (i % 4) * 88, top 8 + floor(i / 4) * 106"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "sin and cos one period each, clamp a ramp with flat ends, lerp a straight line, step a jump at the centre, fract four teeth, abs a V, pow a cubic rise. Resized, the background fills the box and the drawing scales uniformly to fit, centred.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 220
+   }
+  ]
+ },
+ "related": [
+  "DRW-06",
+  "VAR-07"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1764,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 65,
+  "operations": {
+   "ANIMATED_FLOAT": 7,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 9,
+   "DRAW_PATH": 8,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 8,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 11,
+   "PathExpression": 8
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     220
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "count",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "data.expression": [
+    "pathExpression",
+    "<arithmetic>"
+   ],
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap",
+    "strokeJoin"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:47.949Z"
+ }
+}

@@ -32,8 +32,19 @@ function textOf(doc, id) {
     } catch (e) { return null; }
 }
 
+// Component.Visibility.isVisible: VISIBLE (1), or an override carrying OVERRIDE_VISIBLE (32).
+function visibilityIsVisible(v) {
+    if (typeof v !== 'number') return true;
+    if ((v >> 4) > 0) return (v & 32) === 32;
+    return v === 1;
+}
+
 /**
  * Build the accessible tree.
+ *
+ * Like CoreDocumentAccessibility (isInteresting / semanticallyRelevantChildComponents use
+ * Component.isVisible), a component that is GONE or INVISIBLE, or inside one that is, is not
+ * in the tree: the hidden tabs of a tab view are not read out.
  *
  * `role`, `mode` and the state description are reported as the raw values the wire carries.
  * The TypeScript player declares no names for them — inventing labels here would be guessing
@@ -44,7 +55,8 @@ export function buildAccessibilityTree(doc) {
     if (!doc) return { nodes, documentDescription: null, hasSemantics: false };
 
     const root = getRootComponent(doc);
-    walkComponents(root, (comp, depth) => {
+    walkComponents(root, (comp, depth, path) => {
+        if (path && path.some(c => !visibilityIsVisible(c.mVisibility))) return;
         const mods = modifiersOf(comp);
         const semantics = mods.filter(m => opCodeOf(m) === OP_SEMANTICS);
         const clickable = mods.some(m => {

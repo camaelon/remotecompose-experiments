@@ -1,0 +1,231 @@
+{
+ "id": "EXP-09",
+ "name": "seeded-skyline",
+ "version": 2,
+ "title": "Seeded random skyline",
+ "summary": "A night city generated from seeded randomness: 14 towers whose heights, window counts and lit windows all come from seed(n, rand()) keyed on the loop indices, under 50 seeded stars; identical on every render.",
+ "prompt": "Generate a night skyline: a row of towers of random heights with randomly lit windows, a moon and stars, the same picture every time.",
+ "level": 3,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.random"
+  ],
+  "secondary": [
+   "data.random",
+   "expr.select",
+   "expr.math",
+   "data.loop",
+   "data.expression",
+   "draw.shapes",
+   "draw.gradient"
+  ]
+ },
+ "use_cases": [
+  "generative-art"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "procedural generation",
+  "generative",
+  "random heights",
+  "deterministic random",
+  "seeded noise",
+  "city skyline",
+  "night scene",
+  "lit windows",
+  "stars"
+ ],
+ "teaches": [
+  "Get a repeatable random number per item with seed(key, rand()): it reseeds the generator with key, then evaluates rand()",
+  "Recompute the same seeded value wherever it is needed (tower top, window rows, window y) instead of storing it: the same key always gives the same number",
+  "Combine nested loop indices into one key (i * 389 + j * 41 + k * 7 + 20000) for a value per window, and threshold it with step(…, 0.55) for on/off",
+  "Use seeded values in a loop's until: floor((40 + 110 * seed(…)) / 10) − 1 window rows per tower"
+ ],
+ "pitfalls": [
+  "Consecutive small seeds (i + 1) give first values that rise or fall in a ramp, because the seed is the float's bits: spread the keys with a multiplier (i * 97 + 3) and give x, y and size different multipliers or the stars fall on a line",
+  "rand() without seed() is different on every evaluation and every load; the C++ renderer needs --seed to pin it",
+  "A variable holding seed(…) is not a stored number but an expression; inside a loop write the seed inline with the loop index",
+  "A seeded scene drawn for a 360×200 box leaves a blank strip in a wider host: drive the loop count from componentWidth() and stand the towers on componentHeight(); since each tower is keyed by its index, the ones that were there keep their look"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/8/loop/commands/1/drawRect/top",
+   "shows": "expr.random",
+   "note": "tower top: @h - 40 - 110 * seed(i * 97 + 3, rand()), standing on the live bottom edge"
+  },
+  {
+   "pointer": "/root/commands/8/loop/commands/3/loop/until",
+   "shows": "expr.random",
+   "note": "window rows from the same seeded height"
+  },
+  {
+   "pointer": "/root/commands/8/loop/commands/3/loop/commands/0/loop/commands/0/paint/ops/0/alpha",
+   "shows": "expr.select",
+   "note": "lit or dark: 0.9 * step(seed(window key, rand()), 0.55)"
+  },
+  {
+   "pointer": "/root/commands/5",
+   "shows": "data.random",
+   "note": "50 stars with separate keys for x, y, size and brightness"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Fourteen dark towers of mixed heights with scattered amber windows, a pale moon top right and faint stars; the picture is the same on every render. Resized, the sky fills the box and the towers stand on its bottom edge: 9 towers at 234 wide, 21 at 540 (the loop runs to ceil(componentWidth() / 26)); the first towers keep their seeded heights and windows at any size, and the moon stays 60 px from the right.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 300
+   }
+  ]
+ },
+ "related": [
+  "VAR-08",
+  "VAR-05"
+ ],
+ "prerequisites": [
+  "VAR-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1274,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 44,
+  "operations": {
+   "ANIMATED_FLOAT": 15,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 4,
+   "DRAW_CIRCLE": 2,
+   "DRAW_RECT": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 4,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 7
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "bottom",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRect",
+   "from",
+   "header",
+   "height",
+   "index",
+   "left",
+   "linearGradient",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "shader",
+   "top",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "expr.random": [
+    "seed(",
+    "rand("
+   ],
+   "data.random": [
+    "rand"
+   ],
+   "expr.select": [
+    "step("
+   ],
+   "expr.math": [
+    "floor(",
+    "ceil("
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawCircle"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:36.763Z"
+ }
+}

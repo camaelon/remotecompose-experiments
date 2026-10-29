@@ -1,0 +1,246 @@
+{
+ "id": "DRW-13",
+ "name": "gradients",
+ "version": 3,
+ "title": "Gradient swatches",
+ "summary": "Three gradient fills: a two-colour horizontal linear gradient on a rounded square, a rainbow sweep gradient around a disc, and an off-centre radial gradient with stops that shades a disc into a lit sphere.",
+ "prompt": "Three swatches side by side: a linear gradient, a sweep (conic) gradient and a radial gradient.",
+ "level": 2,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.gradient"
+  ],
+  "secondary": [
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "gradient",
+  "linear gradient",
+  "radial gradient",
+  "sweep gradient",
+  "conic gradient",
+  "angular gradient",
+  "colour ramp",
+  "color wheel",
+  "sphere",
+  "3d ball",
+  "highlight",
+  "shader",
+  "blend"
+ ],
+ "teaches": [
+  "Fill a shape with a linearGradient paint op between (x1, y1) and (x2, y2)",
+  "Draw a colour wheel with sweepGradient around (centerX, centerY), repeating the first colour last to close it",
+  "Shade a disc into a sphere with a radialGradient whose centre is offset towards the light, placing colours with stops",
+  "Clear the gradient with the paint key shader 0 before drawing solid text",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre"
+ ],
+ "pitfalls": [
+  "Gradients are only read inside a paint's \"ops\" array: {\"paint\": {\"linearGradient\": ...}} is ignored by the Java reference parser (json2rc refuses it); write {\"paint\": {\"ops\": [{\"linearGradient\": ...}]}}",
+  "Gradient coordinates are canvas coordinates, not relative to the shape: x1/x2 must span the shape's own left and right, and the radial centre is near the disc's, not at 0,0",
+  "The gradient stays on the paint: without shader 0 the labels are drawn with the last gradient instead of their colour",
+  "A sweep gradient seams at 3 o'clock unless the last colour repeats the first",
+  "stops must have one entry per colour, increasing from 0 to 1",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: literal coordinates sit in the top-left and get cut off when it is resized, so scale the drawing to fit (or derive positions from componentWidth()/componentHeight())"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/3",
+   "shows": "draw.gradient",
+   "note": "linearGradient from x 20 to 120, blue to violet, inside paint ops"
+  },
+  {
+   "pointer": "/root/commands/5",
+   "shows": "draw.gradient",
+   "note": "sweepGradient around (180, 70), seven colours, first repeated last"
+  },
+  {
+   "pointer": "/root/commands/7",
+   "shows": "draw.gradient",
+   "note": "radialGradient centred up-left of the disc, white highlight at stop 0.3 fading to navy"
+  },
+  {
+   "pointer": "/root/commands/9",
+   "shows": "draw.gradient",
+   "note": "shader 0 removes the gradient from the paint"
+  },
+  {
+   "pointer": "/root/commands/8",
+   "shows": "draw.shapes",
+   "note": "the disc the radial gradient fills"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "text.anchor",
+   "note": "a label centred under its swatch (panX 0, panY 0)"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A blue-to-violet rounded square, a smooth rainbow disc with no seam, and a blue sphere lit from the upper left. Resized, the whole drawing scales uniformly to fit and stays centred (smaller in a narrow box, centred with margins in a wide one).",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 160
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 160
+   }
+  ]
+ },
+ "related": [
+  "DRW-14",
+  "DRW-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 680,
+  "header": {
+   "width": 360,
+   "height": 160
+  },
+  "op_count": 28,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 3,
+   "DRAW_CIRCLE": 2,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 4
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     160
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "centerX",
+   "centerY",
+   "color",
+   "colors",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "left",
+   "linearGradient",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "radialGradient",
+   "radius",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "shader",
+   "stops",
+   "sweepGradient",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "draw.gradient": [
+    "linearGradient",
+    "radialGradient",
+    "sweepGradient"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:16.443Z"
+ }
+}

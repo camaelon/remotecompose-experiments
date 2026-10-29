@@ -1,0 +1,294 @@
+{
+ "id": "EXP-04",
+ "name": "remap-ranges",
+ "version": 2,
+ "title": "Mapping values between ranges",
+ "summary": "Three readings in their own units (temperature −10…40 °C, gain −60…0 dB, speed 0…120 km/h) normalised with clamp((v − lo) / (hi − lo)) and placed on tracks with lerp; the out-of-range speed pins to the end.",
+ "prompt": "Show temperature, audio gain and speed on horizontal tracks, each mapped from its own range onto the track, with values past the end clamped.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.shaping"
+  ],
+  "secondary": [
+   "expr.format",
+   "data.expression",
+   "draw.shapes",
+   "draw.gradient",
+   "text.anchor",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "gauge",
+  "dashboard"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "map range",
+  "remap",
+  "normalize",
+  "scale value",
+  "convert units",
+  "progress track",
+  "level meter",
+  "clamp to range",
+  "lerp",
+  "slider position"
+ ],
+ "teaches": [
+  "Normalise a value to 0..1 once, as a named expression: tTemp = clamp(0, 1, (@temp + 10) / 50)",
+  "Map the normalised t onto pixels with lerp(start, end, t): cx = lerp(20, 340, @tTemp)",
+  "Clamp before mapping so an out-of-range input (speed 140 on a 0..120 scale) pins to the end instead of drawing off the track"
+ ],
+ "pitfalls": [
+  "clamp takes (min, max, value): the value is LAST, clamp(x, 0, 1) is always 0 (it is min(max(a, c), b), so only the max has to be in the middle)",
+  "lerp(a, b, t) does not clamp: lerp(30, 340, 1.17) is 392, past the track, which is why t is clamped first",
+  "A gradient set on the paint stays set when you change the colour: the marker after the gradient track would be painted with the gradient. Clear it with {\"shader\": 0} in the next paint's ops",
+  "Tracks drawn to x = 340 only fit the 360 header width: read componentWidth() into a variable (@r) and use it for the right ends, the gradient and the lerp targets; text that only fits when wide can go in a conditionalOperations on that width"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/tTemp",
+   "shows": "expr.shaping",
+   "note": "clamp(0, 1, (@temp + 10) / 50): −10…40 °C to 0..1"
+  },
+  {
+   "pointer": "/resources/variables/tSpeed",
+   "shows": "expr.shaping",
+   "note": "clamp(0, 1, @speed / 120): 140 km/h pins to 1"
+  },
+  {
+   "pointer": "/root/commands/21/drawCircle/cx",
+   "shows": "expr.shaping",
+   "note": "lerp(20, @r, @tTemp): 0..1 onto the track, whose right end @r = componentWidth() - 20 follows the live width"
+  },
+  {
+   "pointer": "/root/commands/20",
+   "shows": "draw.gradient",
+   "note": "{\"shader\": 0} clears the gradient before the solid marker"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "temp": {
+    "type": "float",
+    "meaning": "temperature in °C",
+    "default": 23,
+    "min": -20,
+    "max": 50,
+    "step": 1
+   },
+   "gain": {
+    "type": "float",
+    "meaning": "gain in dB",
+    "default": -18,
+    "min": -60,
+    "max": 12,
+    "step": 1
+   },
+   "speed": {
+    "type": "float",
+    "meaning": "speed in km/h",
+    "default": 140,
+    "min": 0,
+    "max": 200,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The temperature marker sits two thirds along the gradient track (23 °C), the gain bar fills 70 % (−18 dB), the speed bar is full with its thumb at the end and a red \"over range\" note. Resized, the tracks run from 20 px to the live width minus 20 (@r = componentWidth() - 20) and the values, the formula and the markers stay right-aligned at the same fractions, at 234 and at 540 wide; below 320 wide the formula and the over-range note are left out (a conditionalOperations on @r) so they do not run into the title and the Speed label.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 230
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 230
+   }
+  ]
+ },
+ "related": [
+  "VAR-02",
+  "INT-04",
+  "EXP-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1411,
+  "header": {
+   "width": 360,
+   "height": 230
+  },
+  "op_count": 62,
+  "operations": {
+   "ANIMATED_FLOAT": 9,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "ConditionalOperations": 2,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 6,
+   "DRAW_CIRCLE": 2,
+   "DRAW_ROUND_RECT": 5,
+   "DRAW_TEXT_ANCHOR": 9,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 3,
+   "PAINT_VALUES": 11,
+   "TextFromFloat": 3
+  },
+  "host_variables": [
+   {
+    "name": "gain",
+    "type": "float",
+    "value": -18
+   },
+   {
+    "name": "speed",
+    "type": "float",
+    "value": 140
+   },
+   {
+    "name": "temp",
+    "type": "float",
+    "value": 23
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     230
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     230
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "colors",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "export",
+   "flags",
+   "gain",
+   "header",
+   "height",
+   "left",
+   "linearGradient",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "shader",
+   "speed",
+   "tGain",
+   "tSpeed",
+   "tTemp",
+   "temp",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "expr.shaping": [
+    "lerp(",
+    "clamp("
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "data.expression": [
+    "conditionalOperations",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "draw.gradient": [
+    "linearGradient"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:31.154Z"
+ }
+}

@@ -1,0 +1,314 @@
+{
+ "id": "INT-01",
+ "name": "tap-counter",
+ "version": 3,
+ "title": "Tap counter",
+ "summary": "A number with a +1 button that increments it on each tap and a Reset button that sets it back to 0.",
+ "prompt": "Make a counter widget with a +1 button that increments the number on each tap and a Reset button.",
+ "level": 2,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.tap"
+  ],
+  "secondary": [
+   "text.dynamic",
+   "a11y.labels",
+   "layout.decoration",
+   "layout.stack",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "counter",
+  "increment",
+  "plus one",
+  "button",
+  "click",
+  "tally",
+  "tap count",
+  "reset",
+  "stepper"
+ ],
+ "components": [
+  "Button"
+ ],
+ "teaches": [
+  "Increment a variable on tap with onClick valueFloatExpressionChange (value \"@count + 1\")",
+  "Set a variable to a fixed value on tap with onClick valueFloatChange",
+  "Declare the state once with a root-level variable and show it with textFromFloat"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "input.tap",
+   "note": "the counter state: a float variable starting at 0"
+  },
+  {
+   "pointer": "/root/1/column/children/1/row/children/0/box/modifiers/6",
+   "shows": "input.tap",
+   "note": "onClick: count = count + 1"
+  },
+  {
+   "pointer": "/root/1/column/children/1/row/children/2/box/modifiers/6",
+   "shows": "input.tap",
+   "note": "onClick: count = 0"
+  },
+  {
+   "pointer": "/root/1/column/children/0",
+   "shows": "text.dynamic",
+   "note": "textFromFloat(@count, 3 digits, no decimals)"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Three taps on +1 show 3; a tap on Reset shows 0 again. Resized, the two buttons stay centred: at 234 wide they shrink to share the row (weight, capped at 120 by widthIn) instead of pushing Reset off the edge, and at 540 they keep 120.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 114,
+     "y": 125
+    },
+    {
+     "t": 0.3,
+     "type": "tap",
+     "x": 114,
+     "y": 125
+    },
+    {
+     "t": 0.5,
+     "type": "tap",
+     "x": 114,
+     "y": 125
+    }
+   ],
+   "duration": 1
+  },
+  "interact": [
+   {
+    "target": 0
+   },
+   {
+    "target": 0
+   },
+   {
+    "target": 0
+   }
+  ],
+  "expect": {
+   "changed_variables": "count goes from 0 to 3"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 180,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 60,
+      "y": 125
+     },
+     {
+      "t": 0.30000000000000004,
+      "type": "tap",
+      "x": 60,
+      "y": 125
+     },
+     {
+      "t": 0.5,
+      "type": "tap",
+      "x": 60,
+      "y": 125
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 180,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 200,
+      "y": 125
+     },
+     {
+      "t": 0.30000000000000004,
+      "type": "tap",
+      "x": 200,
+      "y": 125
+     },
+     {
+      "t": 0.5,
+      "type": "tap",
+      "x": 200,
+      "y": 125
+     }
+    ],
+    "duration": 1
+   }
+  ]
+ },
+ "related": [
+  "CMP-01",
+  "INT-02"
+ ],
+ "pitfalls": [
+  "valueFloatChange only sets a constant; incrementing needs valueFloatExpressionChange with an expression that reads the target (\"@count + 1\")",
+  "textFromFloat `whole` is the number of integer digits kept (3 here, enough up to 999), and inside a text value `decimal` defaults to 3, so set \"decimal\": 0 for a whole number",
+  "Declare the state as a root-level variable before the components that read it; the onClick actions then target it by name (\"@count\")",
+  "Fixed-width buttons (size 120×48) overflow when the host is narrower than the header: give them weight 1 with widthIn [0, 120] so they shrink but never grow past 120, and separate them with a fixed spacer box, since weights ignore spacedBy"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 739,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 45,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 1,
+   "CoreText": 3,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 4,
+   "HEADER": 1,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 7,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "MODIFIER_WIDTH_IN": 2,
+   "RoundedClipRectModifierOperation": 2,
+   "TextFromFloat": 1,
+   "ValueFloatExpressionChangeActionOperation": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "decimal",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "modifiers",
+   "name",
+   "onClick",
+   "padding",
+   "profiles",
+   "root",
+   "row",
+   "semantics",
+   "target",
+   "text",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "verticalArrangement",
+   "weight",
+   "whole",
+   "width",
+   "widthIn"
+  ],
+  "evidence": {
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:51.753Z"
+ }
+}

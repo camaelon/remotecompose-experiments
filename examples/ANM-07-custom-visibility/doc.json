@@ -1,0 +1,47 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 220, "profiles": 513,
+  "contentDescription": "A promo banner that rises and fades in when shown, and shrinks away when dismissed"},
+ "root": [
+  {"variable": {"name": "show", "vtype": "int", "value": 0}},
+  {"defineVisibilityAnimation": {
+   "name": "riseIn",
+   "params": ["progress", "w", "h", "x", "y"],
+   "commands": [
+    {"save": [
+     {"paint": {"alpha": "@progress"}},
+     {"translate": {"dx": 0, "dy": "(1 - @progress) * @h * 0.6"}},
+     {"type": "drawComponentContent"}
+    ]}
+   ]}},
+  {"defineVisibilityAnimation": {
+   "name": "shrinkOut",
+   "params": ["progress", "w", "h", "x", "y"],
+   "commands": [
+    {"save": [
+     {"paint": {"alpha": "1 - @progress"}},
+     {"scale": {"sx": "1 - 0.2 * @progress", "sy": "1 - 0.2 * @progress", "pivotX": "@x + @w / 2", "pivotY": "@y + @h / 2"}},
+     {"type": "drawComponentContent"}
+    ]}
+   ]}},
+  {"column": {
+   "modifiers": ["fillMaxSize", {"background": "#FF101828"}, {"padding": 16}, {"spacedBy": 14}],
+   "children": [
+    {"box": {"horizontalAlignment": "center", "verticalAlignment": "center",
+     "modifiers": [{"size": [140, 40]}, {"clip": 20}, {"background": "#FF243044"},
+      {"semantics": {"contentDescription": "Show the offer", "clickable": true}},
+      {"onClick": {"type": "valueIntegerChange", "target": "@show", "value": 1}}],
+     "children": [{"text": {"value": "Show offer", "fontSize": 15, "color": "#FF4DA3FF"}}]}},
+    {"column": {
+     "modifiers": [{"visibility": "@show"},
+      {"animationSpec": {"visibilityDuration": 500, "visibilityEasing": "DECELERATE",
+        "enterFunction": "riseIn", "exitFunction": "shrinkOut"}},
+      "fillMaxWidth", {"clip": 18}, {"background": "#FF7C4DFF"}, {"padding": 18}, {"spacedBy": 4},
+      {"semantics": {"contentDescription": "Offer: 30% off annual plans. Tap to dismiss", "clickable": true}},
+      {"onClick": {"type": "valueIntegerChange", "target": "@show", "value": 0}}],
+     "children": [
+      {"text": {"value": "30% off annual plans", "fontSize": 20, "color": "#FFFFFFFF"}},
+      {"text": {"value": "This week only. Tap to dismiss", "fontSize": 14, "color": "#DDFFFFFF"}}
+     ]}}
+   ]}}
+ ]
+}

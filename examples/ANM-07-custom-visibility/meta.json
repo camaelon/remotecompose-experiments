@@ -1,0 +1,285 @@
+{
+ "id": "ANM-07",
+ "name": "custom-visibility",
+ "version": 1,
+ "title": "Custom visibility animation",
+ "summary": "A promo banner whose entrance and exit are drawn by two defineVisibilityAnimation functions: riseIn fades it in while it rises 60 % of its height, shrinkOut fades it while it scales down to 80 % about its centre; animationSpec names them as enterFunction and exitFunction.",
+ "prompt": "A 'Show offer' button that reveals a promo banner which rises and fades into place; tapping the banner dismisses it by shrinking and fading it away.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.custom_visibility"
+  ],
+  "secondary": [
+   "anim.visibility",
+   "anim.easing",
+   "layout.state",
+   "draw.transform",
+   "input.tap",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "card",
+  "notification"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "banner",
+  "promo",
+  "toast",
+  "rise in",
+  "shrink out",
+  "custom transition",
+  "drawComponentContent",
+  "pop up"
+ ],
+ "teaches": [
+  "Define a transition once with defineVisibilityAnimation {name, params [progress, w, h, x, y], commands}; it runs every frame of the transition with progress 0→1",
+  "Draw the component yourself inside it: set paint alpha, translate or scale about (@x + @w / 2, @y + @h / 2), then drawComponentContent",
+  "Attach the functions with animationSpec enterFunction / exitFunction (enterAnimation and exitAnimation default to CUSTOM) and set the easing with visibilityEasing"
+ ],
+ "pitfalls": [
+  "defineVisibilityAnimation goes at the root, before the components that use it (a first-pass definition, like variable)",
+  "Exit progress also runs 0→1: write the exit as 1 - progress for alpha, not progress",
+  "drawComponentContent composites the component in a layer with the current paint alpha, so a paint alpha fades the whole subtree at once"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1",
+   "shows": "anim.custom_visibility",
+   "note": "riseIn: alpha = progress, translate dy = (1 - progress) * h * 0.6, drawComponentContent"
+  },
+  {
+   "pointer": "/root/2",
+   "shows": "anim.custom_visibility",
+   "note": "shrinkOut: alpha 1 - progress, scale 1 - 0.2·progress about the centre"
+  },
+  {
+   "pointer": "/root/3/column/children/1/column/modifiers/1",
+   "shows": "anim.visibility",
+   "note": "animationSpec {visibilityDuration: 500, visibilityEasing: DECELERATE, enterFunction: riseIn, exitFunction: shrinkOut}"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap on Show offer at 0.1 s, captured 0.2 s later. The banner is partly faded and still below its final place, rising into it; fully in place and opaque by 0.6 s. Resized (narrow 240, wide 540) the banner fills the width and wraps its lines on the narrow host; the rise distance is 60 % of the banner's own height (@h), so it scales with it.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 86,
+     "y": 36
+    }
+   ],
+   "duration": 0.3
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 86,
+      "y": 36
+     }
+    ],
+    "duration": 0.3
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 240,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 86,
+      "y": 36
+     }
+    ],
+    "duration": 0.3
+   }
+  ]
+ },
+ "related": [
+  "ANM-06",
+  "LAY-12"
+ ],
+ "prerequisites": [
+  "ANM-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1112,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 58,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 6,
+   "ANIMATION_SPEC": 1,
+   "CoreText": 3,
+   "DATA_INT": 1,
+   "DATA_TEXT": 5,
+   "DrawContent": 2,
+   "FUNCTION_DEFINE": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 6,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_SAVE": 2,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_VISIBILITY": 1,
+   "MODIFIER_WIDTH": 3,
+   "PAINT_VALUES": 2,
+   "RoundedClipRectModifierOperation": 2,
+   "VALUE_INTEGER_CHANGE_ACTION": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     240
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "defineVisibilityAnimation",
+   "dx",
+   "dy",
+   "enterFunction",
+   "exitFunction",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "name",
+   "onClick",
+   "padding",
+   "paint",
+   "params",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "root",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "spacedBy",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "visibility",
+   "visibilityDuration",
+   "visibilityEasing",
+   "vtype",
+   "width"
+  ],
+  "evidence": {
+   "anim.custom_visibility": [
+    "defineVisibilityAnimation",
+    "enterFunction",
+    "exitFunction",
+    "drawComponentContent"
+   ],
+   "anim.visibility": [
+    "visibilityDuration"
+   ],
+   "anim.easing": [
+    "visibilityEasing"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "draw.transform": [
+    "save",
+    "scale",
+    "translate"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueIntegerChange"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:35.716Z"
+ }
+}

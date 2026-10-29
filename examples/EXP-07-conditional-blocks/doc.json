@@ -1,0 +1,84 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 190, "profiles": 513,
+  "contentDescription": "An air quality reading with a category badge and advice chosen by thresholds"},
+ "resources": {
+  "variables": {
+   "aqi": {"value": 132, "export": true}
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "s", "value": "min(1, componentWidth() / 360)"}},
+   {"translate": {"dx": 0, "dy": "(componentHeight() - 190 * @s) / 2"}},
+   {"scale": {"sx": "@s", "sy": "@s"}},
+   {"variable": {"name": "r", "value": "componentWidth() / @s - 20"}},
+   {"variable": {"name": "q", "value": "(@r - 20) / 4"}},
+   {"variable": {"name": "b", "value": "min(@r, 340)"}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 13}]}},
+   {"drawTextAnchored": {"text": "Air quality index", "x": 20, "y": 26, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 46}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "@aqi", "whole": 3, "decimal": 0, "flags": 5},
+     "x": 20, "y": 66, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF66BB6A"}]}},
+   {"drawRect": {"left": 20, "top": 150, "right": "18 + @q", "bottom": 158}},
+   {"paint": {"ops": [{"color": "#FFFFCA28"}]}},
+   {"drawRect": {"left": "20 + @q", "top": 150, "right": "18 + 2 * @q", "bottom": 158}},
+   {"paint": {"ops": [{"color": "#FFFF9800"}]}},
+   {"drawRect": {"left": "20 + 2 * @q", "top": 150, "right": "18 + 3 * @q", "bottom": 158}},
+   {"paint": {"ops": [{"color": "#FFEF5350"}]}},
+   {"drawRect": {"left": "20 + 3 * @q", "top": 150, "right": "@r", "bottom": 158}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}]}},
+   {"drawCircle": {"cx": "20 + 4 * @q * clamp(0, 1, @aqi / 200)", "cy": 154, "radius": 7}},
+   {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"textSize": 10}]}},
+   {"drawTextAnchored": {"text": "0", "x": 20, "y": 172, "panX": -1, "panY": 0}},
+   {"drawTextAnchored": {"text": "50", "x": "19 + @q", "y": 172, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "100", "x": "19 + 2 * @q", "y": 172, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "150", "x": "19 + 3 * @q", "y": 172, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "200+", "x": "@r", "y": 172, "panX": 1, "panY": 0}},
+   {"conditionalOperations": {"condition": "eq", "v1": "@aqi", "v2": 0, "commands": [
+     {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"textSize": 15}]}},
+     {"drawTextAnchored": {"text": "No reading", "x": 140, "y": 45, "panX": -1, "panY": 0}}
+   ]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@aqi", "v2": 0, "commands": [
+     {"conditionalOperations": {"condition": "le", "v1": "@aqi", "v2": 50, "commands": [
+       {"paint": {"ops": [{"color": "#FF66BB6A"}]}},
+       {"drawRoundRect": {"left": 140, "top": 30, "right": "@b", "bottom": 60, "rx": 15, "ry": 15}},
+       {"paint": {"ops": [{"color": "#FF101828"}, {"textSize": 15}]}},
+       {"drawTextAnchored": {"text": "Good", "x": "@b / 2 + 70", "y": 45, "panX": 0, "panY": 0}},
+       {"paint": {"ops": [{"color": "#FFB0BEC5"}, {"textSize": 13}]}},
+       {"drawTextAnchored": {"text": "Enjoy the outdoors.", "x": 20, "y": 112, "panX": -1, "panY": 0}}
+     ]}}
+   ]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@aqi", "v2": 50, "commands": [
+     {"conditionalOperations": {"condition": "le", "v1": "@aqi", "v2": 100, "commands": [
+       {"paint": {"ops": [{"color": "#FFFFCA28"}]}},
+       {"drawRoundRect": {"left": 140, "top": 30, "right": "@b", "bottom": 60, "rx": 15, "ry": 15}},
+       {"paint": {"ops": [{"color": "#FF101828"}, {"textSize": 15}]}},
+       {"drawTextAnchored": {"text": "Moderate", "x": "@b / 2 + 70", "y": 45, "panX": 0, "panY": 0}},
+       {"paint": {"ops": [{"color": "#FFB0BEC5"}, {"textSize": 13}]}},
+       {"drawTextAnchored": {"text": "Unusually sensitive people: take it easy.", "x": 20, "y": 112, "panX": -1, "panY": 0}}
+     ]}}
+   ]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@aqi", "v2": 100, "commands": [
+     {"conditionalOperations": {"condition": "le", "v1": "@aqi", "v2": 150, "commands": [
+       {"paint": {"ops": [{"color": "#FFFF9800"}]}},
+       {"drawRoundRect": {"left": 140, "top": 30, "right": "@b", "bottom": 60, "rx": 15, "ry": 15}},
+       {"paint": {"ops": [{"color": "#FF101828"}, {"textSize": 15}]}},
+       {"drawTextAnchored": {"text": "Unhealthy for some", "x": "@b / 2 + 70", "y": 45, "panX": 0, "panY": 0}},
+       {"paint": {"ops": [{"color": "#FFB0BEC5"}, {"textSize": 13}]}},
+       {"drawTextAnchored": {"text": "Sensitive groups: limit long outdoor effort.", "x": 20, "y": 112, "panX": -1, "panY": 0}}
+     ]}}
+   ]}},
+   {"conditionalOperations": {"condition": "gt", "v1": "@aqi", "v2": 150, "commands": [
+     {"paint": {"ops": [{"color": "#FFEF5350"}]}},
+     {"drawRoundRect": {"left": 140, "top": 30, "right": "@b", "bottom": 60, "rx": 15, "ry": 15}},
+     {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 15}]}},
+     {"drawTextAnchored": {"text": "Unhealthy", "x": "@b / 2 + 70", "y": 45, "panX": 0, "panY": 0}},
+     {"paint": {"ops": [{"color": "#FFB0BEC5"}, {"textSize": 13}]}},
+     {"drawTextAnchored": {"text": "Everyone: move activities indoors.", "x": 20, "y": 112, "panX": -1, "panY": 0}}
+   ]}}
+  ]
+ }
+}

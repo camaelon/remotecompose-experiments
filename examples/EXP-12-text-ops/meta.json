@@ -1,0 +1,310 @@
+{
+ "id": "EXP-12",
+ "name": "text-ops",
+ "version": 2,
+ "title": "String operations",
+ "summary": "A contact card built from three raw exported strings: textTransform capitalises the name, takes an upper-case initial and upper-cases the role, textMeasure sizes the role pill, textSubtext trims a preview and textLength counts its characters.",
+ "prompt": "A contact card from raw strings: \"ada lovelace\" shown as \"Ada Lovelace\" with an initial avatar, the role upper-cased in a pill that fits the text, and a 30-character preview of a message with its length.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.string"
+  ],
+  "secondary": [
+   "text.measure",
+   "text.dynamic",
+   "expr.format",
+   "host.variables",
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "capitalize",
+  "uppercase",
+  "initials",
+  "avatar letter",
+  "substring",
+  "truncate",
+  "ellipsis",
+  "text width",
+  "character count",
+  "pill badge",
+  "string functions"
+ ],
+ "teaches": [
+  "Transform a string into a new text variable with textTransform {text, start, len, operation, varName}: 1 lower, 2 upper, 3 trim, 4 capitalise words, 5 capitalise first; len -1 runs to the end",
+  "Cut a substring with textSubtext {text, start, len, varName} and add an ellipsis with textMerge",
+  "Measure the rendered width with textMeasure (mode 0) after setting the paint's textSize, and size a pill with it: right = 122 + @roleW",
+  "Count characters with textLength {text, name} and print the count with textFromFloat"
+ ],
+ "pitfalls": [
+  "The JSON names for textTransform's operation are off by one in the reference parser: \"uppercase\" writes 1 (TEXT_TO_LOWERCASE), \"lowercase\" 2 (upper), \"capitalize\" 3 (trim). Write the number",
+  "textMeasure measures with the paint as it is at that point in the commands: set textSize first",
+  "textSubtext throws past the end of the string on Java (substring): keep start + len within the text, or use len -1",
+  "These operations are in the AndroidX profile: the header needs profiles 513 (the Java writer refuses opcode 199 without it)",
+  "A card drawn to x = 348 only fits the header width: draw it to componentWidth() - 12, and when the fixed-size text (a 21 px name, a 30-character preview) would no longer fit, scale the canvas down as a whole"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/3/commands/0",
+   "shows": "expr.string",
+   "note": "textTransform operation 4: \"ada lovelace\" → \"Ada Lovelace\""
+  },
+  {
+   "pointer": "/root/3/commands/1",
+   "shows": "expr.string",
+   "note": "start 0, len 1, operation 2: the upper-case initial"
+  },
+  {
+   "pointer": "/root/3/commands/3",
+   "shows": "expr.string",
+   "note": "textSubtext: the first 30 characters"
+  },
+  {
+   "pointer": "/root/3/commands/18",
+   "shows": "text.measure",
+   "note": "textMeasure mode 0 → @roleW, the pill's width"
+  },
+  {
+   "pointer": "/root/3/commands/4",
+   "shows": "expr.string",
+   "note": "textLength → @chars"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "name": {
+    "type": "string",
+    "meaning": "contact name",
+    "default": "ada lovelace"
+   },
+   "role": {
+    "type": "string",
+    "meaning": "role",
+    "default": "analyst"
+   },
+   "msg": {
+    "type": "string",
+    "meaning": "last message",
+    "default": "The engine might compose elaborate pieces of music"
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A purple circle with A, \"Ada Lovelace\", a teal ANALYST pill fitted to its text, and the preview \"The engine might compose elabo…\" over \"50 characters\". Resized, the card fills the live width (right edge at componentWidth() - 12) with the divider following it; below the 360 design width the whole card is scaled down (@s = min(1, w / 360)) so the name and the preview stay inside it, at 234 wide too.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 180
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 180
+   }
+  ]
+ },
+ "related": [
+  "TXT-10",
+  "EXP-11"
+ ],
+ "prerequisites": [
+  "EXP-11"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1141,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 54,
+  "operations": {
+   "ANIMATED_FLOAT": 6,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 5,
+   "DRAW_CIRCLE": 1,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 2,
+   "DRAW_TEXT_ANCHOR": 5,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 3,
+   "PAINT_VALUES": 10,
+   "TextFromFloat": 1,
+   "TextLength": 1,
+   "TextMeasure": 1,
+   "TextMerge": 2,
+   "TextSubtext": 1,
+   "TextTransform": 3
+  },
+  "host_variables": [
+   {
+    "name": "msg",
+    "type": "string",
+    "value": "The engine might compose elaborate pieces of music"
+   },
+   {
+    "name": "name",
+    "type": "string",
+    "value": "ada lovelace"
+   },
+   {
+    "name": "role",
+    "type": "string",
+    "value": "analyst"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     180
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "export",
+   "flags",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "left",
+   "len",
+   "mode",
+   "modifiers",
+   "name",
+   "operation",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "start",
+   "sx",
+   "sy",
+   "text",
+   "textLength",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "vtype",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "expr.string": [
+    "textMerge",
+    "textTransform",
+    "textSubtext",
+    "textLength",
+    "textMeasure"
+   ],
+   "text.measure": [
+    "textMeasure",
+    "textLength"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:40.106Z"
+ }
+}

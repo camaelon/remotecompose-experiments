@@ -1,0 +1,238 @@
+{
+ "component": "Switch",
+ "version": 2,
+ "summary": "An on/off switch: a tap flips its variable (0 or 1); the thumb springs across (a little overshoot) while the track colour fades in.",
+ "params": {
+  "checked": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The 0/1 state. Bind a document variable (\"@wifi\") to read or drive it; omitted, the switch keeps its own"
+  },
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Accessibility label (the switch draws no text)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Track colour when on"
+  }
+ },
+ "capabilities": [
+  "input.toggle",
+  "a11y.labels",
+  "draw.shapes"
+ ],
+ "call": {
+  "Switch": {
+   "label": "Wi-Fi",
+   "checked": "@wifi"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": [
+      52,
+      32
+     ]
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label",
+      "clickable": true
+     }
+    },
+    {
+     "onClick": {
+      "type": "valueFloatExpressionChange",
+      "target": "@checked",
+      "value": "1 - @checked"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@theme.stroke"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 1,
+        "top": 1,
+        "right": 51,
+        "bottom": 31,
+        "rx": 15,
+        "ry": 15
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "alpha": "@p"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 1,
+        "top": 1,
+        "right": 51,
+        "bottom": 31,
+        "rx": 15,
+        "ry": 15
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "alpha": "1 - @p"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "16 + @x",
+        "cy": 16,
+        "radius": 8
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@p"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "16 + @x",
+        "cy": 16,
+        "radius": 10
+       }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0,
+        "top": 0,
+        "right": 52,
+        "bottom": 32,
+        "rx": 16,
+        "ry": 16
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "alpha": "@p"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0,
+        "top": 0,
+        "right": 52,
+        "bottom": 32,
+        "rx": 16,
+        "ry": 16
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FFFFFFFF"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "16 + @x",
+        "cy": 16,
+        "radius": 12
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The motion is paint time: an animated local p = {\"value\": \"@checked\", \"anim\": 0.3} eases from 0 to 1 when the state flips (Java re-evaluates an animated expression every frame while it runs), and the thumb x is 16 + 20 * (p + 0.5 * sin(pi * p) * (2 * @checked - 1)): the sine term pushes it about 10% past the end and back, the spring feel. No layout runs while it moves",
+  "The track colour follows the state without colour expressions: the `color` track is drawn over the grey one with paint alpha p",
+  "Mono themes have no motion: p is @checked itself, so the thumb and the track snap (the sine term is 0 at both ends)",
+  "It draws no text: put the visible label next to it (a KeyValueRow key, a ListItem title) and pass the same words as `label`"
+ ],
+ "locals": {
+  "p": {
+   "value": "@checked",
+   "anim": 0.3
+  },
+  "x": {
+   "$if": "theme.mono",
+   "then": "20 * @checked",
+   "else": "20 * (@p + 0.5 * sin(3.14159 * @p) * (2 * @checked - 1))"
+  }
+ }
+}

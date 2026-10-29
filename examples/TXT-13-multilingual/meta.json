@@ -1,0 +1,200 @@
+{
+ "id": "TXT-13",
+ "name": "multilingual",
+ "version": 3,
+ "title": "Multilingual text",
+ "summary": "One line each of English, Japanese, right-to-left Arabic and emoji, all from plain text components relying on the player's font fallback.",
+ "prompt": "Show \"Hello, world\" in English, Japanese and right-to-left Arabic, plus a line of emoji.",
+ "level": 2,
+ "family": "TXT",
+ "capabilities": {
+  "primary": [
+   "text.i18n"
+  ],
+  "secondary": [
+   "text.basic",
+   "layout.stack",
+   "layout.spacing",
+   "layout.size",
+   "layout.align"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "unicode",
+  "localisation",
+  "translation",
+  "rtl",
+  "right to left",
+  "cjk",
+  "emoji",
+  "font fallback",
+  "international",
+  "arabic",
+  "japanese",
+  "non-latin",
+  "bidi",
+  "utf-8"
+ ],
+ "teaches": [
+  "Write any script straight into a text value as UTF-8: the player picks a fallback font per glyph",
+  "Let right-to-left text such as Arabic shape and order itself; no flag is needed on the component",
+  "Check a render for tofu boxes when a document mixes scripts"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/1/children/1",
+   "shows": "text.i18n",
+   "note": "Japanese: こんにちは世界"
+  },
+  {
+   "pointer": "/root/children/2/children/1",
+   "shows": "text.i18n",
+   "note": "Arabic, right to left: مرحبا بالعالم"
+  },
+  {
+   "pointer": "/root/children/3/children/1",
+   "shows": "text.i18n",
+   "note": "emoji"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Four labelled lines; the Japanese, Arabic and emoji glyphs all render, with no tofu boxes, and the Arabic letters are joined and run right to left. Resized (270, 540 wide) the 64 dp label column leaves room for the 24 sp samples; at 270 こんにちは世界 still fits on one line.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 270,
+    "height": 180
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 180
+   }
+  ]
+ },
+ "related": [
+  "TXT-01",
+  "TXT-14"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 822,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 44,
+  "operations": {
+   "CoreText": 8,
+   "DATA_TEXT": 8,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 13,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 5
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     270,
+     180
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "color",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "root",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "text.i18n": [
+    "text"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "layout.align": [
+    "verticalAlignment",
+    "spacedBy"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:44.864Z"
+ },
+ "pitfalls": [
+  "Put the characters themselves in the JSON (UTF-8); there is no font or locale setting to make, and no escape is needed",
+  "Rendering depends on the player's fonts: a device without a CJK, Arabic or colour-emoji font shows tofu boxes, so check renders on the target",
+  "Right-to-left text runs right to left inside its own box but the box is still placed by the layout (start of a row is the left): the Arabic line here starts at the same x as the others",
+  "Japanese and Chinese have no spaces to break at: the C++ player keeps こんにちは世界 on one line and clips it when the box is narrower, so leave the sample enough width (a narrow label column)"
+ ]
+}

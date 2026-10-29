@@ -1,0 +1,269 @@
+{
+ "id": "ANM-05",
+ "name": "animated-resize",
+ "version": 2,
+ "title": "Animated card resize",
+ "summary": "An order card that grows to show its delivery details when tapped: its height is an expression of @open and animationSpec animates the resize, the card below slides down with its own spec, and the details fade in through an animated graphicsLayer alpha.",
+ "prompt": "A list of two order cards; tapping the first one expands it smoothly to show the courier, delivery window and instructions, pushing the second card down, and tapping again collapses it.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.layout"
+  ],
+  "secondary": [
+   "anim.value",
+   "anim.easing",
+   "expr.modifiers",
+   "input.toggle",
+   "layout.decoration",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "card",
+  "list"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "expand card",
+  "accordion",
+  "show more",
+  "grow height",
+  "collapse",
+  "details reveal",
+  "push down",
+  "animate content size"
+ ],
+ "teaches": [
+  "Resize a component from a variable (height \"68 + @open * 78\") and add animationSpec to make the new size animate instead of snapping",
+  "Give siblings their own animationSpec so they glide to their new positions as the card grows",
+  "Fade the revealed content with graphicsLayer alpha {\"value\": \"@open\", \"anim\": 0.4} while the box grows"
+ ],
+ "pitfalls": [
+  "Each component animates only if it carries animationSpec: without one on the second card it jumps down while the first card grows",
+  "A collapsed card still lays out its hidden lines below the visible area: clip the card and fade those lines (alpha 0), or they peek out under the padding. While collapsed they are squeezed to zero height, which the audit reports as layout_zero_size (expected here)",
+  "motionDuration is in milliseconds; the anim object's duration is in seconds",
+  "A card with a fixed collapsed height must keep its title on one line (maxLines 1, ellipsis): wrapped on a narrow host it pushes the subtitle out of the card"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/column/children/0/column/modifiers/2",
+   "shows": "anim.layout",
+   "note": "animationSpec {motionDuration: 450, motionEasing: DECELERATE} on the growing card"
+  },
+  {
+   "pointer": "/root/1/column/children/0/column/modifiers/1",
+   "shows": "expr.modifiers",
+   "note": "height = 68 + @open * 78"
+  },
+  {
+   "pointer": "/root/1/column/children/1/column/modifiers/2",
+   "shows": "anim.layout",
+   "note": "the second card's own spec: it slides down instead of jumping"
+  },
+  {
+   "pointer": "/root/1/column/children/0/column/children/2/column/modifiers/0",
+   "shows": "anim.value",
+   "note": "details alpha {value: @open, anim: 0.4}"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap on the first card at 0.1 s, captured 0.1 s later: the card is most of the way to its expanded height (decelerating), the details are fading in and the Delivered card has moved down. Settled after 0.5 s. Resized (narrow 240, wide 540) both cards fill the width and grow the same 78 dp; on the narrow host the title ellipsizes on one line instead of wrapping out of the 68 dp collapsed card.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 40
+    }
+   ],
+   "duration": 0.2
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 320,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 40
+     }
+    ],
+    "duration": 0.2
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 360,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 40
+     }
+    ],
+    "duration": 0.2
+   }
+  ]
+ },
+ "related": [
+  "LAY-12",
+  "EXP-10",
+  "ANM-08"
+ ],
+ "prerequisites": [
+  "ANM-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1209,
+  "header": {
+   "width": 360,
+   "height": 320
+  },
+  "op_count": 57,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 3,
+   "ANIMATION_SPEC": 2,
+   "CoreText": 7,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 8,
+   "GraphicsLayerModifier": 1,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 11,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 4,
+   "MODIFIER_WIDTH": 3,
+   "RoundedClipRectModifierOperation": 2,
+   "ValueFloatExpressionChangeActionOperation": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 2
+  },
+  "audit_findings": [
+   "warning: layout_zero_size",
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 1,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     320
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     360
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "anim",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "graphicsLayer",
+   "header",
+   "height",
+   "maxLines",
+   "modifiers",
+   "motionDuration",
+   "motionEasing",
+   "name",
+   "onClick",
+   "overflow",
+   "padding",
+   "profiles",
+   "root",
+   "semantics",
+   "spacedBy",
+   "target",
+   "text",
+   "type",
+   "value",
+   "variable",
+   "width"
+  ],
+  "evidence": {
+   "anim.layout": [
+    "animationSpec"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "anim.easing": [
+    "motionEasing"
+   ],
+   "expr.modifiers": [
+    "graphicsLayer"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:33.572Z"
+ },
+ "expect_findings": [
+  "layout_zero_size"
+ ]
+}

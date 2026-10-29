@@ -1,0 +1,278 @@
+{
+ "id": "EXP-07",
+ "name": "conditional-blocks",
+ "version": 2,
+ "title": "Threshold categories with conditionalOperations",
+ "summary": "An air-quality reading whose badge and advice come from conditionalOperations blocks: eq for no data, nested gt/le pairs for each band (AND), and the scale marker from a clamped expression.",
+ "prompt": "Show an air quality index with a coloured category badge (Good, Moderate, Unhealthy for some, Unhealthy) and one line of advice for the band the value falls in, plus a scale with a marker.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.conditional"
+  ],
+  "secondary": [
+   "data.condition",
+   "expr.shaping",
+   "expr.format",
+   "data.expression",
+   "draw.shapes",
+   "text.anchor",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "weather",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "air quality",
+  "aqi",
+  "category badge",
+  "threshold",
+  "if else",
+  "range check",
+  "status",
+  "band",
+  "nested condition",
+  "conditional content"
+ ],
+ "teaches": [
+  "Draw a block only when a comparison holds with conditionalOperations {condition: gt|ge|lt|le|eq, v1, v2, commands}: v1 is compared to v2",
+  "Test a band (50 < v ≤ 100) by nesting two blocks: a gt block containing a le block",
+  "Write the else branch as its own block with the complementary condition; there is no else",
+  "Keep continuous things (the marker position) as expressions and use blocks only for content that differs per band"
+ ],
+ "pitfalls": [
+  "There is no else, and no and/or: nest for AND, repeat the block for OR, and write the complement for else",
+  "The condition names are gt, ge, lt, le and eq (case-insensitive); anything else becomes 0, which the reader does not treat as an error",
+  "eq compares floats exactly: use it on whole numbers or flags, not on computed fractions",
+  "Static text in the blocks is fine; a value that only changes size or position is cheaper as an expression than as four blocks",
+  "A canvas laid out with literal x coordinates (98, 179, 340) only fits its header width: compute the edges from componentWidth(), and when there is less room than the design needs, scale the drawing down as a whole (min(1, componentWidth() / 360)) rather than letting text run off the edge"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/26",
+   "shows": "expr.conditional",
+   "note": "eq: only when @aqi == 0, the \"No reading\" note"
+  },
+  {
+   "pointer": "/root/commands/28",
+   "shows": "expr.conditional",
+   "note": "gt 50 containing le 100: the Moderate band"
+  },
+  {
+   "pointer": "/root/commands/30",
+   "shows": "data.condition",
+   "note": "gt 150 alone: the open-ended top band"
+  },
+  {
+   "pointer": "/root/commands/19/drawCircle/cx",
+   "shows": "expr.shaping",
+   "note": "20 + 4 * @q * clamp(0, 1, @aqi / 200), @q being a quarter of the live scale width"
+  },
+  {
+   "pointer": "/root/commands/0",
+   "shows": "data.expression",
+   "note": "@s = min(1, componentWidth() / 360): below the 360 design width the whole card is scaled down (and centred vertically); above it @r = componentWidth() / @s - 20 stretches the scale"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "aqi": {
+    "type": "float",
+    "meaning": "air quality index, 0 = no reading",
+    "default": 132,
+    "min": 0,
+    "max": 300,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "AQI 132: an orange \"Unhealthy for some\" badge, the sensitive-groups advice, and the marker between 100 and 150 on the scale. aqi 0, 30, 75 and 180 show No reading, Good, Moderate and Unhealthy. Resized, at 234 wide the card is scaled down as a whole (@s = 0.65) and centred vertically; at 540 the scale stretches to the live width (quarters of @r - 20) while the badge stops growing at 200 px.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 190
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 190
+   }
+  ]
+ },
+ "related": [
+  "VAR-04",
+  "EXP-06"
+ ],
+ "prerequisites": [
+  "VAR-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2247,
+  "header": {
+   "width": 360,
+   "height": 190
+  },
+  "op_count": 103,
+  "operations": {
+   "ANIMATED_FLOAT": 19,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 8,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 15,
+   "DRAW_CIRCLE": 1,
+   "DRAW_RECT": 4,
+   "DRAW_ROUND_RECT": 4,
+   "DRAW_TEXT_ANCHOR": 16,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 21,
+   "TextFromFloat": 1
+  },
+  "host_variables": [
+   {
+    "name": "aqi",
+    "type": "float",
+    "value": 132
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     190
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     190
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "aqi",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "export",
+   "flags",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "expr.conditional": [
+    "conditionalOperations"
+   ],
+   "data.condition": [
+    "conditionalOperations"
+   ],
+   "expr.shaping": [
+    "clamp("
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "data.expression": [
+    "conditionalOperations",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:34.443Z"
+ }
+}

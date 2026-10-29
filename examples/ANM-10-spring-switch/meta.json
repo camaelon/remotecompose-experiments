@@ -1,0 +1,262 @@
+{
+ "id": "ANM-10",
+ "name": "spring-switch",
+ "version": 2,
+ "title": "Springy switches",
+ "summary": "Two settings switches whose thumbs spring across with a little overshoot (a graphicsLayer translationX over an animated progress, at paint time) while the blue track fades in with the same progress.",
+ "prompt": "A settings card with Wi-Fi and Bluetooth switches; tapping a row flips its switch with a springy thumb that slightly overshoots and a track colour that fades between grey and blue.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.value",
+   "expr.trig"
+  ],
+  "secondary": [
+   "input.toggle",
+   "expr.modifiers",
+   "layout.decoration",
+   "layout.weight",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "toggle switch",
+  "springy",
+  "bouncy toggle",
+  "settings",
+  "on off",
+  "ios switch",
+  "material switch",
+  "thumb animation"
+ ],
+ "teaches": [
+  "Animate a state change at paint time: a root variable {\"value\": \"@on\", \"anim\": 0.3} eases from 0 to 1 whenever @on flips, and every visual reads it",
+  "Give the thumb a spring feel with an expression over that progress: x = 22 * (p + 0.5 * sin(pi * p) * (2 * @on - 1)) overshoots about 10% and settles, in graphicsLayer translationX (no layout runs)",
+  "Cross-fade the track colour by stacking an 'on' layer whose graphicsLayer alpha is the same progress"
+ ],
+ "pitfalls": [
+  "JSON has no colour expression: fade between colours with an overlay's alpha",
+  "A {value, anim} animation has only the standard cubic easing; an overshoot is an expression over the eased progress, and the sine term flips sign with the target, so a tap during the 0.3 s travel jumps the thumb by up to 2 dp",
+  "Do not move the thumb with a layout dimension and an OVERSHOOT animationSpec: Java re-measures a width bound to a variable, but its bounds animation stops at the first frame the eased progress reaches 1, so an overshooting easing leaves the thumb at the overshoot (about 2 dp past the end) until the next layout (U, see EXAMPLES_FINDINGS)",
+  "Weights ignore spacedBy (U3): the text column takes weight 1 and the switch sits after it with no spacedBy"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/3",
+   "shows": "anim.value",
+   "note": "btP = {value: @bt, anim: 0.3}: the eased progress"
+  },
+  {
+   "pointer": "/root/4/column/children/1/row/children/1/box/children/1/row/children/0/box/modifiers/0",
+   "shows": "expr.trig",
+   "note": "thumb translationX: 22 * (p + 0.5 sin(pi p)(2 @bt - 1)), the overshoot"
+  },
+  {
+   "pointer": "/root/4/column/children/1/row/children/1/box/children/0/box/modifiers/1",
+   "shows": "expr.modifiers",
+   "note": "blue track alpha @btP"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Wi-Fi on, Bluetooth off. A tap on the Bluetooth row at 0.1 s, captured 0.08 s later: its thumb is past the middle and the track half blue. Settled after 0.6 s. Resized (narrow 240, wide 540) the rows fill the width with the switches pinned right; a switch keeps its 52 dp track, so its 22 dp thumb travel is a fixed distance by design.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 124
+    }
+   ],
+   "duration": 0.18
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 124
+     }
+    ],
+    "duration": 0.18
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 124
+     }
+    ],
+    "duration": 0.18
+   }
+  ]
+ },
+ "related": [
+  "INT-02",
+  "CMP-02",
+  "ANM-02"
+ ],
+ "prerequisites": [
+  "ANM-02"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1805,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 100,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 6,
+   "CoreText": 4,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 6,
+   "GraphicsLayerModifier": 4,
+   "HEADER": 1,
+   "LAYOUT_BOX": 6,
+   "LAYOUT_COLUMN": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 13,
+   "MODIFIER_BACKGROUND": 9,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 11,
+   "MODIFIER_PADDING": 5,
+   "MODIFIER_WIDTH": 13,
+   "RoundedClipRectModifierOperation": 6,
+   "ValueFloatExpressionChangeActionOperation": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "graphicsLayer",
+   "header",
+   "height",
+   "modifiers",
+   "name",
+   "onClick",
+   "padding",
+   "profiles",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "spacedBy",
+   "target",
+   "text",
+   "translationX",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "anim.value": [
+    "anim"
+   ],
+   "expr.trig": [
+    "sin("
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "expr.modifiers": [
+    "graphicsLayer"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:38.968Z"
+ }
+}

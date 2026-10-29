@@ -1,0 +1,19 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 200, "profiles": 513,
+  "contentDescription": "A glowing ring whose position, size and colour the host sets"},
+ "resources": {"variables": {
+  "ringX": {"value": 0.5, "export": true},
+  "ringY": {"value": 0.5, "export": true},
+  "ringRadius": {"value": 60, "export": true},
+  "ringHue": {"value": 0.6, "export": true}}},
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize"],
+  "commands": [
+   {"paint": {"shader": {
+    "agsl": "uniform float2 uCenter;\nuniform float2 uSize;\nuniform float uRadius;\nuniform float uHue;\nhalf4 main(float2 p) {\n  float d = abs(length(p - uCenter * uSize) - uRadius);\n  float ring = 1.0 - smoothstep(4.0, 7.0, d);\n  float glow = exp(-d * 0.08) * 0.6;\n  float3 c = 0.5 + 0.5 * cos(6.28318 * (uHue + float3(0.0, 0.33, 0.67)));\n  float3 bg = float3(0.063, 0.094, 0.157);\n  return half4(half3(bg + c * max(ring, glow)), 1.0);\n}",
+    "uniforms": {"uCenter": ["@ringX", "@ringY"], "uSize": ["componentWidth()", "componentHeight()"], "uRadius": "@ringRadius", "uHue": "@ringHue"}}}},
+   {"drawRect": {"left": 0, "top": 0, "right": "componentWidth()", "bottom": "componentHeight()"}}
+  ]
+ }
+}

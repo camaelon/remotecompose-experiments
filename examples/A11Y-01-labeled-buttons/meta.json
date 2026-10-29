@@ -1,0 +1,285 @@
+{
+ "id": "A11Y-01",
+ "name": "labeled-buttons",
+ "version": 2,
+ "title": "Labelled icon buttons",
+ "summary": "A toolbar of three icon-only buttons (Play, Add, Search), each carrying a contentDescription and marked clickable for screen readers; DX-04 is the same toolbar without them.",
+ "prompt": "Make a toolbar of icon-only buttons (play, add, search) that a screen reader can announce.",
+ "level": 2,
+ "family": "A11Y",
+ "capabilities": {
+  "primary": [
+   "a11y.labels"
+  ],
+  "secondary": [
+   "input.tap",
+   "data.condition",
+   "draw.path",
+   "draw.shapes",
+   "draw.stroke",
+   "layout.align"
+  ]
+ },
+ "use_cases": [
+  "control",
+  "media-player"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "accessibility",
+  "a11y",
+  "talkback",
+  "voiceover",
+  "screen reader",
+  "content description",
+  "alt text",
+  "icon button",
+  "toolbar",
+  "aria label"
+ ],
+ "components": [
+  "IconButton"
+ ],
+ "teaches": [
+  "Label an icon-only button with semantics contentDescription so a screen reader can announce it",
+  "Mark it as an actionable element with semantics clickable: true (the JSON has no role key; Java and json2rc write role 255, unset)",
+  "Highlight the last-pressed button with conditionalOperations eq @selected i inside each button's canvas"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/row/children/0/canvas/modifiers/1",
+   "shows": "a11y.labels",
+   "note": "semantics: contentDescription \"Play\", clickable"
+  },
+  {
+   "pointer": "/root/1/row/children/0/canvas/modifiers/2",
+   "shows": "input.tap",
+   "note": "onClick: selected = 0"
+  },
+  {
+   "pointer": "/root/1/row/children/0/canvas/commands/1",
+   "shows": "data.condition",
+   "note": "the accent background when this button was the last pressed"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "inspect_accessibility lists three clickable nodes labelled Play, Add and Search, and the audit has no a11y finding. A tap on Search turns its circle blue. Resized (240, 540 wide) the three 56 dp buttons stay evenly spread across the width; the tap on Search (moved to its new centre) still turns it blue.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 284,
+     "y": 50
+    }
+   ],
+   "duration": 0.5
+  },
+  "interact": [
+   {
+    "target": 2
+   }
+  ],
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 194,
+      "y": 50
+     }
+    ]
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 419,
+      "y": 50
+     }
+    ]
+   }
+  ]
+ },
+ "related": [
+  "DX-04",
+  "A11Y-04",
+  "A11Y-02"
+ ],
+ "pitfalls": [
+  "semantics has no role key in the Java parser (it reads contentDescription, text, stateDescription, enabled and clickable); a \"role\" is silently dropped, so use clickable: true to mark a button",
+  "semantics clickable: true only tells the screen reader the node is actionable; the onClick modifier on the same component is what makes it act",
+  "Name the action (\"Search\"), not the picture (\"magnifying glass\"); an icon-only button has no text for a screen reader to fall back on"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 834,
+  "header": {
+   "width": 360,
+   "height": 100
+  },
+  "op_count": 59,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "CanvasContent": 3,
+   "ConditionalOperations": 3,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 3,
+   "DRAW_CIRCLE": 4,
+   "DRAW_LINE": 3,
+   "DRAW_PATH": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 4,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 4,
+   "MODIFIER_WIDTH": 4,
+   "PAINT_VALUES": 9,
+   "PATH_CREATE": 1,
+   "PathAppend": 3,
+   "ValueFloatExpressionChangeActionOperation": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "canvas",
+   "children",
+   "clickable",
+   "color",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "header",
+   "height",
+   "horizontalArrangement",
+   "id",
+   "modifiers",
+   "name",
+   "onClick",
+   "ops",
+   "paint",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathCreate",
+   "profiles",
+   "radius",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "target",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "a11y.labels": [
+    "semantics"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "data.condition": [
+    "conditionalOperations"
+   ],
+   "draw.path": [
+    "drawPath",
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "layout.align": [
+    "verticalAlignment",
+    "horizontalArrangement"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:24.990Z"
+ }
+}

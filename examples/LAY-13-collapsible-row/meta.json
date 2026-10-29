@@ -1,0 +1,266 @@
+{
+ "id": "LAY-13",
+ "name": "collapsible-row",
+ "version": 2,
+ "title": "Collapsible app bar (priorities)",
+ "summary": "An Inbox app bar shown at five widths: a collapsibleRow drops its children by collapsiblePriority as space runs out (the unread chip first, then share, then search), keeps the unprioritized title and overflow menu longest, and a weighted spacer keeps the icons pushed to the end at every width.",
+ "prompt": "An app bar (title \"Inbox\", a \"12 new\" chip, search, share and an overflow menu) that drops its least important items as it narrows: the chip first, then share, then search; the title and the overflow menu stay. Show it at 328, 240, 200, 152 and 112 dp.",
+ "level": 3,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.responsive"
+  ],
+  "secondary": [
+   "layout.weight",
+   "layout.stack",
+   "layout.size",
+   "layout.spacing",
+   "layout.decoration",
+   "draw.shapes",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "collapsible row",
+  "toolbar",
+  "app bar",
+  "action bar",
+  "overflow actions",
+  "priority",
+  "drop items when narrow",
+  "hide on small screens",
+  "adaptive toolbar",
+  "progressive disclosure",
+  "responsive header"
+ ],
+ "teaches": [
+  "Let a collapsibleRow decide what fits: children are kept in priority order (highest first) and dropped from the lowest priority up once the next one no longer fits",
+  "Rank children with collapsiblePriority {orientation: horizontal, priority: N}; leave the must-stay ones (title, overflow menu) without a priority, which counts as the highest",
+  "Push the actions to the end with an unprioritized weighted spacer: it takes only the space left over and never causes a drop",
+  "Size the container, not the collapsibleRow, when its children include a weight: give the row fillMaxWidth inside a box of the width you want"
+ ],
+ "pitfalls": [
+  "Unprioritized children all tie at the top and keep document order among themselves: at 112 dp the title (first) stays and the overflow menu (last) goes",
+  "The fit test adds up the children's widths only, not spacedBy: with spacedBy 10 a 225 dp row keeps 220 dp of children and overflows by 20 dp. Build gaps into the children's own widths (as the 76 dp title box does) instead",
+  "Priorities compare by the integer part of their difference, so values less than 1 apart tie and 2, 2.5, 3 is not a consistent order (at 250 dp Java keeps 3 and 2 and drops 2.5): use whole numbers",
+  "Dropping stops at the first child that does not fit: a lower-priority child that is narrow enough to fit is dropped too, so give similar-sized items adjacent priorities",
+  "Don't give the weighted spacer a priority: it is then ranked and dropped like any other child as soon as space is short (at 200 dp a priority-0 spacer went while 40 dp were still free), and the remaining items re-centre instead of staying at the ends",
+  "A child with a weight makes a row or collapsibleRow ignore its own width modifier and fill its parent (Java, matched by both players): wrap it in a box of the width you want",
+  "A nested collapsibleRow is measured against the width left after its earlier siblings in document order, not after the higher-priority ones, so its own drops can interleave oddly with the parent's (an inner label kept while a higher-priority sibling goes, then the reverse a few dp narrower)",
+  "A demo of fixed widths overflows a narrower host if one of them is as wide as the header's content area: make the widest one fillMaxWidth so it becomes the live, resizing case"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "layout.responsive",
+   "note": "the whole bar: collapsibleRow with title, chip, spacer and three icons"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/1/box/modifiers/2",
+   "shows": "layout.responsive",
+   "note": "the chip's collapsiblePriority 1: the first to go"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/3/canvas/modifiers/2",
+   "shows": "layout.responsive",
+   "note": "search, priority 3: the last action to go"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0/collapsibleRow/children/2",
+   "shows": "layout.weight",
+   "note": "unprioritized weighted spacer: takes the leftover width only"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Five bars: the first is full width (328 dp at 360) and shows everything; 240 dp drops the \"12 new\" chip; 200 dp also drops share; 152 dp also drops search (title and overflow menu left); 112 dp keeps only the title. The icons stay right-aligned in every bar. Verified against Java (java-layout.sh 360 400): the same children are gone and the C++ and TS x/width match it. Resized: the full-width bar is the live one — at 300 wide (268 dp) it has already dropped the chip, at 540 it shows everything with the icons at the far end; the four fixed-width bars below are unchanged.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 300,
+    "height": 420
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 420
+   }
+  ]
+ },
+ "prerequisites": [
+  "LAY-07"
+ ],
+ "related": [
+  "LAY-09",
+  "LAY-14",
+  "LAY-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 4639,
+  "header": {
+   "width": 360,
+   "height": 420
+  },
+  "op_count": 319,
+  "operations": {
+   "CanvasContent": 15,
+   "CollapsibleRowLayout": 5,
+   "CoreText": 15,
+   "DATA_TEXT": 7,
+   "DRAW_CIRCLE": 35,
+   "DRAW_LINE": 15,
+   "HEADER": 1,
+   "LAYOUT_BOX": 20,
+   "LAYOUT_CANVAS": 15,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 56,
+   "MODIFIER_BACKGROUND": 11,
+   "MODIFIER_COLLAPSIBLE_PRIORITY": 15,
+   "MODIFIER_HEIGHT": 26,
+   "MODIFIER_PADDING": 10,
+   "MODIFIER_WIDTH": 41,
+   "PAINT_VALUES": 20,
+   "RoundedClipRectModifierOperation": 10
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     300,
+     420
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     420
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "collapsiblePriority",
+   "collapsibleRow",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawLine",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "orientation",
+   "padding",
+   "paint",
+   "priority",
+   "profiles",
+   "radius",
+   "root",
+   "spacedBy",
+   "spacer",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "text",
+   "value",
+   "verticalAlignment",
+   "weight",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.responsive": [
+    "collapsibleRow",
+    "collapsiblePriority"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacer",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:12.173Z"
+ }
+}

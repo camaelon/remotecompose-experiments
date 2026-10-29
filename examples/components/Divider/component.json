@@ -1,0 +1,29 @@
+{
+ "component": "Divider",
+ "version": 2,
+ "summary": "A 1 dp horizontal rule across its parent, optionally inset from the start to line up with list text.",
+ "params": {
+  "inset": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Start inset in dp, e.g. 72 under ListItems with a 40 dp Avatar (16 + 40 + 16). 0: a single box"
+  },
+  "color": { "type": "color", "default": "@colors.outline", "doc": "Rule colour" }
+ },
+ "capabilities": ["layout.decoration"],
+ "call": { "Divider": { "inset": 56 } },
+ "pitfalls": [
+  "The inset is padding on an outer box around a filled inner box: padding before a background on the same box insets the background in Java and the TypeScript player but not in the C++ player, so the two-box form is the one that looks the same everywhere"
+ ],
+ "body": {
+  "$if": "inset",
+  "then": {
+   "box": {
+    "modifiers": ["fillMaxWidth", { "height": "@theme.divider" }, { "padding": { "start": "@inset" } }],
+    "children": [{ "box": { "modifiers": ["fillMaxSize", { "background": "@color" }] } }]
+   }
+  },
+  "else": { "box": { "modifiers": ["fillMaxWidth", { "height": "@theme.divider" }, { "background": "@color" }] } }
+ }
+}

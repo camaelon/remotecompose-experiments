@@ -1,0 +1,199 @@
+{
+ "id": "DRW-14",
+ "name": "agsl-plasma",
+ "version": 3,
+ "title": "AGSL plasma shader",
+ "summary": "A full-canvas AGSL runtime shader that sums four sine fields into a flowing rainbow plasma, animated by binding iTime to continuousSec().",
+ "prompt": "An animated psychedelic plasma background made with an AGSL shader that moves over time.",
+ "level": 3,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.shader"
+  ],
+  "secondary": [
+   "time.clock",
+   "data.measure",
+   "draw.shapes"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "loading-state"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "agsl",
+  "runtime shader",
+  "fragment shader",
+  "pixel shader",
+  "glsl",
+  "shadertoy",
+  "plasma",
+  "animated background",
+  "procedural",
+  "generative",
+  "rainbow"
+ ],
+ "teaches": [
+  "Attach an AGSL runtime shader to the paint with shader {agsl, uniforms}",
+  "Animate a shader by binding a float uniform to an expression such as continuousSec()",
+  "Pass a float2 uniform as a two-element array (iResolution [componentWidth(), componentHeight()])",
+  "Cover the canvas with a drawRect to componentWidth() × componentHeight() so the shader runs on every pixel"
+ ],
+ "pitfalls": [
+  "Uniform names in `uniforms` must match the AGSL declarations exactly; an undeclared uniform is ignored and a missing one stays 0",
+  "The shader only colours what is drawn with the paint: without the drawRect nothing appears",
+  "main receives canvas coordinates in pixels, not 0..1: normalise them with a resolution uniform (here iResolution, bound to componentWidth() and componentHeight(): a literal header size goes wrong as soon as the document is resized)",
+  "Bind iTime to continuousSec(), which keeps repainting; animationTime() alone never schedules a repaint, so the plasma would freeze",
+  "A shader bound to the clock repaints every frame: pin `clock` to compare renders"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0",
+   "shows": "draw.shader",
+   "note": "paint shader: AGSL source plus uniforms iResolution [componentWidth(), componentHeight()] and iTime = continuousSec()"
+  },
+  {
+   "pointer": "/root/commands/0/paint/shader/uniforms",
+   "shows": "time.clock",
+   "note": "iTime bound to continuousSec()"
+  },
+  {
+   "pointer": "/root/commands/1",
+   "shows": "data.measure",
+   "note": "a drawRect covering the component runs the shader on every pixel"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "2026-01-01T10:10:00",
+  "touch": false
+ },
+ "check": {
+  "describe": "A saturated rainbow plasma covering the canvas; renders at 10:10:00 and 10:10:02 differ. Resized, the plasma still covers the whole canvas and its pattern scales with the height (iResolution follows the component size).",
+  "render": {
+   "clock": "2026-01-01T10:10:00"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 200
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 300
+   }
+  ]
+ },
+ "related": [
+  "DRW-15",
+  "DRW-13"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 680,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 13,
+  "operations": {
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_RECT": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 1,
+   "SHADER_DATA": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     200
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     360,
+     300
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "agsl",
+   "apiLevel",
+   "bottom",
+   "commands",
+   "contentDescription",
+   "drawRect",
+   "header",
+   "height",
+   "iResolution",
+   "iTime",
+   "left",
+   "modifiers",
+   "paint",
+   "profiles",
+   "right",
+   "root",
+   "shader",
+   "top",
+   "type",
+   "uniforms",
+   "width"
+  ],
+  "evidence": {
+   "draw.shader": [
+    "shader"
+   ],
+   "time.clock": [
+    "continuousSec"
+   ],
+   "data.measure": [
+    "componentWidth()",
+    "componentHeight()"
+   ],
+   "draw.shapes": [
+    "drawRect"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:17.510Z"
+ }
+}

@@ -1,0 +1,276 @@
+{
+ "id": "DRW-15",
+ "name": "agsl-uniforms",
+ "version": 3,
+ "title": "Host-driven AGSL ring",
+ "summary": "An AGSL glowing ring whose centre (as fractions of the canvas), radius and hue are shader uniforms bound to four exported host variables.",
+ "prompt": "A neon glowing ring drawn by an AGSL shader whose position, radius and colour the app can set at runtime.",
+ "level": 3,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.shader"
+  ],
+  "secondary": [
+   "host.variables",
+   "data.tokens",
+   "data.measure",
+   "draw.shapes"
+  ]
+ },
+ "use_cases": [
+  "generative-art",
+  "loading-state",
+  "gauge"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "agsl",
+  "runtime shader",
+  "shader uniform",
+  "uniform",
+  "glow",
+  "neon ring",
+  "halo",
+  "host parameter",
+  "exported variable",
+  "float2",
+  "parameterised shader"
+ ],
+ "teaches": [
+  "Bind a shader uniform to a host variable by giving its value as @name",
+  "Build a float2 uniform from two variables with an array: uCenter [@ringX, @ringY]",
+  "Export the variables with defaults in resources.variables so the host can move, resize and recolour the ring",
+  "Give the host positions as fractions of the canvas and pass the canvas size as a uniform (uSize [componentWidth(), componentHeight()]), so the ring keeps its place when the document is resized"
+ ],
+ "pitfalls": [
+  "resources.variables are only host-settable with \"export\": true; without it they are plain constants",
+  "Uniform names must match the AGSL declarations exactly, including case",
+  "The shader draws the background too (bg in the AGSL): the paint replaces the colour of every pixel the drawRect covers, so there is no separate background modifier",
+  "A shader's main receives pixel coordinates of the box the host gives the document, not of the header: a centre exported in pixels (180, 100) is only centred at 360×200, so export fractions and scale them by a size uniform bound to componentWidth()/componentHeight()"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0/paint/shader/uniforms",
+   "shows": "draw.shader",
+   "note": "uCenter [@ringX, @ringY] (fractions), uSize [componentWidth(), componentHeight()], uRadius @ringRadius, uHue @ringHue"
+  },
+  {
+   "pointer": "/resources/variables",
+   "shows": "host.variables",
+   "note": "four exported floats with defaults 0.5, 0.5 (fractions of the canvas), 60 and 0.6"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "ringX": {
+    "type": "float",
+    "meaning": "ring centre x in dp",
+    "default": 180,
+    "min": 0,
+    "max": 360,
+    "step": 1
+   },
+   "ringY": {
+    "type": "float",
+    "meaning": "ring centre y in dp",
+    "default": 100,
+    "min": 0,
+    "max": 200,
+    "step": 1
+   },
+   "ringRadius": {
+    "type": "float",
+    "meaning": "ring radius in dp",
+    "default": 60,
+    "min": 10,
+    "max": 90,
+    "step": 1
+   },
+   "ringHue": {
+    "type": "float",
+    "meaning": "hue 0..1 of the ring colour",
+    "default": 0.6,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "With the defaults a green ring sits centred at any size; with ringX 0.28, ringY 0.45, ringRadius 45, ringHue 0 it moves left, shrinks and turns red. Resized (240×200, 540×200) the default ring stays centred.",
+  "render": {
+   "variables": {
+    "ringX": 0.28,
+    "ringY": 0.45,
+    "ringRadius": 45,
+    "ringHue": 0
+   }
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 200,
+    "variables": {
+     "ringX": 0.5,
+     "ringY": 0.5,
+     "ringRadius": 60,
+     "ringHue": 0.6
+    }
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200,
+    "variables": {
+     "ringX": 0.5,
+     "ringY": 0.5,
+     "ringRadius": 60,
+     "ringHue": 0.6
+    }
+   }
+  ]
+ },
+ "related": [
+  "DRW-14",
+  "VAR-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 850,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 21,
+  "operations": {
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 1,
+   "DRAW_RECT": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 4,
+   "PAINT_VALUES": 1,
+   "SHADER_DATA": 1
+  },
+  "host_variables": [
+   {
+    "name": "ringHue",
+    "type": "float",
+    "value": 0.600000024
+   },
+   {
+    "name": "ringRadius",
+    "type": "float",
+    "value": 60
+   },
+   {
+    "name": "ringX",
+    "type": "float",
+    "value": 0.5
+   },
+   {
+    "name": "ringY",
+    "type": "float",
+    "value": 0.5
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "agsl",
+   "apiLevel",
+   "bottom",
+   "commands",
+   "contentDescription",
+   "drawRect",
+   "export",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "paint",
+   "profiles",
+   "resources",
+   "right",
+   "ringHue",
+   "ringRadius",
+   "ringX",
+   "ringY",
+   "root",
+   "shader",
+   "top",
+   "type",
+   "uCenter",
+   "uHue",
+   "uRadius",
+   "uSize",
+   "uniforms",
+   "value",
+   "variables",
+   "width"
+  ],
+  "evidence": {
+   "draw.shader": [
+    "shader"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables"
+   ],
+   "data.measure": [
+    "componentWidth()",
+    "componentHeight()"
+   ],
+   "draw.shapes": [
+    "drawRect"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:18.538Z"
+ }
+}

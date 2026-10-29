@@ -1,0 +1,309 @@
+{
+ "id": "STR-10",
+ "name": "global-section",
+ "version": 2,
+ "title": "Shared definitions in a global section",
+ "summary": "A steps widget whose shared numbers (goal, gap) sit in a global section at the top of the root, with a rem comment, and whose ring progress is computed inside the canvas but wrapped in a global command, so the converter moves it before the root where every component can read it.",
+ "prompt": "A daily steps widget: a green progress ring with the percentage in the middle, and beside it \"Steps today\", 7,420 and \"2,580 to go\" against a 10,000 goal; keep the goal and spacing as shared constants.",
+ "level": 2,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.global"
+  ],
+  "secondary": [
+   "struct.comment",
+   "data.tokens",
+   "data.expression",
+   "text.dynamic",
+   "draw.arc",
+   "draw.stroke",
+   "layout.spacing",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "fitness",
+  "widget",
+  "gauge"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "global",
+  "constants",
+  "design tokens",
+  "shared values",
+  "hoist",
+  "defined once",
+  "steps",
+  "activity ring",
+  "progress ring",
+  "goal"
+ ],
+ "teaches": [
+  "Group document-wide definitions in {\"global\": {\"children\": [...]}} at the top of a root array: variables (and rem comments) defined once, read anywhere as @goal, @gap",
+  "Hoist a value computed where it is drawn: {\"global\": {\"commands\": [...]}} inside a canvas moves those commands before the root, so @progress is computed before any layout and is visible to every component",
+  "Use the same token in a modifier and a drawing: @gap pads the row and sizes the spacer box"
+ ],
+ "pitfalls": [
+  "A global section's children must be definitions (variable, definePattern, referencedOperations, createFloatFunction, …); anything else in it is silently skipped",
+  "Do not use a vtype color variable as a paint colour: Java writes its id as a literal ARGB (transparent) and json2rc writes opaque black. Colours for paints and text belong in resources.colors, used as @colors.accent",
+  "global moves bytes, it does not copy them: the hoisted commands leave the canvas, so anything they define is computed once for the document, not per paint of that canvas",
+  "A fixed 140 dp ring leaves the numbers no room on a narrow host: give the ring canvas a weight and draw it from componentWidth()/componentHeight(), capped at its design size"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "struct.global",
+   "note": "global section: rem plus the goal and gap tokens"
+  },
+  {
+   "pointer": "/root/1/row/children/0/canvas/commands/0",
+   "shows": "struct.global",
+   "note": "global command in a canvas: progress hoisted before the root"
+  },
+  {
+   "pointer": "/root/0/global/children/0",
+   "shows": "struct.comment",
+   "note": "rem: a comment stored in the document"
+  },
+  {
+   "pointer": "/resources/colors",
+   "shows": "data.tokens",
+   "note": "colours as named colour resources"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "steps": {
+    "type": "float",
+    "meaning": "steps walked today",
+    "default": 7420,
+    "min": 0,
+    "max": 20000,
+    "step": 10
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A green ring three quarters full with 74% inside; beside it \"Steps today\", 7,420 and green \"2,580 to go\". Resized (narrow 240, wide 540) the ring and the numbers share the row by weight: the ring is centred in its half, its radius min(56, min(componentWidth(), componentHeight()) / 2 - 14) shrinks on a small host, and the percentage's text size follows the radius.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 220
+   }
+  ]
+ },
+ "prerequisites": [
+  "VAR-01"
+ ],
+ "related": [
+  "VAR-01",
+  "STR-05",
+  "CMP-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1130,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 60,
+  "operations": {
+   "ANIMATED_FLOAT": 12,
+   "COLOR_CONSTANT": 2,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "CoreText": 3,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 3,
+   "DRAW_ARC": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 6,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 3,
+   "PAINT_VALUES": 3,
+   "TextFromFloat": 3,
+   "TextMerge": 2
+  },
+  "host_variables": [
+   {
+    "name": "accent",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "steps",
+    "type": "float",
+    "value": 7420
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF243044"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     220
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "accent",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawArc",
+   "drawCircle",
+   "drawTextAnchored",
+   "export",
+   "flags",
+   "fontSize",
+   "global",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "rem",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "startAngle",
+   "steps",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "text",
+   "textSize",
+   "top",
+   "track",
+   "type",
+   "value",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "struct.global": [
+    "global"
+   ],
+   "struct.comment": [
+    "rem"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables",
+    "colors"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "layout.spacing": [
+    "padding"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:28.013Z"
+ }
+}

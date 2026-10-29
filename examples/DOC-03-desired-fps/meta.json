@@ -1,0 +1,205 @@
+{
+ "id": "DOC-03",
+ "name": "desired-fps",
+ "version": 3,
+ "title": "Desired frame rate",
+ "summary": "A dot that slides across a track every 2 s, in a document whose header asks the player for 30 fps.",
+ "prompt": "An animated dot that slides along a track every 2 seconds, capped at 30 fps to save battery.",
+ "level": 2,
+ "family": "DOC",
+ "capabilities": {
+  "primary": [
+   "doc.fps",
+   "time.clock"
+  ],
+  "secondary": [
+   "doc.header",
+   "draw.shapes",
+   "draw.stroke",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "loading-state"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "frame rate",
+  "fps",
+  "refresh rate",
+  "battery",
+  "throttle animation",
+  "animationTime"
+ ],
+ "teaches": [
+  "Cap how often an animated document repaints with header.desiredFPS",
+  "Loop a position every 2 s with (continuousSec() % 2) / 2, which also makes the player repaint every frame",
+  "Map the 0..1 phase onto a track: x = 30 + phase * 240",
+  "Paint the canvas background with a background modifier instead of a full-size drawRect"
+ ],
+ "snippets": [
+  {
+   "pointer": "/header/desiredFPS",
+   "shows": "doc.fps",
+   "note": "ask the player for 30 frames per second instead of its default"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "time.clock",
+   "note": "cx = 30 + (continuousSec() % 2) / 2 * 240: one pass every 2 s"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "10:00:01",
+  "touch": false
+ },
+ "check": {
+  "describe": "Repaints every frame (repaint verdict continuous); at 10:00:01 the dot is mid-track (x = 150), at 10:00:00 at the left end. Resized (200×100, 450×140) the track spans the width less 30 on each side and stays vertically centred, the dot mid-track.",
+  "render": {
+   "clock": "2026-10-29T10:00:01"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 100
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 140
+   }
+  ]
+ },
+ "prerequisites": [
+  "DOC-01"
+ ],
+ "related": [
+  "TIM-02"
+ ],
+ "pitfalls": [
+  "animationTime() alone never schedules a repaint: the player's getOpsToUpdate only wakes for listeners on continuousSec (every frame), timeInSec, timeInMin or a wakeIn, so a dot driven by animationTime() stays put on an idle host (the inspector reports repaint idle). Drive continuous motion with continuousSec()",
+  "Paint ops are cumulative: after a stroke paint, the next fill shape must set {\"style\": \"fill\"} again or it is drawn as an outline",
+  "desiredFPS is a hint to the player, not a timer: the motion must still come from a time expression, and speed is set by the expression, not the fps",
+  "Canvas coordinates written from the header size (a track from 30 to 270 at y 50) stay put when the host gives another box: derive them from componentWidth() / componentHeight()"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 424,
+  "header": {
+   "width": 300,
+   "height": 100
+  },
+  "op_count": 19,
+  "operations": {
+   "ANIMATED_FLOAT": 5,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     100
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     140
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "desiredFPS",
+   "drawCircle",
+   "drawLine",
+   "header",
+   "height",
+   "modifiers",
+   "ops",
+   "paint",
+   "profiles",
+   "radius",
+   "root",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "type",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "doc.fps": [
+    "header.desiredFPS"
+   ],
+   "time.clock": [
+    "continuousSec"
+   ],
+   "doc.header": [
+    "header"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:06.069Z"
+ }
+}

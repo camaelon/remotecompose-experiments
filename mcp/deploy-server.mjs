@@ -14,12 +14,34 @@
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { usesComponents } from "./lib/components.mjs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
+import { compileComponents } from "./lib/json2rc.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { checkReport } from "./lib/rc2image.mjs";
 import { buildPage, formatBytes } from "./lib/web-page.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
+
+/** The playground's JSON buttons for a document given as JSON: the text, and the expanded
+ *  form when it calls library components. Empty for an .rc. */
+function jsonViews(a, name) {
+    if (a.json === undefined && a.json_path === undefined) return [];
+    try {
+        const file = a.json_path !== undefined ? resolvePath(a.json_path, "json_path") : null;
+        const text = file ? readFileSync(file, "utf8") : typeof a.json === "string" ? a.json : JSON.stringify(a.json);
+        const out = [{ label: "JSON", text, file: `${name}.json`, title: "The document as published" }];
+        try {
+            const doc = JSON.parse(text);
+            if (usesComponents(doc)) {
+                const dir = a.base_dir !== undefined ? resolvePath(a.base_dir, "base_dir") : file ? path.dirname(file) : resolvePath(".");
+                out.push({ label: "Expanded JSON", text: JSON.stringify(compileComponents(doc, dir).doc, null, 1),
+                    file: `${name}.expanded.json`, title: "The document with its components expanded: what the converter sees" });
+            }
+        } catch { /* not JSON the expander reads: the text alone */ }
+        return out;
+    } catch { return []; }
+}
 
 const PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? "").replace(/\/+$/, "");
 const HTTP_MODE = process.argv.includes("--http") || Boolean(process.env.MCP_HTTP_PORT);
@@ -193,6 +215,12 @@ const PACKAGE_WEB_PROPS = {
         description: "Page background, any CSS colour (default: black for fill, light grey for fixed; a checkerboard behind the frame with controls).",
     },
     theme: { type: "string", enum: ["light", "dark", "auto"], description: "Colour theme; \"auto\" follows the viewer's system setting. Default auto." },
+    variable_ranges: {
+        type: "object",
+        description: "Per host variable, the playground editor's {min, max, step, meaning}: the slider " +
+            "covers min..max and typed values are clamped to it (e.g. {\"progress\": {\"min\": 0, " +
+            "\"max\": 1, \"meaning\": \"completion\"}}). Without it a slider guesses its range from the value.",
+    },
     density: {
         description:
             "Display density the document is laid out at: \"device\" (default) uses the viewer's " +
@@ -332,6 +360,9 @@ export const definition = {
                 const fileName = (source ? path.basename(source).replace(/\.(rc|rcd|json)$/i, "")
                                          : title.replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "document") + ".rc";
 
+                // A page published from JSON shows it (and its component expansion) in the
+                // playground's JSON viewer; from an .rc there is no JSON to show.
+                const json = controls ? jsonViews(a, fileName.replace(/\.rc$/, "")) : [];
                 const html = buildPage({
                     bundle: await playerBundle(),
                     rcBase64: rcBytes.toString("base64"),
@@ -348,6 +379,8 @@ export const definition = {
                         variables,
                         declared: settable,
                         urlVariables: a.url_variables !== false,
+                        ranges: a.variable_ranges ?? {},
+                        ...(json.length ? { json } : {}),
                     },
                 });
 

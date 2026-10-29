@@ -1,0 +1,179 @@
+{
+ "id": "DX-02",
+ "name": "zero-size-content",
+ "version": 1,
+ "title": "Diagnostic: zero-size content",
+ "summary": "Deliberately flawed: a message text inside a box with height 0, so the box (and its background) collapses and the audit reports layout_zero_size.",
+ "prompt": "A card whose message text sits in a box with height 0.",
+ "level": 2,
+ "family": "DX",
+ "capabilities": {
+  "primary": [
+   "layout.size"
+  ],
+  "secondary": [
+   "layout.decoration",
+   "layout.spacing",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "notification"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "zero size",
+  "zero height",
+  "invisible",
+  "collapsed",
+  "missing text",
+  "text not showing",
+  "layout bug",
+  "diagnostic",
+  "audit fixture"
+ ],
+ "teaches": [
+  "Recognise layout_zero_size: a container with height 0 collapses, its background never shows and its children are laid out with 0 height",
+  "Fix it by removing the fixed 0 (wrap content) or giving the box a real height"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/box/modifiers/1",
+   "shows": "layout.size",
+   "note": "the flaw: height 0"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "expect_findings": [
+  "layout_zero_size"
+ ],
+ "check": {
+  "describe": "audit reports one finding, layout_zero_size (count 2: the 260×0 box and the 0-high text inside it). The render shows only the Inbox title: the message and its background are both gone. Resized, the column fills the box and the title stays put; the message box is still zero height at every size.",
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   },
+   {
+    "name": "tall",
+    "width": 300,
+    "height": 300
+   }
+  ]
+ },
+ "related": [
+  "DX-01"
+ ],
+ "pitfalls": [
+  "An empty zero-size box is not reported (the audit treats it as a spacer); the finding needs content inside, which is the case where something is actually lost"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 388,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 19,
+  "operations": {
+   "CoreText": 2,
+   "DATA_TEXT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 4,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 0
+  },
+  "audit_findings": [
+   "warning: layout_zero_size"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size"
+    ]
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     300,
+     300
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "root",
+   "spacedBy",
+   "text",
+   "value",
+   "width"
+  ],
+  "evidence": {
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "layout.decoration": [
+    "background"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:20.563Z"
+ }
+}

@@ -1,0 +1,263 @@
+{
+ "id": "EXP-13",
+ "name": "system-values",
+ "version": 2,
+ "title": "System values in expressions",
+ "summary": "A diagnostics card that prints the system values expressions can read: window size, the canvas's own size, density, font size, local time (timeInHr, timeInMin % 60) and day of year, plus a bar of the day elapsed.",
+ "prompt": "A diagnostics card listing the window size, this canvas's size, display density, font size, local time and day of year, each with the expression that reads it.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.system"
+  ],
+  "secondary": [
+   "data.measure",
+   "time.clock",
+   "time.date",
+   "expr.format",
+   "expr.string",
+   "expr.operators",
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "device info",
+  "diagnostics",
+  "screen size",
+  "window size",
+  "density",
+  "font scale",
+  "local time",
+  "day of year",
+  "environment values",
+  "debug overlay"
+ ],
+ "teaches": [
+  "Read the environment inside any expression: windowWidth(), windowHeight(), componentWidth(), componentHeight(), density(), fontSize(), timeInHr(), timeInMin(), dayOfYear()",
+  "Lay out a canvas against its own size (right = componentWidth() − 12) so it fits any host size",
+  "Get the minute of the hour with timeInMin() % 60 (timeInMin is minutes since midnight) and zero-pad it with flags 13"
+ ],
+ "pitfalls": [
+  "timeInMin() is minutes since midnight and timeInSec() the second within the hour, not since midnight; timeInHr() is the hour",
+  "componentWidth() is the size of the component the expression belongs to, here the canvas; on a modifier it is that component's size",
+  "Pin the clock (render clock) when checking a time-dependent document; without it every time value reads the wall clock",
+  "fontSize() is the host's text size setting, 14 by default in the renderers",
+  "Right-aligned captions at componentWidth() - 24 collide with values at a fixed x = 112 once the host is narrow: below the design width, scale the drawing (and divide componentWidth() by the scale for its geometry) rather than overlapping"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/15/drawTextAnchored/text",
+   "shows": "expr.system",
+   "note": "windowWidth() × windowHeight() via textMerge"
+  },
+  {
+   "pointer": "/root/commands/5/drawRoundRect",
+   "shows": "data.measure",
+   "note": "the card fits the canvas: @w - 12, with @w = componentWidth() / @s"
+  },
+  {
+   "pointer": "/root/commands/27/drawTextAnchored/text",
+   "shows": "expr.system",
+   "note": "density() with 2 decimals"
+  },
+  {
+   "pointer": "/root/commands/39/drawTextAnchored/text",
+   "shows": "expr.system",
+   "note": "timeInHr() : timeInMin() % 60, zero padded"
+  },
+  {
+   "pointer": "/root/commands/9/drawRoundRect/right",
+   "shows": "time.clock",
+   "note": "the day elapsed: 60 * timeInMin() / 1440"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "2026-10-28T10:08:00",
+  "touch": false
+ },
+ "check": {
+  "describe": "At 10:08 on 28 October and density 1 the card reads 360 × 230, 360 × 230, 1.00, 14.0, 10:08 and 301. Resized, the window and canvas rows report the live size (234 × 230, 540 × 230) and the card, the day bar and the right-hand captions follow the width; below 360 wide the card is drawn scaled down as a whole (@s = min(1, componentWidth() / 360), geometry from @w = componentWidth() / @s) so the captions do not run into the values.",
+  "render": {
+   "clock": "2026-10-28T10:08:00"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 230,
+    "clock": "2026-10-28T10:08:00"
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 230,
+    "clock": "2026-10-28T10:08:00"
+   }
+  ]
+ },
+ "related": [
+  "VAR-09",
+  "HST-07",
+  "DOC-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2193,
+  "header": {
+   "width": 360,
+   "height": 230
+  },
+  "op_count": 101,
+  "operations": {
+   "ANIMATED_FLOAT": 16,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 15,
+   "DRAW_ROUND_RECT": 3,
+   "DRAW_TEXT_ANCHOR": 19,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 22,
+   "TextFromFloat": 9,
+   "TextMerge": 6
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     230
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     230
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "decimal",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "flags",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "expr.system": [
+    "density()",
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight",
+    "timeInMin",
+    "timeInHr",
+    "dayOfYear"
+   ],
+   "data.measure": [
+    "componentWidth()",
+    "componentHeight()"
+   ],
+   "time.clock": [
+    "timeInHr",
+    "timeInMin"
+   ],
+   "time.date": [
+    "year",
+    "dayOfYear"
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "expr.string": [
+    "textMerge"
+   ],
+   "expr.operators": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRoundRect"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:41.182Z"
+ }
+}

@@ -1,0 +1,201 @@
+{
+ "id": "TIM-01",
+ "name": "digital-clock",
+ "version": 2,
+ "title": "Digital clock",
+ "summary": "HH:MM:SS in large digits: hour, minute and second read from the clock and zero-padded to two digits.",
+ "prompt": "Make a digital clock that shows the current time as HH:MM:SS in large digits.",
+ "level": 2,
+ "family": "TIM",
+ "capabilities": {
+  "primary": [
+   "time.clock"
+  ],
+  "secondary": [
+   "text.dynamic",
+   "data.expression",
+   "layout.stack",
+   "layout.align",
+   "text.style"
+  ]
+ },
+ "use_cases": [
+  "watch-face",
+  "widget"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "time",
+  "hh:mm:ss",
+  "current time",
+  "digital watch",
+  "seconds",
+  "zero padding",
+  "clock widget",
+  "24-hour",
+  "leading zero",
+  "live time"
+ ],
+ "teaches": [
+  "Read the clock: timeInHr() for the hour, timeInMin() % 60 for the minute, timeInSec() % 60 for the second",
+  "Zero-pad each field to two digits with textFromFloat whole 2, decimal 0, flags 12 (PAD_PRE_ZERO)",
+  "Lay the fields and colon separators out in a row"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/0/children/0",
+   "shows": "time.clock",
+   "note": "hours: textFromFloat(timeInHr(), 2 digits, zero padded)"
+  },
+  {
+   "pointer": "/root/children/0/children/2",
+   "shows": "time.clock",
+   "note": "minutes: timeInMin() % 60 (timeInMin is minutes since midnight)"
+  },
+  {
+   "pointer": "/root/children/0/children/4",
+   "shows": "time.clock",
+   "note": "seconds: timeInSec() % 60 (timeInSec is seconds within the hour)"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "10:10:05",
+  "touch": false
+ },
+ "check": {
+  "describe": "At 10:10:05 it reads 10:10:05; at 09:05:07 it reads 09:05:07 with leading zeros. Resized, the time stays centred in the box (a layout box with centred alignment); it needs about 220 dp of width at fontSize 56.",
+  "render": {
+   "clock": "2026-10-29T10:10:05"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 160
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 160
+   }
+  ]
+ },
+ "pitfalls": [
+  "timeInMin() is minutes since midnight and timeInSec() seconds within the hour, so both need % 60 to give a clock field",
+  "Without flags 12 (PAD_PRE_ZERO) textFromFloat pads with spaces, so 9 shows as \" 9\" rather than 09",
+  "timeInHr() is the 24-hour hour (0–23); a 12-hour clock needs (timeInHr() + 11) % 12 + 1",
+  "A clock field needs decimal 0: inside a text value object decimal defaults to 3"
+ ],
+ "related": [
+  "TIM-02",
+  "TXT-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 510,
+  "header": {
+   "width": 360,
+   "height": 160
+  },
+  "op_count": 25,
+  "operations": {
+   "ANIMATED_FLOAT": 2,
+   "CoreText": 5,
+   "DATA_TEXT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 7,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "TextFromFloat": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     160
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "color",
+   "contentDescription",
+   "decimal",
+   "flags",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "profiles",
+   "root",
+   "text",
+   "type",
+   "value",
+   "verticalAlignment",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "time.clock": [
+    "timeInHr",
+    "timeInMin",
+    "timeInSec"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "layout.stack": [
+    "row",
+    "box"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment"
+   ],
+   "text.style": [
+    "fontWeight"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:30.152Z"
+ }
+}

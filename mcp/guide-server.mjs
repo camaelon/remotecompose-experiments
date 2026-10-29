@@ -11,6 +11,7 @@ import { definition as deploy } from "./deploy-server.mjs";
 import { definition as inspector } from "./inspect-server.mjs";
 import { definition as json2rc } from "./json2rc-server.mjs";
 import { definition as rcRender } from "./rc-render-server.mjs";
+import { definition as examples } from "./examples-server.mjs";
 
 // Where each server lives: its entry file, and its path under MCP_PUBLIC_BASE_URL on a
 // deployment (mcp/deploy/Caddyfile routes /<route>/mcp to it).
@@ -19,6 +20,7 @@ const SERVERS = [
     { def: rcRender, file: "mcp/rc-render-server.mjs", route: "rc-render" },
     { def: inspector, file: "mcp/inspect-server.mjs", route: "inspect" },
     { def: deploy, file: "mcp/deploy-server.mjs", route: "deploy" },
+    { def: examples, file: "mcp/examples-server.mjs", route: "examples" },
 ];
 
 const SELF = {
@@ -29,6 +31,13 @@ const SELF = {
 };
 
 const WORKFLOWS = [
+    {
+        title: "Build a document from scratch",
+        steps: ["rc-examples.build_kit with the goal in plain words: the components to call and the " +
+                "examples (with their JSON snippets and pitfalls) that cover it.",
+                "Write the document, calling components by name ({\"Button\": {...}}).",
+                "rc-render.validate, then render_rc; rc-inspect.audit before calling it done."],
+    },
     {
         title: "See what a JSON document looks like",
         steps: ["rc-render.render_rc with `json` or `json_path` — no separate conversion step.",

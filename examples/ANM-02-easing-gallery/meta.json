@@ -1,0 +1,270 @@
+{
+ "id": "ANM-02",
+ "name": "easing-gallery",
+ "version": 3,
+ "title": "Easing gallery",
+ "summary": "Six dots race across their tracks when tapped, each with its own animationSpec motionEasing (Linear, Standard, Accelerate, Decelerate, Anticipate, Overshoot), so the curves can be compared mid-flight.",
+ "prompt": "Show the six built-in easing curves side by side: six labelled tracks, each with a dot; tapping anywhere sends every dot to the other end, each easing differently, and tapping again brings them back.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.easing",
+   "anim.layout"
+  ],
+  "secondary": [
+   "input.toggle",
+   "data.expression",
+   "layout.spacing",
+   "layout.decoration",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "easing comparison",
+  "motion curves",
+  "animation curves",
+  "race",
+  "timing functions",
+  "overshoot vs anticipate",
+  "ease in out demo"
+ ],
+ "teaches": [
+  "Pick a component's motion curve with animationSpec motionEasing: LINEAR, STANDARD, ACCELERATE, DECELERATE, ANTICIPATE or OVERSHOOT",
+  "Move a component by changing layout, not by drawing: a spacer with width \"@go * (componentWidth() - 22)\" (the track's inner width when @go is 1) pushes the dot, and the dot's animationSpec animates its new position",
+  "Toggle a 0/1 float with valueFloatExpressionChange \"1 - @go\" to replay the animation both ways"
+ ],
+ "pitfalls": [
+  "animationSpec animates the component that carries it: the spacer jumps to its new width, the dot (with the spec) glides. Put the spec on what should move",
+  "ANTICIPATE dips below the start and OVERSHOOT passes the end: leave room in the track, or clip it as here",
+  "motionDuration is in milliseconds (1200), unlike the anim object's seconds",
+  "Size the travel with an exact width: Java resolves a variable only in an exact width/height (DimensionModifierOperation.updateVariables), so fillMaxWidth \"@go\" is a NaN fraction there, a full fill, and the dots never move (C++ and TypeScript did resolve it). The spacer is {\"width\": \"@go * (componentWidth() - 22)\"}: in a modifier componentWidth() is the parent's full width (the track, padded 3 + 19), so every size travels the whole track. windowWidth() would not do: in Java it is the header width, not the view's",
+  "In Java a bounds animation ends at the first frame its eased progress reaches 1, without snapping to the target: OVERSHOOT stops at its overshoot (about 9% past the end here, inside the 19 dp of track padding) until the next layout; C++ settles at the end"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/column/children/6/row/children/1/row/children/1/box/modifiers/3",
+   "shows": "anim.easing",
+   "note": "animationSpec {motionDuration: 1200, motionEasing: OVERSHOOT} on the dot"
+  },
+  {
+   "pointer": "/root/1/column/children/5/row/children/1/row/children/1/box/modifiers/3",
+   "shows": "anim.easing",
+   "note": "the same dot with ANTICIPATE: pulls back first"
+  },
+  {
+   "pointer": "/root/1/column/children/1/row/children/1/row/children/0/spacer/modifiers/0",
+   "shows": "anim.layout",
+   "note": "spacer width @go * (componentWidth() - 22): the layout change that the dot animates, the whole inner track at any size"
+  },
+  {
+   "pointer": "/root/1/column/modifiers/5",
+   "shows": "input.toggle",
+   "note": "onClick: go = 1 - go"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap at 0.1 s, captured 0.4 s into the 1.2 s race: Overshoot and Decelerate lead, Standard and Linear are mid-track, Accelerate lags and Anticipate has barely left (it pulled back first). All reach the right end by 1.3 s. Resized (narrow 240, wide 540) every track fills the row and each dot travels the whole track: the spacer is @go * (componentWidth() - 22), the track's inner width, with 19 dp of right padding to park the 16 dp dot.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 150
+    }
+   ],
+   "duration": 0.5
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 276,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 150
+     }
+    ],
+    "duration": 0.5
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 300,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 150
+     }
+    ],
+    "duration": 0.5
+   }
+  ]
+ },
+ "related": [
+  "EXP-03",
+  "ANM-10",
+  "ANM-05"
+ ],
+ "prerequisites": [
+  "ANM-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2966,
+  "header": {
+   "width": 360,
+   "height": 276
+  },
+  "op_count": 179,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 7,
+   "ANIMATION_SPEC": 6,
+   "COMPONENT_VALUE": 6,
+   "CoreText": 7,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 8,
+   "HEADER": 1,
+   "LAYOUT_BOX": 12,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 12,
+   "LayoutComponentContent": 26,
+   "MODIFIER_BACKGROUND": 13,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_DIMENSION_CONSTRAINTS": 6,
+   "MODIFIER_HEIGHT": 19,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_WIDTH": 31,
+   "RoundedClipRectModifierOperation": 12,
+   "ValueFloatExpressionChangeActionOperation": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 1,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     276
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "motionDuration",
+   "motionEasing",
+   "name",
+   "onClick",
+   "padding",
+   "profiles",
+   "requiredWidthIn",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "spacedBy",
+   "spacer",
+   "target",
+   "text",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "anim.easing": [
+    "motionEasing"
+   ],
+   "anim.layout": [
+    "animationSpec"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacer",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:30.351Z"
+ }
+}

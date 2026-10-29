@@ -1,0 +1,33 @@
+{
+ "header": {"apiLevel": 7, "width": 200, "height": 200, "profiles": 513,
+  "contentDescription": "A battery icon filled to the battery level, red below 20 percent"},
+ "resources": {
+  "variables": {"battery": {"value": 76, "export": true}}
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize"],
+  "commands": [
+   {"paint": {"ops": [{"color": "#FF101828"}]}},
+   {"drawRect": {"left": 0, "top": 0, "right": "componentWidth()", "bottom": "componentHeight()"}},
+   {"variable": {"name": "s", "value": "min(componentWidth() / 200, componentHeight() / 200)"}},
+   {"translate": {"dx": "(componentWidth() - 200) / 2", "dy": "(componentHeight() - 200) / 2"}},
+   {"scale": {"sx": "@s", "sy": "@s", "pivotX": 100, "pivotY": 100}},
+   {"variable": {"name": "level", "value": "clamp(0, 100, @battery)"}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"style": "stroke"}, {"strokeWidth": 4}]}},
+   {"drawRoundRect": {"left": 40, "top": 60, "right": 150, "bottom": 120, "rx": 10, "ry": 10}},
+   {"paint": {"ops": [{"style": "fill"}]}},
+   {"drawRoundRect": {"left": 152, "top": 78, "right": 162, "bottom": 102, "rx": 3, "ry": 3}},
+   {"paint": {"ops": [{"color": "#FF66BB6A"}]}},
+   {"conditionalOperations": {"condition": "lt", "v1": "@level", "v2": 20, "commands": [
+     {"paint": {"ops": [{"color": "#FFEF5350"}]}}
+   ]}},
+   {"drawRoundRect": {"left": 48, "top": 68, "right": "48 + 94 * @level / 100", "bottom": 112, "rx": 5, "ry": 5}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 24}]}},
+   {"drawTextAnchored": {
+     "text": {"type": "textMerge",
+      "id1": {"type": "textFromFloat", "value": "@level", "whole": 3, "decimal": 0, "flags": 4}, "id2": "%"},
+     "x": 100, "y": 156, "panX": 0, "panY": 0}}
+  ]
+ }
+}

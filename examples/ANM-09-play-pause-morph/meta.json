@@ -1,0 +1,274 @@
+{
+ "id": "ANM-09",
+ "name": "play-pause-morph",
+ "version": 2,
+ "title": "Play/pause icon morph",
+ "summary": "A play button whose triangle morphs into two pause bars: pathTween interpolates between two four-point paths with a tween of {\"value\": \"@playing\", \"anim\": 0.35}, and a tap flips @playing.",
+ "prompt": "A round play button that morphs smoothly into a pause icon when tapped, and back to play on the next tap.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.morph"
+  ],
+  "secondary": [
+   "anim.value",
+   "draw.path",
+   "input.toggle",
+   "draw.shapes",
+   "text.anchor",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "media-player",
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "play pause",
+  "animated icon",
+  "icon transition",
+  "morph",
+  "shape tween",
+  "media button",
+  "toggle icon"
+ ],
+ "teaches": [
+  "Morph between two paths with pathTween {id, path1, path2, tween}, then draw the result by its id with drawPath",
+  "Animate the morph by making the tween an anim object: {\"value\": \"@playing\", \"anim\": 0.35}",
+  "Build both shapes with the same commands in the same order: the play triangle is split into two quads to match the two pause bars, corner for corner"
+ ],
+ "pitfalls": [
+  "The two paths must have the same verbs and point count, or the tween has nothing to pair up",
+  "An SVG string in resources.paths becomes an empty path in Java (U11): use the op list (moveTo/lineTo/close objects)",
+  "json2rc also accepts {\"data\": [...]} in resources.paths; Java throws a ClassCastException on it, so stay with the op list",
+  "The TS player does not draw pathTween results (EXAMPLES_FINDINGS T16)",
+  "Paths in resources.paths have fixed coordinates: centre them with one translate from componentWidth()/componentHeight() rather than drawing at the header's 180, 90"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/canvas/commands/0",
+   "shows": "anim.morph",
+   "note": "pathTween icon = play ↔ pause, tween {value: @playing, anim: 0.35}"
+  },
+  {
+   "pointer": "/resources/paths/play",
+   "shows": "draw.path",
+   "note": "play as two quads, ordered like the pause bars"
+  },
+  {
+   "pointer": "/root/1/canvas/modifiers/3",
+   "shows": "input.toggle",
+   "note": "playing = 1 - playing"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap at 0.1 s, captured 0.15 s later: halfway between play and pause, two slanted quads. Settles to two pause bars by 0.5 s. Resized (narrow 240, wide 540×260) the button and caption stay centred: one translate by (componentWidth() / 2 - 180, componentHeight() / 2 - 110) moves the whole drawing, so the paths keep their header coordinates.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 90
+    }
+   ],
+   "duration": 0.25
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 90
+     }
+    ],
+    "duration": 0.25
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 260,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 110
+     }
+    ],
+    "duration": 0.25
+   }
+  ]
+ },
+ "related": [
+  "DRW-05",
+  "INT-02"
+ ],
+ "prerequisites": [
+  "DRW-05"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 857,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 30,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 4,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_PATH": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 3,
+   "PATH_DATA": 2,
+   "PATH_TWEEN": 1,
+   "ValueFloatExpressionChangeActionOperation": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 1,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     260
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "anim",
+   "apiLevel",
+   "background",
+   "canvas",
+   "clickable",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawPath",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "id",
+   "modifiers",
+   "name",
+   "onClick",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "path1",
+   "path2",
+   "pathTween",
+   "paths",
+   "pause",
+   "play",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "semantics",
+   "target",
+   "text",
+   "textSize",
+   "translate",
+   "tween",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "anim.morph": [
+    "pathTween"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:37.875Z"
+ }
+}

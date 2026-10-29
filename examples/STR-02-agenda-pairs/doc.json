@@ -1,0 +1,251 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "Today's four meetings as bars on an 8 to 18 hour timeline, past ones dimmed"
+ },
+ "resources": {
+  "floatArrays": {
+   "meetings": [
+    9,
+    10.5,
+    11,
+    12,
+    13.5,
+    14.5,
+    15,
+    16.75
+   ]
+  },
+  "variables": {
+   "now": {
+    "value": 14,
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "#FF101828"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "px",
+     "value": "(componentWidth() - 50) / 10"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFFFFFFF"
+      },
+      {
+       "textSize": 15
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "Today",
+     "x": 16,
+     "y": 20,
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF8899AA"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "arrayLength(@meetings) / 2",
+       "whole": 1,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": " meetings"
+     },
+     "x": "componentWidth() - 16",
+     "y": 20,
+     "panX": 1,
+     "panY": 0
+    }
+   },
+   {
+    "loop": {
+     "index": "h",
+     "from": 8,
+     "until": 19,
+     "step": 2,
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF243044"
+         }
+        ]
+       }
+      },
+      {
+       "drawRect": {
+        "left": "29 + (h - 8) * @px",
+        "top": 36,
+        "right": "30 + (h - 8) * @px",
+        "bottom": 166
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF5C6B7E"
+         },
+         {
+          "textSize": 10
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "h",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 5
+        },
+        "x": "30 + (h - 8) * @px",
+        "y": 180,
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFEF5350"
+      }
+     ]
+    }
+   },
+   {
+    "drawRect": {
+     "left": "29 + (@now - 8) * @px",
+     "top": 36,
+     "right": "31 + (@now - 8) * @px",
+     "bottom": 166
+    }
+   },
+   {
+    "drawCircle": {
+     "cx": "30 + (@now - 8) * @px",
+     "cy": 36,
+     "radius": 4
+    }
+   },
+   {
+    "loop": {
+     "index": "i",
+     "from": 0,
+     "until": "arrayLength(@meetings)",
+     "step": 2,
+     "commands": [
+      {
+       "variable": {
+        "name": "x0",
+        "value": "30 + (arrayGet(@meetings, i) - 8) * @px"
+       }
+      },
+      {
+       "variable": {
+        "name": "x1",
+        "value": "30 + (arrayGet(@meetings, i + 1) - 8) * @px"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FF4DA3FF"
+         },
+         {
+          "alpha": "1 - 0.6 * step(@now, arrayGet(@meetings, i + 1))"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@x0",
+        "top": "44 + i * 15",
+        "right": "@x1",
+        "bottom": "66 + i * 15",
+        "rx": 6,
+        "ry": 6
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "#FFFFFFFF"
+         },
+         {
+          "textSize": 10
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "arrayGet(@meetings, i + 1) - arrayGet(@meetings, i)",
+          "whole": 1,
+          "decimal": 2,
+          "flags": 5
+         },
+         "id2": " h"
+        },
+        "x": "@x0 + 6",
+        "y": "55 + i * 15",
+        "panX": -1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

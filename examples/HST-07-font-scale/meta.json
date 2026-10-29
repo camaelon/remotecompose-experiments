@@ -1,0 +1,213 @@
+{
+ "id": "HST-07",
+ "name": "font-scale",
+ "version": 2,
+ "title": "Font-scale aware card",
+ "summary": "A reminder card whose title, body and button height are computed from the system font size, so the card grows when the user enlarges text.",
+ "prompt": "Make a reminder card whose text and button get bigger when the user turns up the system font size.",
+ "level": 2,
+ "family": "HST",
+ "capabilities": {
+  "primary": [
+   "host.font-scale"
+  ],
+  "secondary": [
+   "data.expression",
+   "layout.decoration",
+   "layout.spacing",
+   "layout.size",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card",
+  "notification"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "font scale",
+  "large text",
+  "dynamic type",
+  "text size",
+  "accessibility",
+  "sp",
+  "readability",
+  "text scaling",
+  "accessibility font size"
+ ],
+ "components": [
+  "Card",
+  "Button"
+ ],
+ "teaches": [
+  "Derive a scale from the system text size: scale = fontSize() / (14 * density()) (1.0 at the default 14 sp)",
+  "Size text with it: fontSize \"@titleSize\" where titleSize = 20 * @scale",
+  "Size a container with it too (button height 40 * @scale) and let wrap-content columns grow around it"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "host.font-scale",
+   "note": "the font scale, from the fontSize() system variable"
+  },
+  {
+   "pointer": "/root/1",
+   "shows": "data.expression",
+   "note": "a text size derived from it"
+  },
+  {
+   "pointer": "/root/4/column/children/0/column/children/2/box/modifiers/0",
+   "shows": "host.font-scale",
+   "note": "the button's height follows the scale"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false,
+  "system_variables": {
+   "33": "fontSize (px)"
+  }
+ },
+ "check": {
+  "describe": "At the default (fontSize 14) the card is about 120 px tall; system_variables {33: 21} (1.5x) makes the text and the button larger and the card taller. Resized, the card fills the width; in a narrow box the title and body wrap and the card grows taller.",
+  "render": {
+   "system_variables": {
+    "33": 21
+   }
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 220
+   }
+  ]
+ },
+ "related": [
+  "HST-01",
+  "A11Y-04"
+ ],
+ "pitfalls": [
+  "fontSize() is in pixels (the C++ renderer sets 14 * density), so divide by density() as well as by 14 to get a pure scale factor",
+  "A fixed height (the button's) does not follow the font scale by itself; derive it from the same @scale, or large text is clipped inside it"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 717,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 33,
+  "operations": {
+   "ANIMATED_FLOAT": 4,
+   "CoreText": 3,
+   "DATA_TEXT": 3,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 6,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 3,
+   "MODIFIER_WIDTH": 2,
+   "RoundedClipRectModifierOperation": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     220
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "name",
+   "padding",
+   "profiles",
+   "root",
+   "roundedRect",
+   "spacedBy",
+   "text",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "host.font-scale": [
+    "fontSize()"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:50.675Z"
+ }
+}

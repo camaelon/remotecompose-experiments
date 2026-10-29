@@ -1,0 +1,256 @@
+{
+ "id": "VAR-06",
+ "name": "array-bar-chart",
+ "version": 3,
+ "title": "Bar chart from a float array",
+ "summary": "Twelve monthly bars drawn by one loop over a floatArrays resource, each height normalised by arrayMax so the tallest bar fills the chart.",
+ "prompt": "Draw a bar chart of twelve monthly sales values that scales the bars so the tallest one fills the chart.",
+ "level": 3,
+ "family": "VAR",
+ "capabilities": {
+  "primary": [
+   "data.array"
+  ],
+  "secondary": [
+   "data.loop",
+   "data.expression",
+   "data.tokens",
+   "draw.shapes",
+   "draw.stroke"
+  ]
+ },
+ "components": [
+  "BarChart"
+ ],
+ "use_cases": [
+  "chart",
+  "dashboard",
+  "finance"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "bar chart",
+  "histogram",
+  "column chart",
+  "data series",
+  "monthly values",
+  "normalise",
+  "array"
+ ],
+ "teaches": [
+  "Store a data series in resources.floatArrays and reference it as @sales",
+  "Loop over the series with until arrayLength(@sales) and read each value with arrayGet(@sales, i)",
+  "Normalise bar heights by arrayMax(@sales) so the chart rescales to any data",
+  "Derive the plot area from componentWidth()/componentHeight() so the chart stretches to whatever box the host gives it"
+ ],
+ "pitfalls": [
+  "resources.floatArrays are exported (named) by default, so a host can replace the series; the bar count follows arrayLength",
+  "Normalise with arrayMax(@sales) rather than a hard-coded maximum, or a host-supplied series with bigger values draws bars above the chart",
+  "Bar positions written against the header width (320 / arrayLength) leave the chart stuck at that width; measure the plot area from componentWidth()/componentHeight() instead"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/floatArrays/sales",
+   "shows": "data.array",
+   "note": "the 12-value series"
+  },
+  {
+   "pointer": "/root/commands/6",
+   "shows": "data.loop",
+   "note": "loop i until arrayLength(@sales)"
+  },
+  {
+   "pointer": "/root/commands/6/loop/commands/0",
+   "shows": "data.array",
+   "note": "bar top: 180 - 160 * arrayGet(@sales, i) / arrayMax(@sales)"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "sales": {
+    "type": "float_array",
+    "meaning": "the values to chart, any length",
+    "default": [
+     12,
+     18,
+     15,
+     22,
+     30,
+     27,
+     35,
+     41,
+     38,
+     29,
+     24,
+     33
+    ]
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Twelve blue bars; the eighth (41) touches the top guide line, the first (12) is under a third of the height. Resized, the chart stretches: the twelve bars share componentWidth() - 40 and scale to componentHeight() - 40, with the axis lines following.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 200
+   },
+   {
+    "name": "tall",
+    "width": 540,
+    "height": 300
+   }
+  ]
+ },
+ "related": [
+  "VAR-07",
+  "VAR-05"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 684,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 29,
+  "operations": {
+   "ANIMATED_FLOAT": 9,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_LINE": 2,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 3
+  },
+  "host_variables": [
+   {
+    "name": "sales",
+    "type": "float_array",
+    "value": [
+     12,
+     18,
+     15,
+     22,
+     30,
+     27,
+     35,
+     41,
+     38,
+     29,
+     24,
+     33
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     200
+    ],
+    "audit_findings": []
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "drawLine",
+   "drawRect",
+   "drawRoundRect",
+   "floatArrays",
+   "from",
+   "header",
+   "height",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "ops",
+   "paint",
+   "profiles",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "sales",
+   "strokeWidth",
+   "style",
+   "top",
+   "type",
+   "until",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "data.tokens": [
+    "resources"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:51.108Z"
+ }
+}

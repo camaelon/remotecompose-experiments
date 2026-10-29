@@ -1,0 +1,508 @@
+{
+ "id": "CMP-04",
+ "name": "chips-badges",
+ "version": 3,
+ "kind": "gallery",
+ "title": "Chips and badges",
+ "summary": "Six library Chips wrapping in a flow (Travel and Music preset through document variables, the rest keeping their own state) and Badges: a count, a live unread count from a host variable, 999+, New and Beta.",
+ "prompt": "I need a set of topic filter chips that wrap onto several lines and toggle when tapped, plus small badges for an unread count and labels like New and Beta.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "Chip",
+  "Badge"
+ ],
+ "capabilities": {
+  "primary": [
+   "input.toggle",
+   "layout.flow"
+  ],
+  "secondary": [
+   "layout.decoration",
+   "text.dynamic",
+   "host.variables",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "control",
+  "notification"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "chip",
+  "tag",
+  "pill",
+  "filter",
+  "badge",
+  "count",
+  "notification dot",
+  "component library",
+  "filter chips",
+  "tags",
+  "pills",
+  "unread badge",
+  "counter badge",
+  "label"
+ ],
+ "teaches": [
+  "Toggle a filter with {\"Chip\": {\"label\": ..., \"selected\": \"@travel\"}}; leave selected out and it keeps its own",
+  "Wrap chips onto lines with flow; the gaps come from end/bottom padding on a wrapper box, since flow ignores spacedBy",
+  "Show a live count with {\"Badge\": {\"count\": \"@unread\"}}, or fixed text with {\"Badge\": {\"text\": \"New\"}}"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/flow/children/1",
+   "shows": "input.toggle",
+   "note": "a Chip bound to @travel (selected)"
+  },
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "layout.flow",
+   "note": "chips in a flow with padded wrappers"
+  },
+  {
+   "pointer": "/root/column/children/3/row/children/1",
+   "shows": "text.dynamic",
+   "note": "a Badge bound to @unread"
+  }
+ ],
+ "pitfalls": [
+  "flow ignores spacedBy (Java and the players alike): wrap each chip in a box with end and bottom padding, which also keeps the first chip aligned with the text above",
+  "A chip with no `selected` variable still toggles, but nothing else can read its state: bind a variable for every filter the document (or host) acts on",
+  "Badge count uses textFromFloat with whole 4 and flags 5: fewer whole digits drop the leading ones (whole 1 prints 12 as 2); a count above 9999 should be text such as 999+",
+  "A flow grows taller as the host narrows: content that fits at the header width can then run past the bottom, so make the page scroll (verticalScroll on the root column)"
+ ],
+ "inputs": {
+  "variables": {
+   "unread": {
+    "type": "float",
+    "meaning": "unread messages; 1000 and up shows 999+",
+    "default": 12,
+    "min": 0,
+    "max": 999,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Travel and Music start selected; tapping Photography selects it; variables {unread: 3} shows 3 in the second badge. Resized, the chips re-flow to the width: one line at 540 wide, three at 234, where the badges move below the fold and the page scrolls (verticalScroll) instead of overflowing.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 210
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 210
+   }
+  ]
+ },
+ "related": [
+  "LAY-08",
+  "CMP-02"
+ ],
+ "derived": {
+  "components": [
+   "Badge",
+   "Chip"
+  ],
+  "component_instances": 11,
+  "component_modes": {
+   "Chip": "expand",
+   "Badge": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 4924,
+  "header": {
+   "width": 360,
+   "height": 210
+  },
+  "op_count": 310,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 6,
+   "ANIMATED_FLOAT": 12,
+   "COLOR_CONSTANT": 15,
+   "COLOR_EXPRESSIONS": 14,
+   "ClipRectModifierOperation": 1,
+   "CoreText": 19,
+   "DATA_FLOAT": 8,
+   "DATA_TEXT": 11,
+   "GraphicsLayerModifier": 6,
+   "HEADER": 1,
+   "LAYOUT_BOX": 29,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 51,
+   "LoopOperation": 14,
+   "MODIFIER_BACKGROUND": 18,
+   "MODIFIER_CLICK": 6,
+   "MODIFIER_HEIGHT": 18,
+   "MODIFIER_PADDING": 24,
+   "MODIFIER_WIDTH": 2,
+   "NAMED_VARIABLE": 9,
+   "RoundedClipRectModifierOperation": 11,
+   "ScrollModifierOperation": 1,
+   "THEME": 21,
+   "TextFromFloat": 2,
+   "TouchExpression": 1,
+   "ValueFloatExpressionChangeActionOperation": 6
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   },
+   {
+    "name": "unread",
+    "type": "float",
+    "value": 12
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 4
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: unused_variables",
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 7,
+   "click": 6,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 4563,
+    "component_modes": {
+     "Chip": "expand",
+     "Badge": "expand"
+    },
+    "motion_removed": 6,
+    "op_count": 268,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "unread",
+      "type": "float",
+      "value": 12
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 4563,
+    "component_modes": {
+     "Chip": "expand",
+     "Badge": "expand"
+    },
+    "motion_removed": 6,
+    "op_count": 268,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "unread",
+      "type": "float",
+      "value": 12
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     210
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     210
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Badge",
+   "Chip",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "children",
+   "chip1_selected",
+   "chip3_selected",
+   "chip4_selected",
+   "chip6_selected",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "contentDescription",
+   "count",
+   "dark",
+   "decimal",
+   "end",
+   "error",
+   "export",
+   "flags",
+   "flow",
+   "fontSize",
+   "graphicsLayer",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "label",
+   "light",
+   "maxLines",
+   "modifiers",
+   "music",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "overflow",
+   "padding",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "scroll",
+   "secondary",
+   "selected",
+   "semantics",
+   "spacedBy",
+   "start",
+   "success",
+   "surfaceHigh",
+   "target",
+   "text",
+   "travel",
+   "type",
+   "unread",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "verticalScroll",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.flow": [
+    "flow"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:47.593Z"
+ }
+}

@@ -1,0 +1,175 @@
+{
+ "id": "DX-01",
+ "name": "overflow",
+ "version": 2,
+ "title": "Diagnostic: layout overflow",
+ "summary": "Deliberately flawed: a banner forced to 400 dp (requiredWidthIn [400, 400]) inside a 300×200 document with no scroll container, so it runs past the right edge and the audit reports layout_overflow naming it.",
+ "prompt": "A 300×200 card with a banner forced to 400 dp wide, not in a scroll container.",
+ "level": 2,
+ "family": "DX",
+ "capabilities": {
+  "primary": [
+   "layout.size"
+  ],
+  "secondary": [
+   "layout.decoration",
+   "layout.spacing",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "overflow",
+  "clipped",
+  "cut off",
+  "too wide",
+  "off screen",
+  "layout bug",
+  "diagnostic",
+  "audit fixture"
+ ],
+ "teaches": [
+  "Recognise layout_overflow: a child forced wider than its parent (requiredWidthIn [400, 400]) is laid out past the document edge and clipped",
+  "Fix it by letting the child fill the parent (fillMaxWidth), or by putting it in a horizontalScroll container"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/box/children/0/box/modifiers/0",
+   "shows": "layout.size",
+   "note": "the flaw: a required 400 dp width in a 260 dp slot"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "expect_findings": [
+  "layout_overflow"
+ ],
+ "check": {
+  "describe": "audit reports exactly one finding, layout_overflow, whose example is the BoxLayout at x 20, w 400 (the Java reference layout also gives 400); the render shows the banner cut at the right edge. Resized, the padded box fills the window; the 400 dp banner still overflows at 200 wide and only fits once the document is 440 dp or wider.",
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "DX-02",
+  "LAY-04"
+ ],
+ "pitfalls": [
+  "A plain width: 400, or widthIn [400, 400], does not overflow in the Java reference or the TypeScript player: both clamp the size to the parent's constraints (as Compose does), so the banner silently becomes 260 wide. Only requiredWidthIn (DimensionConstraints) overrides the parent; the C++ player lets widthIn overflow too, which is a player difference, not the reference behaviour"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 349,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 17,
+  "operations": {
+   "CoreText": 1,
+   "DATA_TEXT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 2,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 3,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_DIMENSION_CONSTRAINTS": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_WIDTH": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 0
+  },
+  "audit_findings": [
+   "warning: layout_overflow"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": [
+     "warning: layout_overflow"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "color",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "requiredWidthIn",
+   "root",
+   "text",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "layout.decoration": [
+    "background"
+   ],
+   "layout.spacing": [
+    "padding"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:19.549Z"
+ }
+}

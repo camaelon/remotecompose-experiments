@@ -9,7 +9,7 @@
 //     theme and play/pause — to see how a document behaves, not only how it looks. Its
 //     state lives in the URL, so a link reproduces what is on screen.
 
-const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
+export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 // Text placed inside a <script> element must not contain "</script" (it would end the
@@ -69,6 +69,17 @@ const COMMON_JS = `
  *                                      (playground only; includes ones the page cannot set),
  *   document: {width, height}          the size the document declares (playground only),
  *   rcBytes, fileName                  the .rc's size and download name (playground only),
+ *   variants: [{name, label, href}]    playground only, optional: other documents of the same
+ *                                      example (a componentTheme expanded on its own, e.g.
+ *                                      mono and mono-inverted), shown as extra segments of the
+ *                                      look control next to Auto / Light / Dark; href is
+ *                                      the page that plays it (relative)
+ *   variant, mainHref                  this page plays that variant (its segment is pressed);
+ *                                      mainHref is the page of the main document, which
+ *                                      Auto / Light / Dark go back to
+ *   json: [{label, url | text, file}]  playground only, optional: a JSON button each, opening a
+ *                                      viewer (syntax-highlighted, copy, download) on the
+ *                                      document fetched from url, or on the text given
  * }
  */
 export function buildPage({ bundle, rcBase64, config }) {
@@ -264,6 +275,28 @@ const PLAYGROUND_CSS = `
     background: var(--text); color: var(--bg); opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 11;
   }
   #toast.show { opacity: 1; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--chip); }
+  .seg button { border: 0; padding: 5px 12px; background: none; cursor: pointer; font-weight: 500; white-space: nowrap; }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button:hover { background: var(--field); }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .seg button.variant { font-style: normal; }
+  .seg .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid currentColor; }
+  #json-dlg {
+    width: min(980px, calc(100vw - 32px)); height: min(84vh, 960px); padding: 0; border: 1px solid var(--line);
+    border-radius: 10px; background: var(--panel); color: var(--text); box-shadow: 0 12px 48px rgba(0,0,0,.35);
+  }
+  #json-dlg[open] { display: flex; flex-direction: column; }
+  #json-dlg::backdrop { background: rgba(0,0,0,.45); }
+  #json-dlg header { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  #json-dlg header .meta { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #json-pre {
+    flex: 1; margin: 0; overflow: auto; padding: 12px 14px; background: var(--field); tab-size: 2;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre;
+  }
+  :root { --j-k: #0b5cad; --j-s: #1a7f37; --j-n: #b35900; --j-l: #8f3fb8; }
+  @media (prefers-color-scheme: dark) { :root { --j-k: #79b8ff; --j-s: #85e89d; --j-n: #ffab70; --j-l: #d2a8ff; } }
+  .j-k { color: var(--j-k); } .j-s { color: var(--j-s); } .j-n { color: var(--j-n); } .j-l { color: var(--j-l); font-weight: 600; }
   @media (max-width: 760px) {
     body { grid-template-rows: auto minmax(55vh, 1fr) auto; grid-template-columns: minmax(0, 1fr);
            grid-template-areas: "bar" "stage" "panel"; height: auto; min-height: 100%; }
@@ -298,7 +331,8 @@ const VARIABLE_ELEMENT_JS = `
     ".alpha{display:flex;align-items:center;gap:6px;flex:1;min-width:0;color:var(--muted);font-size:11px}" +
     ".bounds{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:2px;font-variant-numeric:tabular-nums}" +
     ".ro{color:var(--muted);font-family:ui-monospace,Menlo,monospace;overflow-wrap:anywhere}" +
-    ".bad{border-color:#d93025!important}";
+    ".bad{border-color:#d93025!important}" +
+    ".meaning{color:var(--muted);font-size:11px;margin:-2px 0 6px}";
 
   function niceRange(v, isInt) {
     if (!isInt && v >= 0 && v <= 1) return [0, 1];
@@ -330,10 +364,12 @@ const VARIABLE_ELEMENT_JS = `
       var top = el("div", "top");
       top.appendChild(el("span", "name", this._name));
       top.appendChild(el("span", "type", this._type));
+      if (this.hasAttribute("meaning")) this.title = this.getAttribute("meaning");
       this._reset = el("button", "reset", "reset");
       this._reset.title = "Back to " + this._default;
       this._reset.onclick = () => { this.value = this._default; this._emit(); };
       this._root.appendChild(top);
+      if (this.hasAttribute("meaning")) this._root.appendChild(el("div", "meaning", this.getAttribute("meaning")));
       var body = el("div");
       this._root.appendChild(body);
       if (this.hasAttribute("readonly")) {
@@ -367,14 +403,19 @@ const VARIABLE_ELEMENT_JS = `
       body.appendChild(row); body.appendChild(bounds);
       var self = this;
       var r = niceRange(Number(this.getAttribute("default")) || 0, isInt);
+      // A declared range (the document's metadata) fixes the slider and clamps what is typed.
+      var fixed = this.hasAttribute("min") && this.hasAttribute("max");
+      if (fixed) r = [Number(this.getAttribute("min")), Number(this.getAttribute("max"))];
+      var declaredStep = this.hasAttribute("step") ? Number(this.getAttribute("step")) : null;
+      function clampV(v) { return fixed ? Math.min(r[1], Math.max(r[0], v)) : v; }
       function setRange(a, b) {
         r = [a, b];
         range.min = a; range.max = b;
-        range.step = isInt ? 1 : (b - a) / 500;
+        range.step = declaredStep || (isInt ? 1 : (b - a) / 500);
         lo.textContent = fmt(a, isInt); hi.textContent = fmt(b, isInt);
       }
       function widen(v) {   // grow the slider to include v, keeping round bounds
-        if (v >= r[0] && v <= r[1]) return;
+        if (fixed || (v >= r[0] && v <= r[1])) return;
         var n = niceRange(v, isInt);
         setRange(Math.min(r[0], n[0]), Math.max(r[1], n[1]));
       }
@@ -397,6 +438,7 @@ const VARIABLE_ELEMENT_JS = `
         num.classList.toggle("bad", !ok);
         if (!ok) return;
         if (isInt) v = Math.trunc(v);
+        v = clampV(v);
         self._value = String(v);
         widen(v); range.value = v;
         self._emit();
@@ -478,6 +520,7 @@ function playgroundPage(bundle, rcBase64, config) {
 <body>
 <header id="bar">
   <h1 title="${t}">${t}</h1>
+  <div id="modes" class="seg" role="group" aria-label="Look: theme, or a monochrome version of the document"></div>
   <div class="group">
     <span class="rc-size" title="${escapeHtml(sizeTitle)}">${escapeHtml(formatBytes(config.rcBytes ?? 0))} .rc</span>
     <button id="download" class="btn primary" title="Download the document as ${escapeHtml(fileName)} (${escapeHtml(sizeTitle)})">Download</button>
@@ -496,18 +539,13 @@ function playgroundPage(bundle, rcBase64, config) {
     <span class="lbl">Density</span>
     <select id="density" aria-label="Density"></select>
   </div>
-  <div class="group">
-    <span class="lbl">Theme</span>
-    <select id="theme" aria-label="Theme">
-      <option value="auto">auto</option><option value="light">light</option><option value="dark">dark</option>
-    </select>
-  </div>
   <span class="sep"></span>
   <div class="group">
     <button id="play" class="btn icon" title="Pause animation" aria-label="Pause">❚❚</button>
     <button id="restart" class="btn icon" title="Restart: reload the document, so animations start over and touch state is reset" aria-label="Restart">↻</button>
   </div>
   <span class="spacer"></span>
+  <div id="json-btns" class="group"></div>
   <div class="group">
     <button id="copy" class="btn" title="Copy a link to exactly this: size, density, theme and variable values">Copy link</button>
     <button id="toggle" class="btn" aria-pressed="true" title="Show or hide the side panel">Panel</button>
@@ -532,6 +570,17 @@ function playgroundPage(bundle, rcBase64, config) {
 </aside>
 <div id="rc-error" hidden></div>
 <div id="toast"></div>
+<dialog id="json-dlg" aria-label="JSON">
+  <header>
+    <div id="json-tabs" class="seg" role="tablist"></div>
+    <span id="json-meta" class="meta"></span>
+    <span class="spacer"></span>
+    <button id="json-copy" class="btn" type="button">Copy</button>
+    <button id="json-dl" class="btn" type="button">Download</button>
+    <button id="json-close" class="btn" type="button" aria-label="Close">Close</button>
+  </header>
+  <pre id="json-pre" tabindex="0"></pre>
+</dialog>
 <script>
 ${scriptSafe(bundle)}
 </script>
@@ -575,6 +624,15 @@ ${VARIABLE_ELEMENT_JS}
   else if (C.start === "auto") S.fill = null;   // decided once the stage can be measured
   if (hash.has("d")) S.density = hash.get("d") === "device" ? "device" : (+hash.get("d") > 0 ? +hash.get("d") : S.density);
   if (/^(auto|light|dark)$/.test(hash.get("t") || "")) S.theme = hash.get("t");
+  // The look control: Auto / Light / Dark switch the player theme of this document; a variant
+  // (mono, mono-inverted) is a document of its own, on its own page. #t= names either, so a
+  // link to a variant's look through the main page (or the reverse) goes to the right page.
+  var VARIANTS = C.variants || [];
+  function variantOf(name) { for (var i = 0; i < VARIANTS.length; i++) if (VARIANTS[i].name === name) return VARIANTS[i]; return null; }
+  var wantT = hash.get("t") || "";
+  if (!C.variant && variantOf(wantT)) { location.replace(variantOf(wantT).href + location.search + location.hash); return; }
+  if (C.variant && C.mainHref && /^(auto|light|dark)$/.test(wantT)) { location.replace(C.mainHref + location.search + location.hash); return; }
+  if (C.variant && wantT !== C.variant && variantOf(wantT)) { location.replace(variantOf(wantT).href + location.search + location.hash); return; }
 
   var urlTimer = 0;
   function syncUrl() {
@@ -590,7 +648,7 @@ ${VARIABLE_ELEMENT_JS}
     });
     var h = new URLSearchParams();
     if (S.fill) h.set("fill", "1"); else { h.set("w", S.w); h.set("h", S.h); }
-    h.set("d", S.density); h.set("t", S.theme);
+    h.set("d", S.density); h.set("t", C.variant || S.theme);
     var qs = q.toString();
     return location.pathname + (qs ? "?" + qs : "") + "#" + h.toString();
   }
@@ -632,7 +690,7 @@ ${VARIABLE_ELEMENT_JS}
   }
 
   // ── Toolbar ──
-  var wIn = $("w"), hIn = $("h"), preset = $("preset"), fitBtn = $("fit"), dens = $("density"), theme = $("theme");
+  var wIn = $("w"), hIn = $("h"), preset = $("preset"), fitBtn = $("fit"), dens = $("density");
   PRESETS.forEach(function (p, i) {
     var o = document.createElement("option");
     o.value = i; o.textContent = p[0] + " · " + p[1] + "×" + p[2];
@@ -680,7 +738,52 @@ ${VARIABLE_ELEMENT_JS}
     handle.player.setDensity(density());
     fit();
   };
-  theme.onchange = function () { S.theme = theme.value; handle.player.setTheme(S.theme); syncUrl(); };
+  // ── The look control ──
+  var LOOKS = [
+    ["auto", "Auto", "Follow the system's light or dark setting"],
+    ["light", "Light", "The light theme (themed colours take their light value)"],
+    ["dark", "Dark", "The dark theme (themed colours take their dark value)"]
+  ].concat(VARIANTS.map(function (v) { return [v.name, v.label || v.name, v.title || ("The " + v.name + " version of the document")]; }));
+  var seg = $("modes");
+  LOOKS.forEach(function (l) {
+    var b = document.createElement("button");
+    b.type = "button"; b.dataset.look = l[0]; b.title = l[2];
+    if (l[0] === "mono" || l[0] === "mono-inverted") {
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      dot.style.background = l[0] === "mono" ? "#000" : "#fff";
+      dot.style.borderColor = l[0] === "mono" ? "#fff" : "#000";
+      dot.style.boxShadow = "0 0 0 1px " + (l[0] === "mono" ? "#000" : "#fff");
+      b.appendChild(dot);
+    }
+    b.appendChild(document.createTextNode(l[1]));
+    b.onclick = function () { setLook(l[0]); };
+    seg.appendChild(b);
+  });
+  function showLook() {
+    var cur = C.variant || S.theme;
+    for (var i = 0; i < seg.children.length; i++) {
+      var b = seg.children[i];
+      b.setAttribute("aria-pressed", String(b.dataset.look === cur));
+    }
+  }
+  function setLook(look) {
+    var isTheme = /^(auto|light|dark)$/.test(look);
+    if (isTheme && !C.variant) {
+      S.theme = look; handle.player.setTheme(S.theme); showLook(); syncUrl();
+      return;
+    }
+    if (look === C.variant) return;
+    var href = isTheme ? C.mainHref : (variantOf(look) || {}).href;
+    if (!href) return;
+    if (isTheme) S.theme = look;
+    // Another page: carry the view (size, density) and the variables over.
+    var u = currentUrl(), at = u.indexOf("#"), qi = u.indexOf("?");
+    var h = new URLSearchParams(u.slice(at + 1));
+    h.set("t", look);
+    location.href = href + (qi >= 0 && qi < at ? u.slice(qi, at) : "") + "#" + h.toString();
+  }
+  showLook();
   $("play").onclick = function () {
     S.playing = !S.playing;
     if (S.playing) handle.player.play(); else handle.player.pause();
@@ -719,13 +822,83 @@ ${VARIABLE_ELEMENT_JS}
       navigator.clipboard.writeText(url).then(done, function () { fallbackCopy(url); });
     } else fallbackCopy(url);
   };
-  function fallbackCopy(text) {
+  function fallbackCopy(text, msg) {
     var ta = document.createElement("textarea");
     ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand("copy"); toast("Link copied"); } catch (e) { toast(text); }
+    try { document.execCommand("copy"); toast(msg || "Link copied"); } catch (e) { toast(msg ? "Copy failed" : text); }
     ta.remove();
   }
+
+  // ── JSON viewer: a button per document (C.json), each fetched once (or given inline),
+  // pretty-printed and highlighted. ──
+  var JSONS = C.json || [], dlg = $("json-dlg"), pre = $("json-pre"), jsonAt = 0;
+  function escH(t) { return t.replace(/[&<>]/g, function (c) { return c === "&" ? "&amp;" : c === "<" ? "&lt;" : "&gt;"; }); }
+  function pretty(t) { try { return JSON.stringify(JSON.parse(t), null, 2); } catch (e) { return t; } }
+  function highlight(t) {
+    if (t.length > 3000000) return escH(t);   // too big to colour quickly: plain
+    var re = /("(?:\\\\.|[^"\\\\])*")(\\s*:)?|\\b(?:true|false|null)\\b|-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?/g;
+    var out = [], last = 0, m;
+    while ((m = re.exec(t))) {
+      out.push(escH(t.slice(last, m.index)));
+      if (m[1]) out.push('<span class="j-' + (m[2] ? "k" : "s") + '">' + escH(m[1]) + "</span>" + (m[2] || ""));
+      else out.push('<span class="j-' + (/^[tfn]/.test(m[0]) ? "l" : "n") + '">' + m[0] + "</span>");
+      last = re.lastIndex;
+    }
+    out.push(escH(t.slice(last)));
+    return out.join("");
+  }
+  function jsonText(item) {
+    if (item._text != null) return Promise.resolve(item._text);
+    if (item.text != null) { item._text = pretty(typeof item.text === "string" ? item.text : JSON.stringify(item.text)); return Promise.resolve(item._text); }
+    return fetch(item.url).then(function (r) {
+      if (!r.ok) throw new Error(r.status + " " + r.statusText);
+      return r.text();
+    }).then(function (t) { item._text = pretty(t); return item._text; });
+  }
+  function showJson(i) {
+    jsonAt = i;
+    var item = JSONS[i], tabs = $("json-tabs").children;
+    for (var k = 0; k < tabs.length; k++) tabs[k].setAttribute("aria-pressed", String(k === i));
+    pre.textContent = "Loading…"; $("json-meta").textContent = "";
+    jsonText(item).then(function (t) {
+      if (jsonAt !== i) return;
+      pre.innerHTML = highlight(t);
+      pre.scrollTop = 0;
+      $("json-meta").textContent = (item.file || "") + " · " + t.split("\\n").length.toLocaleString("en-US") + " lines";
+    }, function (e) { if (jsonAt === i) pre.textContent = "Could not load " + (item.url || "the JSON") + ": " + (e && e.message ? e.message : e); });
+  }
+  if (JSONS.length) {
+    JSONS.forEach(function (item, i) {
+      var b = document.createElement("button");
+      b.className = "btn"; b.type = "button"; b.textContent = item.label;
+      b.title = item.title || ("Show " + (item.file || "the document's JSON"));
+      b.onclick = function () { if (!dlg.open) dlg.showModal(); showJson(i); };
+      $("json-btns").appendChild(b);
+      var tab = document.createElement("button");
+      tab.type = "button"; tab.textContent = item.label; tab.title = b.title;
+      tab.onclick = function () { showJson(i); };
+      $("json-tabs").appendChild(tab);
+    });
+  } else $("json-btns").hidden = true;
+  $("json-close").onclick = function () { dlg.close(); };
+  dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });   // the backdrop
+  $("json-copy").onclick = function () {
+    var t = JSONS[jsonAt] && JSONS[jsonAt]._text;
+    if (t == null) return;
+    var done = function () { toast("JSON copied"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done, function () { fallbackCopy(t, "JSON copied"); });
+    else fallbackCopy(t, "JSON copied");
+  };
+  $("json-dl").onclick = function () {
+    var item = JSONS[jsonAt], t = item && item._text;
+    if (t == null) return;
+    var url = URL.createObjectURL(new Blob([t], { type: "application/json" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = item.file || "document.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  };
 
   // ── Drag handles. The frame is centred horizontally, so while it is narrower than the
   // stage both edges move: the width changes by twice the pointer travel to keep the
@@ -769,6 +942,8 @@ ${VARIABLE_ELEMENT_JS}
     var e = document.createElement("rc-variable");
     e.setAttribute("name", v.name);
     e.setAttribute("type", v.type);
+    var spec = (C.ranges || {})[v.name] || {};
+    ["min", "max", "step", "meaning"].forEach(function (k) { if (spec[k] !== undefined) e.setAttribute(k, spec[k]); });
     if (C.declared[v.name]) {
       e.setAttribute("default", S.defaults[v.name]);
       e.setAttribute("value", S.values[v.name]);
@@ -827,7 +1002,6 @@ ${VARIABLE_ELEMENT_JS}
     if (!S.fill) { S.w = DOC.width; S.h = DOC.height; }
   }
   dens.value = String(S.density);
-  theme.value = S.theme;
   try {
     handle = RC.createPlayer(host, {
       theme: S.theme,

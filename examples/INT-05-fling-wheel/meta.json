@@ -1,0 +1,330 @@
+{
+ "id": "INT-05",
+ "name": "fling-wheel",
+ "version": 3,
+ "title": "Fling prize wheel",
+ "summary": "A six-colour prize wheel: a horizontal drag turns it, and a fast release keeps it spinning until it decelerates to a stop.",
+ "prompt": "Make a prize wheel I can spin with a swipe; it should keep spinning after I let go and slow down to a stop.",
+ "level": 3,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.fling"
+  ],
+  "secondary": [
+   "draw.arc",
+   "draw.transform",
+   "draw.path",
+   "draw.shapes",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "game",
+  "control"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "wheel of fortune",
+  "spinner",
+  "spin",
+  "fling",
+  "momentum",
+  "inertia",
+  "rotate",
+  "roulette"
+ ],
+ "teaches": [
+  "Make a value fling: touchExpression with expression [\"touchX()\"] and touchMode 0 (gently) carries the release velocity on and eases to a stop",
+  "Wrap an angle by leaving out min: max 360 makes the value wrap instead of clamp",
+  "Rotate a group of draws by the touch value with save { rotate(angle, pivot) ... }"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0",
+   "shows": "input.fling",
+   "note": "angle follows the horizontal drag (1 px = 1 degree), wraps at 360, and keeps going on a fast release"
+  },
+  {
+   "pointer": "/root/commands/1/save/commands/0",
+   "shows": "draw.transform",
+   "note": "@s = (min(componentWidth(), componentHeight()) - 60) / 240, then translate to the live centre (componentWidth() / 2, componentHeight() / 2 + 10) and scale by @s, so the wheel drawn at a fixed 120 radius fits any box"
+  },
+  {
+   "pointer": "/root/commands/1/save/commands/3",
+   "shows": "draw.transform",
+   "note": "save + rotate(@angle) around the six drawSector calls, about the origin the outer save moved to the wheel centre"
+  },
+  {
+   "pointer": "/root/commands/1/save/commands/3/save/commands/2",
+   "shows": "draw.arc",
+   "note": "one 60 degree sector"
+  },
+  {
+   "pointer": "/root/commands/1/save/commands/10",
+   "shows": "draw.path",
+   "note": "the fixed pointer: a small triangle built with pathCreate / pathAppendLineTo / pathAppendClose"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A 100 px drag released at 1000 px/s keeps the wheel turning for about two seconds after the release; at 3 s and at 4 s the frames are identical (settled). Resized, the wheel stays centred and scales with the smaller side (radius (min(w, h) - 60) / 2): smaller at 195×300, centred in the wide 450×200 box, with the pointer still on top; the same fling spins it the same angle, since a pixel is a degree at any size.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "down",
+     "x": 60,
+     "y": 280
+    },
+    {
+     "t": 0.15,
+     "type": "move",
+     "x": 110,
+     "y": 280
+    },
+    {
+     "t": 0.2,
+     "type": "up",
+     "x": 160,
+     "y": 280
+    }
+   ],
+   "duration": 3
+  },
+  "interact": [
+   {
+    "drag": [
+     60,
+     280,
+     200,
+     280
+    ],
+    "steps": 4
+   },
+   {
+    "wait": 3
+   }
+  ],
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 195,
+    "height": 300,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 60,
+      "y": 280
+     },
+     {
+      "t": 0.15,
+      "type": "move",
+      "x": 110,
+      "y": 280
+     },
+     {
+      "t": 0.2,
+      "type": "up",
+      "x": 160,
+      "y": 280
+     }
+    ],
+    "duration": 3
+   },
+   {
+    "name": "short",
+    "width": 450,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 60,
+      "y": 180
+     },
+     {
+      "t": 0.15,
+      "type": "move",
+      "x": 110,
+      "y": 180
+     },
+     {
+      "t": 0.2,
+      "type": "up",
+      "x": 160,
+      "y": 180
+     }
+    ],
+    "duration": 3
+   }
+  ]
+ },
+ "related": [
+  "INT-04",
+  "INT-06"
+ ],
+ "pitfalls": [
+  "The fling velocity is found by perturbing touchX() inside the expression array itself: [\"touchX()\"] flings, but a single infix element such as [\"touchX() * 2\"] compiles to a separate expression and releases with zero velocity",
+  "Leaving out min turns on wrap mode (around max); min 0 clamps instead",
+  "drawPath with an inline SVG string is padded to 1024 floats (about 4 KB) by the Java parser; build small shapes with pathCreate / pathAppendLineTo so the document stays small and byte-identical",
+  "Draw the pointer after the save block: everything inside save { rotate } turns with the wheel, everything after it stays put",
+  "Draw a canvas around a translated centre and scale it from componentWidth()/componentHeight() rather than placing it at the header size literal coordinates (150, 160): the rotate pivot then is just the origin, and the drawing fits any box"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 770,
+  "header": {
+   "width": 300,
+   "height": 300
+  },
+  "op_count": 42,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_PATH": 1,
+   "DRAW_SECTOR": 6,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 2,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 7,
+   "PATH_CREATE": 1,
+   "PathAppend": 3,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     195,
+     300
+    ],
+    "audit_findings": []
+   },
+   "short": {
+    "render": "render-short.png",
+    "render_findings": [],
+    "size": [
+     450,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "angle",
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "defaultValue",
+   "drawCircle",
+   "drawPath",
+   "drawSector",
+   "dx",
+   "dy",
+   "expression",
+   "header",
+   "height",
+   "id",
+   "left",
+   "max",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathCreate",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rotate",
+   "save",
+   "scale",
+   "semantics",
+   "startAngle",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "top",
+   "touchExpression",
+   "touchMode",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "input.fling": [
+    "touchExpression"
+   ],
+   "draw.arc": [
+    "drawSector"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "draw.path": [
+    "drawPath",
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:55.993Z"
+ }
+}

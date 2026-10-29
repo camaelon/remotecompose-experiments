@@ -1,0 +1,276 @@
+{
+ "id": "DRW-12",
+ "name": "clipping",
+ "version": 3,
+ "title": "Stripes clipped to shapes",
+ "summary": "The same diagonal stripe pattern clipped three ways: to a square with clipRect, to a circle path and to a star path with clipPath.",
+ "prompt": "Fill a square, a circle and a star with the same diagonal stripe pattern by clipping it to each shape.",
+ "level": 2,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.clip"
+  ],
+  "secondary": [
+   "draw.path",
+   "draw.plot",
+   "draw.transform",
+   "data.loop",
+   "draw.shapes",
+   "draw.stroke",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "clip",
+  "clipping",
+  "mask",
+  "stencil",
+  "hatch",
+  "hatching",
+  "stripes",
+  "pattern fill",
+  "shape mask",
+  "crop to shape"
+ ],
+ "teaches": [
+  "Restrict drawing to a rectangle with clipRect inside a save block",
+  "Mask a pattern with any path id via clipPath (a pathExpression circle, a pathCreate star)",
+  "Scope each clip with save {commands} so it ends when the block restores",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre"
+ ],
+ "pitfalls": [
+  "A clip only shrinks: without the surrounding save block the second clip intersects the first and nothing is drawn",
+  "Clip paths are only used, never drawn: create them before the clipPath, and draw an outline separately if one is wanted",
+  "Make the pattern overshoot the clip on every side; the stripes start 100 dp left of the square so the bottom-left corner is covered",
+  "Draw the labels outside the save blocks, or they are clipped away too",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: literal coordinates sit in the top-left and get cut off when it is resized, so scale the drawing to fit (or derive positions from componentWidth()/componentHeight())"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/20",
+   "shows": "draw.clip",
+   "note": "save { clipRect, stripes }: the clip ends with the block"
+  },
+  {
+   "pointer": "/root/commands/22/save/commands/0",
+   "shows": "draw.clip",
+   "note": "clipPath to the circle path"
+  },
+  {
+   "pointer": "/root/commands/24/save/commands/0",
+   "shows": "draw.clip",
+   "note": "clipPath to the star path"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "draw.plot",
+   "note": "a closed circle path: pathExpression of cos/sin with flags 1 (loop)"
+  },
+  {
+   "pointer": "/root/commands/4",
+   "shows": "draw.path",
+   "note": "pathCreate starts the star path; pathAppendLineTo adds its vertices"
+  },
+  {
+   "pointer": "/root/commands/20/save/commands/1",
+   "shows": "data.loop",
+   "note": "15 diagonal stripes from the loop index"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Blue stripes fill only a square, teal only a disc, yellow only a star; nothing outside. Resized, the whole drawing scales uniformly to fit and stays centred (smaller in a narrow box, centred with margins in a wide one).",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 180
+   }
+  ]
+ },
+ "related": [
+  "DRW-05",
+  "DRW-11"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1223,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 59,
+  "operations": {
+   "ANIMATED_FLOAT": 9,
+   "CLIP_PATH": 2,
+   "CLIP_RECT": 1,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 4,
+   "DRAW_LINE": 3,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 3,
+   "MATRIX_RESTORE": 3,
+   "MATRIX_SAVE": 3,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 4,
+   "PATH_CREATE": 1,
+   "PathAppend": 10,
+   "PathExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "clipPath",
+   "clipRect",
+   "color",
+   "commands",
+   "contentDescription",
+   "count",
+   "drawLine",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathCreate",
+   "pathExpression",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "right",
+   "root",
+   "save",
+   "scale",
+   "start",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "draw.clip": [
+    "clipRect",
+    "clipPath"
+   ],
+   "draw.path": [
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "draw.transform": [
+    "save",
+    "scale",
+    "translate"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "draw.shapes": [
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:15.392Z"
+ }
+}

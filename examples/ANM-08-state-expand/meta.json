@@ -1,0 +1,295 @@
+{
+ "id": "ANM-08",
+ "name": "state-expand",
+ "version": 2,
+ "title": "Mini player expands (StateLayout)",
+ "summary": "A now-playing mini player that expands to a full card: a stateLayout switches between a row state and a column state, and the components that carry the same animationSpec animationId in both states (the card, the album art, the title, the artist) morph from one state's bounds to the other's.",
+ "prompt": "A music mini player (album art, title, artist, play icon in one row); tapping it expands into a full card with big album art, the title and a progress bar, the art growing into place; tapping again collapses it.",
+ "level": 4,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.state"
+  ],
+  "secondary": [
+   "layout.state",
+   "anim.layout",
+   "input.tap",
+   "layout.decoration",
+   "layout.weight",
+   "draw.shapes",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "media-player",
+  "card"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "shared element",
+  "hero transition",
+  "container transform",
+  "mini player",
+  "now playing",
+  "expand collapse",
+  "album art grows",
+  "two layouts"
+ ],
+ "teaches": [
+  "Hold alternative layouts as children of a stateLayout and pick one with indexId (an integer variable): state 0 the row, state 1 the column",
+  "Pair the components that exist in both states with the same animationSpec animationId ({\"animationSpec\": {\"animationId\": 101, \"motionDuration\": 450}}) so they morph (position and size) instead of fading out and in",
+  "Put an onClick on each state's root that sets the other state (valueIntegerChange sel = 1 or 0), and an animationSpec on the stateLayout for the container's own resize"
+ ],
+ "pitfalls": [
+  "indexId must be an integer variable (vtype integer) changed with valueIntegerChange",
+  "The `id` modifier (component id) does not pair components across states: only animationSpec animationId does. Sharing an `id` between the two state roots even breaks the taps (the hidden state's action runs too), so leave the roots' component ids distinct",
+  "An onClick on the stateLayout itself is not dispatched by Java: put it on the state roots",
+  "Player status (2026-10-29): C++ matches Java's layout and morph; the TS player does not dispatch a tap on a state root, so it stays collapsed",
+  "Draw a progress line from componentWidth() (right = componentWidth() * 0.4), not a literal 280/112: the card is as wide as the host"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/modifiers/1",
+   "shows": "anim.state",
+   "note": "animationSpec on the stateLayout: 450 ms STANDARD morph"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/indexId",
+   "shows": "layout.state",
+   "note": "indexId @sel: which child state is shown"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/children/1/column/children/0/box/modifiers/0",
+   "shows": "anim.state",
+   "note": "animationId 101 on the 150 dp art; the 48 dp art in state 0 has animationId 101 too, so it grows into place"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/children/0/row/modifiers/7",
+   "shows": "input.tap",
+   "note": "collapsed state's root: sel = 1"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap on the mini player at 0.1 s, captured 0.2 s later. Mid-morph: the card about two thirds of its expanded height and the art about 110 dp, moving to the centre, the title following below it. Settles to the full card with 150 dp art, title, artist and a progress bar. Resized (narrow 240, wide 540, captured settled at 1 s) the expanded card fills the width with the art centred, and the progress line is 40 % of whatever width it gets (componentWidth()); the 288 dp card needs a host at least 320 dp tall.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 52
+    }
+   ],
+   "duration": 0.3
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 340,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 52
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 340,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 52
+     }
+    ],
+    "duration": 1
+   }
+  ]
+ },
+ "related": [
+  "LAY-12",
+  "ANM-05",
+  "CMP-06"
+ ],
+ "prerequisites": [
+  "ANM-05"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1521,
+  "header": {
+   "width": 360,
+   "height": 320
+  },
+  "op_count": 83,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 1,
+   "ANIMATION_SPEC": 9,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "CoreText": 5,
+   "DATA_INT": 1,
+   "DATA_TEXT": 5,
+   "DRAW_ROUND_RECT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 12,
+   "MODIFIER_BACKGROUND": 5,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_PADDING": 3,
+   "MODIFIER_WIDTH": 9,
+   "PAINT_VALUES": 2,
+   "RoundedClipRectModifierOperation": 4,
+   "StateLayout": 1,
+   "VALUE_INTEGER_CHANGE_ACTION": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: layout_touch_target",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     340
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     340
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "animationId",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "indexId",
+   "left",
+   "modifiers",
+   "motionDuration",
+   "motionEasing",
+   "name",
+   "onClick",
+   "padding",
+   "paint",
+   "profiles",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "size",
+   "spacedBy",
+   "spacer",
+   "stateLayout",
+   "target",
+   "text",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "visibilityDuration",
+   "vtype",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "anim.state": [
+    "stateLayout"
+   ],
+   "layout.state": [
+    "stateLayout"
+   ],
+   "anim.layout": [
+    "animationSpec"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueIntegerChange"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "draw.shapes": [
+    "drawRoundRect"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:36.829Z"
+ }
+}

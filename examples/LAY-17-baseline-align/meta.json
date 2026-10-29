@@ -1,0 +1,222 @@
+{
+ "id": "LAY-17",
+ "name": "baseline-align",
+ "version": 2,
+ "title": "Number and unit on one baseline",
+ "summary": "A run summary (8.42 km, 42:10 min, 5′01″ /km) twice: with the row's default centring the small units float at mid-height, with alignByBaseline on the number and the unit they share the number's text baseline.",
+ "prompt": "A run summary card with three stats (distance 8.42 km, time 42:10 min, pace 5′01″ /km), each a big number followed by a small unit that sits on the number's baseline, with a label below. Show the same card with default centring above it for comparison.",
+ "level": 2,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.baseline"
+  ],
+  "secondary": [
+   "layout.align",
+   "layout.stack",
+   "layout.spacing",
+   "layout.decoration",
+   "text.basic",
+   "text.style",
+   "layout.responsive"
+  ]
+ },
+ "use_cases": [
+  "fitness",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "baseline",
+  "text baseline",
+  "number with unit",
+  "value and unit",
+  "mixed font sizes",
+  "big number small label",
+  "stat",
+  "metric",
+  "align text"
+ ],
+ "teaches": [
+  "Put alignByBaseline on every text of a row to line their first baselines up, whatever their font sizes",
+  "Keep a unit next to its number in its own small row, and lay the stats out in a collapsibleRow with spaceBetween so a narrow card drops the last stat instead of cutting it"
+ ],
+ "pitfalls": [
+  "Put alignByBaseline on every child of the row: once one child has it, a child without it is placed with its top on the shared baseline (Java RowLayout gives it an align offset of 0), so a unit without it drops below the number",
+  "With alignByBaseline the row's verticalAlignment moves the aligned group as a whole; it no longer centres each child on its own",
+  "Player status (2026-10-29): the C++ player aligns baselines; the TS player ignores alignByBaseline and puts the units at the top of the row. The Java layout harness (MockRemoteContext) measures every text 100×10, so it can't check baselines",
+  "Weighted stat columns (weight 1 each) never shrink below their content: when the card narrows the numbers overlap and the last unit is cut. Size stats to their content in a collapsibleRow (spaceBetween) so the last one drops out; a weighted child is never dropped by a collapsibleRow"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/3/collapsibleRow/children/0/column/children/0/row",
+   "shows": "layout.baseline",
+   "note": "8.42 (26 sp) and km (13 sp), both with alignByBaseline"
+  },
+  {
+   "pointer": "/root/column/children/3/collapsibleRow/children/0/column/children/0/row/children/1/text/modifiers/0",
+   "shows": "layout.baseline",
+   "note": "the unit's alignByBaseline, before its 3 dp left padding"
+  },
+  {
+   "pointer": "/root/column/children/1/collapsibleRow/children/0/column/children/0/row",
+   "shows": "layout.align",
+   "note": "the same pair with verticalAlignment center, for comparison"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Top card: km, min and /km float at mid-height of the big numbers. Bottom card: their bottoms sit on the numbers' baseline (C++: the 13 sp unit 15.1 dp below the row top instead of 8.8). Resized: at 540 wide the three stats spread to the card's edges; at 240 (and already at 300) the collapsibleRow drops Pace rather than overlapping or cutting the numbers, and the captions end in an ellipsis.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 232
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 232
+   }
+  ]
+ },
+ "prerequisites": [
+  "LAY-02"
+ ],
+ "related": [
+  "LAY-04",
+  "LAY-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1950,
+  "header": {
+   "width": 360,
+   "height": 232
+  },
+  "op_count": 108,
+  "operations": {
+   "CollapsibleRowLayout": 2,
+   "CoreText": 20,
+   "DATA_TEXT": 11,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 6,
+   "LayoutComponentContent": 35,
+   "MODIFIER_ALIGN_BY": 6,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 10,
+   "MODIFIER_WIDTH": 3,
+   "RoundedClipRectModifierOperation": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: repaint_continuous"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     232
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     232
+    ],
+    "audit_findings": [
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "alignByBaseline",
+   "apiLevel",
+   "background",
+   "children",
+   "clip",
+   "collapsibleRow",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalArrangement",
+   "maxLines",
+   "modifiers",
+   "overflow",
+   "padding",
+   "profiles",
+   "root",
+   "row",
+   "spacedBy",
+   "text",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "layout.baseline": [
+    "alignByBaseline"
+   ],
+   "layout.align": [
+    "verticalAlignment",
+    "horizontalArrangement",
+    "spacedBy"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "text.style": [
+    "fontWeight"
+   ],
+   "layout.responsive": [
+    "collapsibleRow"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:16.024Z"
+ }
+}

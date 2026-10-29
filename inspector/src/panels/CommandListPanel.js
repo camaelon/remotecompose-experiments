@@ -832,8 +832,11 @@ export function getVariableUsageInfo(doc, ops) {
         const opName = getOpName(op);
         const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
 
-        if ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) ||
-            opName.includes('Constant') || opName.includes('Expression') || opName.includes('Variable') || opName.includes('Attribute')) {
+        // An action (ValueFloatExpressionChangeAction, ...) reads its ids when it runs; it
+        // defines nothing, though its name contains 'Expression'.
+        const isAction = /Action$/.test(opName);
+        if (!isAction && ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) ||
+            opName.includes('Constant') || opName.includes('Expression') || opName.includes('Variable') || opName.includes('Attribute'))) {
             const id = getOpId(op);
             if (id !== null) {
                 usageInfo.definedVarIds.add(id);
@@ -1014,8 +1017,9 @@ export function getVariableUsageInfo(doc, ops) {
         if (!op) return;
         const opName = getOpName(op);
         const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
-        const isScalarVarDef = [80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) ||
-                        ((opName.includes('Constant') || opName.includes('Expression') || opName.includes('Variable') || opName.includes('Attribute')) && opCode !== 123 && opCode !== 160 && !opName.includes('Path'));
+        // Actions are readers (roots): a click's `count = @count + 1` reads the expression.
+        const isScalarVarDef = !/Action$/.test(opName) && ([80, 81, 82, 83, 84, 85, 104, 105, 134, 135, 136, 137, 138, 140, 144, 148, 151, 153, 156, 172, 196].includes(opCode) ||
+                        ((opName.includes('Constant') || opName.includes('Expression') || opName.includes('Variable') || opName.includes('Attribute')) && opCode !== 123 && opCode !== 160 && !opName.includes('Path')));
 
         if (!isScalarVarDef) {
             const refIds = extractReferencedVarIds(op);
@@ -1791,7 +1795,19 @@ export function prettyPrintPathTween(op) {
         }
         return String(v);
     }
-    return `Path #${outId} = tween(Path #${p1} ➔ Path #${p2}, fraction=${fmt(tw)})`;
+    // The TS PathTween keeps mTween as raw float bits (PathTween.java's mTween): a NaN id
+    // when the fraction is a variable, else the literal's bits.
+    let twStr = fmt(tw);
+    if (typeof op.mTween === 'number' && Number.isInteger(op.mTween) && typeof op.mTweenOut === 'number') {
+        const b = op.mTween >>> 0;
+        if ((b & 0x7f800000) === 0x7f800000 && (b & 0x7fffff) !== 0) {
+            const id = b & 0x7fffff;
+            twStr = `${getSystemVarName(id) || `var_${id}`} (${formatNumber(op.mTweenOut)})`;
+        } else {
+            twStr = formatNumber(op.mTweenOut);
+        }
+    }
+    return `Path #${outId} = tween(Path #${p1} ➔ Path #${p2}, fraction=${twStr})`;
 }
 
 export function prettyPrintPathData(op) {

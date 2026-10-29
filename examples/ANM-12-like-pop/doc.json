@@ -1,0 +1,194 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 240,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "A like button: tapping the heart fills it red, pops it bigger and back, and sends out a ring"
+ },
+ "resources": {
+  "paths": {
+   "heart": [
+    {
+     "type": "moveTo",
+     "x": 0,
+     "y": 22
+    },
+    {
+     "type": "cubicTo",
+     "x1": -44,
+     "y1": -4,
+     "x2": -24,
+     "y2": -40,
+     "x3": 0,
+     "y3": -14
+    },
+    {
+     "type": "cubicTo",
+     "x1": 24,
+     "y1": -40,
+     "x2": 44,
+     "y2": -4,
+     "x3": 0,
+     "y3": 22
+    },
+    {
+     "type": "close"
+    }
+   ]
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "liked",
+    "value": 0
+   }
+  },
+  {
+   "variable": {
+    "name": "tapAt",
+    "value": -10
+   }
+  },
+  {
+   "canvas": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "#FF101828"
+     },
+     {
+      "semantics": {
+       "contentDescription": "Like",
+       "clickable": true
+      }
+     },
+     {
+      "onClick": [
+       {
+        "type": "valueFloatExpressionChange",
+        "target": "@liked",
+        "value": "1 - @liked"
+       },
+       {
+        "type": "valueFloatExpressionChange",
+        "target": "@tapAt",
+        "value": "animationTime()"
+       }
+      ]
+     }
+    ],
+    "commands": [
+     {
+      "type": "wakeIn",
+      "seconds": "0.016 + 3600 * step(animationTime() - @tapAt, 0.6)"
+     },
+     {
+      "variable": {
+       "name": "p",
+       "value": "clamp(0, 1, (animationTime() - @tapAt) / 0.45)"
+      }
+     },
+     {
+      "variable": {
+       "name": "s",
+       "value": "1.6 + 0.5 * sin(@p * 3.14159) * (1 - @p)"
+      }
+     },
+     {
+      "translate": {
+       "dx": "componentWidth() / 2 - 120",
+       "dy": "componentHeight() / 2 - 100"
+      }
+     },
+     {
+      "impulse": {
+       "duration": 0.5,
+       "start": "@tapAt",
+       "commands": [
+        {
+         "impulseProcess": {
+          "commands": [
+           {
+            "paint": {
+             "color": "#FFFF4D6D",
+             "style": "stroke",
+             "strokeWidth": "6 * (1 - @p)"
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 120,
+             "cy": 84,
+             "radius": "40 + 50 * @p"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "save": [
+       {
+        "translate": {
+         "dx": 120,
+         "dy": 84
+        }
+       },
+       {
+        "scale": {
+         "sx": "@s",
+         "sy": "@s"
+        }
+       },
+       {
+        "paint": {
+         "color": "#FFFF4D6D",
+         "style": "fill",
+         "alpha": "@liked"
+        }
+       },
+       {
+        "drawPath": {
+         "path": "heart"
+        }
+       },
+       {
+        "paint": {
+         "color": "#FFFF4D6D",
+         "style": "stroke",
+         "strokeWidth": 2.5,
+         "alpha": 1
+        }
+       },
+       {
+        "drawPath": {
+         "path": "heart"
+        }
+       }
+      ]
+     },
+     {
+      "paint": {
+       "color": "#FF8A99AD",
+       "style": "fill",
+       "textSize": 15
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "Tap to like",
+       "x": 120,
+       "y": 170,
+       "panX": 0,
+       "panY": 0
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

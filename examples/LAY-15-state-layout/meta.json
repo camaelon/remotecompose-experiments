@@ -1,0 +1,306 @@
+{
+ "id": "LAY-15",
+ "name": "state-layout",
+ "version": 1,
+ "title": "Three-state status card (StateLayout)",
+ "summary": "A photo-backup card with three layouts (up to date, backing up, paused) held by a stateLayout and picked by an exported integer: each state's root taps to the next state, and components paired by animationSpec animationId (the card, its header row, the badge, the title) morph between them while the rest enter and exit.",
+ "prompt": "A photo backup status card with three states chosen by an integer the host can set: a compact \"Up to date\" row, an expanded \"Backing up\" card with a progress bar and Pause/Details buttons, and a red \"Paused, no Wi-Fi\" card with Retry. Tapping the card goes to the next state, and the card animates its size and the header between them.",
+ "level": 3,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.state"
+  ],
+  "secondary": [
+   "anim.state",
+   "anim.layout",
+   "input.tap",
+   "data.integer",
+   "host.variables",
+   "a11y.labels",
+   "layout.weight",
+   "layout.stack",
+   "layout.decoration",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card",
+  "loading-state",
+  "notification"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "state layout",
+  "status card",
+  "error state",
+  "empty state",
+  "loading state",
+  "compact and expanded",
+  "multiple layouts",
+  "switch layout by index",
+  "state machine",
+  "tap to cycle",
+  "view switcher",
+  "crossfade layouts"
+ ],
+ "teaches": [
+  "Hold one layout per state as the children of a stateLayout and pick one with indexId, an integer variable (here an exported integer the host can set to 0, 1 or 2)",
+  "Advance the state from each state's root: an onClick with valueIntegerChange to the next index (1, 2, then back to 0), with semantics describing what the tap does",
+  "Pair the parts that exist in every state with the same animationSpec animationId (card 200, header row 203, badge 201, title 202) so they morph in size and position; unpaired parts enter and exit",
+  "Size each state for its own content (72, 148 and 128 dp): only the current state is measured, so the stateLayout resizes with it"
+ ],
+ "pitfalls": [
+  "An onClick on the stateLayout itself is not dispatched by Java: put one on every state root",
+  "Pair components with animationSpec animationId: the `id` modifier (component id) does not pair them across states. The state roots need no component ids at all; give them distinct ones if you set any",
+  "Keep paired components at the same depth in every state (here each state's header is one row with animationId 203): during the transition the previous state's direct children that the new state lacks are painted as exiting, so a badge that is a direct child in one state and nested in another was painted twice (a stray green corner in the C++ player)",
+  "Keep a paired text the same size in every state: its bounds morph, and a text that grows is cut short mid-transition (\"Photo\" instead of \"Photo backup\")",
+  "The index is read at paint time and the new state is laid out on the next frame, so capture a change at least a frame later. An index with no matching child is ignored: with state 3 the card stays on the state it had (state 0 at start) in Java and C++, so keep the exported range 0..2"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/box/children/0/stateLayout",
+   "shows": "layout.state",
+   "note": "stateLayout with indexId @state and three state roots"
+  },
+  {
+   "pointer": "/root/0/resources/integers/state",
+   "shows": "data.integer",
+   "note": "the exported integer that selects the state (0 up to date, 1 backing up, 2 paused)"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/children/0/column/modifiers/7",
+   "shows": "input.tap",
+   "note": "state 0's tap: valueIntegerChange state = 1"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/children/1/column/children/0/row/children/0/box/modifiers/0",
+   "shows": "anim.state",
+   "note": "the badge's animationSpec animationId 201, shared with the badges of the other states"
+  },
+  {
+   "pointer": "/root/1/box/children/0/stateLayout/modifiers/1",
+   "shows": "anim.layout",
+   "note": "the stateLayout's own animationSpec: 350 ms STANDARD resize"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "state": {
+    "type": "int",
+    "meaning": "which layout is shown: 0 up to date, 1 backing up, 2 paused (no Wi-Fi)",
+    "default": 0,
+    "min": 0,
+    "max": 2,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap on the compact card at 0.1 s, captured settled at 0.9 s: the expanded \"Backing up\" card with progress bar and Pause/Details. Mid-transition (0.2 s) the card is half grown with the badge already blue. variables {\"state\": 2} shows the red Paused card with Retry; a second tap from state 1 goes there and a third back to the compact row. Verified against Java (java-layout.sh 360 220 --click 180 52 --settle, then --click 180 100): the stateLayout is 72, 148, 128 then 72 dp high, and C++ and TS match. Resized (240×220, 540×300) the card fills the width; at 240 the status line wraps to two lines and the progress bar follows the card's width.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 52
+    }
+   ],
+   "duration": 0.9
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 300
+   }
+  ]
+ },
+ "prerequisites": [
+  "LAY-12",
+  "INT-01"
+ ],
+ "related": [
+  "ANM-08",
+  "EXP-15",
+  "LAY-09"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 3105,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 171,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATION_SPEC": 13,
+   "CoreText": 12,
+   "DATA_INT": 1,
+   "DATA_TEXT": 13,
+   "HEADER": 1,
+   "LAYOUT_BOX": 12,
+   "LAYOUT_COLUMN": 6,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 5,
+   "LayoutComponentContent": 35,
+   "MODIFIER_BACKGROUND": 12,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 12,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_WIDTH": 20,
+   "NAMED_VARIABLE": 1,
+   "RoundedClipRectModifierOperation": 10,
+   "StateLayout": 1,
+   "VALUE_INTEGER_CHANGE_ACTION": 3
+  },
+  "host_variables": [
+   {
+    "name": "state",
+    "type": "int",
+    "value": 0
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: layout_touch_target",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "animationId",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "export",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "indexId",
+   "integers",
+   "modifiers",
+   "motionDuration",
+   "motionEasing",
+   "onClick",
+   "padding",
+   "profiles",
+   "resources",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "spacedBy",
+   "spacer",
+   "state",
+   "stateLayout",
+   "target",
+   "text",
+   "type",
+   "value",
+   "verticalAlignment",
+   "visibilityDuration",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "layout.state": [
+    "stateLayout"
+   ],
+   "anim.state": [
+    "stateLayout"
+   ],
+   "anim.layout": [
+    "animationSpec"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueIntegerChange"
+   ],
+   "data.integer": [
+    "integers",
+    "valueIntegerChange"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:14.900Z"
+ }
+}

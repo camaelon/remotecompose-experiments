@@ -1,0 +1,286 @@
+{
+ "id": "HST-02",
+ "name": "host-data-chart",
+ "version": 3,
+ "title": "Sparkline from host data",
+ "summary": "A sparkline drawn from an exported float array the host can replace; the line scales to the array's length, minimum and maximum.",
+ "prompt": "Draw a sparkline of weekly revenue where the app supplies the numbers as an array of any length.",
+ "level": 3,
+ "family": "HST",
+ "capabilities": {
+  "primary": [
+   "host.variables",
+   "data.array"
+  ],
+  "secondary": [
+   "data.loop",
+   "data.expression",
+   "draw.shapes",
+   "draw.stroke",
+   "text.anchor",
+   "data.tokens"
+  ]
+ },
+ "use_cases": [
+  "chart",
+  "finance",
+  "dashboard"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "sparkline",
+  "line chart",
+  "time series",
+  "host data",
+  "float array",
+  "trend",
+  "mini chart",
+  "trend line",
+  "stock chart"
+ ],
+ "components": [
+  "Sparkline"
+ ],
+ "teaches": [
+  "Export a float array to the host with resources.floatArrays {\"data\": {\"value\": [...], \"export\": true}}",
+  "Derive the series' last index, minimum and range once with canvas variables (arrayLength, arrayMin, arrayMax) and reuse them as @last, @lo, @span",
+  "Draw one segment per pair of points with a loop from 0 until @last and arrayGet(@data, i), so a host array of another length or range still fills the chart",
+  "Derive the plot area from componentWidth()/componentHeight() so the sparkline stretches to whatever box the host gives it"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/floatArrays",
+   "shows": "host.variables",
+   "note": "the exported series and its default"
+  },
+  {
+   "pointer": "/root/commands/2",
+   "shows": "data.array",
+   "note": "span = max(arrayMax(@data) - @lo, 1): the value range, guarded against a flat series"
+  },
+  {
+   "pointer": "/root/commands/8",
+   "shows": "data.array",
+   "note": "loop over the points; each segment's ends come from arrayGet"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "data.array",
+   "note": "the last point, highlighted"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "data": {
+    "type": "float_array",
+    "meaning": "the series to plot, any length >= 2",
+    "default": [
+     12,
+     15,
+     14,
+     18,
+     17,
+     21,
+     19,
+     24,
+     23,
+     27,
+     26,
+     31
+    ]
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The default series draws a rising teal line ending in a white dot at the top right; render_rc with variables {data: [a falling series]} draws a falling line. Resized, the background fills the box and the sparkline stretches over componentWidth() - 40 by componentHeight() - 80, with the end dot following.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 280
+   }
+  ]
+ },
+ "related": [
+  "HST-01"
+ ],
+ "pitfalls": [
+  "rc-inspect interact doesn't accept float_array variables yet (EXAMPLES_FINDINGS I8); use render_rc variables",
+  "Normalising by arrayMax − arrayMin divides by zero when every value is the same; guard the range with max(…, 1)",
+  "The loop runs until arrayLength − 1 (one segment per pair), and reads arrayGet(@data, i + 1); looping to arrayLength reads past the end",
+  "Plot coordinates written against the header (320 wide, 100 tall) leave the chart stuck at that size; measure the plot area from componentWidth()/componentHeight() instead"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 854,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 31,
+  "operations": {
+   "ANIMATED_FLOAT": 9,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 1,
+   "DRAW_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 1,
+   "PAINT_VALUES": 4
+  },
+  "host_variables": [
+   {
+    "name": "data",
+    "type": "float_array",
+    "value": [
+     12,
+     15,
+     14,
+     18,
+     17,
+     21,
+     19,
+     24,
+     23,
+     27,
+     26,
+     31
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": []
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     360,
+     280
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "data",
+   "drawCircle",
+   "drawLine",
+   "drawRect",
+   "drawTextAnchored",
+   "export",
+   "floatArrays",
+   "from",
+   "header",
+   "height",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "host.variables": [
+    "export"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "data.tokens": [
+    "resources"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:45.496Z"
+ }
+}

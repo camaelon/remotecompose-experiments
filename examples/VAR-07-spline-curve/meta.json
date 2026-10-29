@@ -1,0 +1,283 @@
+{
+ "id": "VAR-07",
+ "name": "spline-curve",
+ "version": 3,
+ "title": "Spline through control values",
+ "summary": "A smooth curve sampled from spline(@points, t) that passes through eight control values drawn as dots, beside a closed blob whose radius follows splineLoop over a second array.",
+ "prompt": "Draw a smooth curve through eight data values with the data points marked as dots, plus an organic blob shape.",
+ "level": 3,
+ "family": "VAR",
+ "capabilities": {
+  "primary": [
+   "data.spline"
+  ],
+  "secondary": [
+   "data.array",
+   "draw.plot",
+   "draw.path",
+   "data.loop",
+   "data.expression",
+   "draw.shapes",
+   "draw.stroke"
+  ]
+ },
+ "components": [
+  "Sparkline"
+ ],
+ "use_cases": [
+  "chart",
+  "generative-art"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "spline",
+  "smooth curve",
+  "interpolation",
+  "catmull-rom",
+  "sparkline",
+  "curve fitting",
+  "organic shape"
+ ],
+ "teaches": [
+  "Interpolate a float array smoothly with spline(@points, t), t from 0 to 1 across all values",
+  "Plot the spline as a path with pathExpression and mark the control values with arrayGet in a loop at x = i / (n − 1)",
+  "Make a closed organic shape from splineLoop as a polar radius, with pathExpression flags 1 (loop)",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre; the background drawRect runs before it, to componentWidth() × componentHeight()"
+ ],
+ "pitfalls": [
+  "splineLoop only wraps t into 0..1 and evaluates the ordinary spline: repeat the first value at the end of the array or the loop has a jump at the seam",
+  "spline(@a, t) spreads the n values evenly over t = 0..1, so value i sits at t = i / (n − 1); place the marker dots at the same x or they miss the curve",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: a background drawRect to the literal header size leaves the rest of a bigger box unpainted, and literal positions get cut off in a smaller one"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/5",
+   "shows": "data.spline",
+   "note": "y = 180 - 160 * spline(@points, a[0]), a[0] 0..1"
+  },
+  {
+   "pointer": "/root/commands/9",
+   "shows": "data.array",
+   "note": "a dot at each control value: arrayGet(@points, i) at x = 20 + i * 200 / 7"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "data.spline",
+   "note": "radius 25 + 50 * splineLoop(@blob, angle / 2π), closed path"
+  },
+  {
+   "pointer": "/resources/floatArrays",
+   "shows": "data.array",
+   "note": "points (8 values) and blob (first value repeated last)"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The blue curve passes exactly through all eight white dots with no corners; the violet blob is closed and smooth. Resized, the background fills the box and the drawing scales uniformly to fit, centred.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "VAR-06",
+  "VAR-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 874,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 32,
+  "operations": {
+   "ANIMATED_FLOAT": 5,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_PATH": 2,
+   "DRAW_RECT": 1,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 2,
+   "PAINT_VALUES": 4,
+   "PathExpression": 2
+  },
+  "host_variables": [
+   {
+    "name": "blob",
+    "type": "float_array",
+    "value": [
+     0.5,
+     0.899999976,
+     0.349999994,
+     0.800000012,
+     0.449999988,
+     1,
+     0.300000012,
+     0.5
+    ]
+   },
+   {
+    "name": "points",
+    "type": "float_array",
+    "value": [
+     0.200000003,
+     0.699999988,
+     0.449999988,
+     0.899999976,
+     0.300000012,
+     0.600000024,
+     0.150000006,
+     0.5
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "blob",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawPath",
+   "drawRect",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "from",
+   "header",
+   "height",
+   "id",
+   "index",
+   "left",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "path",
+   "pathExpression",
+   "pivotX",
+   "pivotY",
+   "points",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "scale",
+   "start",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "width"
+  ],
+  "evidence": {
+   "data.spline": [
+    "spline",
+    "splineLoop"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "pathExpression",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawCircle"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeJoin"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:52.181Z"
+ }
+}

@@ -1,0 +1,262 @@
+{
+ "id": "LAY-12",
+ "name": "visibility",
+ "version": 2,
+ "title": "Gone versus invisible",
+ "summary": "Two A-B-C lists side by side: on the left B is gone and its space collapses, on the right B is invisible and leaves a gap.",
+ "prompt": "Three items where the middle one has visibility gone, then invisible (two variants side by side).",
+ "level": 2,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.state"
+  ],
+  "secondary": [
+   "host.variables",
+   "data.integer",
+   "data.tokens",
+   "layout.stack",
+   "layout.weight",
+   "layout.spacing",
+   "layout.size",
+   "layout.decoration",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "list"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "hide",
+  "show",
+  "collapse",
+  "display none",
+  "hidden",
+  "conditional visibility"
+ ],
+ "teaches": [
+  "Hide a component with the visibility modifier, which reads an integer variable: 0 gone, 1 visible, 2 invisible",
+  "Collapse a hidden item's space with gone (0), or keep its space with invisible (2)",
+  "Declare each visibility as an exported integer in resources (\"@leftB\") so the host can show or hide the item"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "data.integer",
+   "note": "exported integers leftB = 0 (gone) and rightB = 2 (invisible)"
+  },
+  {
+   "pointer": "/root/1/children/0/children/2",
+   "shows": "layout.state",
+   "note": "B with visibility @leftB (0, gone): C moves up"
+  },
+  {
+   "pointer": "/root/1/children/2/children/2",
+   "shows": "layout.state",
+   "note": "B with visibility @rightB (2, invisible): a gap stays"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "leftB": {
+    "type": "int",
+    "meaning": "visibility of the left B: 0 gone, 1 visible, 2 invisible",
+    "default": 0,
+    "min": 0,
+    "max": 2,
+    "step": 1
+   },
+   "rightB": {
+    "type": "int",
+    "meaning": "visibility of the right B: 0 gone, 1 visible, 2 invisible",
+    "default": 2,
+    "min": 0,
+    "max": 2,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Left: A then C directly below it. Right: A, an empty slot the size of B, then C (Java reference: right C 44 px lower than left C). Setting rightB to 1 shows B again. Resized (240, 540 wide) the two panels share the width; at 240 the \"B invisible (2)\" caption wraps, and the gap B leaves is still there.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 220
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 220
+   }
+  ]
+ },
+ "pitfalls": [
+  "visibility takes an integer variable id, not a boolean or a string: a literal such as {\"visibility\": 2} is read as variable id 2, not the value invisible",
+  "Unexported integers used only by visibility are reported as dead_code by the audit; exporting them (the host's switch) avoids it",
+  "Invisible keeps B's space and its spacedBy gap; gone removes both"
+ ],
+ "prerequisites": [
+  "LAY-01"
+ ],
+ "related": [
+  "VAR-04",
+  "LAY-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1376,
+  "header": {
+   "width": 360,
+   "height": 220
+  },
+  "op_count": 75,
+  "operations": {
+   "CoreText": 8,
+   "DATA_INT": 2,
+   "DATA_TEXT": 5,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 11,
+   "MODIFIER_BACKGROUND": 9,
+   "MODIFIER_HEIGHT": 3,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_VISIBILITY": 2,
+   "MODIFIER_WIDTH": 10,
+   "NAMED_VARIABLE": 2,
+   "RoundedClipRectModifierOperation": 8
+  },
+  "host_variables": [
+   {
+    "name": "leftB",
+    "type": "int",
+    "value": 0
+   },
+   {
+    "name": "rightB",
+    "type": "int",
+    "value": 2
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_empty_container"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     220
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     220
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "contentDescription",
+   "export",
+   "fontSize",
+   "header",
+   "height",
+   "integers",
+   "leftB",
+   "modifiers",
+   "padding",
+   "profiles",
+   "resources",
+   "rightB",
+   "root",
+   "roundedRect",
+   "spacedBy",
+   "text",
+   "textAlign",
+   "type",
+   "value",
+   "visibility",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "layout.state": [
+    "visibility"
+   ],
+   "host.variables": [
+    "export"
+   ],
+   "data.integer": [
+    "integers"
+   ],
+   "data.tokens": [
+    "resources"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth",
+    "fillMaxHeight"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:10.964Z"
+ }
+}

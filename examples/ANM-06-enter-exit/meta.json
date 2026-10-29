@@ -1,0 +1,279 @@
+{
+ "id": "ANM-06",
+ "name": "enter-exit",
+ "version": 1,
+ "title": "Enter and exit animations",
+ "summary": "A notification list where tapping a notification slides it away to the right before the others close the gap (exitSequence BEFORE), and Restore opens the gaps first and then fades the notifications back in (enterSequence AFTER).",
+ "prompt": "Show three notifications; tapping one dismisses it by sliding it off to the right, then the ones below move up. A Restore button brings them all back with a fade.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.visibility"
+  ],
+  "secondary": [
+   "anim.layout",
+   "layout.state",
+   "input.tap",
+   "layout.decoration",
+   "layout.weight",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "notification",
+  "list"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "dismiss",
+  "swipe away",
+  "remove item",
+  "notification stack",
+  "undo",
+  "close gap",
+  "slide out",
+  "fade in",
+  "enter sequence",
+  "exit sequence"
+ ],
+ "teaches": [
+  "Animate a component in and out of visibility with animationSpec enterAnimation / exitAnimation (FADE_IN, FADE_OUT, SLIDE_LEFT/RIGHT/TOP/BOTTOM, ROTATE) and visibilityDuration",
+  "Order the exit against the layout with exitSequence BEFORE (play the exit, then let siblings close the gap) and enterSequence AFTER (open the gap, then play the entrance)",
+  "Hide with an int variable read by visibility (1 visible, 0 gone) and valueIntegerChange; restoring sets all of them back to 1"
+ ],
+ "pitfalls": [
+  "visibility reads an integer variable: declare it with vtype int and change it with valueIntegerChange",
+  "Every list item needs its own animationSpec, including the ones that only move: the motion of the survivors comes from their specs"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/3/column/children/2/row/modifiers/1",
+   "shows": "anim.visibility",
+   "note": "animationSpec: enter FADE_IN after the gap opens, exit SLIDE_RIGHT before the gap closes, 350 ms"
+  },
+  {
+   "pointer": "/root/3/column/children/2/row/modifiers/0",
+   "shows": "layout.state",
+   "note": "visibility @n2 (int)"
+  },
+  {
+   "pointer": "/root/3/column/children/2/row/modifiers/8",
+   "shows": "input.tap",
+   "note": "dismiss: n2 = 0"
+  },
+  {
+   "pointer": "/root/3/column/children/0/row/children/1/box/modifiers/4",
+   "shows": "input.tap",
+   "note": "Restore: n1 = n2 = n3 = 1"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "A tap on 'Your ride is here' at 0.1 s, captured 0.15 s later. The row is about halfway off to the right and Battery has not moved yet (BEFORE); after the 350 ms exit, Battery moves up into the gap (Java, C++ and TS alike). Resized (narrow 240, wide 540) the rows fill the width, Restore stays at the right, and the dismissed row slides out by its own width.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 120
+    }
+   ],
+   "duration": 0.25
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 300,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 120,
+      "y": 120
+     }
+    ],
+    "duration": 0.25
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 320,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 120
+     }
+    ],
+    "duration": 0.25
+   }
+  ]
+ },
+ "related": [
+  "INT-07",
+  "LAY-12",
+  "ANM-07"
+ ],
+ "prerequisites": [
+  "LAY-12"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2200,
+  "header": {
+   "width": 360,
+   "height": 300
+  },
+  "op_count": 131,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATION_SPEC": 3,
+   "CoreText": 11,
+   "DATA_INT": 3,
+   "DATA_TEXT": 13,
+   "HEADER": 1,
+   "LAYOUT_BOX": 7,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 23,
+   "MODIFIER_BACKGROUND": 8,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_PADDING": 4,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 16,
+   "RoundedClipRectModifierOperation": 7,
+   "VALUE_INTEGER_CHANGE_ACTION": 6
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: layout_empty_container",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 4,
+   "click": 4,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     300
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     320
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_empty_container",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "enterAnimation",
+   "enterSequence",
+   "exitAnimation",
+   "exitSequence",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "motionDuration",
+   "name",
+   "onClick",
+   "padding",
+   "profiles",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "spacedBy",
+   "spacer",
+   "target",
+   "text",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "visibility",
+   "visibilityDuration",
+   "vtype",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "anim.visibility": [
+    "enterAnimation",
+    "exitAnimation",
+    "enterSequence",
+    "exitSequence",
+    "visibilityDuration"
+   ],
+   "anim.layout": [
+    "animationSpec"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueIntegerChange"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:34.667Z"
+ }
+}

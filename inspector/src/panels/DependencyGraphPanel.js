@@ -52,6 +52,9 @@ export function getFloatExprVarDependencies(bits) {
 
     for (let i = 0; i < bits.length; i++) {
         const raw = bits[i];
+        // Only numbers are expression words; an array of ops or modifiers is not (coercing an
+        // object calls its valueOf).
+        if (typeof raw !== 'number') continue;
         const b = toRawBitsHelper(raw);
         if (isNaNBits(b)) {
             const id = idFromBits(b);
@@ -567,10 +570,13 @@ export function buildExpressionGraphModel(doc) {
 
             const varId = getOpId(op);
 
-            if (opCode === 81 || opName === 'FloatExpression' || opName.includes('FloatExpression')) {
+            if (opCode === 81 || opName === 'FloatExpression' || opName.includes('FloatExpression')
+                    || opCode === 157 || opName === 'TouchExpression') {
+                // A TouchExpression is a float producer too: its value tracks an RPN expression
+                // (mSrcExp), so whatever that expression reads is live.
                 if (varId !== null && varId !== undefined) {
                     const nodeId = `var_${varId}`;
-                    const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
+                    const bits = (opCode === 157 ? op.mSrcExp : null) || op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
                     const formulaStr = bits ? prettyPrintFloatExpression(bits) : '';
                     let liveVal = state ? state.getFloat(varId) : NaN;
                     if (Number.isNaN(liveVal) || liveVal === undefined) liveVal = 0;
@@ -723,10 +729,80 @@ export function buildExpressionGraphModel(doc) {
             const opName = getOpName(op);
             const opCode = op.OP_CODE !== undefined ? op.OP_CODE : (op.constructor ? op.constructor.OP_CODE : 0);
 
-            // Skip variable definition operations, metadata headers, and UI layout container operations
-            if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 211, 212, 213, 214, 220].includes(opCode) || getOpVarOutputs(op).length > 0 || opName === 'Header' || opName === 'ContainerEnd' || opName.includes('Layout') || isContainerOp(op)) return;
+            // Skip variable definition operations, metadata headers, and UI layout container operations.
+            // An action (ValueIntegerExpressionChangeAction...) writes a variable but is a consumer of
+            // the expression it reads: what a tap does counts as a use.
+            const isAction = /Action$/.test(opName) || opCode === 218;
+            // A StateLayout (217) is layout structure, but its index variable picks the state
+            // shown: a read, like a visibility modifier's.
+            // A pattern inflation (247) passes its arguments to the template: each argument
+            // variable is read, whatever the template then does with it.
+            if (opCode === 247 && op.mArgIds && op.mArgIds.length) {
+                const targets = [...op.mArgIds].map((v) => {
+                    const id = ((v & 0x7f800000) === 0x7f800000 && (v & 0x7fffff) !== 0) ? (v & 0x7fffff) : v;
+                    return nodeMap.has(`var_${id}`) ? `var_${id}` : null;
+                }).filter(Boolean);
+                if (targets.length) {
+                    const cid = `consumer_247_${opIdx}`;
+                    const cn = getOrCreateNode(cid, { varId: null, label: `PatternInflation #${opIdx + 1}`, type: 'consumer',
+                        formula: `Op #${opIdx + 1} (pattern arguments)`, value: 'Consumer', op });
+                    for (const target of targets) {
+                        if (!cn.inputs.includes(target)) cn.inputs.push(target);
+                        const pn = nodeMap.get(target);
+                        if (!pn.outputs.includes(cid)) pn.outputs.push(cid);
+                        edges.push({ from: target, to: cid });
+                    }
+                }
+                return;
+            }
+            if (opCode === 217 && typeof op.mIndexId === 'number' && op.mIndexId > 0) {
+                const target = nodeMap.has(`var_${op.mIndexId}`) ? `var_${op.mIndexId}` : null;
+                if (target) {
+                    const cid = `consumer_217_${opIdx}`;
+                    const cn = getOrCreateNode(cid, { varId: null, label: `StateLayout #${opIdx + 1}`, type: 'consumer',
+                        formula: `Op #${opIdx + 1} (StateLayout index)`, value: 'Consumer', op });
+                    if (!cn.inputs.includes(target)) cn.inputs.push(target);
+                    const pn = nodeMap.get(target);
+                    if (!pn.outputs.includes(cid)) pn.outputs.push(cid);
+                    edges.push({ from: target, to: cid });
+                }
+                return;
+            }
+            if ([0, 80, 81, 82, 83, 84, 85, 134, 144, 148, 200, 201, 202, 203, 204, 205, 207, 208, 209, 210, 212, 213, 214, 220].includes(opCode) || (!isAction && getOpVarOutputs(op).length > 0) || opName === 'Header' || opName === 'ContainerEnd' || opName.includes('Layout') || isContainerOp(op)) return;
 
             const referencedIds = new Set();
+
+            // ValueIntegerExpressionChangeAction (218) keeps the expression it evaluates as a long
+            // id (id + 2^32, Utils.longIdFromNan), which the generic scan below cannot see.
+            if (opCode === 218 && typeof op.mValueExpressionId === 'number') referencedIds.add(op.mValueExpressionId % 0x100000000);
+            // FloatFunctionCall (166): each argument whose raw bits are a NaN id reads that
+            // variable or expression (an expression argument is computed for the call).
+            if (opCode === 166 && Array.isArray(op.mArgs)) {
+                for (const v of op.mArgs) {
+                    const ab = typeof v === 'number' && Number.isInteger(v) ? v : toRawBitsHelper(v);
+                    if ((ab & 0x7f800000) === 0x7f800000 && (ab & 0x7fffff) !== 0) referencedIds.add(ab & 0x7fffff);
+                }
+            }
+
+            // A visibility modifier (211) reads its integer variable, which is what shows or
+            // hides the component: a consumer, not layout structure.
+            if (opCode === 211 && typeof op.mVisibilityId === 'number') referencedIds.add(op.mVisibilityId);
+            // A graphicsLayer (224) keeps its attributes in a Map; a float attribute whose raw
+            // bits are a NaN id reads that variable (alpha, scale, rotation bound to state).
+            if (opCode === 224 && op.mAttributes instanceof Map) {
+                for (const attr of op.mAttributes.values()) {
+                    if (!attr || !attr.isFloat) continue;
+                    const b = attr.bits !== undefined ? attr.bits : toRawBitsHelper(attr.value);
+                    if ((b & 0x7f800000) === 0x7f800000 && (b & 0x7fffff) !== 0) referencedIds.add(b & 0x7fffff);
+                }
+            }
+
+            // A PathTween (158) keeps its fraction as raw float bits in mTween (PathTween.java's
+            // mTween); a NaN id there is the animated variable that drives the morph.
+            if (opCode === 158 && typeof op.mTween === 'number') {
+                const b = op.mTween >>> 0;
+                if ((b & 0x7f800000) === 0x7f800000 && (b & 0x7fffff) !== 0) referencedIds.add(b & 0x7fffff);
+            }
 
             // Structural decode first: this understands each operation's parameter layout,
             // including nested payloads such as a PaintData's PaintBundle, which the property
@@ -761,7 +837,7 @@ export function buildExpressionGraphModel(doc) {
                             }
                         }
                     }
-                } else if (Array.isArray(val) && key !== 'mOps' && key !== 'mOperations' && key !== 'operations' && key !== 'mList' && key !== 'list') {
+                } else if ((Array.isArray(val) || ArrayBuffer.isView(val)) && key !== 'mOps' && key !== 'mOperations' && key !== 'operations' && key !== 'mList' && key !== 'list') {
                     getFloatExprVarDependencies(val).forEach(id => {
                         if (nodeMap.has(`var_${id}`) || nodeMap.has(`sys_${id}`)) {
                             referencedIds.add(id);

@@ -1,0 +1,290 @@
+{
+ "id": "INT-07",
+ "name": "tabs",
+ "version": 3,
+ "title": "Tabs with panels",
+ "summary": "Three tabs (Songs, Albums, Artists): tapping one shows its panel through visibility modifiers and slides the underline under it.",
+ "prompt": "Make a tab bar with three tabs (Songs, Albums, Artists); tapping a tab shows its panel and slides an underline under it.",
+ "level": 3,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.tap",
+   "layout.state"
+  ],
+  "secondary": [
+   "data.expression",
+   "layout.weight",
+   "layout.decoration",
+   "a11y.labels",
+   "draw.shapes"
+  ]
+ },
+ "use_cases": [
+  "media-player",
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "tabs",
+  "tab bar",
+  "segmented control",
+  "panels",
+  "show hide",
+  "switch view",
+  "navigation",
+  "underline indicator"
+ ],
+ "components": [
+  "Tabs"
+ ],
+ "teaches": [
+  "Show one panel at a time with a visibility modifier bound to an integer variable (1 visible, 0 gone)",
+  "Run several actions from one onClick: set the selected tab and every panel's visibility",
+  "Slide an underline to the selected tab with one animated variable {\"value\": \"@tab * 120 + 16\", \"anim\": 0.25} that both edges read"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1",
+   "shows": "layout.state",
+   "note": "show0: an int variable (vtype int), 1 for the first panel and 0 for the others"
+  },
+  {
+   "pointer": "/root/4/column/children/0/row/children/2/box/modifiers/3",
+   "shows": "input.tap",
+   "note": "onClick with four actions: tab = 2, show0 = 0, show1 = 0, show2 = 1"
+  },
+  {
+   "pointer": "/root/4/column/children/2/box/children/2/column/modifiers/0",
+   "shows": "layout.state",
+   "note": "visibility: @show2"
+  },
+  {
+   "pointer": "/root/4/column/children/1/canvas/commands/0",
+   "shows": "data.expression",
+   "note": "ux: the underline left edge, animated over 0.25 s to the selected tab, a third of the live componentWidth() per tab; the bar is drawn from @ux to @ux + componentWidth() / 3 - 32"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts on Songs (blue panel); a tap on Artists shows the teal Artists panel and moves the underline to the third tab. Resized, the three weighted tabs share the width and the underline is a third of the live width minus 16 px each side: tapping the third tab moves it under Artists at 234 and at 540 wide, the track spanning the full width.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 300,
+     "y": 24
+    }
+   ],
+   "duration": 1
+  },
+  "interact": [
+   {
+    "target": 2
+   }
+  ],
+  "expect": {
+   "layout_changes": "the Artists panel becomes visible and Songs goes"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 240,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 195,
+      "y": 24
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 240,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 450,
+      "y": 24
+     }
+    ],
+    "duration": 1
+   }
+  ]
+ },
+ "related": [
+  "INT-01",
+  "INT-02"
+ ],
+ "pitfalls": [
+  "visibility reads an integer variable, not a float: declare it with \"vtype\": \"int\" and change it with valueIntegerChange (1 visible, 0 gone)",
+  "There is no expression for visibility, so every tab's onClick must set all the panel integers, not just its own",
+  "Stack the panels in one box: gone panels take no space, so the visible one fills it",
+  "Accessibility inspectors may still list the hidden panels (the inspector does not yet drop GONE components)",
+  "An underline placed at @tab * 120 with a track drawn to x = 360 only lines up with the tabs at the header width; derive both from componentWidth() (the weighted tabs are a third of it each)"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1693,
+  "header": {
+   "width": 360,
+   "height": 240
+  },
+  "op_count": 111,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 2,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "CoreText": 9,
+   "DATA_FLOAT": 1,
+   "DATA_INT": 3,
+   "DATA_TEXT": 9,
+   "DRAW_RECT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 19,
+   "MODIFIER_BACKGROUND": 5,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_PADDING": 4,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 10,
+   "PAINT_VALUES": 1,
+   "RoundedClipRectModifierOperation": 3,
+   "VALUE_INTEGER_CHANGE_ACTION": 9,
+   "ValueFloatExpressionChangeActionOperation": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     240
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     240
+    ],
+    "audit_findings": [
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "drawRect",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "left",
+   "modifiers",
+   "name",
+   "onClick",
+   "ops",
+   "padding",
+   "paint",
+   "profiles",
+   "right",
+   "root",
+   "roundedRect",
+   "row",
+   "semantics",
+   "spacedBy",
+   "target",
+   "text",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "visibility",
+   "vtype",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "input.tap": [
+    "onClick",
+    "valueFloatChange",
+    "valueIntegerChange"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "draw.shapes": [
+    "drawRect"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:58.141Z"
+ }
+}

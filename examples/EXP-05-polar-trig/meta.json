@@ -1,0 +1,314 @@
+{
+ "id": "EXP-05",
+ "name": "polar-trig",
+ "version": 2,
+ "title": "Compass bearing with atan2",
+ "summary": "A compass dial of 60 ticks placed with sin/cos in a loop, a needle that points at an exported target with atan2, and the bearing (degrees) and distance (hypot) printed beside it.",
+ "prompt": "Draw a compass dial with tick marks and N/E/S/W, and a needle pointing from the centre at a target point; show the bearing in degrees and the distance to the target.",
+ "level": 3,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.trig"
+  ],
+  "secondary": [
+   "expr.math",
+   "expr.select",
+   "expr.string",
+   "data.loop",
+   "data.expression",
+   "draw.shapes",
+   "draw.stroke",
+   "text.anchor",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "gauge"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "compass",
+  "bearing",
+  "heading",
+  "angle to point",
+  "polar coordinates",
+  "dial ticks",
+  "needle",
+  "radians to degrees",
+  "distance",
+  "atan2"
+ ],
+ "teaches": [
+  "Place items around a circle from a loop index: x = cx + r * sin(i * 0.10472), y = cy − r * cos(i * 0.10472) (6° steps, 0° at the top, clockwise)",
+  "Point at a target with atan2(dx, −dy) for a compass bearing (0 at north, clockwise); keep the angle in one named variable and reuse it for both needle ends",
+  "Convert radians to 0..360 degrees with (angle * 57.29578 + 360) % 360, and measure the distance with hypot(dx, dy)",
+  "Vary a tick's length without a branch: 74 + 6 * step(i % 5, 0) is 74 every fifth tick and 80 otherwise"
+ ],
+ "pitfalls": [
+  "Every trig function works in radians and there is no deg() or rad() in JSON: multiply by 57.29578 or 0.0174533",
+  "atan2 takes (y, x). In screen coordinates y grows downward, so a compass bearing is atan2(dx, -dy), not atan2(dy, dx)",
+  "% of a negative angle stays negative (-90 % 360 = -90): add 360 before taking % 360",
+  "A canvas drawn at its header size (literal coordinates) runs off a narrower host and leaves a strip in a wider one: when the drawing is one composition (chart and legend, dial and readout), scale it as a whole with @fit = min(componentWidth() / W, componentHeight() / H) and centre it with a translate"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/b",
+   "shows": "expr.trig",
+   "note": "b = atan2(@tx - 110, 115 - @ty): bearing in radians"
+  },
+  {
+   "pointer": "/root/commands/6",
+   "shows": "data.loop",
+   "note": "60 ticks around the dial; the long ones every fifth via step(i % 5, 0)"
+  },
+  {
+   "pointer": "/root/commands/10/drawLine",
+   "shows": "expr.trig",
+   "note": "needle tip: 110 + 62 * sin(@b), 115 - 62 * cos(@b)"
+  },
+  {
+   "pointer": "/root/commands/31/drawTextAnchored/text/id1/value",
+   "shows": "expr.trig",
+   "note": "(@b * 57.29578 + 360) % 360: degrees, 0..360"
+  },
+  {
+   "pointer": "/root/commands/32/drawTextAnchored/text/id1/value",
+   "shows": "expr.math",
+   "note": "hypot(@tx - 110, @ty - 115): distance"
+  },
+  {
+   "pointer": "/root/commands/31/drawTextAnchored/text",
+   "shows": "expr.string",
+   "note": "textMerge(number, \"°\") keeps the unit against the digits"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "tx": {
+    "type": "float",
+    "meaning": "target x",
+    "default": 170,
+    "min": 0,
+    "max": 360,
+    "step": 1
+   },
+   "ty": {
+    "type": "float",
+    "meaning": "target y",
+    "default": 70,
+    "min": 0,
+    "max": 230,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The red needle points up and to the right at the yellow target; the readout says 53° and 75 px. Resized, the compass and its readout are scaled as one (@fit = min(w / 360, h / 230)) and centred: smaller at 234 wide, 1.5× at 540×345, the bearing and distance unchanged.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 230
+   },
+   {
+    "name": "large",
+    "width": 540,
+    "height": 345
+   }
+  ]
+ },
+ "related": [
+  "TIM-02",
+  "VAR-05"
+ ],
+ "prerequisites": [
+  "EXP-02"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1714,
+  "header": {
+   "width": 360,
+   "height": 230
+  },
+  "op_count": 76,
+  "operations": {
+   "ANIMATED_FLOAT": 14,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 11,
+   "DRAW_CIRCLE": 4,
+   "DRAW_LINE": 4,
+   "DRAW_TEXT_ANCHOR": 10,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 2,
+   "PAINT_VALUES": 12,
+   "TextFromFloat": 2,
+   "TextMerge": 2
+  },
+  "host_variables": [
+   {
+    "name": "tx",
+    "type": "float",
+    "value": 170
+   },
+   {
+    "name": "ty",
+    "type": "float",
+    "value": 70
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     230
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "large": {
+    "render": "render-large.png",
+    "render_findings": [],
+    "size": [
+     540,
+     345
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "b",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "drawCircle",
+   "drawLine",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "export",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "index",
+   "loop",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "scale",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "translate",
+   "tx",
+   "ty",
+   "type",
+   "until",
+   "value",
+   "variable",
+   "variables",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "expr.trig": [
+    "sin(",
+    "cos(",
+    "atan2("
+   ],
+   "expr.math": [
+    "hypot(",
+    "min("
+   ],
+   "expr.select": [
+    "step("
+   ],
+   "expr.string": [
+    "textMerge"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:32.256Z"
+ }
+}

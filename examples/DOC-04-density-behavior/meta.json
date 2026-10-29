@@ -1,0 +1,199 @@
+{
+ "id": "DOC-04",
+ "name": "density-behavior",
+ "version": 4,
+ "title": "Density behavior",
+ "summary": "A 200×200 card with a 1 dp border, 16 dp padding and 14 sp text, declared in dp so the player scales it to any screen density.",
+ "prompt": "A 200×200 card with a 1 dp hairline border, 16 dp padding and 14 sp text that looks identical on 1x, 2x and 3x screens.",
+ "level": 2,
+ "family": "DOC",
+ "capabilities": {
+  "primary": [
+   "doc.density"
+  ],
+  "secondary": [
+   "doc.header",
+   "layout.stack",
+   "layout.spacing",
+   "layout.decoration",
+   "layout.size",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "dp",
+  "dpi",
+  "pixel density",
+  "retina",
+  "scale factor",
+  "hidpi"
+ ],
+ "teaches": [
+  "Declare that sizes are in dp with header.densityBehavior 2 (0 legacy, 1 pixels, 2 dp)",
+  "Let the player scale the document size, padding, spacedBy gaps, borders and fixed sizes by the display density",
+  "Draw a 1 dp rounded hairline as a clipped accent box with 1 dp padding around a clipped dark box"
+ ],
+ "snippets": [
+  {
+   "pointer": "/header/densityBehavior",
+   "shows": "doc.density",
+   "note": "2 = DENSITY_BEHAVIOR_DP: the header size and the layout values are dp"
+  },
+  {
+   "pointer": "/root/children/0",
+   "shows": "layout.decoration",
+   "note": "a 1 dp hairline: clip 12 + accent background + padding 1, around a clip 11 dark card with 16 dp padding"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "At density 1 the card fills 200×200 with a thin blue frame. In the Java reference at 400×400 and density 2 the outer padding becomes 32 px and the 8 dp spacedBy gap 16 px. Resized (140×200, 300×160) the card keeps 16 dp padding and 1 dp hairline; the body text rewraps to the width.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 140,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 300,
+    "height": 160
+   }
+  ]
+ },
+ "pitfalls": [
+  "Without densityBehavior (legacy, 0) the Java reference does not scale padding or fixed width/height by density: at density 2 a 16 padding stays 16 px. Only densityBehavior 2 makes them dp",
+  "densityBehavior needs apiLevel 8: the Java parser refuses it at 7. At apiLevel 8 the border modifier is written in its non-legacy form (json2rc matches Java); its width is dp and scales too. The border is drawn inside the bounds, so pad by width + spacing (17 here) to keep the content clear of it",
+  "Compare layouts at density 2 with players/conformance/java-layout.sh doc.rc 400 400 --density 2; the C++ player matches, the TypeScript player is being fixed (EXAMPLES_FINDINGS T7)",
+  "border's cornerRadius only rounds with \"shape\": 2 (ROUNDED_RECTANGLE); the default shape 0 is a plain rectangle in Java, whatever the radius"
+ ],
+ "prerequisites": [
+  "DOC-01"
+ ],
+ "related": [
+  "DOC-02",
+  "LAY-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 455,
+  "header": {
+   "width": 200,
+   "height": 200
+  },
+  "op_count": 20,
+  "operations": {
+   "CoreText": 2,
+   "DATA_TEXT": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 4,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_BORDER": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_WIDTH": 2
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     140,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     300,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "border",
+   "children",
+   "color",
+   "contentDescription",
+   "cornerRadius",
+   "densityBehavior",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "root",
+   "shape",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "width"
+  ],
+  "evidence": {
+   "doc.density": [
+    "densityBehavior",
+    "density()"
+   ],
+   "doc.header": [
+    "header"
+   ],
+   "layout.stack": [
+    "column",
+    "box"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "border"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:07.083Z"
+ }
+}

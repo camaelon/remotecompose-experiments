@@ -1,0 +1,58 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 220, "profiles": 513,
+  "contentDescription": "A week of step counts as bars, with total, average, best day and spread"},
+ "resources": {
+  "floatArrays": {
+   "steps": [6200, 8400, 7100, 10300, 5600, 12100, 9000]
+  },
+  "variables": {
+   "avg": "arraySum(@steps) / arrayLength(@steps)"
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "s", "value": "min(1, componentWidth() / 360)"}},
+   {"translate": {"dx": 0, "dy": "(componentHeight() - 220 * @s) / 2"}},
+   {"scale": {"sx": "@s", "sy": "@s"}},
+   {"variable": {"name": "r", "value": "componentWidth() / @s - 20"}},
+   {"variable": {"name": "c", "value": "(@r - 4) / 4"}},
+   {"variable": {"name": "b", "value": "(@r - 20) / 7"}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "Total", "x": 20, "y": 18, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 18}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "arraySum(@steps)", "whole": 6, "decimal": 0, "flags": 21}, "x": 20, "y": 40, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "Average", "x": "20 + @c", "y": 18, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 18}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "round(@avg)", "whole": 6, "decimal": 0, "flags": 21}, "x": "20 + @c", "y": 40, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "Best day", "x": "20 + 2 * @c", "y": 18, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 18}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "arrayMax(@steps)", "whole": 6, "decimal": 0, "flags": 21}, "x": "20 + 2 * @c", "y": 40, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "Std dev", "x": "20 + 3 * @c", "y": 18, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 18}]}},
+   {"drawTextAnchored": {"text": {"type": "textFromFloat", "value": "round(sqrt(arraySumSqr(@steps) / arrayLength(@steps) - square(@avg)))", "whole": 6, "decimal": 0, "flags": 21}, "x": "20 + 3 * @c", "y": 40, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF4DA3FF"}]}},
+   {"loop": {"index": "i", "from": 0, "until": "arrayLength(@steps)", "commands": [
+    {"paint": {"ops": [{"alpha": "0.45 + 0.55 * step(arrayGet(@steps, i), arrayMax(@steps) - 1)"}]}},
+    {"drawRoundRect": {"left": "6 + (i + 0.5) * @b", "right": "34 + (i + 0.5) * @b",
+      "top": "190 - 110 * arrayGet(@steps, i) / arrayMax(@steps)", "bottom": 190, "rx": 5, "ry": 5}}
+   ]}},
+   {"paint": {"ops": [{"alpha": 1}, {"color": "#FFFFCA28"}, {"style": "stroke"}, {"strokeWidth": 2}, {"strokeCap": "round"}]}},
+   {"drawLine": {"x1": 20, "y1": "190 - 110 * @avg / arrayMax(@steps)", "x2": "@r", "y2": "190 - 110 * @avg / arrayMax(@steps)"}},
+   {"paint": {"ops": [{"style": "fill"}, {"textSize": 10}]}},
+   {"drawTextAnchored": {"text": "avg", "x": "@r", "y": "182 - 110 * @avg / arrayMax(@steps)", "panX": 1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 11}]}},
+   {"drawTextAnchored": {"text": "M", "x": "20 + 0.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "T", "x": "20 + 1.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "W", "x": "20 + 2.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "T", "x": "20 + 3.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "F", "x": "20 + 4.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "S", "x": "20 + 5.5 * @b", "y": 206, "panX": 0, "panY": 0}},
+   {"drawTextAnchored": {"text": "S", "x": "20 + 6.5 * @b", "y": 206, "panX": 0, "panY": 0}}
+  ]
+ }
+}

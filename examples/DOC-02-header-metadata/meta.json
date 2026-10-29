@@ -1,0 +1,188 @@
+{
+ "id": "DOC-02",
+ "name": "header-metadata",
+ "version": 2,
+ "title": "Header metadata",
+ "summary": "DOC-01's teal card plus header.contentDescription, the label a screen reader announces for the whole document.",
+ "prompt": "Give my RemoteCompose card a document-level accessibility description (\"Greeting card\") in the header.",
+ "level": 1,
+ "family": "DOC",
+ "capabilities": {
+  "primary": [
+   "doc.header",
+   "a11y.document"
+  ],
+  "secondary": [
+   "layout.stack",
+   "layout.size",
+   "layout.align",
+   "layout.decoration",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "metadata",
+  "document description",
+  "contentDescription",
+  "profiles",
+  "header tags",
+  "screen reader",
+  "accessibility label"
+ ],
+ "teaches": [
+  "Describe the whole document for screen readers with header.contentDescription",
+  "Set header.profiles to 513 = ANDROIDX (0x200) | EXPERIMENTAL (0x1), the profile set the players and text expect",
+  "Keep apiLevel, width and height in the header next to the metadata"
+ ],
+ "snippets": [
+  {
+   "pointer": "/header",
+   "shows": "doc.header",
+   "note": "apiLevel 7, 300×200, profiles 513 (0x200 androidx + 0x1 experimental), contentDescription \"Greeting card\""
+  },
+  {
+   "pointer": "/header/contentDescription",
+   "shows": "a11y.document",
+   "note": "the document-level description a screen reader announces"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Renders like DOC-01; inspect_summary's header shows profiles 513 (the description is in the HEADER op, not echoed by summary). Resized (200×200, 450×160) the box still fills the document and the text stays centred.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 160
+   }
+  ]
+ },
+ "prerequisites": [
+  "DOC-01"
+ ],
+ "related": [
+  "DOC-01",
+  "A11Y-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 195,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 10,
+  "operations": {
+   "CoreText": 1,
+   "DATA_TEXT": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 2,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "color",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "profiles",
+   "root",
+   "text",
+   "type",
+   "value",
+   "verticalAlignment",
+   "width"
+  ],
+  "evidence": {
+   "doc.header": [
+    "header"
+   ],
+   "a11y.document": [
+    "/header/contentDescription"
+   ],
+   "layout.stack": [
+    "box"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment"
+   ],
+   "layout.decoration": [
+    "background"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:05.046Z"
+ },
+ "pitfalls": [
+  "header.contentDescription labels the whole document; to label one component use the semantics modifier {\"semantics\": {\"contentDescription\": \"...\"}} instead (see A11Y-01)",
+  "inspect_summary does not echo the description; it is stored in the HEADER op (look at the header in inspect output or the raw ops)"
+ ]
+}

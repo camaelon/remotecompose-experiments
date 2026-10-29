@@ -1,0 +1,61 @@
+{
+ "header": {"apiLevel": 7, "width": 360, "height": 200, "profiles": 513,
+  "contentDescription": "Three batteries coloured red, amber or green by level, each with a time estimate"},
+ "resources": {
+  "floatArrays": {
+   "levels": [18, 42, 86],
+   "charging": [0, 1, 0]
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize", {"background": "#FF101828"}],
+  "commands": [
+   {"variable": {"name": "fit", "value": "min(componentWidth() / 360, componentHeight() / 200)"}},
+   {"translate": {"dx": "(componentWidth() - 360 * @fit) / 2", "dy": "(componentHeight() - 200 * @fit) / 2"}},
+   {"scale": {"sx": "@fit", "sy": "@fit"}},
+   {"loop": {"index": "i", "from": 0, "until": 3, "commands": [
+    {"paint": {"ops": [{"color": "#FF5C6B7E"}, {"style": "stroke"}, {"strokeWidth": 2}, {"alpha": 1}, {"textSize": 14}]}},
+    {"drawRoundRect": {"left": 24, "top": "30 + i * 58", "right": 150, "bottom": "66 + i * 58", "rx": 7, "ry": 7}},
+    {"paint": {"ops": [{"style": "fill"}]}},
+    {"drawRoundRect": {"left": 152, "top": "41 + i * 58", "right": 158, "bottom": "55 + i * 58", "rx": 2, "ry": 2}},
+    {"paint": {"ops": [{"color": "#FFEF5350"}, {"alpha": "1 - step(arrayGet(@levels, i), 20)"}]}},
+    {"drawRoundRect": {"left": 29, "top": "35 + i * 58", "right": "max(37, 29 + 1.16 * arrayGet(@levels, i))", "bottom": "61 + i * 58", "rx": 4, "ry": 4}},
+    {"drawTextAnchored": {"text": "Low", "x": 246, "y": "38 + i * 58", "panX": -1, "panY": 0}},
+    {"paint": {"ops": [{"color": "#FFFFCA28"}, {"alpha": "step(arrayGet(@levels, i), 20) * (1 - step(arrayGet(@levels, i), 50))"}]}},
+    {"drawRoundRect": {"left": 29, "top": "35 + i * 58", "right": "max(37, 29 + 1.16 * arrayGet(@levels, i))", "bottom": "61 + i * 58", "rx": 4, "ry": 4}},
+    {"drawTextAnchored": {"text": "Medium", "x": 246, "y": "38 + i * 58", "panX": -1, "panY": 0}},
+    {"paint": {"ops": [{"color": "#FF66BB6A"}, {"alpha": "step(arrayGet(@levels, i), 50)"}]}},
+    {"drawRoundRect": {"left": 29, "top": "35 + i * 58", "right": "max(37, 29 + 1.16 * arrayGet(@levels, i))", "bottom": "61 + i * 58", "rx": 4, "ry": 4}},
+    {"drawTextAnchored": {"text": "Good", "x": 246, "y": "38 + i * 58", "panX": -1, "panY": 0}}
+   ]}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"alpha": 1}, {"textSize": 22}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "arrayGet(@levels, 0)", "whole": 3, "decimal": 0, "flags": 5}, "id2": "%"},
+     "x": 172, "y": 48, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}, {"alpha": "arrayGet(@charging, 0)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 0) * 6, (100 - arrayGet(@levels, 0)) * 1.2, arrayGet(@charging, 0))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min to full"},
+     "x": 246, "y": 58, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"alpha": "1 - arrayGet(@charging, 0)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 0) * 6, (100 - arrayGet(@levels, 0)) * 1.2, arrayGet(@charging, 0))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min left"},
+     "x": 246, "y": 58, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"alpha": 1}, {"textSize": 22}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "arrayGet(@levels, 1)", "whole": 3, "decimal": 0, "flags": 5}, "id2": "%"},
+     "x": 172, "y": 106, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}, {"alpha": "arrayGet(@charging, 1)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 1) * 6, (100 - arrayGet(@levels, 1)) * 1.2, arrayGet(@charging, 1))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min to full"},
+     "x": 246, "y": 116, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"alpha": "1 - arrayGet(@charging, 1)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 1) * 6, (100 - arrayGet(@levels, 1)) * 1.2, arrayGet(@charging, 1))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min left"},
+     "x": 246, "y": 116, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"alpha": 1}, {"textSize": 22}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "arrayGet(@levels, 2)", "whole": 3, "decimal": 0, "flags": 5}, "id2": "%"},
+     "x": 172, "y": 164, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}, {"alpha": "arrayGet(@charging, 2)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 2) * 6, (100 - arrayGet(@levels, 2)) * 1.2, arrayGet(@charging, 2))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min to full"},
+     "x": 246, "y": 174, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"alpha": "1 - arrayGet(@charging, 2)"}]}},
+   {"drawTextAnchored": {"text": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "ifElse(arrayGet(@levels, 2) * 6, (100 - arrayGet(@levels, 2)) * 1.2, arrayGet(@charging, 2))", "whole": 3, "decimal": 0, "flags": 5}, "id2": " min left"},
+     "x": 246, "y": 174, "panX": -1, "panY": 0}}
+  ]
+ }
+}

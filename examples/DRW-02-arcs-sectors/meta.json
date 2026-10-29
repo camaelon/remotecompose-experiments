@@ -1,0 +1,224 @@
+{
+ "id": "DRW-02",
+ "name": "arcs-sectors",
+ "version": 3,
+ "title": "Progress ring and pie",
+ "summary": "A stroked 270° progress ring filled to 70%, and a three-slice pie whose slices meet exactly.",
+ "prompt": "A circular progress ring at 70% with the percentage in the middle, next to a three-slice pie chart.",
+ "level": 2,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.arc"
+  ],
+  "secondary": [
+   "draw.stroke",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "gauge",
+  "chart"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "progress ring",
+  "circular progress",
+  "donut",
+  "pie chart",
+  "pie slice",
+  "wedge",
+  "sector",
+  "gauge",
+  "arc",
+  "percentage"
+ ],
+ "teaches": [
+  "Draw a progress ring as two stroked arcs: a full 270° track and a partial value arc",
+  "Round the ends of an arc with strokeCap round",
+  "Build a pie from drawSector slices whose start angles continue each other",
+  "Switch the paint back to style fill before drawing text over stroked shapes",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/4",
+   "shows": "draw.arc",
+   "note": "the track: startAngle 135, sweepAngle 270"
+  },
+  {
+   "pointer": "/root/commands/6",
+   "shows": "draw.arc",
+   "note": "the value: 70% of 270° = 189°"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "draw.stroke",
+   "note": "a 14 dp stroke with round caps for the ring"
+  },
+  {
+   "pointer": "/root/commands/7",
+   "shows": "text.anchor",
+   "note": "style fill again before the label, or the text is stroked 14 dp wide"
+  },
+  {
+   "pointer": "/root/commands/10",
+   "shows": "draw.arc",
+   "note": "a pie slice: drawSector from -90° (12 o'clock), 40% = 144°"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A blue ring three-quarters round and 70% filled; red, yellow and green slices meeting exactly. Resized, the whole drawing scales uniformly to fit and stays centred (smaller in a narrow box, centred with margins in a wide one).",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "DRW-01",
+  "SHW-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 602,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 28,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_ARC": 2,
+   "DRAW_SECTOR": 3,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 6
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "drawArc",
+   "drawSector",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "right",
+   "root",
+   "scale",
+   "startAngle",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "draw.arc": [
+    "drawArc",
+    "drawSector"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:09.148Z"
+ },
+ "pitfalls": [
+  "Angles are in degrees, clockwise, with 0° at 3 o'clock: 12 o'clock is -90 and a gauge that opens at the bottom starts at 135",
+  "drawArc is only the curve: stroke it for a ring. With style fill it fills the chord between its ends; drawSector is the filled wedge that reaches the centre",
+  "Paint state persists: text drawn after the ring paint inherits style stroke and strokeWidth 14 and renders as an unreadable blob; set style fill first",
+  "Each slice's startAngle must equal the previous start + sweep, and the sweeps must add up to 360, or the pie shows gaps or overlaps",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: literal coordinates sit in the top-left and get cut off when it is resized, so scale the drawing to fit (or derive positions from componentWidth()/componentHeight())"
+ ]
+}

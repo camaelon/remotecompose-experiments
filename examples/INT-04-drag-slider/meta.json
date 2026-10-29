@@ -1,0 +1,299 @@
+{
+ "id": "INT-04",
+ "name": "drag-slider",
+ "version": 3,
+ "title": "Drag slider",
+ "summary": "A 0–100 slider: touchMode 6 maps the finger's x straight to a clamped value, so the thumb, the filled track and the label follow the finger.",
+ "prompt": "Build a horizontal 0–100 slider I can drag, with the thumb following my finger and the value shown above it.",
+ "level": 3,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.drag"
+  ],
+  "secondary": [
+   "text.dynamic",
+   "draw.shapes",
+   "draw.stroke",
+   "data.expression",
+   "data.measure"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "slider",
+  "seek bar",
+  "seekbar",
+  "volume",
+  "brightness",
+  "range input",
+  "scrubber",
+  "drag"
+ ],
+ "teaches": [
+  "Map the finger position to a clamped 0–100 value with touchExpression (min, max, an expression of touchX(), touchMode 6 for absolute position)",
+  "Position the thumb and the filled track from the touch-driven variable",
+  "Show the live value with textFromFloat in drawTextAnchored"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0",
+   "shows": "input.drag",
+   "note": "touchExpression: value = (touchX() - 20) / (width - 40) * 100, clamped 0..100, touchMode 6 (absolute position)"
+  },
+  {
+   "pointer": "/root/commands/6",
+   "shows": "input.drag",
+   "note": "the thumb at 20 + (width - 40) * @value / 100"
+  },
+  {
+   "pointer": "/root/commands/7",
+   "shows": "text.dynamic",
+   "note": "textFromFloat(@value, 3 digits, no decimals)"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts at 30; a drag from x=100 to x=240 leaves the thumb under the finger at 84 (a tap at x=150 gives 50). Resized, the track spans the box minus 20 px each side and the value follows the live componentWidth(): at 195 wide a drag to x=152 gives 85, at 450 wide a drag to x=372 gives 85, the thumb under the finger both times.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "down",
+     "x": 100,
+     "y": 60
+    },
+    {
+     "t": 0.3,
+     "type": "move",
+     "x": 240,
+     "y": 60
+    },
+    {
+     "t": 0.4,
+     "type": "up",
+     "x": 240,
+     "y": 60
+    }
+   ],
+   "duration": 1
+  },
+  "interact": [
+   {
+    "drag": [
+     100,
+     60,
+     240,
+     60
+    ]
+   },
+   {
+    "wait": 0.5
+   }
+  ],
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 195,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 100,
+      "y": 60
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 152,
+      "y": 60
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 152,
+      "y": 60
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 100,
+      "y": 60
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 372,
+      "y": 60
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 372,
+      "y": 60
+     }
+    ],
+    "duration": 1
+   }
+  ]
+ },
+ "related": [
+  "INT-05",
+  "CMP-03"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 562,
+  "header": {
+   "width": 300,
+   "height": 100
+  },
+  "op_count": 23,
+  "operations": {
+   "ANIMATED_FLOAT": 5,
+   "COMPONENT_VALUE": 1,
+   "CanvasContent": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 2,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 3,
+   "TextFromFloat": 1,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     195,
+     100
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     100
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "decimal",
+   "defaultValue",
+   "drawCircle",
+   "drawLine",
+   "drawTextAnchored",
+   "expression",
+   "header",
+   "height",
+   "max",
+   "min",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "radius",
+   "root",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "text",
+   "textSize",
+   "touchExpression",
+   "touchMode",
+   "type",
+   "value",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "input.drag": [
+    "touchExpression"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "draw.shapes": [
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ],
+   "data.measure": [
+    "componentWidth()"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:54.934Z"
+ },
+ "pitfalls": [
+  "touchMode 6 (STOP_ABSOLUTE_POS) is the only absolute mode: the value is the expression of the finger position. Modes 0–5 are relative: the value moves by how far the expression changes from the touch-down, so the thumb would not jump to where you tap",
+  "touchExpression takes `expression` as an array (one infix string element is fine) and an integer `touchMode`; a bare infix string or a named stopMode only works in json2rc and rcj, not in the Java parser",
+  "min and max clamp the value; leaving out min switches to wrap mode (see INT-05)",
+  "Paint is stateful: the second drawLine reuses the stroke width and cap set before the first, and the thumb paint must switch back to style fill",
+  "A canvas background drawn as drawRect(0, 0, 300, 100) leaves the rest of a wider host unpainted: use a background modifier (or componentWidth()/componentHeight()) so it fills whatever box the host gives"
+ ]
+}

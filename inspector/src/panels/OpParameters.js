@@ -218,6 +218,7 @@ const OP_PARAM_SCHEMAS = {
     126: { rawFields: [['mScaleX', 'scaleX'], ['mScaleY', 'scaleY'], ['mCenterX', 'centerX'], ['mCenterY', 'centerY']] },
     127: { rawFields: [['mTranslateX', 'translateX'], ['mTranslateY', 'translateY']] },
     128: { rawFields: [['mSkewX', 'skewX'], ['mSkewY', 'skewY']] },
+    158: { plain: [['mPathId1', 'path1'], ['mPathId2', 'path2']], rawFields: [['mTween', 'tween']] }, // PathTween
     181: { plain: [['mPathId', 'pathId']], rawFields: [['mFraction', 'fraction'], ['mVOffset', 'vOffset']] },
     133: { fields: [['mX', 'x'], ['mY', 'y'], ['mPanX', 'panX'], ['mPanY', 'panY']], plain: [['mTextID', 'textId'], ['mFlags', 'flags']] },
     150: { componentValue: true },

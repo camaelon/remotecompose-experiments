@@ -1,0 +1,155 @@
+{
+ "component": "Chip",
+ "version": 3,
+ "summary": "A pill-shaped filter chip: a tap toggles its 0/1 `selected` variable, and the selected face (filled with `color`) fades in over the plain one.",
+ "params": {
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Also the accessibility label"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "0/1. Bind a document variable to read or preset it (\"@travel\"); omitted, the chip keeps its own, starting unselected"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The selected face; its label is onPrimary"
+  }
+ },
+ "capabilities": [
+  "input.toggle",
+  "layout.decoration",
+  "a11y.labels"
+ ],
+ "call": {
+  "Chip": {
+   "label": "Photography",
+   "selected": "@photo"
+  }
+ },
+ "pitfalls": [
+  "State colours without colour expressions: the two faces are stacked in one clipped box (same padding, same text, so the same size) and the top one's graphicsLayer alpha is the 0/1 state",
+  "Chips wrap their label: put them in a row (or several rows) with spacedBy; a `flow` ignores spacedBy",
+  "The label is one line with an ellipsis (maxLines 1): in a slot narrower than the label it ends in … instead of wrapping and being clipped by the 32 dp pill",
+  "Selecting cross-fades: the selected face's graphicsLayer alpha is the animated value {\"value\": \"@selected\", \"anim\": 0.2} (paint time; mono strips the motion)"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    {
+     "clip": 16
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label",
+      "clickable": true
+     }
+    },
+    {
+     "onClick": {
+      "type": "valueFloatExpressionChange",
+      "target": "@selected",
+      "value": "1 - @selected"
+     }
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "height": 32
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "background": "@colors.outline"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "padding": 1
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "clip": 15
+        }
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       },
+       {
+        "padding": [
+         {
+          "$if": "theme.mono",
+          "then": 13,
+          "else": 14
+         },
+         0
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "@label",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "fontSize": 14,
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "graphicsLayer": {
+         "alpha": {
+          "value": "@selected",
+          "anim": 0.2
+         }
+        }
+       },
+       {
+        "height": 32
+       },
+       {
+        "background": "@color"
+       },
+       {
+        "padding": [
+         14,
+         0
+        ]
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "@label",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "fontSize": 14,
+         "color": "@colors.onPrimary"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

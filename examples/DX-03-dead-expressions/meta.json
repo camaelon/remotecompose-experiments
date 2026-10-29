@@ -1,0 +1,195 @@
+{
+ "id": "DX-03",
+ "name": "dead-expressions",
+ "version": 3,
+ "title": "Diagnostic: dead expressions",
+ "summary": "Deliberately flawed: a static card that commits a chain of three expressions (inset, padded, third) whose result nothing reads, so the audit reports dead_code listing the three FloatExpression operations.",
+ "prompt": "A chain of three committed expressions whose result nothing reads.",
+ "level": 2,
+ "family": "DX",
+ "capabilities": {
+  "primary": [
+   "data.expression"
+  ],
+  "secondary": [
+   "draw.shapes",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "dead code",
+  "unused expression",
+  "wasted bytes",
+  "optimisation",
+  "diagnostic",
+  "audit fixture"
+ ],
+ "teaches": [
+  "Recognise dead_code: expressions forced into the document (commit: true) that no draw, layout or output reads",
+  "Fix it by deleting the chain, or by dropping commit so the converter only writes variables something uses",
+  "Size a canvas card from componentWidth()/componentHeight() so it stretches with the document"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0",
+   "shows": "data.expression",
+   "note": "the flaw: inset = density() * 4, committed though nothing reads it"
+  },
+  {
+   "pointer": "/root/commands/2",
+   "shows": "data.expression",
+   "note": "the end of the dead chain"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "expect_findings": [
+  "dead_code"
+ ],
+ "check": {
+  "describe": "audit reports dead_code with ops 7, 8 and 9 (three FloatExpression), plus the matching unused_variables info; the card renders normally. Resized, the background fills the box and the card stretches to the width with 30 dp margins, centred vertically; the three dead variables are unchanged.",
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 200,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 200
+   }
+  ]
+ },
+ "related": [
+  "DX-05"
+ ],
+ "pitfalls": [
+  "Without \"commit\": true, a variable nothing reads is never written at all (both the Java parser and json2rc defer variables until first use), so the dead chain only exists when it is committed"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 482,
+  "header": {
+   "width": 300,
+   "height": 200
+  },
+  "op_count": 24,
+  "operations": {
+   "ANIMATED_FLOAT": 8,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 1,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 1
+  },
+  "audit_findings": [
+   "warning: dead_code",
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     200,
+     200
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     200
+    ],
+    "audit_findings": [
+     "warning: dead_code",
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "bottom",
+   "color",
+   "commands",
+   "commit",
+   "contentDescription",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "text",
+   "textSize",
+   "top",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:21.577Z"
+ }
+}

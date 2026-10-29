@@ -1,0 +1,269 @@
+{
+ "id": "LAY-10",
+ "name": "vertical-scroll-list",
+ "version": 2,
+ "title": "Vertical scrolling list",
+ "summary": "A 360×400 contact list of 12 rows (avatar, name, preview line) in a column that scrolls when dragged.",
+ "prompt": "A scrollable contact list with a round avatar, a name and a message preview on each row.",
+ "level": 3,
+ "family": "LAY",
+ "capabilities": {
+  "primary": [
+   "layout.scroll"
+  ],
+  "secondary": [
+   "layout.stack",
+   "layout.align",
+   "layout.size",
+   "layout.spacing",
+   "layout.decoration",
+   "data.tokens",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "list"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "scroll view",
+  "recycler",
+  "lazy column",
+  "contacts",
+  "inbox",
+  "feed",
+  "overflow"
+ ],
+ "teaches": [
+  "Make a column taller than the document scroll with the verticalScroll modifier",
+  "Bind the scroll position to a variable (resources.variables scroll: 0, verticalScroll \"@scroll\") so the player can drive and read it",
+  "Build a list row from a round avatar box and a two-line text column, spaced with spacedBy 12"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "data.tokens",
+   "note": "the scroll position variable, starting at 0"
+  },
+  {
+   "pointer": "/root/1/modifiers/2",
+   "shows": "layout.scroll",
+   "note": "verticalScroll bound to @scroll"
+  },
+  {
+   "pointer": "/root/1/children/0",
+   "shows": "layout.stack",
+   "note": "one 64 dp row: avatar, name and preview, spacedBy 12"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Before the drag rows 1–6 are visible; after dragging (180,350)→(180,50) the list is scrolled to its end, showing rows 7–12. Resized (300×560, 540×300) the rows stretch to the width and the list scrolls in whatever height it gets; the same swipe moves it by the same 300 dp.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "down",
+     "x": 180,
+     "y": 350
+    },
+    {
+     "t": 0.2,
+     "type": "move",
+     "x": 180,
+     "y": 250
+    },
+    {
+     "t": 0.3,
+     "type": "move",
+     "x": 180,
+     "y": 150
+    },
+    {
+     "t": 0.4,
+     "type": "move",
+     "x": 180,
+     "y": 50
+    },
+    {
+     "t": 0.5,
+     "type": "up",
+     "x": 180,
+     "y": 50
+    }
+   ],
+   "duration": 1
+  },
+  "interact": [
+   {
+    "drag": [
+     180,
+     350,
+     180,
+     50
+    ]
+   },
+   {
+    "wait": 0.5
+   }
+  ],
+  "renders": [
+   {
+    "name": "tall",
+    "width": 300,
+    "height": 560
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 300
+   }
+  ]
+ },
+ "pitfalls": [
+  "clip {\"circle\": ...} writes nothing (the Java writer has no circle clip, upstream U9), leaving a square avatar; a roundedRect of half the size gives the round one",
+  "A list only scrolls if its content is taller than the viewport: here 12 × 64 dp rows in a 400 dp document"
+ ],
+ "prerequisites": [
+  "LAY-01"
+ ],
+ "related": [
+  "LAY-11",
+  "INT-05"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 4049,
+  "header": {
+   "width": 360,
+   "height": 400
+  },
+  "op_count": 264,
+  "operations": {
+   "ClipRectModifierOperation": 1,
+   "CoreText": 36,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 25,
+   "HEADER": 1,
+   "LAYOUT_BOX": 12,
+   "LAYOUT_COLUMN": 13,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 12,
+   "LayoutComponentContent": 73,
+   "MODIFIER_BACKGROUND": 13,
+   "MODIFIER_HEIGHT": 25,
+   "MODIFIER_PADDING": 12,
+   "MODIFIER_WIDTH": 25,
+   "RoundedClipRectModifierOperation": 12,
+   "ScrollModifierOperation": 1,
+   "TouchExpression": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 0,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     300,
+     560
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     300
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "clip",
+   "color",
+   "column",
+   "contentDescription",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "modifiers",
+   "padding",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "scroll",
+   "size",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "verticalScroll",
+   "width"
+  ],
+  "evidence": {
+   "layout.scroll": [
+    "verticalScroll"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize",
+    "fillMaxWidth"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables"
+   ],
+   "text.basic": [
+    "text"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:08.813Z"
+ }
+}

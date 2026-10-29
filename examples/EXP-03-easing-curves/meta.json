@@ -1,0 +1,266 @@
+{
+ "id": "EXP-03",
+ "name": "easing-curves",
+ "version": 2,
+ "title": "Easing curves compared",
+ "summary": "Linear, ease-in (square), ease-out, smooth_step and smootherstep drawn over each other on one unit-square chart, each a pathExpression in t = a[0], with a legend.",
+ "prompt": "Plot five easing curves from 0 to 1 on the same chart (linear, ease in, ease out, smoothstep, smootherstep) with a colour legend and the formula under each name.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.shaping"
+  ],
+  "secondary": [
+   "expr.math",
+   "draw.plot",
+   "draw.path",
+   "draw.shapes",
+   "draw.stroke",
+   "text.anchor",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "chart"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "easing",
+  "ease in out",
+  "smoothstep",
+  "smootherstep",
+  "interpolation curve",
+  "animation curve",
+  "timing function",
+  "transfer function",
+  "unit square plot"
+ ],
+ "teaches": [
+  "Shape a 0..1 parameter with plain expressions: square(t) eases in, 1 - square(1 - t) eases out, smooth_step(t, 1, 0) and t*t*t*(t*(6*t - 15) + 10) ease both ends",
+  "Plot y = f(t) as a pathExpression with start 0, end 1 and a[0] as t, mapping it into the box with x = left + w * t and y = bottom - h * f(t)",
+  "Reuse one id per curve (\"easeIn\", \"smooth\"…) and draw it with drawPath after setting the stroke"
+ ],
+ "pitfalls": [
+  "smooth_step takes (value, max, min): smooth_step(t, 1, 0) is the usual smoothstep(0, 1, t). Not clamp's order",
+  "pathExpression without flags 4 (LINEAR) joins the samples with splines; 64 linear samples are enough for these curves, a straight line needs only count 2",
+  "The JSON parser has no smoothstep, mix or ease names: write the polynomial, and keep it under 32 RPN tokens",
+  "A canvas drawn at its header size (literal coordinates) runs off a narrower host and leaves a strip in a wider one: when the drawing is one composition (chart and legend, dial and readout), scale it as a whole with @fit = min(componentWidth() / W, componentHeight() / H) and centre it with a translate"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/10/pathExpression/expressionY",
+   "shows": "expr.shaping",
+   "note": "ease in: square(a[0])"
+  },
+  {
+   "pointer": "/root/commands/11/pathExpression/expressionY",
+   "shows": "expr.shaping",
+   "note": "ease out: 1 - square(1 - a[0])"
+  },
+  {
+   "pointer": "/root/commands/12/pathExpression/expressionY",
+   "shows": "expr.shaping",
+   "note": "smooth_step(a[0], 1, 0): value first, then max, then min"
+  },
+  {
+   "pointer": "/root/commands/13/pathExpression",
+   "shows": "draw.plot",
+   "note": "smootherstep t³(t(6t − 15) + 10) as a 64-sample linear pathExpression"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Five curves from bottom-left to top-right: a grey diagonal, blue below it, green above it, yellow and red S-curves crossing at the centre, the red steeper. Resized, the chart and its legend are scaled as one (@fit = min(w / 360, h / 240)) and centred: smaller at 234 wide with the legend still beside the chart, centred at 1:1 in a 540 wide box.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 240
+   }
+  ]
+ },
+ "related": [
+  "VAR-03",
+  "DRW-06"
+ ],
+ "prerequisites": [
+  "DRW-06"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1724,
+  "header": {
+   "width": 360,
+   "height": 240
+  },
+  "op_count": 72,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 11,
+   "DRAW_CIRCLE": 5,
+   "DRAW_LINE": 2,
+   "DRAW_PATH": 5,
+   "DRAW_RECT": 1,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 11,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 16,
+   "PathExpression": 5
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     240
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     240
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "color",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawRect",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "header",
+   "height",
+   "id",
+   "left",
+   "modifiers",
+   "name",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "scale",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "expr.shaping": [
+    "smooth_step(",
+    "step("
+   ],
+   "expr.math": [
+    "square(",
+    "min("
+   ],
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeCap",
+    "strokeJoin"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "data.expression": [
+    "pathExpression",
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:30.097Z"
+ }
+}

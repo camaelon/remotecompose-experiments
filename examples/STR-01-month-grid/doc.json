@@ -1,0 +1,272 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 300,
+  "height": 300,
+  "profiles": 513,
+  "contentDescription": "October 2026 month calendar with today, the 29th, circled"
+ },
+ "resources": {
+  "variables": {
+   "firstWeekday": {
+    "value": 3,
+    "export": true
+   },
+   "monthDays": {
+    "value": 31,
+    "export": true
+   },
+   "today": {
+    "value": 29,
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "#FF101828"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "cw",
+     "value": "(componentWidth() - 13) / 7"
+    }
+   },
+   {
+    "variable": {
+     "name": "rh",
+     "value": "(componentHeight() - 72) / 6"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FFFFFFFF"
+      },
+      {
+       "textSize": 17
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": "October 2026",
+     "x": 18,
+     "y": 30,
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "#FF5C6B7E"
+      },
+      {
+       "textSize": 11
+      }
+     ]
+    }
+   },
+   {
+    "save": [
+     {
+      "translate": {
+       "dx": "6.5 + @cw * 0.5",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "M",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "T",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "W",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "T",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "F",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "S",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     },
+     {
+      "translate": {
+       "dx": "@cw",
+       "dy": 0
+      }
+     },
+     {
+      "drawTextAnchored": {
+       "text": "S",
+       "x": 0,
+       "y": 64,
+       "panX": 0,
+       "panY": 0
+      }
+     }
+    ]
+   },
+   {
+    "loop": {
+     "index": "week",
+     "from": 0,
+     "until": 6,
+     "commands": [
+      {
+       "loop": {
+        "index": "wd",
+        "from": 0,
+        "until": 7,
+        "commands": [
+         {
+          "variable": {
+           "name": "day",
+           "value": "week * 7 + wd + 1 - @firstWeekday"
+          }
+         },
+         {
+          "variable": {
+           "name": "inMonth",
+           "value": "step(@day, 0.5) * step(@monthDays + 0.5, @day)"
+          }
+         },
+         {
+          "variable": {
+           "name": "isToday",
+           "value": "1 - min(1, abs(@day - @today))"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FF4DA3FF"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "6.5 + @cw * (wd + 0.5)",
+           "cy": "77 + @rh * (week + 0.5)",
+           "radius": "0.42 * min(@cw, @rh) * @isToday"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FFE3E8EF"
+            },
+            {
+             "textSize": 14
+            },
+            {
+             "alpha": "@inMonth * (1 - 0.45 * step(wd, 4.5))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textFromFloat",
+            "value": "@day",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 5
+           },
+           "x": "6.5 + @cw * (wd + 0.5)",
+           "y": "77 + @rh * (week + 0.5)",
+           "panX": 0,
+           "panY": 0
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

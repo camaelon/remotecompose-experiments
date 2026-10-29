@@ -1,0 +1,41 @@
+{
+ "header": {"apiLevel": 7, "width": 300, "height": 140, "profiles": 513,
+  "contentDescription": "A temperature reading with a warning badge above 30 degrees"},
+ "resources": {
+  "variables": {
+   "temp": {"value": 24, "export": true}
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": ["fillMaxSize"],
+  "commands": [
+   {"paint": {"ops": [{"color": "#FF101828"}]}},
+   {"drawRect": {"left": 0, "top": 0, "right": "componentWidth()", "bottom": "componentHeight()"}},
+   {"variable": {"name": "s", "value": "min(componentWidth() / 300, componentHeight() / 140)"}},
+   {"translate": {"dx": "(componentWidth() - 300) / 2", "dy": "(componentHeight() - 140) / 2"}},
+   {"scale": {"sx": "@s", "sy": "@s", "pivotX": 150, "pivotY": 70}},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 14}]}},
+   {"drawTextAnchored": {"text": "Server room", "x": 20, "y": 30, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 44}]}},
+   {"drawTextAnchored": {
+     "text": {"type": "textFromFloat", "value": "@temp", "whole": 2, "decimal": 1},
+     "x": 20, "y": 82, "panX": -1, "panY": 0}},
+   {"paint": {"ops": [{"textSize": 22}]}},
+   {"drawTextAnchored": {"text": "°C", "x": 116, "y": 74, "panX": -1, "panY": 0}},
+   {"conditionalOperations": {
+     "condition": "gt",
+     "v1": "@temp",
+     "v2": 30,
+     "commands": [
+      {"paint": {"ops": [{"color": "#FFEF5350"}]}},
+      {"drawRoundRect": {"left": 180, "top": 60, "right": 280, "bottom": 92, "rx": 16, "ry": 16}},
+      {"paint": {"ops": [{"color": "#FFFFFFFF"}, {"textSize": 15}]}},
+      {"drawTextAnchored": {"text": "Too hot", "x": 230, "y": 76, "panX": 0, "panY": 0}}
+     ]
+   }},
+   {"paint": {"ops": [{"color": "#FF8899AA"}, {"textSize": 12}]}},
+   {"drawTextAnchored": {"text": "Alert above 30 °C", "x": 20, "y": 116, "panX": -1, "panY": 0}}
+  ]
+ }
+}

@@ -1,0 +1,336 @@
+{
+ "id": "EXP-11",
+ "name": "text-formatting",
+ "version": 2,
+ "title": "Number formatting flags",
+ "summary": "Eight numbers turned into text by textFromFloat flags and textMerge: thousands grouping, period-comma and underscore separators, negative parentheses, zero padding, mm:ss from seconds, a percent and whole-digit clipping.",
+ "prompt": "A reference card of number formats: $1,234.50, 1.234,50 €, 9_876_543, (42.50), 007, 07:05 from 425 seconds, 65 % and what happens when the whole digits are too few.",
+ "level": 2,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.format"
+  ],
+  "secondary": [
+   "text.dynamic",
+   "expr.string",
+   "expr.math",
+   "expr.operators",
+   "data.expression",
+   "text.basic",
+   "layout.stack",
+   "layout.decoration"
+  ]
+ },
+ "use_cases": [
+  "card",
+  "finance"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "number format",
+  "thousands separator",
+  "currency",
+  "european number format",
+  "leading zeros",
+  "negative parentheses",
+  "time format",
+  "mm:ss",
+  "percent",
+  "format flags"
+ ],
+ "teaches": [
+  "Add flags: AFTER 0 space/1 none/3 zero, PRE 0 space/4 none/12 zero, GROUPING 16 by 3, SEPARATOR 64 period-comma/128 space-comma/192 underscore, 256 negative in parentheses, 512 rounding",
+  "Build mm:ss from seconds: textMerge(textFromFloat(floor(@secs / 60), whole 2, flags 13), textMerge(\":\", textFromFloat(@secs % 60, whole 2, flags 13)))",
+  "Add a prefix or a unit with textMerge(\"$\", number) or textMerge(number, \" €\"); nest textMerge for three parts"
+ ],
+ "pitfalls": [
+  "whole is the number of characters KEPT before the decimal point, separators included: 9,876,543 needs whole 9, and whole 3 prints 543",
+  "Without 512 (OPTIONS_ROUNDING) the decimals are cut, not rounded; with decimal 0 the C++ player ignores 512 too, so round() the value",
+  "A float holds about 7 significant digits: 1234567.89 is stored as 1234567.875; keep amounts below 2^24 or in cents",
+  "Inside a text value object decimal defaults to 3; set decimal 0 for whole numbers",
+  "A row of label and value with spaceBetween lets a long label push into the value when the host narrows: give the label column weight 1 and its texts maxLines 1 with ellipsis, so the value keeps its intrinsic width"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/children/1/children/1/text/value",
+   "shows": "expr.format",
+   "note": "textMerge(\"$\", textFromFloat(@price, 7, 2, flags 23)) → $1,234.50"
+  },
+  {
+   "pointer": "/root/children/2/children/1/text/value/id1",
+   "shows": "expr.format",
+   "note": "flags 87 = 64 PERIOD_COMMA + 16 BY3 + 7 → 1.234,50"
+  },
+  {
+   "pointer": "/root/children/4/children/1/text/value",
+   "shows": "expr.format",
+   "note": "flags 263 = 256 + 7 → (42.50)"
+  },
+  {
+   "pointer": "/root/children/5/children/1/text/value",
+   "shows": "expr.format",
+   "note": "flags 13 = 12 PAD_PRE_ZERO + 1 → 007"
+  },
+  {
+   "pointer": "/root/children/6/children/1/text/value",
+   "shows": "expr.string",
+   "note": "mm:ss from floor(s / 60) and s % 60, joined by textMerge"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "balance": {
+    "type": "float",
+    "meaning": "account balance; negative shows in parentheses",
+    "default": -42.5,
+    "min": -999,
+    "max": 999,
+    "step": 0.5
+   },
+   "big": {
+    "type": "float",
+    "meaning": "a large count, grouped by thousands",
+    "default": 9876543,
+    "min": 0,
+    "max": 9999999,
+    "step": 1
+   },
+   "code": {
+    "type": "float",
+    "meaning": "a code shown zero-padded to 3 digits",
+    "default": 7,
+    "min": 0,
+    "max": 999,
+    "step": 1
+   },
+   "price": {
+    "type": "float",
+    "meaning": "a price in dollars",
+    "default": 1234.5,
+    "min": 0,
+    "max": 99999,
+    "step": 0.01
+   },
+   "ratio": {
+    "type": "float",
+    "meaning": "a ratio shown as %",
+    "default": 0.654,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   },
+   "secs": {
+    "type": "float",
+    "meaning": "a duration in seconds, shown mm:ss",
+    "default": 425,
+    "min": 0,
+    "max": 5999,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Rows read $1,234.50, 1.234,50 €, 9_876_543, (42.50), 007, 07:05, 65% and 543. Resized, every formatted value stays whole at the end of its row: the label column takes what is left (weight 1) and ellipsizes on one line, so at 234 wide PERIOD_COMMA reads PERIOD_… beside 1.234,50 €; at 540 the rows spread out.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 370
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 370
+   }
+  ]
+ },
+ "related": [
+  "TXT-08",
+  "TIM-08"
+ ],
+ "prerequisites": [
+  "TXT-08"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 3418,
+  "header": {
+   "width": 360,
+   "height": 370
+  },
+  "op_count": 181,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "CoreText": 25,
+   "DATA_FLOAT": 6,
+   "DATA_TEXT": 22,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 9,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 8,
+   "LayoutComponentContent": 42,
+   "MODIFIER_BACKGROUND": 9,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_WIDTH": 17,
+   "NAMED_VARIABLE": 6,
+   "RoundedClipRectModifierOperation": 8,
+   "TextFromFloat": 9,
+   "TextMerge": 5
+  },
+  "host_variables": [
+   {
+    "name": "balance",
+    "type": "float",
+    "value": -42.5
+   },
+   {
+    "name": "big",
+    "type": "float",
+    "value": 9876543
+   },
+   {
+    "name": "code",
+    "type": "float",
+    "value": 7
+   },
+   {
+    "name": "price",
+    "type": "float",
+    "value": 1234.5
+   },
+   {
+    "name": "ratio",
+    "type": "float",
+    "value": 0.653999984
+   },
+   {
+    "name": "secs",
+    "type": "float",
+    "value": 425
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     370
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     370
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "balance",
+   "big",
+   "children",
+   "clip",
+   "code",
+   "color",
+   "column",
+   "contentDescription",
+   "decimal",
+   "export",
+   "flags",
+   "fontFamily",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalArrangement",
+   "id1",
+   "id2",
+   "maxLines",
+   "modifiers",
+   "overflow",
+   "padding",
+   "price",
+   "profiles",
+   "ratio",
+   "resources",
+   "root",
+   "roundedRect",
+   "secs",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "weight",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.string": [
+    "textMerge"
+   ],
+   "expr.math": [
+    "floor(",
+    "round("
+   ],
+   "expr.operators": [
+    "<arithmetic>"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:39.039Z"
+ }
+}

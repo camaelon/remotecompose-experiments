@@ -1,0 +1,211 @@
+{
+ "id": "DRW-05",
+ "name": "path-builder",
+ "version": 3,
+ "title": "Star built point by point",
+ "summary": "A symmetric five-point star built with pathCreate, nine pathAppendLineTo calls and pathAppendClose, then filled and outlined.",
+ "prompt": "Draw a yellow five-point star with a white outline, building the path point by point.",
+ "level": 2,
+ "family": "DRW",
+ "capabilities": {
+  "primary": [
+   "draw.path"
+  ],
+  "secondary": [
+   "draw.stroke"
+  ]
+ },
+ "use_cases": [
+  "card"
+ ],
+ "form_factor": "widget-2x2",
+ "keywords": [
+  "star",
+  "polygon",
+  "polyline",
+  "rating",
+  "favourite",
+  "custom shape",
+  "moveTo",
+  "lineTo",
+  "close path",
+  "vertices"
+ ],
+ "teaches": [
+  "Start a named path at its first point with pathCreate",
+  "Add vertices with pathAppendLineTo and close the outline with pathAppendClose",
+  "Reuse one path id for a fill and an outline by drawing it twice with different paints",
+  "Fit a drawing authored at the header size to any box: a variable s = min(componentWidth() / W, componentHeight() / H), a translate by half the extra space and a scale by s about the design's centre"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/3",
+   "shows": "draw.path",
+   "note": "pathCreate: path id 'star' starting at the top point"
+  },
+  {
+   "pointer": "/root/commands/4",
+   "shows": "draw.path",
+   "note": "pathAppendLineTo: the next vertex, an inner point"
+  },
+  {
+   "pointer": "/root/commands/13",
+   "shows": "draw.path",
+   "note": "pathAppendClose back to the first point"
+  },
+  {
+   "pointer": "/root/commands/15",
+   "shows": "draw.path",
+   "note": "drawPath by id with the fill paint"
+  },
+  {
+   "pointer": "/root/commands/16",
+   "shows": "draw.stroke",
+   "note": "a 3 dp white outline with round joins over the fill"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A yellow five-point star with a white outline, point up and symmetric. Resized, it scales to the shorter side and stays centred.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 130,
+    "height": 200
+   },
+   {
+    "name": "wide",
+    "width": 320,
+    "height": 160
+   }
+  ]
+ },
+ "related": [
+  "DRW-04",
+  "DRW-12"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 635,
+  "header": {
+   "width": 200,
+   "height": 200
+  },
+  "op_count": 30,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DRAW_PATH": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "PAINT_VALUES": 2,
+   "PATH_CREATE": 1,
+   "PathAppend": 10
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     130,
+     200
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "color",
+   "commands",
+   "contentDescription",
+   "drawPath",
+   "dx",
+   "dy",
+   "header",
+   "height",
+   "id",
+   "modifiers",
+   "name",
+   "paint",
+   "path",
+   "pathAppendClose",
+   "pathAppendLineTo",
+   "pathCreate",
+   "pivotX",
+   "pivotY",
+   "profiles",
+   "root",
+   "scale",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "translate",
+   "type",
+   "value",
+   "variable",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "draw.path": [
+    "drawPath",
+    "pathCreate",
+    "pathAppendLineTo",
+    "pathAppendClose"
+   ],
+   "draw.stroke": [
+    "strokeWidth",
+    "strokeJoin"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:12.238Z"
+ },
+ "pitfalls": [
+  "Every pathAppend* names the path it extends with `path`; pathCreate declares it with `id` and its first point",
+  "Draw the fill before the outline: the stroke is centred on the edge, so half of it would be covered by a later fill",
+  "Without strokeJoin round the outline's sharp star points become long miter spikes",
+  "Canvas coordinates are pixels of the box the host gives the document, not of the header: literal coordinates sit in the top-left and get cut off when it is resized, so scale the drawing to fit (or derive positions from componentWidth()/componentHeight())"
+ ]
+}

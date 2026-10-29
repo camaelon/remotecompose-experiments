@@ -1,0 +1,242 @@
+{
+ "id": "ANM-03",
+ "name": "staggered-entrance",
+ "version": 2,
+ "title": "Staggered list entrance",
+ "summary": "Five reminder rows slide in from the right and fade up one after another when the list appears: each row's graphicsLayer translationX and alpha read the same eased progress of animationTime(), delayed 0.12 s per row, and a wakeIn keeps frames coming for the 1.4 s intro.",
+ "prompt": "A 'This week' list of five reminders that animates in when it appears: each row slides in from the right and fades in, starting a little after the one above.",
+ "level": 3,
+ "family": "ANM",
+ "capabilities": {
+  "primary": [
+   "anim.stagger"
+  ],
+  "secondary": [
+   "expr.modifiers",
+   "expr.shaping",
+   "doc.fps",
+   "layout.decoration",
+   "layout.weight",
+   "text.anchor"
+  ]
+ },
+ "use_cases": [
+  "list",
+  "onboarding",
+  "notification"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "staggered animation",
+  "cascade in",
+  "list intro",
+  "slide in rows",
+  "appear one by one",
+  "entrance",
+  "reminders",
+  "delay per item"
+ ],
+ "teaches": [
+  "Stagger items by giving each the same progress clamp(0, 1, (animationTime() - delay_i) / 0.5) with a growing delay",
+  "Slide and fade a whole row with one graphicsLayer: translationX 48 * square(1 - p) and alpha p",
+  "Schedule frames only while the intro runs with wakeIn \"0.016 + 3600 * step(animationTime(), 1.4)\": every frame until 1.4 s, then an hour"
+ ],
+ "pitfalls": [
+  "animationTime() alone never schedules a repaint (EXAMPLES_FINDINGS U6): without the wakeIn the Java player can leave the rows invisible; continuousSec() would repaint forever",
+  "step(x, edge) is x > edge, so step(animationTime(), 1.4) is 0 during the intro and 1 after",
+  "Weights ignore spacedBy (U3): the rows use a fixed spacer between the dot and the weighted title",
+  "graphicsLayer translation moves only the drawing, not the layout, so the sliding rows don't push their neighbours or overflow the column's clip",
+  "Give the weighted title maxLines 1 and ellipsis: on a narrow host it should shorten, not wrap or push the time out of the row (the C++ player still measures a weighted text at its natural width; TS and Java ellipsize)"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/4/row/modifiers/0/graphicsLayer/translationX",
+   "shows": "anim.stagger",
+   "note": "row 4: translationX = 48 * (1 - p)², p = clamp(0, 1, (animationTime() - 0.66) / 0.5)"
+  },
+  {
+   "pointer": "/root/column/children/4/row/modifiers/0",
+   "shows": "expr.modifiers",
+   "note": "the row's graphicsLayer: alpha p and translationX from the same p"
+  },
+  {
+   "pointer": "/root/column/children/0/canvas/commands/0",
+   "shows": "doc.fps",
+   "note": "wakeIn: 60 fps for the first 1.4 s, then idle"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Captured at 0.75 s: Dentist is in place, Gym class and Team sync are still sliding and faint, Pick up parcel has just appeared to the right, Call mum is not there yet. By 1.4 s all five rows are in place. Resized (narrow 240, wide 540) the rows fill the width, the time stays right-aligned and a long title ellipsizes (maxLines 1) instead of pushing it; the 48 dp slide-in is a fixed distance on purpose.",
+  "render": {
+   "duration": 0.75
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 320,
+    "duration": 0.75
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 360,
+    "duration": 0.75
+   }
+  ]
+ },
+ "related": [
+  "TIM-06",
+  "TIM-04",
+  "ANM-06"
+ ],
+ "prerequisites": [
+  "EXP-10"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 2830,
+  "header": {
+   "width": 360,
+   "height": 320
+  },
+  "op_count": 143,
+  "operations": {
+   "ANIMATED_FLOAT": 11,
+   "CanvasContent": 1,
+   "CoreText": 10,
+   "DATA_TEXT": 11,
+   "DRAW_TEXT_ANCHOR": 1,
+   "GraphicsLayerModifier": 5,
+   "HEADER": 1,
+   "LAYOUT_BOX": 10,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 5,
+   "LayoutComponentContent": 22,
+   "MODIFIER_BACKGROUND": 11,
+   "MODIFIER_HEIGHT": 12,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_WIDTH": 22,
+   "PAINT_VALUES": 1,
+   "RoundedClipRectModifierOperation": 10,
+   "WAKE_IN": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_empty_container"
+  ],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     320
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_empty_container"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "background",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "color",
+   "column",
+   "commands",
+   "contentDescription",
+   "drawTextAnchored",
+   "fontSize",
+   "graphicsLayer",
+   "header",
+   "height",
+   "maxLines",
+   "modifiers",
+   "overflow",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "profiles",
+   "root",
+   "row",
+   "seconds",
+   "size",
+   "spacedBy",
+   "spacer",
+   "text",
+   "textSize",
+   "translationX",
+   "type",
+   "value",
+   "verticalAlignment",
+   "weight",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "anim.stagger": [
+    "animationTime()"
+   ],
+   "expr.modifiers": [
+    "graphicsLayer"
+   ],
+   "expr.shaping": [
+    "clamp(",
+    "step("
+   ],
+   "doc.fps": [
+    "wakeIn"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-29T21:38:31.470Z"
+ }
+}

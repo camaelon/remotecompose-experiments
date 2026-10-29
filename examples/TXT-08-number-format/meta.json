@@ -1,0 +1,211 @@
+{
+ "id": "TXT-08",
+ "name": "number-format",
+ "version": 3,
+ "title": "Number formatting",
+ "summary": "A live counter of the seconds since midnight, formatted by textFromFloat with 0, 1 and 2 decimals.",
+ "prompt": "Show a live number (seconds since midnight) formatted with 0, 1 and 2 decimal places.",
+ "level": 3,
+ "family": "TXT",
+ "capabilities": {
+  "primary": [
+   "text.dynamic"
+  ],
+  "secondary": [
+   "time.clock",
+   "text.basic",
+   "layout.stack",
+   "layout.spacing",
+   "layout.size",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "format number",
+  "decimal places",
+  "number to string",
+  "counter",
+  "digits",
+  "precision",
+  "float to text",
+  "rounding",
+  "fixed decimals",
+  "number display"
+ ],
+ "teaches": [
+  "Turn a live float into text with a textFromFloat value: whole digits, decimal places and flags",
+  "Compute seconds since midnight once, as a named resources.variables expression (timeInMin() * 60 + timeInSec() % 60), and reference it as @secs",
+  "Keep trailing zeros with flags 3 (PAD_AFTER_ZERO) and drop leading padding with 4 (PAD_PRE_NONE): flags 7"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/secs",
+   "shows": "data.expression",
+   "note": "secs = timeInMin()*60 + timeInSec()%60, shared by the three lines"
+  },
+  {
+   "pointer": "/root/children/1/children/1/text/value",
+   "shows": "text.dynamic",
+   "note": "textFromFloat(@secs, whole 5, decimal 0, flags 7)"
+  },
+  {
+   "pointer": "/root/children/3/children/1/text/value",
+   "shows": "text.dynamic",
+   "note": "the same value with decimal 2: flags 7 keeps the .00"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "10:10:05",
+  "touch": false
+ },
+ "check": {
+  "describe": "At 10:10:05 the three lines read 36605, 36605.0 and 36605.00. Resized (240, 540 wide) the 80 dp label column stays put and the numbers keep their full width; at 240 36605.00 still fits.",
+  "render": {
+   "clock": "2026-10-28T10:10:05"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 180
+   }
+  ]
+ },
+ "related": [
+  "TIM-01",
+  "INT-04"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 735,
+  "header": {
+   "width": 360,
+   "height": 180
+  },
+  "op_count": 39,
+  "operations": {
+   "ANIMATED_FLOAT": 1,
+   "CoreText": 7,
+   "DATA_TEXT": 4,
+   "HEADER": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 3,
+   "LayoutComponentContent": 11,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "TextFromFloat": 3
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     180
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "children",
+   "color",
+   "contentDescription",
+   "decimal",
+   "flags",
+   "fontSize",
+   "header",
+   "height",
+   "modifiers",
+   "padding",
+   "profiles",
+   "resources",
+   "root",
+   "secs",
+   "spacedBy",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "time.clock": [
+    "timeInMin",
+    "timeInSec"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "layout.stack": [
+    "column",
+    "row"
+   ],
+   "layout.spacing": [
+    "padding",
+    "spacedBy"
+   ],
+   "layout.size": [
+    "width",
+    "height",
+    "size",
+    "fillMaxSize"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:42.766Z"
+ },
+ "pitfalls": [
+  "timeInSec() is the second within the HOUR (minute*60 + second), not since midnight: at 10:10:05 it is 605",
+  "textFromFloat's default flags (0, PAD_AFTER_SPACE) print trailing zeros as spaces: 36605 with decimal 2 shows \"36605.0\" plus a blank; add PAD_AFTER_ZERO (3) to print 36605.00",
+  "`whole` is the number of integer digits KEPT, not a minimum: 36605 with whole 3 prints 605. Size it for the largest value (86399 needs 5)",
+  "Inside a text value object, decimal defaults to 3 when omitted; write decimal 0 for an integer"
+ ]
+}

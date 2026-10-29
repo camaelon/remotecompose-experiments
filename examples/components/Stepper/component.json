@@ -1,0 +1,215 @@
+{
+ "component": "Stepper",
+ "version": 2,
+ "summary": "A minus / value / plus control that changes a number by `step`, clamped to [min, max].",
+ "params": {
+  "value": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The number. Bind a document variable to read it (\"@guests\"); omitted, the stepper keeps its own, starting at `initial` 0"
+  },
+  "min": {
+   "type": "float",
+   "default": 0,
+   "doc": "Lowest value (a number or a \"@variable\")"
+  },
+  "max": {
+   "type": "float",
+   "default": 10,
+   "doc": "Highest value"
+  },
+  "step": {
+   "type": "float",
+   "default": 1,
+   "doc": "Change per tap"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the value (use with a fractional step)"
+  },
+  "label": {
+   "type": "string",
+   "default": "",
+   "doc": "What is counted, in lower case (\"guests\"): the buttons are announced as \"Decrease guests\" and \"Increase guests\"; empty, just Decrease and Increase"
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "text.dynamic",
+  "data.expression"
+ ],
+ "call": {
+  "Stepper": {
+   "value": "@guests",
+   "min": 1,
+   "max": 8,
+   "label": "guests"
+  }
+ },
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    {
+     "spacedBy": "@theme.space_3"
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "size": 36
+       },
+       {
+        "clip": 18
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "background": "@colors.outline"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "padding": 1
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "clip": 17
+        }
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       },
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "label",
+          "then": "Decrease @label",
+          "else": "Decrease"
+         },
+         "clickable": true
+        }
+       },
+       {
+        "onClick": {
+         "type": "valueFloatExpressionChange",
+         "target": "@value",
+         "value": "max(@min, @value - @step)"
+        }
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "−",
+         "fontSize": 20,
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "horizontalAlignment": "center",
+      "modifiers": [
+       {
+        "width": 40
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textFromFloat",
+          "value": "@value",
+          "whole": 3,
+          "decimal": "@decimals",
+          "flags": 5
+         },
+         "fontSize": "@theme.text_lg",
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "size": 36
+       },
+       {
+        "clip": 18
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "background": "@colors.outline"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "padding": 1
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "clip": 17
+        }
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       },
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "label",
+          "then": "Increase @label",
+          "else": "Increase"
+         },
+         "clickable": true
+        }
+       },
+       {
+        "onClick": {
+         "type": "valueFloatExpressionChange",
+         "target": "@value",
+         "value": "min(@max, @value + @step)"
+        }
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "+",
+         "fontSize": 20,
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "textFromFloat `whole` is the number of integer digits kept, not a minimum: whole 1 prints 10 as 0. The value uses whole 3 with flags 5 (no padding), so it stays centred",
+  "The buttons clamp with max(@min, @value - @step) and min(@max, @value + @step): a value outside [min, max] set by the host is pulled back on the next tap",
+  "The buttons are announced as Decrease and Increase, followed by `label` when given (\"Decrease guests\"); put the stepper next to a KeyValueRow key that names the quantity"
+ ]
+}

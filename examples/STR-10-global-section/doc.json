@@ -1,0 +1,239 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "Steps today: 7,420 of 10,000, a ring at 74 percent"
+ },
+ "resources": {
+  "variables": {
+   "steps": {
+    "value": 7420,
+    "export": true
+   }
+  },
+  "colors": {
+   "accent": "#FF66BB6A",
+   "track": "#FF243044"
+  }
+ },
+ "root": [
+  {
+   "global": {
+    "children": [
+     {
+      "rem": {
+       "text": "design tokens, shared by every component"
+      }
+     },
+     {
+      "variable": {
+       "name": "goal",
+       "value": 10000
+      }
+     },
+     {
+      "variable": {
+       "name": "gap",
+       "value": 16
+      }
+     }
+    ]
+   }
+  },
+  {
+   "row": {
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "#FF101828"
+     },
+     {
+      "padding": "@gap"
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "weight": 1
+        },
+        "fillMaxHeight"
+       ],
+       "commands": [
+        {
+         "global": {
+          "commands": [
+           {
+            "variable": {
+             "name": "progress",
+             "value": "clamp(0, 1, @steps / @goal)"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "variable": {
+          "name": "r",
+          "value": "min(56, min(componentWidth(), componentHeight()) / 2 - 14)"
+         }
+        },
+        {
+         "variable": {
+          "name": "cx",
+          "value": "componentWidth() / 2"
+         }
+        },
+        {
+         "variable": {
+          "name": "cy",
+          "value": "componentHeight() / 2"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 14
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx",
+          "cy": "@cy",
+          "radius": "@r"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.accent"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@cx - @r",
+          "top": "@cy - @r",
+          "right": "@cx + @r",
+          "bottom": "@cy + @r",
+          "startAngle": -90,
+          "sweepAngle": "360 * @progress"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFFFFFF"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": "@r * 0.43"
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@progress * 100",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "%"
+          },
+          "x": "@cx",
+          "y": "@cy",
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "width": "@gap"
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "children": [
+        {
+         "text": {
+          "value": "Steps today",
+          "fontSize": 13,
+          "color": "#FF8899AA"
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textFromFloat",
+           "value": "@steps",
+           "whole": 6,
+           "decimal": 0,
+           "flags": 21
+          },
+          "fontSize": 30,
+          "color": "#FFFFFFFF"
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "max(0, @goal - @steps)",
+            "whole": 6,
+            "decimal": 0,
+            "flags": 21
+           },
+           "id2": " to go"
+          },
+          "fontSize": 13,
+          "color": "@colors.accent"
+         }
+        }
+       ],
+       "modifiers": [
+        {
+         "weight": 1
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

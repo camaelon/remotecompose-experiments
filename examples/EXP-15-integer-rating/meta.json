@@ -1,0 +1,294 @@
+{
+ "id": "EXP-15",
+ "name": "integer-rating",
+ "version": 2,
+ "title": "Integer star rating",
+ "summary": "A five-star rating driven by an exported integer: each star's filled/empty face is chosen by an integer-expression visibility (clamp(0, 1, @rating - k)), a Poor/Okay/Great label by integer division and abs, and a tap cycles 1→5 with valueIntegerExpressionChange (@rating % 5 + 1).",
+ "prompt": "A five-star rating bound to an integer the host can set; show filled stars up to the rating, a Poor/Okay/Great word, and let a tap on the stars cycle the rating from 1 to 5.",
+ "level": 3,
+ "family": "EXP",
+ "capabilities": {
+  "primary": [
+   "expr.integer"
+  ],
+  "secondary": [
+   "data.integer",
+   "layout.state",
+   "input.tap",
+   "a11y.labels",
+   "layout.stack",
+   "layout.align",
+   "text.basic",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "control",
+  "card"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "star rating",
+  "rating bar",
+  "integer variable",
+  "integer division",
+  "modulo",
+  "cycle values",
+  "show or hide",
+  "visibility expression",
+  "review stars",
+  "tap to change"
+ ],
+ "teaches": [
+  "Write an integer expression wherever an int id is expected (visibility, valueIntegerExpressionChange): a string with an @variable and an operator, e.g. \"clamp(0, 1, @rating - 2)\", compiles to an IntegerExpression",
+  "Show the k-th filled star with visibility clamp(0, 1, @rating - k) (1 = VISIBLE, 0 = GONE) and its empty twin with 1 - clamp(0, 1, @rating - k), stacked in one box",
+  "Use integer division as a threshold: @rating / 4 is 1 only for 4 and 5; 1 - min(1, abs(@rating - 3)) is 1 only at exactly 3",
+  "Cycle a value on tap with {\"type\": \"valueIntegerExpressionChange\", \"target\": \"@rating\", \"value\": \"@rating % 5 + 1\"}"
+ ],
+ "pitfalls": [
+  "The integer infix knows only + - * / % (and unary minus) and abs, min, max, clamp; no bit operators, no float functions. / truncates toward zero",
+  "A string becomes an integer expression only when it contains an @reference AND one of + - * / %: \"clamp(0, 1, @rating)\" alone is not one; write \"@rating - 0\" or reference the variable directly",
+  "visibility values are 0 GONE, 1 VISIBLE, 2 INVISIBLE: an expression that can reach 2 hides without collapsing, so clamp it to 0..1",
+  "clamp takes (min, max, value) here too",
+  "Visibility changes animate (about 300 ms) in the players: capture a tap's result after the transition",
+  "The audit reports the tap's IntegerExpression as dead_code: the inspector doesn't count a ValueIntegerExpressionChange action as its reader (a false positive)",
+  "Five fixed 44 dp stars need 220 dp: in a narrower host a plain row squeezes the last ones to 0 wide. Give each star box weight 1 with widthIn [0, 44] and centre the row (horizontalArrangement center), since a weighted row fills its width"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0/resources/integers/rating",
+   "shows": "data.integer",
+   "note": "rating, an exported integer (default 4)"
+  },
+  {
+   "pointer": "/root/1/children/1/children/2/box/children/0/text/modifiers/0",
+   "shows": "expr.integer",
+   "note": "third star filled when clamp(0, 1, @rating - 2) = 1"
+  },
+  {
+   "pointer": "/root/1/children/1/children/2/box/children/1/text/modifiers/0",
+   "shows": "layout.state",
+   "note": "its empty twin: 1 - clamp(0, 1, @rating - 2)"
+  },
+  {
+   "pointer": "/root/1/children/2/box/children/2/text/modifiers/0",
+   "shows": "expr.integer",
+   "note": "Great when @rating / 4 = 1 (integer division)"
+  },
+  {
+   "pointer": "/root/1/children/2/box/children/1/text/modifiers/0",
+   "shows": "expr.integer",
+   "note": "Okay only at 3: 1 - min(1, abs(@rating - 3))"
+  },
+  {
+   "pointer": "/root/1/children/1/modifiers/1",
+   "shows": "input.tap",
+   "note": "tap: valueIntegerExpressionChange @rating % 5 + 1 cycles 1..5"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "rating": {
+    "type": "int",
+    "meaning": "stars 1..5",
+    "default": 4,
+    "min": 1,
+    "max": 5,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Four yellow stars and one dark, \"Great\". rating 1 and 3 show one star \"Poor\" and three stars \"Okay\"; a tap on the stars goes 4 → 5, a second tap wraps to 1. Resized, the five stars stay centred: at 195 wide they shrink to share the row (weight 1, at most 44 dp each) and a tap on them still goes 4 → 5; at 450 they keep 44 dp.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 195,
+    "height": 180,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 97,
+      "y": 66
+     }
+    ],
+    "duration": 0.5
+   },
+   {
+    "name": "wide",
+    "width": 450,
+    "height": 180
+   }
+  ]
+ },
+ "related": [
+  "LAY-12",
+  "INT-01",
+  "INT-07",
+  "EXP-06"
+ ],
+ "prerequisites": [
+  "LAY-12",
+  "INT-01"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 1882,
+  "header": {
+   "width": 300,
+   "height": 180
+  },
+  "op_count": 106,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "CoreText": 15,
+   "DATA_INT": 1,
+   "DATA_TEXT": 7,
+   "HEADER": 1,
+   "IntegerExpression": 14,
+   "LAYOUT_BOX": 6,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 23,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_VISIBILITY": 13,
+   "MODIFIER_WIDTH": 6,
+   "MODIFIER_WIDTH_IN": 5,
+   "NAMED_VARIABLE": 1,
+   "ValueIntegerExpressionChangeAction": 1
+  },
+  "host_variables": [
+   {
+    "name": "rating",
+    "type": "int",
+    "value": 4
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: unused_variables",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 1,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     195,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     450,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clickable",
+   "color",
+   "contentDescription",
+   "export",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "integers",
+   "modifiers",
+   "onClick",
+   "padding",
+   "profiles",
+   "rating",
+   "resources",
+   "root",
+   "semantics",
+   "spacedBy",
+   "target",
+   "text",
+   "type",
+   "value",
+   "verticalAlignment",
+   "visibility",
+   "weight",
+   "width",
+   "widthIn"
+  ],
+  "evidence": {
+   "expr.integer": [
+    "integers",
+    "valueIntegerExpressionChange"
+   ],
+   "data.integer": [
+    "integers"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "input.tap": [
+    "onClick"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "layout.align": [
+    "horizontalAlignment",
+    "verticalAlignment",
+    "horizontalArrangement",
+    "spacedBy"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "host.variables": [
+    "export"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:43.366Z"
+ }
+}

@@ -1,0 +1,273 @@
+{
+ "id": "INT-02",
+ "name": "toggle-switch",
+ "version": 2,
+ "title": "Toggle switch",
+ "summary": "A Wi-Fi row with an iOS-style switch: each tap flips a 0/1 variable that moves the thumb and recolours the track.",
+ "prompt": "Add an iOS-style on/off switch to a Wi-Fi settings row; tapping it toggles it and the thumb slides and the track turns green.",
+ "level": 3,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.toggle"
+  ],
+  "secondary": [
+   "data.condition",
+   "data.expression",
+   "draw.shapes",
+   "a11y.labels",
+   "layout.weight"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "widget-4x1",
+ "keywords": [
+  "switch",
+  "toggle",
+  "on off",
+  "setting",
+  "settings row",
+  "boolean",
+  "flip",
+  "preference"
+ ],
+ "components": [
+  "Switch"
+ ],
+ "teaches": [
+  "Toggle a 0/1 variable on tap with onClick valueFloatExpressionChange (value \"1 - @on\")",
+  "Move the thumb with an expression of the state: cx = 20 + @on * 32",
+  "Swap the track colour with conditionalOperations (gt @on 0.5) around a paint change"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/row/children/1/canvas/modifiers/2",
+   "shows": "input.toggle",
+   "note": "onClick: on = 1 - on"
+  },
+  {
+   "pointer": "/root/1/row/children/1/canvas/commands/1",
+   "shows": "data.condition",
+   "note": "when on > 0.5, switch the paint to the accent colour before drawing the track"
+  },
+  {
+   "pointer": "/root/1/row/children/1/canvas/commands/4",
+   "shows": "data.expression",
+   "note": "the thumb's x follows the state"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts off (grey track, thumb left); one tap turns it on (teal track, thumb right). Resized, the label takes the free width (weight 1) and the 72×48 switch stays against the right edge: a tap 60 px from the right turns it on at 234 and at 540 wide.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 300,
+     "y": 50
+    }
+   ],
+   "duration": 0.5
+  },
+  "interact": [
+   {
+    "target": 0
+   }
+  ],
+  "expect": {
+   "changed_variables": "on goes from 0 to 1; the thumb x from 20 to 52"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 174,
+      "y": 50
+     }
+    ],
+    "duration": 0.5
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 100,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 480,
+      "y": 50
+     }
+    ],
+    "duration": 0.5
+   }
+  ]
+ },
+ "related": [
+  "INT-01",
+  "A11Y-02"
+ ],
+ "pitfalls": [
+  "Toggle with valueFloatExpressionChange \"1 - @on\"; valueFloatChange can only set a constant",
+  "conditionalOperations only swaps the paint for the draws that follow it inside the same canvas; set the default paint first, then override it in the branch",
+  "drawRoundRect needs both rx and ry (there is no default and no radiusX/radiusY spelling)"
+ ],
+ "derived": {
+  "converter": "json2rc",
+  "bytes": 485,
+  "header": {
+   "width": 360,
+   "height": 100
+  },
+  "op_count": 30,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 2,
+   "CanvasContent": 1,
+   "ConditionalOperations": 1,
+   "CoreText": 1,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 2,
+   "DRAW_CIRCLE": 1,
+   "DRAW_ROUND_RECT": 1,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 3,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 3,
+   "PAINT_VALUES": 3,
+   "ValueFloatExpressionChangeActionOperation": 1
+  },
+  "host_variables": [],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 1,
+   "click": 1,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     100
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "apiLevel",
+   "background",
+   "bottom",
+   "canvas",
+   "children",
+   "clickable",
+   "color",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "drawCircle",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "left",
+   "modifiers",
+   "name",
+   "onClick",
+   "ops",
+   "padding",
+   "paint",
+   "profiles",
+   "radius",
+   "right",
+   "root",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "size",
+   "target",
+   "text",
+   "top",
+   "type",
+   "v1",
+   "v2",
+   "value",
+   "variable",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "data.condition": [
+    "conditionalOperations"
+   ],
+   "data.expression": [
+    "expression",
+    "conditionalOperations",
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.weight": [
+    "weight"
+   ]
+  },
+  "built_at": "2026-10-29T21:39:52.783Z"
+ }
+}

@@ -1,0 +1,117 @@
+{
+ "component": "PagerDots",
+ "version": 2,
+ "summary": "A page indicator: `count` 8 dp dots 8 dp apart, and an accent dot that sits on (or, with an animated variable, slides to) the one at `current`.",
+ "params": {
+  "count": {
+   "type": "float",
+   "required": true,
+   "static": true,
+   "doc": "Number of pages (a literal: the dots are generated when the document is built)"
+  },
+  "current": {
+   "type": "float",
+   "required": true,
+   "doc": "The current index, 0-based, usually a \"@variable\"; the dot slides to a new index by itself"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The current dot; the others are outline"
+  }
+ },
+ "capabilities": [
+  "draw.shapes",
+  "data.expression"
+ ],
+ "call": {
+  "PagerDots": {
+   "count": 3,
+   "current": "@page"
+  }
+ },
+ "pitfalls": [
+  "One canvas, not a row of boxes: the plain dots are generated with $each, and a single accent dot is drawn at x = 4 + 16 × current, so it costs one expression however many pages there are",
+  "The canvas is count × 16 − 8 dp wide: centre it with the parent's horizontalAlignment",
+  "The current dot eases to a new index: an animated local c = {\"value\": \"@current\", \"anim\": 0.25} (paint time) is what the canvas reads; mono themes jump"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "width": "@count * 16 - 8"
+    },
+    {
+     "height": 8
+    }
+   ],
+   "commands": [
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.outline"
+       },
+       {
+        "style": {
+         "$if": "theme.mono",
+         "then": "stroke",
+         "else": "fill"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "strokeWidth": 1.5
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$each": "count",
+     "index": "i",
+     "do": {
+      "drawCircle": {
+       "cx": "4 + @i * 16",
+       "cy": 4,
+       "radius": {
+        "$if": "theme.mono",
+        "then": 3.25,
+        "else": 4
+       }
+      }
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "style": "fill"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "4 + @c * 16",
+      "cy": 4,
+      "radius": 4
+     }
+    }
+   ]
+  }
+ },
+ "locals": {
+  "c": {
+   "value": "@current",
+   "anim": 0.25
+  }
+ }
+}

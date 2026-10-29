@@ -1,0 +1,41 @@
+{
+ "component": "Badge",
+ "version": 2,
+ "summary": "A small rounded badge holding a short text or a live count.",
+ "params": {
+  "text": { "type": "string", "doc": "Fixed text (\"New\", \"999+\"); give text or count" },
+  "count": { "type": "float", "doc": "A live number instead of text: a number or a \"@variable\", up to 4 digits" },
+  "color": { "type": "color", "default": "@colors.error", "doc": "Background; the text is onPrimary" }
+ },
+ "capabilities": ["layout.decoration", "text.dynamic"],
+ "call": { "Badge": { "count": "@unread" } },
+ "body": {
+  "box": {
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "modifiers": [
+    { "height": 20 },
+    { "clip": { "roundedRect": 10 } },
+    { "background": "@color" },
+    { "padding": { "start": 7, "end": 7 } }
+   ],
+   "children": [
+    {
+     "text": {
+      "fontSize": "@theme.text_sm",
+      "color": "@colors.onPrimary",
+      "value": {
+       "$if": "count",
+       "then": { "type": "textFromFloat", "value": "@count", "whole": 4, "decimal": 0, "flags": 5 },
+       "else": "@text"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "textFromFloat `whole` is the number of integer digits kept: whole 1 prints 12 as 2. Use enough digits with flags 5 (no padding before or after)",
+  "A badge over an icon is a box holding the icon and the Badge, aligned top-end; the badge is 20 dp tall and wraps its text"
+ ]
+}

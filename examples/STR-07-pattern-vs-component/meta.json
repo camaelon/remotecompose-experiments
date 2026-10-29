@@ -1,0 +1,272 @@
+{
+ "id": "STR-07",
+ "name": "pattern-vs-component",
+ "version": 2,
+ "title": "Format template vs library component",
+ "summary": "The same key/value spec row built twice: four SpecRow calls of a definePattern template that the player inflates, and four calls of the KeyValueRow library component that json2rc expands into plain components before writing. They look the same; the template costs about 48 B per extra row, the expanded component about 200 B (KeyValueRow v3, whose key ellipsizes in a weighted box).",
+ "prompt": "A phone spec card (Display 6.1 in OLED, Chip A18, Storage 256 GB, Battery 3,561 mAh) built once with a definePattern row template and once with the KeyValueRow library component, to compare them.",
+ "level": 4,
+ "family": "STR",
+ "capabilities": {
+  "primary": [
+   "struct.pattern"
+  ],
+  "secondary": [
+   "reuse.pattern",
+   "layout.weight",
+   "layout.decoration",
+   "layout.stack",
+   "text.basic",
+   "data.tokens"
+  ]
+ },
+ "components": [
+  "KeyValueRow"
+ ],
+ "use_cases": [
+  "card",
+  "list"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "template vs component",
+  "document size",
+  "bytes",
+  "reuse",
+  "inflate",
+  "expand",
+  "compile time",
+  "runtime template",
+  "macro expansion",
+  "spec sheet"
+ ],
+ "teaches": [
+  "Choose definePattern when the same row repeats: the body is stored once in the .rc and each call is a pattern inflation with its argument ids (measured here: 840 B for 1 row, 1078 B for 6, about 48 B per extra row)",
+  "Choose a library component (KeyValueRow) for richer options (slots, $if, theme tokens) resolved at conversion: json2rc expands each call into plain components, so every call costs its full body (788 B for 1 row, 1641 B for 6, about 171 B per row)",
+  "Re-theme library components by defining their colours (surface, muted, onSurface) in resources.colors; a template reads the same named colours through @colors"
+ ],
+ "pitfalls": [
+  "A text inside a template measures as one component for every instance (U7): two intrinsic-width texts in a row collide, clipped to one instance's width. Give template texts a weight or fixed width (here both texts take weight 1, the value right-aligned)",
+  "The break-even is about two rows: with one call the template's definition (about 52 B) is pure overhead",
+  "The Java parser only sees the expanded document: a library component call is a json2rc feature, and doc.expanded.json is what is byte-checked; definePattern is in the format and every parser reads it"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0",
+   "shows": "struct.pattern",
+   "note": "SpecRow template: key and value, both texts weighted"
+  },
+  {
+   "pointer": "/root/1/column/children/0/column/children/1",
+   "shows": "struct.pattern",
+   "note": "a template call: {\"SpecRow\": {key, value}}"
+  },
+  {
+   "pointer": "/root/1/column/children/2/column/children/1",
+   "shows": "reuse.pattern",
+   "note": "the library call: {\"KeyValueRow\": {key, value}}, expanded at conversion"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Two cards with the same four rows, keys muted on the left and values right-aligned; the top card's label says definePattern, the bottom one KeyValueRow. Resized (narrow 240, wide 540) both cards fill the width, keys stay left and values right in both builds, and a caption too long for the card ellipsizes.",
+  "render": {},
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 440
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 480
+   }
+  ]
+ },
+ "prerequisites": [
+  "RU-05",
+  "STR-05"
+ ],
+ "related": [
+  "RU-05",
+  "STR-05",
+  "STR-06"
+ ],
+ "derived": {
+  "components": [
+   "KeyValueRow"
+  ],
+  "component_instances": 4,
+  "component_modes": {
+   "KeyValueRow": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 1931,
+  "header": {
+   "width": 360,
+   "height": 440
+  },
+  "op_count": 137,
+  "operations": {
+   "COLOR_CONSTANT": 5,
+   "CoreText": 18,
+   "DATA_TEXT": 11,
+   "HEADER": 1,
+   "LAYOUT_BOX": 5,
+   "LAYOUT_COLUMN": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 8,
+   "LayoutComponentContent": 33,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_WIDTH": 23,
+   "NAMED_VARIABLE": 5,
+   "RoundedClipRectModifierOperation": 2
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     440
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     480
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "KeyValueRow",
+   "SpecRow",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "contentDescription",
+   "definePattern",
+   "end",
+   "fontSize",
+   "header",
+   "height",
+   "key",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "overflow",
+   "padding",
+   "parameters",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "row",
+   "surface",
+   "text",
+   "textAlign",
+   "value",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "struct.pattern": [
+    "definePattern"
+   ],
+   "reuse.pattern": [
+    "definePattern"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "text.basic": [
+    "text"
+   ],
+   "data.tokens": [
+    "resources",
+    "colors"
+   ]
+  },
+  "built_at": "2026-10-29T21:40:24.767Z"
+ }
+}

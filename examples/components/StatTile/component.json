@@ -1,0 +1,303 @@
+{
+ "component": "StatTile",
+ "version": 3,
+ "summary": "A KPI tile filling its width: a label, a live value with its unit, and an optional delta with an up chevron when positive, a down chevron otherwise, green when the change is good and red when it is bad (invert for metrics where lower is better).",
+ "params": {
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Small muted title"
+  },
+  "value": {
+   "type": "float",
+   "required": true,
+   "doc": "A number or a \"@variable\" (up to 6 integer digits)"
+  },
+  "unit": {
+   "type": "string",
+   "default": "",
+   "doc": "After the value, smaller and muted (\"ms\", \"%\", \"k€\")"
+  },
+  "delta": {
+   "type": "float",
+   "doc": "Change since the last period, a number or a \"@variable\"; its sign picks the colour and the chevron, its absolute value is printed with one decimal. Omitted (or a literal 0): no delta line"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the value"
+  },
+  "invert": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true when a fall is good (churn, latency, cost): a rise turns red and a fall green"
+  }
+ },
+ "locals": {
+  "size": {
+   "$if": "delta",
+   "then": "abs(@delta)",
+   "else": 0
+  },
+  "up": {
+   "$if": "delta",
+   "then": "step(@delta, 0)",
+   "else": 0
+  }
+ },
+ "capabilities": [
+  "text.dynamic",
+  "data.condition",
+  "layout.decoration"
+ ],
+ "call": {
+  "StatTile": {
+   "label": "Revenue",
+   "value": "@revenue",
+   "unit": "k€",
+   "delta": "@revenueDelta"
+  }
+ },
+ "pitfalls": [
+  "Colour by sign without colour expressions: the delta is drawn twice, green with paint alpha @up and red with 1 - @up, where the local up is step(@delta, 0); step(x, edge) is x > edge, so 0 counts as a fall",
+  "Numbers use textFromFloat flags 5: the default flags pad the integer part with spaces (whole 6 puts four spaces before 42), which shifts the value right",
+  "The tile fills its width: put two side by side as weighted boxes with a fixed spacer box between them (weights ignore spacedBy)",
+  "abs(@delta) and step(@delta, 0) are locals, each computed once for the call (a literal delta folds both to numbers)",
+  "The label is one line with an ellipsis, so a narrow tile shortens it with … instead of wrapping it into the value. The value and unit do not shrink: a 128 k€ tile needs about 100 dp, so below that use one tile per row"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "clip": "@theme.radius_md"
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "background": "@colors.outline"
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "padding": 1
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": {
+      "clip": "@theme.radius_md - 1"
+     }
+    },
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": {
+      "$if": "theme.mono",
+      "then": 13,
+      "else": 14
+     }
+    },
+    {
+     "spacedBy": "@theme.space_1"
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "@label",
+      "maxLines": 1,
+      "overflow": "ellipsis",
+      "fontSize": "@theme.text_sm",
+      "color": "@colors.muted"
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "bottom",
+      "modifiers": [
+       {
+        "spacedBy": "@theme.space_1"
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textFromFloat",
+          "value": "@value",
+          "whole": 6,
+          "decimal": "@decimals",
+          "flags": 5
+         },
+         "fontSize": "@theme.text_xl",
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "$if": "unit",
+        "then": {
+         "text": {
+          "value": "@unit",
+          "fontSize": "@theme.text_md",
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "padding": {
+             "bottom": 4
+            }
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "delta",
+     "then": {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 18
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": {
+             "$if": "invert",
+             "then": "@colors.error",
+             "else": "@colors.success"
+            }
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "alpha": "@up"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 1,
+          "y1": 12,
+          "x2": 6,
+          "y2": 5
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 6,
+          "y1": 5,
+          "x2": 11,
+          "y2": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 13
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@size",
+           "whole": 4,
+           "decimal": 1,
+           "flags": 5
+          },
+          "x": 16,
+          "y": 9,
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": {
+             "$if": "invert",
+             "then": "@colors.success",
+             "else": "@colors.error"
+            }
+           },
+           {
+            "alpha": "1 - @up"
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@size",
+           "whole": 4,
+           "decimal": 1,
+           "flags": 5
+          },
+          "x": 16,
+          "y": 9,
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "stroke"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 1,
+          "y1": 5,
+          "x2": 6,
+          "y2": 12
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 6,
+          "y1": 12,
+          "x2": 11,
+          "y2": 5
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}
