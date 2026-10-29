@@ -2,6 +2,7 @@
 #include "rccore/Operation.h"
 #include "rccore/RemoteContext.h"
 #include "rccore/animation/LayoutAnimation.h"
+#include "rccore/RemapContext.h"
 #include <vector>
 #include <memory>
 
@@ -9,8 +10,12 @@ namespace rccore {
 
 class WireBuffer;
 
-class CoreDocument {
+class CoreDocument : public IdAllocator {
 public:
+    /** CoreDocument.getNextId: ids for what pattern inflation declares, above every id the
+     *  document itself declares (see initFromBuffer). */
+    int getNextId() override { return ++mCurrentId; }
+
     // Restart the animation clock: the next paint is time 0. A document painted ahead of time
     // (a slide prepared off-screen before it is shown) would otherwise count its animation from
     // that first, unseen paint, and arrive with its opening animation already played.
@@ -57,6 +62,8 @@ public:
     // Accessors
     int getWidth() const { return mWidth; }
     int getHeight() const { return mHeight; }
+    /** DOC_DENSITY_BEHAVIOR (header key 27): 0 legacy, 1 pixels, 2 dp. */
+    int getDensityBehavior() const { return mDensityBehavior; }
     void setWidth(int w) { mWidth = w; }
     void setHeight(int h) { mHeight = h; }
     const std::vector<std::unique_ptr<Operation>>& getOperations() const { return mOperations; }
@@ -96,6 +103,11 @@ private:
     void computeTranslate(float w, float h, float sx, float sy, float* translateOutput);
 
     std::vector<std::unique_ptr<Operation>> mOperations;
+    // Scroll modifiers with a constant position that took the current touch down: they
+    // scroll themselves under drag (ScrollModifierOperation.onTouchDrag).
+    std::vector<class ModifierScroll*> mScrollCaptures;
+    int mCurrentId = 0;
+    int mDensityBehavior = 0;
     LayoutAnimStore mAnimStore;
     int mWidth = 600;
     int mHeight = 600;

@@ -298,6 +298,11 @@ export class RemoteComposeState {
 
     markVariableDirty(id: number): void { this.updateListeners(id); }
 
+    /** Whether a host has pinned this data id (overrideData), so the document's loads skip it. */
+    isDataOverridden(id: number): boolean {
+        return id < RemoteComposeState.MAX_DATA && this.mDataOverride[id];
+    }
+
     clearDataOverride(id: number): void {
         if (id < RemoteComposeState.MAX_DATA) this.mDataOverride[id] = false;
         this.updateListeners(id);

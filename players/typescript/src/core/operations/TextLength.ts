@@ -35,8 +35,8 @@ export class TextLength extends Operation implements VariableSupport {
     updateVariables(_context: RemoteContext): void { /* nothing to update */ }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const lengthId = buffer.readInt();
-        const textId = buffer.readInt();
+        const lengthId = buffer.declareId();
+        const textId = buffer.readId();
         operations.push(new TextLength(lengthId, textId));
     }
 }

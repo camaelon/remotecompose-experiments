@@ -19,8 +19,8 @@ export class DrawRoundRect extends DrawBase6 {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawRoundRect(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt(), buffer.readInt()
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(),
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()
         ));
     }
 }

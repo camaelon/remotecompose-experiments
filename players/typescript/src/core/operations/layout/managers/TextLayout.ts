@@ -36,9 +36,9 @@ export class TextLayout extends CoreText {
         // bits: a value driven by a variable is a NaN-encoded id, and round-tripping it
         // through a JS number can canonicalise the NaN and lose the payload. This is the
         // same reason CoreText's parameter reader takes floats via readInt().
-        const fontSize = buffer.readInt();
+        const fontSize = buffer.readNanIdBits();   // readNanId in the reference: may be a variable
         const fontStyle = buffer.readInt();
-        const fontWeight = buffer.readInt();
+        const fontWeight = buffer.readNanIdBits();
         const fontFamilyId = buffer.readId();
         const textAlign = buffer.readInt();
         const overflow = buffer.readInt();

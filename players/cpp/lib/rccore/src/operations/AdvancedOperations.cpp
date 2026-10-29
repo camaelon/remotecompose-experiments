@@ -5,6 +5,8 @@
 #include "rccore/Utils.h"
 
 #include <sstream>
+#include <charconv>
+#include <cstdint>
 #include <iomanip>
 #include <cmath>
 #include <chrono>
@@ -346,6 +348,104 @@ void TextFromFloat::updateVariables(RemoteContext& context) {
 // OO (bits 8-9): OPTIONS    (256=NEG_PARENS, 512=ROUNDING)
 // L  (bit 10):   LEGACY_MODE (1024)
 
+// Java Float.toString (shortest repr; decimal for 1e-3 <= |v| < 1e7, else d.dddE<n>).
+static std::string javaFloatToString(float v) {
+    if (std::isnan(v)) return "NaN";
+    if (std::isinf(v)) return v > 0 ? "Infinity" : "-Infinity";
+    if (v == 0.0f) return std::signbit(v) ? "-0.0" : "0.0";
+    std::string sign = v < 0 ? "-" : "";
+    float a = std::fabs(v);
+    char buf[64];
+    auto r = std::to_chars(buf, buf + sizeof(buf), a, std::chars_format::scientific);
+    std::string sci(buf, r.ptr);
+    auto ePos = sci.find('e');
+    std::string mant = sci.substr(0, ePos);
+    int e = std::stoi(sci.substr(ePos + 1));
+    std::string d;
+    for (char c : mant) if (c != '.') d += c;
+    if (a >= 1e-3f && a < 1e7f) {
+        std::string ip, fp;
+        if (e >= 0) {
+            if ((int)d.size() <= e + 1) { ip = d + std::string(e + 1 - d.size(), '0'); fp = "0"; }
+            else { ip = d.substr(0, e + 1); fp = d.substr(e + 1); }
+        } else {
+            ip = "0";
+            fp = std::string(-e - 1, '0') + d;
+        }
+        return sign + ip + "." + fp;
+    }
+    return sign + d.substr(0, 1) + "." + (d.size() > 1 ? d.substr(1) : "0") + "E" + std::to_string(e);
+}
+
+// Java Math.round(float): floor(x + 0.5), NaN -> 0, saturating at the int range.
+static float javaRoundF(float x) {
+    if (std::isnan(x)) return 0.0f;
+    double r = std::floor((double)x + 0.5);
+    if (r > 2147483647.0) r = 2147483647.0;
+    if (r < -2147483648.0) r = -2147483648.0;
+    return (float)(int32_t)r;
+}
+
+static int32_t javaFloatToInt(float x) {
+    if (std::isnan(x)) return 0;
+    if (x >= 2147483647.0f) return INT32_MAX;
+    if (x <= -2147483648.0f) return INT32_MIN;
+    return (int32_t)x;
+}
+
+static int64_t javaFloatToLong(float x) {
+    if (std::isnan(x)) return 0;
+    if (x >= 9.223372e18f) return INT64_MAX;
+    if (x <= -9.223372e18f) return INT64_MIN;
+    return (int64_t)x;
+}
+
+// Shared tail of both StringUtils.floatToString variants: scale, Math.round, scale back,
+// Float.toString(...).substring(2, after + 2), trim zeros (down to index `keep`), pad.
+static std::string javaFraction(float fractionalPart, int scaleDigits, int afterDP, int post,
+                                int keep) {
+    for (int i = 0; i < scaleDigits; i++) fractionalPart *= 10;
+    fractionalPart = javaRoundF(fractionalPart);
+    for (int i = 0; i < scaleDigits; i++) fractionalPart *= .1F;
+    std::string fact = javaFloatToString(fractionalPart);
+    size_t end = std::min(fact.size(), (size_t)afterDP + 2);
+    fact = end > 2 ? fact.substr(2, end - 2) : std::string();
+    int trim = (int)fact.size();
+    for (int i = (int)fact.size() - 1; i >= keep; i--) {
+        if (fact[i] != '0') break;
+        trim--;
+    }
+    fact = fact.substr(0, trim);
+    if (post != 0 && (int)fact.size() < afterDP) fact += std::string(afterDP - fact.size(), (char)post);
+    return fact;
+}
+
+static std::string padInteger(std::string s, int beforeDP, int pre) {
+    int iLen = (int)s.size();
+    if (iLen < beforeDP) {
+        if (pre != 0) s = std::string(beforeDP - iLen, (char)pre) + s;
+    } else if (iLen > beforeDP) {
+        s = s.substr(iLen - beforeDP);
+    }
+    return s;
+}
+
+// StringUtils.floatToString(value, before, after, pre, post) -- the LEGACY_MODE path.
+static std::string floatToStringLegacy(float value, int beforeDP, int afterDP, int pre, int post) {
+    bool isNeg = value < 0;
+    if (isNeg) value = -value;
+    int32_t integerPart = javaFloatToInt(value);
+    float fractionalPart = std::fmod(value, 1.0f);
+    std::string ip = padInteger(std::to_string(integerPart), beforeDP, pre);
+    if (afterDP == 0) return (isNeg ? "-" : "") + ip;
+    std::string fact = javaFraction(fractionalPart, afterDP, afterDP, post, 0);
+    return (isNeg ? "-" : "") + ip + "." + fact;
+}
+
+// StringUtils.floatToString(value, before, after, pre, post, separator, grouping, options),
+// ported line by line (including its quirks: the integer part comes from tochars, which
+// applies ROUNDING, the fraction from the unrounded value % 1; at most 9 digits in all
+// unless padding after the point).
 static std::string floatToStringImpl(float value, int beforeDP, int afterDP,
                                      int pre, int post, int grouping, int separator, int options) {
     char groupSep = ',', decSep = '.';
@@ -355,100 +455,57 @@ static std::string floatToStringImpl(float value, int beforeDP, int afterDP,
         case 3: groupSep = '_'; decSep = '.'; break;
     }
     bool useParens = (options & 1) != 0;
+    bool rounding = (options & 2) != 0;
     bool isNeg = value < 0;
     if (isNeg) value = -value;
 
-    // Separate integer and fractional parts
-    int intPart = (int)value;
-    float fracPart = value - intPart;
-
-    // Convert integer part to string
+    // tochars(value, before, after, rounding): only its integer part is used.
     std::string intStr;
-    if (intPart == 0) {
-        intStr = "0";
-    } else {
-        int tmp = intPart;
-        while (tmp > 0) {
-            intStr = char('0' + (tmp % 10)) + intStr;
-            tmp /= 10;
+    {
+        float v = value;
+        if (rounding) {
+            float rf = 0.5f;
+            for (int i = 0; i < afterDP; i++) rf /= 10.0f;
+            v += rf;
+        }
+        int64_t integerPart = javaFloatToLong(v);
+        int intLength = 1;
+        if (integerPart > 0) {
+            intLength = 0;
+            for (int64_t t = integerPart; t > 0; t /= 10) intLength++;
+        }
+        int actualBefore = std::min(beforeDP, intLength);
+        intStr.assign(std::max(0, actualBefore), '0');
+        int64_t t = integerPart;
+        for (int i = actualBefore - 1; i >= 0; i--) {
+            intStr[i] = (char)('0' + t % 10);
+            t /= 10;
         }
     }
+    float fractionalPart = std::fmod(value, 1.0f);
 
-    // Apply grouping
     if (grouping > 0) {
-        int step = (grouping == 1) ? 3 : (grouping == 2) ? 4 : 3;
         int len = (int)intStr.size();
-        if (grouping == 3) {
-            // BY32: first group of 3, then groups of 2
-            for (int i = len - 3; i > 0; i -= 2) {
-                intStr.insert(i, 1, groupSep);
-            }
-        } else {
-            for (int i = len - step; i > 0; i -= step) {
-                intStr.insert(i, 1, groupSep);
-            }
-        }
+        int first = 3, step = (grouping == 2) ? 4 : (grouping == 3) ? 2 : 3;
+        if (grouping == 2) first = 4;
+        for (int i = len - first; i > 0; i -= step) intStr.insert(i, 1, groupSep);
     }
-
-    // Pad integer part
     int iLen = (int)intStr.size();
-    if (iLen < beforeDP && pre != 0) {
-        intStr = std::string(beforeDP - iLen, (char)pre) + intStr;
-    } else if (iLen > beforeDP && beforeDP > 0) {
-        intStr = intStr.substr(iLen - beforeDP);
-    }
+    intStr = padInteger(intStr, beforeDP, pre);
+    int trimAfter = afterDP;
+    if (iLen + afterDP > 9) trimAfter = std::max(1, 9 - iLen);
+    if (post == 0) afterDP = trimAfter;
 
     if (afterDP == 0) {
         if (!isNeg) return intStr;
         if (useParens) return "(" + intStr + ")";
         return "-" + intStr;
     }
-
-    // Convert fractional part — match TS/Java approach
-    // Scale fractional part to integer, then extract digits
-    float fracScaled = fracPart;
-    for (int i = 0; i < afterDP; i++) fracScaled *= 10;
-    int fracInt = (int)std::round(fracScaled);
-    for (int i = 0; i < afterDP; i++) fracScaled *= 0.1f;
-
-    // Use toString approach matching TS: float to string, extract after decimal
-    std::string fact;
-    {
-        float ff = fracPart;
-        for (int i = 0; i < afterDP; i++) ff *= 10;
-        ff = std::round(ff);
-        for (int i = 0; i < afterDP; i++) ff *= 0.1f;
-
-        std::ostringstream oss;
-        oss << ff;
-        std::string fs = oss.str();
-        auto dotPos = fs.find('.');
-        if (dotPos != std::string::npos) {
-            fact = fs.substr(dotPos + 1);
-            if ((int)fact.size() > afterDP) fact = fact.substr(0, afterDP);
-        } else {
-            fact = "0";
-        }
-    }
-
-    // Trim trailing zeros (keep at least 1 digit like TS full mode: i > 0)
-    while (fact.size() > 1 && fact.back() == '0') {
-        fact.pop_back();
-    }
-
-    // Pad after
-    if (post != 0 && (int)fact.size() < afterDP) {
-        fact += std::string(afterDP - fact.size(), (char)post);
-    }
-
-    std::string result;
-    if (isNeg) {
-        if (useParens) result = "(";
-        else result = "-";
-    }
-    result += intStr + decSep + fact;
-    if (isNeg && useParens) result += ")";
-    return result;
+    std::string fact = javaFraction(fractionalPart, trimAfter, afterDP, post, 1);
+    std::string body = intStr + decSep + fact;
+    if (!isNeg) return body;
+    if (useParens) return "(" + body + ")";
+    return "-" + body;
 }
 
 void TextFromFloat::apply(RemoteContext& context) {
@@ -479,9 +536,10 @@ void TextFromFloat::apply(RemoteContext& context) {
     bool legacy = (flags & 1024) != 0;
 
     std::string result;
-    if (legacy) {
-        // Legacy mode: simpler formatting without grouping
-        result = floatToStringImpl(val, digitsBefore, digitsAfter, padBefore, padAfter, 0, 0, 0);
+    if (flags & 4096) {           // FULL_FORMAT: Float.toString
+        result = javaFloatToString(val);
+    } else if (legacy) {
+        result = floatToStringLegacy(val, digitsBefore, digitsAfter, padBefore, padAfter);
     } else {
         result = floatToStringImpl(val, digitsBefore, digitsAfter, padBefore, padAfter, group, sep, opts);
     }
@@ -1012,6 +1070,49 @@ void PathAppendOp::apply(RemoteContext& context) {
 
 // ── PathExpression ─────────────────────────────────────────────────────
 
+// PathGenerator.Monotonic.monotoneTangents: Fritsch–Carlson tangents plus the Hyman filter, so
+// the curve never overshoots through an extremum.
+static void monotoneTan(std::vector<float>& d, const std::vector<float>& delta,
+                        const std::vector<float>& h, bool loop) {
+    int segs = (int)delta.size();
+    int n = loop ? segs : segs + 1;
+    d.assign(n, 0.0f);
+    auto sgn = [](float v) { return (v > 0) - (v < 0); };
+    for (int i = 0; i < n; i++) {
+        int prev = (i - 1 + segs) % segs;
+        int next = i % segs;
+        if (!loop && i == 0) {
+            d[i] = delta[0];
+        } else if (!loop && i == n - 1) {
+            d[i] = delta[segs - 1];
+        } else {
+            float dp = delta[prev], dn = delta[next];
+            if (dp == 0.0f || dn == 0.0f || sgn(dp) != sgn(dn)) {
+                d[i] = 0.0f;
+            } else {
+                float w1 = 2 * h[next] + h[prev];
+                float w2 = h[next] + 2 * h[prev];
+                d[i] = (w1 + w2) / (w1 / dp + w2 / dn);
+            }
+        }
+    }
+    for (int i = 0; i < segs; i++) {
+        if (delta[i] == 0.0f) {
+            d[i] = 0.0f;
+            d[(i + 1) % n] = 0.0f;
+        } else {
+            float a = d[i] / delta[i];
+            float b = d[(i + 1) % n] / delta[i];
+            float s = a * a + b * b;
+            if (s > 9.0f) {
+                float t = 3.0f / (float)std::sqrt((double)s);
+                d[i] = t * a * delta[i];
+                d[(i + 1) % n] = t * b * delta[i];
+            }
+        }
+    }
+}
+
 // Helper for spline tangent smoothing (matching TS smoothTan)
 static void smoothTan(std::vector<float>& d, const std::vector<float>& delta,
                       const std::vector<float>& h, bool loop) {
@@ -1142,12 +1243,20 @@ void PathExpressionOp::apply(RemoteContext& context) {
         dyS[i] = sy / d;
     }
 
-    // Compute smooth tangents
+    // PathGenerator dispatches on (flags & 0x6): LINEAR (4) draws straight segments (cubics
+    // whose control points are the end points), MONOTONIC (2) uses monotone tangents with
+    // the control points computed in double, anything else is the smooth spline.
+    const int mode = flags & 0x6;
     std::vector<float> dxT, dyT;
-    smoothTan(dxT, dxS, h, loop);
-    smoothTan(dyT, dyS, h, loop);
+    if (mode == 2) {
+        monotoneTan(dxT, dxS, h, loop);
+        monotoneTan(dyT, dyS, h, loop);
+    } else if (mode != 4) {
+        smoothTan(dxT, dxS, h, loop);
+        smoothTan(dyT, dyS, h, loop);
+    }
 
-    // Generate cubic Bezier segments with spline control points
+    // Generate cubic Bezier segments
     float cx = xData[0], cy = yData[0];
     for (int i = 0; i < segs; i++) {
         int i1 = (i + 1) % n;
@@ -1156,12 +1265,25 @@ void PathExpressionOp::apply(RemoteContext& context) {
         pathData.push_back(nanCmd(14)); // PATH_CUBIC
         pathData.push_back(cx);
         pathData.push_back(cy);
-        // Control point 1: point[i] + tangent * h/3
-        pathData.push_back(xData[i] + dxT[i] * hi / 3.0f);
-        pathData.push_back(yData[i] + dyT[i] * hi / 3.0f);
-        // Control point 2: point[i+1] - tangent * h/3
-        pathData.push_back(xData[i1] - dxT[ti1] * hi / 3.0f);
-        pathData.push_back(yData[i1] - dyT[ti1] * hi / 3.0f);
+        if (mode == 4) {
+            pathData.push_back(xData[i]);
+            pathData.push_back(yData[i]);
+            pathData.push_back(xData[i1]);
+            pathData.push_back(yData[i1]);
+        } else if (mode == 2) {
+            double hd = hi;
+            pathData.push_back((float)(xData[i] + dxT[i] * hd / 3.0));
+            pathData.push_back((float)(yData[i] + dyT[i] * hd / 3.0));
+            pathData.push_back((float)(xData[i1] - dxT[ti1] * hd / 3.0));
+            pathData.push_back((float)(yData[i1] - dyT[ti1] * hd / 3.0));
+        } else {
+            // Control point 1: point[i] + tangent * h/3
+            pathData.push_back(xData[i] + dxT[i] * hi / 3.0f);
+            pathData.push_back(yData[i] + dyT[i] * hi / 3.0f);
+            // Control point 2: point[i+1] - tangent * h/3
+            pathData.push_back(xData[i1] - dxT[ti1] * hi / 3.0f);
+            pathData.push_back(yData[i1] - dyT[ti1] * hi / 3.0f);
+        }
         // End point
         pathData.push_back(xData[i1]);
         pathData.push_back(yData[i1]);
@@ -1719,9 +1841,9 @@ void ColorThemeOp::apply(RemoteContext& context) {
 // ── DataDynamicListFloat ───────────────────────────────────────────────
 void DataDynamicListFloat::apply(RemoteContext& context) {
     // No mode check — runs in ALL modes matching TS
-    int len = (int)length;
-    std::vector<float> data(len, 0.0f);
-    context.loadFloatList(id, data);
+    // DataDynamicListFloat.apply: addCollection(this) -- the op owns its array, so values an
+    // UpdateDynamicFloatList wrote survive the next data pass.
+    context.loadDynamicFloatList(id, (int)length);
 }
 
 // ── UpdateDynamicFloatList ────────────────────────────────────────────
@@ -1736,12 +1858,19 @@ void UpdateDynamicFloatListOp::updateVariables(RemoteContext& context) {
 }
 
 void UpdateDynamicFloatListOp::apply(RemoteContext& context) {
-    auto* list = context.getFloatListMutable(id);
+    // UpdateDynamicFloatList.apply: only a DataDynamicListFloat is written (getDynamicFloats
+    // is null for a plain DataListFloat, so a setArrayValue on one is a no-op on Android).
+    // Java runs it where the paint list runs (Component.paintingComponent), once a frame;
+    // this player also replays a component's non-paint ops in its measure DATA passes,
+    // which would advance a self-referencing update several steps per frame.
+    if (context.getMode() == ContextMode::DATA) return;
+    auto* list = context.getDynamicFloatList(id);
     if (!list) return;
     int idx = (int)oIndex;
     if (idx >= 0 && idx < (int)list->size()) {
         (*list)[idx] = oValue;
     }
+    context.markVariableDirty(id);
 }
 
 // ── DrawBitmapScaled ───────────────────────────────────────────────────

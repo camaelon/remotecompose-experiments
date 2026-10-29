@@ -99,14 +99,14 @@ export class DrawBitmapScaled extends PaintOperation implements VariableSupport 
     deepToString(indent: string): string { return `${indent}DrawBitmapScaled(${this.mImageId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const srcL = buffer.readInt(); const srcT = buffer.readInt();
-        const srcR = buffer.readInt(); const srcB = buffer.readInt();
-        const dstL = buffer.readInt(); const dstT = buffer.readInt();
-        const dstR = buffer.readInt(); const dstB = buffer.readInt();
+        const id = buffer.readId();
+        const srcL = buffer.readNanIdBits(); const srcT = buffer.readNanIdBits();
+        const srcR = buffer.readNanIdBits(); const srcB = buffer.readNanIdBits();
+        const dstL = buffer.readNanIdBits(); const dstT = buffer.readNanIdBits();
+        const dstR = buffer.readNanIdBits(); const dstB = buffer.readNanIdBits();
         const scaleType = buffer.readInt();
-        const scaleFactor = buffer.readInt();
-        const cdId = buffer.readInt();
+        const scaleFactor = buffer.readNanIdBits();
+        const cdId = buffer.readId();
         operations.push(new DrawBitmapScaled(id, srcL, srcT, srcR, srcB, dstL, dstT, dstR, dstB, scaleType, scaleFactor, cdId));
     }
 }

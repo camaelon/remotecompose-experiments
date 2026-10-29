@@ -50,8 +50,8 @@ export class ColorTheme extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const colorGroupId = buffer.readInt();
+        const id = buffer.readId();
+        const colorGroupId = buffer.readId();
         const lightModeIndex = buffer.readShort();
         const darkModeIndex = buffer.readShort();
         const lightModeFallback = buffer.readInt();

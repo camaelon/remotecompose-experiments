@@ -59,11 +59,11 @@ export class DataListFloat extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}DataListFloat(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.declareId();
         const count = buffer.readInt();
         const bits = new Int32Array(count);
         for (let i = 0; i < count; i++) {
-            bits[i] = buffer.readInt();
+            bits[i] = buffer.readNanIdBits();
         }
         operations.push(new DataListFloat(id, bits));
     }

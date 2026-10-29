@@ -58,8 +58,8 @@ export class ColorAttribute extends Operation {
 
     deepToString(indent: string): string { return `${indent}ColorAttribute(${this.mOutputId})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const outputId = buffer.readInt();
-        const colorId = buffer.readInt();
+        const outputId = buffer.readId();
+        const colorId = buffer.readId();
         const type = buffer.readShort();
         operations.push(new ColorAttribute(outputId, colorId, type));
     }

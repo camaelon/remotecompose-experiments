@@ -35,10 +35,10 @@ export class DrawBitmapInt extends PaintOperation {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawBitmapInt(
-            buffer.readInt(),
+            buffer.readId(),
             buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt(),
             buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt()
+            buffer.readId()
         ));
     }
 }

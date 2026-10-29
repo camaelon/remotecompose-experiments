@@ -1,10 +1,11 @@
+import { intBitsToFloat } from '../../Utils';
 // ActionOperations: action modifier operations that execute on click/touch events.
 // Port of Java HostActionOperation, HostNamedActionOperation,
 // ValueIntegerChangeAction, ValueStringChangeAction, ValueFloatChangeAction.
 
 import { Operation } from '../../../Operation';
 import type { WireBuffer } from '../../../WireBuffer';
-import type { RemoteContext } from '../../../RemoteContext';
+import { ContextMode, type RemoteContext } from '../../../RemoteContext';
 
 // ── HostActionOperation (209): INT actionId ───────────────────────────
 export class HostActionOperation extends Operation {
@@ -27,7 +28,7 @@ export class HostActionOperation extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new HostActionOperation(buffer.readInt()));
+        operations.push(new HostActionOperation(buffer.readId()));
     }
 }
 
@@ -78,9 +79,9 @@ export class HostNamedActionOperation extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
+        const textId = buffer.readId();
         const type = buffer.readInt();
-        const valueId = buffer.readInt();
+        const valueId = buffer.readId();
         operations.push(new HostNamedActionOperation(textId, type, valueId));
     }
 }
@@ -108,7 +109,7 @@ export class ValueIntegerChangeAction extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const valueId = buffer.readInt();
+        const valueId = buffer.readId();
         const value = buffer.readInt();
         operations.push(new ValueIntegerChangeAction(valueId, value));
     }
@@ -137,8 +138,8 @@ export class ValueStringChangeAction extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const valueId = buffer.readInt();
-        const stringId = buffer.readInt();
+        const valueId = buffer.readId();
+        const stringId = buffer.readId();
         operations.push(new ValueStringChangeAction(valueId, stringId));
     }
 }
@@ -157,8 +158,17 @@ export class ValueIntegerExpressionChangeAction extends Operation {
 
     write(_buffer: WireBuffer): void { /* stub */ }
 
-    apply(_context: RemoteContext): void {
-        // Requires document.evaluateIntExpression — stub for now
+    /**
+     * ValueIntegerExpressionChangeActionOperation.runAction: evaluate the integer
+     * expression and write it into the target. Both ids arrive long-encoded (id + 2^32, see
+     * Utils.longIdFromNan); the reference casts the target with `(int)`, keeping the low 32
+     * bits, and looks the expression up by its long id, then by the decoded id.
+     */
+    apply(context: RemoteContext): void {
+        if (context.mMode === ContextMode.DATA) return;
+        const document: any = context.getDocument();
+        if (!document?.evaluateIntExpression) return;
+        document.evaluateIntExpression(this.mValueExpressionId, toInt32(this.mTargetValueId), context);
     }
 
     deepToString(indent: string): string {
@@ -166,10 +176,15 @@ export class ValueIntegerExpressionChangeAction extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const valueId = buffer.readLong();
-        const expressionId = buffer.readLong();
+        const valueId = buffer.readLongNanId();
+        const expressionId = buffer.readLongNanId();
         operations.push(new ValueIntegerExpressionChangeAction(valueId, expressionId));
     }
+}
+
+/** Java's (int) cast of a long: the low 32 bits, signed. */
+function toInt32(v: number): number {
+    return Number(BigInt.asIntN(32, BigInt(Math.trunc(v))));
 }
 
 // ── ValueFloatChangeAction (222): INT valueId, FLOAT value ────────────
@@ -195,8 +210,8 @@ export class ValueFloatChangeAction extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const valueId = buffer.readInt();
-        const value = buffer.readFloat();
+        const valueId = buffer.readId();
+        const value = intBitsToFloat(buffer.readNanIdBits());
         operations.push(new ValueFloatChangeAction(valueId, value));
     }
 }

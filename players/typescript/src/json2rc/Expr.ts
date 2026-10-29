@@ -22,7 +22,7 @@ const RAND_SEED_OP = 40;
 const OPERATORS: Record<string, number> = { "+": 1, "-": 2, "*": 3, "/": 4, "%": 5, "u-": 73 };
 const PRECEDENCE: Record<string, number> = { "+": 1, "-": 1, "*": 2, "/": 2, "%": 2, "u-": 3 };
 const FUNCTIONS: Record<string, number | null> = { "seed": null, "seed_2arg": null, "sin": 18, "cos": 19, "tan": 20, "asin": 21, "acos": 22, "atan": 23, "atan2": 24, "sqrt": 9, "abs": 10, "pow": 8, "min": 6, "max": 7, "floor": 14, "ceil": 31, "log": 15, "ln": 16, "sign": 11, "round": 17, "lerp": 49, "step": 44, "smooth_step": 50, "clamp": 27, "ifElse": 26, "mad": 25, "ping_pong": 54, "fract": 53, "exp": 13, "hypot": 47, "square": 45, "rand": 39, "arrayMin": 34, "arrayMax": 33, "arrayLength": 37, "arraySum": 35, "arraySumSqr": 78, "arraySumXY": 77, "arrayGet": 32, "spline": 38, "arraySpline": 38, "splineLoop": 75, "anim": 256 };
-const SYSTEM_VARS: Record<string, number> = { "time": 1, "continuousSec": 1, "continuousSec()": 1, "seconds": 2, "timeInSec": 2, "timeInSec()": 2, "timeInMin": 3, "timeInMin()": 3, "timeInHr": 4, "timeInHr()": 4, "animationTime": 30, "animationTime()": 30, "animTime": 30, "deltaTime": 31, "deltaTime()": 31, "delta_time": 31, "dt": 31, "animationDeltaTime": 31, "animationDeltaTime()": 31, "epochSecond": 32, "epochSecond()": 32, "calendarMonth": 9, "calendarMonth()": 9, "month": 9, "offsetToUtc": 10, "offsetToUtc()": 10, "utcOffset": 10, "weekDay": 11, "weekDay()": 11, "weekday": 11, "dayOfWeek": 11, "dayOfMonth": 12, "dayOfMonth()": 12, "day": 12, "dayOfYear": 34, "dayOfYear()": 34, "year": 35, "year()": 35, "windowWidth": 5, "windowWidth()": 5, "windowHeight": 6, "windowHeight()": 6, "density": 27, "density()": 27, "apiLevel": 28, "apiLevel()": 28, "fontSize": 33, "fontSize()": 33, "touchX": 13, "touchX()": 13, "touchPosX": 13, "touchPositionX": 13, "touchY": 14, "touchY()": 14, "touchPosY": 14, "touchPositionY": 14, "touchVelX": 15, "touchVelX()": 15, "touchVelocityX": 15, "touchVelY": 16, "touchVelY()": 16, "touchVelocityY": 16, "touchTime": 29, "touchTime()": 29, "touchEventTime": 29, "touchEventTime()": 29, "accelX": 17, "accelX()": 17, "accelerationX": 17, "accelerationX()": 17, "accelY": 18, "accelY()": 18, "accelerationY": 18, "accelerationY()": 18, "accelZ": 19, "accelZ()": 19, "accelerationZ": 19, "accelerationZ()": 19, "gyroX": 20, "gyroX()": 20, "gyroRotX": 20, "gyroRotX()": 20, "gyroRotationX": 20, "gyroY": 21, "gyroY()": 21, "gyroRotY": 21, "gyroRotY()": 21, "gyroRotationY": 21, "gyroZ": 22, "gyroZ()": 22, "gyroRotZ": 22, "gyroRotZ()": 22, "gyroRotationZ": 22, "magneticX": 23, "magneticX()": 23, "magneticY": 24, "magneticY()": 24, "magneticZ": 25, "magneticZ()": 25, "light": 26, "light()": 26, "lightLevel": 26, "batteryLevel": 38, "batteryLevel()": 38, "powerState": 39, "powerState()": 39, "memoryFree": 40, "memoryFree()": 40, "networkSignal": 41, "networkSignal()": 41, "rand": 3211303, "rand()": 3211303, "a[0]": 3211334, "a[1]": 3211335, "a[2]": 3211336 };
+const SYSTEM_VARS: Record<string, number> = { "time": 1, "continuousSec": 1, "continuousSec()": 1, "seconds": 2, "timeInSec": 2, "timeInSec()": 2, "timeInMin": 3, "timeInMin()": 3, "timeInHr": 4, "timeInHr()": 4, "animationTime": 30, "animationTime()": 30, "animTime": 30, "deltaTime": 31, "deltaTime()": 31, "delta_time": 31, "dt": 31, "animationDeltaTime": 31, "animationDeltaTime()": 31, "epochSecond": 32, "epochSecond()": 32, "calendarMonth": 9, "calendarMonth()": 9, "month": 9, "offsetToUtc": 10, "offsetToUtc()": 10, "utcOffset": 10, "weekDay": 11, "weekDay()": 11, "weekday": 11, "dayOfWeek": 11, "dayOfMonth": 12, "dayOfMonth()": 12, "day": 12, "dayOfYear": 34, "dayOfYear()": 34, "year": 35, "year()": 35, "windowWidth": 5, "windowWidth()": 5, "windowHeight": 6, "windowHeight()": 6, "density": 27, "density()": 27, "apiLevel": 28, "apiLevel()": 28, "fontSize": 33, "fontSize()": 33, "touchX": 13, "touchX()": 13, "touchPosX": 13, "touchPositionX": 13, "touchY": 14, "touchY()": 14, "touchPosY": 14, "touchPositionY": 14, "touchVelX": 15, "touchVelX()": 15, "touchVelocityX": 15, "touchVelY": 16, "touchVelY()": 16, "touchVelocityY": 16, "touchTime": 29, "touchTime()": 29, "touchEventTime": 29, "touchEventTime()": 29, "accelX": 17, "accelX()": 17, "accelerationX": 17, "accelerationX()": 17, "accelY": 18, "accelY()": 18, "accelerationY": 18, "accelerationY()": 18, "accelZ": 19, "accelZ()": 19, "accelerationZ": 19, "accelerationZ()": 19, "gyroX": 20, "gyroX()": 20, "gyroRotX": 20, "gyroRotX()": 20, "gyroRotationX": 20, "gyroY": 21, "gyroY()": 21, "gyroRotY": 21, "gyroRotY()": 21, "gyroRotationY": 21, "gyroZ": 22, "gyroZ()": 22, "gyroRotZ": 22, "gyroRotZ()": 22, "gyroRotationZ": 22, "magneticX": 23, "magneticX()": 23, "magneticY": 24, "magneticY()": 24, "magneticZ": 25, "magneticZ()": 25, "light": 26, "light()": 26, "lightLevel": 26, "batteryLevel": 38, "batteryLevel()": 38, "powerState": 39, "powerState()": 39, "memoryFree": 40, "memoryFree()": 40, "networkSignal": 41, "networkSignal()": 41, "rand": 3211303, "rand()": 3211303, "a[0]": 3211334, "u": 3211334, "a[1]": 3211335, "v": 3211335, "a[2]": 3211336 };
 
 export function isVariableRef(s: string): boolean {
     return s.length >= 2 && (s.startsWith("$") || s.startsWith("@"));
@@ -115,6 +115,87 @@ export class ExpressionParser {
             merged.push(t);
         }
         return merged;
+    }
+
+    /**
+     * ExpressionParser.infixToIntegerRpn: shunting-yard over the same tokens, producing
+     * "long" items as JS numbers, where 2^32 + n marks an id/operator (the mask bit).
+     * `resolveVar(token)` supplies a variable token's value (RemoteComposeJsonParser rules).
+     */
+    infixToIntegerRpn(expression: string, resolveVar: (token: string) => number): number[] {
+        const I = 0x100000000, IOFF = 0x10000;
+        const IOPS: Record<string, number> = { "+": 1, "-": 2, "*": 3, "/": 4, "%": 5, "u-": 15 };
+        const IFUNCS: Record<string, number> = { abs: 16, min: 13, max: 14, clamp: 21 };
+        const opOf = (op: string): number => {
+            if (!(op in IOPS)) throw new ExpressionError(`Unsupported integer operator: ${op}`);
+            return I + IOFF + IOPS[op];
+        };
+        const fnOf = (fn: string): number => {
+            if (!(fn in IFUNCS)) throw new ExpressionError(`Unsupported integer function: ${fn}`);
+            return I + IOFF + IFUNCS[fn];
+        };
+        const isOp = (t: string) => t in OPERATORS;
+        const isFn = (t: string) => t in FUNCTIONS;
+        const out: number[] = [];
+        const stack: string[] = [];
+        let lastWasOperator = true;
+        for (const token of this.tokenize(expression)) {
+            if (this.isNumber(token)) {
+                if (!/^[+-]?\d+$/.test(token)) throw new ExpressionError(`For input string: "${token}"`);
+                out.push(parseInt(token, 10) | 0);
+                lastWasOperator = false;
+            } else if (this.isVariableStrict(token)) {
+                out.push(resolveVar(token));
+                lastWasOperator = false;
+            } else if (isFn(token)) {
+                stack.push(token); lastWasOperator = true;
+            } else if (token === ",") {
+                while (stack.length && stack[stack.length - 1] !== "(") {
+                    const op = stack.pop()!;
+                    if (isOp(op)) out.push(opOf(op)); else if (isFn(op)) out.push(fnOf(op));
+                }
+                lastWasOperator = true;
+            } else if (isOp(token)) {
+                if (token === "-" && lastWasOperator) stack.push("u-");
+                else {
+                    while (stack.length && isOp(stack[stack.length - 1])) {
+                        const top = stack[stack.length - 1];
+                        const p1 = PRECEDENCE[top], p2 = PRECEDENCE[token];
+                        if (p1 > p2 || (p1 === p2 && token !== "u-")) out.push(opOf(stack.pop()!));
+                        else break;
+                    }
+                    stack.push(token);
+                }
+                lastWasOperator = true;
+            } else if (token === "(") {
+                stack.push(token); lastWasOperator = true;
+            } else if (token === ")") {
+                while (stack.length && stack[stack.length - 1] !== "(") {
+                    const op = stack.pop()!;
+                    if (isOp(op)) out.push(opOf(op)); else if (isFn(op)) out.push(fnOf(op));
+                }
+                if (!stack.length) throw new ExpressionError("Mismatched parentheses");
+                stack.pop();
+                if (stack.length && isFn(stack[stack.length - 1])) out.push(fnOf(stack.pop()!));
+                lastWasOperator = false;
+            } else {
+                throw new ExpressionError(`Unknown token in expression: ${token}`);
+            }
+        }
+        while (stack.length) {
+            const op = stack.pop()!;
+            if (isOp(op)) out.push(opOf(op)); else if (isFn(op)) out.push(fnOf(op));
+        }
+        return out;
+    }
+
+    /** ExpressionParser.isVariable: a well-formed @/$ reference, a known name, or a system variable. */
+    isVariableStrict(token: string): boolean {
+        if (isVariableRef(token)) {
+            const name = variableNameFromRef(token);
+            return name.length > 0 && /^[\p{L}\p{N}_.]+$/u.test(name);
+        }
+        return this.isVariable(token);
     }
 
     infixToRpn(expression: string, extraFunctions?: Record<string, number>): number[] {

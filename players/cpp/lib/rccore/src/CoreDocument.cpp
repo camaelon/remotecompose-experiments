@@ -1,4 +1,5 @@
 #include "rccore/CoreDocument.h"
+#include "rccore/Loom.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/Operations.h"
 #include "rccore/PaintContext.h"
@@ -7,6 +8,8 @@
 #include "rccore/operations/AdvancedOperations.h"
 #include "rccore/operations/LayoutOperations.h"
 #include "rccore/animation/LayoutAnimation.h"
+#include "rccore/Utils.h"
+#include <algorithm>
 #include <stdexcept>
 #include <chrono>
 #include <ctime>
@@ -28,62 +31,17 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
     // can't carry stale bounds and trigger spurious transitions. Other documents'
     // stores are theirs and are left alone.
     mAnimStore.clear();
+    mScrollCaptures.clear();
 
-    // Stack of container operations being built
-    std::vector<Operation*> containerStack;
+    // CoreDocument.initFromBuffer: the id counter for pattern inflation starts 10 above the
+    // largest VariableProvider id (from START_VARIABLE_ID + 1 = 43), so inflated ids are the
+    // reference's exactly.
+    int maxId = 43;
+    if (!readOperationTree(buffer, mOperations, &maxId)) return false;
+    mCurrentId = maxId + 10;
 
-    // RC_TRACE=1 prints every opcode with the buffer position it started at.
-    // A desync shows up as the position jumping by the wrong number of bytes,
-    // which is otherwise invisible: the failure surfaces many ops later.
-    const bool trace = std::getenv("RC_TRACE") != nullptr;
-
-    while (buffer.available()) {
-        int opStart = buffer.getIndex();
-        int opcode = buffer.readByte();
-        if (trace) {
-            std::fprintf(stderr, "[rc] pos=%-6d op=%-4d %s\n", opStart, opcode,
-                         Operations::getName(opcode).c_str());
-        }
-
-        // ContainerEnd pops the stack
-        if (opcode == 214) { // CONTAINER_END
-            if (!containerStack.empty()) {
-                containerStack.pop_back();
-            }
-            continue;
-        }
-
-        auto reader = Operations::getReader(opcode);
-        if (!reader) {
-            // Unknown opcode - skip to end
-            return false;
-        }
-
-        // Read the operation into a temp vector
-        std::vector<std::unique_ptr<Operation>> temp;
-        reader(buffer, temp);
-
-        for (auto& op : temp) {
-            bool isContainer = op->isContainer();
-            Operation* rawPtr = op.get();
-
-            if (containerStack.empty()) {
-                mOperations.push_back(std::move(op));
-            } else {
-                containerStack.back()->addChild(std::move(op));
-            }
-
-            if (isContainer) {
-                containerStack.push_back(rawPtr);
-            }
-        }
-    }
-
-    // A pattern definition must not draw where it is defined — only where it is
-    // called. Until macro expansion exists (see the note on the loom ops in
-    // LayoutOperations.h), drop the bodies so an unexpanded document is missing its
-    // macro content rather than showing one stray copy of every template.
-    prunePatternDefinitions(mOperations);
+    // Expand every template call (Loom), as LoomManager.expandAll does after nesting.
+    expandLoom(mOperations, *this);
 
     // Extract dimensions from header if present
     if (!mOperations.empty()) {
@@ -95,6 +53,10 @@ bool CoreDocument::initFromBuffer(WireBuffer& buffer) {
             mMinorVersion = header->minorVersion;
             mPatchVersion = header->patchVersion;
             mCapabilities = header->capabilities;
+            // Header.DOC_DENSITY_BEHAVIOR
+            auto db = header->headerMap.find(27);
+            if (db != header->headerMap.end() && std::holds_alternative<int32_t>(db->second))
+                mDensityBehavior = std::get<int32_t>(db->second);
         }
     }
     return true;
@@ -121,6 +83,7 @@ void CoreDocument::prunePatternDefinitions(
 
 void CoreDocument::registerListeners(RemoteContext& context) {
     context.clearListeners();
+    context.mDensityBehavior = mDensityBehavior;
     registerListenersRecursive(context, mOperations);
     if (!std::getenv("RC_NO_PAINT_ONLY")) context.classifyPaintOnlyVars();   // env: A/B the layout cache
 }
@@ -230,6 +193,7 @@ void CoreDocument::applyDataOperations(RemoteContext& context, int theme) {
     context.loadFloat(RemoteContext::ID_WINDOW_WIDTH, context.mWidth);
     context.loadFloat(RemoteContext::ID_WINDOW_HEIGHT, context.mHeight);
     context.loadFloat(RemoteContext::ID_DENSITY, context.mDensity);
+    context.mDensityBehavior = mDensityBehavior;
     context.loadFloat(RemoteContext::ID_FONT_SIZE, 14.0f * context.mDensity);
     updateTimeVariables(context);
     applyOperations(context, mOperations, theme);
@@ -328,6 +292,32 @@ void CoreDocument::applyOperations(RemoteContext& context,
 static bool rippleRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
                             float x, float y, float parentX, float parentY);
 
+// Every visible component under (x, y) whose scroll modifier has a constant position takes
+// the touch, as Component.onTouchDown hands it to each TouchHandler of each component that
+// contains the point. A variable position is scrolled by its TouchExpression instead.
+static void collectScrollTargets(RemoteContext& context,
+                                 const std::vector<std::unique_ptr<Operation>>& ops,
+                                 float x, float y, float parentX, float parentY,
+                                 std::vector<ModifierScroll*>& out) {
+    for (const auto& op : ops) {
+        int cid = op->getOpComponentId();
+        const RemoteContext::ComponentDim* dim = cid != -1 ? context.getComponentDimension(cid) : nullptr;
+        if (cid != -1 && !dim) continue;
+        if (dim && !dim->visible) continue;
+        float absX = dim ? parentX + dim->x : parentX, absY = dim ? parentY + dim->y : parentY;
+        if (dim && x >= absX && x <= absX + dim->w && y >= absY && y <= absY + dim->h) {
+            for (const auto& child : op->mChildren) {
+                if (child->opcode() != Operations::MODIFIER_SCROLL) continue;
+                auto* s = static_cast<ModifierScroll*>(child.get());
+                if (!Utils::isVariable(s->position)) out.push_back(s);
+            }
+        }
+        if (!op->mChildren.empty())
+            collectScrollTargets(context, op->mChildren, x, y,
+                                 dim ? absX + dim->padX : absX, dim ? absY + dim->padY : absY, out);
+    }
+}
+
 void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
     context.loadFloat(RemoteContext::ID_TOUCH_POS_X, x);
     context.loadFloat(RemoteContext::ID_TOUCH_POS_Y, y);
@@ -336,6 +326,14 @@ void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
         if (touch) {
             touch->touchDown(context, x, y);
         }
+    }
+    mScrollCaptures.clear();
+    collectScrollTargets(context, mOperations, x, y, 0, 0, mScrollCaptures);
+    for (auto* s : mScrollCaptures) {
+        s->touching = true;
+        s->touchDownX = x;
+        s->touchDownY = y;
+        s->initialScroll = s->scrollOffset;
     }
     rippleRecursive(context, mOperations, x, y, 0, 0);
 }
@@ -379,6 +377,13 @@ void CoreDocument::touchDrag(RemoteContext& context, float x, float y) {
             touch->touchDrag(context, x, y);
         }
     }
+    // ScrollModifierOperation.onTouchDrag: mScrollY = max(-maxY, min(0, initial + dy)).
+    for (auto* s : mScrollCaptures) {
+        if (!s->touching) continue;
+        float d = s->direction == 0 ? y - s->touchDownY : x - s->touchDownX;
+        s->scrollOffset = std::max(0.0f, std::min(s->maxScroll, s->initialScroll - d));
+        context.needsRepaint();
+    }
 }
 
 void CoreDocument::touchUp(RemoteContext& context, float x, float y,
@@ -393,6 +398,8 @@ void CoreDocument::touchUp(RemoteContext& context, float x, float y,
             touch->touchUp(context, x, y, dx, dy);
         }
     }
+    for (auto* s : mScrollCaptures) s->touching = false;
+    mScrollCaptures.clear();
 }
 
 // ── Content scaling ──────────────────────────────────────────────────
@@ -483,9 +490,31 @@ void CoreDocument::addClickArea(int id, const std::string& contentDescription, f
     mClickAreas.push_back({id, contentDescription, left, top, right, bottom, metadata});
 }
 
-static bool onClickRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops, float x, float y, float parentX, float parentY) {
+// The states of a StateLayout, in order (its layout-component children, through a content
+// wrapper), and whether `op` is one of them other than the shown one: StateLayout.onClick
+// hands a click to the current state only. The test matters when states share ids, as then
+// they share one set of bounds.
+static void collectStates(Operation* op, std::vector<Operation*>& out) {
+    for (auto& c : op->mChildren) {
+        if (c->opcode() == 201) collectStates(c.get(), out);
+        else if (c->getOpComponentId() != -1) out.push_back(c.get());
+    }
+}
+
+static bool isHiddenState(Operation* parent, Operation* op) {
+    if (!parent || parent->opcode() != 217) return false;
+    std::vector<Operation*> states;
+    collectStates(parent, states);
+    if (states.empty()) return false;
+    int idx = static_cast<StateLayout*>(parent)->measuredIndex;
+    Operation* cur = idx >= 0 && idx < (int)states.size() ? states[idx] : states[0];
+    return std::find(states.begin(), states.end(), op) != states.end() && op != cur;
+}
+
+static bool onClickRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops, float x, float y, float parentX, float parentY, Operation* parent = nullptr) {
     for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
         const auto& op = *it;
+        if (isHiddenState(parent, op.get())) continue;
         int cid = op->getOpComponentId();
         if (cid != -1) {
             auto* dim = context.getComponentDimension(cid);
@@ -497,7 +526,7 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
                 // Check children first (back to front). They are placed inside this one's
                 // padding (and offset), so that is their origin, not its corner.
                 if (!op->mChildren.empty()) {
-                    if (onClickRecursive(context, op->mChildren, x, y, absX + dim->padX, absY + dim->padY)) {
+                    if (onClickRecursive(context, op->mChildren, x, y, absX + dim->padX, absY + dim->padY, op.get())) {
                         return true;
                     }
                 }
@@ -506,6 +535,14 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
                 if (x >= absX && x <= absX + dim->w && y >= absY && y <= absY + dim->h) {
                     for (const auto& child : op->mChildren) {
                         if (child->opcode() == 59) { // MODIFIER_CLICK
+                            // ClickModifierOperation.onClick: a ripple from the click point
+                            // when animations are on, then the actions.
+                            if (isLayoutAnimationEnabled()) {
+                                auto* c = static_cast<ModifierClick*>(child.get());
+                                c->rippleStart = context.getFloat(RemoteContext::ID_ANIMATION_TIME);
+                                c->rippleX = x - absX;
+                                c->rippleY = y - absY;
+                            }
                             for (const auto& action : child->mChildren) {
                                 action->runAction(context, x, y);
                             }
@@ -514,6 +551,11 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
                         } else if (child->opcode() == 83) { // MODIFIER_MULTI_CLICK
                             auto* mc = dynamic_cast<ModifierMultiClick*>(child.get());
                             if (mc && mc->clickType == 0) {
+                                if (isLayoutAnimationEnabled()) {
+                                    mc->rippleStart = context.getFloat(RemoteContext::ID_ANIMATION_TIME);
+                                    mc->rippleX = x - absX;
+                                    mc->rippleY = y - absY;
+                                }
                                 for (const auto& action : child->mChildren) {
                                     action->runAction(context, x, y);
                                 }
@@ -527,7 +569,7 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
             }
         } else {
             if (!op->mChildren.empty()) {
-                if (onClickRecursive(context, op->mChildren, x, y, parentX, parentY)) {
+                if (onClickRecursive(context, op->mChildren, x, y, parentX, parentY, parent)) {
                     return true;
                 }
             }

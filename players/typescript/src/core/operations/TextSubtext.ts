@@ -70,10 +70,10 @@ export class TextSubtext extends Operation implements VariableSupport {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const textId = buffer.readInt();
-        const srcId = buffer.readInt();
-        const start = buffer.readInt();
-        const len = buffer.readInt();
+        const textId = buffer.declareId();
+        const srcId = buffer.readId();
+        const start = buffer.readNanIdBits();
+        const len = buffer.readNanIdBits();
         operations.push(new TextSubtext(textId, srcId, start, len));
     }
 }

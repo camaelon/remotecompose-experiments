@@ -608,7 +608,7 @@ export class CanvasPaintContext extends PaintContext {
 
     private applyFillStyle(override?: CanvasGradient | CanvasPattern | null): void {
         this.ctx.fillStyle = override ?? this.getEffectiveColor();
-        this.ctx.globalAlpha = this.alpha;
+        this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         this.ctx.globalCompositeOperation = this.blendMode;
     }
 
@@ -618,7 +618,7 @@ export class CanvasPaintContext extends PaintContext {
         this.ctx.lineCap = this.lineCap;
         this.ctx.lineJoin = this.lineJoin;
         this.ctx.miterLimit = this.miterLimit;
-        this.ctx.globalAlpha = this.alpha;
+        this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         this.ctx.globalCompositeOperation = this.blendMode;
     }
 
@@ -843,8 +843,15 @@ export class CanvasPaintContext extends PaintContext {
                     break;
                 case PaintBundle.COLOR_ID: {
                     // Value is already resolved to ARGB by PaintBundle.updateVariables().
-                    // As with COLOR, this leaves any shader alone.
-                    this.color = argbToRgba(arr[i++]);
+                    // As with COLOR, this leaves any shader alone. Java applies COLOR_ID and
+                    // COLOR alike (Paint.setColor), so it replaces the alpha too: keeping a
+                    // previous ALPHA here drew the next canvas with the last canvas's alpha
+                    // (0 after an off Switch) where Java and C++ draw it opaque (T27).
+                    const argb = arr[i++] | 0;
+                    this.colorArgb = argb;
+                    this.alpha = ((argb >>> 24) & 0xFF) / 255;
+                    this.color = `rgb(${(argb >>> 16) & 0xFF},${(argb >>> 8) & 0xFF},`
+                               + `${argb & 0xFF})`;
                     break;
                 }
                 case PaintBundle.COLOR_FILTER_ID: {
@@ -1019,7 +1026,7 @@ export class CanvasPaintContext extends PaintContext {
         if (state) {
             Object.assign(this, state);
             this.setFont();
-            this.ctx.globalAlpha = this.alpha;
+            this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         }
     }
 
@@ -1122,7 +1129,7 @@ export class CanvasPaintContext extends PaintContext {
 
         // Composite into Canvas2D at the original document rect (the canvas
         // transform handles scaling from document coords to screen pixels).
-        this.ctx.globalAlpha = this.alpha;
+        this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         this.ctx.globalCompositeOperation = this.blendMode;
         const dstW = right - left;
         const dstH = Math.abs(bottom - top);
@@ -1439,7 +1446,19 @@ export class CanvasPaintContext extends PaintContext {
         return res;
     }
 
+    /**
+     * Measure text the way the Java reference's headless MockRemoteContext does (getTextBounds:
+     * always 100x10; layoutComplexText: 30 per character x 40), for conformance runs against
+     * that reference (players/conformance). Set it before loading; it changes layout, so it is
+     * never on in a real player.
+     */
+    static mockTextMetrics = !!(globalThis as any).process?.env?.RC_MOCK_TEXT;
+
     getTextBounds(textId: number, start: number, end: number, flags: number, bounds: Float32Array): void {
+        if (CanvasPaintContext.mockTextMetrics) {
+            bounds[0] = 0; bounds[1] = 0; bounds[2] = 100; bounds[3] = 10;
+            return;
+        }
         const text = this.textCache.get(textId);
         if (!text) { bounds.fill(0); return; }
         const s = start >= 0 ? start : 0;
@@ -1493,6 +1512,11 @@ export class CanvasPaintContext extends PaintContext {
                       _strikethrough: boolean, _flags: number): any {
         const str = this.textCache.get(textId);
         if (!str) return null;
+        if (CanvasPaintContext.mockTextMetrics) {
+            // MockRemoteContext.layoutComplexText: getText(textId).length * 30, by 40.
+            return { lines: [str], alignment, lineHeight: 40, width: str.length * 30, height: 40,
+                     maxWidth, maxHeight, visibleLines: 1 };
+        }
         const s = start >= 0 ? start : 0;
         const e = (end === -1 || end > str.length) ? str.length : end;
         const text = str.substring(s, e);
@@ -1509,18 +1533,16 @@ export class CanvasPaintContext extends PaintContext {
             const metrics = this.measureTextCached(text);
             if (metrics.width <= maxWidth || maxWidth <= 0 || maxLines === 1) {
                 let lines = [text];
-                if (overflow === 1 && maxLines === 1 && maxWidth > 0 && metrics.width > maxWidth) {
-                    let lastLine = text;
-                    while (this.measureTextCached(lastLine + '...').width > maxWidth && lastLine.length > 0) {
-                        lastLine = lastLine.substring(0, lastLine.length - 1);
-                    }
-                    lines = [lastLine + '...'];
+                let width = metrics.width;
+                if (CanvasPaintContext.isEllipsis(overflow) && maxWidth > 0 && metrics.width > maxWidth) {
+                    lines = [this.ellipsize(text, maxWidth, overflow)];
+                    width = this.measureTextCached(lines[0]).width;
                 }
                 return {
                     lines,
                     alignment,
                     lineHeight,
-                    width: metrics.width,
+                    width,
                     height: lineHeight,
                     maxWidth,
                     maxHeight,
@@ -1531,41 +1553,54 @@ export class CanvasPaintContext extends PaintContext {
 
         // Word-wrap text to fit maxWidth, honoring embedded newlines as hard breaks
         const lines: string[] = [];
+        // Whether maxLines cut the text, and how much of it the kept lines cover.
+        let truncated = false;
+        let consumed = 0;
         // First split on hard newlines, then word-wrap each paragraph
         const paragraphs = text.split('\n');
+        let paraStart = 0;
         for (let pi = 0; pi < paragraphs.length; pi++) {
-            if (maxLines > 0 && lines.length >= maxLines) break;
+            if (maxLines > 0 && lines.length >= maxLines) { truncated = true; break; }
             const para = paragraphs[pi];
             const words = para.split(/(\s+)/);
             let currentLine = '';
+            let pos = paraStart;
             for (const word of words) {
                 const testLine = currentLine + word;
                 const metrics = this.measureTextCached(testLine);
                 if (metrics.width > maxWidth && currentLine.length > 0) {
                     lines.push(currentLine);
+                    consumed = pos;
                     currentLine = word.trimStart();
-                    if (maxLines > 0 && lines.length >= maxLines) break;
+                    if (maxLines > 0 && lines.length >= maxLines) { truncated = true; break; }
                 } else {
                     currentLine = testLine;
                 }
+                pos += word.length;
             }
+            if (truncated) break;
             if (currentLine.length > 0 && (maxLines <= 0 || lines.length < maxLines)) {
                 lines.push(currentLine);
+                consumed = paraStart + para.length;
             } else if (para.length === 0 && (maxLines <= 0 || lines.length < maxLines)) {
                 // Empty paragraph = blank line from consecutive \n
                 lines.push('');
+                consumed = paraStart;
             }
+            paraStart += para.length + 1;
         }
+        if (consumed < text.length && maxLines > 0 && lines.length >= maxLines) truncated = true;
 
-        // Apply ellipsis if overflowing
-        if (overflow === 1 && maxLines > 0 && lines.length >= maxLines) {
+        // Ellipsize the last line when the text was cut by maxLines, as StaticLayout does with
+        // setEllipsize (AndroidPaintContext.layoutComplexText maps OVERFLOW_ELLIPSIS to END,
+        // START_ELLIPSIS to START, MIDDLE_ELLIPSIS to MIDDLE). The remainder of the text is
+        // folded into that line first, so END shows where it was cut.
+        if (CanvasPaintContext.isEllipsis(overflow) && maxLines > 0 && lines.length >= maxLines
+            && truncated) {
             const lastIdx = maxLines - 1;
-            let lastLine = lines[lastIdx];
-            while (this.measureTextCached(lastLine + '...').width > maxWidth && lastLine.length > 0) {
-                lastLine = lastLine.substring(0, lastLine.length - 1);
-            }
-            lines[lastIdx] = lastLine + '...';
             lines.length = maxLines;
+            lines[lastIdx] = this.ellipsize(lines[lastIdx] + ' ' + text.substring(consumed).trimStart(),
+                                            maxWidth, overflow, true);
         }
 
         // Compute total dimensions
@@ -1576,14 +1611,60 @@ export class CanvasPaintContext extends PaintContext {
         }
         const totalHeight = lines.length * lineHeight;
 
+        // AndroidPaintContext: when an ellipsized layout is taller than maxHeight, count the
+        // lines whose bottom is inside it; CoreText then lays out again with that many lines.
+        let visibleLines = lines.length;
+        if (totalHeight > maxHeight && CanvasPaintContext.isEllipsis(overflow)
+            && lines.length >= maxLines) {
+            visibleLines = 0;
+            for (let i = 0; i < lines.length; i++) {
+                if ((i + 1) * lineHeight < maxHeight) visibleLines++;
+                else break;
+            }
+        }
+
         return {
             lines, alignment, lineHeight,
             width: totalWidth,
             height: totalHeight,
             maxWidth,
             maxHeight,
-            visibleLines: lines.length
+            visibleLines
         };
+    }
+
+    private static isEllipsis(overflow: number): boolean {
+        // CoreText.OVERFLOW_ELLIPSIS (3), OVERFLOW_START_ELLIPSIS (4), OVERFLOW_MIDDLE_ELLIPSIS (5)
+        return overflow === 3 || overflow === 4 || overflow === 5;
+    }
+
+    /**
+     * TextUtils.ellipsize: fit `text` in maxWidth with a "\u2026", cut at the end (END),
+     * the start (START) or the middle (MIDDLE). `force` adds the ellipsis even when the text
+     * fits, for a last line that maxLines cut short.
+     */
+    private ellipsize(text: string, maxWidth: number, overflow: number, force = false): string {
+        const ELLIPSIS = '\u2026';
+        if (!force && this.measureTextCached(text).width <= maxWidth) return text;
+        const fits = (t: string) => this.measureTextCached(t).width <= maxWidth;
+        if (overflow === 4) {
+            let keep = text.length;
+            while (keep > 0 && !fits(ELLIPSIS + text.substring(text.length - keep))) keep--;
+            return ELLIPSIS + text.substring(text.length - keep).trimStart();
+        }
+        if (overflow === 5) {
+            let keep = text.length;
+            while (keep > 0) {
+                const head = text.substring(0, Math.ceil(keep / 2));
+                const tail = text.substring(text.length - Math.floor(keep / 2));
+                if (fits(head + ELLIPSIS + tail)) return head + ELLIPSIS + tail;
+                keep--;
+            }
+            return ELLIPSIS;
+        }
+        let keep = text.length;
+        while (keep > 0 && !fits(text.substring(0, keep).trimEnd() + ELLIPSIS)) keep--;
+        return text.substring(0, keep).trimEnd() + ELLIPSIS;
     }
 
     drawComplexText(computedTextLayout: any, targetWidth?: number): void {
@@ -1614,7 +1695,7 @@ export class CanvasPaintContext extends PaintContext {
                dstLeft: number, dstTop: number, dstRight: number, dstBottom: number, _cdId: number): void {
         const img = this.bitmapToDraw(imageId);
         if (!img) return;
-        this.ctx.globalAlpha = this.alpha;
+        this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         this.ctx.globalCompositeOperation = this.blendMode;
         this.ctx.imageSmoothingEnabled = this.filterBitmap;
         const sw = srcRight - srcLeft;
@@ -1631,7 +1712,7 @@ export class CanvasPaintContext extends PaintContext {
     drawBitmapSimple(id: number, left: number, top: number, right: number, bottom: number): void {
         const img = this.bitmapToDraw(id);
         if (!img) return;
-        this.ctx.globalAlpha = this.alpha;
+        this.ctx.globalAlpha = this.alpha * this.mLayerAlpha;
         this.ctx.globalCompositeOperation = this.blendMode;
         this.ctx.imageSmoothingEnabled = this.filterBitmap;
         this.ctx.drawImage(img, left, top, right - left, bottom - top);
@@ -1714,16 +1795,26 @@ export class CanvasPaintContext extends PaintContext {
     }
     translate(translateX: number, translateY: number): void { this.ctx.translate(translateX, translateY); }
 
-    matrixSave(): void { this.ctx.save(); }
-    matrixRestore(): void { this.ctx.restore(); }
+    // The alpha of the enclosing saveLayer()s (an enter/exit fade): every draw sets
+    // globalAlpha from its paint, so the layer's alpha is multiplied in there. It follows the
+    // canvas save stack.
+    private mLayerAlpha = 1;
+    private mLayerAlphaStack: number[] = [];
+    matrixSave(): void { this.mLayerAlphaStack.push(this.mLayerAlpha); this.ctx.save(); }
+    matrixRestore(): void {
+        if (this.mLayerAlphaStack.length) this.mLayerAlpha = this.mLayerAlphaStack.pop()!;
+        this.ctx.restore();
+    }
 
     override saveLayer(x: number, y: number, w: number, h: number): void {
+        this.mLayerAlphaStack.push(this.mLayerAlpha);
         this.ctx.save();
         this.ctx.beginPath();
         this.ctx.rect(x, y, w, h);
         this.ctx.clip();
         if (this.alpha < 1) {
-            this.ctx.globalAlpha *= this.alpha;
+            this.mLayerAlpha *= this.alpha;
+            this.ctx.globalAlpha = this.mLayerAlpha;
         }
     }
 

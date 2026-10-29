@@ -63,6 +63,10 @@ export class Component extends PaintOperation implements Container {
     mNeedsMeasure = true;
     mNeedsRepaint = true;
     mFirstLayout = true;
+    // The visibility this component was last laid out with: what an animation starts from.
+    // (A visibility modifier sets mVisibility as soon as its variable changes; the reference
+    // schedules it, leaving mVisibility at the laid-out value until the next layout.)
+    mLayoutVisibility = Visibility.VISIBLE;
 
     mAnimationSpec: AnimationSpec = AnimationSpec.DEFAULT;
     mAnimateMeasure: AnimateMeasure | null = null;
@@ -191,11 +195,12 @@ export class Component extends PaintOperation implements Container {
         const allowAnimation = !this.mFirstLayout &&
             context.isAnimationEnabled() &&
             this.mAnimationSpec.isAnimationEnabled() &&
-            m.getAllowsAnimation();
+            m.getAllowsAnimation() &&
+            !(Visibility.isGone(this.mLayoutVisibility) && Visibility.isGone(m.getVisibility()));
 
         if (allowAnimation) {
             if (this.mAnimateMeasure === null) {
-                const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mVisibility);
+                const origin = new ComponentMeasure(this.mComponentId, this.mX, this.mY, this.mWidth, this.mHeight, this.mLayoutVisibility);
                 const target = new ComponentMeasure(this.mComponentId, m.getX(), m.getY(), m.getW(), m.getH(), m.getVisibility());
                 if (!target.same(origin)) {
                     const now = context.mClock?.millis() ?? Date.now();
@@ -216,9 +221,10 @@ export class Component extends PaintOperation implements Container {
                 const now = context.mClock?.millis() ?? Date.now();
                 this.mAnimateMeasure.updateTarget(context, m, now);
             }
-        } else {
+        } else if (!context.isAnimationEnabled() || !this.mAnimationSpec.isAnimationEnabled()) {
             this.mAnimateMeasure = null;
         }
+        // (A component going from GONE to GONE keeps an exit animation in flight.)
 
         if (this.mAnimateMeasure === null) {
             this.mVisibility = m.getVisibility();
@@ -233,6 +239,7 @@ export class Component extends PaintOperation implements Container {
             this.mAnimateMeasure.apply(context);
             this.markNeedsBoundsAnimation();
         }
+        this.mLayoutVisibility = m.getVisibility() & 15;
         this.mFirstLayout = false;
     }
 

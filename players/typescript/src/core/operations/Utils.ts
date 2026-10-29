@@ -50,6 +50,21 @@ export function idFromNan(value: number): number {
  * directly from the wire bits — robust across JS engines that canonicalize NaN
  * payloads (Safari/Firefox) when a NaN passes through a float value.
  */
+/**
+ * Inside a pattern, the reference remaps a NaN-boxed word of an expression only when it is a
+ * variable: not a math operator (AnimatedFloatExpression.isMathOperator, ids in
+ * (0x310000, 0x310000 + 79]) and not a data variable (NanMap.isDataVariable, region 2).
+ * Matrix expressions use their own operator range (MatrixOperations.isOperator,
+ * (0x320000, 0x320000 + 54]).
+ */
+export function isRemappableExpressionWord(bits: number, matrix = false): boolean {
+    if (!isNaNBits(bits)) return false;
+    const id = bits & 0x3FFFFF;
+    if ((id >> 20) === 2) return false;
+    const [lo, hi] = matrix ? [0x320000, 0x320000 + 54] : [0x310000, 0x310000 + 79];
+    return !(id > lo && id <= hi);
+}
+
 export function isNaNBits(bits: number): boolean {
     return (bits & 0x7F800000) === 0x7F800000 && (bits & 0x007FFFFF) !== 0;
 }

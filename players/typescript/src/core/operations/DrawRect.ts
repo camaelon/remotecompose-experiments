@@ -19,7 +19,7 @@ export class DrawRect extends DrawBase4 {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawRect(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()
         ));
     }
 }

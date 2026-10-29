@@ -63,8 +63,8 @@ void Operations::init() {
                    Stub::drawBitmapTextAnchored);
     registerReader(DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH, "DRAW_BITMAP_FONT_TEXT_RUN_ON_PATH",
                    Stub::drawBitmapFontTextRunOnPath);
-    registerReader(FUNCTION_CALL, "FUNCTION_CALL", Stub::functionCall);
-    registerReader(FUNCTION_DEFINE, "FUNCTION_DEFINE", Stub::functionDefine);
+    registerReader(FUNCTION_CALL, "FUNCTION_CALL", FunctionCallOp::read);
+    registerReader(FUNCTION_DEFINE, "FUNCTION_DEFINE", FunctionDefineOp::read);
     registerReader(REM, "REM", Stub::rem);
 
     // ── Protocol & data ────────────────────────────────────────────────

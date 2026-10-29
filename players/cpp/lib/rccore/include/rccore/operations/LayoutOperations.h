@@ -24,6 +24,7 @@ class LayoutRoot : public Operation {
 public:
     int componentId = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_ROOT"; }
     int opcode() const override { return 200; }
@@ -33,7 +34,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutRoot>();
-        op->componentId = buf.readInt();
+        op->componentId = buf.declareId();
         ops.push_back(std::move(op));
     }
 };
@@ -51,7 +52,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutComponentContent>();
-        op->componentId = buf.readInt();
+        op->componentId = buf.declareId();
         ops.push_back(std::move(op));
     }
 };
@@ -62,6 +63,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_BOX"; }
     int opcode() const override { return 202; }
@@ -71,8 +73,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutBox>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         ops.push_back(std::move(op));
@@ -87,6 +89,7 @@ public:
     float spacedBy = 0;
     float oSpacedBy = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_ROW"; }
     int opcode() const override { return 203; }
@@ -99,8 +102,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutRow>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
@@ -117,6 +120,7 @@ public:
     float spacedBy = 0;
     float oSpacedBy = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_COLUMN"; }
     int opcode() const override { return 204; }
@@ -129,8 +133,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutColumn>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
@@ -144,6 +148,7 @@ class LayoutCanvas : public Operation {
 public:
     int componentId = 0, animationId = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_CANVAS"; }
     int opcode() const override { return 205; }
@@ -153,8 +158,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutCanvas>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         ops.push_back(std::move(op));
     }
 };
@@ -164,6 +169,7 @@ class CanvasContent : public Operation {
 public:
     int componentId = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "CanvasContent"; }
     int opcode() const override { return 207; }
@@ -173,7 +179,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<CanvasContent>();
-        op->componentId = buf.readInt();
+        op->componentId = buf.declareId();
         ops.push_back(std::move(op));
     }
 };
@@ -189,6 +195,7 @@ public:
     int fontFamilyId = 0, textAlign = 0, overflow = 0, maxLines = 0;
     float oFontSize = 14, oFontWeight = 400;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_TEXT"; }
     int opcode() const override { return 208; }
@@ -201,14 +208,14 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutText>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
-        op->textId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
+        op->textId = buf.readId();
         op->color = buf.readInt();
-        op->fontSize = buf.readFloat();
+        op->fontSize = buf.readNanId();
         op->fontStyle = buf.readInt();
-        op->fontWeight = buf.readFloat();
-        op->fontFamilyId = buf.readInt();
+        op->fontWeight = buf.readNanId();
+        op->fontFamilyId = buf.readId();
         op->textAlign = buf.readInt();
         op->overflow = buf.readInt();
         op->maxLines = buf.readInt();
@@ -226,14 +233,19 @@ public:
     int componentId = -1, animationId = -1;
     int color = static_cast<int>(0xFF000000);  // default black
     int colorId = -1;
-    float fontSize = 16;
+    // TextStyle.DEFAULT_FONT_SIZE: the size when P_FONT_SIZE is absent (CoreText.read)
+    float fontSize = 36;
     int fontStyle = 0;
     float fontWeight = 400;
     int fontFamilyId = -1, textAlign = 1, overflow = 1, maxLines = 0x7FFFFFFF;
     int flags = 0;
+    // P_LETTER_SPACING (em), P_LINE_HEIGHT_ADD (px) and P_LINE_HEIGHT_MULTIPLIER: what
+    // StaticLayout's setLetterSpacing / setLineSpacing(add, multiplier) get on Android.
+    float letterSpacing = 0, lineHeightAdd = 0, lineHeightMultiplier = 1;
 
-    float oFontSize = 16, oFontWeight = 400;
+    float oFontSize = 36, oFontWeight = 400;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "CoreText"; }
     int opcode() const override { return 239; }
@@ -246,7 +258,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<CoreTextOp>();
-        op->textId = buf.readInt();
+        op->textId = buf.readId();
+        // CoreText.read resolves P_ID (1), P_ANIMATION_ID (2), P_COLOR_ID (4), P_FONT_FAMILY (8)
+        // and P_PARENT_ID (24) inside a pattern. The component id is resolved, not declared:
+        // the enclosing LayoutComponentContent declares it.
         int paramsLength = buf.readShort();
         for (int i = 0; i < paramsLength; i++) {
             int id = buf.readByte();
@@ -272,12 +287,14 @@ public:
                     int val = buf.readInt();
                     switch (id) {
                         // INT params
-                        case 1: op->componentId = val; break;
-                        case 2: op->animationId = val; break;
+                        // The component's own ids are defined here: declared, as every other
+                        // layout component's, so each pattern inflation gets fresh ones.
+                        case 1: op->componentId = buf.declareIdValue(val); break;
+                        case 2: op->animationId = buf.declareIdValue(val); break;
                         case 3: op->color = val; break;
-                        case 4: op->colorId = val; break;
+                        case 4: op->colorId = buf.remapId(val); break;
                         case 6: op->fontStyle = val; break;
-                        case 8: op->fontFamilyId = val; break;
+                        case 8: op->fontFamilyId = buf.remapId(val); break;
                         case 9: op->textAlign = val; break;
                         case 10: op->overflow = val; break;
                         case 11: op->maxLines = val; break;
@@ -287,7 +304,9 @@ public:
                         // FLOAT params (stored as int bits, decode via memcpy)
                         case 5: { float f; memcpy(&f, &val, sizeof(f)); op->fontSize = f; break; }
                         case 7: { float f; memcpy(&f, &val, sizeof(f)); op->fontWeight = f; break; }
-                        case 12: case 13: case 14: break; // letterSpacing/lineHeight - skip
+                        case 12: { float f; memcpy(&f, &val, sizeof(f)); op->letterSpacing = f; break; }
+                        case 13: { float f; memcpy(&f, &val, sizeof(f)); op->lineHeightAdd = f; break; }
+                        case 14: { float f; memcpy(&f, &val, sizeof(f)); op->lineHeightMultiplier = f; break; }
                         case 25: case 26: break; // min/maxFontSize - skip
                         default: break;
                     }
@@ -295,6 +314,8 @@ public:
                 }
             }
         }
+        op->oFontSize = op->fontSize;
+        op->oFontWeight = op->fontWeight;
         ops.push_back(std::move(op));
     }
 };
@@ -309,6 +330,7 @@ public:
     int maxItemsInEachRow = INT32_MAX;
     int maxLines = INT32_MAX;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_FLOW"; }
     int opcode() const override { return 240; }
@@ -331,8 +353,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutFlow>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
@@ -368,6 +390,7 @@ public:
     std::vector<Property> properties;
 
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
     std::string name() const override { return "LAYOUT_CUSTOM"; }
     int opcode() const override { return 93; }
     std::vector<Field> fields() const override { return {}; }
@@ -378,7 +401,7 @@ public:
         auto op = std::make_unique<LayoutCustom>();
         op->componentId = buf.readInt();
         op->animationId = buf.readInt();
-        op->configId = buf.readInt();
+        op->configId = buf.readId();
         int propCount = buf.readInt();
         for (int i = 0; i < propCount; i++) {
             Property p;
@@ -408,11 +431,16 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutCompute>();
         op->type = buf.readInt();
-        op->boundsId = buf.readInt();
+        op->boundsId = buf.readId();
         op->animateChanges = buf.readBoolean();
         ops.push_back(std::move(op));
     }
 };
+
+// Layout (bounds and enter/exit) animations: on by default. A conformance harness that wants
+// the settled layout at once, as the reference's with animations off, turns them off.
+void setLayoutAnimationEnabled(bool enabled);
+bool isLayoutAnimationEnabled();
 
 // ── StateLayout (217) ──────────────────────────────────────────────────
 class StateLayout : public Operation {
@@ -420,7 +448,12 @@ public:
     int componentId = 0, animationId = 0;
     int horizontalPositioning = 0, verticalPositioning = 0;
     int indexId = 0;
+    // StateLayout.currentLayoutIndex / previousLayoutIndex / inTransition: kept across frames,
+    // the layout state itself being rebuilt every frame.
+    int currentIndex = 0, previousIndex = 0, measuredIndex = 0;
+    bool indexInitialized = false, inTransition = false;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "StateLayout"; }
     int opcode() const override { return 217; }
@@ -432,11 +465,11 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<StateLayout>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontalPositioning = buf.readInt();
         op->verticalPositioning = buf.readInt();
-        op->indexId = buf.readInt();
+        op->indexId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -457,10 +490,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LoopOperationOp>();
-        op->indexId = buf.readInt();
-        op->from = buf.readFloat();
-        op->step = buf.readFloat();
-        op->until = buf.readFloat();
+        op->indexId = buf.readId();
+        op->from = buf.readNanId();
+        op->step = buf.readNanId();
+        op->until = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -482,8 +515,8 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ConditionalOp>();
         op->type = buf.readByte();
-        op->a = buf.readFloat();
-        op->b = buf.readFloat();
+        op->a = buf.readNanId();
+        op->b = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -502,7 +535,7 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierWidth>();
-        op->type = buf.readInt(); op->width = buf.readFloat();
+        op->type = buf.readInt(); op->width = buf.readNanId();
         op->oWidth = op->width;
         ops.push_back(std::move(op));
     }
@@ -521,7 +554,7 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierHeight>();
-        op->type = buf.readInt(); op->height = buf.readFloat();
+        op->type = buf.readInt(); op->height = buf.readNanId();
         op->oHeight = op->height;
         ops.push_back(std::move(op));
     }
@@ -543,9 +576,10 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierBackground>();
         op->flags = buf.readInt(); op->colorId = buf.readInt();
+        if (op->flags & 2) op->colorId = buf.remapId(op->colorId);   // an id only with COLOR_REF
         op->reserve1 = buf.readInt(); op->reserve2 = buf.readInt();
-        op->r = buf.readFloat(); op->g = buf.readFloat();
-        op->b = buf.readFloat(); op->a = buf.readFloat();
+        op->r = buf.readNanId(); op->g = buf.readNanId();
+        op->b = buf.readNanId(); op->a = buf.readNanId();
         op->oR = op->r; op->oG = op->g; op->oB = op->b; op->oA = op->a;
         op->shapeType = buf.readInt();
         ops.push_back(std::move(op));
@@ -570,10 +604,11 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierBorder>();
         op->flags = buf.readInt(); op->colorId = buf.readInt();
+        if (op->flags & 2) op->colorId = buf.remapId(op->colorId);   // an id only with COLOR_REF
         op->reserve1 = buf.readInt(); op->reserve2 = buf.readInt();
-        op->borderWidth = buf.readFloat(); op->roundedCorner = buf.readFloat();
-        op->r = buf.readFloat(); op->g = buf.readFloat();
-        op->b = buf.readFloat(); op->a = buf.readFloat();
+        op->borderWidth = buf.readNanId(); op->roundedCorner = buf.readNanId();
+        op->r = buf.readNanId(); op->g = buf.readNanId();
+        op->b = buf.readNanId(); op->a = buf.readNanId();
         op->oBorderWidth = op->borderWidth; op->oRoundedCorner = op->roundedCorner;
         op->oR = op->r; op->oG = op->g; op->oB = op->b; op->oA = op->a;
         op->shapeType = buf.readInt();
@@ -594,8 +629,8 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierPadding>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));
@@ -604,6 +639,9 @@ public:
 
 class ModifierClick : public Operation {
 public:
+    // The click ripple (ClickModifierOperation.animateRipple): started by a click at (x, y) in
+    // the component's own coordinates, at animation time `start` seconds; -1 when idle.
+    float rippleStart = -1.0f, rippleX = 0.0f, rippleY = 0.0f;
     std::string name() const override { return "MODIFIER_CLICK"; }
     int opcode() const override { return 59; }
     std::vector<Field> fields() const override { return {}; }
@@ -655,7 +693,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierVisibility>();
-        op->visibilityId = buf.readInt();
+        op->visibilityId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -669,7 +707,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierAlignBy>();
-        op->line = buf.readFloat(); op->flags = buf.readInt();
+        op->line = buf.readNanId(); op->flags = buf.readInt();
         ops.push_back(std::move(op));
     }
 };
@@ -687,7 +725,7 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierWidthIn>();
-        op->min = buf.readFloat(); op->max = buf.readFloat();
+        op->min = buf.readNanId(); op->max = buf.readNanId();
         op->oMin = op->min; op->oMax = op->max;
         ops.push_back(std::move(op));
     }
@@ -706,7 +744,7 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierHeightIn>();
-        op->min = buf.readFloat(); op->max = buf.readFloat();
+        op->min = buf.readNanId(); op->max = buf.readNanId();
         op->oMin = op->min; op->oMax = op->max;
         ops.push_back(std::move(op));
     }
@@ -725,7 +763,7 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierOffset>();
-        op->x = buf.readFloat(); op->y = buf.readFloat();
+        op->x = buf.readNanId(); op->y = buf.readNanId();
         op->oX = op->x; op->oY = op->y;
         ops.push_back(std::move(op));
     }
@@ -740,7 +778,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierZIndex>();
-        op->zIndex = buf.readFloat();
+        op->zIndex = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -786,6 +824,12 @@ public:
     int direction = 0;
     float position = 0, max = 0, notchMax = 0;
     float oPosition = 0, oMax = 0, oNotchMax = 0;
+    // ScrollModifierOperation's own scroll state. With a constant position (no TouchExpression
+    // drives it) the modifier scrolls itself under drag: mScrollY = clamp(initial + dy).
+    // Stored here as a positive offset (Java keeps its negation); maxScroll is set by layout.
+    float scrollOffset = 0, maxScroll = 0;
+    float touchDownX = 0, touchDownY = 0, initialScroll = 0;
+    bool touching = false;
     std::string name() const override { return "ScrollModifierOperation"; }
     int opcode() const override { return 226; }
     std::vector<Field> fields() const override { return {}; }
@@ -797,9 +841,9 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierScroll>();
         op->direction = buf.readInt();
-        op->position = buf.readFloat();
-        op->max = buf.readFloat();
-        op->notchMax = buf.readFloat();
+        op->position = buf.readNanId();
+        op->max = buf.readNanId();
+        op->notchMax = buf.readNanId();
         op->oPosition = op->position; op->oMax = op->max; op->oNotchMax = op->notchMax;
         ops.push_back(std::move(op));
     }
@@ -858,20 +902,17 @@ public:
 // Java: core/operations/loom/*.java, and see the TypeScript port in
 // players/typescript/src/core/operations/loom/PatternOperations.ts.
 //
-// These are READ but NOT EXPANDED. Expansion means re-inflating a template body
-// once per call site through an ID-remapping buffer so each instance gets unique
-// component/data ids; that needs readId()/declareId() indirection in every op
-// reader, which this engine does not have. Until then:
-//   * documents containing patterns parse and render everything OUTSIDE the
-//     macros (previously an unknown opcode aborted the whole document), and
-//   * macro-produced content is absent rather than wrong.
-// PatternDefine and PatternBlock deliberately do not expose children to the
-// layout tree: a template body must not draw at its definition site.
+// Expanded at load by Loom.cpp (expandLoom), as the reference's LoomManager does: every
+// template body is kept as bytes and re-read once per call site through a WireBuffer that
+// carries a RemapContext, so each inflation gets its own component and variable ids (every
+// reader declares / resolves its ids as its Java counterpart does). The bodies are captured
+// while reading (readOperationTree): the `body` members below.
 
 // REFERENCED_OPERATIONS (142) — a named, reusable group of modifiers/ops.
 class ReferencedOperations : public Operation {
 public:
     int refId = 0;
+    std::vector<uint8_t> body;   // the children as bytes, for IncludeReferencedOperations
     std::string name() const override { return "REFERENCED_OPERATIONS"; }
     int opcode() const override { return 142; }
     std::vector<Field> fields() const override { return {}; }
@@ -879,7 +920,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ReferencedOperations>();
-        op->refId = buf.readInt();
+        op->refId = buf.declareId();
         ops.push_back(std::move(op));
     }
 };
@@ -889,6 +930,7 @@ class PatternForEach : public Operation {
 public:
     int collectionId = 0;
     int localItemId = 0;
+    std::vector<uint8_t> body;   // re-read once per collection item
     std::string name() const override { return "MACRO_FOR_EACH"; }
     int opcode() const override { return 244; }
     std::vector<Field> fields() const override { return {}; }
@@ -896,8 +938,8 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PatternForEach>();
-        op->collectionId = buf.readInt();
-        op->localItemId = buf.readInt();
+        op->collectionId = buf.readId();
+        op->localItemId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -912,7 +954,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<IncludeReferencedOperations>();
-        op->refId = buf.readInt();
+        op->refId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -932,15 +974,18 @@ public:
     std::vector<Field> fields() const override { return {}; }
     // Container on the wire so ContainerEnd is balanced, but see the note above:
     // the body must not render where it is defined.
-    bool isContainer() const override { return containerForm; }
+    // Always a container, as in the reference: the writer emits the skip form (body as
+    // skipLength bytes) and still closes it with a ContainerEnd. Treating only the rare
+    // container form as a container let that ContainerEnd close the enclosing container.
+    bool isContainer() const override { return true; }
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PatternDefine>();
-        op->patternId = buf.readInt();
+        op->patternId = buf.readId();
         int paramCount = buf.readInt();
         if (paramCount < 0 || paramCount > 4096) paramCount = 0;
         op->paramIds.reserve(paramCount);
-        for (int i = 0; i < paramCount; i++) op->paramIds.push_back(buf.readInt());
+        for (int i = 0; i < paramCount; i++) op->paramIds.push_back(buf.readId());
         int skipLength = buf.readInt();
         op->containerForm = (skipLength == 0);
         if (skipLength > 0) {
@@ -963,11 +1008,11 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PatternInflation>();
-        op->patternId = buf.readInt();
+        op->patternId = buf.readId();
         int argCount = buf.readInt();
         if (argCount < 0 || argCount > 4096) argCount = 0;
         op->argIds.reserve(argCount);
-        for (int i = 0; i < argCount; i++) op->argIds.push_back(buf.readInt());
+        for (int i = 0; i < argCount; i++) op->argIds.push_back(buf.readId());
         ops.push_back(std::move(op));
     }
 };
@@ -991,6 +1036,13 @@ public:
 class PatternBlock : public Operation {
 public:
     int paramIndex = 0;
+    // A slot's content is read once, with the call site's context, and moved into the first
+    // PatternArgument that uses it. A second use re-reads these bytes with a snapshot of that
+    // context: its mappings already hold every id the first read declared, so the copy gets
+    // the same ids (the reference shares the very same operations instead).
+    std::vector<uint8_t> body;
+    std::shared_ptr<RemapContext> readContext;
+    bool consumed = false;
     std::string name() const override { return "MACRO_BLOCK"; }
     int opcode() const override { return 249; }
     std::vector<Field> fields() const override { return {}; }
@@ -1010,7 +1062,8 @@ public:
     int motionEasingType = 0;
     float visibilityDuration = 0;
     int visibilityEasingType = 0;
-    int enterAnimation = 0, exitAnimation = 0;
+    int enterAnimation = 0, exitAnimation = 0;   // low byte the effect, next the sequence
+    int enterFunctionId = -1, exitFunctionId = -1; // CUSTOM: defineVisibilityAnimation ids
 
     std::string name() const override { return "ANIMATION_SPEC"; }
     int opcode() const override { return 14; }
@@ -1018,13 +1071,19 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<AnimationSpec>();
-        op->animationId = buf.readInt();
+        op->animationId = buf.readId();
         op->motionDuration = buf.readFloat();
         op->motionEasingType = buf.readInt();
         op->visibilityDuration = buf.readFloat();
         op->visibilityEasingType = buf.readInt();
         op->enterAnimation = buf.readInt();
         op->exitAnimation = buf.readInt();
+        // A CUSTOM (8) enter or exit animation carries two function ids (AnimationSpec.read);
+        // skipping them left the stream eight bytes behind.
+        if ((op->enterAnimation & 0xFF) == 8 || (op->exitAnimation & 0xFF) == 8) {
+            op->enterFunctionId = buf.readId();
+            op->exitFunctionId = buf.readId();
+        }
         ops.push_back(std::move(op));
     }
 };
@@ -1088,6 +1147,8 @@ public:
     static constexpr int CLICK_TYPE_DOUBLE = 2;
 
     int clickType = 0;
+    // A single click ripples too (MultiClickModifier.animateRipple); see ModifierClick.
+    float rippleStart = -1.0f, rippleX = 0.0f, rippleY = 0.0f;
 
     std::string name() const override { return "MODIFIER_MULTI_CLICK"; }
     int opcode() const override { return 83; }
@@ -1122,8 +1183,8 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierDimensionConstraints>();
         op->constraintType = buf.readByte();
-        op->minVal = buf.readFloat();
-        op->maxVal = buf.readFloat();
+        op->minVal = buf.readNanId();
+        op->maxVal = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -1198,14 +1259,16 @@ public:
         for (int i = 0; i < count; i++) {
             int tag = buf.readByte();
             switch (tag) {
-                case P_ID:                    op->id = buf.readInt(); break;
+                // TextStyle.read declares P_ID (the style's own id) and resolves P_COLOR_ID,
+                // P_FONT_FAMILY and P_PARENT_ID.
+                case P_ID:                    op->id = buf.declareIdValue(buf.readInt()); break;
                 case P_ANIMATION_ID:          buf.readInt(); break;
                 case P_COLOR:                 op->color = buf.readInt(); op->hasColor = true; break;
-                case P_COLOR_ID:              op->colorId = buf.readInt(); op->hasColorId = true; break;
+                case P_COLOR_ID:              op->colorId = buf.remapId(buf.readInt()); op->hasColorId = true; break;
                 case P_FONT_SIZE:             op->fontSize = buf.readFloat(); op->hasFontSize = true; break;
                 case P_FONT_STYLE:            op->fontStyle = buf.readInt(); op->hasFontStyle = true; break;
                 case P_FONT_WEIGHT:           op->fontWeight = buf.readFloat(); op->hasFontWeight = true; break;
-                case P_FONT_FAMILY:           op->fontFamilyId = buf.readInt(); op->hasFontFamily = true; break;
+                case P_FONT_FAMILY:           op->fontFamilyId = buf.remapId(buf.readInt()); op->hasFontFamily = true; break;
                 case P_TEXT_ALIGN:            op->textAlign = buf.readInt(); op->hasTextAlign = true; break;
                 case P_OVERFLOW:              op->overflow = buf.readInt(); op->hasOverflow = true; break;
                 case P_MAX_LINES:             op->maxLines = buf.readInt(); op->hasMaxLines = true; break;
@@ -1231,7 +1294,7 @@ public:
                 }
                 case P_AUTOSIZE:              op->autosize = buf.readBoolean(); op->hasAutosize = true; break;
                 case P_FLAGS:                 buf.readInt(); break;
-                case P_PARENT_ID:             op->parentId = buf.readInt(); break;
+                case P_PARENT_ID:             op->parentId = buf.remapId(buf.readInt()); break;
                 case P_MIN_FONT_SIZE:         op->minFontSize = buf.readFloat(); op->hasMinFontSize = true; break;
                 case P_MAX_FONT_SIZE:         op->maxFontSize = buf.readFloat(); op->hasMaxFontSize = true; break;
                 default:

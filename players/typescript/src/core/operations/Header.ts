@@ -31,6 +31,7 @@ export class Header extends Operation {
     static readonly DEBUG: number = 16;
     static readonly FEATURE_MEASURE_VERSION: number = 17;
     static readonly FEATURE_TOUCH_VERSION: number = 18;
+    static readonly FEATURE_PRIORITY_FIX: number = 23;
 
     // Data types
     private static readonly DATA_TYPE_INT = 0;

@@ -89,6 +89,27 @@ not a shared behaviour. Plain and whitespace-wrapped base64 are byte-identical o
 `url` is deliberately *not* accepted for a bitmap, because the reference does not accept it
 either — it fetches sounds from a URL but not images, and adding it here would diverge.
 
+## Checked against the Java parser directly
+
+These were added against androidx's `RemoteComposeJsonParser` (not rcj, which lacks them),
+each byte-compared with `players/conformance/java-json.sh` (docs/EXAMPLES_FINDINGS.md J3–J18):
+- every text component key: fontStyle, letterSpacing, lineHeightMultiplier/Add, min/maxFontSize,
+  fontFamily, underline, strikethrough, autoSize, fontAxis/fontAxisValues, textStyleId,
+  lineBreakStrategy, hyphenationFrequency, justificationMode, `textSize`;
+- `resources.paths` (op list or SVG string) and the `path`/`pathData` command;
+- `scale` with a pivot; `padding` as `[all]` or `[h, v]`; `clip` rect and circle;
+- the non-legacy border at apiLevel >= 8, and Java's refusal of `densityBehavior` below 8;
+- paint `radialGradient` (one- and two-circle forms) and a direct paint `alpha`;
+- `u`/`v` as system variables; `graphicsLayer`; `textMerge`; `requiredWidthIn`,
+  `requiredHeightIn`, `dimensionConstraints`; `multiClick` as MODIFIER_MULTI_CLICK.
+
+One deliberate difference: an SVG *string* in `resources.paths` or the `path` command is
+written as the parsed path. Java writes an empty DATA_PATH there (its default platform only
+converts RemotePathBase), so its document draws nothing.
+
+check-paths compares against rcj, and rcj writes a non-zero `multiClick` type as
+MODIFIER_CLICK plus an int: `click_multi` now matches Java and differs from rcj.
+
 ## What is still not implemented
 
 Nothing the corpus reaches. Beyond those, the reference itself has commands neither converter implements;
@@ -114,6 +135,36 @@ its cases against bytes that parser produced. One detail matters for byte-identi
 keeps the uniforms in a `java.util.HashMap` and writes them in its iteration order.
 `javaHashMapOrder` in `Writer.ts` reproduces that order, including the table resize past 12
 entries. It was checked against a JVM.
+
+## Component templates (Loom)
+
+json2rc converts the reference's template commands, byte-identical to androidx's Java parser
+on the two Loom layout-specs, six of the eight template demos in the RemoteCompose-Examples
+corpus, and four focused cases. The commands are:
+- `definePattern` (`name`, `parameters`, `locals`, `children`), defined in the first pass;
+- calls by template name, as `{"<Name>": {param: value}}` or with `arguments`, with
+  `children` for slots;
+- `patternInflation`, `patternBlock`, `patternArgument` and `patternForEach`;
+- templates as modifiers: `{"<Name>": [args]}` or `includeMacro`;
+- `referencedOperations` with `include`, both as a component and as a modifier;
+- the `modifier` component.
+
+What templates needed alongside:
+- the `id` modifier;
+- colour, string and integer `variable`s, and `resources.integers`;
+- reassigning a variable, which writes under its existing id;
+- variable references in colours, and in click-action targets;
+- the `clip` shorthands `{"roundedRect": r}` and a bare radius;
+- `ripple`.
+
+Parameters are fresh data ids, bound as NaN-boxed variables while the body is parsed. Locals
+are pattern-local ids, 0x4000 upwards, held as plain floats. The scope is restored after the
+definition.
+
+Still refused:
+- integer expressions, such as an action with `"expression": "@vars.count + 1"` (needs the
+  integer-expression compiler);
+- one text-id ordering in string-change actions inside a template (`rc-json-macro-demo`).
 
 ## Why there is a separate path test
 

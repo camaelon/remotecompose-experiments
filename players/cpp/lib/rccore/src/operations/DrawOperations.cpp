@@ -352,17 +352,19 @@ void ClipPathOp::apply(RemoteContext& context) {
 }
 
 // ── Matrix operations ─────────────────────────────────────────────────
+// MatrixSave.paint / MatrixRestore.paint: the canvas only (matrix and clip). The paint is not
+// saved, so a paint set between them stays in effect after the restore, as in the reference.
 void MatrixSave::apply(RemoteContext& context) {
     if (context.getMode() == ContextMode::PAINT) {
         auto* pc = context.getPaintContext();
-        if (pc) { pc->matrixSave(); pc->savePaint(); }
+        if (pc) pc->matrixSave();
     }
 }
 
 void MatrixRestore::apply(RemoteContext& context) {
     if (context.getMode() == ContextMode::PAINT) {
         auto* pc = context.getPaintContext();
-        if (pc) { pc->restorePaint(); pc->matrixRestore(); }
+        if (pc) pc->matrixRestore();
     }
 }
 
@@ -486,8 +488,8 @@ void ShaderData::apply(RemoteContext& context) {
 
 void ShaderData::read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
     auto op = std::make_unique<ShaderData>();
-    op->shaderID = buf.readInt();
-    op->shaderTextId = buf.readInt();
+    op->shaderID = buf.declareId();
+    op->shaderTextId = buf.readId();
     int sizes = buf.readInt();
     int floatSize = sizes & 0xFF;
     int intSize = (sizes >> 8) & 0xFF;
@@ -497,7 +499,7 @@ void ShaderData::read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& 
         u.name = buf.readUTF8();
         int len = buf.readInt();
         u.values.resize(len);
-        for (int j = 0; j < len; j++) u.values[j] = buf.readFloat();
+        for (int j = 0; j < len; j++) u.values[j] = buf.readNanId();
         op->floatUniforms.push_back(std::move(u));
     }
     for (int i = 0; i < intSize; i++) {
@@ -511,7 +513,7 @@ void ShaderData::read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& 
     for (int i = 0; i < bitmapSize; i++) {
         ShaderData::BitmapUniform u;
         u.name = buf.readUTF8();
-        u.bitmapId = buf.readInt();
+        u.bitmapId = buf.readId();
         op->bitmapUniforms.push_back(std::move(u));
     }
     ops.push_back(std::move(op));

@@ -469,24 +469,24 @@ export class TouchExpression extends Operation implements TouchListener {
     deepToString(indent: string): string { return `${indent}TouchExpression(${this.mId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const startValue = buffer.readInt();
-        const min = buffer.readInt();
-        const max = buffer.readInt();
-        const velocityId = buffer.readInt();
+        const id = buffer.readId();
+        const startValue = buffer.readNanIdBits();
+        const min = buffer.readNanIdBits();
+        const max = buffer.readNanIdBits();
+        const velocityId = buffer.readNanIdBits();
         const touchEffects = buffer.readInt();
         const len = buffer.readInt();
         const valueLen = len & 0xFFFF;
         const exp = new Int32Array(valueLen);
-        for (let i = 0; i < valueLen; i++) exp[i] = buffer.readInt();
+        for (let i = 0; i < valueLen; i++) exp[i] = buffer.readNanIdBits();
         const stopLogic = buffer.readInt();
         const stopLen = stopLogic & 0xFFFF;
         const stopMode = stopLogic >> 16;
         const stopsData = new Int32Array(stopLen);
-        for (let i = 0; i < stopLen; i++) stopsData[i] = buffer.readInt();
+        for (let i = 0; i < stopLen; i++) stopsData[i] = buffer.readNanIdBits();
         const easingLen = buffer.readInt();
         const easingData = easingLen > 0 ? new Float32Array(easingLen) : null;
-        for (let i = 0; i < easingLen; i++) easingData![i] = buffer.readFloat();
+        for (let i = 0; i < easingLen; i++) easingData![i] = intBitsToFloat(buffer.readNanIdBits());
         operations.push(new TouchExpression(
             id, exp, startValue, min, max, touchEffects,
             velocityId, stopMode, stopsData, easingData));

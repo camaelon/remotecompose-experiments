@@ -37,6 +37,9 @@ class DeferredVariables {
         this.deferred = new Map();
         this.resolver = null;
     }
+    /** A pattern body binds its parameters and locals over the outer scope, restored after. */
+    snapshot() { return [new Map(this.materialised), new Map(this.deferred)]; }
+    restore(s) { this.materialised = new Map(s[0]); this.deferred = new Map(s[1]); }
     defer(name, command) { this.deferred.set(name, command); }
     /** Only variables already written — a deferred entry is invisible here, which is what
      *  lets a later declaration of the same name replace a pending one. */
@@ -61,6 +64,104 @@ class DeferredVariables {
 }
 exports.DeferredVariables = DeferredVariables;
 function toInt32(v) { return v | 0; }
+/** GraphicsLayerModifierOperation attribute ids for the keys the JSON parser knows. */
+const GRAPHICS_LAYER_ATTR = {
+    scalex: 0, scaley: 1, rotationz: 4, translationx: 7, translationy: 8, alpha: 11,
+};
+/** org.json (Android) optInt: a number or numeric string, truncated; anything else the default. */
+function optInt(v, dflt) {
+    if (typeof v === "number")
+        return Number.isFinite(v) ? Math.trunc(v) | 0 : dflt;
+    if (typeof v === "string") {
+        const n = Number(v.trim());
+        return v.trim() !== "" && !Number.isNaN(n) ? Math.trunc(n) | 0 : dflt;
+    }
+    return dflt;
+}
+/** org.json (Android) getInt: a number or numeric string (NaN -> 0), else an error. */
+function jsonGetInt(v, what) {
+    if (typeof v === "number")
+        return Number.isFinite(v) ? Math.trunc(v) | 0 : 0;
+    if (typeof v === "string" && v.trim() !== "" && (!Number.isNaN(Number(v)) || v.trim() === "NaN")) {
+        const n = Number(v);
+        return Number.isFinite(n) ? Math.trunc(n) | 0 : 0;
+    }
+    throw new NotImplementedComponent(`${what}: expected an int, got ${JSON.stringify(v)}`);
+}
+/** The `rem` remark text: text, value, message or comment, else empty. */
+function remText(c) {
+    return String(c.text ?? c.value ?? c.message ?? c.comment ?? "");
+}
+/** MatrixOperations, by OFFSET + 1 + index (RemoteComposeJsonParser.parseMatrixOperator). */
+const MATRIX_OPS = ["IDENTITY", "ROT_X", "ROT_Y", "ROT_Z", "TRANSLATE_X", "TRANSLATE_Y",
+    "TRANSLATE_Z", "TRANSLATE2", "TRANSLATE3", "SCALE_X", "SCALE_Y", "SCALE_Z", "SCALE2",
+    "SCALE3", "MUL", "ROT_PZ", "ROT_AXIS", "PROJECTION"];
+/** DRAW_TO_BITMAP (190). */
+function drawOnBitmap(w, bitmapId, mode, color) {
+    w.buffer.start(190);
+    w.buffer.writeInt(bitmapId);
+    w.buffer.writeInt(mode);
+    w.buffer.writeInt(color);
+}
+/** Float.isNaN on raw bits. */
+function isNanBits(bits) {
+    return ((bits >>> 23) & 0xff) === 0xff && (bits & 0x7fffff) !== 0;
+}
+/** RemoteComposeJsonParser.isVariableRef / getVariableNameFromRef. */
+function isVariableRef(s) {
+    if (s.length < 2 || !/^[@$]/.test(s))
+        return false;
+    return !/^[@$](colors|paths|matrices)\./.test(s);
+}
+function variableNameFromRef(s) {
+    return /^[@$]vars\./.test(s) ? s.slice(6) : s.slice(1);
+}
+/** AnimationSpec.ANIMATION and SEQUENCE, by ordinal. */
+const ANIMATION_TYPES = ["FADE_IN", "FADE_OUT", "SLIDE_LEFT", "SLIDE_RIGHT", "SLIDE_TOP",
+    "SLIDE_BOTTOM", "ROTATE", "PARTICLE", "CUSTOM"];
+const SEQUENCE_TYPES = ["CONCURRENT", "BEFORE", "AFTER"];
+/** DefaultModifierParsers.parseAnimationType / parseSequenceType. */
+function enumOrdinal(v, names, dflt) {
+    if (v === null || v === undefined)
+        return dflt;
+    if (typeof v === "number") {
+        const o = Math.trunc(v);
+        return o >= 0 && o < names.length ? o : dflt;
+    }
+    if (typeof v === "string") {
+        const i = names.indexOf(v.toUpperCase());
+        return i >= 0 ? i : dflt;
+    }
+    return dflt;
+}
+/** DefaultModifierParsers.parseEasingType (Easing.CUBIC_*). */
+function easingType(v, dflt) {
+    if (v === null || v === undefined)
+        return dflt;
+    if (typeof v === "number")
+        return Math.trunc(v);
+    if (typeof v === "string") {
+        const E = {
+            CUBIC_STANDARD: 1, STANDARD: 1, CUBIC_ACCELERATE: 2, ACCELERATE: 2,
+            CUBIC_DECELERATE: 3, DECELERATE: 3, CUBIC_LINEAR: 4, LINEAR: 4,
+            CUBIC_ANTICIPATE: 5, ANTICIPATE: 5, CUBIC_OVERSHOOT: 6, OVERSHOOT: 6,
+        };
+        return E[v.toUpperCase()] ?? dflt;
+    }
+    return dflt;
+}
+/** org.json (Android) optBoolean: a boolean, or the string "true"/"false" in any case. */
+function optBoolean(v, dflt) {
+    if (typeof v === "boolean")
+        return v;
+    if (typeof v === "string") {
+        if (v.toLowerCase() === "true")
+            return true;
+        if (v.toLowerCase() === "false")
+            return false;
+    }
+    return dflt;
+}
 function parseColor(value) {
     if (typeof value === "number")
         return toInt32(value);
@@ -114,7 +215,13 @@ function normalizeComponent(c) {
 const INT_MAX = 2147483647;
 const NAN_BITS = 0x7fc00000;
 const FIRST_PASS_TYPES = new Set(["resources", "variable", "global",
-    "definepattern", "referencedoperations"]);
+    "definepattern", "referencedoperations",
+    "createfloatfunction", "floatfunction",
+    "definevisibilityanimation", "createoffscreenbitmap"]);
+/** RemoteComposeJsonParser.isFirstPassOnlyComponent: parsed in the first pass, skipped in the root. */
+const FIRST_PASS_ONLY_TYPES = new Set(["resources", "variable", "definepattern", "referencedoperations",
+    "createfloatfunction", "floatfunction",
+    "definevisibilityanimation", "createoffscreenbitmap"]);
 const PATH_MOVE = 10, PATH_LINE = 11, PATH_QUAD = 12, PATH_CUBIC = 14, PATH_CLOSE = 15;
 const SVG_SPLIT = /(?=[MmZzLlHhVvCcSsQqTtAa])/;
 const SVG_SEP = /[,\s]+/;
@@ -350,6 +457,69 @@ function parseSvgPath(pathData) {
     }
     return out;
 }
+/**
+ * ResourceParser "paths" given as an op list. Every segment carries its start point (the
+ * current point), and `close` returns the current point to the subpath's start. An unknown
+ * op type is skipped, as the reference's switch does.
+ */
+function pathFromOps(ops) {
+    const out = [];
+    const verb = (tag) => out.push({ bits: (tag | 0xff800000) >>> 0 });
+    const num = (op, k) => {
+        const v = op[k];
+        const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+        if (Number.isNaN(n))
+            throw new NotImplementedComponent(`path op '${op.type}' needs a number for ${k}`);
+        return n;
+    };
+    let cx = 0, cy = 0, sx = 0, sy = 0;
+    for (const op of ops) {
+        if (!op || typeof op !== "object")
+            throw new NotImplementedComponent("path op must be an object");
+        switch (String(op.type)) {
+            case "moveTo": {
+                const x = num(op, "x"), y = num(op, "y");
+                verb(PATH_MOVE);
+                out.push(x, y);
+                cx = sx = x;
+                cy = sy = y;
+                break;
+            }
+            case "lineTo": {
+                const x = num(op, "x"), y = num(op, "y");
+                verb(PATH_LINE);
+                out.push(cx, cy, x, y);
+                cx = x;
+                cy = y;
+                break;
+            }
+            case "quadTo": {
+                const x1 = num(op, "x1"), y1 = num(op, "y1"), x2 = num(op, "x2"), y2 = num(op, "y2");
+                verb(PATH_QUAD);
+                out.push(cx, cy, x1, y1, x2, y2);
+                cx = x2;
+                cy = y2;
+                break;
+            }
+            case "cubicTo": {
+                const x1 = num(op, "x1"), y1 = num(op, "y1"), x2 = num(op, "x2"), y2 = num(op, "y2");
+                const x3 = num(op, "x3"), y3 = num(op, "y3");
+                verb(PATH_CUBIC);
+                out.push(cx, cy, x1, y1, x2, y2, x3, y3);
+                cx = x3;
+                cy = y3;
+                break;
+            }
+            case "close":
+                verb(PATH_CLOSE);
+                cx = sx;
+                cy = sy;
+                break;
+            default: break;
+        }
+    }
+    return out;
+}
 /** A resource section is either {name: value} or [{name: value}, ...]. */
 /**
  * The three accepted resource shapes, mirroring ResourceParser.parseOrderedResource:
@@ -473,16 +643,19 @@ const VECTOR_COMPONENTS = ["x", "y", "z", "w"];
  */
 const VAR1_BITS = (0xff800000 | (0x310000 + 70)) >>> 0;
 const VAR2_BITS = (0xff800000 | (0x310000 + 71)) >>> 0;
-const PB_GRADIENT = 11, GRAD_LINEAR = 0, GRAD_SWEEP = 2;
-const PAINT_KEYS_ORDER = ["shader", "color", "strokeJoin", "strokeCap", "style", "width",
-    "textSize", "sweepGradient"];
+const PB_GRADIENT = 11, GRAD_LINEAR = 0, GRAD_RADIAL = 1, GRAD_SWEEP = 2, GRAD_RADIAL2 = 3;
+const PAINT_KEYS_ORDER = ["shader", "color", "alpha", "strokeJoin", "strokeCap", "style", "width",
+    "textSize", "radialGradient", "sweepGradient"];
+/** Keys that select the two-circle (focal) radialGradient (FOCAL_RADIAL_KEYS upstream). */
+const FOCAL_RADIAL_KEYS = ["startX", "startY", "startR", "startRadius", "endX", "endY", "endR",
+    "endRadius", "focalX", "focalY", "focalR", "focalRadius"];
 const PAINT_KEY_ALIASES = { strokewidth: "width", runtimeshader: "shader" };
 /**
  * `linearGradient` is in PAINT_KEYS_IGNORED because the reference ignores it *as a direct
  * key* — inside an `ops` array it is honoured. The two lists are not in conflict.
  */
 /** Accepted as direct keys but ignored by the reference — fail loudly rather than lose them. */
-const PAINT_KEYS_IGNORED = ["linearGradient", "pathEffect", "alpha"];
+const PAINT_KEYS_IGNORED = ["linearGradient", "pathEffect"];
 const CAP = { round: 1, square: 2 }; // else butt(0)
 const JOIN = { round: 1, bevel: 2 }; // else miter(0)
 class Parser {
@@ -502,6 +675,10 @@ class Parser {
         this.profiles = 0;
         this.apiLevel = 7;
         this.inFirstPass = false;
+        /** Templates defined so far: name (lower case) -> pattern id and parameter names. */
+        this.patterns = new Map();
+        /** Matrices declared by matrixConstant, for `$matrices.name`. */
+        this.matrices = new Map();
         this.readFile = options.readFile;
     }
     /** Resolve a canvas float field to raw float32 bits (literal, ref or expression). */
@@ -518,6 +695,20 @@ class Parser {
                 return special[value] >>> 0;
             if (value === "max")
                 return (0, WireBuffer_1.floatToRawIntBits)(3.4028234663852886e38);
+            if (value.startsWith("path:") || value.startsWith("path.")) {
+                // PathData verb markers (RemoteComposeJsonParser.parseFloat).
+                const PV = { MOVE: 10, LINE: 11, QUADRATIC: 12, QUAD: 12,
+                    CONIC: 13, CUBIC: 14, CLOSE: 15, DONE: 16 };
+                const v = PV[value.slice(5).toUpperCase()];
+                if (v !== undefined)
+                    return (0, WireBuffer_1.asNanBits)(v);
+            }
+            if (/^[@$]matrices\./.test(value) && !value.includes(" ") && value.length > 10) {
+                const name = value.slice(10);
+                const m = this.matrices.get(name) ?? (this.variables.isMaterialised(name) ? this.variables.get(name) : undefined);
+                if (m !== undefined)
+                    return m;
+            }
             // Anything else is an expression: a bare variable reference resolves to its id,
             // otherwise it is compiled and the *result* id comes back NaN-boxed.
             if (this.expr.isVariable(value))
@@ -542,6 +733,14 @@ class Parser {
         for (const [key, value] of Object.entries(header)) {
             if (key === "apiLevel" || key === "orderedResources")
                 continue;
+            if (key === "densityBehavior" && apiLevel < 8) {
+                // RemoteComposeWriter.filterAndValidateTags: below apiLevel 8 the legacy
+                // value (0) is dropped and anything else is refused.
+                if (Number(value) !== 0) {
+                    throw new NotImplementedComponent("densityBehavior is only supported in API level 8 or higher");
+                }
+                continue;
+            }
             const tag = Header_1.HEADER_KEY_TO_TAG[key];
             if (tag === undefined)
                 throw new NotImplementedComponent(`Unknown header tag: ${key}`);
@@ -550,7 +749,7 @@ class Parser {
         this.writer = new Writer_1.Writer(apiLevel, tags);
         this.expr = new Expr_1.ExpressionParser(this.writer, this.variables);
         // First use of a deferred variable materialises it, wherever that happens to be.
-        this.variables.resolver = (_name, cmd) => this.materialiseFloatVar(cmd);
+        this.variables.resolver = (_name, cmd) => this.materialiseVariable(cmd);
         if (doc.resources) {
             this.inFirstPass = true;
             this.parseResources(doc.resources);
@@ -574,7 +773,7 @@ class Parser {
         this.writer.rootStart();
         for (const item of items) {
             const t = String(item.type ?? "").toLowerCase();
-            if (t === "resources" || t === "variable")
+            if (FIRST_PASS_ONLY_TYPES.has(t))
                 continue;
             this.parseComponent(item);
         }
@@ -583,6 +782,22 @@ class Parser {
     }
     parseModifiers(raw) {
         const out = [];
+        // RecordingModifier keeps ONE width and ONE height modifier: a later fill, size,
+        // weight or width updates the first one in place (setWidthModifier/setHeightModifier),
+        // so `{"weight": 1}, "fillMaxWidth"` writes a single width modifier, at the weight's position.
+        let widthAt = -1, heightAt = -1;
+        const pushW = (e) => { if (widthAt >= 0)
+            out[widthAt] = e;
+        else {
+            widthAt = out.length;
+            out.push(e);
+        } };
+        const pushH = (e) => { if (heightAt >= 0)
+            out[heightAt] = e;
+        else {
+            heightAt = out.length;
+            out.push(e);
+        } };
         for (const mod of raw ?? []) {
             // A modifier is either a bare string ("fillMaxSize") or a single-key object.
             // A bare "fillMaxSize" is the same as {"fillMaxSize": "NaN"} — the value field
@@ -593,19 +808,31 @@ class Parser {
                 const k = key.toLowerCase();
                 if (k === "fillmaxsize") {
                     const v = this.fbits(value);
-                    out.push((0, Writer_1.modWidth)(Writer_1.TYPE_FILL, v), (0, Writer_1.modHeight)(Writer_1.TYPE_FILL, v));
+                    pushW((0, Writer_1.modWidth)(Writer_1.TYPE_FILL, v));
+                    pushH((0, Writer_1.modHeight)(Writer_1.TYPE_FILL, v));
                 }
                 else if (k === "fillmaxwidth") {
-                    out.push((0, Writer_1.modWidth)(Writer_1.TYPE_FILL, this.fbits(value)));
+                    pushW((0, Writer_1.modWidth)(Writer_1.TYPE_FILL, this.fbits(value)));
                 }
                 else if (k === "fillmaxheight") {
-                    out.push((0, Writer_1.modHeight)(Writer_1.TYPE_FILL, this.fbits(value)));
+                    pushH((0, Writer_1.modHeight)(Writer_1.TYPE_FILL, this.fbits(value)));
                 }
                 else if (k === "width") {
-                    out.push((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, this.fbits(value)));
+                    pushW((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, this.fbits(value)));
                 }
                 else if (k === "height") {
-                    out.push((0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, this.fbits(value)));
+                    pushH((0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, this.fbits(value)));
+                }
+                else if (k === "spacedby") {
+                    // Not a modifier on the wire: the row/column's own spacing parameter.
+                    this.writer.spacedByBits = this.fbits(value);
+                }
+                else if (k === "ripple") {
+                    out.push((w) => w.rippleModifier()); // RippleModifierOperation: the opcode alone
+                }
+                else if (k === "id") {
+                    // Not a modifier on the wire: the component's own id (RecordingModifier.componentId).
+                    this.writer.componentIdOverride = Math.trunc(Number(value));
                 }
                 else if (k === "background") {
                     if (typeof value !== "string") {
@@ -618,7 +845,7 @@ class Parser {
                 }
                 else if (k === "border") {
                     const b = (value ?? {});
-                    out.push((0, Writer_1.modBorder)(Number(b.width), Number(b.cornerRadius), this.resolveColor(b.color), Math.trunc(Number(b.shape ?? 0))));
+                    out.push((0, Writer_1.modBorder)(Number(b.width), Number(b.cornerRadius), this.resolveColor(b.color), Math.trunc(Number(b.shape ?? 0)), this.apiLevel <= 7));
                 }
                 else if (k === "verticalscroll" || k === "horizontalscroll") {
                     // verticalScroll emits *two* modifiers: a clip to the component's bounds,
@@ -638,13 +865,35 @@ class Parser {
                 else if (k === "visibility") {
                     // A variable id, not a boolean: the document flips the variable and
                     // everything bound to it appears or disappears.
-                    out.push((0, Writer_1.modVisibility)(this.resolveId(value)));
+                    out.push((0, Writer_1.modVisibility)(this.resolveTextId(value)));
                 }
                 else if (k === "clip") {
-                    const shape = (value ?? {});
-                    const st = String(shape.type ?? "").toLowerCase();
+                    // RemoteComposeJsonParser.parseShape: a number, or {"roundedRect": r}, is a
+                    // rounded rectangle of radius r; {"roundedRect": {...}} takes its key as type.
+                    let shape = (value ?? {});
+                    if (typeof value === "number")
+                        shape = { type: "roundedrect", radius: value };
+                    else if (shape && typeof shape === "object" && !("type" in shape) && Object.keys(shape).length === 1) {
+                        const [sk, sv] = Object.entries(shape)[0];
+                        if (typeof sv === "number")
+                            shape = { type: "roundedrect", radius: sv };
+                        else if (sv && typeof sv === "object")
+                            shape = { type: sk, ...sv };
+                    }
+                    const st = String(shape.type ?? "roundedrect").toLowerCase();
+                    if (st === "rect") {
+                        // ClipModifier writes a plain clip to the bounds; left/top/right/
+                        // bottom are parsed into the RectShape but never written.
+                        out.push((0, Writer_1.modClipRect)());
+                        continue;
+                    }
+                    if (st === "circle") {
+                        // ClipModifier.write has no branch for CircleShape: the reference
+                        // writes nothing (upstream U9), so neither does this.
+                        continue;
+                    }
                     if (st !== "roundrect" && st !== "roundedrect") {
-                        throw new NotImplementedComponent(`clip shape '${st}' (circle/rect TBD)`);
+                        throw new NotImplementedComponent(`Unknown shape type: ${st}`);
                     }
                     if ("radius" in shape) {
                         const r = Number(shape.radius);
@@ -658,22 +907,34 @@ class Parser {
                     // `[w, h]` is a pair, and goes through getDouble rather than parseFloat,
                     // so neither element may be an expression. A scalar covers both axes.
                     if (Array.isArray(value)) {
-                        out.push((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, numBits(value[0])), (0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, numBits(value[1])));
+                        pushW((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, numBits(value[0])));
+                        pushH((0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, numBits(value[1])));
                     }
                     else {
                         const v = this.fbits(value);
-                        out.push((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, v), (0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, v));
+                        pushW((0, Writer_1.modWidth)(Writer_1.TYPE_EXACT, v));
+                        pushH((0, Writer_1.modHeight)(Writer_1.TYPE_EXACT, v));
                     }
                 }
                 else if (k === "weight" || k === "horizontalweight") {
-                    out.push((0, Writer_1.modWidth)(Writer_1.TYPE_WEIGHT, numBits(value)));
+                    pushW((0, Writer_1.modWidth)(Writer_1.TYPE_WEIGHT, numBits(value)));
                 }
                 else if (k === "verticalweight") {
-                    out.push((0, Writer_1.modHeight)(Writer_1.TYPE_WEIGHT, numBits(value)));
+                    pushH((0, Writer_1.modHeight)(Writer_1.TYPE_WEIGHT, numBits(value)));
                 }
                 else if (k === "widthin") {
                     const wi = value;
                     out.push((0, Writer_1.modWidthIn)(this.fbits(wi[0]), this.fbits(wi[1])));
+                }
+                else if (k === "requiredwidthin" || k === "requiredheightin") {
+                    const r = value;
+                    out.push((0, Writer_1.modDimensionConstraints)(k === "requiredwidthin" ? 2 : 3, this.fbits(r[0]), this.fbits(r[1])));
+                }
+                else if (k === "dimensionconstraints") {
+                    const dc = (value ?? {});
+                    const type = optInt(dc.type, 0);
+                    const min = this.fbits(dc.min), max = this.fbits(dc.max);
+                    out.push((0, Writer_1.modDimensionConstraints)(type, min, max));
                 }
                 else if (k === "heightin") {
                     const hi = value;
@@ -690,7 +951,7 @@ class Parser {
                 }
                 else if (k === "semantics") {
                     const sem = (value ?? {});
-                    const tid = (field) => field in sem ? this.writer.addText(String(sem[field])) : 0;
+                    const tid = (field) => field in sem ? this.resolveTextId(sem[field]) : 0; // "@label" works, as upstream
                     out.push((0, Writer_1.modSemantics)(tid("contentDescription"), -1, // role: there is no JSON key for it upstream either
                     tid("text"), tid("stateDescription"), Writer_1.SEMANTICS_MODE_SET, sem.enabled === undefined ? true : Boolean(sem.enabled), Boolean(sem.clickable ?? false)));
                 }
@@ -708,7 +969,42 @@ class Parser {
                 }
                 else if (k === "padding") {
                     const b = this.paddingBits(value);
-                    out.push((0, Writer_1.modPadding)(b[0], b[1], b[2], b[3]));
+                    if (b)
+                        out.push((0, Writer_1.modPadding)(b[0], b[1], b[2], b[3]));
+                }
+                else if (k === "graphicslayer") {
+                    // DefaultModifierParsers "graphicslayer": known keys (any case) parsed in
+                    // JSON order, each through parseFloat, so an expression's ops are written
+                    // in that order. The attributes live in a HashMap<Integer, Object>, which
+                    // writes them back by ascending attribute id; a repeated id keeps its slot
+                    // and takes the later value. Unknown keys are ignored.
+                    if (!value || typeof value !== "object" || Array.isArray(value)) {
+                        throw new NotImplementedComponent("graphicsLayer needs an object");
+                    }
+                    const attrs = new Map();
+                    for (const [gk, gv] of Object.entries(value)) {
+                        const id = GRAPHICS_LAYER_ATTR[gk.toLowerCase()];
+                        if (id !== undefined)
+                            attrs.set(id, this.fbits(gv));
+                    }
+                    const sorted = [...attrs.entries()].sort((a, b) => a[0] - b[0]);
+                    out.push((0, Writer_1.modGraphicsLayer)(sorted));
+                }
+                else if (k === "include") {
+                    // A referenced group of modifiers, replayed here (IncludeReferencedOperationsModifier).
+                    const id = this.resolveTextId(value);
+                    out.push((w) => w.includeReferencedOperations(id));
+                }
+                else if (k === "includemacro" || this.patterns.has(k)) {
+                    // A template used as a modifier, a "style factory" (MacroCallModifier):
+                    // {"includeMacro": {"pattern", "arguments"}} or {"<Template>": [args]}.
+                    const call = k === "includemacro" ? (value ?? {}) : { pattern: key, arguments: value };
+                    const id = k === "includemacro" ? this.writer.addText(String(call.pattern)) : this.patterns.get(k).id;
+                    const args = (call.arguments ?? []).map((x) => this.resolveTextId(x));
+                    out.push((w) => { w.patternInflation(id, args); w.containerEnd(); });
+                }
+                else if (this.parseMoreModifiers(k, value, out, pushW, pushH)) {
+                    // handled
                 }
                 else {
                     throw new NotImplementedComponent(`modifier '${key}'`);
@@ -716,6 +1012,256 @@ class Parser {
             }
         }
         return out;
+    }
+    /**
+     * DefaultModifierParsers entries json2rc lacked: animationSpec, zIndex, touch actions,
+     * drawWithContent, layoutCompute, alignByBaseline, fillParentMax*, marquee and
+     * collapsiblePriority. Returns false for a key that is none of them.
+     */
+    parseMoreModifiers(k, value, out, pushW, pushH) {
+        const num = (v, d) => (typeof v === "number" ? v
+            : typeof v === "string" && v.trim() !== "" && !Number.isNaN(Number(v)) ? Number(v) : d);
+        if (k === "animationspec") {
+            let id = -1, md = 300, me = 1, vd = 300, ve = 1, enterFn = -1, exitFn = -1;
+            let enter = 0, exit = 1, enterSeq = 0, exitSeq = 0;
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                const o = value;
+                id = optInt(o.animationId, -1);
+                md = num(o.motionDuration, 300);
+                me = easingType("motionEasingType" in o ? o.motionEasingType : o.motionEasing, 1);
+                vd = num(o.visibilityDuration, 300);
+                ve = easingType("visibilityEasingType" in o ? o.visibilityEasingType : o.visibilityEasing, 1);
+                enterFn = this.resolveFunctionId("enterFunctionId" in o ? o.enterFunctionId : o.enterFunction);
+                exitFn = this.resolveFunctionId("exitFunctionId" in o ? o.exitFunctionId : o.exitFunction);
+                enter = enumOrdinal(o.enterAnimation, ANIMATION_TYPES, enterFn !== -1 ? 8 : 0);
+                exit = enumOrdinal(o.exitAnimation, ANIMATION_TYPES, exitFn !== -1 ? 8 : 1);
+                enterSeq = enumOrdinal(o.enterSequence, SEQUENCE_TYPES, 0);
+                exitSeq = enumOrdinal(o.exitSequence, SEQUENCE_TYPES, 0);
+            }
+            else {
+                id = jsonGetInt(value, "animationSpec");
+            }
+            const enterPacked = (enter & 0xff) | ((enterSeq & 0xff) << 8);
+            const exitPacked = (exit & 0xff) | ((exitSeq & 0xff) << 8);
+            out.push((w) => w.animationSpec(id, md, me, vd, ve, enterPacked, exitPacked, enterFn, exitFn));
+            return true;
+        }
+        if (k === "zindex") {
+            const z = this.fbits(value);
+            out.push((w) => { w.buffer.start(223); w.buffer.writeInt(z); });
+            return true;
+        }
+        const touch = {
+            ontouchdown: 219, touchdown: 219, ontouchup: 220, touchup: 220,
+            ontouchcancel: 225, touchcancel: 225,
+        };
+        if (k in touch) {
+            const op = touch[k];
+            const actions = this.parseActions(value);
+            out.push((w) => { w.buffer.start(op); for (const a of actions)
+                a(w); w.containerEnd(); });
+            return true;
+        }
+        if (k === "drawwithcontent") {
+            out.push((w) => w.buffer.start(174));
+            return true;
+        }
+        if (k === "layoutcompute") {
+            // ComponentLayoutComputeModifier with an empty command list: LAYOUT_COMPUTE, the
+            // bounds array it declares, and the end.
+            const type = optInt((value ?? {}).type, 0);
+            out.push((w) => {
+                const boundsId = w.allocArrayId();
+                w.buffer.start(238);
+                w.buffer.writeInt(type);
+                w.buffer.writeInt(boundsId);
+                w.buffer.writeBoolean(false);
+                w.addDynamicFloatArray(boundsId, (0, WireBuffer_1.floatToRawIntBits)(6));
+                w.containerEnd();
+            });
+            return true;
+        }
+        if (k === "alignbybaseline") {
+            out.push((w) => { w.buffer.start(237); w.buffer.writeInt((0, WireBuffer_1.asNanBits)(1)); w.buffer.writeInt(0); });
+            return true;
+        }
+        if (k === "fillparentmaxwidth") {
+            pushW((0, Writer_1.modWidth)(7, this.fbits(value)));
+            return true;
+        }
+        if (k === "fillparentmaxheight") {
+            pushH((0, Writer_1.modHeight)(8, this.fbits(value)));
+            return true;
+        }
+        if (k === "fillparentmaxsize") {
+            const v = this.fbits(value);
+            pushW((0, Writer_1.modWidth)(7, v));
+            pushH((0, Writer_1.modHeight)(8, v));
+            return true;
+        }
+        if (k === "marquee") {
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+                throw new NotImplementedComponent("marquee needs an object");
+            }
+            const o = value;
+            const it = optInt(o.iterations, 2147483647), mode = optInt(o.animationMode, 0);
+            const f = [num(o.repeatDelayMillis, 1200), num(o.initialDelayMillis, 1200),
+                num(o.spacing, 0), num(o.velocity, 0)];
+            out.push((w) => {
+                w.buffer.start(228);
+                w.buffer.writeInt(it);
+                w.buffer.writeInt(mode);
+                for (const x of f)
+                    w.buffer.writeFloat(x);
+            });
+            return true;
+        }
+        if (k === "collapsiblepriority") {
+            let orientation = 0, priority;
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+                orientation = String(value.orientation ?? "horizontal").toLowerCase() === "vertical" ? 1 : 0;
+                priority = (0, WireBuffer_1.floatToRawIntBits)(num(value.priority, 0));
+            }
+            else if (Array.isArray(value)) {
+                orientation = jsonGetInt(value[0], "collapsiblePriority[0]");
+                priority = (0, WireBuffer_1.floatToRawIntBits)(Number(value[1]));
+            }
+            else {
+                priority = this.fbits(value);
+            }
+            out.push((w) => { w.buffer.start(235); w.buffer.writeInt(orientation); w.buffer.writeInt(priority); });
+            return true;
+        }
+        return false;
+    }
+    /** DefaultModifierParsers.resolveFunctionId: -1 when absent. */
+    resolveFunctionId(val) {
+        if (val === null || val === undefined)
+            return -1;
+        if (typeof val === "number")
+            return Math.trunc(val);
+        if (typeof val === "string") {
+            const name = isVariableRef(val) ? variableNameFromRef(val) : val;
+            const bits = this.variables.get(name);
+            if (bits !== undefined) {
+                if (isNanBits(bits))
+                    return bits & 0x3fffff;
+                return Math.trunc((0, WireBuffer_1.f32FromBits)(bits));
+            }
+            return this.resolveTextId(val);
+        }
+        return -1;
+    }
+    /**
+     * RemoteComposeJsonParser.resolveIntegerVariable, as a "long": 2^32 + id for a variable
+     * (the integer-expression mask bit), the plain value for a number.
+     */
+    resolveIntegerVariable(obj) {
+        if (typeof obj === "number")
+            return Math.trunc(obj);
+        if (typeof obj === "string") {
+            const name = isVariableRef(obj) ? variableNameFromRef(obj) : obj;
+            if (this.variables.isMaterialised(name))
+                return 0x100000000 + (this.variables.get(name) & 0x3fffff);
+            const id = this.writer.addNamedInt(name, 0);
+            this.variables.set(name, (0, WireBuffer_1.asNanBits)(id));
+            return 0x100000000 + id;
+        }
+        throw new NotImplementedComponent(`Cannot resolve integer variable from ${JSON.stringify(obj)}`);
+    }
+    /** ExpressionParser.parseIntegerExpression: INTEGER_EXPRESSION (144); returns 2^32 + id. */
+    parseIntegerExpression(expr) {
+        const items = this.expr.infixToIntegerRpn(expr, (token) => {
+            const name = isVariableRef(token) ? variableNameFromRef(token) : token;
+            if (this.variables.isMaterialised(name)) {
+                const bits = this.variables.get(name);
+                if (isNanBits(bits))
+                    return 0x100000000 + (bits & 0x3fffff);
+                const v = this.expr.variableNanBits(token); // getVariableNan
+                return isNanBits(v) ? 0x100000000 + (v & 0x3fffff) : Math.trunc((0, WireBuffer_1.f32FromBits)(v));
+            }
+            return this.resolveIntegerVariable(token);
+        });
+        let mask = 0;
+        const vals = items.map((v, i) => {
+            if (v >= 0x100000000) {
+                mask |= (1 << i);
+                return (v - 0x100000000) | 0;
+            }
+            return v | 0;
+        });
+        const id = this.writer.allocDataId();
+        const b = this.writer.buffer;
+        b.start(144);
+        b.writeInt(id);
+        b.writeInt(mask);
+        b.writeInt(vals.length);
+        for (const v of vals)
+            b.writeInt(v);
+        return 0x100000000 + id;
+    }
+    /**
+     * RemoteComposeJsonParser.resolveIntegerId: a number is the id; a name (with or without
+     * @/$) is an existing variable's id, or else a new named integer variable set to 0.
+     */
+    resolveIntegerId(obj) {
+        if (typeof obj === "number")
+            return Math.trunc(obj) | 0;
+        return this.resolveIntegerVariable(obj) % 0x100000000;
+    }
+    /**
+     * RemoteComposeJsonParser.parseFloatFunction: FUNCTION_DEFINE, its parameters bound as
+     * variables for the body (parsed as first-pass commands), then the end. A visibility
+     * animation always has at least six parameters: progress, w, h, x, y, id.
+     */
+    parseFloatFunction(command, visibility) {
+        let params = Array.isArray(command.params) ? command.params : null;
+        if (params === null && Array.isArray(command.parameters))
+            params = command.parameters;
+        const count = params !== null
+            ? (visibility ? Math.max(params.length, 6) : params.length)
+            : (visibility ? 6 : optInt(command.count, 0));
+        const [fid, argIds] = this.writer.defineFloatFunction(count);
+        const args = argIds.map(WireBuffer_1.asNanBits);
+        if (command.name !== undefined && command.name !== null) {
+            this.variables.set(String(command.name), (0, WireBuffer_1.floatToRawIntBits)(fid));
+        }
+        const saved = this.variables.snapshot();
+        if (visibility && count >= 6) {
+            const bind = [["progress", 0], ["w", 1], ["width", 1], ["h", 2],
+                ["height", 2], ["x", 3], ["y", 4], ["id", 5], ["componentId", 5]];
+            for (const [n, i] of bind)
+                this.variables.set(n, args[i]);
+        }
+        if (params !== null) {
+            const p0 = String(params[0]);
+            if (visibility && params.length === 6 && (p0 === "id" || p0 === "componentId")) {
+                this.variables.set(p0, args[5]);
+                for (let i = 1; i < 6; i++)
+                    this.variables.set(String(params[i]), args[i - 1]);
+            }
+            else {
+                params.forEach((p, i) => this.variables.set(String(p), args[i]));
+            }
+        }
+        if (!Array.isArray(command.commands)) {
+            throw new NotImplementedComponent(`${command.type}: missing 'commands' array`);
+        }
+        const prev = this.inFirstPass;
+        this.inFirstPass = true;
+        for (const c of command.commands)
+            this.parseCommand(c);
+        this.inFirstPass = prev;
+        this.writer.containerEnd();
+        this.variables.restore(saved);
+    }
+    /** createOffscreenBitmap: DATA_BITMAP of type RAW8888, encoding offscreen, 1x1, no payload. */
+    createOffscreenBitmap(command) {
+        const id = this.writer.allocDataId();
+        this.writer.addBitmap(id, 1, 1, new Uint8Array(0), 3, 4);
+        const name = command.name ?? command.id ?? command.varName ?? command.value;
+        if (name !== undefined && name !== null)
+            this.variables.set(String(name), (0, WireBuffer_1.floatToRawIntBits)(id));
     }
     /**
      * Padding, in the reference's three forms.
@@ -727,10 +1273,20 @@ class Parser {
      */
     paddingBits(value) {
         if (Array.isArray(value)) {
-            if (value.length < 4) {
-                throw new NotImplementedComponent(`padding list needs 4 values, got ${value.length}`);
+            // [all], [horizontal, vertical] or [start, top, end, bottom] (extra values are
+            // ignored); any other length writes no padding at all, as in the reference.
+            if (value.length === 2) {
+                const h = numBits(value[0]), v = numBits(value[1]);
+                return [h, v, h, v];
             }
-            return [numBits(value[0]), numBits(value[1]), numBits(value[2]), numBits(value[3])];
+            if (value.length >= 4) {
+                return [numBits(value[0]), numBits(value[1]), numBits(value[2]), numBits(value[3])];
+            }
+            if (value.length === 1) {
+                const v = numBits(value[0]);
+                return [v, v, v, v];
+            }
+            return null;
         }
         if (value && typeof value === "object") {
             const g = (k) => numBits(value[k] ?? 0);
@@ -780,7 +1336,7 @@ class Parser {
             return;
         }
         if (ctype === "flow") {
-            this.writer.startFlow(hAlignOf(component, "start"), vAlignOf(component, "top"), mods, Math.trunc(Number(component.maxColumns ?? 2147483647)));
+            this.writer.startFlow(hAlignOf(component, "start"), vAlignOf(component, "top"), mods, optInt(component.maxColumns, 2147483647), 0.0, optInt(component.maxLines, 2147483647));
             for (const k of (component.children ?? []).map(normalizeComponent)) {
                 this.parseComponent(k);
             }
@@ -818,10 +1374,67 @@ class Parser {
             }
             return;
         }
+        if (ctype === "collapsiblecolumn" || ctype === "collapsiblerow") {
+            this.writer.startCollapsible(ctype === "collapsiblecolumn", hAlignOf(component, "center"), vAlignOf(component, "center"), mods);
+            for (const k of kids)
+                this.parseComponent(k);
+            this.writer.endContainer();
+            return;
+        }
+        if (ctype === "statelayout") {
+            // DefaultComponentParsers "stateLayout": the index (an integer variable) under any
+            // of four names; each child is one state.
+            const idx = "indexId" in component ? component.indexId
+                : "stateId" in component ? component.stateId
+                    : "index" in component ? component.index : component.stateIndex;
+            if (idx === undefined)
+                throw new NotImplementedComponent("stateLayout: missing indexId");
+            const indexId = this.resolveIntegerId(idx);
+            this.writer.startStateLayout(indexId, mods);
+            for (const k of kids)
+                this.parseComponent(k);
+            this.writer.endContainer();
+            return;
+        }
+        if (ctype === "custom") {
+            const props = [];
+            for (const p of (component.properties ?? [])) {
+                const dataType = jsonGetInt(p.dataType, "custom dataType") & 0xffff;
+                const type = jsonGetInt(p.type, "custom type") & 0xffff;
+                if ((dataType & 1) === 0)
+                    props.push([type, dataType, jsonGetInt(p.value, "custom value"), false]);
+                else
+                    props.push([type, dataType, Number(p.value), true]);
+            }
+            const configId = this.writer.addText(component.config === undefined || component.config === null
+                ? "" : String(component.config));
+            this.writer.startCustom(configId, props, mods);
+            for (const k of kids)
+                this.parseComponent(k);
+            this.writer.endContainer();
+            return;
+        }
+        if (ctype === "createfloatfunction" || ctype === "floatfunction"
+            || ctype === "definevisibilityanimation") {
+            if (this.inFirstPass)
+                this.parseFloatFunction(component, ctype === "definevisibilityanimation");
+            return;
+        }
+        if (ctype === "createoffscreenbitmap") {
+            if (this.inFirstPass)
+                this.createOffscreenBitmap(component);
+            return;
+        }
+        if (ctype === "rem") {
+            this.writer.rem(remText(component));
+            return;
+        }
         if (ctype === "text") {
             this.parseText(component, mods);
             return;
         }
+        if (this.parseLoomComponent(ctype, component, kids))
+            return;
         if (ctype === "canvas") {
             this.writer.startCanvas(mods, this.apiLevel);
             for (const cmd of component.commands ?? [])
@@ -831,6 +1444,114 @@ class Parser {
         }
         throw new NotImplementedComponent(`component type '${ctype}'`);
     }
+    parseKids(kids) {
+        for (const k of kids ?? [])
+            this.parseComponent(normalizeComponent(k));
+    }
+    /**
+     * Loom: component templates, as DefaultComponentParsers' definePattern, patternArgument,
+     * patternBlock, patternInflation and patternForEach, plus calls by template name.
+     * Returns false when the component is none of these.
+     */
+    parseLoomComponent(ctype, component, kids) {
+        if (ctype === "definepattern") {
+            if (this.inFirstPass)
+                this.definePattern(component);
+            return true;
+        }
+        if (ctype === "referencedoperations") {
+            // DefaultComponentParsers "referencedoperations": a fresh id, the children, then the
+            // group's own modifiers (parsed again here, after the children, as the reference),
+            // and the name bound to the id. Defined once, in the first pass.
+            if (!this.inFirstPass && this.variables.isMaterialised(String(component.name)))
+                return true;
+            const id = this.writer.allocDataId();
+            this.writer.referencedOperationsStart(id);
+            this.parseKids(kids);
+            for (const m of this.parseModifiers(component.modifiers))
+                m(this.writer);
+            this.writer.containerEnd();
+            this.variables.set(String(component.name), (0, WireBuffer_1.floatToRawIntBits)(id));
+            return true;
+        }
+        if (ctype === "modifier") {
+            // DefaultComponentParsers "modifier": the component's modifiers written as they are,
+            // which is how a style template's body emits its modifiers.
+            for (const m of this.parseModifiers(component.modifiers))
+                m(this.writer);
+            return true;
+        }
+        if (ctype === "include") {
+            this.writer.includeReferencedOperations(this.resolveTextId(component.value));
+            return true;
+        }
+        if (ctype === "patternargument") {
+            this.writer.patternArgument(Math.trunc(Number(component.parameterIndex)));
+            return true;
+        }
+        if (ctype === "patternblock") {
+            this.writer.patternBlock(Math.trunc(Number(component.parameterIndex)));
+            this.parseKids(kids);
+            this.writer.containerEnd();
+            return true;
+        }
+        if (ctype === "patterninflation") {
+            const id = this.writer.addText(String(component.pattern));
+            const args = (component.arguments ?? []).map((a) => this.resolveTextId(a));
+            this.writer.patternInflation(id, args);
+            this.parseKids(kids);
+            this.writer.containerEnd();
+            return true;
+        }
+        if (ctype === "patternforeach") {
+            const collectionId = this.resolveTextId(component.collection);
+            const localName = String(component.localItem);
+            const localId = this.writer.nextLocalId();
+            const prev = this.variables.snapshot();
+            this.variables.set(localName, (0, WireBuffer_1.floatToRawIntBits)(localId));
+            this.writer.patternForEach(collectionId, localId);
+            this.parseKids(kids);
+            this.writer.containerEnd();
+            this.variables.restore(prev);
+            return true;
+        }
+        const pattern = this.patterns.get(ctype);
+        if (pattern) {
+            // A call: arguments by position, or by parameter name (a missing one is 0).
+            const argIds = component.arguments !== undefined
+                ? pattern.params.map((_p, i) => (i < component.arguments.length ? this.resolveTextId(component.arguments[i]) : 0))
+                : pattern.params.map((p) => (p in component ? this.resolveTextId(component[p]) : 0));
+            this.writer.patternInflation(pattern.id, argIds);
+            this.parseKids(kids);
+            this.writer.containerEnd();
+            return true;
+        }
+        return false;
+    }
+    /** DefaultComponentParsers "definepattern" (first pass only). */
+    definePattern(component) {
+        const name = String(component.name);
+        if (this.patterns.has(name.toLowerCase())) {
+            throw new NotImplementedComponent(`definePattern: '${name}' is already defined`);
+        }
+        const params = (component.parameters ?? []).map(String);
+        const saved = this.variables.snapshot();
+        // Each parameter is a fresh data id, visible in the body as a NaN-boxed variable.
+        const paramIds = params.map((p) => {
+            const id = this.writer.allocDataId();
+            this.variables.set(p, (0, WireBuffer_1.asNanBits)(id));
+            return id;
+        });
+        const patternId = this.writer.definePattern(name, paramIds);
+        // Locals: pattern-local ids, bound as plain floats holding the id (as the reference).
+        for (const local of component.locals ?? []) {
+            this.variables.set(String(local), (0, WireBuffer_1.floatToRawIntBits)(this.writer.nextLocalId()));
+        }
+        this.parseKids(component.children ?? []);
+        this.writer.endPatternDefine();
+        this.variables.restore(saved);
+        this.patterns.set(name.toLowerCase(), { id: patternId, params });
+    }
     /** `{"drawRect": {...}}` normalises the same way a component does. */
     normalizeCommand(c) {
         if (!("type" in c) && Object.keys(c).length === 1) {
@@ -839,8 +1560,16 @@ class Parser {
             const out = { type: key };
             if (Array.isArray(val))
                 out.commands = val;
-            else if (val && typeof val === "object")
-                Object.assign(out, val);
+            else if (val && typeof val === "object") {
+                // RemoteComposeJsonParser.parseCommand: a nested `type` is moved to `source`,
+                // so it never replaces the command name.
+                for (const [k, v] of Object.entries(val)) {
+                    if (k === "type")
+                        out.source = v;
+                    else
+                        out[k] = v;
+                }
+            }
             else if (["drawpath", "pathappendclose"].includes(key.toLowerCase()))
                 out.path = val;
             else
@@ -893,6 +1622,8 @@ class Parser {
             this.gradient(src.linearGradient, ints, false);
         else if (key === "sweepGradient")
             this.gradient(src.sweepGradient, ints, true);
+        else if (key === "radialGradient")
+            this.radialGradient(src.radialGradient, ints);
         else
             throw new NotImplementedComponent(`paint key '${key}'`);
     }
@@ -935,6 +1666,9 @@ class Parser {
         }
         if (!source)
             return 0; // the reference returns 0 (no shader) for an empty source
+        // createShader interns the source before the uniforms are parsed (an expression
+        // uniform writes its ops after the text); commit allocates the shader id last.
+        const textId = this.writer.addText(source);
         const floats = [];
         const bitmaps = [];
         for (const [name, u] of Object.entries(uniforms ?? {})) {
@@ -945,7 +1679,7 @@ class Parser {
             else
                 floats.push([name, [this.fbits(u)]]);
         }
-        return this.writer.addShader(source, floats, [], bitmaps);
+        return this.writer.addShader(source, floats, [], bitmaps, textId);
     }
     /**
      * A `uniform shader` input. The reference resolves it like a text id, so a number is the
@@ -961,6 +1695,63 @@ class Parser {
                 return hit;
         }
         return this.resolveTextId(value);
+    }
+    /**
+     * RemoteComposeJsonParser.applyRadialGradient. With any focal key it is the two-circle
+     * form (RADIAL_GRADIENT2): the end circle falls back to centerX/centerY/radius and the
+     * start centre to the end centre. Coordinates are parsed end circle first, then the
+     * start circle, and written start first. The tile mode is optInt, as for linear.
+     */
+    radialGradient(g, ints) {
+        if (!g || typeof g !== "object")
+            throw new NotImplementedComponent("radialGradient needs an object");
+        const head = this.gradientColors(g);
+        const tileMode = optInt(g.tileMode, 0);
+        if (FOCAL_RADIAL_KEYS.some((k) => k in g)) {
+            const keys = (dflt, ...ks) => {
+                for (const k of ks)
+                    if (k in g)
+                        return this.fbits(g[k]);
+                return dflt;
+            };
+            const endX = keys((0, WireBuffer_1.floatToRawIntBits)(0), "endX", "centerX");
+            const endY = keys((0, WireBuffer_1.floatToRawIntBits)(0), "endY", "centerY");
+            const endR = keys((0, WireBuffer_1.floatToRawIntBits)(0), "endR", "endRadius", "radius");
+            const startX = keys(endX, "startX", "focalX");
+            const startY = keys(endY, "startY", "focalY");
+            const startR = keys((0, WireBuffer_1.floatToRawIntBits)(0), "startR", "startRadius", "focalR", "focalRadius");
+            ints.push(PB_GRADIENT | (GRAD_RADIAL2 << 16), ...head, startX, startY, startR, endX, endY, endR, tileMode);
+        }
+        else {
+            for (const k of ["centerX", "centerY", "radius"]) {
+                if (!(k in g))
+                    throw new NotImplementedComponent(`radialGradient needs ${k}`);
+            }
+            const cx = this.fbits(g.centerX), cy = this.fbits(g.centerY), r = this.fbits(g.radius);
+            ints.push(PB_GRADIENT | (GRAD_RADIAL << 16), ...head, cx, cy, r, tileMode);
+        }
+    }
+    /** The colour count and mask, the colours, and the stops, as every gradient writes them. */
+    gradientColors(g) {
+        const colorsArr = (g.colors ?? []);
+        const colors = [];
+        let idMask = 0;
+        colorsArr.forEach((c, i) => {
+            if (typeof c === "string" && (c.startsWith("$colors.") || c.startsWith("@colors."))) {
+                idMask |= (1 << i);
+                colors.push(toInt32(this.resolveColor(c)));
+            }
+            else {
+                colors.push(toInt32(typeof c === "string" ? this.resolveColor(c) : parseColor(c)));
+            }
+        });
+        const stops = Array.isArray(g.stops) ? g.stops : undefined;
+        const out = [(((idMask << 16) | colors.length) & 0xffffffff) | 0, ...colors];
+        out.push(stops ? stops.length : 0);
+        if (stops)
+            for (const st of stops)
+                out.push((0, WireBuffer_1.floatToRawIntBits)(Number(st)));
+        return out;
     }
     gradient(g, ints, sweep) {
         const colorsArr = (g.colors ?? []);
@@ -1066,14 +1857,22 @@ class Parser {
         }
         if (obj && typeof obj === "object") {
             const kind = String(obj.type ?? "").toLowerCase();
-            if (kind === "textfromfloat") {
-                const vo = obj;
-                return this.writer.addTextFromFloat(this.fbits(vo.value), Number(vo.whole ?? 0), Number(vo.decimal ?? 3), Number(vo.flags ?? 0));
+            const vo = obj;
+            if (kind === "textmerge") {
+                // {"type": "textMerge", "id1": a, "id2": b}: each side resolved as a text
+                // id (and so may itself be a textMerge or textFromFloat), then a fresh id.
+                const id1 = this.resolveTextId(vo.id1);
+                const id2 = this.resolveTextId(vo.id2);
+                return this.writer.textMerge(id1, id2);
             }
-            throw new NotImplementedComponent(kind === "textmerge"
-                ? "textMerge needs a TEXT_MERGE writer, which this converter does not "
-                    + "have; no corpus document exercises it"
-                : `text id object '${kind}'`);
+            if (kind === "textfromfloat") {
+                // `after`/`before` are the reference's older spellings of decimal/whole.
+                const val = this.fbits(vo.value);
+                const after = "decimal" in vo ? optInt(vo.decimal, 3) : optInt(vo.after, 3);
+                const before = "whole" in vo ? optInt(vo.whole, 0) : optInt(vo.before, 0);
+                return this.writer.addTextFromFloat(val, before, after, optInt(vo.flags, 0));
+            }
+            throw new NotImplementedComponent(`Unsupported text object type: ${kind}`);
         }
         const text = String(obj);
         if (text.startsWith("$colors.") || text.startsWith("@colors.")) {
@@ -1082,11 +1881,11 @@ class Parser {
                 return hit;
         }
         if (text.includes("@") && /[+\-*/%]/.test(text)) {
-            throw new NotImplementedComponent(`text id '${text}' is an integer expression, which needs integer-variable `
-                + "support this converter does not have");
+            // RemoteComposeJsonParser.resolveTextId: an integer expression; its id.
+            return this.parseIntegerExpression(text) % 0x100000000;
         }
-        if (/^[@$]/.test(text)) {
-            const name = text.slice(1);
+        if (isVariableRef(text)) {
+            const name = variableNameFromRef(text); // "@vars.x" names x, as getVariableNameFromRef
             // `get`, not `isMaterialised`: a deferred variable is written at its first use,
             // and this is a use. Checking only for an already-written variable made the
             // reference fall through and emit the literal text "@hdgText".
@@ -1247,7 +2046,7 @@ class Parser {
                 if (target === undefined || target === null) {
                     throw new NotImplementedComponent('valueFloatExpressionChange needs a "target"');
                 }
-                const targetId = this.resolveId(target);
+                const targetId = this.resolveTextId(target);
                 const rawValue = "value" in a ? a.value : a.expression;
                 if (rawValue === undefined || rawValue === null) {
                     throw new NotImplementedComponent('valueFloatExpressionChange needs a "value" or "expression"');
@@ -1258,19 +2057,19 @@ class Parser {
                 if (target === undefined || target === null) {
                     throw new NotImplementedComponent('valueFloatChange needs a "target"');
                 }
-                actions.push((0, Writer_1.valueFloatChange)(this.resolveId(target), this.fbits(a.value)));
+                actions.push((0, Writer_1.valueFloatChange)(this.resolveTextId(target), this.fbits(a.value)));
             }
             else if (t === "valueintegerchange") {
                 if (target === undefined || target === null) {
                     throw new NotImplementedComponent('valueIntegerChange needs a "target"');
                 }
-                actions.push((0, Writer_1.valueIntegerChange)(this.resolveId(target), Number(a.value)));
+                actions.push((0, Writer_1.valueIntegerChange)(this.resolveTextId(target), Number(a.value)));
             }
             else if (t === "valuestringchange") {
                 if (target === undefined || target === null) {
                     throw new NotImplementedComponent('valueStringChange needs a "target"');
                 }
-                const targetId = this.resolveId(target);
+                const targetId = this.resolveTextId(target);
                 const value = a.value;
                 if (typeof value === "string"
                     && !value.startsWith("@") && !value.startsWith("$")) {
@@ -1281,17 +2080,16 @@ class Parser {
                 }
             }
             else if (t === "valueintegerexpressionchange") {
-                // Literal ids only. The reference resolves the target through an integer
-                // variable table and the value through an integer *expression* parser;
-                // neither exists here, and guessing would emit a document no reference run
-                // could confirm.
+                // DefaultModifierParsers: the target as an integer variable (2^32 + id), the
+                // value as an integer expression string or a literal long.
+                if (target === undefined)
+                    throw new NotImplementedComponent("valueIntegerExpressionChange: missing target");
+                this.resolveTextId(target); // parseAction resolves targetId for every action
+                const intTarget = this.resolveIntegerVariable(target);
                 const value = "value" in a ? a.value : a.expression;
-                if (typeof target !== "number" || typeof value !== "number") {
-                    throw new NotImplementedComponent("valueIntegerExpressionChange with a named target or an expression "
-                        + "string needs integer-variable support, which this converter does "
-                        + "not have; only literal ids are accepted");
-                }
-                actions.push((0, Writer_1.valueIntegerExpressionChange)(Math.trunc(target), Math.trunc(value)));
+                const exprId = typeof value === "string" ? this.parseIntegerExpression(value)
+                    : jsonGetInt(value, "valueIntegerExpressionChange value");
+                actions.push((0, Writer_1.valueIntegerExpressionChange)(intTarget, exprId));
             }
             else {
                 throw new NotImplementedComponent(`click action type '${t}'`);
@@ -1320,6 +2118,24 @@ class Parser {
         }
         return this.writer.addPathData(parseSvgPath(s));
     }
+    /**
+     * An SVG string declared as a path (resources.paths, the `path` command). The reference
+     * writes an EMPTY DATA_PATH here (upstream U8: DEFAULT_PLATFORM.pathToFloatArray only
+     * understands RemotePathBase, and these hand it a PathParser or a String), so a path
+     * declared this way never draws on any player. This converter writes the parsed path,
+     * as drawPath does, and differs from the reference's bytes in that one op.
+     */
+    // Java's DEFAULT_PLATFORM.pathToFloatArray only understands RemotePathBase and returns an
+    // empty array for a String, so an SVG string here becomes an empty DATA_PATH (U11). Matched
+    // for byte parity; drawPath with a string, or the op-list form, draws the path.
+    addPathString(_value) {
+        return this.writer.addPathData([]);
+    }
+    /** One side of a themed colour that is not a pair of references: Java's parseColor (a
+     *  "#..." value, or the id a "@colors.x" names, used as a value). */
+    themedSide(s) {
+        return /^[@$]colors\./.test(s) ? this.resolveColor(s) : parseColor(s);
+    }
     /** A colour value: literal, "$colors.name", or a variable holding a colour id. */
     resolveColor(value) {
         if (typeof value === "string" &&
@@ -1329,6 +2145,16 @@ class Parser {
             if (id === undefined)
                 throw new NotImplementedComponent(`Color not found: ${name}`);
             return id;
+        }
+        // RemoteComposeJsonParser.parseColor: a variable reference is the variable's id (a
+        // pattern parameter is one: remapped to each call's colour at playback).
+        if (typeof value === "string" && /^[@$]/.test(value)) {
+            const bits = this.variables.get(value.slice(1));
+            if (bits !== undefined) {
+                if (((bits >>> 23) & 0xff) === 0xff && (bits & 0x7fffff) !== 0)
+                    return (0, WireBuffer_1.idFromNanBits)(bits);
+                return Math.trunc((0, WireBuffer_1.f32FromBits)(bits));
+            }
         }
         return toInt32(parseColor(value));
     }
@@ -1439,12 +2265,25 @@ class Parser {
             w.matrixRestore();
             return;
         }
+        if (t === "wakein") {
+            w.wakeIn(f("seconds"));
+            return;
+        }
         if (t === "translate") {
             w.matrixTranslate(f("dx"), f("dy"));
             return;
         }
         if (t === "scale") {
-            w.matrixScale(f("sx"), f("sy"));
+            // As for rotate, the pivot is parsed before sx and sy (the reference reads it
+            // into locals first).
+            if ("pivotX" in command || "centerX" in command) {
+                const px = this.fbits("pivotX" in command ? command.pivotX : command.centerX);
+                const py = this.fbits("pivotY" in command ? command.pivotY : command.centerY);
+                w.matrixScale(f("sx"), f("sy"), px, py);
+            }
+            else {
+                w.matrixScale(f("sx"), f("sy"));
+            }
             return;
         }
         if (t === "rotate") {
@@ -1503,6 +2342,21 @@ class Parser {
             // empty remark rather than an error — a comment is not worth failing a build over.
             const m = command.text ?? command.value ?? command.message ?? command.comment ?? "";
             w.rem(String(m));
+            return;
+        }
+        if (t === "path" || t === "pathdata") {
+            // A path declared from data: an array of floats (each through parseFloat, so
+            // verbs can be written "NaN"-boxed or as expressions) or an SVG string.
+            const data = command.data;
+            if (data === undefined || data === null) {
+                throw new NotImplementedComponent(`'${t}' needs \`data\``);
+            }
+            const pid = Array.isArray(data)
+                ? w.addPathData(data.map((v) => ({ bits: this.fbits(v) })))
+                : this.addPathString(data);
+            if (command.id !== undefined && command.id !== null) {
+                this.paths.set(String(command.id), pid);
+            }
             return;
         }
         if (t === "pathcreate") {
@@ -2014,27 +2868,419 @@ class Parser {
             w.clipRect(f("left"), f("top"), f("right"), f("bottom"));
             return;
         }
+        if (this.parseMoreCommands(t, command, f))
+            return;
         throw new NotImplementedComponent(`canvas command '${t}'`);
+    }
+    /** A path id: a number as-is, else a name/reference/SVG string (parsePath). */
+    resolvePathId(v) {
+        if (typeof v === "number")
+            return Math.trunc(v);
+        if (v === undefined)
+            throw new NotImplementedComponent("missing path");
+        return this.resolvePath(v);
+    }
+    /** A float-holding variable (plain float id), as the reference's mVariables.put(name, (float) id). */
+    bindPlain(name, id) {
+        if (name !== undefined && name !== null)
+            this.variables.set(String(name), (0, WireBuffer_1.floatToRawIntBits)(id));
+    }
+    bindBits(name, bits) {
+        if (name !== undefined && name !== null)
+            this.variables.set(String(name), bits);
+    }
+    /**
+     * RemoteComposeJsonParser.parseCommand cases json2rc lacked: functions, attributes,
+     * text ops, lookups, dynamic lists, matrices, path tween/combine, actions and the
+     * small one-op commands. Returns false for an unknown command.
+     */
+    parseMoreCommands(t, command, f) {
+        const w = this.writer;
+        const fOpt = (k, d) => (k in command ? f(k) : (0, WireBuffer_1.floatToRawIntBits)(d));
+        const req = (k) => {
+            if (!(k in command))
+                throw new NotImplementedComponent(`${command.type}: missing required field '${k}'`);
+            return command[k];
+        };
+        switch (t) {
+            case "createfloatfunction":
+            case "floatfunction":
+                this.parseFloatFunction(command, false);
+                return true;
+            case "definevisibilityanimation":
+                this.parseFloatFunction(command, true);
+                return true;
+            case "callfloatfunction": {
+                const fnId = this.resolveTextId(req("id"));
+                const args = req("args");
+                if (!Array.isArray(args))
+                    throw new NotImplementedComponent("callFloatFunction: 'args' must be an array");
+                w.callFloatFunction(fnId, args.map((a) => this.fbits(a)));
+                return true;
+            }
+            case "setarrayvalue": {
+                const id = this.resolveTextId(req("id"));
+                const index = f("index"), value = f("value");
+                w.setArrayValue(id, index, value);
+                return true;
+            }
+            case "dynamicfloatarray":
+            case "dynamicfloatlist": {
+                const next = w.allocDataId(); // optInt("id", nextId()): allocated either way
+                const listId = "id" in command ? optInt(command.id, next) : next;
+                const size = fOpt("size", 0);
+                this.bindPlain(command.name, listId);
+                w.addDynamicFloatArray(listId, size);
+                return true;
+            }
+            case "updatedynamicfloatlist": {
+                const listBits = f("list");
+                const listId = Math.trunc((0, WireBuffer_1.f32FromBits)(listBits)) | 0;
+                const index = f("index"), value = f("value");
+                w.setArrayValue(listId, index, value);
+                return true;
+            }
+            case "drawtweenpath": {
+                const p1 = this.resolvePathId(req("path1")), p2 = this.resolvePathId(req("path2"));
+                const tween = f("tween");
+                const start = fOpt("start", 0), stop = fOpt("stop", 1);
+                w.drawTweenPath(p1, p2, tween, start, stop);
+                return true;
+            }
+            case "pathtween":
+            case "pathcombine": {
+                const p1 = this.resolvePathId(req("path1")), p2 = this.resolvePathId(req("path2"));
+                const id = t === "pathtween" ? w.pathTween(p1, p2, f("tween"))
+                    : w.pathCombine(p1, p2, optInt(command.op, 0));
+                if (command.id !== undefined && command.id !== null)
+                    this.paths.set(String(command.id), id);
+                return true;
+            }
+            case "skew": {
+                const sx = f("skewX"), sy = f("skewY");
+                w.matrixSkew(sx, sy);
+                return true;
+            }
+            case "matrixfrompath": {
+                const pathId = this.resolvePathId(req("path"));
+                const fraction = f("fraction"), vOffset = fOpt("vOffset", 0);
+                w.matrixFromPath(pathId, fraction, vOffset, optInt(command.flags, 0));
+                return true;
+            }
+            case "matrixconstant": {
+                const values = req("values");
+                const bits = values.map((item) => {
+                    if (typeof item === "string" && item.startsWith("matrix:")) {
+                        const i = MATRIX_OPS.indexOf(item.slice(7));
+                        return i >= 0 ? (0, WireBuffer_1.asNanBits)(0x320000 + i + 1) : 0;
+                    }
+                    return this.fbits(item);
+                });
+                const name = typeof command.name === "string" ? command.name : null;
+                let matrixId;
+                if (optBoolean(command.named, false) && name !== null) {
+                    // (int) createNamedVariable(...) casts the NaN-boxed id to int: always 0 (upstream).
+                    w.setFloatName(w.allocDataId(), name);
+                    matrixId = 0;
+                }
+                else {
+                    const next = w.allocDataId();
+                    matrixId = "id" in command ? optInt(command.id, next) : next;
+                }
+                if (name !== null) {
+                    this.variables.set(name, (0, WireBuffer_1.asNanBits)(matrixId));
+                    this.matrices.set(name, (0, WireBuffer_1.asNanBits)(matrixId));
+                }
+                w.matrixExpression(matrixId, bits);
+                return true;
+            }
+            case "matrixvectormath":
+            case "matrixmultiply": {
+                const matrix = f("matrix");
+                const type = t === "matrixmultiply" ? optInt(command.mType, 0)
+                    : optInt(command.type, optInt(command.mType, 0));
+                const from = req("from").map((x) => this.fbits(x));
+                const named = optBoolean(command.named, false);
+                const outIds = req("out").map((item) => {
+                    if (typeof item === "string" || t === "matrixmultiply") {
+                        const n = String(item);
+                        const id = w.allocDataId();
+                        if (named)
+                            w.setFloatName(id, n);
+                        this.variables.set(n, (0, WireBuffer_1.asNanBits)(id));
+                        return id;
+                    }
+                    return Math.trunc(Number(item));
+                });
+                w.matrixVectorMath(type & 0xffff, outIds, matrix, from);
+                return true;
+            }
+            case "textmeasure": {
+                const textId = this.resolveTextId(req("text"));
+                this.bindBits(command.name, w.textMeasure(textId, optInt(command.mode, 0)));
+                return true;
+            }
+            case "textlength": {
+                const textId = this.resolveTextId(req("text"));
+                this.bindBits(command.name, w.textLength(textId));
+                return true;
+            }
+            case "colorattribute": {
+                const type = optInt(command.attribute, optInt(command.colorType, optInt(command.type, 0)));
+                this.bindBits(command.name, w.colorAttribute(optInt(command.color, 0), type & 0xffff));
+                return true;
+            }
+            case "imageattribute":
+            case "bitmapattribute": {
+                const b = req("bitmap");
+                const ref = typeof b === "string" && /^[@$]/.test(b) ? this.bitmaps.get(b.slice(1)) : undefined;
+                const bitmapId = ref ?? this.resolveTextId(b);
+                this.bindBits(command.name, w.imageAttribute(bitmapId, optInt(command.attribute, 0) & 0xffff));
+                return true;
+            }
+            case "textattribute": {
+                const textId = this.resolveTextId(req("text"));
+                this.bindBits(command.name, w.textAttribute(textId, optInt(command.attribute, 0) & 0xffff));
+                return true;
+            }
+            case "timeattribute": {
+                const args = Array.isArray(command.args) ? command.args.map((a) => jsonGetInt(a, "timeAttribute args")) : [];
+                this.bindBits(command.name, w.timeAttribute(optInt(command.timeId, 0), optInt(command.type, 0) & 0xffff, args));
+                return true;
+            }
+            case "textsubtext":
+            case "texttransform": {
+                const txt = this.resolveTextId(req("text"));
+                const start = f("start"), len = f("len");
+                let id;
+                if (t === "textsubtext")
+                    id = w.textSubtext(txt, start, len);
+                else {
+                    const opStr = String(req("operation")).toLowerCase();
+                    const op = opStr === "uppercase" ? 1 : opStr === "lowercase" ? 2
+                        : opStr === "capitalize" ? 3 : optInt(command.operation, 0);
+                    id = w.textTransform(txt, start, len, op);
+                }
+                this.bindPlain(command.varName, id);
+                return true;
+            }
+            case "idlookup": {
+                const arr = f("array"), index = f("index");
+                this.bindPlain(command.varName, w.idLookup(arr, index));
+                return true;
+            }
+            case "maplookup":
+            case "datamaplookup": {
+                const mapId = this.resolveTextId(req("map"));
+                const strId = w.addText(String(req("key")));
+                this.bindPlain(command.varName, w.mapLookup(mapId, strId));
+                return true;
+            }
+            case "textlookupint": {
+                const id = this.resolveTextId(req("id"));
+                const dataSet = f("dataSet");
+                const index = this.resolveTextId(req("index"));
+                w.textLookupInt(id, dataSet, index);
+                return true;
+            }
+            case "runaction":
+            case "runactions":
+                w.runActionsStart();
+                for (const c of command.commands ?? [])
+                    this.parseCommand(c);
+                w.containerEnd();
+                return true;
+            case "performhaptic":
+                w.buffer.start(177);
+                w.buffer.writeInt(jsonGetInt(req("constant"), "performHaptic"));
+                return true;
+            case "playsound": {
+                const id = this.resolveTextId(req("id"));
+                w.buffer.start(141);
+                w.buffer.writeInt(id);
+                return true;
+            }
+            case "clickarea": {
+                const id = this.resolveTextId(req("id"));
+                const cd = command.contentDescription;
+                const l = f("left"), tp = f("top"), r = f("right"), b = f("bottom");
+                const cdId = cd === undefined || cd === null ? 0 : w.addText(String(cd));
+                const md = command.metadata;
+                const mdId = md === undefined || md === null ? 0 : w.addText(String(md));
+                w.buffer.start(64);
+                w.buffer.writeInt(id);
+                w.buffer.writeInt(cdId);
+                for (const x of [l, tp, r, b])
+                    w.buffer.writeInt(x);
+                w.buffer.writeInt(mdId);
+                return true;
+            }
+            case "debugmessage": {
+                const msg = String(req("message"));
+                const val = this.fbits(command.value);
+                const flag = optInt(command.flag, 0);
+                const textId = w.addText(msg);
+                w.buffer.start(179);
+                w.buffer.writeInt(textId);
+                w.buffer.writeInt(val);
+                w.buffer.writeInt(flag);
+                return true;
+            }
+            case "createoffscreenbitmap":
+                this.createOffscreenBitmap(command);
+                return true;
+            case "drawtobitmap":
+            case "drawonbitmap": {
+                const bm = "bitmap" in command ? command.bitmap : "bitmapId" in command ? command.bitmapId : req("value");
+                const bitmapId = this.resolveTextId(bm);
+                drawOnBitmap(w, bitmapId, optInt(command.mode, 0), optInt(command.color, 0));
+                return true;
+            }
+            case "drawcomponenttobitmap": {
+                const bm = "bitmap" in command ? command.bitmap : "bitmapId" in command ? command.bitmapId : req("value");
+                const bitmapId = this.resolveTextId(bm);
+                let mode = 0, comp = 0;
+                if ("componentId" in command || "id" in command) {
+                    comp = this.resolveTextId("componentId" in command ? command.componentId : command.id);
+                    mode = 2;
+                }
+                else if (this.variables.isMaterialised("id")) {
+                    comp = this.resolveTextId("@id");
+                    mode = 2;
+                }
+                drawOnBitmap(w, bitmapId, mode, comp);
+                w.buffer.start(139);
+                drawOnBitmap(w, 0, 0, 0);
+                return true;
+            }
+            case "drawcontent":
+            case "drawcomponentcontent":
+                w.buffer.start(139);
+                return true;
+            case "global":
+                w.beginGlobal();
+                for (const c of command.commands ?? [])
+                    this.parseCommand(c);
+                w.endGlobal();
+                return true;
+            case "resources":
+                this.parseResources(command.resources ?? command);
+                return true;
+            case "componentvalue":
+            case "addcomponentvalue": {
+                const id = this.resolveTextId(req("id"));
+                const vt = jsonGetInt(req("valueType"), "componentValue valueType");
+                w.buffer.start(150);
+                w.buffer.writeInt(vt);
+                w.buffer.writeInt(w.lastComponentId);
+                w.buffer.writeInt(id);
+                return true;
+            }
+            case "polarpathexpression": {
+                // addPolarPathExpression: a PATH_EXPRESSION whose second array is the centre and
+                // whose flags carry POLAR (8).
+                const id = String(req("id"));
+                const rOps = this.expr.infixToRpn(String(req("expressionR")));
+                const start = f("start"), end = f("end"), count = f("count");
+                const cx = this.fbits("centerX" in command ? command.centerX : "cx" in command ? command.cx : 0);
+                const cy = this.fbits("centerY" in command ? command.centerY : "cy" in command ? command.cy : 0);
+                const pid = w.pathExpression(8 | optInt(command.flags, 0), start, end, count, rOps, [cx, cy]);
+                this.paths.set(id, pid);
+                return true;
+            }
+            case "pathappendmoveto":
+            case "pathappendquadto":
+            case "pathappendreset": {
+                const pathId = this.resolvePath(String(req("path")));
+                let data;
+                if (t === "pathappendmoveto")
+                    data = [(0, WireBuffer_1.asNanBits)(10), f("x"), f("y")];
+                else if (t === "pathappendquadto") {
+                    const x1 = f("x1"), y1 = f("y1"), x2 = f("x2"), y2 = f("y2");
+                    data = [(0, WireBuffer_1.asNanBits)(12), 0, 0, x1, y1, x2, y2];
+                }
+                else
+                    data = [(0, WireBuffer_1.asNanBits)(17)];
+                w.buffer.start(160);
+                w.buffer.writeInt(pathId);
+                w.buffer.writeInt(data.length);
+                for (const d of data)
+                    w.buffer.writeInt(d);
+                return true;
+            }
+            default:
+                return false;
+        }
     }
     parseVariable(command) {
         const name = String(command.name);
-        const vtype = String(command.vtype ?? "float");
+        const vtype = String(command.vtype ?? "float").toLowerCase();
+        const commit = Boolean(command.commit), flush = Boolean(command.flush);
+        if (vtype === "color" || vtype === "string" || vtype === "integer" || vtype === "int") {
+            // RemoteComposeJsonParser "variable": colour, string and integer kinds, emitted now in
+            // the first pass (or with commit), otherwise at first use.
+            if (this.inFirstPass || commit)
+                this.variables.set(name, this.materialiseVariable(command));
+            else
+                this.variables.defer(name, command);
+            return;
+        }
         if (vtype !== "float") {
             throw new NotImplementedComponent(`variable vtype '${vtype}'`);
         }
         if (command.export)
             throw new NotImplementedComponent("named/export float variable TBD");
-        const commit = Boolean(command.commit), flush = Boolean(command.flush);
         if (!(this.inFirstPass || commit || flush)) {
             this.variables.defer(name, command); // emitted at first use
             return;
         }
-        if (flush)
-            throw new NotImplementedComponent("flush variable TBD");
         if (this.variables.isMaterialised(name)) {
-            throw new NotImplementedComponent("variable reassignment (targetId) TBD");
+            // Reassignment: the new value is written under the variable's existing id, as the
+            // reference does (its `targetId` path) -- a pattern local is the usual case.
+            const bits = this.variables.get(name);
+            const isNan = ((bits >>> 23) & 0xff) === 0xff && (bits & 0x7fffff) !== 0;
+            const targetId = isNan ? (0, WireBuffer_1.idFromNanBits)(bits) : Math.trunc((0, WireBuffer_1.f32FromBits)(bits));
+            const val = command.value;
+            if (val !== null && typeof val === "object") {
+                this.variables.set(name, (0, WireBuffer_1.asNanBits)(targetId));
+            }
+            else if (typeof val === "string" && /[+\-*/%(),]/.test(val)) {
+                this.writer.floatExpressionAt(targetId, this.expr.infixToRpn(val));
+                this.variables.set(name, (0, WireBuffer_1.asNanBits)(targetId));
+            }
+            else if (typeof val === "number") {
+                this.writer.floatConstantAt(targetId, val);
+                this.variables.set(name, (0, WireBuffer_1.asNanBits)(targetId));
+            }
+            else {
+                throw new NotImplementedComponent(`variable reassignment of ${JSON.stringify(val)} TBD`);
+            }
+            return;
         }
         this.variables.set(name, this.materialiseFloatVar(command));
+    }
+    /** A colour, string or integer variable, as the reference's "variable" command. */
+    materialiseVariable(command) {
+        const vtype = String(command.vtype ?? "float").toLowerCase();
+        const name = String(command.name);
+        const named = Boolean(command.export);
+        if (vtype === "color") {
+            const color = this.resolveColor(command.value);
+            const id = named ? this.writer.addNamedColor(name, color) : this.writer.addColor(color);
+            return (0, WireBuffer_1.floatToRawIntBits)(id); // held as a plain float, as the reference
+        }
+        if (vtype === "string") {
+            const textId = this.resolveTextId(command.value);
+            if (named)
+                this.writer.setStringName(textId, name);
+            return (0, WireBuffer_1.floatToRawIntBits)(textId);
+        }
+        if (vtype === "integer" || vtype === "int") {
+            const v = Math.trunc(Number(command.value ?? 0));
+            const id = named ? this.writer.addNamedInt(name, v) : this.writer.addInteger(v);
+            return (0, WireBuffer_1.asNanBits)(id);
+        }
+        return this.materialiseFloatVar(command);
     }
     materialiseFloatVar(command) {
         const value = command.value;
@@ -2058,8 +3304,8 @@ class Parser {
         for (const key of order) {
             if (!(key in section))
                 continue;
-            if (!["colors", "floatArrays", "variables", "bitmaps"].includes(key)) {
-                throw new NotImplementedComponent(`resource type '${key}' (colors/floatArrays/variables/bitmaps only)`);
+            if (!["colors", "paths", "floatArrays", "variables", "bitmaps", "integers"].includes(key)) {
+                throw new NotImplementedComponent(`resource type '${key}' (colors/paths/floatArrays/variables/integers/bitmaps only)`);
             }
             this.parseResourceSection(key, section[key]);
         }
@@ -2073,11 +3319,55 @@ class Parser {
             return;
         }
         if ("colors" in section) {
-            for (const [name, , value] of eachResource(section.colors)) {
+            for (const [name, cfg, value] of eachResource(section.colors)) {
                 if (value && typeof value === "object" && !Array.isArray(value)) {
-                    throw new NotImplementedComponent("themed (light/dark) color TBD");
+                    // ResourceParser: {"light": c, "dark": c} is a themed colour. Two
+                    // "@colors.x" references pair those colours; otherwise each side is a
+                    // value, written as its own colour (named by lightName / darkName).
+                    if (!("light" in value && "dark" in value)) {
+                        throw new NotImplementedComponent(`resources.colors.${name}: an object colour needs "light" and "dark"`);
+                    }
+                    const light = String(value.light), dark = String(value.dark);
+                    const isRef = (s) => s.startsWith("$colors.") || s.startsWith("@colors.");
+                    const id = isRef(light) && isRef(dark)
+                        ? this.writer.addThemedColorIds(this.resolveColor(light), this.resolveColor(dark))
+                        : this.writer.addThemedColorValues(typeof value.lightName === "string" ? value.lightName : null, this.themedSide(light), typeof value.darkName === "string" ? value.darkName : null, this.themedSide(dark));
+                    if (cfg === null || cfg.export !== false)
+                        this.writer.setColorName(id, name);
+                    this.colors.set(name, id);
+                    continue;
                 }
                 this.colors.set(name, this.writer.addNamedColor(name, parseColor(value)));
+            }
+        }
+        if ("paths" in section) {
+            // ResourceParser "paths": an op list [{type: moveTo|lineTo|quadTo|cubicTo|close}]
+            // or an SVG string. Each is its own DATA_PATH; `$paths.name` finds it.
+            for (const [name, , value] of eachResource(section.paths)) {
+                // Anything else ({"data": [...]}) makes the reference parser throw a
+                // ClassCastException; refuse it here rather than write a document Java can't.
+                if (!Array.isArray(value) && typeof value !== "string") {
+                    throw new NotImplementedComponent(`resources.paths.${name}: an op list [{type: moveTo|lineTo|quadTo|cubicTo|close}] or an SVG string (the reference parser rejects ${JSON.stringify(value).slice(0, 40)})`);
+                }
+                this.paths.set(name, Array.isArray(value)
+                    ? this.writer.addPathData(pathFromOps(value))
+                    : this.addPathString(value));
+            }
+        }
+        if ("integers" in section) {
+            // ResourceParser "integers": exported unless told otherwise, NaN-boxed id.
+            for (const [name, cfg, value] of eachResource(section.integers)) {
+                let named = cfg === null || cfg.export !== false;
+                let v = value;
+                if (v && typeof v === "object") {
+                    if ("export" in v)
+                        named = v.export !== false;
+                    if ("value" in v)
+                        v = v.value;
+                }
+                const n = Math.trunc(Number(v));
+                const id = named ? this.writer.addNamedInt(name, n) : this.writer.addInteger(n);
+                this.variables.set(name, (0, WireBuffer_1.asNanBits)(id));
             }
         }
         if ("floatArrays" in section) {
@@ -2104,28 +3394,60 @@ class Parser {
                     this.variables.set(name, (0, WireBuffer_1.floatToRawIntBits)(id));
                     continue;
                 }
+                // ResourceParser "variables". An object value is unwrapped to its `value`
+                // (so an `anim` key beside it is ignored, as upstream: animate with an
+                // expression object {"value": "<expr>", "anim": seconds} instead).
                 let val = value;
-                if (val && typeof val === "object" && "value" in val && !("anim" in val)) {
-                    val = val.value;
+                let isNamed = named;
+                if (val && typeof val === "object" && !Array.isArray(val)) {
+                    const vo = val;
+                    if ("export" in vo)
+                        isNamed = optBoolean(vo.export, false);
+                    const typeStr = typeof vo.type === "string" ? vo.type : "";
+                    if (typeStr.toLowerCase() === "integer" || typeStr.toLowerCase() === "int") {
+                        const n = optInt(vo.value, 0);
+                        const id = isNamed ? this.writer.addNamedInt(name, n) : this.writer.addInteger(n);
+                        this.variables.set(name, (0, WireBuffer_1.asNanBits)(id));
+                        continue;
+                    }
+                    if (typeStr === "textFromFloat") {
+                        const textId = this.writer.addTextFromFloat(this.fbits(vo.value), optInt(vo.before, 0), optInt(vo.after, 3), optInt(vo.flags, 0));
+                        this.variables.set(name, (0, WireBuffer_1.floatToRawIntBits)(textId));
+                        if (isNamed)
+                            this.writer.setStringName(textId, name);
+                        continue;
+                    }
+                    if (typeStr.toLowerCase() === "textfromfloat" || typeStr.toLowerCase() === "textmerge") {
+                        // EXTENSION (other spellings, textMerge): a text id held as a plain float.
+                        this.variables.set(name, (0, WireBuffer_1.floatToRawIntBits)(this.resolveTextId(val)));
+                        continue;
+                    }
+                    if ("value" in vo)
+                        val = vo.value;
                 }
-                if (val && typeof val === "object"
-                    && ["textfromfloat", "textmerge"]
-                        .includes(String(val.type ?? "").toLowerCase())) {
-                    // A *text* id held in a float variable, stored as a plain float rather
-                    // than NaN-boxed: it names a string, not a number, so nothing downstream
-                    // should read it as a variable reference.
-                    this.variables.set(name, (0, WireBuffer_1.floatToRawIntBits)(this.resolveTextId(val)));
+                if (val === "width" || val === "height") {
+                    const bits = this.writer.addComponentValue(val === "width" ? Writer_1.OP.CV_WIDTH : Writer_1.OP.CV_HEIGHT);
+                    if (isNamed)
+                        this.writer.setFloatName(bits & 0x3fffff, name);
+                    this.variables.set(name, bits);
+                    continue;
                 }
-                else if (typeof val === "number") {
-                    this.variables.set(name, named
-                        ? this.writer.addNamedFloat(name, val)
-                        : this.writer.addFloatConstant(val));
+                if (val === "fontSize") {
+                    if (isNamed)
+                        this.writer.setFloatName(33, name);
+                    this.variables.set(name, (0, WireBuffer_1.asNanBits)(33));
+                    continue;
+                }
+                const bits = typeof val === "number" ? (0, WireBuffer_1.floatToRawIntBits)(val) : this.fbits(val);
+                if (!isNanBits(bits)) {
+                    const fv = (0, WireBuffer_1.f32FromBits)(bits);
+                    this.variables.set(name, isNamed ? this.writer.addNamedFloat(name, fv)
+                        : this.writer.addFloatConstant(fv));
                 }
                 else {
-                    const bits = this.fbits(val);
+                    if (isNamed)
+                        this.writer.setFloatName(bits & 0x3fffff, name);
                     this.variables.set(name, bits);
-                    if (named)
-                        this.writer.setFloatName(bits & 0x007fffff, name);
                 }
             }
         }
@@ -2136,7 +3458,8 @@ class Parser {
             // a different field layout; refusing beats emitting a plausible wrong document.
             throw new NotImplementedComponent("text without a `profiles` header tag — add \"profiles\": 513");
         }
-        const value = component.value;
+        // `text` is the reference's alias for `value`.
+        const value = "value" in component ? component.value : component.text;
         let textId;
         if (typeof value === "string" && (value.startsWith("$") || value.startsWith("@"))) {
             // A value starting with $ or @ is a variable/resource reference, not literal
@@ -2144,6 +3467,11 @@ class Parser {
             // and this is the same call the draw commands already use. It is what lets a
             // component show a string chosen at run time: `textLookup` puts a text id in a
             // variable, and the component renders whatever that id currently names.
+            textId = this.resolveTextId(value);
+        }
+        else if (value && typeof value === "object") {
+            // {"type": "textFromFloat", ...} or another text expression, as the reference
+            // resolves every value; String() of it would print "[object Object]".
             textId = this.resolveTextId(value);
         }
         else if (value !== undefined && value !== null) {
@@ -2156,7 +3484,7 @@ class Parser {
             textId = this.writer.addTextFromFloat(this.fbits(tff.value), Number(tff.whole ?? 0), Number(tff.decimal ?? 0), Number(tff.flags ?? 0));
         }
         else {
-            throw new NotImplementedComponent("text without value or textFromFloat");
+            textId = -1; // no text at all: the reference writes id -1
         }
         // A "$colors." reference sets colorId and leaves color at its default; a literal
         // does the opposite. Setting both, or the wrong one, changes which CoreText tag is
@@ -2171,16 +3499,66 @@ class Parser {
             color = this.resolveColor(c);
         }
         const overflow = OVERFLOW[String(component.overflow ?? "clip").toLowerCase()] ?? 1;
+        // The order matters: each float can be an expression, which writes its ops as it
+        // is parsed, so they are read in the order RemoteComposeJsonParser reads them.
+        const has = (k) => component[k] !== undefined && component[k] !== null;
+        const fontSizeBits = has("fontSize") ? this.fbits(component.fontSize)
+            : has("textSize") ? this.fbits(component.textSize) : (0, WireBuffer_1.floatToRawIntBits)(36.0);
+        const fontWeightBits = has("fontWeight")
+            ? this.fbits(component.fontWeight) : (0, WireBuffer_1.floatToRawIntBits)(400.0);
+        const textStyleId = optInt(component.textStyleId, -1);
+        const minFontSizeBits = has("minFontSize")
+            ? this.fbits(component.minFontSize) : (0, WireBuffer_1.floatToRawIntBits)(-1.0);
+        const maxFontSizeBits = has("maxFontSize")
+            ? this.fbits(component.maxFontSize) : (0, WireBuffer_1.floatToRawIntBits)(-1.0);
+        let fontStyle = 0;
+        if (has("fontStyle")) {
+            fontStyle = String(component.fontStyle).toLowerCase() === "italic"
+                ? 1 : optInt(component.fontStyle, 0);
+        }
+        const fontFamily = has("fontFamily") ? String(component.fontFamily) : null;
+        const letterSpacingBits = has("letterSpacing")
+            ? this.fbits(component.letterSpacing) : (0, WireBuffer_1.floatToRawIntBits)(0.0);
+        const lineHeightAddBits = has("lineHeightAdd")
+            ? this.fbits(component.lineHeightAdd) : (0, WireBuffer_1.floatToRawIntBits)(0.0);
+        const lineHeightMultiplierBits = has("lineHeightMultiplier")
+            ? this.fbits(component.lineHeightMultiplier) : (0, WireBuffer_1.floatToRawIntBits)(1.0);
+        let fontAxis = null;
+        let fontAxisValues = null;
+        if (has("fontAxis") && has("fontAxisValues")) {
+            if (!Array.isArray(component.fontAxis) || !Array.isArray(component.fontAxisValues)) {
+                throw new NotImplementedComponent("fontAxis and fontAxisValues must be arrays");
+            }
+            fontAxis = component.fontAxis.map((a) => String(a));
+            // valArr.getDouble(i) for each axis; a shorter values array throws in Java.
+            fontAxisValues = fontAxis.map((_, i) => {
+                const v = Number(component.fontAxisValues[i]);
+                if (Number.isNaN(v)) {
+                    throw new NotImplementedComponent(`fontAxisValues[${i}] is not a number`);
+                }
+                return v;
+            });
+            if (component.fontAxisValues.length !== fontAxis.length) {
+                throw new NotImplementedComponent("fontAxis and fontAxisValues must be the same length");
+            }
+        }
         this.writer.textComponent(textId, {
             color,
             colorId,
-            fontSizeBits: component.fontSize !== undefined
-                ? this.fbits(component.fontSize) : (0, WireBuffer_1.floatToRawIntBits)(36.0),
-            fontWeightBits: component.fontWeight !== undefined
-                ? this.fbits(component.fontWeight) : (0, WireBuffer_1.floatToRawIntBits)(400.0),
+            fontSizeBits,
+            fontWeightBits,
             textAlign: parseTextAlign(String(component.textAlign ?? "start")),
             overflow,
-            maxLines: component.maxLines !== undefined ? Number(component.maxLines) : INT_MAX,
+            maxLines: component.maxLines !== undefined ? optInt(component.maxLines, INT_MAX) : INT_MAX,
+            minFontSizeBits, maxFontSizeBits, fontStyle, fontFamily,
+            letterSpacingBits, lineHeightAddBits, lineHeightMultiplierBits,
+            lineBreakStrategy: optInt(component.lineBreakStrategy, 0),
+            hyphenationFrequency: optInt(component.hyphenationFrequency, 0),
+            justificationMode: optInt(component.justificationMode, 0),
+            underline: optBoolean(component.underline, false),
+            strikethrough: optBoolean(component.strikethrough, false),
+            autosize: optBoolean(component.autoSize, false),
+            textStyleId, fontAxis, fontAxisValues,
             modifiers: mods,
         });
     }

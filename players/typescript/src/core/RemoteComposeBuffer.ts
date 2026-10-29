@@ -14,6 +14,16 @@ export interface ByteSpan {
     _byteEnd: number;
 }
 
+/**
+ * Opcodes whose reference class implements VariableProvider. CoreDocument.initFromBuffer
+ * starts allocating ids above the largest VariableProvider id, and pattern inflation draws
+ * from that counter, so the set must be the reference's for inflated ids to match. Each one's
+ * getId() is the first id its reader reads, except ComponentValue (150): its second, the value.
+ * Components are VariableProviders too and report their component id (see CoreDocument).
+ */
+export const VARIABLE_PROVIDERS = new Set([45, 64, 80, 81, 101, 102, 123, 134, 135, 136, 138, 142, 144, 145,
+    146, 147, 150, 153, 156, 157, 158, 159, 161, 175, 180, 186, 187, 193, 196, 197, 242]);
+
 export class RemoteComposeBuffer {
     private mBuffer: WireBuffer;
 
@@ -51,13 +61,20 @@ export class RemoteComposeBuffer {
                 return;
             }
             const before = operations.length;
+            const trace: number[] = [];
+            this.mBuffer.mIdTrace = trace;
             reader(buf, operations);
+            this.mBuffer.mIdTrace = null;
             const endOffset = this.mBuffer.getIndex();
-            // Tag every op produced by this read with its byte span in the source buffer.
+            // Tag every op produced by this read with its byte span in the source buffer, and
+            // with its VariableProvider id when the reference class is one (see below).
             for (let i = before; i < operations.length; i++) {
-                const span = operations[i] as unknown as ByteSpan;
+                const span = operations[i] as unknown as ByteSpan & { _providerId?: number };
                 span._byteStart = startOffset;
                 span._byteEnd = endOffset;
+                if (VARIABLE_PROVIDERS.has(opId) && trace.length) {
+                    span._providerId = opId === 150 ? trace[trace.length - 1] : trace[0];
+                }
             }
         }
     }

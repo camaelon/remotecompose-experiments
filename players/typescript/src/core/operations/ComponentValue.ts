@@ -84,8 +84,8 @@ export class ComponentValue extends Operation {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readInt();
-        const componentId = buffer.readInt();
-        const valueId = buffer.readInt();
+        const componentId = buffer.readId();
+        const valueId = buffer.readId();
         operations.push(new ComponentValue(type, componentId, valueId));
     }
 }

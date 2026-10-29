@@ -80,12 +80,12 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
         case MUL: { float b = mStack[sp--]; mStack[sp] *= b; break; }
         case DIV: {
             float b = mStack[sp--];
-            mStack[sp] = (b != 0.0f) ? mStack[sp] / b : 0.0f;
+            mStack[sp] = mStack[sp] / b;   // Java: x/0 is Inf/NaN
             break;
         }
         case MOD: {
             float b = mStack[sp--];
-            mStack[sp] = (b != 0.0f) ? std::fmod(mStack[sp], b) : 0.0f;
+            mStack[sp] = std::fmod(mStack[sp], b);   // Java %: truncated remainder, x%0 is NaN
             break;
         }
         case MIN_OP: { float b = mStack[sp--]; mStack[sp] = std::min(mStack[sp], b); break; }
@@ -97,20 +97,29 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
         // Unary math
         case SQRT_OP: mStack[sp] = std::sqrt(mStack[sp]); break;
         case ABS_OP: mStack[sp] = std::abs(mStack[sp]); break;
-        case SIGN: mStack[sp] = (mStack[sp] > 0) ? 1.0f : (mStack[sp] < 0) ? -1.0f : 0.0f; break;
+        case SIGN: mStack[sp] = (mStack[sp] > 0) ? 1.0f : (mStack[sp] < 0) ? -1.0f : mStack[sp]; break;  // Math.signum: keeps 0/-0/NaN
         case EXP_OP: mStack[sp] = std::exp(mStack[sp]); break;
         case FLOOR_OP: mStack[sp] = std::floor(mStack[sp]); break;
         case CEIL_OP: mStack[sp] = std::ceil(mStack[sp]); break;
         case LOG10_OP: mStack[sp] = std::log10(mStack[sp]); break;
         case LN_OP: mStack[sp] = std::log(mStack[sp]); break;
         case LOG2_OP: mStack[sp] = std::log2(mStack[sp]); break;
-        case ROUND_OP: mStack[sp] = std::round(mStack[sp]); break;
+        case ROUND_OP: {
+            // Java (float) Math.round(float): floor(x + 0.5) (half up: round(-2.5) = -2),
+            // NaN -> 0, saturating at the int range. In double, so 0.49999997f stays 0.
+            float x = mStack[sp];
+            double r = std::isnan(x) ? 0.0 : std::floor((double)x + 0.5);
+            if (r > 2147483647.0) r = 2147483647.0;
+            if (r < -2147483648.0) r = -2147483648.0;
+            mStack[sp] = (float)r;
+            break;
+        }
         case CBRT_OP: mStack[sp] = std::cbrt(mStack[sp]); break;
         case DEG: mStack[sp] = mStack[sp] * 57.29578f; break;
         case RAD: mStack[sp] = mStack[sp] * 0.017453292f; break;
         case CHANGE_SIGN: mStack[sp] = -mStack[sp]; break;
         case SQUARE: mStack[sp] = mStack[sp] * mStack[sp]; break;
-        case INV: mStack[sp] = (mStack[sp] != 0.0f) ? 1.0f / mStack[sp] : 0.0f; break;
+        case INV: mStack[sp] = 1.0f / mStack[sp]; break;   // Java: 1/0 is Inf
         case FRACT: { float x = mStack[sp]; mStack[sp] = x - std::trunc(x); break; }
 
         // Trig
@@ -123,8 +132,9 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
 
         // Ternary
         case MAD: {
-            float a = mStack[sp--]; float b = mStack[sp--];
-            mStack[sp] = mStack[sp] + b * a;
+            // Java: stack[sp-2] = stack[sp] + stack[sp-1] * stack[sp-2], i.e. mad(a, b, c) = a*b + c
+            float c = mStack[sp--]; float b = mStack[sp--];
+            mStack[sp] = c + b * mStack[sp];
             break;
         }
         case IFELSE: {
@@ -162,15 +172,12 @@ int ExpressionEvaluator::opEval(int sp, int opId) {
             break;
         }
         case PINGPONG: {
+            // Java: tmp = x % (2*max) (truncated, so negative x stays negative);
+            // tmp < max ? tmp : 2*max - tmp
             float max = mStack[sp--];
-            float x = mStack[sp];
-            if (max > 0) {
-                float t = std::fmod(x, max * 2.0f);
-                if (t < 0) t += max * 2.0f;
-                mStack[sp] = (t < max) ? t : (max * 2.0f - t);
-            } else {
-                mStack[sp] = 0.0f;
-            }
+            float max2 = max * 2.0f;
+            float t = std::fmod(mStack[sp], max2);
+            mStack[sp] = (t < max) ? t : (max2 - t);
             break;
         }
 

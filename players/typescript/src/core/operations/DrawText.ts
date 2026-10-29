@@ -59,9 +59,9 @@ export class DrawText extends PaintOperation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawText(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(),
+            buffer.readId(), buffer.readInt(), buffer.readInt(),
             buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt(), buffer.readBoolean()
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readBoolean()
         ));
     }
 }

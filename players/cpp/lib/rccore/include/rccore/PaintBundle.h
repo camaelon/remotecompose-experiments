@@ -93,6 +93,9 @@ public:
     static constexpr int FONT_TYPE_MONOSPACE  = 3;
 
     void readBundle(WireBuffer& buf);
+    /** PaintBundle.resolveIds: inside a pattern, remap the ids (and NaN-boxed float ids) the
+     *  bundle carries to this inflation's. readBundle calls it; a no-op outside a pattern. */
+    void resolveIds(WireBuffer& buf);
 
     // Returns the resolved array (mOutArray if populated, else mArray).
     const std::vector<int32_t>& getData() const {

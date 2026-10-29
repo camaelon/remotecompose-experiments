@@ -38,10 +38,15 @@ public:
     static constexpr int ENCODING_EMPTY   = 3; // Allocate empty bitmap
 
     SkiaPaintContext(rccore::RemoteContext& context, SkCanvas* canvas);
+
+    // How many font families the platform font manager knows. Zero means every text draw
+    // silently paints nothing — common on a fresh headless Linux box with no fonts installed.
+    int fontFamilyCount() const;
     ~SkiaPaintContext() override;
 
     // Update the canvas pointer (e.g. after surface resize)
     void setCanvas(SkCanvas* canvas) { mCanvas = canvas; }
+    float currentPaintAlpha() const override { return mPaint.getAlphaf(); }
     SkCanvas* canvas() const { return mCanvas; }   // for custom-component hosts
 
     // Drawing

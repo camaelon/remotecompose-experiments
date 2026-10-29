@@ -1,5 +1,7 @@
 #pragma once
 #include "rccore/Operation.h"
+#include <functional>
+#include <stdexcept>
 #include "rccore/RemoteContext.h"
 #include "rccore/WireBuffer.h"
 #include "rccore/ExpressionEvaluator.h"
@@ -50,14 +52,14 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<FloatExpression>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         int packed = buf.readInt();
         int exprLen = packed & 0xFFFF;
         int animLen = (packed >> 16) & 0xFFFF;
         op->expression.resize(exprLen);
-        for (int i = 0; i < exprLen; i++) op->expression[i] = buf.readFloat();
+        for (int i = 0; i < exprLen; i++) op->expression[i] = buf.readNanId();
         op->animationSpec.resize(animLen);
-        for (int i = 0; i < animLen; i++) op->animationSpec[i] = buf.readFloat();
+        for (int i = 0; i < animLen; i++) op->animationSpec[i] = buf.readNanId();
 
         // Initialize animation objects based on animation spec
         if (animLen > 0) {
@@ -108,9 +110,23 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ColorExpressionOp>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         op->p1 = buf.readInt(); op->p2 = buf.readInt();
         op->p3 = buf.readInt(); op->p4 = buf.readInt();
+        if (buf.remapContext()) {
+            // ColorExpression.read: IDARGB (6) packs an alpha id in p1's top 16 bits; ARGB (5),
+            // HSV (4) and IDARGB carry NaN-boxed floats in p2..p4; the interpolations (0-3) a
+            // colour id in p2 (mode bit 1) and/or p3 (mode bit 2), and a float tween in p4.
+            int mode = op->p1 & 0xFF;
+            if (mode == 6) op->p1 = (buf.remapId(op->p1 >> 16) << 16) | (op->p1 & 0xFFFF);
+            if (mode >= 4 && mode <= 6) {
+                op->p2 = buf.remapNanBits(op->p2); op->p3 = buf.remapNanBits(op->p3); op->p4 = buf.remapNanBits(op->p4);
+            } else if (mode <= 3) {
+                if (mode & 1) op->p2 = buf.remapId(op->p2);
+                if (mode & 2) op->p3 = buf.remapId(op->p3);
+                op->p4 = buf.remapNanBits(op->p4);
+            }
+        }
 
         op->mode = op->p1 & 0xFF;
         switch (op->mode) {
@@ -161,11 +177,17 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<IntegerExpressionOp>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         op->mask = buf.readInt();
         int len = buf.readInt();
         op->srcValues.resize(len);
-        for (int i = 0; i < len; i++) op->srcValues[i] = buf.readInt();
+        // An entry the mask marks as an id (and below the operator offset 0x10000) is resolved
+        // inside a pattern, as IntegerExpression.read does.
+        for (int i = 0; i < len; i++) {
+            int v = buf.readInt();
+            bool isId = ((1 << i) & op->mask) != 0 && v < 0x10000;
+            op->srcValues[i] = isId ? buf.remapId(v) : v;
+        }
         ops.push_back(std::move(op));
     }
 };
@@ -189,8 +211,11 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextFromFloat>();
-        op->textId = buf.readInt();
-        op->floatId = buf.readFloat();
+        op->textId = buf.declareId();
+        op->floatId = buf.readNanId();
+        // TextFromFloat's constructor: mOutValue = mValue, so a literal prints itself
+        // (updateVariables only replaces it when the value is a variable).
+        op->oValue = op->floatId;
         int tmp = buf.readInt();
         op->digitsAfter = tmp & 0xFFFF;
         op->digitsBefore = (tmp >> 16) & 0xFFFF;
@@ -212,9 +237,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextMerge>();
-        op->destId = buf.readInt();
-        op->srcId1 = buf.readInt();
-        op->srcId2 = buf.readInt();
+        op->destId = buf.declareId();
+        op->srcId1 = buf.readId();
+        op->srcId2 = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -234,9 +259,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextLookupOp>();
-        op->id = buf.readInt();
-        op->dataSet = buf.readInt();
-        op->index = buf.readFloat();
+        op->id = buf.declareId();
+        op->dataSet = buf.readId();
+        op->index = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -257,10 +282,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextTransformOp>();
-        op->destId = buf.readInt();
-        op->srcId = buf.readInt();
-        op->start = buf.readFloat();
-        op->len = buf.readFloat();
+        op->destId = buf.declareId();
+        op->srcId = buf.readId();
+        op->start = buf.readNanId();
+        op->len = buf.readNanId();
         op->operation = buf.readInt();
         ops.push_back(std::move(op));
     }
@@ -279,8 +304,8 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ComponentValueOp>();
         op->type = buf.readInt();
-        op->componentId = buf.readInt();
-        op->valueId = buf.readInt();
+        op->componentId = buf.readId();
+        op->valueId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -298,10 +323,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DataListFloat>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         int len = buf.readInt();
         op->data.resize(len);
-        for (int i = 0; i < len; i++) op->data[i] = buf.readFloat();
+        for (int i = 0; i < len; i++) op->data[i] = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -319,10 +344,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DataListIds>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         int len = buf.readInt();
         op->ids.resize(len);
-        for (int i = 0; i < len; i++) op->ids[i] = buf.readInt();
+        for (int i = 0; i < len; i++) op->ids[i] = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -408,24 +433,24 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TouchExpressionOp>();
-        op->id = buf.readInt();
-        op->startValue = buf.readFloat();
-        op->min = buf.readFloat();
-        op->max = buf.readFloat();
-        op->velocityId = buf.readFloat();
+        op->id = buf.readId();
+        op->startValue = buf.readNanId();
+        op->min = buf.readNanId();
+        op->max = buf.readNanId();
+        op->velocityId = buf.readNanId();
         op->touchEffects = buf.readInt();
         int len = buf.readInt();
         int exprLen = len & 0xFFFF;
         op->expression.resize(exprLen);
-        for (int i = 0; i < exprLen; i++) op->expression[i] = buf.readFloat();
+        for (int i = 0; i < exprLen; i++) op->expression[i] = buf.readNanId();
         int stopLogic = buf.readInt();
         int stopLen = stopLogic & 0xFFFF;
         op->stopMode = stopLogic >> 16;
         op->stopsData.resize(stopLen);
-        for (int i = 0; i < stopLen; i++) op->stopsData[i] = buf.readFloat();
+        for (int i = 0; i < stopLen; i++) op->stopsData[i] = buf.readNanId();
         int easingLen = buf.readInt();
         op->easingData.resize(easingLen);
-        for (int i = 0; i < easingLen; i++) op->easingData[i] = buf.readFloat();
+        for (int i = 0; i < easingLen; i++) op->easingData[i] = buf.readNanId();
 
         // Initialize resolved fields from wire values (matching Java constructor)
         op->mOutDefValue = op->startValue;
@@ -473,10 +498,15 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathAppendOp>();
-        op->id = buf.readInt();
+        op->id = buf.readId();
         int len = buf.readInt();
         op->data.resize(len);
-        for (int i = 0; i < len; i++) op->data[i] = buf.readFloat();
+        for (int i = 0; i < len; i++) {
+            float v = buf.readFloat();
+            int32_t b; memcpy(&b, &v, sizeof(b));
+            // As PathData, but path commands go up to RESET = 17.
+            op->data[i] = (RemapContext::isNaNBits(b) && (b & 0x3FFFFF) > 17) ? buf.remapNan(v) : v;
+        }
         op->oData = op->data;
         ops.push_back(std::move(op));
     }
@@ -499,17 +529,17 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathExpressionOp>();
-        op->id = buf.readInt();
+        op->id = buf.readId();
         op->flags = buf.readInt();
-        op->min = buf.readFloat();
-        op->max = buf.readFloat();
-        op->count = buf.readFloat();
+        op->min = buf.readNanId();
+        op->max = buf.readNanId();
+        op->count = buf.readNanId();
         int lenX = buf.readInt();
         op->expressionX.resize(lenX);
-        for (int i = 0; i < lenX; i++) op->expressionX[i] = buf.readFloat();
+        for (int i = 0; i < lenX; i++) op->expressionX[i] = buf.readNanId();
         int lenY = buf.readInt();
         op->expressionY.resize(lenY);
-        for (int i = 0; i < lenY; i++) op->expressionY[i] = buf.readFloat();
+        for (int i = 0; i < lenY; i++) op->expressionY[i] = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -531,9 +561,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathCreateOp>();
-        op->id = buf.readInt();
-        op->startX = buf.readFloat();
-        op->startY = buf.readFloat();
+        op->id = buf.declareId();
+        op->startX = buf.readNanId();
+        op->startY = buf.readNanId();
         op->oStartX = op->startX;
         op->oStartY = op->startY;
         ops.push_back(std::move(op));
@@ -558,10 +588,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathTweenOp>();
-        op->outId = buf.readInt();
-        op->pathId1 = buf.readInt();
-        op->pathId2 = buf.readInt();
-        op->tween = buf.readFloat();
+        op->outId = buf.readId();
+        op->pathId1 = buf.readId();
+        op->pathId2 = buf.readId();
+        op->tween = buf.readNanId();
         op->oTween = op->tween;
         ops.push_back(std::move(op));
     }
@@ -583,9 +613,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathCombineOp>();
-        op->outId = buf.readInt();
-        op->pathId1 = buf.readInt();
-        op->pathId2 = buf.readInt();
+        op->outId = buf.readId();
+        op->pathId1 = buf.readId();
+        op->pathId2 = buf.readId();
         op->operation = buf.readByte();
         ops.push_back(std::move(op));
     }
@@ -604,11 +634,11 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixConstantOp>();
-        op->id = buf.readInt();
+        op->id = buf.readId();
         op->type = buf.readInt();
         int len = buf.readInt();
         op->values.resize(len);
-        for (int i = 0; i < len; i++) op->values[i] = buf.readFloat();
+        for (int i = 0; i < len; i++) op->values[i] = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -632,13 +662,13 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixVectorMathOp>();
         op->type = buf.readShort();
-        op->matrixId = buf.readInt();
+        op->matrixId = buf.readId();
         int lenOut = buf.readInt();
         op->outIds.resize(lenOut);
-        for (int i = 0; i < lenOut; i++) op->outIds[i] = buf.readInt();
+        for (int i = 0; i < lenOut; i++) op->outIds[i] = buf.readId();
         int lenIn = buf.readInt();
         op->inValues.resize(lenIn);
-        for (int i = 0; i < lenIn; i++) op->inValues[i] = buf.readFloat();
+        for (int i = 0; i < lenIn; i++) op->inValues[i] = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -660,11 +690,14 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixExpressionOp>();
-        op->id = buf.readInt();
+        op->id = buf.readId();
         op->type = buf.readInt();
         int len = buf.readInt();
         op->expression.resize(len);
-        for (int i = 0; i < len; i++) op->expression[i] = buf.readFloat();
+        for (int i = 0; i < len; i++) {
+            float v = buf.readFloat();
+            op->expression[i] = WireBuffer::isRemappableExpressionWord(v, true) ? buf.remapNan(v) : v;
+        }
         ops.push_back(std::move(op));
     }
 };
@@ -686,9 +719,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixFromPathOp>();
-        op->pathId = buf.readInt();
-        op->percent = buf.readFloat();
-        op->vOffset = buf.readFloat();
+        op->pathId = buf.readId();
+        op->percent = buf.readNanId();
+        op->vOffset = buf.readNanId();
         op->flags = buf.readInt();
         ops.push_back(std::move(op));
     }
@@ -708,8 +741,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DebugMessageOp>();
-        op->textId = buf.readInt();
-        op->value = buf.readFloat();
+        op->textId = buf.readId();
+        op->value = buf.readNanId();
         op->flags = buf.readInt();
         ops.push_back(std::move(op));
     }
@@ -729,8 +762,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ColorThemeOp>();
-        op->id = buf.readInt();
-        op->groupId = buf.readInt();
+        op->id = buf.readId();
+        op->groupId = buf.readId();
         op->lightModeIndex = buf.readShort();
         op->darkModeIndex = buf.readShort();
         op->lightFallback = buf.readInt();
@@ -752,8 +785,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DataDynamicListFloat>();
-        op->id = buf.readInt();
-        op->length = buf.readFloat();
+        op->id = buf.declareId();
+        op->length = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -775,9 +808,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<UpdateDynamicFloatListOp>();
-        op->id = buf.readInt();
-        op->index = buf.readFloat();
-        op->value = buf.readFloat();
+        op->id = buf.readId();
+        op->index = buf.readNanId();
+        op->value = buf.readNanId();
         op->oIndex = op->index;
         op->oValue = op->value;
         ops.push_back(std::move(op));
@@ -807,30 +840,121 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawBitmapScaled>();
-        op->imageId = buf.readInt();
-        op->srcL = buf.readFloat(); op->srcT = buf.readFloat();
-        op->srcR = buf.readFloat(); op->srcB = buf.readFloat();
-        op->dstL = buf.readFloat(); op->dstT = buf.readFloat();
-        op->dstR = buf.readFloat(); op->dstB = buf.readFloat();
+        op->imageId = buf.readId();
+        op->srcL = buf.readNanId(); op->srcT = buf.readNanId();
+        op->srcR = buf.readNanId(); op->srcB = buf.readNanId();
+        op->dstL = buf.readNanId(); op->dstT = buf.readNanId();
+        op->dstR = buf.readNanId(); op->dstB = buf.readNanId();
         op->oSrcL = op->srcL; op->oSrcT = op->srcT;
         op->oSrcR = op->srcR; op->oSrcB = op->srcB;
         op->oDstL = op->dstL; op->oDstT = op->dstT;
         op->oDstR = op->dstR; op->oDstB = op->dstB;
         op->scaleType = buf.readInt();
-        op->scaleFactor = buf.readFloat();
+        op->scaleFactor = buf.readNanId();
         op->oScaleFactor = op->scaleFactor;
-        op->descriptionId = buf.readInt();
+        op->descriptionId = buf.readId();
+        ops.push_back(std::move(op));
+    }
+};
+
+// ── FUNCTION_DEFINE (168) ────────────────────────────────────────────
+// FloatFunctionDefine: a function id, its parameter variable ids, and a body (a container)
+// run by execute(). Known as an object by its id; a CUSTOM enter/exit animation runs one
+// (defineVisibilityAnimation) with (progress, w, h, x, y, componentId).
+class FunctionDefineOp : public Operation {
+public:
+    int id = 0;
+    std::vector<int> args;
+    int depth = 0;
+    std::string name() const override { return "FUNCTION_DEFINE"; }
+    int opcode() const override { return 168; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isContainer() const override { return true; }
+    void apply(RemoteContext& context) override { context.putObject(id, this); }
+    void execute(RemoteContext& context) {
+        if (depth >= 16) return;   // MAX_EXECUTION_DEPTH (Java: 16): no recursion
+        depth++;
+        for (auto& op : mChildren) {
+            if (op->isVariableSupport()) op->updateVariables(context);
+            context.incrementOpCount();
+            op->apply(context);
+        }
+        depth--;
+    }
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<FunctionDefineOp>();
+        op->id = buf.readId();
+        int n = buf.readInt();
+        for (int i = 0; i < n && i < 64; i++) op->args.push_back(buf.readId());
+        ops.push_back(std::move(op));
+    }
+};
+
+// ── FunctionCall (166) ─────────────────────────────────────────────────
+// FloatFunctionCall: a paint op that loads its (resolved) arguments into the define's
+// parameter variables and runs the define's ops inline, so two calls in one frame give
+// the ops between them different values.
+class FunctionCallOp : public Operation {
+public:
+    int id = 0;
+    std::vector<float> args;
+    std::vector<float> outArgs;
+    std::string name() const override { return "FUNCTION_CALL"; }
+    int opcode() const override { return 166; }
+    std::vector<Field> fields() const override { return {}; }
+    bool isPaintOperation() const override { return true; }
+    bool isVariableSupport() const override { return true; }
+    static bool isRef(float v) {
+        return std::isnan(v) && !ExpressionEvaluator::isMathOperator(v)
+               && !ExpressionEvaluator::isDataVariable(v);
+    }
+    void registerListening(RemoteContext& context) override {
+        for (float v : args)
+            if (isRef(v)) context.listensTo(Utils::idFromNan(v), this);
+    }
+    void updateVariables(RemoteContext& context) override {
+        for (size_t i = 0; i < args.size(); i++)
+            outArgs[i] = isRef(args[i]) ? context.getFloat(Utils::idFromNan(args[i])) : args[i];
+    }
+    void apply(RemoteContext& context) override {
+        if (context.getMode() != ContextMode::PAINT) return;
+        auto* fn = dynamic_cast<FunctionDefineOp*>(context.getObject(id));
+        if (!fn) return;
+        for (size_t j = 0; j < outArgs.size() && j < fn->args.size(); j++) {
+            context.loadFloat(fn->args[j], outArgs[j]);
+            updateVariables(context);
+        }
+        fn->execute(context);
+    }
+    static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
+        auto op = std::make_unique<FunctionCallOp>();
+        op->id = buf.readId();
+        int n = buf.readInt();
+        if (n > 80) throw std::runtime_error("array too big");
+        for (int i = 0; i < n; i++) op->args.push_back(buf.readNanId());
+        op->outArgs = op->args;
         ops.push_back(std::move(op));
     }
 };
 
 // ── DrawContent (139) ──────────────────────────────────────────────────
+// Inside a visibility function (FUNCTION_DEFINE run by a CUSTOM enter/exit animation) it
+// draws the animated component (DrawContent.paint: context.mLastComponent); the layout
+// sets the hook for the time the function runs.
 class DrawContentOp : public Operation {
 public:
+    static inline thread_local std::function<void()>* sDrawComponent = nullptr;
     std::string name() const override { return "DrawContent"; }
     int opcode() const override { return 139; }
     std::vector<Field> fields() const override { return {}; }
-    void apply(RemoteContext& context) override {}
+    void apply(RemoteContext& context) override {
+        if (context.getMode() == ContextMode::PAINT && sDrawComponent) {
+            auto* hook = sDrawComponent;
+            sDrawComponent = nullptr;          // not re-entrant (DrawContent.mInProcessing)
+            (*hook)();
+            sDrawComponent = hook;
+        }
+    }
     bool isPaintOperation() const override { return true; }
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
@@ -878,7 +1002,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<HostActionOp>();
-        op->actionId = buf.readInt();
+        op->actionId = buf.readId();
         ops.push_back(std::move(op));
     }
     void runAction(RemoteContext& context, float, float) override {
@@ -902,8 +1026,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueFloatChangeOp>();
-        op->targetId = buf.readInt();
-        op->value = buf.readFloat();
+        op->targetId = buf.readId();
+        op->value = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -920,7 +1044,7 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueIntChangeOp>();
-        op->targetId = buf.readInt(); op->value = buf.readInt();
+        op->targetId = buf.readId(); op->value = buf.readInt();
         ops.push_back(std::move(op));
     }
 };
@@ -928,17 +1052,20 @@ public:
 class ValueStringChangeOp : public Operation {
 public:
     int targetId = 0;
-    std::string value;
+    int valueId = 0;   // a text id: the wire carries two ids (ValueStringChangeActionOperation)
     std::string name() const override { return "VALUE_STRING_CHANGE_ACTION"; }
     int opcode() const override { return 213; }
     std::vector<Field> fields() const override { return {}; }
     void apply(RemoteContext& context) override {}
     void runAction(RemoteContext& context, float, float) override {
-        context.loadText(targetId, value);
+        // The reference: context.overrideText(target, valueId), the text stored under valueId.
+        context.overrideText(targetId, context.getText(valueId));
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueStringChangeOp>();
-        op->targetId = buf.readInt(); op->value = buf.readUTF8();
+        // Was readInt + readUTF8: the value is a text id, so this consumed the wrong bytes and
+        // every operation after a string-change action misparsed.
+        op->targetId = buf.readId(); op->valueId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -992,8 +1119,8 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<HostActionMetadataOp>();
-        op->actionId = buf.readInt();
-        op->metadataId = buf.readInt();
+        op->actionId = buf.readId();
+        op->metadataId = buf.readId();
         ops.push_back(std::move(op));
     }
     void runAction(RemoteContext& context, float, float) override {
@@ -1022,9 +1149,9 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<HostNamedActionOp>();
-        op->textId = buf.readInt();
+        op->textId = buf.readId();
         op->type = buf.readInt();
-        op->valueId = buf.readInt();
+        op->valueId = buf.readId();
         ops.push_back(std::move(op));
     }
     void runAction(RemoteContext& context, float, float) override {
@@ -1074,8 +1201,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueFloatExpressionChangeOp>();
-        op->targetId = buf.readInt();
-        op->exprId = buf.readInt();
+        op->targetId = buf.readId();
+        op->exprId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -1095,8 +1222,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ValueLongChangeOp>();
-        op->targetId = buf.readLong();
-        op->value = buf.readLong();
+        op->targetId = buf.readLongNanId();
+        op->value = buf.readLongNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -1117,8 +1244,8 @@ public:
     void apply(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextAttributeOp>();
-        op->id = buf.readInt();
-        op->textId = buf.readInt();
+        op->id = buf.readId();
+        op->textId = buf.readId();
         op->type = buf.readShort();
         buf.readShort(); // unused
         ops.push_back(std::move(op));
@@ -1133,6 +1260,10 @@ public:
     // a radius implies the effect is on (matches the Java operation's read).
     float blurX = 0.0f, blurY = 0.0f;
     bool hasBlur = false;
+    // The transform (GraphicsLayerModifierOperation SCALE_X/Y 0/1, ROTATION_Z 4,
+    // TRANSFORM_ORIGIN_X/Y 5/6, TRANSLATION_X/Y 7/8); each may be a NaN-encoded variable.
+    float scaleX = 1.0f, scaleY = 1.0f, rotationZ = 0.0f;
+    float originX = 0.5f, originY = 0.5f, translationX = 0.0f, translationY = 0.0f;
     std::string name() const override { return "GraphicsLayerModifier"; }
     int opcode() const override { return 224; }
     std::vector<Field> fields() const override { return {}; }
@@ -1145,8 +1276,17 @@ public:
             int attrId = tag & 0x3FF;
             int dataType = (tag >> 10) & 0x3;
             if (dataType == 1) {
-                float v = buf.readFloat();
-                if (attrId == 11) op->alpha = v;                        // opacity
+                // GraphicsLayerModifierOperation reads its floats with readNanId: inside a
+                // pattern a parameter or local's id is remapped to this inflation's.
+                float v = buf.readNanId();
+                if (attrId == 0) op->scaleX = v;
+                else if (attrId == 1) op->scaleY = v;
+                else if (attrId == 4) op->rotationZ = v;
+                else if (attrId == 5) op->originX = v;
+                else if (attrId == 6) op->originY = v;
+                else if (attrId == 7) op->translationX = v;
+                else if (attrId == 8) op->translationY = v;
+                else if (attrId == 11) op->alpha = v;                   // opacity
                 else if (attrId == 17) { op->blurX = v; op->hasBlur = true; }
                 else if (attrId == 18) { op->blurY = v; op->hasBlur = true; }
             } else {
@@ -1167,9 +1307,9 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DataMapIdsOp>();
-        op->id = buf.readInt();
+        op->id = buf.declareId();
         int count = buf.readInt();
-        for (int i = 0; i < count; i++) { buf.readUTF8(); buf.readByte(); buf.readInt(); }
+        for (int i = 0; i < count; i++) { buf.readUTF8(); buf.readByte(); buf.readId(); }
         ops.push_back(std::move(op));
     }
 };
@@ -1184,9 +1324,9 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DataMapLookupOp>();
-        op->id = buf.readInt();
-        op->mapId = buf.readInt();
-        op->stringId = buf.readInt();
+        op->id = buf.readId();
+        op->mapId = buf.readId();
+        op->stringId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -1207,8 +1347,8 @@ public:
     void apply(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextMeasureOp>();
-        op->id = buf.readInt();
-        op->textId = buf.readInt();
+        op->id = buf.declareId();
+        op->textId = buf.readId();
         op->type = buf.readInt();
         ops.push_back(std::move(op));
     }
@@ -1227,8 +1367,8 @@ public:
     void registerListening(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextLengthOp>();
-        op->lengthId = buf.readInt();
-        op->textId = buf.readInt();
+        op->lengthId = buf.declareId();
+        op->textId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -1251,10 +1391,10 @@ public:
     void updateVariables(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextSubtextOp>();
-        op->textId = buf.readInt();
-        op->srcId = buf.readInt();
-        op->start = buf.readFloat();
-        op->len = buf.readFloat();
+        op->textId = buf.declareId();
+        op->srcId = buf.readId();
+        op->start = buf.readNanId();
+        op->len = buf.readNanId();
         op->oStart = op->start;
         op->oLen = op->len;
         ops.push_back(std::move(op));
@@ -1272,9 +1412,9 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<IdLookupOp>();
-        op->id = buf.readInt();
-        op->dataMapId = buf.readInt();
-        op->index = buf.readFloat();
+        op->id = buf.readId();
+        op->dataMapId = buf.readId();
+        op->index = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -1354,19 +1494,20 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ParticlesCreateOp>();
-        op->mId = buf.readInt();
+        op->mId = buf.readId();
         op->mParticleCount = buf.readInt();
         int varLen = buf.readInt();
         op->mVarId.resize(varLen);
         op->mEquations.resize(varLen);
         op->mOutEquations.resize(varLen);
         for (int i = 0; i < varLen; i++) {
-            op->mVarId[i] = buf.readInt();
+            op->mVarId[i] = buf.readId();
             int equLen = buf.readInt();
             op->mEquations[i].resize(equLen);
             op->mOutEquations[i].resize(equLen);
             for (int j = 0; j < equLen; j++) {
                 float v = buf.readFloat();
+                if (WireBuffer::isRemappableExpressionWord(v)) v = buf.remapNan(v);
                 op->mEquations[i][j] = v;
                 op->mOutEquations[i][j] = v;
             }
@@ -1553,13 +1694,14 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ParticlesLoopOp>();
-        op->mId = buf.readInt();
+        op->mId = buf.readId();
         int restartLen = buf.readInt();
         if (restartLen > 0) {
             op->mRestart.resize(restartLen);
             op->mOutRestart.resize(restartLen);
             for (int i = 0; i < restartLen; i++) {
                 float v = buf.readFloat();
+                if (WireBuffer::isRemappableExpressionWord(v)) v = buf.remapNan(v);
                 op->mRestart[i] = v;
                 op->mOutRestart[i] = v;
             }
@@ -1689,10 +1831,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ParticlesCompareOp>();
-        op->mId = buf.readInt();
+        op->mId = buf.readId();
         op->mFlags = static_cast<short>(buf.readShort());
-        op->mMin = buf.readFloat();
-        op->mMax = buf.readFloat();
+        op->mMin = buf.readNanId();
+        op->mMax = buf.readNanId();
         op->mOutMin = op->mMin;
         op->mOutMax = op->mMax;
         op->mExpression = readFloatsVec(buf);
@@ -2084,8 +2226,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ImpulseOperationOp>();
-        op->mDuration = buf.readFloat();
-        op->mStartAt = buf.readFloat();
+        op->mDuration = buf.readNanId();
+        op->mStartAt = buf.readNanId();
         op->mOutDuration = op->mDuration;
         op->mOutStartAt = op->mStartAt;
         ops.push_back(std::move(op));
@@ -2117,7 +2259,7 @@ public:
     void apply(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawToBitmapOp>();
-        op->bitmapId = buf.readInt();
+        op->bitmapId = buf.readId();
         op->mode = buf.readInt();
         op->color = buf.readInt();
         ops.push_back(std::move(op));
@@ -2131,6 +2273,7 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "CollapsibleRowLayout"; }
     int opcode() const override { return 230; }
@@ -2141,8 +2284,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<CollapsibleRowLayout>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
@@ -2157,6 +2300,7 @@ public:
     int horizontal = 0, vertical = 0;
     float spacedBy = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "CollapsibleColumnLayout"; }
     int opcode() const override { return 233; }
@@ -2167,8 +2311,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<CollapsibleColumnLayout>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         op->spacedBy = buf.readFloat();
@@ -2182,6 +2326,7 @@ public:
     int componentId = 0, animationId = 0;
     int horizontal = 0, vertical = 0;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "FitBoxLayout"; }
     int opcode() const override { return 176; }
@@ -2192,8 +2337,8 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<FitBoxLayout>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
         op->horizontal = buf.readInt();
         op->vertical = buf.readInt();
         ops.push_back(std::move(op));
@@ -2224,7 +2369,7 @@ public:
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ModifierCollapsiblePriority>();
         op->orientation = buf.readInt();
-        op->priority = buf.readFloat();
+        op->priority = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -2251,6 +2396,7 @@ public:
     int imageId = 0, contentScale = 0;
     float aspectRatio = 1.0f;
     int getOpComponentId() const override { return componentId; }
+    void setOpComponentId(int v) override { componentId = v; }
 
     std::string name() const override { return "LAYOUT_IMAGE"; }
     int opcode() const override { return 234; }
@@ -2261,11 +2407,11 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<LayoutImage>();
-        op->componentId = buf.readInt();
-        op->animationId = buf.readInt();
-        op->imageId = buf.readInt();
+        op->componentId = buf.declareId();
+        op->animationId = buf.declareId();
+        op->imageId = buf.readId();
         op->contentScale = buf.readInt();
-        op->aspectRatio = buf.readFloat();
+        op->aspectRatio = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -2334,8 +2480,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ColorAttributeOp>();
-        op->mId = buf.readInt();
-        op->mColorId = buf.readInt();
+        op->mId = buf.readId();
+        op->mColorId = buf.readId();
         op->mType = buf.readShort();
         ops.push_back(std::move(op));
     }
@@ -2352,13 +2498,13 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<BitmapFontDataOp>();
-        buf.readInt();  // id
+        buf.readId();  // id
         int versionAndCount = buf.readInt();
         int numGlyphs = versionAndCount & 0xFFFF;
         int version = (versionAndCount >> 16) & 0xFFFF;
         for (int i = 0; i < numGlyphs; i++) {
             buf.readUTF8();   // chars
-            buf.readInt();    // bitmapId
+            buf.readId();    // bitmapId
             buf.readShort();  // marginLeft
             buf.readShort();  // marginTop
             buf.readShort();  // marginRight
@@ -2413,7 +2559,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<HapticFeedbackOp>();
-        op->type = buf.readInt();
+        op->type = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -2433,7 +2579,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<WakeInOp>();
-        op->wake = buf.readFloat();
+        op->wake = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -2469,12 +2615,12 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ImageAttributeOp>();
-        op->id = buf.readInt();
-        op->imageId = buf.readInt();
+        op->id = buf.readId();
+        op->imageId = buf.readId();
         op->type = static_cast<int16_t>(buf.readShort());
         int len = buf.readShort();
         for (int i = 0; i < len; i++) {
-            op->args.push_back(buf.readInt());
+            op->args.push_back(buf.readId());
         }
         ops.push_back(std::move(op));
     }
@@ -2511,12 +2657,12 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TimeAttributeOp>();
-        op->id = buf.readInt();
-        op->timeId = buf.readInt();
+        op->id = buf.readId();
+        op->timeId = buf.readId();
         op->type = static_cast<int16_t>(buf.readShort());
         int len = buf.readShort();
         for (int i = 0; i < len; i++) {
-            op->args.push_back(buf.readInt());
+            op->args.push_back(buf.readId());
         }
         ops.push_back(std::move(op));
     }

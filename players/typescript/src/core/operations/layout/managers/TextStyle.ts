@@ -82,18 +82,24 @@ export class TextStyle extends Operation {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const count = buffer.readShort();
+        // Inside a pattern, TextStyle.read declares P_ID (the style's own id, fresh per
+        // inflation) and resolves P_COLOR_ID, P_FONT_FAMILY and P_PARENT_ID through the macro
+        // remapping (a no-op elsewhere).
+        const remap = (buffer as any).getRemapContext?.();
+        const rid = (v: number) => (remap ? remap.resolveId(v) : v);
+        const did = (v: number) => (remap ? remap.declareId(v) : v);
         const style = new TextStyle();
         for (let i = 0; i < count; i++) {
             const tag = buffer.readByte();
             switch (tag) {
-                case P_ID:                    style.id = buffer.readInt(); break;
+                case P_ID:                    style.id = did(buffer.readInt()); break;
                 case P_ANIMATION_ID:          buffer.readInt(); break;
                 case P_COLOR:                 style.color = buffer.readInt(); break;
-                case P_COLOR_ID:              style.colorId = buffer.readInt(); break;
+                case P_COLOR_ID:              style.colorId = rid(buffer.readInt()); break;
                 case P_FONT_SIZE:             style.fontSize = buffer.readFloat(); break;
                 case P_FONT_STYLE:            style.fontStyle = buffer.readInt(); break;
                 case P_FONT_WEIGHT:           style.fontWeight = buffer.readFloat(); break;
-                case P_FONT_FAMILY:           style.fontFamilyId = buffer.readInt(); break;
+                case P_FONT_FAMILY:           style.fontFamilyId = rid(buffer.readInt()); break;
                 case P_TEXT_ALIGN:            style.textAlign = buffer.readInt(); break;
                 case P_OVERFLOW:              style.overflow = buffer.readInt(); break;
                 case P_MAX_LINES:             style.maxLines = buffer.readInt(); break;
@@ -121,7 +127,7 @@ export class TextStyle extends Operation {
                 }
                 case P_AUTOSIZE:              style.autosize = buffer.readBoolean(); break;
                 case P_FLAGS:                 buffer.readInt(); break;
-                case P_PARENT_ID:             style.parentId = buffer.readInt(); break;
+                case P_PARENT_ID:             style.parentId = rid(buffer.readInt()); break;
                 case P_MIN_FONT_SIZE:         style.minFontSize = buffer.readFloat(); break;
                 case P_MAX_FONT_SIZE:         style.maxFontSize = buffer.readFloat(); break;
                 default:

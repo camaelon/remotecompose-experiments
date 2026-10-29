@@ -1,7 +1,7 @@
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
-import { isNaNBits, idFromBits, floatToRawIntBits } from './Utils';
+import { isNaNBits, idFromBits, floatToRawIntBits, isRemappableExpressionWord } from './Utils';
 import { MatrixOperations } from './utilities/MatrixOperations';
 
 export class MatrixExpression extends Operation {
@@ -60,12 +60,18 @@ export class MatrixExpression extends Operation {
     deepToString(indent: string): string { return `${indent}MatrixExpression(${this.mMatrixId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        // As MatrixExpression.read: id resolved, and inside a pattern each variable word (not a
+        // matrix operator or data variable) remapped.
+        const remap = (buffer as any).getRemapContext?.();
+        const id = buffer.readId();
         const type = buffer.readInt();
         const len = buffer.readInt();
         if (len > 32 || len < 0) throw new Error(`Invalid matrix expression length ${len}`);
         const bits = new Int32Array(len);
-        for (let i = 0; i < len; i++) bits[i] = buffer.readInt();
+        for (let i = 0; i < len; i++) {
+            const b = buffer.readInt();
+            bits[i] = remap && isRemappableExpressionWord(b, true) ? remap.resolveNanIdBits(b) : b;
+        }
         operations.push(new MatrixExpression(id, type, bits));
     }
 }

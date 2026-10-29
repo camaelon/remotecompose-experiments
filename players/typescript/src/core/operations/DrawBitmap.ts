@@ -67,12 +67,12 @@ export class DrawBitmap extends PaintOperation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}DrawBitmap(${this.mImageId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const left = buffer.readInt();
-        const top = buffer.readInt();
-        const right = buffer.readInt();
-        const bottom = buffer.readInt();
-        const cdId = buffer.readInt();
+        const id = buffer.readId();
+        const left = buffer.readNanIdBits();
+        const top = buffer.readNanIdBits();
+        const right = buffer.readNanIdBits();
+        const bottom = buffer.readNanIdBits();
+        const cdId = buffer.readId();
         operations.push(new DrawBitmap(id, left, top, right, bottom, cdId));
     }
 }

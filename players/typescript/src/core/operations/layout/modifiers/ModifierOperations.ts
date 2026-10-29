@@ -5,9 +5,12 @@ import type { VariableSupport } from '../../../VariableSupport';
 import type { WireBuffer } from '../../../WireBuffer';
 import { ContextMode, RemoteContext } from '../../../RemoteContext';
 import { PaintBundle } from '../../paint/PaintBundle';
-import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits } from '../../Utils';
+import { isNaNBits, idFromBits, intBitsToFloat, isVariableBits, interpolateColor } from '../../Utils';
 import { Visibility } from '../Component';
 import { TouchExpression } from '../../TouchExpression';
+import type { PaintContext } from '../../../PaintContext';
+import { CubicEasing } from '../../utilities/easing/CubicEasing';
+import { Easing } from '../../utilities/easing/Easing';
 
 /**
  * What the measure pass needs from a min/max constraint, regardless of which op it
@@ -43,24 +46,38 @@ export class WidthModifier extends Operation implements VariableSupport {
      *  getValue() reports as 0 — so the raw bits are the only way to tell
      *  "fill half" from "fill completely". */
     hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
+    // Java DimensionModifierOperation.registerListening / updateVariables: EXACT scales by
+    // density only under DENSITY_BEHAVIOR_DP, EXACT_DP always; both re-resolve from the
+    // authored value (a literal or a variable) each time.
     registerListening(context: RemoteContext): void {
-        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
-            context.listensTo(idFromBits(this.mValueBits), this);
+        if (this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) {
+            if (isNaNBits(this.mValueBits)) context.listensTo(idFromBits(this.mValueBits), this);
+            if (this.mType === WidthModifier.EXACT_DP
+                || context.getDensityBehavior?.() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+                context.listensTo(27 /* ID_DENSITY */, this);
+            }
         }
     }
     updateVariables(context: RemoteContext): void {
-        if ((this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
-            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
-            if (this.mType === WidthModifier.EXACT_DP) {
-                this.mOutValue *= context.getDensity();
+        if (this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) {
+            const pre = this.mOutValue;
+            this.mOutValue = isNaNBits(this.mValueBits)
+                ? context.getFloat(idFromBits(this.mValueBits)) : intBitsToFloat(this.mValueBits);
+            if (this.mType === WidthModifier.EXACT_DP
+                || context.getDensityBehavior?.() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+                const density = context.getDensity();
+                if (density > 0 && !Number.isNaN(density)) this.mOutValue *= density;
             }
+            // Java: a changed value re-measures the document (root invalidateMeasure), so a
+            // width/height bound to a variable a click changes takes effect (T: was missing).
+            if (pre !== this.mOutValue) context.getDocument?.()?.invalidateMeasure();
         }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}WidthModifier(${this.mType}, ${this.mOutValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new WidthModifier(buffer.readInt(), buffer.readInt()));
+        operations.push(new WidthModifier(buffer.readInt(), buffer.readNanIdBits()));
     }
 }
 
@@ -89,24 +106,38 @@ export class HeightModifier extends Operation implements VariableSupport {
      *  getValue() reports as 0 — so the raw bits are the only way to tell
      *  "fill half" from "fill completely". */
     hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
+    // Java DimensionModifierOperation.registerListening / updateVariables: EXACT scales by
+    // density only under DENSITY_BEHAVIOR_DP, EXACT_DP always; both re-resolve from the
+    // authored value (a literal or a variable) each time.
     registerListening(context: RemoteContext): void {
-        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
-            context.listensTo(idFromBits(this.mValueBits), this);
+        if (this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) {
+            if (isNaNBits(this.mValueBits)) context.listensTo(idFromBits(this.mValueBits), this);
+            if (this.mType === HeightModifier.EXACT_DP
+                || context.getDensityBehavior?.() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+                context.listensTo(27 /* ID_DENSITY */, this);
+            }
         }
     }
     updateVariables(context: RemoteContext): void {
-        if ((this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) && isNaNBits(this.mValueBits)) {
-            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
-            if (this.mType === HeightModifier.EXACT_DP) {
-                this.mOutValue *= context.getDensity();
+        if (this.mType === HeightModifier.EXACT || this.mType === HeightModifier.EXACT_DP) {
+            const pre = this.mOutValue;
+            this.mOutValue = isNaNBits(this.mValueBits)
+                ? context.getFloat(idFromBits(this.mValueBits)) : intBitsToFloat(this.mValueBits);
+            if (this.mType === HeightModifier.EXACT_DP
+                || context.getDensityBehavior?.() === RemoteContext.DENSITY_BEHAVIOR_DP) {
+                const density = context.getDensity();
+                if (density > 0 && !Number.isNaN(density)) this.mOutValue *= density;
             }
+            // Java: a changed value re-measures the document (root invalidateMeasure), so a
+            // width/height bound to a variable a click changes takes effect (T: was missing).
+            if (pre !== this.mOutValue) context.getDocument?.()?.invalidateMeasure();
         }
     }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}HeightModifier(${this.mType}, ${this.mOutValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new HeightModifier(buffer.readInt(), buffer.readInt()));
+        operations.push(new HeightModifier(buffer.readInt(), buffer.readNanIdBits()));
     }
 }
 
@@ -148,7 +179,7 @@ export class WidthInModifier extends Operation implements VariableSupport {
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}WidthInModifier(${this.mOutMin}, ${this.mOutMax})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new WidthInModifier(buffer.readInt(), buffer.readInt()));
+        operations.push(new WidthInModifier(buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -190,7 +221,7 @@ export class HeightInModifier extends Operation implements VariableSupport {
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}HeightInModifier(${this.mOutMin}, ${this.mOutMax})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new HeightInModifier(buffer.readInt(), buffer.readInt()));
+        operations.push(new HeightInModifier(buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -205,7 +236,7 @@ export class CollapsiblePriorityModifier extends Operation {
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}CollapsiblePriorityModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new CollapsiblePriorityModifier(buffer.readInt(), buffer.readFloat()));
+        operations.push(new CollapsiblePriorityModifier(buffer.readInt(), intBitsToFloat(buffer.readNanIdBits())));
     }
 }
 
@@ -291,13 +322,16 @@ export class BackgroundModifier extends Operation implements VariableSupport {
         // Java BackgroundModifierOperation.read: colorId remapped (readId),
         // r/g/b/a are readNanId (NaN-encoded color-var refs remap in macros).
         const flags = buffer.readInt();
-        const colorId = buffer.readId();
+        // As the reference: the colour is an id only when COLOR_REF is set, and only then is it
+        // remapped inside a pattern; otherwise the word is a literal and must not be touched.
+        let colorId = buffer.readInt();
+        if ((flags & 2) !== 0) colorId = (buffer as any).getRemapContext?.()?.resolveId(colorId) ?? colorId;
         buffer.readInt(); // reserve1
         buffer.readInt(); // reserve2
-        const r = buffer.readInt();
-        const g = buffer.readInt();
-        const b = buffer.readInt();
-        const a = buffer.readInt();
+        const r = buffer.readNanIdBits();
+        const g = buffer.readNanIdBits();
+        const b = buffer.readNanIdBits();
+        const a = buffer.readNanIdBits();
         const shapeType = buffer.readInt();
         operations.push(new BackgroundModifier(flags, colorId, r, g, b, a, shapeType));
     }
@@ -361,10 +395,11 @@ export class BorderModifier extends Operation {
     }
     deepToString(indent: string): string { return `${indent}BorderModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        // Java BorderModifierOperation.read: colorId remapped (readId); float
-        // fields are readNanId (NaN-encoded var refs remap in macros).
+        // Java BorderModifierOperation.read: the colour is an id, remapped in macros, only
+        // with COLOR_REF (flag 2); float fields are readNanId.
         const flags = buffer.readInt();
-        const colorId = buffer.readId();
+        let colorId = buffer.readInt();
+        if ((flags & 2) !== 0) colorId = (buffer as any).getRemapContext?.()?.resolveId(colorId) ?? colorId;
         buffer.readInt(); // reserve1
         buffer.readInt(); // reserve2
         // Bits, then literal — see PaddingModifier below, which has always done this.
@@ -433,7 +468,7 @@ export class PaddingModifier extends Operation implements VariableSupport {
     deepToString(indent: string): string { return `${indent}PaddingModifier(${this.mLeftValue}, ${this.mTopValue}, ${this.mRightValue}, ${this.mBottomValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new PaddingModifier(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(), buffer.readInt()));
+            buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -494,16 +529,60 @@ export class ClipRectModifier extends Operation {
     }
 }
 
+/**
+ * The press ripple Java's ClickModifierOperation, MultiClickModifier and RippleModifierOperation
+ * paint (animateRipple + paint): from the touch point a circle grows to the component's larger
+ * side in half a second (CUBIC_STANDARD) while its colour goes from (250,250,250,a180) to
+ * (200,200,200,a0) over one second (Utils.interpolateColor), clipped to the component.
+ * Times are the clock's milliseconds (context.getClock().millis()), as in Java.
+ */
+export class Ripple {
+    private static readonly EASE = new CubicEasing(Easing.CUBIC_STANDARD);
+    start = 0; x = 0; y = 0;
+    animate(context: RemoteContext, x: number, y: number): void {
+        this.start = context.getClock?.()?.millis?.() ?? Date.now();
+        if (this.start === 0) this.start = 1;
+        this.x = x; this.y = y;
+        context.needsRepaint();
+    }
+    paint(pc: PaintContext, context: RemoteContext, w: number, h: number): void {
+        if (this.start === 0 || w <= 0 || h <= 0) return;
+        pc.needsRepaint();
+        const now = context.getClock?.()?.millis?.() ?? Date.now();
+        let progress = (now - this.start) / 1000;
+        if (progress > 1) this.start = 0;
+        progress = Math.min(1, Math.max(0, progress));
+        const tween = Ripple.EASE.get(progress);
+        const tweenRadius = Ripple.EASE.get(Math.min(1, progress / 0.5));
+        const color = interpolateColor(((180 << 24) | (250 << 16) | (250 << 8) | 250) | 0,
+                                       ((0 << 24) | (200 << 16) | (200 << 8) | 200) | 0, tween);
+        pc.matrixSave();
+        pc.savePaint();
+        const pb = new PaintBundle();
+        pb.mArray = [PaintBundle.STYLE, PaintBundle.COLOR, color];
+        pb.mPos = 3;
+        pc.replacePaint(pb);
+        pc.clipRect(0, 0, w, h);
+        pc.drawCircle(this.x, this.y, Math.max(w, h) * tweenRadius);
+        pc.restorePaint();
+        pc.matrixRestore();
+    }
+}
+
 // ── MODIFIER_CLICK (59): no payload (container — children follow) ─────
 export class ClickModifier extends Operation {
     static readonly OP_CODE = 59;
     mList: Operation[] = [];
     private mComponent: any = null;
+    /** Java ClickModifierOperation: a click ripples when animations are enabled. */
+    readonly ripple = new Ripple();
     constructor() { super(); }
     getList(): Operation[] { return this.mList; }
     setComponent(c: any): void { this.mComponent = c; }
 
-    onClick(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
+    onClick(context: RemoteContext, _doc: any, x: number, y: number): boolean {
+        // x, y: the component's own coordinates (LayoutComponent.onClick passes them so).
+        if (context.isAnimationEnabled?.() ?? true) this.ripple.animate(context, x, y);
         // Execute action operations
         for (const op of this.mList) {
             context.incrementOpCount(op);
@@ -542,8 +621,11 @@ export class MultiClickModifier extends Operation {
     getClickType(): number { return this.mClickType; }
     setComponent(c: any): void { this.mComponent = c; }
 
-    onClick(context: RemoteContext, _doc: any, _x: number, _y: number): boolean {
+    /** Java MultiClickModifier: a single click ripples too, when animations are enabled. */
+    readonly ripple = new Ripple();
+    onClick(context: RemoteContext, _doc: any, x: number, y: number): boolean {
         if (this.mClickType !== MultiClickModifier.CLICK_TYPE_SINGLE) return false;
+        if (context.isAnimationEnabled?.() ?? true) this.ripple.animate(context, x, y);
         for (const op of this.mList) { context.incrementOpCount(op); op.apply(context); }
         context.needsRepaint();
         return true;
@@ -607,8 +689,8 @@ export class DimensionConstraintsModifier extends Operation {
     }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const type = buffer.readByte();
-        const min = buffer.readFloat();
-        const max = buffer.readFloat();
+        const min = intBitsToFloat(buffer.readNanIdBits());
+        const max = intBitsToFloat(buffer.readNanIdBits());
         operations.push(new DimensionConstraintsModifier(type, min, max));
     }
 }
@@ -730,7 +812,7 @@ export class VisibilityModifier extends Operation {
     }
     deepToString(indent: string): string { return `${indent}VisibilityModifier(${this.mVisibilityId})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new VisibilityModifier(buffer.readInt()));
+        operations.push(new VisibilityModifier(buffer.readId()));
     }
 }
 
@@ -763,7 +845,7 @@ export class OffsetModifier extends Operation implements VariableSupport {
     }
     deepToString(indent: string): string { return `${indent}OffsetModifier(${this.mOutX}, ${this.mOutY})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new OffsetModifier(buffer.readInt(), buffer.readInt()));
+        operations.push(new OffsetModifier(buffer.readNanIdBits(), buffer.readNanIdBits()));
     }
 }
 
@@ -785,97 +867,216 @@ export class ZIndexModifier extends Operation {
     }
     deepToString(indent: string): string { return `${indent}ZIndexModifier(${this.mCurrentValue})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new ZIndexModifier(buffer.readInt()));
+        operations.push(new ZIndexModifier(buffer.readNanIdBits()));
     }
 }
 
-// ── MODIFIER_GRAPHICS_LAYER (224): INT length, then [INT tag, FLOAT/INT value]* ──
+/**
+ * A graphicsLayer value that follows a variable, as Java's AnimatableValue: the first value
+ * is taken as is, and a later change animates over 300 ms (CUBIC_STANDARD) unless it came
+ * within 300 ms of the previous one, in which case it snaps.
+ */
+class GraphicsLayerAnimatableValue {
+    private mIsVariable = false;
+    private mId = 0;
+    private mValue = 0;
+    private mAnimateValueChanges = true;
+    private mAnimate = false;
+    private mAnimateTargetTime = 0;
+    private readonly mAnimateDuration = 300;
+    private mTarget = 0;
+    private mStart = 0;
+    private mLastUpdate = 0;
+    private mEasing: CubicEasing | null = null;
+
+    constructor(bits: number) {
+        if (isVariableBits(bits)) {
+            this.mId = idFromBits(bits);
+            this.mIsVariable = true;
+        } else {
+            this.mValue = intBitsToFloat(bits);
+        }
+    }
+
+    getValue(): number { return this.mValue; }
+
+    evaluate(context: PaintContext): number {
+        if (!this.mIsVariable) return this.mValue;
+        const value = context.getContext().getFloat(this.mId);
+        const timeMillis = context.getClock().millis();
+        if (value !== this.mValue) {
+            const interval = timeMillis - this.mLastUpdate;
+            this.mAnimateValueChanges = interval > this.mAnimateDuration && this.mLastUpdate !== 0;
+            this.mLastUpdate = timeMillis;
+        }
+        if (!this.mAnimateValueChanges) {
+            this.mValue = value;
+        } else {
+            if (value !== this.mValue && !this.mAnimate) {
+                this.mStart = this.mValue;
+                this.mTarget = value;
+                this.mAnimate = true;
+                this.mAnimateTargetTime = timeMillis;
+                this.mEasing = new CubicEasing(Easing.CUBIC_STANDARD);
+            }
+            if (this.mAnimate) {
+                const elapsed = timeMillis - this.mAnimateTargetTime;
+                // Java: FloatAnimation(CUBIC_STANDARD, 0.3 s).get(elapsed / 300), which is
+                // the easing at (elapsed / 300) / 0.3.
+                const t = Math.min(1, Math.max(0, elapsed / this.mAnimateDuration / 0.3));
+                const p = t >= 1 ? 1 : this.mEasing!.get(t);
+                this.mValue = (1 - p) * this.mStart + p * this.mTarget;
+                if (p >= 1) this.mAnimate = false;
+            } else {
+                this.mValue = this.mTarget;
+            }
+        }
+        return this.mValue;
+    }
+}
+
+/** One attribute of a graphics layer. `bits` keeps the authored float bits (a NaN-encoded
+ *  variable reference stays visible to the inspector); `value` is the current value. */
+export interface GraphicsLayerAttribute {
+    id: number;
+    name: string;
+    isFloat: boolean;
+    bits: number | null;
+    value: number;
+}
+
+// ── MODIFIER_GRAPHICS_LAYER (224): INT count, then (INT tag, FLOAT|INT value)* ────────
+// Port of Java GraphicsLayerModifierOperation. The tag is `index | (dataType << 10)`.
 export class GraphicsLayerModifier extends Operation {
     static readonly OP_CODE = 224;
-    // Attribute tag IDs (lower 10 bits of the tag word)
     static readonly SCALE_X = 0;
     static readonly SCALE_Y = 1;
     static readonly ROTATION_X = 2;
     static readonly ROTATION_Y = 3;
     static readonly ROTATION_Z = 4;
-    static readonly TRANSLATION_X = 5;
-    static readonly TRANSLATION_Y = 6;
-    static readonly TRANSLATION_Z = 7;
-    static readonly ALPHA = 8;
-    static readonly SHADOW_ELEVATION = 9;
-    static readonly CAMERA_DISTANCE = 10;
-    static readonly BLUR_RADIUS_X = 15;
-    static readonly BLUR_RADIUS_Y = 16;
+    static readonly TRANSFORM_ORIGIN_X = 5;
+    static readonly TRANSFORM_ORIGIN_Y = 6;
+    static readonly TRANSLATION_X = 7;
+    static readonly TRANSLATION_Y = 8;
+    static readonly TRANSLATION_Z = 9;
+    static readonly SHADOW_ELEVATION = 10;
+    static readonly ALPHA = 11;
+    static readonly CAMERA_DISTANCE = 12;
+    static readonly COMPOSITING_STRATEGY = 13;
+    static readonly SPOT_SHADOW_COLOR = 14;
+    static readonly AMBIENT_SHADOW_COLOR = 15;
+    static readonly HAS_BLUR = 16;
+    static readonly BLUR_RADIUS_X = 17;
+    static readonly BLUR_RADIUS_Y = 18;
+    static readonly BLUR_TILE_MODE = 19;
+    static readonly SHAPE = 20;
+    static readonly SHAPE_RADIUS = 21;
 
-    private mAttributes: Map<number, { value: number; isFloat: boolean }> = new Map();
+    private static readonly DATA_TYPE_INT = 0;
+    private static readonly DATA_TYPE_FLOAT = 1;
 
-    constructor(attributes: Map<number, { value: number; isFloat: boolean }>) {
-        super();
-        this.mAttributes = attributes;
+    // [name, isFloat, default] in Java's mValues order.
+    private static readonly DEFS: [string, boolean, number][] = [
+        ['SCALE_X', true, 1], ['SCALE_Y', true, 1], ['ROTATION_X', true, 0],
+        ['ROTATION_Y', true, 0], ['ROTATION_Z', true, 0], ['TRANSFORM_ORIGIN_X', true, 0],
+        ['TRANSFORM_ORIGIN_Y', true, 0], ['TRANSLATION_X', true, 0], ['TRANSLATION_Y', true, 0],
+        ['TRANSLATION_Z', true, 0], ['SHADOW_ELEVATION', true, 0], ['ALPHA', true, 1],
+        ['CAMERA_DISTANCE', true, 8], ['COMPOSITING_STRATEGY', false, 0],
+        ['SPOT_SHADOW_COLOR', false, 0], ['AMBIENT_SHADOW_COLOR', false, 0],
+        ['HAS_BLUR', false, 0], ['BLUR_RADIUS_X', true, 0], ['BLUR_RADIUS_Y', true, 0],
+        ['BLUR_TILE_MODE', false, 0], ['SHAPE', false, -1], ['SHAPE_RADIUS', true, 0],
+    ];
+
+    /** Every attribute the document set, by Java index. */
+    mAttributes: Map<number, GraphicsLayerAttribute> = new Map();
+    private mAnimatable: Map<number, GraphicsLayerAnimatableValue> = new Map();
+    mHasBlurEffect = false;
+
+    private setFloat(index: number, bits: number): void {
+        const [name] = GraphicsLayerModifier.DEFS[index];
+        const anim = new GraphicsLayerAnimatableValue(bits);
+        this.mAnimatable.set(index, anim);
+        this.mAttributes.set(index, { id: index, name, isFloat: true, bits, value: anim.getValue() });
     }
 
-    getAlpha(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.ALPHA);
-        return attr ? attr.value : 1.0;
+    private setInt(index: number, value: number): void {
+        const [name] = GraphicsLayerModifier.DEFS[index];
+        this.mAttributes.set(index, { id: index, name, isFloat: false, bits: null, value });
     }
 
-    getScaleX(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.SCALE_X);
-        return attr ? attr.value : 1.0;
+    // Not `valueOf`: that name overrides Object.prototype.valueOf, so any numeric coercion of the
+    // modifier (e.g. the inspector scanning op fields with `>>> 0`) would call it with no index.
+    private attributeValue(index: number): number {
+        const a = this.mAttributes.get(index);
+        return a ? a.value : GraphicsLayerModifier.DEFS[index][2];
     }
 
-    getScaleY(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.SCALE_Y);
-        return attr ? attr.value : 1.0;
+    getAlpha(): number { return this.attributeValue(GraphicsLayerModifier.ALPHA); }
+    getScaleX(): number { return this.attributeValue(GraphicsLayerModifier.SCALE_X); }
+    getScaleY(): number { return this.attributeValue(GraphicsLayerModifier.SCALE_Y); }
+    getRotationZ(): number { return this.attributeValue(GraphicsLayerModifier.ROTATION_Z); }
+    getTranslationX(): number { return this.attributeValue(GraphicsLayerModifier.TRANSLATION_X); }
+    getTranslationY(): number { return this.attributeValue(GraphicsLayerModifier.TRANSLATION_Y); }
+
+    /**
+     * Java fillInAttributes: the attributes whose current value differs from the default
+     * (needsToWrite), as the map PaintContext.setGraphicsLayer takes.
+     */
+    fillInAttributes(out: Map<number, any>): void {
+        for (const [index, a] of this.mAttributes) {
+            const def = GraphicsLayerModifier.DEFS[index][2];
+            if (a.value !== def) out.set(index, a.value);
+        }
     }
 
-    getRotationZ(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.ROTATION_Z);
-        return attr ? attr.value : 0.0;
-    }
-
-    getTranslationX(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.TRANSLATION_X);
-        return attr ? attr.value : 0.0;
-    }
-
-    getTranslationY(): number {
-        const attr = this.mAttributes.get(GraphicsLayerModifier.TRANSLATION_Y);
-        return attr ? attr.value : 0.0;
+    /** Java paint(): evaluate each animatable value (variables resolve here). */
+    evaluate(context: PaintContext): void {
+        for (const [index, anim] of this.mAnimatable) {
+            const a = this.mAttributes.get(index)!;
+            a.value = anim.evaluate(context);
+        }
     }
 
     write(_buffer: WireBuffer): void { /* stub */ }
+    apply(_context: RemoteContext): void { /* painted by LayoutComponent */ }
 
-    apply(context: RemoteContext): void {
-        if (context.mMode !== ContextMode.PAINT) return;
-        const pc = context.getPaintContext();
-        if (!pc) return;
-
-        // Evaluate variable-referenced attributes
-        for (const [_key, attr] of this.mAttributes) {
-            if (attr.isFloat && Number.isNaN(attr.value)) {
-                // NaN-encoded variable — resolve
-                // Note: the attribute values are static for now; animation support would go here
-            }
-        }
+    deepToString(indent: string): string {
+        return `${indent}GraphicsLayerModifier(${this.getScaleX()}, ${this.getScaleY()})`;
     }
-
-    deepToString(indent: string): string { return `${indent}GraphicsLayerModifier(${this.mAttributes.size} attrs)`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const length = buffer.readInt();
-        const attributes = new Map<number, { value: number; isFloat: boolean }>();
+        const op = new GraphicsLayerModifier();
+        if (length < 0 || length > GraphicsLayerModifier.DEFS.length) {
+            throw new Error(`attempt to allocate an invalid number of attributes: ${length}`);
+        }
+        const remap = (buffer as any).getRemapContext?.();
         for (let i = 0; i < length; i++) {
             const tag = buffer.readInt();
-            const attrId = tag & 0x3FF;
-            const dataType = (tag >> 10) & 0x3;
-            if (dataType === 1) {
-                attributes.set(attrId, { value: buffer.readFloat(), isFloat: true });
-            } else {
-                attributes.set(attrId, { value: buffer.readInt(), isFloat: false });
+            const dataType = tag >> 10;
+            const index = tag & 0x3F;
+            if (index < 0 || index >= GraphicsLayerModifier.DEFS.length) {
+                throw new Error(`attempt to read an invalid attribute index: ${index}`);
+            }
+            if (index === GraphicsLayerModifier.BLUR_RADIUS_X
+                || index === GraphicsLayerModifier.BLUR_RADIUS_Y) {
+                op.mHasBlurEffect = true;
+                op.setInt(GraphicsLayerModifier.HAS_BLUR, 1);
+            }
+            if (dataType === GraphicsLayerModifier.DATA_TYPE_FLOAT) {
+                // readNanId: a variable reference keeps its NaN payload (and is remapped
+                // inside a Loom pattern by the buffer).
+                op.setFloat(index, buffer.readNanIdBits());
+            } else if (dataType === GraphicsLayerModifier.DATA_TYPE_INT) {
+                let value = buffer.readInt();
+                if ((index === GraphicsLayerModifier.SPOT_SHADOW_COLOR
+                     || index === GraphicsLayerModifier.AMBIENT_SHADOW_COLOR) && remap) {
+                    value = remap.resolveId(value);
+                }
+                op.setInt(index, value);
             }
         }
-        operations.push(new GraphicsLayerModifier(attributes));
+        operations.push(op);
     }
 }
 
@@ -1054,9 +1255,9 @@ export class ScrollModifier extends Operation {
     deepToString(indent: string): string { return `${indent}ScrollModifier(dir=${this.mDirection})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
         const direction = buffer.readInt();
-        const position = buffer.readInt();
-        const max = buffer.readInt();
-        const notchMax = buffer.readInt();
+        const position = buffer.readNanIdBits();
+        const max = buffer.readNanIdBits();
+        const notchMax = buffer.readNanIdBits();
         operations.push(new ScrollModifier(direction, position, max, notchMax));
     }
 }
@@ -1146,6 +1347,8 @@ export class MarqueeModifier extends Operation {
 // ── MODIFIER_RIPPLE (229): no payload ─────────────────────────────────
 export class RippleModifier extends Operation {
     static readonly OP_CODE = 229;
+    /** RippleModifierOperation.onTouchDown starts it (unconditionally), paint draws it. */
+    readonly ripple = new Ripple();
     constructor() { super(); }
     write(_buffer: WireBuffer): void { /* stub */ }
     apply(_context: RemoteContext): void { /* handled by layout */ }
@@ -1176,7 +1379,7 @@ export class AlignByModifier extends Operation {
     apply(_context: RemoteContext): void { /* handled by layout */ }
     deepToString(indent: string): string { return `${indent}AlignByModifier`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        operations.push(new AlignByModifier(buffer.readFloat(), buffer.readInt()));
+        operations.push(new AlignByModifier(intBitsToFloat(buffer.readNanIdBits()), buffer.readInt()));
     }
 }
 

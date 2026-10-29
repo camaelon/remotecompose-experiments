@@ -60,8 +60,8 @@ export class DrawTweenPath extends PaintOperation implements VariableSupport {
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
         operations.push(new DrawTweenPath(
-            buffer.readInt(), buffer.readInt(), buffer.readInt(),
-            buffer.readInt(), buffer.readInt()
+            buffer.readId(), buffer.readId(), buffer.readNanIdBits(),
+            buffer.readNanIdBits(), buffer.readNanIdBits()
         ));
     }
 }

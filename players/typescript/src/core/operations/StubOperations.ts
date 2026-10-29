@@ -1,8 +1,9 @@
+import { intBitsToFloat } from './Utils';
 // StubOperations: parse-only operation stubs that read fields but have no apply() logic.
 
 import { Operation } from '../Operation';
 import { PaintOperation } from '../PaintOperation';
-import { idFromBits, floatToRawIntBits } from './Utils';
+import { idFromBits, floatToRawIntBits, isNaNBits } from './Utils';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import { createSnapshot } from '../RemoteClock';
@@ -68,6 +69,11 @@ export class ImpulseOperation extends PaintOperation {
             return;
         }
         if (now <= this.mOutStartAt + this.mOutDuration) {
+            // An open impulse window needs the next frame. The initial pass only runs the
+            // setup block and draws nothing that asks for one, so without this the web player
+            // (which paints only on request) stopped after it: a particle/impulse document
+            // showed its first frame — everything but the particles — and never moved.
+            context.needsRepaint();
             if (this.mInitialPass) {
                 for (const op of this.mList) {
                     if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
@@ -92,8 +98,8 @@ export class ImpulseOperation extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const duration = buffer.readFloat();
-        const startAt = buffer.readFloat();
+        const duration = intBitsToFloat(buffer.readNanIdBits());
+        const startAt = intBitsToFloat(buffer.readNanIdBits());
         operations.push(new ImpulseOperation(duration, startAt));
     }
 }
@@ -146,8 +152,8 @@ export class DebugMessage extends Operation {
     apply(_context: RemoteContext): void { /* stub */ }
     deepToString(indent: string): string { return `${indent}DebugMessage`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt(); // textId
-        buffer.readFloat(); // floatValue
+        buffer.readId(); // textId
+        intBitsToFloat(buffer.readNanIdBits()); // floatValue
         buffer.readInt(); // flags
         operations.push(new DebugMessage());
     }
@@ -161,8 +167,8 @@ export class HostActionMetadataOperation extends Operation {
     apply(_context: RemoteContext): void { /* stub */ }
     deepToString(indent: string): string { return `${indent}HostActionMetadataOperation`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt(); // actionId
-        buffer.readInt(); // metadataId
+        buffer.readId(); // actionId
+        buffer.readId(); // metadataId
         operations.push(new HostActionMetadataOperation());
     }
 }
@@ -237,25 +243,64 @@ export class ValueFloatExpressionChangeAction extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const valueId = buffer.readInt();
-        const expressionId = buffer.readInt();
+        const valueId = buffer.readId();
+        const expressionId = buffer.readId();
         operations.push(new ValueFloatExpressionChangeAction(valueId, expressionId));
     }
 }
 
 // ── PathTween (158) ──────────────────────────────────────────────────
-export class PathTween extends Operation {
+/**
+ * Port of PathTween.java: interpolates path mPathId1 -> mPathId2 by mTween and stores the
+ * result as path mOutId, which a later DrawPath (or another tween) reads. mTween is the
+ * authored value as raw float bits — a NaN id when the fraction is a variable (an
+ * animated `@playing`), re-read in updateVariables into mTweenOut. The interpolation itself
+ * is PaintContext.tweenPath (the reference's AndroidPaintContext.getPathArray: coordinates
+ * lerped, command markers kept from path 1).
+ */
+export class PathTween extends PaintOperation {
     static readonly OP_CODE = 158;
-    constructor() { super(); }
-    write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}PathTween`; }
+    mOutId: number;
+    mPathId1: number;
+    mPathId2: number;
+    /** Raw float bits of the tween fraction (NaN id when it is a variable). */
+    mTween: number;
+    mTweenOut: number;
+    constructor(outId: number, pathId1: number, pathId2: number, tweenBits: number) {
+        super();
+        this.mOutId = outId;
+        this.mPathId1 = pathId1;
+        this.mPathId2 = pathId2;
+        this.mTween = tweenBits;
+        this.mTweenOut = intBitsToFloat(tweenBits);
+    }
+    write(buffer: WireBuffer): void {
+        buffer.start(PathTween.OP_CODE);
+        buffer.writeInt(this.mOutId);
+        buffer.writeInt(this.mPathId1);
+        buffer.writeInt(this.mPathId2);
+        buffer.writeInt(this.mTween);
+    }
+    updateVariables(context: RemoteContext): void {
+        this.mTweenOut = isNaNBits(this.mTween)
+            ? context.getFloat(idFromBits(this.mTween))
+            : intBitsToFloat(this.mTween);
+    }
+    registerListening(context: RemoteContext): void {
+        if (isNaNBits(this.mTween)) context.listensTo(idFromBits(this.mTween), this);
+    }
+    paint(context: PaintContext): void {
+        context.tweenPath(this.mOutId, this.mPathId1, this.mPathId2, this.mTweenOut);
+    }
+    deepToString(indent: string): string {
+        return `${indent}PathTween[${this.mOutId}] = [${this.mPathId1}] + [${this.mPathId2}], ${this.mTweenOut}`;
+    }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt();   // outId
-        buffer.readInt();   // pathId1
-        buffer.readInt();   // pathId2
-        buffer.readFloat(); // tween
-        operations.push(new PathTween());
+        const outId = buffer.readId();
+        const pathId1 = buffer.readId();
+        const pathId2 = buffer.readId();
+        const tween = buffer.readNanIdBits();
+        operations.push(new PathTween(outId, pathId1, pathId2, tween));
     }
 }
 
@@ -267,21 +312,46 @@ export class HapticFeedback extends Operation {
     apply(_context: RemoteContext): void { /* stub */ }
     deepToString(indent: string): string { return `${indent}HapticFeedback`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readInt(); // type
+        buffer.readId(); // type
         operations.push(new HapticFeedback());
     }
 }
 
 // ── WakeIn (191) ─────────────────────────────────────────────────────
-export class WakeIn extends Operation {
+/**
+ * Port of WakeIn.java: asks the render loop to wake up in `wake` seconds. The value may
+ * be a variable (a NaN id), re-read in updateVariables; paint hands it to
+ * PaintContext.wakeIn (RemoteComposeState.wakeIn keeps the soonest), which is what
+ * getRepaintDelay and the inspector's repaint analysis read.
+ */
+export class WakeIn extends PaintOperation {
     static readonly OP_CODE = 191;
-    constructor() { super(); }
-    write(_buffer: WireBuffer): void { /* stub */ }
-    apply(_context: RemoteContext): void { /* stub */ }
-    deepToString(indent: string): string { return `${indent}WakeIn`; }
+    /** The authored value, as raw float bits (a NaN id when it is a variable). */
+    private mWakeBits: number;
+    private mWakeOut: number;
+    constructor(wakeBits: number) {
+        super();
+        this.mWakeBits = wakeBits;
+        this.mWakeOut = intBitsToFloat(wakeBits);
+    }
+    write(buffer: WireBuffer): void {
+        buffer.start(WakeIn.OP_CODE);
+        buffer.writeInt(this.mWakeBits);
+    }
+    updateVariables(context: RemoteContext): void {
+        this.mWakeOut = isNaNBits(this.mWakeBits)
+            ? context.getFloat(idFromBits(this.mWakeBits))
+            : intBitsToFloat(this.mWakeBits);
+    }
+    registerListening(context: RemoteContext): void {
+        if (isNaNBits(this.mWakeBits)) context.listensTo(idFromBits(this.mWakeBits), this);
+    }
+    paint(context: PaintContext): void {
+        context.wakeIn(this.mWakeOut);
+    }
+    deepToString(indent: string): string { return `${indent}WakeIn(${this.mWakeOut})`; }
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        buffer.readFloat(); // wake
-        operations.push(new WakeIn());
+        operations.push(new WakeIn(buffer.readNanIdBits()));
     }
 }
 
@@ -410,12 +480,12 @@ export class TimeAttribute extends PaintOperation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const timeId = buffer.readInt();
+        const id = buffer.readId();
+        const timeId = buffer.readId();
         const type = buffer.readShort();
         const len = buffer.readShort();
         const args: number[] = [];
-        for (let i = 0; i < len; i++) args.push(buffer.readInt());
+        for (let i = 0; i < len; i++) args.push(buffer.readId());
         operations.push(new TimeAttribute(id, timeId, type, args));
     }
 }

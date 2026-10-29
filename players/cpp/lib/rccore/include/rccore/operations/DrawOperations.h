@@ -22,7 +22,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<TextData>();
-        op->textId = buf.readInt();
+        op->textId = buf.declareId();
         op->text = buf.readUTF8();
         ops.push_back(std::move(op));
     }
@@ -43,7 +43,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<BitmapData>();
-        op->imageId = buf.readInt();
+        op->imageId = buf.readId();
         op->widthAndType = buf.readInt();
         op->heightAndEncoding = buf.readInt();
         op->bitmap = buf.readBuffer();
@@ -64,11 +64,16 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<PathDataOp>();
-        op->idAndWinding = buf.readInt();
+        int32_t raw = buf.readInt();
+        // As PathData.read: the id (low 24 bits) is resolved inside a pattern, and a NaN-boxed
+        // value remapped unless it is a path command (ids <= DONE = 16).
+        op->idAndWinding = (raw & ~0xFFFFFF) | (buf.remapId(raw & 0xFFFFFF) & 0xFFFFFF);
         int len = buf.readInt();
         op->pathData.resize(len);
         for (int i = 0; i < len; i++) {
-            op->pathData[i] = buf.readFloat();
+            float v = buf.readFloat();
+            int32_t b; memcpy(&b, &v, sizeof(b));
+            op->pathData[i] = (RemapContext::isNaNBits(b) && (b & 0x3FFFFF) > 16) ? buf.remapNan(v) : v;
         }
         ops.push_back(std::move(op));
     }
@@ -116,8 +121,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawRect>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));
@@ -141,8 +146,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawCircle>();
-        op->cx = buf.readFloat(); op->cy = buf.readFloat();
-        op->radius = buf.readFloat();
+        op->cx = buf.readNanId(); op->cy = buf.readNanId();
+        op->radius = buf.readNanId();
         op->oCx = op->cx; op->oCy = op->cy; op->oRadius = op->radius;
         ops.push_back(std::move(op));
     }
@@ -165,8 +170,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawLine>();
-        op->x1 = buf.readFloat(); op->y1 = buf.readFloat();
-        op->x2 = buf.readFloat(); op->y2 = buf.readFloat();
+        op->x1 = buf.readNanId(); op->y1 = buf.readNanId();
+        op->x2 = buf.readNanId(); op->y2 = buf.readNanId();
         op->oX1 = op->x1; op->oY1 = op->y1;
         op->oX2 = op->x2; op->oY2 = op->y2;
         ops.push_back(std::move(op));
@@ -190,8 +195,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawOval>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));
@@ -217,9 +222,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawRoundRect>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
-        op->radiusX = buf.readFloat(); op->radiusY = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
+        op->radiusX = buf.readNanId(); op->radiusY = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         op->oRadiusX = op->radiusX; op->oRadiusY = op->radiusY;
@@ -246,9 +251,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawSector>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
-        op->startAngle = buf.readFloat(); op->sweepAngle = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
+        op->startAngle = buf.readNanId(); op->sweepAngle = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         op->oStartAngle = op->startAngle; op->oSweepAngle = op->sweepAngle;
@@ -275,9 +280,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawArc>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
-        op->startAngle = buf.readFloat(); op->sweepAngle = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
+        op->startAngle = buf.readNanId(); op->sweepAngle = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         op->oStartAngle = op->startAngle; op->oSweepAngle = op->sweepAngle;
@@ -298,7 +303,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawPath>();
-        op->pathId = buf.readInt();
+        op->pathId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -321,8 +326,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawTweenPath>();
-        op->path1Id = buf.readInt(); op->path2Id = buf.readInt();
-        op->tween = buf.readFloat(); op->start = buf.readFloat(); op->stop = buf.readFloat();
+        op->path1Id = buf.readId(); op->path2Id = buf.readId();
+        op->tween = buf.readNanId(); op->start = buf.readNanId(); op->stop = buf.readNanId();
         op->oTween = op->tween; op->oStart = op->start; op->oStop = op->stop;
         ops.push_back(std::move(op));
     }
@@ -347,12 +352,12 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawBitmap>();
-        op->imageId = buf.readInt();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
+        op->imageId = buf.readId();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
-        op->descriptionId = buf.readInt();
+        op->descriptionId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -373,12 +378,12 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawBitmapInt>();
-        op->imageId = buf.readInt();
+        op->imageId = buf.readId();
         op->srcL = buf.readInt(); op->srcT = buf.readInt();
         op->srcR = buf.readInt(); op->srcB = buf.readInt();
         op->dstL = buf.readInt(); op->dstT = buf.readInt();
         op->dstR = buf.readInt(); op->dstB = buf.readInt();
-        op->cdId = buf.readInt();
+        op->cdId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -402,9 +407,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawTextRun>();
-        op->textId = buf.readInt(); op->start = buf.readInt(); op->end = buf.readInt();
+        op->textId = buf.readId(); op->start = buf.readInt(); op->end = buf.readInt();
         op->contextStart = buf.readInt(); op->contextEnd = buf.readInt();
-        op->x = buf.readFloat(); op->y = buf.readFloat();
+        op->x = buf.readNanId(); op->y = buf.readNanId();
         op->oX = op->x; op->oY = op->y;
         op->rtl = buf.readBoolean();
         ops.push_back(std::move(op));
@@ -430,9 +435,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawTextAnchored>();
-        op->textId = buf.readInt();
-        op->x = buf.readFloat(); op->y = buf.readFloat();
-        op->panX = buf.readFloat(); op->panY = buf.readFloat();
+        op->textId = buf.readId();
+        op->x = buf.readNanId(); op->y = buf.readNanId();
+        op->panX = buf.readNanId(); op->panY = buf.readNanId();
         op->oX = op->x; op->oY = op->y;
         op->oPanX = op->panX; op->oPanY = op->panY;
         op->flags = buf.readInt();
@@ -458,12 +463,12 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<DrawTextOnPath>();
-        op->textId = buf.readInt(); op->pathId = buf.readInt();
+        op->textId = buf.readId(); op->pathId = buf.readId();
         // vOffset is written FIRST, ahead of hOffset — the reverse of the constructor
         // and of every signature in this family. Both the reference reader and the
         // TypeScript player read it in this order; reading h first silently swaps the
         // two, which shifts text across the path instead of along it.
-        op->vOffset = buf.readFloat(); op->hOffset = buf.readFloat();
+        op->vOffset = buf.readNanId(); op->hOffset = buf.readNanId();
         op->oHOffset = op->hOffset; op->oVOffset = op->vOffset;
         ops.push_back(std::move(op));
     }
@@ -486,8 +491,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ClipRectOp>();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));
@@ -507,7 +512,9 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ClipPathOp>();
-        op->pathId = buf.readInt();
+        int32_t pack = buf.readInt();
+        // The low 20 bits are the path id (resolved inside a pattern), the top byte the region op.
+        op->pathId = (pack & ~0xFFFFF) | (buf.remapId(pack & 0xFFFFF) & 0xFFFFF);
         ops.push_back(std::move(op));
     }
 };
@@ -553,8 +560,8 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixScale>();
-        op->sx = buf.readFloat(); op->sy = buf.readFloat();
-        op->cx = buf.readFloat(); op->cy = buf.readFloat();
+        op->sx = buf.readNanId(); op->sy = buf.readNanId();
+        op->cx = buf.readNanId(); op->cy = buf.readNanId();
         op->oSx = op->sx; op->oSy = op->sy;
         op->oCx = op->cx; op->oCy = op->cy;
         ops.push_back(std::move(op));
@@ -577,7 +584,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixTranslate>();
-        op->dx = buf.readFloat(); op->dy = buf.readFloat();
+        op->dx = buf.readNanId(); op->dy = buf.readNanId();
         op->oDx = op->dx; op->oDy = op->dy;
         ops.push_back(std::move(op));
     }
@@ -599,7 +606,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixRotate>();
-        op->angle = buf.readFloat(); op->cx = buf.readFloat(); op->cy = buf.readFloat();
+        op->angle = buf.readNanId(); op->cx = buf.readNanId(); op->cy = buf.readNanId();
         op->oAngle = op->angle; op->oCx = op->cx; op->oCy = op->cy;
         ops.push_back(std::move(op));
     }
@@ -621,7 +628,7 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<MatrixSkew>();
-        op->sx = buf.readFloat(); op->sy = buf.readFloat();
+        op->sx = buf.readNanId(); op->sy = buf.readNanId();
         op->oSx = op->sx; op->oSy = op->sy;
         ops.push_back(std::move(op));
     }
@@ -652,7 +659,7 @@ public:
     void apply(RemoteContext& context) override {}
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<RootContentDescription>();
-        op->contentDescriptionId = buf.readInt();
+        op->contentDescriptionId = buf.readId();
         ops.push_back(std::move(op));
     }
 };
@@ -668,7 +675,7 @@ public:
     void apply(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<FloatConstant>();
-        op->id = buf.readInt(); op->value = buf.readFloat();
+        op->id = buf.declareId(); op->value = buf.readNanId();
         ops.push_back(std::move(op));
     }
 };
@@ -700,7 +707,7 @@ public:
     void apply(RemoteContext& context) override;
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ColorConstant>();
-        op->id = buf.readInt(); op->color = buf.readInt();
+        op->id = buf.declareId(); op->color = buf.readInt();
         ops.push_back(std::move(op));
     }
 };
@@ -741,7 +748,7 @@ public:
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<NamedVariable>();
-        op->varId = buf.readInt(); op->varType = buf.readInt();
+        op->varId = buf.declareId(); op->varType = buf.readInt();
         op->varName = buf.readUTF8();
         ops.push_back(std::move(op));
     }
@@ -766,10 +773,10 @@ public:
 
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {
         auto op = std::make_unique<ClickArea>();
-        op->id = buf.readInt(); op->cdId = buf.readInt();
-        op->left = buf.readFloat(); op->top = buf.readFloat();
-        op->right = buf.readFloat(); op->bottom = buf.readFloat();
-        op->metadataId = buf.readInt();
+        op->id = buf.declareId(); op->cdId = buf.readId();
+        op->left = buf.readNanId(); op->top = buf.readNanId();
+        op->right = buf.readNanId(); op->bottom = buf.readNanId();
+        op->metadataId = buf.readId();
         op->oLeft = op->left; op->oTop = op->top;
         op->oRight = op->right; op->oBottom = op->bottom;
         ops.push_back(std::move(op));

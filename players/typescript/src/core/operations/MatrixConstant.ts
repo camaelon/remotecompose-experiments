@@ -1,3 +1,4 @@
+import { intBitsToFloat } from './Utils';
 import { Operation } from '../Operation';
 import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
@@ -26,12 +27,12 @@ export class MatrixConstant extends Operation {
     deepToString(indent: string): string { return `${indent}MatrixConstant(${this.mMatrixId})`; }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
+        const id = buffer.readId();
         const type = buffer.readInt();
         const len = buffer.readInt();
         if (len > 16 || len < 0) throw new Error(`Invalid matrix length ${len}`);
         const values = new Float32Array(len);
-        for (let i = 0; i < len; i++) values[i] = buffer.readFloat();
+        for (let i = 0; i < len; i++) values[i] = intBitsToFloat(buffer.readNanIdBits());
         operations.push(new MatrixConstant(id, type, values));
     }
 }

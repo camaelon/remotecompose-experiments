@@ -17,6 +17,62 @@ void PaintBundle::readBundle(WireBuffer& buf) {
     for (int i = 0; i < len; i++) {
         mArray[i] = buf.readInt();
     }
+    if (buf.remapContext()) resolveIds(buf);
+}
+
+// PaintBundle.resolveIds / resolveGradientIds. Two departures from the reference, where its
+// walk disagrees with how the bundle is written (and with its own applyPaintChange): TEXTURE
+// is three words (bitmap id, tile modes, filter), and a sweep gradient has no tile mode word.
+void PaintBundle::resolveIds(WireBuffer& buf) {
+    int len = static_cast<int>(mArray.size());
+    auto fl = [&](int i) { if (i < len) mArray[i] = buf.remapNanBits(mArray[i]); };
+    auto id = [&](int i) { if (i < len) mArray[i] = buf.remapId(mArray[i]); };
+    int i = 0;
+    while (i < len) {
+        int32_t cmd = mArray[i++];
+        int tag = cmd & 0xFFFF;
+        int upper = (cmd >> 16) & 0xFFFF;
+        switch (tag) {
+            case STROKE_MITER: case STROKE_WIDTH: case ALPHA: case TEXT_SIZE: case SHADER_MATRIX:
+                fl(i++);
+                break;
+            case COLOR_FILTER_ID: case COLOR_ID: case SHADER: case TYPEFACE: case FALLBACK_TYPEFACE:
+                id(i++);
+                break;
+            case TEXTURE:
+                id(i);
+                i += 3;
+                break;
+            case COLOR: case COLOR_FILTER:
+                i++;
+                break;
+            case FONT_AXIS:
+                for (int j = 0; j < upper && i < len; j++) { id(i++); fl(i++); }
+                break;
+            case GRADIENT: {
+                if (i >= len) break;
+                int32_t control = mArray[i++];
+                int numColors = control & 0xFF;
+                int regBits = (control >> 16) & 0xFFFF;
+                for (int j = 0; j < numColors && i < len; j++, i++) {
+                    if ((regBits & (1 << j)) != 0) id(i);
+                }
+                if (i >= len) break;
+                int numStops = mArray[i++];
+                for (int j = 0; j < numStops && i < len; j++) fl(i++);
+                fl(i++); fl(i++);                      // x, y (or the centre)
+                if (upper == LINEAR_GRADIENT) { fl(i++); fl(i++); i++; }            // end, tile mode
+                else if (upper == RADIAL_GRADIENT) { fl(i++); i++; }                 // radius, tile mode
+                else if (upper == 3) { fl(i++); fl(i++); fl(i++); fl(i++); i++; }    // RADIAL_GRADIENT2
+                break;
+            }
+            case PATH_EFFECT:
+                for (int j = 0; j < upper && i < len; j++) fl(i++);
+                break;
+            default:
+                break;
+        }
+    }
 }
 
 // ── Helper: check if int bits represent a NaN float ───────────────────

@@ -6,7 +6,7 @@ import type { PaintContext } from '../../../PaintContext';
 import { RemoteContext } from '../../../RemoteContext';
 import type { MeasurePass } from '../measure/MeasurePass';
 import { Size } from '../measure/Size';
-import { WidthModifier, HeightModifier, ScrollModifier } from '../modifiers/ModifierOperations';
+import { WidthModifier, HeightModifier, ScrollModifier, DimensionConstraintsModifier } from '../modifiers/ModifierOperations';
 import { isNaNBits, idFromBits } from '../../Utils';
 
 export abstract class LayoutManager extends LayoutComponent {
@@ -31,6 +31,9 @@ export abstract class LayoutManager extends LayoutComponent {
         this.mLastMinH = minHeight;
         this.mLastMaxH = maxHeight;
 
+        // Padding resolves in the modifiers' updateVariables (variables, DP scaling); pick up
+        // the resolved values, as Java's computeModifierDefinedWidth does via updatePadding.
+        this.updatePadding();
         const selfMeasure = measure.get(this);
         const padding_w = this.mPaddingLeft + this.mPaddingRight;
         const padding_h = this.mPaddingTop + this.mPaddingBottom;
@@ -38,9 +41,33 @@ export abstract class LayoutManager extends LayoutComponent {
         const wMod = this.getWidthModifier();
         const hMod = this.getHeightModifier();
 
+        // widthIn / heightIn tighten the incoming constraints before anything is sized,
+        // as BaseModernMeasurePolicy does (minWidth = max(minWidth, widthIn.min),
+        // maxWidth = min(maxWidth, widthIn.max)). An explicit width is then clamped into
+        // them: `width(40).widthIn(100, 260)` is 100, not 40.
+        {
+            const wIn = this.getWidthInModifier();
+            if (wIn) {
+                if (wIn.getMin() >= 0) minWidth = Math.max(minWidth, wIn.getMin());
+                if (wIn.getMax() >= 0) maxWidth = Math.min(maxWidth, wIn.getMax());
+            }
+            const hIn = this.getHeightInModifier();
+            if (hIn) {
+                if (hIn.getMin() >= 0) minHeight = Math.max(minHeight, hIn.getMin());
+                if (hIn.getMax() >= 0) maxHeight = Math.min(maxHeight, hIn.getMax());
+            }
+        }
+
+        // RowLayout.isInHorizontalFill / ColumnLayout.isInVerticalFill: a row with a
+        // horizontally weighted child fills horizontally, a column with a vertically weighted
+        // child fills vertically, whatever its own size modifier says.
+        const [weightFillW, weightFillH] = this.weightFill();
+
         // Determine width
         let w: number;
-        if (wMod && (wMod.getType() === WidthModifier.EXACT || wMod.getType() === WidthModifier.EXACT_DP)) {
+        if (weightFillW && wMod?.getType() !== WidthModifier.FILL) {
+            w = maxWidth;
+        } else if (wMod && (wMod.getType() === WidthModifier.EXACT || wMod.getType() === WidthModifier.EXACT_DP)) {
             // Clamp to the incoming constraint. Without this a child larger than its
             // parent keeps its requested size and overflows; the reference and the C++
             // player both clamp (BaseModernMeasurePolicy: min(measuredWidth, maxWidth)).
@@ -70,7 +97,9 @@ export abstract class LayoutManager extends LayoutComponent {
 
         // Determine height
         let h: number;
-        if (hMod && (hMod.getType() === HeightModifier.EXACT || hMod.getType() === HeightModifier.EXACT_DP)) {
+        if (weightFillH && hMod?.getType() !== HeightModifier.FILL) {
+            h = maxHeight;
+        } else if (hMod && (hMod.getType() === HeightModifier.EXACT || hMod.getType() === HeightModifier.EXACT_DP)) {
             h = Math.min(hMod.getValue() + this.mPadBeforeHeight, maxHeight);
         } else if (hMod && hMod.getType() === HeightModifier.FILL) {
             h = hMod.hasFraction() ? maxHeight * hMod.getValue() : maxHeight;
@@ -83,21 +112,13 @@ export abstract class LayoutManager extends LayoutComponent {
         selfMeasure.setW(w);
         selfMeasure.setH(h);
 
-        // A weight only means something once the parent has distributed space for it, and it
-        // does that by pinning the axis — measure(share, share, ...). On the *cross* axis
-        // there is no distribution pass, so the branches above fall back to the padding
-        // alone: the component collapses to its border, its content box comes out zero, and
-        // everything inside is clipped away while the component's own background still
-        // draws. That is a table whose rows and header band are there with no text in them.
-        //
-        // An undistributed weight has no share to take, so the only size available is the
-        // one its content asks for — measure that axis as a wrap.
-        const widthWeightUnpinned = wMod?.getType() === WidthModifier.WEIGHT
-            && minWidth <= this.mPadBeforeWidth;
-        const heightWeightUnpinned = hMod?.getType() === HeightModifier.WEIGHT
-            && minHeight <= this.mPadBeforeHeight;
-        const horizontalWrap = wMod?.getType() === WidthModifier.WRAP || widthWeightUnpinned;
-        const verticalWrap = hMod?.getType() === HeightModifier.WRAP || heightWeightUnpinned;
+        // A weight is not a wrap, even before the parent has distributed its share:
+        // BaseModernMeasurePolicy sizes it to its modifier-defined size (0 for a bare
+        // weight) and measures its children against that. Measuring it as a wrap made a
+        // weighted column holding a fillMaxWidth child take the whole row in the row's
+        // first computeSize pass, so a fixed spacer after it was offered 0 and collapsed.
+        const horizontalWrap = !weightFillW && wMod?.getType() === WidthModifier.WRAP;
+        const verticalWrap = !weightFillH && hMod?.getType() === HeightModifier.WRAP;
 
         if (horizontalWrap || verticalWrap) {
             this.mCachedWrapSize.clear();
@@ -108,8 +129,17 @@ export abstract class LayoutManager extends LayoutComponent {
             // width measures its children at the parent's full width first, and a
             // wrapping height then locks in from that wrong measurement — which is why
             // text in a narrow fixed-width box was sized to one line and never re-grew.
-            const childMaxW = (horizontalWrap ? maxWidth : w) - padding_w;
-            const childMaxH = (verticalWrap ? maxHeight : h) - padding_h;
+            //
+            // A weighted axis is the exception: InsetWrapMeasurePolicy tightens only in its
+            // fixed/wrap branch, so a weight keeps the offered inset (maxWidth - padding).
+            // Its own size there is just its modifier-defined size (0 for a bare weight),
+            // and `0 - padding` would measure the children at a negative width: a weighted
+            // column with start padding then wrapped to 0 high and was pinned at that by the
+            // row's weight distribution (T12).
+            const weightW = wMod?.getType() === WidthModifier.WEIGHT;
+            const weightH = hMod?.getType() === HeightModifier.WEIGHT;
+            const childMaxW = (horizontalWrap || weightW ? maxWidth : w) - padding_w;
+            const childMaxH = (verticalWrap || weightH ? maxHeight : h) - padding_h;
             this.computeWrapSize(context, minWidth, childMaxW, minHeight,
                 childMaxH, horizontalWrap, verticalWrap, measure, this.mCachedWrapSize);
 
@@ -179,7 +209,7 @@ export abstract class LayoutManager extends LayoutComponent {
         this.updateComponentValues(context.getContext(), w, h);
 
         // Measure children with fill sizing (skip if already done in scroll path)
-        if (!scrollMod) {
+        if (!scrollMod && !(horizontalWrap || verticalWrap)) {
             const childMaxW = Math.max(0, w - padding_w);
             const childMaxH = Math.max(0, h - padding_h);
             this.computeSize(context, 0, childMaxW, 0, childMaxH, measure);
@@ -190,6 +220,22 @@ export abstract class LayoutManager extends LayoutComponent {
         // with content-only dimensions; restore the container's computed w/h here.
         w = Math.max(w, minWidth);
         h = Math.max(h, minHeight);
+        // EnforceConstraintsMeasurePolicy (the default measure version) then clamps to the
+        // max, so a widthIn minimum larger than the space offered still gives way to it.
+        w = Math.min(w, maxWidth);
+        h = Math.min(h, maxHeight);
+        // ...and a *required* constraint (DimensionConstraints REQUIRED_*) wins over that
+        // (DimensionConstraintsModifierOperation.applyWidthConstraint).
+        const wReq = this.getWidthInModifier();
+        if (wReq instanceof DimensionConstraintsModifier
+            && wReq.getType() === DimensionConstraintsModifier.REQUIRED_HORIZONTAL) {
+            w = Math.max(wReq.getMin(), Math.min(w, wReq.getMax()));
+        }
+        const hReq = this.getHeightInModifier();
+        if (hReq instanceof DimensionConstraintsModifier
+            && hReq.getType() === DimensionConstraintsModifier.REQUIRED_VERTICAL) {
+            h = Math.max(hReq.getMin(), Math.min(h, hReq.getMax()));
+        }
         selfMeasure.setW(w);
         selfMeasure.setH(h);
 
@@ -219,6 +265,9 @@ export abstract class LayoutManager extends LayoutComponent {
             }
         }
     }
+
+    /** Whether the children's weights make this fill [horizontally, vertically]. */
+    protected weightFill(): [boolean, boolean] { return [false, false]; }
 
     // Override in subclasses to compute wrap-content size
     computeWrapSize(_context: PaintContext, _minWidth: number, _maxWidth: number,

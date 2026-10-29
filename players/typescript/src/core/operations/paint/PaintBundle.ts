@@ -103,6 +103,64 @@ export class PaintBundle {
             this.mArray[i] = buffer.readInt();
         }
         this.mPos = len;
+        const remap = (buffer as any).getRemapContext?.();
+        if (remap) this.resolveIds(remap);
+    }
+
+    /**
+     * PaintBundle.resolveIds / resolveGradientIds: inside a pattern, remap the ids (and NaN-boxed
+     * float ids) the bundle carries to this inflation's. Two departures from the reference, where
+     * its walk disagrees with how the bundle is written (and with its own applyPaintChange):
+     * TEXTURE is three words (bitmap id, tile modes, filter), and a sweep gradient has no tile
+     * mode word.
+     */
+    private resolveIds(remap: { resolveId(id: number): number; resolveNanIdBits(bits: number): number }): void {
+        const a = this.mArray, len = this.mPos;
+        const fl = (i: number) => { if (i < len) a[i] = remap.resolveNanIdBits(a[i]); };
+        const id = (i: number) => { if (i < len) a[i] = remap.resolveId(a[i]); };
+        let i = 0;
+        while (i < len) {
+            const cmd = a[i++];
+            const tag = cmd & 0xFFFF;
+            const upper = (cmd >> 16) & 0xFFFF;
+            switch (tag) {
+                case PaintBundle.STROKE_MITER: case PaintBundle.STROKE_WIDTH: case PaintBundle.ALPHA:
+                case PaintBundle.TEXT_SIZE: case PaintBundle.SHADER_MATRIX:
+                    fl(i++); break;
+                case PaintBundle.COLOR_FILTER_ID: case PaintBundle.COLOR_ID: case PaintBundle.SHADER:
+                case PaintBundle.TYPEFACE: case PaintBundle.FALLBACK_TYPEFACE:
+                    id(i++); break;
+                case PaintBundle.TEXTURE:
+                    id(i); i += 3; break;
+                case PaintBundle.COLOR: case PaintBundle.COLOR_FILTER:
+                    i++; break;
+                case PaintBundle.FONT_AXIS:
+                    for (let j = 0; j < upper && i < len; j++) { id(i++); fl(i++); }
+                    break;
+                case PaintBundle.GRADIENT: {
+                    if (i >= len) break;
+                    const control = a[i++];
+                    const numColors = control & 0xFF;
+                    const regBits = (control >> 16) & 0xFFFF;
+                    for (let j = 0; j < numColors && i < len; j++, i++) {
+                        if ((regBits & (1 << j)) !== 0) id(i);
+                    }
+                    if (i >= len) break;
+                    const numStops = a[i++];
+                    for (let j = 0; j < numStops && i < len; j++) fl(i++);
+                    fl(i++); fl(i++);                                   // x, y (or the centre)
+                    if (upper === PaintBundle.LINEAR_GRADIENT) { fl(i++); fl(i++); i++; }
+                    else if (upper === PaintBundle.RADIAL_GRADIENT) { fl(i++); i++; }
+                    else if (upper === 3) { fl(i++); fl(i++); fl(i++); fl(i++); i++; }   // RADIAL_GRADIENT2
+                    break;
+                }
+                case PaintBundle.PATH_EFFECT:
+                    for (let j = 0; j < upper && i < len; j++) fl(i++);
+                    break;
+                default:
+                    break;
+            }
+        }
     }
 
     /** Returns the resolved array (mOutArray if available, otherwise mArray). */

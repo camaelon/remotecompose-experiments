@@ -8,9 +8,11 @@ exports.modPadding = modPadding;
 exports.modBorder = modBorder;
 exports.modScroll = modScroll;
 exports.modVisibility = modVisibility;
+exports.modGraphicsLayer = modGraphicsLayer;
 exports.modClipRect = modClipRect;
 exports.modClipRoundedRect = modClipRoundedRect;
 exports.modWidthIn = modWidthIn;
+exports.modDimensionConstraints = modDimensionConstraints;
 exports.modHeightIn = modHeightIn;
 exports.modSemantics = modSemantics;
 exports.modClick = modClick;
@@ -38,14 +40,14 @@ const WireBuffer_1 = require("./WireBuffer");
 const Header_1 = require("./Header");
 exports.OP = {
     COMPONENT_VALUE: 150, MODIFIER_OFFSET: 221, ACCESSIBILITY_SEMANTICS: 250,
-    MODIFIER_CLICK: 59, HOST_NAMED_ACTION: 210, HOST_ACTION: 209, HOST_ACTION_METADATA: 216,
+    MODIFIER_CLICK: 59, MODIFIER_DIMENSION_CONSTRAINTS: 243, TEXT_MERGE: 136, MODIFIER_MULTI_CLICK: 83, HOST_NAMED_ACTION: 210, HOST_ACTION: 209, HOST_ACTION_METADATA: 216,
     MODIFIER_WIDTH_IN: 231, MODIFIER_HEIGHT_IN: 232,
     DEFINE_MESH_3D: 110, SET_CAMERA_3D: 111, MATRIX_3D_OP: 112, DRAW_MESH_3D: 113,
     PAINT_3D_STATE: 114, SET_LIGHTS_3D: 115, VECTOR_EXPRESSION: 116,
     MESH_EXPRESSION_3D: 117, SET_TEXTURE_3D: 118, MESH_PRIMITIVE_3D: 120,
     TOUCH_EXPRESSION: 157, MODIFIER_VISIBILITY: 211,
     LAYOUT_FLOW: 240,
-    IMPULSE_START: 164, IMPULSE_PROCESS: 165, MODIFIER_BORDER: 107,
+    IMPULSE_START: 164, IMPULSE_PROCESS: 165, MODIFIER_BORDER: 107, MODIFIER_GRAPHICS_LAYER: 224,
     MODIFIER_SCROLL: 226, LAYOUT_FIT_BOX: 176,
     DATA_BITMAP: 101, PARTICLE_DEFINE: 161, PARTICLE_LOOP: 163, PARTICLE_COMPARE: 194,
     VALUE_FLOAT_EXPRESSION_CHANGE_ACTION: 227, VALUE_FLOAT_CHANGE_ACTION: 222,
@@ -58,13 +60,15 @@ exports.OP = {
     LAYOUT_ROOT: 200, LAYOUT_CONTENT: 201, LAYOUT_BOX: 202, LAYOUT_ROW: 203,
     LAYOUT_COLUMN: 204, LAYOUT_CANVAS: 205, LAYOUT_CANVAS_CONTENT: 207,
     CONTAINER_END: 214, DATA_TEXT: 102, CORE_TEXT: 239, DATA_SHADER: 45,
+    REFERENCED_OPERATIONS: 142, INCLUDE_REFERENCED_OPERATIONS: 245, DATA_INT: 140,
+    MACRO_FOR_EACH: 244, MACRO_DEFINE: 246, MACRO_CALL: 247, MACRO_ARGUMENT: 248, MACRO_BLOCK: 249,
     MODIFIER_WIDTH: 16, MODIFIER_HEIGHT: 67, MODIFIER_BACKGROUND: 55,
     MODIFIER_PADDING: 58, MODIFIER_CLIP_RECT: 108, MODIFIER_ROUNDED_CLIP_RECT: 54,
     DATA_FLOAT: 80, ANIMATED_FLOAT: 81, COLOR_CONSTANT: 138, NAMED_VARIABLE: 137,
     PAINT_VALUES: 40, DRAW_RECT: 42, DRAW_CIRCLE: 46, DRAW_LINE: 47, DRAW_OVAL: 56,
     DRAW_ROUND_RECT: 51, DRAW_ARC: 152, DRAW_SECTOR: 52, DRAW_TEXT_ANCHOR: 133,
-    MATRIX_SAVE: 130, MATRIX_RESTORE: 131, MATRIX_TRANSLATE: 127, MATRIX_SCALE: 126,
-    MATRIX_ROTATE: 129, CLIP_RECT: 39, LOOP_START: 215,
+    MATRIX_SAVE: 130, MATRIX_RESTORE: 131, WAKE_IN: 191, MATRIX_TRANSLATE: 127, MATRIX_SCALE: 126,
+    MATRIX_ROTATE: 129, CLIP_RECT: 39, LOOP_START: 215, THEME: 63, COLOR_EXPRESSION: 134,
 };
 exports.TYPE_EXACT = 0;
 exports.TYPE_FILL = 1;
@@ -127,6 +131,8 @@ class Writer {
         this.buffer = new WireBuffer_1.WireBuffer();
         this.componentId = -1; // pre-decrement -> first is -2
         this.nextDataId = 42; // post-increment -> first is 42
+        this.nextLocal = 0x4000; // pattern-local ids (RemoteComposeState.createNextLocalId)
+        this.patternDefineOffsets = [];
         this.lastComponentId = 0;
         this.textCache = new Map();
         this.componentValueCache = new Map();
@@ -134,12 +140,30 @@ class Writer {
         this.nextArrayId = (2 << 20) + 42; // NanMap.START_ARRAY
         this.insertPoint = -1;
         this.globalStart = -1;
+        /** Set by the `id` modifier: the next component takes this id instead of a generated one,
+         *  and the generated counter does not move (RemoteComposeBuffer.getComponentId). */
+        this.componentIdOverride = null;
+        /** Set by the `spacedBy` modifier (raw float bits: it may be an expression): the next
+         *  row/column writes it instead of 0 (RecordingModifier.spacedBy -> getSpacedBy). */
+        this.spacedByBits = null;
+        /** The interning caches as each open pattern definition found them (RemoteComposeState's
+         *  data scopes). The component-value cache is the writer's own, as in the reference. */
+        this.dataScopes = [];
+        // ── functions, attributes, lookups, matrices (RemoteComposeWriter / RemoteComposeBuffer) ──
+        /** RemoteComposeState's Integer-keyed data cache (textMeasure, textLength, mapLookup). */
+        this.intCache = new Map();
         (0, Header_1.applyHeader)(this.buffer, apiLevel, tags);
     }
     encodeToByteArray() {
         return this.buffer.toBytes();
     }
     allocComponentId() {
+        if (this.componentIdOverride !== null) {
+            const id = this.componentIdOverride;
+            this.componentIdOverride = null;
+            this.lastComponentId = id;
+            return id;
+        }
         this.componentId -= 1;
         this.lastComponentId = this.componentId;
         return this.componentId;
@@ -172,6 +196,58 @@ class Writer {
     containerEnd() {
         this.buffer.start(exports.OP.CONTAINER_END);
     }
+    // ── Loom (component templates) ─────────────────────────────────────────
+    // RemoteComposeWriter / RemoteComposeBuffer: definePattern, patternInflation,
+    // addPatternBlock, addPatternArgument, addPatternForEach and their ends.
+    rippleModifier() { this.buffer.start(229); }
+    /** REFERENCED_OPERATIONS (142): a reusable group, closed by containerEnd(). */
+    referencedOperationsStart(id) { this.buffer.start(exports.OP.REFERENCED_OPERATIONS); this.buffer.writeInt(id); }
+    /** INCLUDE_REFERENCED_OPERATIONS (245): replay a group here (as a component or a modifier). */
+    includeReferencedOperations(id) { this.buffer.start(exports.OP.INCLUDE_REFERENCED_OPERATIONS); this.buffer.writeInt(id); }
+    /** A pattern-local id (0x4000 range): each inflation gets a fresh one at playback. */
+    nextLocalId() { return this.nextLocal++; }
+    /** MACRO_DEFINE: the name interned as text is the id; the body follows, and its length is
+     *  patched into skipLength by endPatternDefine (PatternDefine.apply / applyEnd). */
+    definePattern(name, paramIds) {
+        const id = this.addText(name);
+        // RemoteComposeWriter.definePattern -> RemoteComposeState.pushDataScope: data first
+        // interned inside the body is defined only per inflation (the body is skipped where it
+        // stands), so it must not be reused once the body ends. What was interned before stays
+        // visible inside.
+        this.dataScopes.push([new Map(this.textCache), new Map(this.tffCache), new Map(this.intCache)]);
+        this.buffer.start(exports.OP.MACRO_DEFINE);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(paramIds.length);
+        for (const p of paramIds)
+            this.buffer.writeInt(p);
+        this.patternDefineOffsets.push(this.buffer.index);
+        this.buffer.writeInt(0); // skipLength, patched at the end
+        return id;
+    }
+    endPatternDefine() {
+        const offset = this.patternDefineOffsets.pop();
+        if (offset !== undefined)
+            this.buffer.overwriteInt(offset, this.buffer.index - (offset + 4));
+        this.containerEnd();
+        // RemoteComposeState.popDataScope: forget what the body interned.
+        const scope = this.dataScopes.pop();
+        if (scope)
+            [this.textCache, this.tffCache, this.intCache] = scope;
+    }
+    patternInflation(id, argIds) {
+        this.buffer.start(exports.OP.MACRO_CALL);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(argIds.length);
+        for (const a of argIds)
+            this.buffer.writeInt(a);
+    }
+    patternBlock(paramIndex) { this.buffer.start(exports.OP.MACRO_BLOCK); this.buffer.writeInt(paramIndex); }
+    patternArgument(paramIndex) { this.buffer.start(exports.OP.MACRO_ARGUMENT); this.buffer.writeInt(paramIndex); }
+    patternForEach(collectionId, localItemId) {
+        this.buffer.start(exports.OP.MACRO_FOR_EACH);
+        this.buffer.writeInt(collectionId);
+        this.buffer.writeInt(localItemId);
+    }
     contentStart() {
         this.buffer.start(exports.OP.LAYOUT_CONTENT);
         this.buffer.writeInt(this.allocComponentId());
@@ -183,8 +259,14 @@ class Writer {
         this.buffer.writeInt(-1); // animationId
         this.buffer.writeInt(horizontal);
         this.buffer.writeInt(vertical);
-        if (spacedBy !== null)
-            this.buffer.writeFloat(spacedBy);
+        if (spacedBy !== null) {
+            if (this.spacedByBits !== null)
+                this.buffer.writeIntBitsAsFloat(this.spacedByBits);
+            else
+                this.buffer.writeFloat(spacedBy);
+            this.spacedByBits = null;
+        }
+        this.spacedByBits = null; // a box has no spacing: never let it reach the next row
         for (const m of modifiers)
             m(this);
         this.contentStart();
@@ -322,6 +404,8 @@ class Writer {
     }
     matrixSave() { this.buffer.start(exports.OP.MATRIX_SAVE); }
     matrixRestore() { this.buffer.start(exports.OP.MATRIX_RESTORE); }
+    /** WAKE_IN: ask the player to repaint within `seconds` (a float, or a variable). */
+    wakeIn(seconds) { this.op(exports.OP.WAKE_IN, [seconds]); }
     matrixTranslate(dx, dy) { this.op(exports.OP.MATRIX_TRANSLATE, [dx, dy]); }
     /** Four fields: sx, sy and a pivot that defaults to NaN. Writing two lost 8 bytes. */
     matrixScale(sx, sy, px = 0x7fc00000, py = 0x7fc00000) {
@@ -419,7 +503,8 @@ class Writer {
     }
     /** DATA_LIST_IDS (146): a list of data ids — here text ids — that textLookup indexes. */
     addList(ids) {
-        const listId = this.allocDataId();
+        // RemoteComposeWriter.addList: cacheData(ids, NanMap.TYPE_ARRAY), an array-space id.
+        const listId = this.nextArrayId++;
         this.buffer.start(exports.OP.DATA_LIST_IDS);
         this.buffer.writeInt(listId);
         this.buffer.writeInt(ids.length);
@@ -464,16 +549,21 @@ class Writer {
         this.containerEnd();
     }
     /** LAYOUT_FLOW (240). Closes with two ends, like the other containers. */
-    startFlow(h, v, mods, maxItems, spacedBy = 0.0) {
+    startFlow(h, v, mods, maxItems, spacedBy = 0.0, maxLines = INT_MAX) {
         const cid = this.allocComponentId();
         this.buffer.start(exports.OP.LAYOUT_FLOW);
         this.buffer.writeInt(cid);
         this.buffer.writeInt(-1); // animationId
         this.buffer.writeInt(h);
         this.buffer.writeInt(v);
-        this.buffer.writeFloat(spacedBy);
+        // RecordingModifier.getSpacedBy: a spacedBy modifier applies to a flow as to a row.
+        if (this.spacedByBits !== null)
+            this.buffer.writeIntBitsAsFloat(this.spacedByBits);
+        else
+            this.buffer.writeFloat(spacedBy);
+        this.spacedByBits = null;
         this.buffer.writeInt(maxItems);
-        this.buffer.writeInt(INT_MAX); // maxLines
+        this.buffer.writeInt(maxLines);
         for (const m of mods)
             m(this);
         this.contentStart();
@@ -760,6 +850,15 @@ class Writer {
         this.containerEnd();
     }
     // ── data ────────────────────────────────────────────────────────────────
+    /** TEXT_MERGE (136): a fresh text id that is the concatenation of two text ids. */
+    textMerge(id1, id2) {
+        const id = this.allocDataId();
+        this.buffer.start(exports.OP.TEXT_MERGE);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(id1);
+        this.buffer.writeInt(id2);
+        return id;
+    }
     addText(s) {
         const hit = this.textCache.get(s);
         if (hit !== undefined)
@@ -778,8 +877,7 @@ class Writer {
      * The reference holds each kind of uniform in a java.util.HashMap and writes it in that
      * map's iteration order, so the same order is reproduced here (javaHashMapOrder).
      */
-    addShader(source, floats, ints, bitmaps) {
-        const textId = this.addText(source);
+    addShader(source, floats, ints, bitmaps, textId = this.addText(source)) {
         const id = this.allocDataId();
         const f = javaHashMapOrder(floats), i = javaHashMapOrder(ints), b = javaHashMapOrder(bitmaps);
         this.buffer.start(exports.OP.DATA_SHADER);
@@ -861,13 +959,95 @@ class Writer {
         this.buffer.writeInt(color);
         return colorId;
     }
+    /** RemoteComposeWriter.addInteger: a fresh id (never deduplicated), DATA_INT. Returns the raw id. */
+    addInteger(value) {
+        const id = this.allocDataId();
+        this.buffer.start(exports.OP.DATA_INT);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(value | 0);
+        return id;
+    }
+    /** RemoteComposeWriter.addNamedInt: NAMED_VARIABLE (INT_TYPE 4) before the DATA_INT. */
+    addNamedInt(name, value) {
+        const id = this.allocDataId();
+        this.buffer.start(exports.OP.NAMED_VARIABLE);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(4);
+        this.buffer.writeUtf8(name);
+        this.buffer.start(exports.OP.DATA_INT);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(value | 0);
+        return id;
+    }
+    /** RemoteComposeWriter.setStringName: name an existing text id (NAMED_VARIABLE STRING_TYPE 0). */
+    setStringName(id, name) {
+        this.buffer.start(exports.OP.NAMED_VARIABLE);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(0);
+        this.buffer.writeUtf8(name);
+    }
+    /** DATA_FLOAT / ANIMATED_FLOAT written under an existing id: a variable reassigned
+     *  (RemoteComposeBuffer.addFloat / addAnimatedFloat with the variable's id). */
+    floatConstantAt(id, value) {
+        this.buffer.start(exports.OP.DATA_FLOAT);
+        this.buffer.writeInt(id);
+        this.buffer.writeFloat(value);
+    }
+    floatExpressionAt(id, opsBits) {
+        this.buffer.start(exports.OP.ANIMATED_FLOAT);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(opsBits.length);
+        for (const b of opsBits)
+            this.buffer.writeInt(b);
+    }
     addNamedColor(name, color) {
         const colorId = this.addColor(color);
+        this.setColorName(colorId, name);
+        return colorId;
+    }
+    /** RemoteComposeWriter.setColorName: NAMED_VARIABLE (COLOR_TYPE 2) on an existing id. */
+    setColorName(colorId, name) {
         this.buffer.start(exports.OP.NAMED_VARIABLE);
         this.buffer.writeInt(colorId);
         this.buffer.writeInt(2); // NV_COLOR_TYPE
         this.buffer.writeUtf8(name);
-        return colorId;
+    }
+    /** RemoteComposeWriter.addThemedColor(lightName, lightValue, darkName, darkValue): two
+     *  colour constants (each named when a name is given), then the themed colour over them. */
+    addThemedColorValues(lightName, light, darkName, dark) {
+        const lightId = this.allocDataId();
+        const darkId = this.allocDataId();
+        if (lightName !== null)
+            this.setColorName(lightId, lightName);
+        if (darkName !== null)
+            this.setColorName(darkId, darkName);
+        for (const [id, c] of [[lightId, light], [darkId, dark]]) {
+            this.buffer.start(exports.OP.COLOR_CONSTANT);
+            this.buffer.writeInt(id);
+            this.buffer.writeInt(c);
+        }
+        return this.addThemedColorIds(lightId, darkId);
+    }
+    /** RemoteComposeWriter.addThemedColor(lightId, darkId): a fresh colour id, set under
+     *  THEME(DARK) and under THEME(LIGHT) by a COLOR_EXPRESSION (mode 3: id to id) with tween
+     *  0 (the dark id) or 1 (the light id), each in a one-pass loop; then THEME(UNSPECIFIED). */
+    addThemedColorIds(lightId, darkId) {
+        const retId = this.allocDataId();
+        for (const [theme, tween] of [[-2, 0], [-3, 1]]) { // Rc.Theme.DARK, Rc.Theme.LIGHT
+            this.buffer.start(exports.OP.THEME);
+            this.buffer.writeInt(theme);
+            this.startLoop(0, (0, WireBuffer_1.floatToRawIntBits)(0), (0, WireBuffer_1.floatToRawIntBits)(1), (0, WireBuffer_1.floatToRawIntBits)(1));
+            this.buffer.start(exports.OP.COLOR_EXPRESSION);
+            this.buffer.writeInt(retId);
+            this.buffer.writeInt(3);
+            this.buffer.writeInt(darkId & 0xffff);
+            this.buffer.writeInt(lightId & 0xffff);
+            this.buffer.writeFloat(tween);
+            this.endLoop();
+        }
+        this.buffer.start(exports.OP.THEME);
+        this.buffer.writeInt(-1); // Rc.Theme.UNSPECIFIED
+        return retId;
     }
     /** FLOAT_LIST. Arrays have their own id counter, starting at START_ARRAY. */
     addFloatArray(values) {
@@ -903,27 +1083,316 @@ class Writer {
         this.tffCache.set(key, dataId);
         return dataId;
     }
+    cacheInt(key) {
+        const id = this.allocDataId();
+        this.intCache.set(key | 0, id);
+        return id;
+    }
+    /** FUNCTION_DEFINE (168): the function id, then one fresh id per parameter
+     *  (createFloatFunction). Closed by containerEnd(). Returns [fid, paramIds]. */
+    defineFloatFunction(paramCount) {
+        const fid = this.allocDataId();
+        const args = [];
+        for (let i = 0; i < paramCount; i++)
+            args.push(this.allocDataId());
+        this.buffer.start(168);
+        this.buffer.writeInt(fid);
+        this.buffer.writeInt(args.length);
+        for (const a of args)
+            this.buffer.writeInt(a);
+        return [fid, args];
+    }
+    /** FUNCTION_CALL (166): id, count, then each argument as float bits. */
+    callFloatFunction(id, argBits) {
+        this.buffer.start(166);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(argBits.length);
+        for (const b of argBits)
+            this.buffer.writeInt(b);
+    }
+    /** DRAW_TWEEN_PATH (125). */
+    drawTweenPath(p1, p2, tween, start, stop) {
+        this.buffer.start(125);
+        this.buffer.writeInt(p1);
+        this.buffer.writeInt(p2);
+        this.buffer.writeInt(tween);
+        this.buffer.writeInt(start);
+        this.buffer.writeInt(stop);
+    }
+    /** PATH_TWEEN (158): a new path id interpolating two paths. */
+    pathTween(p1, p2, tween) {
+        const out = this.allocDataId();
+        this.buffer.start(158);
+        this.buffer.writeInt(out);
+        this.buffer.writeInt(p1);
+        this.buffer.writeInt(p2);
+        this.buffer.writeInt(tween);
+        return out;
+    }
+    /** PATH_COMBINE (175): op is a byte. */
+    pathCombine(p1, p2, op) {
+        const out = this.allocDataId();
+        this.buffer.start(175);
+        this.buffer.writeInt(out);
+        this.buffer.writeInt(p1);
+        this.buffer.writeInt(p2);
+        this.buffer.writeByte(op & 0xff);
+        return out;
+    }
+    /** MATRIX_SKEW (128). */
+    matrixSkew(sx, sy) { this.op(128, [sx, sy]); }
+    /** MATRIX_FROM_PATH (181). */
+    matrixFromPath(pathId, fraction, vOffset, flags) {
+        this.buffer.start(181);
+        this.buffer.writeInt(pathId);
+        this.buffer.writeInt(fraction);
+        this.buffer.writeInt(vOffset);
+        this.buffer.writeInt(flags);
+    }
+    /** TEXT_SUBTEXT (182): returns the new (plain) text id. */
+    textSubtext(txt, start, len) {
+        const id = this.allocDataId();
+        this.buffer.start(182);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(txt);
+        this.buffer.writeInt(start);
+        this.buffer.writeInt(len);
+        return id;
+    }
+    /** TEXT_TRANSFORM (199). */
+    textTransform(txt, start, len, operation) {
+        const id = this.allocDataId();
+        this.buffer.start(199);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(txt);
+        this.buffer.writeInt(start);
+        this.buffer.writeInt(len);
+        this.buffer.writeInt(operation);
+        return id;
+    }
+    /** TEXT_MEASURE (155): always written, cached under textId + mode*31. NaN-boxed id. */
+    textMeasure(textId, mode) {
+        const id = this.cacheInt(textId + Math.imul(mode, 31));
+        this.buffer.start(155);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(textId);
+        this.buffer.writeInt(mode);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** TEXT_LENGTH (156): cached under textId + (156 << 16). NaN-boxed id. */
+    textLength(textId) {
+        const id = this.cacheInt(textId + (156 << 16));
+        this.buffer.start(156);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(textId);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** DATA_MAP_LOOKUP (154), deduplicated by mapId + strId*33 (RemoteComposeWriter.mapLookup). */
+    mapLookup(mapId, strId) {
+        const hash = (mapId + Math.imul(strId, 33)) | 0;
+        const hit = this.intCache.get(hash);
+        if (hit !== undefined)
+            return hit;
+        const id = this.cacheInt(hash);
+        this.buffer.start(154);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(mapId);
+        this.buffer.writeInt(strId);
+        return id;
+    }
+    /** ID_LOOKUP (192): the data set is a NaN-boxed id; returns the plain id. */
+    idLookup(dataSetBits, indexBits) {
+        const id = this.allocDataId();
+        this.buffer.start(192);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(dataSetBits & 0x3fffff);
+        this.buffer.writeInt(indexBits);
+        return id;
+    }
+    /** TEXT_LOOKUP_INT (153): the caller supplies the output id. */
+    textLookupInt(id, dataSetBits, indexId) {
+        this.buffer.start(153);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(dataSetBits & 0x3fffff);
+        this.buffer.writeInt(indexId);
+    }
+    /** UPDATE_DYNAMIC_FLOAT_LIST (198): setArrayValue / updateDynamicFloatList. */
+    setArrayValue(id, index, value) {
+        this.buffer.start(198);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(index);
+        this.buffer.writeInt(value);
+    }
+    /** An array-space id (createID(NanMap.TYPE_ARRAY)). */
+    allocArrayId() { return this.nextArrayId++; }
+    /** DYNAMIC_FLOAT_LIST (197). */
+    addDynamicFloatArray(id, size) {
+        this.buffer.start(197);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(size);
+    }
+    /** ATTRIBUTE_COLOR (180): NaN-boxed id. */
+    colorAttribute(baseColor, type) {
+        const id = this.allocDataId();
+        this.buffer.start(180);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(baseColor);
+        this.buffer.writeShort(type);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** ATTRIBUTE_IMAGE (171), no args. */
+    imageAttribute(bitmapId, attr) {
+        const id = this.allocDataId();
+        this.buffer.start(171);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(bitmapId);
+        this.buffer.writeShort(attr);
+        this.buffer.writeShort(0);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** ATTRIBUTE_TEXT (170). */
+    textAttribute(textId, attr) {
+        const id = this.allocDataId();
+        this.buffer.start(170);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(textId);
+        this.buffer.writeShort(attr);
+        this.buffer.writeShort(0);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** ATTRIBUTE_TIME (172). */
+    timeAttribute(longId, type, args) {
+        const id = this.allocDataId();
+        this.buffer.start(172);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(longId);
+        this.buffer.writeShort(type);
+        this.buffer.writeShort(args.length);
+        for (const a of args)
+            this.buffer.writeInt(a);
+        return (0, WireBuffer_1.asNanBits)(id);
+    }
+    /** RUN_ACTION (236): closed by containerEnd(). */
+    runActionsStart() { this.buffer.start(236); }
+    /** MATRIX_EXPRESSION (187), type 0. */
+    matrixExpression(id, bits) {
+        this.buffer.start(187);
+        this.buffer.writeInt(id);
+        this.buffer.writeInt(0);
+        this.buffer.writeInt(bits.length);
+        for (const b of bits)
+            this.buffer.writeInt(b);
+    }
+    /** MATRIX_VECTOR_MATH (188). */
+    matrixVectorMath(type, outIds, matrixBits, fromBits) {
+        this.buffer.start(188);
+        this.buffer.writeShort(type);
+        this.buffer.writeInt(matrixBits & 0x3fffff);
+        this.buffer.writeInt(outIds.length);
+        for (const o of outIds)
+            this.buffer.writeInt(o);
+        this.buffer.writeInt(fromBits.length);
+        for (const b of fromBits)
+            this.buffer.writeInt(b);
+    }
+    // ── layout managers and modifiers ported from DefaultComponentParsers / DefaultModifierParsers ──
+    /** ANIMATION_SPEC (14); the two function ids only when an animation is CUSTOM or one is set. */
+    animationSpec(id, motionDuration, motionEasing, visDuration, visEasing, enter, exit, enterFn, exitFn) {
+        const b = this.buffer;
+        b.start(14);
+        b.writeInt(id);
+        b.writeFloat(motionDuration);
+        b.writeInt(motionEasing);
+        b.writeFloat(visDuration);
+        b.writeInt(visEasing);
+        b.writeInt(enter);
+        b.writeInt(exit);
+        if ((enter & 0xff) === 8 || (exit & 0xff) === 8 || enterFn !== -1 || exitFn !== -1) {
+            b.writeInt(enterFn);
+            b.writeInt(exitFn);
+        }
+    }
+    /** LAYOUT_STATE (217): id, animationId -1, 0, 0, indexId; modifiers; content. */
+    startStateLayout(indexId, mods) {
+        const cid = this.allocComponentId();
+        this.buffer.start(217);
+        this.buffer.writeInt(cid);
+        this.buffer.writeInt(-1);
+        this.buffer.writeInt(0);
+        this.buffer.writeInt(0);
+        this.buffer.writeInt(indexId);
+        this.spacedByBits = null;
+        for (const m of mods)
+            m(this);
+        this.contentStart();
+    }
+    /** LAYOUT_COLLAPSIBLE_ROW (230) / LAYOUT_COLLAPSIBLE_COLUMN (233): as row/column. */
+    startCollapsible(column, h, v, mods) {
+        this.containerWithAlign(column ? 233 : 230, h, v, 0.0, mods);
+    }
+    /** LAYOUT_CUSTOM (93): the component id is the modifier's own (-1 unless `id` is set). */
+    startCustom(configId, props, mods) {
+        const cid = this.componentIdOverride ?? -1;
+        this.componentIdOverride = null;
+        this.buffer.start(93);
+        this.buffer.writeInt(cid);
+        this.buffer.writeInt(-1);
+        this.buffer.writeInt(configId);
+        this.buffer.writeInt(props.length);
+        for (const [type, dataType, value, isFloat] of props) {
+            this.buffer.writeShort(type);
+            this.buffer.writeShort(dataType);
+            if (dataType === 1 || dataType === 3)
+                this.buffer.writeFloat(isFloat ? value : 0);
+            else
+                this.buffer.writeInt(isFloat ? 0 : value);
+        }
+        this.spacedByBits = null;
+        for (const m of mods)
+            m(this);
+        this.contentStart();
+    }
     // ── text component ──────────────────────────────────────────────────────
     textComponent(textId, p) {
+        // RemoteComposeWriter.startTextComponent: the family name, then each axis tag, are
+        // interned as texts before the CoreText op.
+        const fontFamilyId = p.fontFamily != null ? this.addText(p.fontFamily) : -1;
+        const axis = p.fontAxis ? p.fontAxis.map((a) => this.addText(a)) : null;
+        if (axis && p.fontAxisValues && axis.length !== p.fontAxisValues.length) {
+            throw new Error("fontAxis and fontAxisValues must be the same length");
+        }
         const cid = this.allocComponentId();
         const fb = WireBuffer_1.floatToRawIntBits;
         const values = {
             id: cid, animationId: -1, color: p.color, colorId: p.colorId,
-            fontSize: p.fontSizeBits, minFontSize: fb(-1.0), maxFontSize: fb(-1.0),
-            fontStyle: 0, fontWeight: p.fontWeightBits, fontFamily: -1,
+            fontSize: p.fontSizeBits, minFontSize: p.minFontSizeBits ?? fb(-1.0),
+            maxFontSize: p.maxFontSizeBits ?? fb(-1.0),
+            fontStyle: p.fontStyle ?? 0, fontWeight: p.fontWeightBits, fontFamily: fontFamilyId,
             textAlign: p.textAlign, overflow: p.overflow, maxLines: p.maxLines,
-            letterSpacing: fb(0.0), lineHeightAdd: fb(0.0), lineHeightMultiplier: fb(1.0),
-            lineBreakStrategy: 0, hyphenationFrequency: 0, justificationMode: 0,
-            underline: false, strikethrough: false, autosize: false,
-            flags: 0, parentId: -1,
+            letterSpacing: p.letterSpacingBits ?? fb(0.0),
+            lineHeightAdd: p.lineHeightAddBits ?? fb(0.0),
+            lineHeightMultiplier: p.lineHeightMultiplierBits ?? fb(1.0),
+            lineBreakStrategy: p.lineBreakStrategy ?? 0,
+            hyphenationFrequency: p.hyphenationFrequency ?? 0,
+            justificationMode: p.justificationMode ?? 0,
+            underline: p.underline ?? false, strikethrough: p.strikethrough ?? false,
+            autosize: p.autosize ?? false,
+            flags: 0, parentId: p.textStyleId ?? -1,
         };
         // Only non-default parameters are written, which is why the defaults above have to
         // match the reference exactly — a wrong default emits a field that should be absent.
+        // Floats compare as values (Java's `value == default`), so -0.0 counts as 0.0.
         const emit = [];
         for (const [name, tag, typ, dflt] of CORE_TEXT_PARAMS) {
+            if (name === "autosize" && axis && axis.length > 0) {
+                // P_FONT_AXIS (20) and P_FONT_AXIS_VALUES (21) go between strikethrough
+                // and autosize, as CoreText.apply writes them.
+                emit.push([20, "ai", axis]);
+                emit.push([21, "af", (p.fontAxisValues ?? []).map((v) => fb(v))]);
+            }
             const v = values[name];
             if (typ === "f") {
-                if (v !== fb(dflt))
+                if ((0, WireBuffer_1.f32FromBits)(v) !== dflt)
                     emit.push([tag, typ, v]);
             }
             else if (typ === "b") {
@@ -942,6 +1411,12 @@ class Writer {
             this.buffer.writeByte(tag);
             if (typ === "b")
                 this.buffer.writeByte(value ? 1 : 0);
+            else if (typ === "ai" || typ === "af") {
+                const arr = value;
+                this.buffer.writeShort(arr.length);
+                for (const x of arr)
+                    this.buffer.writeInt(x);
+            }
             else
                 this.buffer.writeInt(value);
         }
@@ -973,15 +1448,17 @@ function modPadding(l, t, r, b) {
  * MODIFIER_BORDER (107): four reserved ints, then width, corner radius, RGBA and a shape.
  * The colour goes out as four floats, not as a packed int.
  */
-function modBorder(width, corner, color, shape) {
+function modBorder(width, corner, color, shape, legacy = true) {
     const a = ((color >>> 24) & 0xff) / 255.0;
     const r = ((color >>> 16) & 0xff) / 255.0;
     const g = ((color >>> 8) & 0xff) / 255.0;
     const b = (color & 0xff) / 255.0;
     return (w) => {
         w.buffer.start(exports.OP.MODIFIER_BORDER);
+        // The third reserved int is 1 for the non-legacy border, which
+        // RemoteComposeWriter.addModifierBorder asks for above apiLevel 7.
         for (let i = 0; i < 4; i++)
-            w.buffer.writeInt(0);
+            w.buffer.writeInt(i === 2 && !legacy ? 1 : 0);
         w.buffer.writeFloat(width);
         w.buffer.writeFloat(corner);
         w.buffer.writeFloat(r);
@@ -1008,6 +1485,20 @@ function modVisibility(valueId) {
         w.buffer.writeInt(valueId);
     };
 }
+/**
+ * MODIFIER_GRAPHICS_LAYER (224): a count, then (tag, float bits) per attribute, with the
+ * tag = attribute id | DATA_TYPE_FLOAT (1) << 10.
+ */
+function modGraphicsLayer(attrs) {
+    return (w) => {
+        w.buffer.start(exports.OP.MODIFIER_GRAPHICS_LAYER);
+        w.buffer.writeInt(attrs.length);
+        for (const [id, bits] of attrs) {
+            w.buffer.writeInt(id | (1 << 10));
+            w.buffer.writeInt(bits);
+        }
+    };
+}
 /** MODIFIER_CLIP_RECT (108): clip to the component's own bounds. No payload. */
 function modClipRect() {
     return (w) => { w.buffer.start(exports.OP.MODIFIER_CLIP_RECT); };
@@ -1024,6 +1515,18 @@ function modClipRoundedRect(topStart, topEnd, bottomStart, bottomEnd) {
 function modWidthIn(minBits, maxBits) {
     return (w) => {
         w.buffer.start(exports.OP.MODIFIER_WIDTH_IN);
+        w.buffer.writeInt(minBits);
+        w.buffer.writeInt(maxBits);
+    };
+}
+/**
+ * MODIFIER_DIMENSION_CONSTRAINTS (243): a type byte (0 horizontal, 1 vertical, 2 required
+ * horizontal, 3 required vertical), then min and max.
+ */
+function modDimensionConstraints(type, minBits, maxBits) {
+    return (w) => {
+        w.buffer.start(exports.OP.MODIFIER_DIMENSION_CONSTRAINTS);
+        w.buffer.writeByte(type);
         w.buffer.writeInt(minBits);
         w.buffer.writeInt(maxBits);
     };
@@ -1063,9 +1566,14 @@ exports.SEMANTICS_MODE_SET = 0;
  */
 function modClick(actions, clickType = 0) {
     return (w) => {
-        w.buffer.start(exports.OP.MODIFIER_CLICK);
-        if (clickType !== 0)
+        // ClickActionModifier.write: a plain click is MODIFIER_CLICK with no payload; any
+        // other click type is MultiClickModifier (MODIFIER_MULTI_CLICK) with the type.
+        if (clickType !== 0) {
+            w.buffer.start(exports.OP.MODIFIER_MULTI_CLICK);
             w.buffer.writeInt(clickType);
+        }
+        else
+            w.buffer.start(exports.OP.MODIFIER_CLICK);
         for (const a of actions)
             a(w);
         w.buffer.start(exports.OP.CONTAINER_END);

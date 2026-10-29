@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <limits>
@@ -86,6 +87,10 @@ public:
 
     // Display density (SDPI / 160). Default 1.0 (matching TS behavior when no DOC_DENSITY_AT_GENERATION).
     float mDensity = 1.0f;
+    // The document's DOC_DENSITY_BEHAVIOR header (CoreDocument.mDensityBehavior): 0 legacy,
+    // 1 pixels, 2 dp (layout dimensions, padding, spacing, borders, clips, offsets and
+    // constant font sizes are multiplied by mDensity). Copied in by CoreDocument.
+    int mDensityBehavior = 0;
 
     // Paint context
     void setPaintContext(PaintContext* pc) { mPaintContext = pc; }
@@ -227,14 +232,46 @@ public:
     // Returns true and sets outColor if found, false otherwise.
     static bool getDefaultSystemColor(const std::string& name, int& outColor);
 
-    // Float list store (for expressions with array ops)
-    void loadFloatList(int id, const std::vector<float>& data) { mFloatLists[id] = data; }
-    const std::vector<float>* getFloatList(int id) const {
+    // Float list store (for expressions with array ops). Keyed as RemoteComposeState's
+    // collection map is (id & 0xFFFFF), so an array referenced with its region bits (an
+    // expression's NaN 0x2000xx) and one declared with a plain id are the same list.
+    static int listKey(int id) { return id & 0xFFFFF; }
+    void loadFloatList(int id, const std::vector<float>& data) {
+        id = listKey(id);
+        if (mFloatListOverrides.count(id)) return;   // a host value sticks
+        mFloatLists[id] = data;
+    }
+    /** Set a float list from the host and make it stick. Java applies a DataListFloat once,
+     *  at load, so a host write afterwards survives; this player re-runs data ops every
+     *  data pass, so the host value is guarded like overrideFloat. */
+    void overrideFloatList(int id, const std::vector<float>& data) {
+        id = listKey(id);
+        mFloatLists[id] = data;
+        mFloatListOverrides.insert(id);
+    }
+    /** A DataDynamicListFloat: created once (its values persist across data passes, as the
+     *  Java op owns its array), the only kind UpdateDynamicFloatList writes into
+     *  (RemoteComposeState.getDynamicFloats is null for a plain DataListFloat). */
+    void loadDynamicFloatList(int id, int length) {
+        id = listKey(id);
         auto it = mFloatLists.find(id);
+        if (!mDynamicFloatLists.count(id) || it == mFloatLists.end()
+            || (int)it->second.size() != length)
+            mFloatLists[id] = std::vector<float>(std::max(0, length), 0.0f);
+        mDynamicFloatLists.insert(id);
+    }
+    std::vector<float>* getDynamicFloatList(int id) {
+        if (!mDynamicFloatLists.count(listKey(id))) return nullptr;
+        return getFloatListMutable(id);
+    }
+    /** RemoteComposeState.markVariableDirty: the ops listening to the list recompute. */
+    void markVariableDirty(int id) { notifyListeners(id); }
+    const std::vector<float>* getFloatList(int id) const {
+        auto it = mFloatLists.find(listKey(id));
         return it != mFloatLists.end() ? &it->second : nullptr;
     }
     std::vector<float>* getFloatListMutable(int id) {
-        auto it = mFloatLists.find(id);
+        auto it = mFloatLists.find(listKey(id));
         return it != mFloatLists.end() ? &it->second : nullptr;
     }
 
@@ -407,6 +444,8 @@ private:
     std::unordered_map<int, int> mColors;
     std::unordered_set<int> mColorOverrides;  // IDs overridden by system theme defaults
     std::unordered_set<int> mFloatOverrides;
+    std::unordered_set<int> mFloatListOverrides;
+    std::unordered_set<int> mDynamicFloatLists;
     std::unordered_set<int> mTextOverrides;
     std::unordered_set<int> mIntegerOverrides;
     std::unordered_map<int, std::string> mTexts;

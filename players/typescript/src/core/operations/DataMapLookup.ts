@@ -64,9 +64,9 @@ export class DataMapLookup extends Operation {
     }
 
     static read(buffer: WireBuffer, operations: Operation[]): void {
-        const id = buffer.readInt();
-        const mapId = buffer.readInt();
-        const stringId = buffer.readInt();
+        const id = buffer.readId();
+        const mapId = buffer.readId();
+        const stringId = buffer.readId();
         operations.push(new DataMapLookup(id, mapId, stringId));
     }
 }

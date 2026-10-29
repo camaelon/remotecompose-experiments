@@ -24,6 +24,10 @@
 #include "include/codec/SkCodec.h"
 #include "include/core/SkStream.h"
 #include "include/core/SkTextBlob.h"
+#include "modules/skshaper/include/SkShaper.h"
+#include "modules/skshaper/include/SkShaper_harfbuzz.h"
+#include "modules/skshaper/include/SkShaper_skunicode.h"
+#include "modules/skunicode/include/SkUnicode_icu.h"
 #if defined(__APPLE__)
 #include "include/ports/SkFontMgr_mac_ct.h"
 #else
@@ -115,6 +119,10 @@ static sk_sp<SkFontMgr> SharedFontMgr() {
     return sMgr;
 }
 
+int SkiaPaintContext::fontFamilyCount() const {
+    return mFontMgr ? mFontMgr->countFamilies() : 0;
+}
+
 SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
     : PaintContext(context), mCanvas(canvas) {
     mPaint.setAntiAlias(true);
@@ -139,6 +147,81 @@ SkiaPaintContext::SkiaPaintContext(RemoteContext& context, SkCanvas* canvas)
 }
 
 SkiaPaintContext::~SkiaPaintContext() = default;
+
+// ── Bidi text ─────────────────────────────────────────────────────────
+// A string holding right-to-left characters (Hebrew, Arabic, Syriac, Thaana, N'Ko, ...) is
+// shaped with HarfBuzz and reordered with ICU's bidi through SkShaper, as Android's
+// Canvas.drawText does with its default first-strong-LTR direction. Everything else keeps the
+// per-codepoint fallback path below, so left-to-right metrics are unchanged.
+static bool isRtlCodepoint(int32_t cp) {
+    return (cp >= 0x0590 && cp <= 0x08FF) || (cp >= 0xFB1D && cp <= 0xFDFF) ||
+           (cp >= 0xFE70 && cp <= 0xFEFF) || (cp >= 0x10800 && cp <= 0x10FFF) ||
+           (cp >= 0x1E800 && cp <= 0x1EFFF);
+}
+
+/** 1 when the first strong character is RTL, 0 when it is LTR (or there is none). */
+static int textRtlLevel(const std::string& utf8, bool* anyRtl) {
+    const char* p = utf8.data();
+    const char* end = p + utf8.size();
+    int level = -1;
+    *anyRtl = false;
+    while (p < end) {
+        int32_t cp = nextUtf8Cp(&p, end);
+        if (cp < 0) break;
+        bool rtl = isRtlCodepoint(cp);
+        if (rtl) *anyRtl = true;
+        if (level < 0) {
+            if (rtl && !(cp >= 0x0660 && cp <= 0x0669) && !(cp >= 0x06F0 && cp <= 0x06F9)) level = 1;
+            else if ((cp >= 'A' && cp <= 'Z') || (cp >= 'a' && cp <= 'z') ||
+                     (cp >= 0x00C0 && cp < 0x0590 && cp != 0x00D7 && cp != 0x00F7) ||
+                     (cp >= 0x0900 && cp < 0x2000) || (cp >= 0x3040 && cp <= 0x9FFF) ||
+                     (cp >= 0xAC00 && cp <= 0xD7AF)) level = 0;
+        }
+        if (level >= 0 && *anyRtl) break;
+    }
+    return level < 0 ? 0 : level;
+}
+
+namespace {
+// Collects SkShaper's runs, already in visual order, into one blob with its baseline at y = 0.
+class BaselineRunHandler final : public SkShaper::RunHandler {
+public:
+    void beginLine() override {}
+    void runInfo(const RunInfo&) override {}
+    void commitRunInfo() override {}
+    Buffer runBuffer(const RunInfo& info) override {
+        const auto& run = fBuilder.allocRunPos(info.fFont, (int) info.glyphCount);
+        return {run.glyphs, run.points(), nullptr, nullptr, {fX, 0}};
+    }
+    void commitRunBuffer(const RunInfo& info) override { fX += info.fAdvance.fX; }
+    void commitLine() override {}
+    sk_sp<SkTextBlob> makeBlob() { return fBuilder.make(); }
+    float advance() const { return fX; }
+private:
+    SkTextBlobBuilder fBuilder;
+    float fX = 0;
+};
+}
+
+static bool shapeBidi(const std::string& utf8, const SkFont& font, sk_sp<SkFontMgr> mgr,
+                      int level, sk_sp<SkTextBlob>* blob, float* advance) {
+    static sk_sp<SkUnicode> sUnicode = SkUnicodes::ICU::Make();
+    if (!sUnicode) return false;
+    static std::unique_ptr<SkShaper> sShaper = SkShapers::HB::ShapeThenWrap(sUnicode, mgr);
+    if (!sShaper) return false;
+    const char* t = utf8.c_str();
+    size_t n = utf8.size();
+    auto fontRuns = SkShaper::MakeFontMgrRunIterator(t, n, font, mgr);
+    auto bidiRuns = SkShapers::unicode::BidiRunIterator(sUnicode, t, n, (uint8_t) level);
+    auto scriptRuns = SkShapers::HB::ScriptRunIterator(t, n);
+    auto langRuns = SkShaper::MakeStdLanguageRunIterator(t, n);
+    if (!fontRuns || !bidiRuns || !scriptRuns || !langRuns) return false;
+    BaselineRunHandler handler;
+    sShaper->shape(t, n, *fontRuns, *bidiRuns, *scriptRuns, *langRuns, nullptr, 0, 1e9f, &handler);
+    *blob = handler.makeBlob();
+    *advance = handler.advance();
+    return true;
+}
 
 float SkiaPaintContext::drawOrMeasureWithFallback(const std::string& utf8,
                                                    float x, float y,
@@ -177,6 +260,24 @@ float SkiaPaintContext::drawOrMeasureWithFallback(const std::string& utf8,
     // Miss: shape the text, remembering each per-typeface run's blob (built at the origin
     // pen position) and its offset from the start so future frames can just re-draw them.
     ShapedText shaped;
+    {
+        bool anyRtl = false;
+        int level = textRtlLevel(utf8, &anyRtl);
+        sk_sp<SkTextBlob> bidiBlob;
+        float bidiAdvance = 0;
+        if (anyRtl && shapeBidi(utf8, mFont, mFontMgr, level, &bidiBlob, &bidiAdvance)) {
+            SkFontMetrics fm;
+            mFont.getMetrics(&fm);
+            shaped.runs.push_back({bidiBlob, 0.0f});
+            shaped.advance = bidiAdvance;
+            shaped.bounds = SkRect::MakeLTRB(0, fm.fAscent, bidiAdvance, fm.fDescent);
+            if (draw && bidiBlob) mCanvas->drawTextBlob(bidiBlob, x, y, mPaint);
+            if (outBounds) { *outBounds = shaped.bounds; outBounds->offset(x, y); }
+            if (mShapeCache.size() >= 8192) mShapeCache.clear();
+            mShapeCache.emplace(key, std::move(shaped));
+            return bidiAdvance;
+        }
+    }
     SkRect totalBounds = SkRect::MakeEmpty();
     bool boundsInit = false;
     float cursorX = 0.0f;   // local pen, relative to the run start
@@ -1077,7 +1178,18 @@ float SkiaPaintContext::measureTextWidth(const std::string& text, float fontSize
 
     SkFont tmpFont(mFont);  // Copy member font (has valid typeface)
     tmpFont.setSize(fontSize);
-    float w = tmpFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8);
+    float w;
+    bool anyRtl = false;
+    textRtlLevel(text, &anyRtl);
+    if (anyRtl) {
+        // Measure an RTL string the way it is drawn: shaped (Arabic joining changes widths).
+        SkFont saved = mFont;
+        mFont = tmpFont;
+        w = drawOrMeasureWithFallback(text, 0, 0, /*draw=*/false, nullptr);
+        mFont = saved;
+    } else {
+        w = tmpFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8);
+    }
     if (mWidthCache.size() >= 8192) mWidthCache.clear();
     mWidthCache.emplace(key, w);
     return w;
