@@ -77,7 +77,12 @@ export class WebRemoteContext extends RemoteContext {
     setNamedStringOverride(stringName: string, value: string): void {
         this.namedStringOverrides.set(stringName, value);
         const v = this.namedVariables.get(stringName);
-        if (v) this.mRemoteComposeState.overrideData(v.id, value);
+        if (v) {
+            this.mRemoteComposeState.overrideData(v.id, value);
+            // Text is drawn from the paint context's cache, not the state's data map: without
+            // this the override was stored and never shown.
+            this.canvasPaintContext.loadText(v.id, value);
+        }
     }
 
     clearNamedStringOverride(stringName: string): void {
@@ -179,6 +184,9 @@ export class WebRemoteContext extends RemoteContext {
     // --- Text ---
 
     loadText(id: number, text: string): void {
+        // A host-set string wins over the document's own DATA_TEXT, which the data pass
+        // reloads every frame — as RemoteComposeState.updateData does for other data.
+        if (this.mRemoteComposeState.isDataOverridden(id)) return;
         this.mRemoteComposeState.cacheDataWithId(id, text);
         this.canvasPaintContext.loadText(id, text);
     }

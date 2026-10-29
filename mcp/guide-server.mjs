@@ -7,6 +7,7 @@
 // stdio by default; `--http [PORT]` for Streamable HTTP (see lib/mcp-server.mjs).
 
 import { isMain, serve } from "./lib/mcp-server.mjs";
+import { definition as deploy } from "./deploy-server.mjs";
 import { definition as json2rc } from "./json2rc-server.mjs";
 import { definition as rcRender } from "./rc-render-server.mjs";
 
@@ -15,6 +16,7 @@ import { definition as rcRender } from "./rc-render-server.mjs";
 const SERVERS = [
     { def: json2rc, file: "mcp/json2rc-server.mjs", route: "json2rc" },
     { def: rcRender, file: "mcp/rc-render-server.mjs", route: "rc-render" },
+    { def: deploy, file: "mcp/deploy-server.mjs", route: "deploy" },
 ];
 
 const SELF = {
@@ -46,6 +48,15 @@ const WORKFLOWS = [
         steps: ["rc-render.render_rc with `touch_events` in document coordinates (the layout size, " +
                 "not output pixels) and a `duration` long enough for flings/animations to settle.",
                 "The captured frame is the last one, at `clock`."],
+    },
+    {
+        title: "Share a document as a web page",
+        steps: ["rc-render.validate first — package only what validates.",
+                "rc-deploy.package_web — one self-contained HTML page (TypeScript player + document). " +
+                "On a deployment it is published and the public link returned; ?name=value in that " +
+                "link sets host variables.",
+                "Open the page to check it: it runs the TypeScript engine, which can differ from rc-render's C++ one.",
+                "rc-deploy.list_pages / unpublish_page to manage what is live."],
     },
     {
         title: "Produce the .rc file",
@@ -101,7 +112,7 @@ function endpoints(entry) {
 
 function overviewMarkdown() {
     const md = ["# RemoteCompose MCP servers", "",
-        "Three servers. Start here; `describe` gives every option of a server or tool.", ""];
+        `${SERVERS.length + 1} servers. Start here; \`describe\` gives every option of a server or tool.`, ""];
     for (const entry of SERVERS) {
         const { def } = entry;
         md.push(`## ${def.name}`, "", def.guide?.summary ?? "", "");
@@ -182,6 +193,9 @@ export const definition = {
         "tasks; `describe` gives a server's or tool's full options with examples.",
     tools: [{
         name: "overview",
+        // Clients such as ChatGPT gate tools on these: read-only ones run without a write
+        // confirmation. Only scratch files it deletes again are written.
+        annotations: { title: "Overview of the RemoteCompose MCP servers", readOnlyHint: true, openWorldHint: false },
         description:
             "Summarise the RemoteCompose MCP servers: what each one does, when to use it (and " +
             "when not), its tools, how to connect, and the common tasks with the tool to use " +
@@ -190,6 +204,9 @@ export const definition = {
         handler: async () => [{ type: "text", text: overviewMarkdown() }],
     }, {
         name: "describe",
+        // Clients such as ChatGPT gate tools on these: read-only ones run without a write
+        // confirmation. Only scratch files it deletes again are written.
+        annotations: { title: "Describe a server or tool", readOnlyHint: true, openWorldHint: false },
         description:
             "Full documentation for a server or one of its tools: every option with its type " +
             "and meaning, and example arguments. With no arguments, documents every tool of " +

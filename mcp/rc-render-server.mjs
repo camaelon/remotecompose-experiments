@@ -4,28 +4,12 @@
 // build location is used, then `rc2image` on PATH.
 // stdio by default; `--http [PORT]` for Streamable HTTP (see lib/mcp-server.mjs).
 
-import { execFile } from "node:child_process";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { analyze, documentFeatures, formatFindings } from "./lib/analysis.mjs";
-import { jsonToRc } from "./lib/json2rc.mjs";
+import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
+import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
-
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const DEFAULT_BIN = path.join(HERE, "..", "players", "cpp", "build", "tools", "rc2image", "rc2image");
-const RC2IMAGE = process.env.RC2IMAGE ?? (existsSync(DEFAULT_BIN) ? DEFAULT_BIN : "rc2image");
-
-// Renders are CPU-bound child processes; a small VPS should not run a dozen at once.
-const MAX_RENDERS = Math.max(1, Number(process.env.MCP_MAX_RENDERS ?? 2));
-let running = 0;
-const waiting = [];
-async function withRenderSlot(fn) {
-    if (running >= MAX_RENDERS) await new Promise((r) => waiting.push(r));
-    running++;
-    try { return await fn(); } finally { running--; waiting.shift()?.(); }
-}
 
 const EVENT_TYPES = ["down", "move", "up", "tap"];
 const num = (v, what) => {
@@ -81,29 +65,7 @@ function buildArgs(a, rcPath, pngPath) {
     return args;
 }
 
-function run(bin, args, env) {
-    return new Promise((resolve) => {
-        execFile(bin, args, { env, timeout: 120_000, maxBuffer: 16 << 20 },
-                 (err, stdout, stderr) => resolve({ err, stdout, stderr }));
-    });
-}
-
 // ── Inputs shared by both tools ──────────────────────────────────────
-
-const DOCUMENT_PROPS = {
-    rc_path: { type: "string", description: "Path to a binary .rc file." },
-    rc_base64: { type: "string", description: "The .rc bytes, base64." },
-    json: {
-        description: "A RemoteCompose JSON document (object or string), converted with json2rc first.",
-        anyOf: [{ type: "object" }, { type: "string" }],
-    },
-    json_path: { type: "string", description: "Path to a RemoteCompose JSON document, converted with json2rc first." },
-    base_dir: {
-        type: "string",
-        description: "For json/json_path: the folder {\"file\": ...} bitmaps resolve against " +
-                     "(default: json_path's folder, or the working directory/workspace).",
-    },
-};
 
 const RENDER_PROPS = {
     width: { type: "number", description: "Layout width the document sees, px (default: the document's own)." },
@@ -169,41 +131,6 @@ const RENDER_PROPS = {
     background: { type: "string", description: "Clear colour: \"transparent\" or AARRGGBB hex. Default white." },
 };
 
-/**
- * Resolve whichever document input was given to an .rc file on disk. A conversion failure
- * is returned, not thrown, so `validate` can report it as a finding.
- */
-function prepareDocument(a) {
-    const given = ["rc_path", "rc_base64", "json", "json_path"].filter((k) => a[k] !== undefined);
-    if (given.length !== 1) {
-        throw new Error("give exactly one of `rc_path`, `rc_base64`, `json` or `json_path`");
-    }
-    if (a.rc_path !== undefined) {
-        const rcPath = resolvePath(a.rc_path, "rc_path");
-        if (!existsSync(rcPath)) throw new Error(`no such file: ${a.rc_path}`);
-        return { rcPath, temp: false, source: "rc" };
-    }
-    let bytes, source = "rc";
-    if (a.rc_base64 !== undefined) {
-        bytes = Buffer.from(a.rc_base64, "base64");
-    } else {
-        source = "json";
-        const jsonFile = a.json_path !== undefined ? resolvePath(a.json_path, "json_path") : null;
-        if (jsonFile && !existsSync(jsonFile)) throw new Error(`no such file: ${a.json_path}`);
-        const dir = a.base_dir !== undefined ? resolvePath(a.base_dir, "base_dir")
-            : jsonFile ? path.dirname(jsonFile) : resolvePath(".");
-        try {
-            bytes = jsonToRc(jsonFile ? readFileSync(jsonFile, "utf8") : a.json, dir);
-        } catch (e) {
-            return { conversionError: String(e?.message ?? e), source };
-        }
-    }
-    if (!bytes.length) throw new Error("the document is empty");
-    const rcPath = outputFile("input", ".rc");
-    writeFileSync(rcPath, bytes);
-    return { rcPath, temp: true, source, bytes: bytes.length };
-}
-
 /** Run rc2image with a --report, returning the parsed report alongside the outcome. */
 async function renderWithReport(a, rcPath, pngPath, { check = false } = {}) {
     const reportPath = outputFile("report", ".json");
@@ -211,7 +138,7 @@ async function renderWithReport(a, rcPath, pngPath, { check = false } = {}) {
     const env = { ...process.env };
     if (a.background !== undefined) env.RC_BG = a.background.replace(/^#/, "");
     try {
-        const { err, stdout, stderr } = await withRenderSlot(() => run(RC2IMAGE, args, env));
+        const { err, stdout, stderr } = await runRc2image(args, env);
         if (err?.code === "ENOENT") {
             throw new Error(`rc2image not found (${RC2IMAGE}). Build players/cpp or set RC2IMAGE.`);
         }
@@ -257,6 +184,10 @@ export const definition = {
         "sanity findings (blank image, missing fonts, …); read them before trusting a picture.",
     tools: [{
         name: "render_rc",
+        // Writes the output file (in the workspace, over HTTP); never deletes or edits anything
+        // else, and the same inputs give the same file.
+        annotations: { title: "Render a RemoteCompose document to PNG", readOnlyHint: false, destructiveHint: false,
+                       idempotentHint: true, openWorldHint: false },
         examples: [
             { what: "Render JSON at phone density with the clock pinned",
               arguments: { json_path: "docs/clock.json", density: 2.625, clock: "2026-01-01T10:10:00" } },
@@ -315,6 +246,9 @@ export const definition = {
         },
     }, {
         name: "validate",
+        // Clients such as ChatGPT gate tools on these: read-only ones run without a write
+        // confirmation. Only scratch files it deletes again are written.
+        annotations: { title: "Validate a RemoteCompose document", readOnlyHint: true, openWorldHint: false },
         examples: [
             { what: "Check a JSON document converts and parses, without rendering",
               arguments: { json_path: "docs/clock.json", render: false } },

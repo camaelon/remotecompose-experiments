@@ -31,6 +31,10 @@ export const definition = {
         "JSON directly.",
     tools: [{
         name: "json2rc",
+        // Writes the output file (in the workspace, over HTTP); never deletes or edits anything
+        // else, and the same inputs give the same file.
+        annotations: { title: "Convert RemoteCompose JSON to .rc", readOnlyHint: false, destructiveHint: false,
+                       idempotentHint: true, openWorldHint: false },
         examples: [
             { what: "Convert a file next to itself", arguments: { input_path: "docs/clock.json" } },
             { what: "Convert inline JSON and get the bytes back",

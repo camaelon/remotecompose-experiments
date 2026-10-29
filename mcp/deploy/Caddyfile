@@ -4,6 +4,8 @@
 #   https://DOMAIN/json2rc/mcp     ->  json2rc   (127.0.0.1:8808)
 #   https://DOMAIN/rc-render/mcp   ->  rc-render (127.0.0.1:8809)
 #   https://DOMAIN/guide/mcp       ->  rc-guide  (127.0.0.1:8810)
+#   https://DOMAIN/deploy/mcp      ->  rc-deploy (127.0.0.1:8811), and its published pages,
+#   https://DOMAIN/deploy/pages/<id>/   which are public (no token) by design
 #
 # No `log` directive on purpose: an access log would record the token for clients that pass
 # it in the URL.
@@ -16,6 +18,9 @@ DOMAIN {
 	}
 	handle_path /guide/* {
 		reverse_proxy 127.0.0.1:8810
+	}
+	handle_path /deploy/* {
+		reverse_proxy 127.0.0.1:8811
 	}
 	handle {
 		respond 404

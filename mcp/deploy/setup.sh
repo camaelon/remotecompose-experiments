@@ -8,7 +8,9 @@
 #   - copies this checkout to /opt/remotecompose-experiments and builds rc2image there,
 #   - creates the `rcmcp` user and the workspace /var/lib/rcmcp,
 #   - writes /etc/rcmcp/*.env, generating a token the first time,
-#   - installs and (re)starts rcmcp@json2rc, rcmcp@rc-render and rcmcp@guide, and the Caddy site.
+#   - builds the TypeScript web player once (rc-deploy embeds it in the pages it makes),
+#   - installs and (re)starts rcmcp@json2rc, rcmcp@rc-render, rcmcp@guide and rcmcp@deploy,
+#     and the Caddy site.
 set -euo pipefail
 
 DOMAIN="${1:-}"
@@ -32,6 +34,9 @@ if ! command -v caddy >/dev/null && ! apt-get install -y -qq caddy; then
     exit 1
 fi
 NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 0)"
+# npm installs esbuild, which builds the web player. Debian ships it separately from node;
+# NodeSource's node includes it (and conflicts with the Debian package), hence the check.
+command -v npm >/dev/null || apt-get install -y -qq npm
 if (( NODE_MAJOR < 18 )); then
     echo "node $NODE_MAJOR is too old (need 18+). Install a current one, e.g.:" >&2
     echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs" >&2
@@ -53,6 +58,11 @@ cmake -S "$DEST/players/cpp" -B "$DEST/players/cpp/build" \
       -DCMAKE_BUILD_TYPE=Release -DRCX_BUILD_APPS=OFF -DRCX_BUILD_TESTS=OFF
 cmake --build "$DEST/players/cpp/build" --target rc2image -j"$(nproc)"
 
+echo "== web player"
+# The services cannot write the checkout, so the bundle is built here, as root, once.
+(cd "$DEST" && npm ci --no-audit --no-fund --loglevel=error)
+node "$DEST/mcp/lib/web-player.mjs" --build
+
 echo "== user, workspace, config"
 id rcmcp &>/dev/null || useradd --system --home /var/lib/rcmcp --shell /usr/sbin/nologin rcmcp
 install -d -o rcmcp -g rcmcp -m 750 /var/lib/rcmcp
@@ -73,12 +83,14 @@ echo "MCP_HTTP_PORT=8808" > /etc/rcmcp/json2rc.env
 echo "MCP_HTTP_PORT=8809" > /etc/rcmcp/rc-render.env
 # The guide reports the public endpoints, so it needs to know the public name.
 printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/guide.env
+# rc-deploy publishes pages under its own public base.
+printf 'MCP_HTTP_PORT=8811\nMCP_PUBLIC_URL=https://%s/deploy\n' "$DOMAIN" > /etc/rcmcp/deploy.env
 
 echo "== services"
 install -m 644 "$DEST/mcp/deploy/rcmcp@.service" /etc/systemd/system/rcmcp@.service
 systemctl daemon-reload
-systemctl enable --now rcmcp@json2rc rcmcp@rc-render rcmcp@guide
-systemctl restart rcmcp@json2rc rcmcp@rc-render rcmcp@guide
+systemctl enable --now rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy
+systemctl restart rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy
 
 echo "== caddy"
 install -d /etc/caddy/sites
@@ -87,7 +99,7 @@ grep -q 'import sites/\*' /etc/caddy/Caddyfile 2>/dev/null || echo 'import sites
 systemctl reload caddy || systemctl restart caddy
 
 # Give each server a few seconds to come up; on failure show why, rather than pointing at logs.
-for svc in json2rc:8808 rc-render:8809 guide:8810; do
+for svc in json2rc:8808 rc-render:8809 guide:8810 deploy:8811; do
     name="${svc%%:*}" port="${svc##*:}"
     for _ in $(seq 20); do curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
     if ! curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
@@ -101,14 +113,15 @@ TOKEN="$(sed -n 's/^MCP_TOKEN=//p' /etc/rcmcp/common.env)"
 cat <<EOF
 
 Done. Endpoints:
-  https://$DOMAIN/guide/mcp       start here: describes the other two
+  https://$DOMAIN/guide/mcp       start here: describes the others
   https://$DOMAIN/json2rc/mcp
   https://$DOMAIN/rc-render/mcp
+  https://$DOMAIN/deploy/mcp      published pages: https://$DOMAIN/deploy/pages/<id>/
 Token (keep secret): $TOKEN
 
 Claude Code:  claude mcp add --transport http rc-render https://$DOMAIN/rc-render/mcp --header "Authorization: Bearer $TOKEN"
-              (same for json2rc and guide)
+              (same for json2rc, guide and deploy)
 claude.ai:    add a custom connector with URL https://$DOMAIN/rc-render/mcp/$TOKEN
-              (and the same for /json2rc/mcp/$TOKEN and /guide/mcp/$TOKEN)
+              (and the same for /json2rc/, /guide/ and /deploy/)
 Logs:         journalctl -u 'rcmcp@*' -f
 EOF

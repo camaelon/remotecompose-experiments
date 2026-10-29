@@ -49,8 +49,8 @@ function createHandler({ name, version, instructions, tools }) {
                 return ok(id, {});
             case "tools/list":
                 return ok(id, {
-                    tools: tools.map(({ name, description, inputSchema }) =>
-                        ({ name, description, inputSchema })),
+                    tools: tools.map(({ name, description, inputSchema, annotations }) =>
+                        ({ name, description, inputSchema, ...(annotations ? { annotations } : {}) })),
                 });
             case "tools/call": {
                 const tool = byName.get(params?.name);
@@ -93,7 +93,7 @@ export function serve(def) {
     const i = process.argv.indexOf("--http");
     const argPort = i >= 0 && /^\d+$/.test(process.argv[i + 1] ?? "") ? Number(process.argv[i + 1]) : NaN;
     const port = Number.isFinite(argPort) ? argPort : Number(process.env.MCP_HTTP_PORT ?? NaN);
-    if (i >= 0 || process.env.MCP_HTTP_PORT) serveHttp(def.name, handle, port);
+    if (i >= 0 || process.env.MCP_HTTP_PORT) serveHttp(def, handle, port);
     else serveStdio(handle);
 }
 
@@ -125,8 +125,13 @@ function serveStdio(handle) {
  * MCP_HTTP_PATH (default /mcp), MCP_TOKEN (required unless MCP_ALLOW_NO_AUTH=1),
  * MCP_ALLOWED_ORIGINS (comma-separated; when set, a request carrying any other Origin is
  * refused). MCP_ROOT is required: over HTTP, file paths must be confined.
+ *
+ * def.publicRoute(req, url, res) -> bool, if present, sees every request outside the MCP
+ * path first and returns true when it answered it. It runs WITHOUT auth: it is for content
+ * meant to be public (the deploy server's published pages), never for tools.
  */
-function serveHttp(name, handle, port) {
+function serveHttp(def, handle, port) {
+    const name = def.name;
     if (!Number.isFinite(port)) port = 8808;
     const host = process.env.MCP_HTTP_HOST ?? "127.0.0.1";
     const base = (process.env.MCP_HTTP_PATH ?? "/mcp").replace(/\/+$/, "");
@@ -162,19 +167,33 @@ function serveHttp(name, handle, port) {
     const server = createServer(async (req, res) => {
         const url = new URL(req.url, "http://x");
         if (url.pathname === "/healthz") return reply(res, 200, "ok\n");
+        if (def.publicRoute && url.pathname !== base && !url.pathname.startsWith(base + "/")) {
+            try {
+                if (await def.publicRoute(req, url, res)) return;
+            } catch (e) {
+                log(`public route ${url.pathname}: ${e?.message ?? e}`);
+                if (!res.headersSent) return reply(res, 500, "error\n");
+                return;
+            }
+        }
 
         let authed = !token;
+        let given = "";
         if (url.pathname === base) {
-            const m = /^Bearer\s+(.+)$/i.exec(req.headers.authorization ?? "");
-            if (m && matches(m[1].trim())) authed = true;
+            const m = /^Bearer\s+(.*)$/i.exec(req.headers.authorization ?? "");
+            given = m ? m[1].trim() : "";
         } else if (url.pathname.startsWith(base + "/")) {
-            if (token && matches(decodeURIComponent(url.pathname.slice(base.length + 1)))) authed = true;
-            else if (token) return reply(res, 404, "not found\n");
+            given = decodeURIComponent(url.pathname.slice(base.length + 1));
         } else {
             return reply(res, 404, "not found\n");
         }
+        if (token && given && matches(given)) authed = true;
         if (!authed) {
-            return reply(res, 401, { error: "unauthorized" }, { "WWW-Authenticate": 'Bearer realm="mcp"' });
+            // Say which of the two went wrong: an empty token is nearly always an unset shell
+            // variable or a missing header, not a wrong secret.
+            const why = given ? "wrong token"
+                : `no token: send "Authorization: Bearer <token>" or put it after ${base}/`;
+            return reply(res, 401, { error: `unauthorized: ${why}` }, { "WWW-Authenticate": 'Bearer realm="mcp"' });
         }
         const origin = req.headers.origin;
         if (origin && origins.length && !origins.includes(origin)) {

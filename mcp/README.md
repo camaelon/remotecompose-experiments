@@ -1,6 +1,6 @@
 # MCP servers
 
-Three [MCP](https://modelcontextprotocol.io) servers. Over stdio they're registered for
+Four [MCP](https://modelcontextprotocol.io) servers. Over stdio they're registered for
 this repo in `../.mcp.json`. Over HTTP they're meant for a VPS (see below). Both are plain
 Node (18+) with no dependencies, so they run from a bare checkout on macOS or Linux.
 
@@ -8,6 +8,7 @@ Node (18+) with no dependencies, so they run from a bare checkout on macOS or Li
 | :--- | :--- | :--- |
 | `json2rc-server.mjs` | `json2rc` | the TypeScript converter in `players/typescript/build-json2rc` |
 | `rc-render-server.mjs` | `render_rc`, `validate` | the C++/Skia headless renderer `players/cpp/tools/rc2image` |
+| `deploy-server.mjs` | `package_web`, `list_pages`, `unpublish_page` | the TypeScript web player (`players/typescript`), bundled with esbuild |
 | `guide-server.mjs` | `overview`, `describe` | the other two servers' own definitions: the single entry point |
 
 **Start with `rc-guide`.** `overview` explains what each server does, when to use it (and
@@ -49,13 +50,14 @@ sudo mcp/deploy/setup.sh mcp.example.com
 ```
 
 The domain's DNS has to point at the VPS, with ports 80 and 443 open. The script installs
-the packages, builds `rc2image` under `/opt/remotecompose-experiments`, and sets up three
-systemd services, `rcmcp@json2rc`, `rcmcp@rc-render` and `rcmcp@guide`. All three run as an unprivileged
+the packages, builds `rc2image` under `/opt/remotecompose-experiments`, and sets up four
+systemd services, `rcmcp@json2rc`, `rcmcp@rc-render`, `rcmcp@guide` and `rcmcp@deploy`. All of them run as an unprivileged
 `rcmcp` user and listen on 127.0.0.1 only. Caddy sits in front and provides TLS. The
 script prints the token and the endpoints:
 
 ```
 https://mcp.example.com/guide/mcp
+https://mcp.example.com/deploy/mcp
 https://mcp.example.com/json2rc/mcp
 https://mcp.example.com/rc-render/mcp
 ```
@@ -177,4 +179,42 @@ Findings:
 
 rc2image does the measuring itself (`--report FILE|-`, `--check`), and `lib/analysis.mjs`
 decides what counts as suspicious, so thresholds can change without a rebuild.
+
+## `package_web` (rc-deploy)
+
+`package_web` turns a document (`rc_path` / `rc_base64` / `json` / `json_path`) into one
+self-contained HTML page. The minified TypeScript player (about 450 KB) and the `.rc` are
+both inlined, so the page works from any static host, as an attachment, or opened from
+disk. Animation, touch and clicks all work.
+
+| option | meaning |
+| :--- | :--- |
+| `layout` | `fill` (default): the document fills the window and re-lays out on resize. `fixed`: a `width` x `height` CSS-px box, centred (default: the document's own size) |
+| `title`, `background` | page title; page background colour |
+| `theme` | `light`, `dark` or `auto` (default `auto`, which follows the viewer's system setting) |
+| `density` | `device` (default) uses the viewer's devicePixelRatio, which is sharp and right for documents authored in dp. A number pins it; use 1 for documents drawn in raw pixels, which otherwise look smaller on high-DPI screens |
+| `variables` | initial host-variable values (float, int, colour, string). Unknown names are an error that lists what the document declares |
+| `url_variables` | default true: `?name=value` in the page URL overrides any declared variable, so one page can show many variants |
+| `publish` | host the page (default on a deployment), see below |
+| `output_path` | also write the HTML file |
+
+Before building, the C++ engine reads the document once (`rc2image --check --report`).
+That rejects documents that don't parse and gets the document's size and each host
+variable's type, so the page knows how to apply `variables` and URL overrides.
+
+**Publishing.** In HTTP mode with `MCP_PUBLIC_URL` set, `package_web` also stores the page
+under `MCP_ROOT/pages/` and returns `MCP_PUBLIC_URL/pages/<id>/`. That URL works **without
+the token**: anyone with the link can open the page, and the 128-bit random id makes it
+unguessable. Published pages are not pruned. Manage them with `list_pages` and
+`unpublish_page`, which deletes a page and stops its link working immediately. Pages are
+served with `noindex`, `nosniff` and `no-referrer`.
+
+**The player bundle** is built from `players/typescript/src/web/main.ts` into
+`players/typescript/build-mcp/player.min.js` (gitignored), or `RC_PLAYER_BUNDLE`. Locally
+it's rebuilt automatically whenever a player source file is newer. On a deployment the
+services can't write the checkout, so `setup.sh` runs `npm ci` and
+`node mcp/lib/web-player.mjs --build`. Re-run setup after pulling player changes.
+
+The page runs the **TypeScript** engine and `render_rc` runs the **C++** one, and the two
+can differ. Check the page itself, not only a `render_rc` picture.
 
