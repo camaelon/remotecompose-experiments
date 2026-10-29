@@ -291,6 +291,9 @@ not just how it looks:
 
   Each variable has its own reset button, and there is a **Reset all**. Edits re-run layout
   as well as paint, so a longer string or a size variable reflows the document.
+- **The document itself.** The `.rc` size is shown next to the title, and **Download** saves
+  the `.rc`, named after the source file. The bytes are already embedded in the page, so the
+  download makes no request and also works for a page opened from disk.
 - **Density, theme, Pause/Play, Restart.** Restart reloads the document, which replays
   animations and clears touch state.
 - **State in the URL.** Variables that differ from their defaults go in `?name=value`, which
@@ -310,7 +313,7 @@ served with `noindex`, `nosniff` and `no-referrer`.
 
 **Page index.** `https://DOMAIN/pages` (also `MCP_PUBLIC_URL/pages/`) is a public,
 token-free list of every published page: title, source, kind (playground or bare player),
-size and date, each linking to its page. This makes every published page discoverable,
+document (`.rc`) and page sizes, and date, each linking to its page. This makes every published page discoverable,
 so the random ids no longer keep anything private. To turn the index off, add
 `MCP_PAGE_INDEX=0` to `/etc/rcmcp/deploy.env` and restart `rcmcp@deploy`; `/pages` then
 returns 404 and unlisted links keep working.

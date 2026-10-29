@@ -17,7 +17,7 @@ import path from "node:path";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { checkReport } from "./lib/rc2image.mjs";
-import { buildPage } from "./lib/web-page.mjs";
+import { buildPage, formatBytes } from "./lib/web-page.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 
@@ -70,6 +70,7 @@ function indexHtml(pages) {
   <td><a href="${esc(p.url)}">${esc(p.title || p.id)}</a></td>
   <td>${esc(p.source)}</td>
   <td>${p.controls === false ? "player" : p.controls ? "playground" : "–"}</td>
+  <td class="n">${p.rc_bytes ? esc(formatBytes(p.rc_bytes)) : "–"}</td>
   <td class="n">${p.bytes ? kb(p.bytes) : ""}</td>
   <td class="n"><time datetime="${esc(p.created)}">${esc(String(p.created ?? "").replace("T", " ").slice(0, 16))}</time></td>
 </tr>`).join("\n");
@@ -102,7 +103,7 @@ function indexHtml(pages) {
 <h1>Published pages</h1>
 <p>${pages.length} page${pages.length === 1 ? "" : "s"} published with rc-deploy, newest first.</p>
 ${pages.length ? `<div class="wrap"><table>
-<thead><tr><th>Title</th><th>Source</th><th>Kind</th><th class="n">Size</th><th class="n">Published (UTC)</th></tr></thead>
+<thead><tr><th>Title</th><th>Source</th><th>Kind</th><th class="n">Document</th><th class="n">Page</th><th class="n">Published (UTC)</th></tr></thead>
 <tbody>
 ${rows}
 </tbody>
@@ -326,12 +327,17 @@ export const definition = {
                 }
                 const source = a.json_path ?? a.rc_path;
                 const title = a.title ?? (source ? path.basename(source).replace(/\.(rc|rcd|json)$/i, "") : "RemoteCompose document");
+                const rcBytes = readFileSync(doc.rcPath);
+                // The download is named after the source file, else the title.
+                const fileName = (source ? path.basename(source).replace(/\.(rc|rcd|json)$/i, "")
+                                         : title.replace(/[^\w.-]+/g, "_").replace(/^_+|_+$/g, "") || "document") + ".rc";
 
                 const html = buildPage({
                     bundle: await playerBundle(),
-                    rcBase64: readFileSync(doc.rcPath).toString("base64"),
+                    rcBase64: rcBytes.toString("base64"),
                     config: {
                         title, layout, width, height, controls,
+                        rcBytes: rcBytes.length, fileName,
                         start: a.width !== undefined || a.height !== undefined || a.layout === "fixed" ? "size"
                              : a.layout === "fill" ? "fill" : "auto",
                         document: { width: docW, height: docH },
@@ -345,7 +351,7 @@ export const definition = {
                     },
                 });
 
-                const result = { title, bytes: Buffer.byteLength(html), controls, layout,
+                const result = { title, bytes: Buffer.byteLength(html), rc_bytes: rcBytes.length, controls, layout,
                                  document: { width: docW, height: docH }, variables: settable };
                 if (a.output_path !== undefined) {
                     const out = resolvePath(a.output_path, "output_path");
@@ -358,7 +364,7 @@ export const definition = {
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
-                        id, title, created: new Date().toISOString(), bytes: result.bytes, controls,
+                        id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),
                     }));
                     result.page_id = id;

@@ -18,6 +18,13 @@ const scriptSafe = (s) => s.replace(/<\/(script)/gi, "<\\/$1").replace(/<!--/g, 
 
 // JSON placed inside a script: `<` escaped so no tag can be formed, and the two line
 // separators JSON allows but older JS string literals did not.
+/** 7500 -> "7.3 KB": binary units, like a file browser shows. */
+export function formatBytes(n) {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(n < 10 * 1024 ? 1 : 0)} KB`;
+    return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
 const jsonInScript = (v) => JSON.stringify(v)
     .replace(/</g, "\\u003c").replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
 
@@ -61,6 +68,7 @@ const COMMON_JS = `
  *   info: [{name, type, value}]        every declared variable with its document default
  *                                      (playground only; includes ones the page cannot set),
  *   document: {width, height}          the size the document declares (playground only),
+ *   rcBytes, fileName                  the .rc's size and download name (playground only),
  * }
  */
 export function buildPage({ bundle, rcBase64, config }) {
@@ -185,7 +193,7 @@ const PLAYGROUND_CSS = `
     grid-area: bar; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px;
     padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line);
   }
-  #bar h1 { font-size: 14px; font-weight: 600; margin: 0 6px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
+  #bar h1 { font-size: 14px; font-weight: 600; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 28ch; }
   .group { display: flex; align-items: center; gap: 4px; }
   .group > .lbl { color: var(--muted); margin-right: 2px; }
   .sep { width: 1px; align-self: stretch; background: var(--line); }
@@ -196,8 +204,15 @@ const PLAYGROUND_CSS = `
     white-space: nowrap;
   }
   .btn:hover { border-color: var(--accent); }
+  .btn.icon { min-width: 30px; padding: 4px 7px; text-align: center; }
   .btn[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
   .spacer { flex: 1; }
+  .rc-size {
+    font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+    padding: 3px 8px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { filter: brightness(1.08); }
   #stage {
     grid-area: stage; overflow: auto; position: relative;
     background-color: var(--check-b);
@@ -448,6 +463,8 @@ const VARIABLE_ELEMENT_JS = `
 
 function playgroundPage(bundle, rcBase64, config) {
     const t = escapeHtml(config.title);
+    const fileName = config.fileName ?? "document.rc";
+    const sizeTitle = `${(config.rcBytes ?? 0).toLocaleString("en-US")} bytes`;
     const bgStyle = config.background ? ` style="background-color:${escapeHtml(config.background)}"` : "";
     return `<!doctype html>
 <html lang="en">
@@ -461,6 +478,10 @@ function playgroundPage(bundle, rcBase64, config) {
 <body>
 <header id="bar">
   <h1 title="${t}">${t}</h1>
+  <div class="group">
+    <span class="rc-size" title="${escapeHtml(sizeTitle)}">${escapeHtml(formatBytes(config.rcBytes ?? 0))} .rc</span>
+    <button id="download" class="btn primary" title="Download the document as ${escapeHtml(fileName)} (${escapeHtml(sizeTitle)})">Download</button>
+  </div>
   <div class="group" title="Size of the box the document is laid out in, in CSS pixels">
     <span class="lbl">Size</span>
     <input id="w" class="num" type="number" min="16" max="4096" step="1" aria-label="Width">
@@ -483,8 +504,8 @@ function playgroundPage(bundle, rcBase64, config) {
   </div>
   <span class="sep"></span>
   <div class="group">
-    <button id="play" class="btn" title="Pause or resume animation">Pause</button>
-    <button id="restart" class="btn" title="Reload the document: animations start over, touch state is reset">Restart</button>
+    <button id="play" class="btn icon" title="Pause animation" aria-label="Pause">❚❚</button>
+    <button id="restart" class="btn icon" title="Restart: reload the document, so animations start over and touch state is reset" aria-label="Restart">↻</button>
   </div>
   <span class="spacer"></span>
   <div class="group">
@@ -663,7 +684,9 @@ ${VARIABLE_ELEMENT_JS}
   $("play").onclick = function () {
     S.playing = !S.playing;
     if (S.playing) handle.player.play(); else handle.player.pause();
-    this.textContent = S.playing ? "Pause" : "Play";
+    this.textContent = S.playing ? "❚❚" : "▶";
+    this.title = S.playing ? "Pause animation" : "Resume animation";
+    this.setAttribute("aria-label", S.playing ? "Pause" : "Play");
   };
   $("restart").onclick = function () { load(); };
   var panel = $("panel");
@@ -679,6 +702,16 @@ ${VARIABLE_ELEMENT_JS}
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove("show"); }, 1600);
   }
+  // The bytes are already in the page: the download is built from them, no request made.
+  $("download").onclick = function () {
+    var bin = atob(DATA), u8 = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    var url = URL.createObjectURL(new Blob([u8], { type: "application/octet-stream" }));
+    var a = document.createElement("a");
+    a.href = url; a.download = C.fileName || "document.rc";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  };
   $("copy").onclick = function () {
     var url = location.href.split(/[?#]/)[0] + currentUrl().slice(location.pathname.length);
     var done = function () { toast("Link copied"); };
@@ -770,6 +803,7 @@ ${VARIABLE_ELEMENT_JS}
 
   function showInfo() {
     var rows = [
+      ["File", (C.fileName || "document.rc") + " · " + (C.rcBytes || 0).toLocaleString("en-US") + " bytes"],
       ["Declared size", DOC.width > 0 ? DOC.width + " × " + DOC.height : "none"],
       ["Host variables", (C.info || []).length + (Object.keys(editors).length !== (C.info || []).length
         ? " (" + Object.keys(editors).length + " editable here)" : "")],
