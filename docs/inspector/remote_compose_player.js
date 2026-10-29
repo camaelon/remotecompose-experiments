@@ -23,8 +23,13 @@ var RC = (() => {
   __export(main_exports, {
     RcPlayerElement: () => RcPlayerElement,
     RcdPlayer: () => RcdPlayer,
+    WebCustomHost: () => WebCustomHost,
     base64ToArrayBuffer: () => base64ToArrayBuffer,
-    createPlayer: () => createPlayer
+    createPlayer: () => createPlayer,
+    createSnapshot: () => createSnapshot,
+    fitInto: () => fitInto,
+    parseEmbedConfig: () => parseEmbedConfig,
+    pinClock: () => pinClock
   });
 
   // players/typescript/src/core/operations/Utils.ts
@@ -39,6 +44,9 @@ var RC = (() => {
   }
   function asNan(v) {
     return intBitsToFloat(v | 0 | -8388608);
+  }
+  function asNanBits(v) {
+    return v | 0 | -8388608;
   }
   function idFromNan(value) {
     return floatToRawIntBits(value) & 4194303;
@@ -57,14 +65,6 @@ var RC = (() => {
   }
   function isMacroLocal(id) {
     return id >= 16384 && id <= 20479;
-  }
-  function isVariable(v) {
-    if (Number.isNaN(v)) {
-      const id = idFromNan(v);
-      if (id === 0) return false;
-      return id > 40 || id < 10;
-    }
-    return false;
   }
   function isVariableBits(bits) {
     if (isNaNBits(bits)) {
@@ -909,9 +909,18 @@ var RC = (() => {
        * TouchExpression inside a component rejected touches that were within it.
        */
       this.mTouchVersion = 1;
+      // Whoever draws custom components (LAYOUT_CUSTOM) for this platform, or null: with no
+      // host a custom component is an empty box, exactly as it was before hosts existed.
+      this.mCustomHost = null;
       this.mDensityBehavior = _RemoteContext.DENSITY_BEHAVIOR_LEGACY;
       this.mClock = clock;
       this.mDocLoadTime = clock.millis();
+    }
+    setCustomHost(host) {
+      this.mCustomHost = host;
+    }
+    getCustomHost() {
+      return this.mCustomHost;
     }
     supportsVersion(major, minor, patch) {
       return this.mDocument?.mVersion?.supportsVersion(major, minor, patch) ?? false;
@@ -4148,8 +4157,6 @@ var RC = (() => {
               listenFloatVar(arr[i], context, op);
               i++;
             }
-            listenFloatVar(arr[i], context, op);
-            i++;
             break;
           }
           default:
@@ -4269,8 +4276,6 @@ var RC = (() => {
               out[i] = fixFloatVar(arr[i], context);
               i++;
             }
-            out[i] = fixFloatVar(arr[i], context);
-            i++;
             break;
           }
           default:
@@ -5768,12 +5773,13 @@ var RC = (() => {
       const colorId = buffer.readId();
       buffer.readInt();
       buffer.readInt();
-      const borderWidth = buffer.readNanId();
-      const roundedCorner = buffer.readNanId();
-      const r = buffer.readNanId();
-      const g = buffer.readNanId();
-      const b = buffer.readNanId();
-      const a = buffer.readNanId();
+      const lit = (bits) => isNaNBits(bits) ? 0 : intBitsToFloat(bits);
+      const borderWidth = lit(buffer.readNanIdBits());
+      const roundedCorner = lit(buffer.readNanIdBits());
+      const r = lit(buffer.readNanIdBits());
+      const g = lit(buffer.readNanIdBits());
+      const b = lit(buffer.readNanIdBits());
+      const a = lit(buffer.readNanIdBits());
       const shapeType = buffer.readInt();
       operations.push(new _BorderModifier(flags, colorId, borderWidth, roundedCorner, r, g, b, a, shapeType));
     }
@@ -7880,8 +7886,18 @@ var RC = (() => {
     readId() {
       return this.readInt();
     }
-    readNanId() {
-      return this.readFloat();
+    /**
+     * A word that may be a NaN-boxed variable id, returned as RAW INT32 BITS.
+     *
+     * Decode with `isNaNBits`/`idFromBits` and turn a literal into a number with
+     * `intBitsToFloat`. Do NOT call `readFloat()` for one of these and decode with
+     * `idFromNan`: see the warning on `readFloat` below.
+     *
+     * Was `readNanId(): return this.readFloat()` until 2026-10-05, which is why 3D, mesh2d,
+     * vector expressions and border modifiers all rendered blank in Safari.
+     */
+    readNanIdBits() {
+      return this.readInt();
     }
     readLongNanId() {
       return this.readLong();
@@ -7897,6 +7913,27 @@ var RC = (() => {
       this.mIndex += 8;
       return hi * 4294967296 + lo;
     }
+    /**
+     * Read a genuine float. **Unsafe for anything that may be a NaN-boxed id.**
+     *
+     * This used to carry the comment "DataView.getFloat32 preserves NaN bit patterns
+     * (critical for ID encoding)". That is not true, and the whole 3D surface was built on
+     * it. ECMAScript permits an implementation to canonicalize any NaN it produces, and
+     * JavaScriptCore does:
+     *
+     *     bits in     V8 (Chrome)   JSC (Safari)
+     *     0xff800005  0xffc00005    0x7fc00000     signaling, as asNan() writes it
+     *     0xffc00005  0xffc00005    0x7fc00000     quiet
+     *     0x7fc00005  0x7fc00005    0x7fc00000     quiet, positive
+     *
+     * V8 only sets the quiet bit, and the id mask is 0x3FFFFF, so the payload survives by
+     * luck. Safari replaces the value outright and the id reads back as 0 — `isVariable()`
+     * then returns false, the id is treated as a literal NaN, and whatever it fed (a vertex,
+     * a rotation angle, a border width) becomes NaN.
+     *
+     * Use `readNanIdBits()` and the `*Bits` helpers in operations/Utils for any field that
+     * can carry a variable. Only call this for a value the format guarantees is a literal.
+     */
     readFloat() {
       const v = this.mDataView.getFloat32(this.mIndex, false);
       this.mIndex += 4;
@@ -8245,6 +8282,904 @@ var RC = (() => {
   };
   _DrawSector.OP_CODE = 52;
   var DrawSector = _DrawSector;
+
+  // players/typescript/src/core/operations/Mesh2DGenerator.ts
+  var LAYOUT_POLAR = 1;
+  var LAYOUT_RING = 2;
+  var LAYOUT_FAN = 4;
+  var LAYOUT_PATH_STRIP = 5;
+  var TYPE_EXPRESSION = 0;
+  var TYPE_F16_VALUES = 2;
+  var TYPE_PATH_SPLINE_STRIP = 3;
+  var TYPE_SPLINE_ROUND_STRIP = 4;
+  var BLEND_MODULATE = 1;
+  var FLAG_ORIGIN = 0;
+  var FLAG_ROTATION = 1;
+  var FLAG_SCALE = 2;
+  var FLAG_FULL = 3;
+  var EXPRESSION_GROUPS = 9;
+  var EXP_X = 0;
+  var EXP_Y = 1;
+  var EXP_TEX_U = 2;
+  var EXP_TEX_V = 3;
+  var EXP_COLOR_A = 4;
+  var EXP_COLOR_R = 5;
+  var EXP_COLOR_G = 6;
+  var EXP_COLOR_B = 7;
+  var EXP_WIDTH = 8;
+  var DEFAULT_RING_INNER_RADIUS = 0.5;
+  var TWO_PI = 6.2831855;
+  var HALF_PI = 1.5707964;
+  var DEGENERATE_EPSILON = 1e-6;
+  var MAX_MESH_2D_VERTICES = 16384;
+  function wrapsU(layout) {
+    return layout === LAYOUT_POLAR || layout === LAYOUT_RING || layout === LAYOUT_FAN;
+  }
+  function vertexCount(layout, uCount, vCount) {
+    if (layout === LAYOUT_FAN) return uCount + 1;
+    return uCount * vCount;
+  }
+  function indexCount(layout, uCount, vCount) {
+    if (layout === LAYOUT_FAN) return uCount * 3;
+    if (vCount < 2 || uCount < 2) return 0;
+    const columns = wrapsU(layout) ? uCount : uCount - 1;
+    return columns * (vCount - 1) * 6;
+  }
+  function domainU(layout, i, uCount) {
+    if (uCount <= 1) return 0;
+    if (wrapsU(layout)) return i / uCount;
+    return i / (uCount - 1);
+  }
+  function domainV(j, vCount) {
+    if (vCount <= 1) return 0;
+    return j / (vCount - 1);
+  }
+  function generateIndices(layout, uCount, vCount) {
+    const out = new Int32Array(Math.max(0, indexCount(layout, uCount, vCount)));
+    let k = 0;
+    if (layout === LAYOUT_FAN) {
+      for (let i = 0; i < uCount; i++) {
+        out[k++] = 0;
+        out[k++] = 1 + i;
+        out[k++] = 1 + (i + 1) % uCount;
+      }
+      return out;
+    }
+    if (vCount < 2 || uCount < 2) return out;
+    const wrap = wrapsU(layout);
+    const columns = wrap ? uCount : uCount - 1;
+    for (let j = 0; j < vCount - 1; j++) {
+      for (let i = 0; i < columns; i++) {
+        const i1 = wrap ? (i + 1) % uCount : i + 1;
+        const topLeft = j * uCount + i;
+        const topRight = j * uCount + i1;
+        const bottomLeft = (j + 1) * uCount + i;
+        const bottomRight = (j + 1) * uCount + i1;
+        out[k++] = topLeft;
+        out[k++] = bottomLeft;
+        out[k++] = topRight;
+        out[k++] = topRight;
+        out[k++] = bottomLeft;
+        out[k++] = bottomRight;
+      }
+    }
+    return out;
+  }
+  function defaultPosition(layout, u, v, out) {
+    switch (layout) {
+      case LAYOUT_POLAR:
+      case LAYOUT_FAN: {
+        const angle = u * TWO_PI;
+        out[0] = v * Math.cos(angle);
+        out[1] = v * Math.sin(angle);
+        break;
+      }
+      case LAYOUT_RING: {
+        const angle = u * TWO_PI;
+        const radius = DEFAULT_RING_INNER_RADIUS + (1 - DEFAULT_RING_INNER_RADIUS) * v;
+        out[0] = radius * Math.cos(angle);
+        out[1] = radius * Math.sin(angle);
+        break;
+      }
+      default:
+        out[0] = u;
+        out[1] = v;
+        break;
+    }
+  }
+  var _f32 = new Float32Array(1);
+  var _i32 = new Int32Array(_f32.buffer);
+  function halfToFloat(half) {
+    const sign = (half & 32768) << 16;
+    const exponent = half >> 10 & 31;
+    let mantissa = half & 1023;
+    let bits;
+    if (exponent === 0) {
+      if (mantissa === 0) {
+        bits = sign;
+      } else {
+        let shift = 0;
+        while ((mantissa & 1024) === 0) {
+          mantissa <<= 1;
+          shift++;
+        }
+        mantissa &= 1023;
+        bits = sign | 127 - 15 - shift << 23 | mantissa << 13;
+      }
+    } else if (exponent === 31) {
+      bits = sign | 2139095040 | mantissa << 13;
+    } else {
+      bits = sign | exponent - 15 + 127 << 23 | mantissa << 13;
+    }
+    _i32[0] = bits;
+    return _f32[0];
+  }
+  var PATH_MOVE = 10;
+  var PATH_LINE = 11;
+  var PATH_QUAD = 12;
+  var PATH_CONIC = 13;
+  var PATH_CUBIC = 14;
+  var PATH_CLOSE = 15;
+  var PATH_DONE = 16;
+  var PATH_CURVE_STEPS = 16;
+  function pathNanId(v) {
+    _f32[0] = v;
+    return _i32[0] & 4194303;
+  }
+  function isPathCommand(v) {
+    if (!Number.isNaN(v)) return false;
+    const id = pathNanId(v);
+    return id >= PATH_MOVE && id <= PATH_DONE;
+  }
+  function flattenPath(data, resolve2) {
+    const out = [];
+    let startX = 0, startY = 0, curX = 0, curY = 0, open = false;
+    const push = (x, y) => {
+      const n2 = out.length;
+      if (n2 >= 2 && out[n2 - 2] === x && out[n2 - 1] === y) return;
+      out.push(x, y);
+    };
+    let i = 0;
+    const n = data.length;
+    while (i < n) {
+      if (!isPathCommand(data[i])) {
+        i++;
+        continue;
+      }
+      switch (pathNanId(data[i])) {
+        case PATH_MOVE:
+          i++;
+          if (i + 1 < n) {
+            curX = startX = resolve2(data[i]);
+            curY = startY = resolve2(data[i + 1]);
+            push(curX, curY);
+            open = true;
+            i += 2;
+          }
+          break;
+        case PATH_LINE:
+          i += 3;
+          if (i + 1 < n) {
+            curX = resolve2(data[i]);
+            curY = resolve2(data[i + 1]);
+            push(curX, curY);
+            i += 2;
+          }
+          break;
+        case PATH_QUAD:
+          i += 3;
+          if (i + 3 < n) {
+            const cx = resolve2(data[i]), cy = resolve2(data[i + 1]);
+            const x = resolve2(data[i + 2]), y = resolve2(data[i + 3]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              push(
+                mt * mt * curX + 2 * mt * t * cx + t * t * x,
+                mt * mt * curY + 2 * mt * t * cy + t * t * y
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 4;
+          }
+          break;
+        case PATH_CONIC:
+          i += 3;
+          if (i + 4 < n) {
+            const cx = resolve2(data[i]), cy = resolve2(data[i + 1]);
+            const x = resolve2(data[i + 2]), y = resolve2(data[i + 3]);
+            const w = resolve2(data[i + 4]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              const w0 = mt * mt, w1 = 2 * mt * t * w, w2 = t * t;
+              const denom = w0 + w1 + w2;
+              if (denom === 0) continue;
+              push(
+                (w0 * curX + w1 * cx + w2 * x) / denom,
+                (w0 * curY + w1 * cy + w2 * y) / denom
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 5;
+          }
+          break;
+        case PATH_CUBIC:
+          i += 3;
+          if (i + 5 < n) {
+            const c1x = resolve2(data[i]), c1y = resolve2(data[i + 1]);
+            const c2x = resolve2(data[i + 2]), c2y = resolve2(data[i + 3]);
+            const x = resolve2(data[i + 4]), y = resolve2(data[i + 5]);
+            for (let s = 1; s <= PATH_CURVE_STEPS; s++) {
+              const t = s / PATH_CURVE_STEPS, mt = 1 - t;
+              const a = mt * mt * mt, b = 3 * mt * mt * t;
+              const c = 3 * mt * t * t, d = t * t * t;
+              push(
+                a * curX + b * c1x + c * c2x + d * x,
+                a * curY + b * c1y + c * c2y + d * y
+              );
+            }
+            curX = x;
+            curY = y;
+            i += 6;
+          }
+          break;
+        case PATH_CLOSE:
+          i++;
+          if (open) push(startX, startY);
+          curX = startX;
+          curY = startY;
+          break;
+        case PATH_DONE:
+        default:
+          return new Float32Array(out);
+      }
+    }
+    return new Float32Array(out);
+  }
+  function samplePolyline(poly, pointCount, fraction, out) {
+    out[0] = 0;
+    out[1] = 0;
+    out[2] = 1;
+    out[3] = 0;
+    if (pointCount < 2) {
+      if (pointCount === 1) {
+        out[0] = poly[0];
+        out[1] = poly[1];
+      }
+      return;
+    }
+    let total = 0;
+    for (let i = 0; i + 1 < pointCount; i++) {
+      const dx = poly[(i + 1) * 2] - poly[i * 2];
+      const dy = poly[(i + 1) * 2 + 1] - poly[i * 2 + 1];
+      total += Math.sqrt(dx * dx + dy * dy);
+    }
+    if (total <= 0) {
+      out[0] = poly[0];
+      out[1] = poly[1];
+      return;
+    }
+    const target = Math.min(Math.max(fraction, 0), 1) * total;
+    let walked = 0;
+    for (let i = 0; i + 1 < pointCount; i++) {
+      const x0 = poly[i * 2], y0 = poly[i * 2 + 1];
+      const x1 = poly[(i + 1) * 2], y1 = poly[(i + 1) * 2 + 1];
+      const dx = x1 - x0, dy = y1 - y0;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      if (len <= 0) continue;
+      if (walked + len >= target || i + 2 === pointCount) {
+        const t = Math.min(Math.max((target - walked) / len, 0), 1);
+        out[0] = x0 + dx * t;
+        out[1] = y0 + dy * t;
+        out[2] = dx / len;
+        out[3] = dy / len;
+        return;
+      }
+      walked += len;
+    }
+  }
+  function roundCapPoint(sample, halfWidth, t, v, direction, out) {
+    const tx = sample[2] * direction, ty = sample[3] * direction;
+    const nx = -sample[3], ny = sample[2];
+    const angle = (1 - t) * HALF_PI;
+    const along = Math.sin(angle) * halfWidth;
+    const across = Math.cos(angle) * halfWidth;
+    const side = (v - 0.5) * 2;
+    out[0] = sample[0] + tx * along + nx * across * side;
+    out[1] = sample[1] + ty * along + ny * across * side;
+  }
+  var MonotonicSpline = class {
+    constructor() {
+      this.x = [];
+      this.y = [];
+      this.m = [];
+    }
+    fit(xs, ys) {
+      this.x = xs;
+      this.y = ys;
+      const n = xs.length;
+      this.m = new Array(n).fill(0);
+      if (n < 2) return;
+      const d = new Array(n - 1).fill(0);
+      for (let i = 0; i + 1 < n; i++) {
+        const dx = xs[i + 1] - xs[i];
+        d[i] = dx !== 0 ? (ys[i + 1] - ys[i]) / dx : 0;
+      }
+      this.m[0] = d[0];
+      this.m[n - 1] = d[n - 2];
+      for (let i = 1; i + 1 < n; i++) {
+        this.m[i] = d[i - 1] * d[i] <= 0 ? 0 : (d[i - 1] + d[i]) * 0.5;
+      }
+      for (let i = 0; i + 1 < n; i++) {
+        if (d[i] === 0) {
+          this.m[i] = 0;
+          this.m[i + 1] = 0;
+          continue;
+        }
+        const a = this.m[i] / d[i], b = this.m[i + 1] / d[i];
+        const s = a * a + b * b;
+        if (s > 9) {
+          const t = 3 / Math.sqrt(s);
+          this.m[i] = t * a * d[i];
+          this.m[i + 1] = t * b * d[i];
+        }
+      }
+    }
+    get isEmpty() {
+      return this.x.length === 0;
+    }
+    at(x) {
+      const n = this.x.length;
+      if (n === 0) return 0;
+      if (n === 1 || x <= this.x[0]) return this.y[0];
+      if (x >= this.x[n - 1]) return this.y[n - 1];
+      let i = 0;
+      while (i + 2 < n && x > this.x[i + 1]) i++;
+      const h = this.x[i + 1] - this.x[i];
+      if (h <= 0) return this.y[i];
+      const t = (x - this.x[i]) / h, t2 = t * t, t3 = t2 * t;
+      return (2 * t3 - 3 * t2 + 1) * this.y[i] + (t3 - 2 * t2 + t) * h * this.m[i] + (-2 * t3 + 3 * t2) * this.y[i + 1] + (t3 - t2) * h * this.m[i + 1];
+    }
+  };
+  function bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, c) {
+    const v00 = verts[(j0 * uCount + i0) * 2 + c];
+    const v10 = verts[(j0 * uCount + i1) * 2 + c];
+    const v01 = verts[(j1 * uCount + i0) * 2 + c];
+    const v11 = verts[(j1 * uCount + i1) * 2 + c];
+    const top = v00 + (v10 - v00) * tu;
+    const bottom = v01 + (v11 - v01) * tu;
+    return top + (bottom - top) * tv;
+  }
+  function sampleMeshPosition(layout, uCount, vCount, verts, u, v, out) {
+    const vc = verts.length / 2;
+    if (vc === 0) {
+      out[0] = 0;
+      out[1] = 0;
+      return;
+    }
+    if (layout === LAYOUT_FAN && uCount >= 1 && vc === uCount + 1) {
+      const uNorm = (u % 1 + 1) % 1;
+      const fu = uNorm * uCount;
+      const i0 = Math.floor(fu) % uCount;
+      const i1 = (i0 + 1) % uCount;
+      const tu = fu - Math.floor(fu);
+      const rimX = (1 - tu) * verts[(1 + i0) * 2] + tu * verts[(1 + i1) * 2];
+      const rimY = (1 - tu) * verts[(1 + i0) * 2 + 1] + tu * verts[(1 + i1) * 2 + 1];
+      const vClamp = Math.min(Math.max(v, 0), 1);
+      out[0] = (1 - vClamp) * verts[0] + vClamp * rimX;
+      out[1] = (1 - vClamp) * verts[1] + vClamp * rimY;
+      return;
+    }
+    if (uCount >= 2 && vCount >= 2 && uCount * vCount === vc) {
+      let i0, i1, tu;
+      if (wrapsU(layout)) {
+        const uNorm = (u % 1 + 1) % 1;
+        const fu = uNorm * uCount;
+        i0 = Math.floor(fu) % uCount;
+        i1 = (i0 + 1) % uCount;
+        tu = fu - Math.floor(fu);
+      } else {
+        const fu = Math.min(Math.max(u, 0), 1) * (uCount - 1);
+        i0 = Math.floor(fu);
+        i1 = Math.min(uCount - 1, i0 + 1);
+        tu = fu - i0;
+      }
+      const fv = Math.min(Math.max(v, 0), 1) * (vCount - 1);
+      const j0 = Math.floor(fv);
+      const j1 = Math.min(vCount - 1, j0 + 1);
+      const tv = fv - j0;
+      out[0] = bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, 0);
+      out[1] = bilinear(verts, uCount, i0, j0, i1, j1, tu, tv, 1);
+      return;
+    }
+    const nearest = Math.max(0, Math.min(
+      vc - 1,
+      Math.round(Math.min(Math.max(u, 0), 1) * (vc - 1))
+    ));
+    out[0] = verts[nearest * 2];
+    out[1] = verts[nearest * 2 + 1];
+  }
+  function sampleFrame(layout, uCount, vCount, verts, u, v, out) {
+    if (verts.length < 2) return false;
+    const uc = Math.max(2, uCount);
+    const vc = Math.max(2, vCount);
+    const wrap = wrapsU(layout);
+    const du = 1 / (wrap ? uc : uc - 1);
+    const dv = 1 / (vc - 1);
+    const centre = new Float32Array(2), uPlus = new Float32Array(2);
+    const uMinus = new Float32Array(2), vPlus = new Float32Array(2), vMinus = new Float32Array(2);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, v, centre);
+    let uSpan;
+    if (wrap) {
+      sampleMeshPosition(layout, uCount, vCount, verts, u + du * 0.5, v, uPlus);
+      sampleMeshPosition(layout, uCount, vCount, verts, u - du * 0.5, v, uMinus);
+      uSpan = du;
+    } else {
+      const uHi = Math.min(1, u + du * 0.5), uLo = Math.max(0, u - du * 0.5);
+      sampleMeshPosition(layout, uCount, vCount, verts, uHi, v, uPlus);
+      sampleMeshPosition(layout, uCount, vCount, verts, uLo, v, uMinus);
+      uSpan = uHi - uLo;
+      if (uSpan <= 0) uSpan = du;
+    }
+    const vHi = Math.min(1, v + dv * 0.5), vLo = Math.max(0, v - dv * 0.5);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, vHi, vPlus);
+    sampleMeshPosition(layout, uCount, vCount, verts, u, vLo, vMinus);
+    let vSpan = vHi - vLo;
+    if (vSpan <= 0) vSpan = dv;
+    out[0] = (uPlus[0] - uMinus[0]) / uSpan;
+    out[1] = (uPlus[1] - uMinus[1]) / uSpan;
+    out[2] = (vPlus[0] - vMinus[0]) / vSpan;
+    out[3] = (vPlus[1] - vMinus[1]) / vSpan;
+    out[4] = centre[0];
+    out[5] = centre[1];
+    return true;
+  }
+  function buildMatrix(frame, flags, out) {
+    const duX = frame[0], duY = frame[1], dvX = frame[2], dvY = frame[3];
+    const originX = frame[4], originY = frame[5];
+    const duLength = Math.hypot(duX, duY);
+    const dvLength = Math.hypot(dvX, dvY);
+    const cross2 = duX * dvY - duY * dvX;
+    let effective = flags;
+    if (effective >= FLAG_FULL && Math.abs(cross2) < DEGENERATE_EPSILON) effective = FLAG_SCALE;
+    if (effective >= FLAG_SCALE && (duLength < DEGENERATE_EPSILON || dvLength < DEGENERATE_EPSILON)) {
+      effective = FLAG_ROTATION;
+    }
+    if (effective >= FLAG_ROTATION && duLength < DEGENERATE_EPSILON) effective = FLAG_ORIGIN;
+    switch (effective) {
+      case FLAG_FULL:
+        out[0] = duX;
+        out[1] = duY;
+        out[2] = dvX;
+        out[3] = dvY;
+        break;
+      case FLAG_SCALE: {
+        const ux = duX / duLength, uy = duY / duLength;
+        const sign = cross2 < 0 ? -1 : 1;
+        out[0] = ux * duLength;
+        out[1] = uy * duLength;
+        out[2] = -uy * dvLength * sign;
+        out[3] = ux * dvLength * sign;
+        break;
+      }
+      case FLAG_ROTATION: {
+        const ux = duX / duLength, uy = duY / duLength;
+        const sign = cross2 < 0 ? -1 : 1;
+        out[0] = ux;
+        out[1] = uy;
+        out[2] = -uy * sign;
+        out[3] = ux * sign;
+        break;
+      }
+      case FLAG_ORIGIN:
+      default:
+        out[0] = 1;
+        out[1] = 0;
+        out[2] = 0;
+        out[3] = 1;
+        break;
+    }
+    out[4] = originX;
+    out[5] = originY;
+  }
+  function clamp255(f) {
+    const i = Math.trunc(f * 255 + 0.5);
+    return i < 0 ? 0 : i > 255 ? 255 : i;
+  }
+  function packColor(a, r, g, b) {
+    return clamp255(a) << 24 | clamp255(r) << 16 | clamp255(g) << 8 | clamp255(b) | 0;
+  }
+
+  // players/typescript/src/core/operations/Mesh2D.ts
+  var MESH_OP_OFFSET = 3211264;
+  var MESH_ID_REGION_MASK = 7340032;
+  var MESH_ID_REGION_ARRAY = 2097152;
+  function isResolvableBits(bits) {
+    return isNaNBits(bits);
+  }
+  var _AddMesh2D = class _AddMesh2D extends Operation {
+    constructor(mMeshId, mType, mLayout, mUCount, mVCount, mFlags, mAux, mExpressions, mSrcIndices, mSrcVerts, mSrcUv, mSrcColors, mWidths, mWidthPositions) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mType = mType;
+      this.mLayout = mLayout;
+      this.mUCount = mUCount;
+      this.mVCount = mVCount;
+      this.mFlags = mFlags;
+      this.mAux = mAux;
+      this.mExpressions = mExpressions;
+      this.mSrcIndices = mSrcIndices;
+      this.mSrcVerts = mSrcVerts;
+      this.mSrcUv = mSrcUv;
+      this.mSrcColors = mSrcColors;
+      this.mWidths = mWidths;
+      this.mWidthPositions = mWidthPositions;
+      // expanded geometry, in the layout drawVertices wants
+      this.mVerts = new Float32Array(0);
+      this.mUv = new Float32Array(0);
+      this.mColors = new Int32Array(0);
+      this.mIndices = new Int32Array(0);
+      // u and v ride in the VAR1/VAR2 slots, which is exactly how the reference binds them.
+      this.mVars = [0, 0, 0];
+      this.mPolyline = new Float32Array(0);
+      this.mWidthSpline = new MonotonicSpline();
+      // Renamed off the base class: Operation already declares a private field of the
+      // original name, and TypeScript treats two separate private declarations of one
+      // name as a type conflict, which reads as "incorrectly extends".
+      this.mMeshDirty = true;
+      this.mScratchPos = new Float32Array(2);
+      this.mScratchSample = new Float32Array(4);
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    registerListening(context) {
+      const watch = (bits) => {
+        if (!isNaNBits(bits)) return;
+        const id = idFromBits(bits);
+        if (id > MESH_OP_OFFSET && id <= MESH_OP_OFFSET + 79) return;
+        if ((id & MESH_ID_REGION_MASK) === MESH_ID_REGION_ARRAY) return;
+        context.listensTo(id, this);
+      };
+      for (const g of this.mExpressions) {
+        for (let i = 0; i < g.length; i++) watch(g[i]);
+      }
+      for (const arr of [this.mSrcVerts, this.mWidths, this.mWidthPositions]) {
+        for (let i = 0; i < arr.length; i++) {
+          if (isNaNBits(arr[i])) context.listensTo(idFromBits(arr[i]), this);
+        }
+      }
+    }
+    markDirty() {
+      this.mMeshDirty = true;
+    }
+    updateVariables(_context) {
+      this.mMeshDirty = true;
+    }
+    apply(context) {
+      if (this.mMeshDirty) {
+        this.expand(context);
+        this.mMeshDirty = false;
+      }
+      const pc = context.getPaintContext();
+      if (pc) {
+        pc.setMesh(
+          this.mMeshId,
+          this.mLayout,
+          this.mUCount,
+          this.mVCount,
+          this.mVerts,
+          this.mUv,
+          this.mColors,
+          this.mIndices
+        );
+      }
+    }
+    deepToString(indent) {
+      return indent + "AddMesh2D id=" + this.mMeshId + " type=" + this.mType + " layout=" + this.mLayout;
+    }
+    get isSplineStrip() {
+      return this.mType === TYPE_PATH_SPLINE_STRIP || this.mType === TYPE_SPLINE_ROUND_STRIP;
+    }
+    val(context, bits) {
+      return isResolvableBits(bits) ? context.getFloat(idFromBits(bits)) : intBitsToFloat(bits);
+    }
+    expand(context) {
+      if (this.mType === TYPE_EXPRESSION || this.isSplineStrip) {
+        this.expandParametric(context);
+      } else {
+        this.expandLiteral(context);
+      }
+    }
+    expandLiteral(context) {
+      const n = this.mSrcVerts.length;
+      const verts = new Float32Array(n);
+      for (let i = 0; i < n; i++) verts[i] = this.val(context, this.mSrcVerts[i]);
+      this.mVerts = verts;
+      const vertexCount2 = n / 2;
+      this.mUv = this.mSrcUv.length === n ? new Float32Array(this.mSrcUv) : new Float32Array(0);
+      this.mColors = this.mSrcColors.length === vertexCount2 ? new Int32Array(this.mSrcColors) : new Int32Array(0);
+      this.mIndices = new Int32Array(this.mSrcIndices);
+    }
+    roundCapColumns() {
+      if (this.mType !== TYPE_SPLINE_ROUND_STRIP) return 0;
+      const cap = this.mFlags;
+      if (cap <= 0) return 0;
+      return Math.max(0, Math.min(cap, Math.trunc((this.mUCount - 2) / 2)));
+    }
+    evaluate(context, group, u, v, fallback) {
+      const e = this.mExpressions[group];
+      if (!e || e.length === 0) return fallback;
+      if (e.length === 1 && !isNaNBits(e[0])) return intBitsToFloat(e[0]);
+      this.mVars[0] = u;
+      this.mVars[1] = v;
+      return FloatExpression.evalRPN(context, e, this.mVars);
+    }
+    strokeWidthAt(context, fraction, v) {
+      if (this.isSplineStrip) {
+        return this.mWidthSpline.isEmpty ? 1 : this.mWidthSpline.at(fraction);
+      }
+      return this.evaluate(context, EXP_WIDTH, fraction, v, 1);
+    }
+    buildWidthSpline(context) {
+      const n = this.mWidths.length;
+      if (n === 0) return;
+      const xs = [];
+      const ys = [];
+      for (let i = 0; i < n; i++) {
+        const pos = this.mWidthPositions.length === n ? this.val(context, this.mWidthPositions[i]) : n === 1 ? 0 : i / (n - 1);
+        xs.push(pos);
+        ys.push(this.val(context, this.mWidths[i]));
+      }
+      this.mWidthSpline.fit(xs, ys);
+    }
+    positionOnPath(context, u, v, points, out) {
+      const sample = this.mScratchSample;
+      let fraction = u;
+      const capColumns = this.roundCapColumns();
+      if (capColumns > 0 && this.mUCount > 1) {
+        const capSpan = capColumns / (this.mUCount - 1);
+        if (u <= capSpan) {
+          samplePolyline(this.mPolyline, points, 0, sample);
+          const hw = this.strokeWidthAt(context, 0, v) * 0.5;
+          roundCapPoint(sample, hw, capSpan > 0 ? u / capSpan : 0, v, -1, out);
+          return;
+        }
+        if (u >= 1 - capSpan) {
+          samplePolyline(this.mPolyline, points, 1, sample);
+          const hw = this.strokeWidthAt(context, 1, v) * 0.5;
+          roundCapPoint(sample, hw, capSpan > 0 ? (1 - u) / capSpan : 0, v, 1, out);
+          return;
+        }
+        fraction = (u - capSpan) / (1 - 2 * capSpan);
+      }
+      samplePolyline(this.mPolyline, points, fraction, sample);
+      const halfWidth = this.strokeWidthAt(context, fraction, v) * 0.5;
+      const offset = (v - 0.5) * 2 * halfWidth;
+      const nx = -sample[3];
+      const ny = sample[2];
+      out[0] = sample[0] + nx * offset;
+      out[1] = sample[1] + ny * offset;
+    }
+    expandParametric(context) {
+      const uc = Math.max(1, this.mUCount);
+      const vc = Math.max(1, this.mVCount);
+      const total = vertexCount(this.mLayout, uc, vc);
+      if (total <= 0 || total > MAX_MESH_2D_VERTICES) return;
+      const verts = new Float32Array(total * 2);
+      const uv = new Float32Array(total * 2);
+      const texU = this.mExpressions[EXP_TEX_U];
+      const texV = this.mExpressions[EXP_TEX_V];
+      const hasTex = (texU ? texU.length : 0) > 0 || (texV ? texV.length : 0) > 0;
+      const ca = this.mExpressions[EXP_COLOR_A];
+      const cr = this.mExpressions[EXP_COLOR_R];
+      const cg = this.mExpressions[EXP_COLOR_G];
+      const cb = this.mExpressions[EXP_COLOR_B];
+      const hasColor = (ca ? ca.length : 0) > 0 || (cr ? cr.length : 0) > 0 || (cg ? cg.length : 0) > 0 || (cb ? cb.length : 0) > 0;
+      const colors = hasColor ? new Int32Array(total) : new Int32Array(0);
+      let points = 0;
+      if (this.mLayout === LAYOUT_PATH_STRIP) {
+        const raw = context.getPathData(this.mAux);
+        if (raw) {
+          const asFloats = new Float32Array(
+            raw.buffer,
+            raw.byteOffset,
+            raw.length
+          );
+          this.mPolyline = flattenPath(asFloats, (f) => {
+            if (!Number.isNaN(f)) return f;
+            const id = pathNanId(f);
+            if (id >= PATH_MOVE && id <= PATH_DONE) return f;
+            return context.getFloat(id);
+          });
+          points = this.mPolyline.length / 2;
+        }
+        if (this.isSplineStrip) this.buildWidthSpline(context);
+      }
+      const fan = this.mLayout === LAYOUT_FAN;
+      const pos = this.mScratchPos;
+      for (let index = 0; index < total; index++) {
+        let u;
+        let v;
+        if (fan) {
+          if (index === 0) {
+            u = 0;
+            v = 0;
+          } else {
+            u = domainU(this.mLayout, index - 1, uc);
+            v = 1;
+          }
+        } else {
+          u = domainU(this.mLayout, index % uc, uc);
+          v = domainV(Math.trunc(index / uc), vc);
+        }
+        if (this.mLayout === LAYOUT_PATH_STRIP && points > 0) {
+          this.positionOnPath(context, u, v, points, pos);
+        } else {
+          defaultPosition(this.mLayout, u, v, pos);
+        }
+        verts[index * 2] = this.evaluate(context, EXP_X, u, v, pos[0]);
+        verts[index * 2 + 1] = this.evaluate(context, EXP_Y, u, v, pos[1]);
+        if (hasTex) {
+          uv[index * 2] = this.evaluate(context, EXP_TEX_U, u, v, u);
+          uv[index * 2 + 1] = this.evaluate(context, EXP_TEX_V, u, v, v);
+        } else {
+          uv[index * 2] = u;
+          uv[index * 2 + 1] = v;
+        }
+        if (hasColor) {
+          colors[index] = packColor(
+            this.evaluate(context, EXP_COLOR_A, u, v, 1),
+            this.evaluate(context, EXP_COLOR_R, u, v, 1),
+            this.evaluate(context, EXP_COLOR_G, u, v, 1),
+            this.evaluate(context, EXP_COLOR_B, u, v, 1)
+          );
+        }
+      }
+      this.mVerts = verts;
+      this.mUv = uv;
+      this.mColors = colors;
+      this.mIndices = generateIndices(this.mLayout, uc, vc);
+    }
+    static read(buffer, operations) {
+      const meshId = buffer.readInt();
+      const type = buffer.readInt();
+      const layout = buffer.readInt();
+      const uCount = buffer.readInt();
+      const vCount = buffer.readInt();
+      const flags = buffer.readInt();
+      const aux = buffer.readInt();
+      const expressions = [];
+      let srcIndices = new Int32Array(0);
+      let srcVerts = new Int32Array(0);
+      let srcUv = new Float32Array(0);
+      let srcColors = new Int32Array(0);
+      let widths = new Int32Array(0);
+      let widthPositions = new Int32Array(0);
+      if (type === TYPE_EXPRESSION) {
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) {
+          const len = buffer.readInt();
+          const arr = new Int32Array(Math.max(0, len));
+          for (let i = 0; i < len; i++) arr[i] = buffer.readInt();
+          expressions.push(arr);
+        }
+      } else if (type === TYPE_PATH_SPLINE_STRIP || type === TYPE_SPLINE_ROUND_STRIP) {
+        const wn = buffer.readInt();
+        widths = new Int32Array(Math.max(0, wn));
+        for (let i = 0; i < wn; i++) widths[i] = buffer.readInt();
+        const pn = buffer.readInt();
+        widthPositions = new Int32Array(Math.max(0, pn));
+        for (let i = 0; i < pn; i++) widthPositions[i] = buffer.readInt();
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
+      } else {
+        const indexCount2 = buffer.readInt();
+        srcIndices = new Int32Array(Math.max(0, indexCount2));
+        for (let i = 0; i < indexCount2; i++) srcIndices[i] = buffer.readShort() & 65535;
+        const vertCount = buffer.readInt();
+        const uvCount = buffer.readInt();
+        const colorCount = buffer.readInt();
+        srcVerts = new Int32Array(Math.max(0, vertCount));
+        srcUv = new Float32Array(Math.max(0, uvCount));
+        srcColors = new Int32Array(Math.max(0, colorCount));
+        if (type === TYPE_F16_VALUES) {
+          for (let i = 0; i < vertCount; i++) {
+            srcVerts[i] = floatToRawIntBits(halfToFloat(buffer.readShort() & 65535));
+          }
+          for (let i = 0; i < uvCount; i++) {
+            srcUv[i] = halfToFloat(buffer.readShort() & 65535);
+          }
+        } else {
+          for (let i = 0; i < vertCount; i++) srcVerts[i] = buffer.readInt();
+          for (let i = 0; i < uvCount; i++) srcUv[i] = buffer.readFloat();
+        }
+        for (let i = 0; i < colorCount; i++) srcColors[i] = buffer.readInt();
+        for (let g = 0; g < EXPRESSION_GROUPS; g++) expressions.push(new Int32Array(0));
+      }
+      operations.push(new _AddMesh2D(
+        meshId,
+        type,
+        layout,
+        uCount,
+        vCount,
+        flags,
+        aux,
+        expressions,
+        srcIndices,
+        srcVerts,
+        srcUv,
+        srcColors,
+        widths,
+        widthPositions
+      ));
+    }
+  };
+  _AddMesh2D.OP_CODE = 104;
+  var AddMesh2D = _AddMesh2D;
+  var _DrawMesh2D = class _DrawMesh2D extends PaintOperation {
+    constructor(mMeshId, mBlend, mImageId) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mBlend = mBlend;
+      this.mImageId = mImageId;
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    paint(context) {
+      context.drawMesh(this.mMeshId, this.mBlend, this.mImageId);
+    }
+    deepToString(indent) {
+      return indent + "DrawMesh2D " + this.mMeshId;
+    }
+    static read(buffer, operations) {
+      operations.push(new _DrawMesh2D(buffer.readInt(), buffer.readInt(), buffer.readInt()));
+    }
+  };
+  _DrawMesh2D.OP_CODE = 105;
+  var DrawMesh2D = _DrawMesh2D;
+  var _MatrixFromMesh2D = class _MatrixFromMesh2D extends PaintOperation {
+    constructor(mMeshId, mU, mV, mFlags) {
+      super();
+      this.mMeshId = mMeshId;
+      this.mU = mU;
+      this.mV = mV;
+      this.mFlags = mFlags;
+      this.mOutU = 0;
+      this.mOutV = 0;
+      this.mOutU = mU;
+      this.mOutV = mV;
+    }
+    // Players read documents; they never write them. Stubbed as elsewhere in this tree.
+    write(_buffer) {
+    }
+    registerListening(context) {
+      if (isResolvableBits(this.mU)) context.listensTo(idFromBits(this.mU), this);
+      if (isResolvableBits(this.mV)) context.listensTo(idFromBits(this.mV), this);
+    }
+    markDirty() {
+    }
+    updateVariables(context) {
+      this.mOutU = isResolvableBits(this.mU) ? context.getFloat(idFromBits(this.mU)) : intBitsToFloat(this.mU);
+      this.mOutV = isResolvableBits(this.mV) ? context.getFloat(idFromBits(this.mV)) : intBitsToFloat(this.mV);
+    }
+    paint(context) {
+      context.matrixFromMesh(this.mMeshId, this.mOutU, this.mOutV, this.mFlags);
+    }
+    deepToString(indent) {
+      return indent + "MatrixFromMesh2D " + this.mMeshId;
+    }
+    static read(buffer, operations) {
+      operations.push(new _MatrixFromMesh2D(
+        buffer.readInt(),
+        buffer.readInt(),
+        buffer.readInt(),
+        buffer.readInt()
+      ));
+    }
+  };
+  _MatrixFromMesh2D.OP_CODE = 106;
+  var MatrixFromMesh2D = _MatrixFromMesh2D;
 
   // players/typescript/src/core/operations/DrawPath.ts
   var _DrawPath = class _DrawPath extends PaintOperation {
@@ -8885,6 +9820,19 @@ var RC = (() => {
     }
     wakeIn(seconds) {
       this.mContext.mRemoteComposeState.wakeIn(seconds);
+    }
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Deliberately not abstract: a backend that has not implemented meshes still compiles and
+    // draws nothing. Geometry arrives already in the layout drawVertices wants. An empty `uv`
+    // or `colors` means the channel is absent.
+    //
+    // drawMesh must leave the paint exactly as it found it.
+    setMesh(_meshId, _layout, _uCount, _vCount, _verts, _uv, _colors, _indices) {
+    }
+    drawMesh(_meshId, _blend, _imageId) {
+    }
+    matrixFromMesh(_meshId, _u, _v, _flags) {
     }
   };
   PaintContext.TEXT_MEASURE_MONOSPACE_WIDTH = 1;
@@ -9727,7 +10675,7 @@ var RC = (() => {
       cz
     ]);
     const normals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]);
-    const indices = new Int32Array([0, 1, 2, 0, 2, 3]);
+    const indices = new Int32Array([0, 1, 2, 2, 3, 0]);
     const uv = uvm !== 0 ? new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]) : null;
     return { verts, normals, indices, uv };
   }
@@ -9780,9 +10728,9 @@ var RC = (() => {
       indices[ip++] = base;
       indices[ip++] = base + 1;
       indices[ip++] = base + 2;
-      indices[ip++] = base;
       indices[ip++] = base + 2;
       indices[ip++] = base + 3;
+      indices[ip++] = base;
     }
     return { verts, normals, indices, uv };
   }
@@ -11550,40 +12498,50 @@ var RC = (() => {
   var MAX_LIGHTS = 32;
   var MAX_CHANNELS = 8;
   var MAX_PRIMITIVE_FLOATS = 2e5;
-  function writeArray(buffer, a) {
+  function writeBits(buffer, a) {
     buffer.writeInt(a.length);
-    for (const v of a) {
-      buffer.writeFloat(v);
+    for (const b of a) {
+      buffer.writeInt(b);
     }
   }
-  function writeOptional(buffer, a) {
+  function writeOptionalFloats(buffer, a) {
     if (a === null) {
       buffer.writeInt(0);
     } else {
-      writeArray(buffer, a);
+      buffer.writeInt(a.length);
+      for (const v of a) {
+        buffer.writeFloat(v);
+      }
     }
   }
-  function readFloats(buffer, max, what) {
+  function readBits(buffer, max, what) {
     const len = buffer.readInt();
     if (len < 0 || len > max) {
       throw new Error(`${what}: bad length ${len}`);
     }
-    const out = new Float32Array(len);
+    const out = new Int32Array(len);
     for (let i = 0; i < len; i++) {
-      out[i] = buffer.readFloat();
+      out[i] = buffer.readInt();
+    }
+    return out;
+  }
+  function literalsOf(bits) {
+    const out = new Float32Array(bits.length);
+    for (let i = 0; i < bits.length; i++) {
+      out[i] = isVariableBits(bits[i]) ? 0 : intBitsToFloat(bits[i]);
     }
     return out;
   }
   function resolve(context, src, dst) {
     for (let i = 0; i < src.length; i++) {
-      const v = src[i];
-      dst[i] = isVariable(v) ? context.getFloat(idFromNan(v)) : v;
+      const b = src[i];
+      dst[i] = isVariableBits(b) ? context.getFloat(idFromBits(b)) : intBitsToFloat(b);
     }
   }
   function listen(context, src, self) {
-    for (const v of src) {
-      if (isVariable(v)) {
-        context.listensTo(idFromNan(v), self);
+    for (const b of src) {
+      if (isVariableBits(b)) {
+        context.listensTo(idFromBits(b), self);
       }
     }
   }
@@ -11612,8 +12570,8 @@ var RC = (() => {
       for (const v of this.mVerts) {
         buffer.writeFloat(v);
       }
-      writeOptional(buffer, this.mNormals);
-      writeOptional(buffer, this.mUv);
+      writeOptionalFloats(buffer, this.mNormals);
+      writeOptionalFloats(buffer, this.mUv);
     }
     deepToString(indent) {
       return `${indent}DefineMesh3D(id=${this.mId}, tris=${this.mIndices.length / 3}, verts=${this.mVerts.length / 3}, normals=${this.mNormals !== null})`;
@@ -11670,8 +12628,8 @@ var RC = (() => {
       this.mProjection = mProjection;
       this.mProjParams = mProjParams;
       this.mViewParams = mViewParams;
-      this.mOutProj = mProjParams.slice();
-      this.mOutView = mViewParams.slice();
+      this.mOutProj = literalsOf(mProjParams);
+      this.mOutView = literalsOf(mViewParams);
     }
     updateVariables(context) {
       resolve(context, this.mProjParams, this.mOutProj);
@@ -11689,8 +12647,8 @@ var RC = (() => {
     write(buffer) {
       buffer.start(_SetCamera3D.OP_CODE);
       buffer.writeInt(this.mProjection);
-      writeArray(buffer, this.mProjParams);
-      writeArray(buffer, this.mViewParams);
+      writeBits(buffer, this.mProjParams);
+      writeBits(buffer, this.mViewParams);
     }
     deepToString(indent) {
       return `${indent}SetCamera3D(proj=${this.mProjection})`;
@@ -11702,8 +12660,8 @@ var RC = (() => {
      */
     static read(buffer, operations) {
       const projection = buffer.readInt();
-      const proj = readFloats(buffer, 16, "SetCamera3D projParams");
-      const view = readFloats(buffer, 16, "SetCamera3D viewParams");
+      const proj = readBits(buffer, 16, "SetCamera3D projParams");
+      const view = readBits(buffer, 16, "SetCamera3D viewParams");
       operations.push(new _SetCamera3D(projection, proj, view));
     }
   };
@@ -11714,7 +12672,7 @@ var RC = (() => {
       super();
       this.mSub = mSub;
       this.mArgs = mArgs;
-      this.mOut = mArgs.slice();
+      this.mOut = literalsOf(mArgs);
     }
     updateVariables(context) {
       resolve(context, this.mArgs, this.mOut);
@@ -11730,7 +12688,7 @@ var RC = (() => {
     write(buffer) {
       buffer.start(_Matrix3DOp.OP_CODE);
       buffer.writeInt(this.mSub);
-      writeArray(buffer, this.mArgs);
+      writeBits(buffer, this.mArgs);
     }
     deepToString(indent) {
       return `${indent}Matrix3DOp(sub=${this.mSub}, args=${this.mOut.length})`;
@@ -11741,7 +12699,7 @@ var RC = (() => {
      */
     static read(buffer, operations) {
       const sub = buffer.readInt();
-      const args = readFloats(buffer, 16, "Matrix3DOp args");
+      const args = readBits(buffer, 16, "Matrix3DOp args");
       operations.push(new _Matrix3DOp(sub, args));
     }
   };
@@ -11778,7 +12736,7 @@ var RC = (() => {
       super();
       this.mSub = mSub;
       this.mParams = mParams;
-      this.mOut = mParams.slice();
+      this.mOut = literalsOf(mParams);
     }
     updateVariables(context) {
       resolve(context, this.mParams, this.mOut);
@@ -11811,7 +12769,7 @@ var RC = (() => {
     write(buffer) {
       buffer.start(_Paint3DState.OP_CODE);
       buffer.writeInt(this.mSub);
-      writeArray(buffer, this.mParams);
+      writeBits(buffer, this.mParams);
     }
     deepToString(indent) {
       return `${indent}Paint3DState(sub=${this.mSub})`;
@@ -11819,7 +12777,7 @@ var RC = (() => {
     /** `sub, len+params[]` — CLEAR_DEPTH takes none, MATERIAL and DEPTH_BIAS two each. */
     static read(buffer, operations) {
       const sub = buffer.readInt();
-      const params = readFloats(buffer, 8, "Paint3DState params");
+      const params = readBits(buffer, 8, "Paint3DState params");
       operations.push(new _Paint3DState(sub, params));
     }
   };
@@ -11831,7 +12789,7 @@ var RC = (() => {
       this.mTypes = mTypes;
       this.mColors = mColors;
       this.mParams = mParams;
-      this.mOut = mParams.slice();
+      this.mOut = literalsOf(mParams);
     }
     updateVariables(context) {
       resolve(context, this.mParams, this.mOut);
@@ -11851,7 +12809,7 @@ var RC = (() => {
         buffer.writeInt(this.mTypes[i]);
         buffer.writeInt(this.mColors[i]);
       }
-      writeArray(buffer, this.mParams);
+      writeBits(buffer, this.mParams);
     }
     deepToString(indent) {
       return `${indent}SetLights3D(n=${this.mTypes.length})`;
@@ -11872,7 +12830,7 @@ var RC = (() => {
         types[i] = buffer.readInt();
         colors[i] = buffer.readInt();
       }
-      const params = readFloats(buffer, MAX_LIGHTS * 4, "SetLights3D params");
+      const params = readBits(buffer, MAX_LIGHTS * 4, "SetLights3D params");
       operations.push(new _SetLights3D(types, colors, params));
     }
   };
@@ -11914,11 +12872,11 @@ var RC = (() => {
       this.mMesh = null;
       /** Set once if the build throws, so a broken shape is reported once and not every frame. */
       this.mFailed = false;
-      this.mOutSegments = mSegments;
-      this.mOutData = mData.map((c) => c.slice());
+      this.mOutSegments = isVariableBits(mSegments) ? 0 : intBitsToFloat(mSegments);
+      this.mOutData = mData.map((c) => literalsOf(c));
     }
     updateVariables(context) {
-      this.mOutSegments = isVariable(this.mSegments) ? context.getFloat(idFromNan(this.mSegments)) : this.mSegments;
+      this.mOutSegments = isVariableBits(this.mSegments) ? context.getFloat(idFromBits(this.mSegments)) : intBitsToFloat(this.mSegments);
       for (let c = 0; c < this.mData.length; c++) {
         resolve(context, this.mData[c], this.mOutData[c]);
       }
@@ -11926,8 +12884,8 @@ var RC = (() => {
       this.mFailed = false;
     }
     registerListening(context) {
-      if (isVariable(this.mSegments)) {
-        context.listensTo(idFromNan(this.mSegments), this);
+      if (isVariableBits(this.mSegments)) {
+        context.listensTo(idFromBits(this.mSegments), this);
       }
       for (const channel of this.mData) {
         listen(context, channel, this);
@@ -11958,21 +12916,21 @@ var RC = (() => {
       buffer.start(_MeshPrimitive.OP_CODE);
       buffer.writeInt(this.mId);
       buffer.writeInt(this.mType);
-      buffer.writeFloat(this.mSegments);
+      buffer.writeInt(this.mSegments);
       buffer.writeInt(this.mFlags);
       buffer.writeInt(this.mData.length);
       for (const ch of this.mData) {
-        writeArray(buffer, ch);
+        writeBits(buffer, ch);
       }
     }
     deepToString(indent) {
-      return `${indent}MeshPrimitive(id=${this.mId}, type=${this.mType}, segments=${this.mSegments}, channels=${this.mData.length})`;
+      return `${indent}MeshPrimitive(id=${this.mId}, type=${this.mType}, segments=${this.mOutSegments}, channels=${this.mData.length})`;
     }
     /** `id, type, segments, flags, channelCount, (len + floats) x channelCount`. */
     static read(buffer, operations) {
       const id = buffer.readInt();
       const type = buffer.readInt();
-      const segments2 = buffer.readFloat();
+      const segments2 = buffer.readInt();
       const flags = buffer.readInt();
       const channels = buffer.readInt();
       if (channels < 0 || channels > MAX_CHANNELS) {
@@ -11980,7 +12938,7 @@ var RC = (() => {
       }
       const data = [];
       for (let c = 0; c < channels; c++) {
-        data.push(readFloats(buffer, MAX_PRIMITIVE_FLOATS, "MeshPrimitive channel"));
+        data.push(readBits(buffer, MAX_PRIMITIVE_FLOATS, "MeshPrimitive channel"));
       }
       operations.push(new _MeshPrimitive(id, type, segments2, flags, data));
     }
@@ -12004,12 +12962,11 @@ var RC = (() => {
     }
     return (idFromBits(b) & ID_REGION_MASK) === ID_REGION_ARRAY;
   }
-  function isResolvable(v) {
-    if (!Number.isNaN(v)) {
+  function isResolvableBits2(bits) {
+    if (!isNaNBits(bits)) {
       return false;
     }
-    const bits = floatToRawIntBits(v);
-    return !AnimatedFloatExpression.isMathOperator(v) && !isDataVariableBits(bits);
+    return !AnimatedFloatExpression.isMathOperatorBits(bits) && !isDataVariableBits(bits);
   }
   function lerp(a, b, t) {
     return Math.fround(a + Math.fround(Math.fround(b - a) * t));
@@ -12043,7 +13000,8 @@ var RC = (() => {
     // ----- variable support -------------------------------------------------
     updateVariables(context) {
       for (let i = 0; i < this.mParams.length; i++) {
-        this.mOutParams[i] = isResolvable(this.mParams[i]) ? context.getFloat(idFromNan(this.mParams[i])) : this.mParams[i];
+        const b = this.mParams[i];
+        this.mOutParams[i] = isResolvableBits2(b) ? floatToRawIntBits(context.getFloat(idFromBits(b))) : b;
       }
       _MeshExpression.resolveGroup(context, this.mPos, this.mOutPos);
       _MeshExpression.resolveGroup(context, this.mNormal, this.mOutNormal);
@@ -12054,14 +13012,15 @@ var RC = (() => {
         const inArr = src[e];
         const out = dst[e];
         for (let i = 0; i < inArr.length; i++) {
-          out[i] = isResolvable(inArr[i]) ? context.getFloat(idFromNan(inArr[i])) : inArr[i];
+          const b = inArr[i];
+          out[i] = isResolvableBits2(b) ? floatToRawIntBits(context.getFloat(idFromBits(b))) : b;
         }
       }
     }
     registerListening(context) {
-      for (const v of this.mParams) {
-        if (isResolvable(v)) {
-          context.listensTo(idFromNan(v), this);
+      for (const b of this.mParams) {
+        if (isResolvableBits2(b)) {
+          context.listensTo(idFromBits(b), this);
         }
       }
       this.listenGroup(context, this.mPos);
@@ -12070,9 +13029,9 @@ var RC = (() => {
     }
     listenGroup(context, group) {
       for (const e of group) {
-        for (const v of e) {
-          if (isResolvable(v)) {
-            context.listensTo(idFromNan(v), this);
+        for (const b of e) {
+          if (isResolvableBits2(b)) {
+            context.listensTo(idFromBits(b), this);
           }
         }
       }
@@ -12290,7 +13249,7 @@ var RC = (() => {
       buffer.writeInt(this.mId);
       buffer.writeInt(this.mType);
       buffer.writeInt(this.mFlags);
-      writeArray2(buffer, this.mParams);
+      writeArray(buffer, this.mParams);
       writeGroup(buffer, this.mPos);
       writeGroup(buffer, this.mNormal);
       writeGroup(buffer, this.mUv);
@@ -12317,16 +13276,16 @@ var RC = (() => {
   };
   _MeshExpression.OP_CODE = 117;
   var MeshExpression = _MeshExpression;
-  function writeArray2(buffer, a) {
+  function writeArray(buffer, a) {
     buffer.writeInt(a.length);
-    for (const v of a) {
-      buffer.writeFloat(v);
+    for (const b of a) {
+      buffer.writeInt(b);
     }
   }
   function writeGroup(buffer, group) {
     buffer.writeInt(group.length);
     for (const e of group) {
-      writeArray2(buffer, e);
+      writeArray(buffer, e);
     }
   }
   function readArray(buffer) {
@@ -12334,9 +13293,9 @@ var RC = (() => {
     if (len < 0 || len > MAX_ARRAY) {
       throw new Error(`MeshExpression: bad array length ${len}`);
     }
-    const a = new Float32Array(len);
+    const a = new Int32Array(len);
     for (let i = 0; i < len; i++) {
-      a[i] = buffer.readNanId();
+      a[i] = buffer.readNanIdBits();
     }
     return a;
   }
@@ -12393,20 +13352,22 @@ var RC = (() => {
   var MAX_PROGRAM = 512;
   var SOFT_DOMAIN_EPS = 1e-6;
   var _dv3 = new DataView(new ArrayBuffer(4));
-  function fromNaN(v) {
-    _dv3.setFloat32(0, v);
-    return _dv3.getInt32(0) & 4194303;
-  }
-  function isVectorOp(v) {
-    if (!Number.isNaN(v)) {
+  function isVectorOpBits(bits) {
+    if (!isNaNBits(bits)) {
       return false;
     }
-    const pos = fromNaN(v);
+    const pos = idFromBits(bits);
     return pos >= OP_VBUILD2 && pos <= OP_VNORM;
   }
   var VectorRpn = class {
     constructor() {
-      this.mProgram = new Float32Array(MAX_PROGRAM);
+      /**
+       * The program as RAW BITS. It mixes literals with NaN-boxed operator and variable ids,
+       * and a Float32Array cannot hold the latter two safely: copying through one canonicalizes
+       * every NaN on JavaScriptCore, which turned each operator into an unrecognised token and
+       * every vector expression into garbage in Safari.
+       */
+      this.mProgram = new Int32Array(MAX_PROGRAM);
       this.mStack = new Float32Array(MAX_STACK * MAX_DIM);
       /** Logical dimensionality of each stack value. */
       this.mDim = new Int32Array(MAX_STACK);
@@ -12420,18 +13381,29 @@ var RC = (() => {
      * Evaluate program[0..len) and write the result's components into out (length >= MAX_DIM).
      * Returns the logical dimensionality of the result (1 = scalar, 2/3/4 = vector).
      */
+    /**
+     * `program` is raw int32 bits. A Float32Array is still accepted for callers that have not
+     * been converted, but it cannot carry operator ids on every engine — see mProgram.
+     */
     apply(program, len, out) {
       if (len > MAX_PROGRAM) {
         throw new Error(`VectorRpn: program length ${len} exceeds ${MAX_PROGRAM}`);
       }
-      this.mProgram.set(program.subarray(0, len), 0);
+      if (program instanceof Int32Array) {
+        this.mProgram.set(program.subarray(0, len), 0);
+      } else {
+        for (let i = 0; i < len; i++) {
+          this.mProgram[i] = floatToRawIntBits(program[i]);
+        }
+      }
       const s = this.mStack;
       let sp = -1;
       for (let i = 0; i < len; i++) {
-        const v = this.mProgram[i];
-        if (Number.isNaN(v)) {
-          sp = this.opEval(sp, fromNaN(v));
+        const bits = this.mProgram[i];
+        if (isNaNBits(bits)) {
+          sp = this.opEval(sp, idFromBits(bits));
         } else {
+          const v = intBitsToFloat(bits);
           sp++;
           if (sp >= MAX_STACK) {
             throw new Error("VectorRpn: stack overflow (malformed program)");
@@ -12677,13 +13649,12 @@ var RC = (() => {
   // players/typescript/src/core/operations/VectorExpression.ts
   var ID_REGION_MASK2 = 3 << 20;
   var ID_REGION_ARRAY2 = 2 << 20;
-  function isResolvable2(v) {
-    if (!Number.isNaN(v)) {
+  function isResolvableBits3(bits) {
+    if (!isNaNBits(bits)) {
       return false;
     }
-    const bits = floatToRawIntBits(v);
-    const isArray = isNaNBits(bits) && (idFromBits(bits) & ID_REGION_MASK2) === ID_REGION_ARRAY2;
-    return !AnimatedFloatExpression.isMathOperator(v) && !isVectorOp(v) && !isArray;
+    const isArray = (idFromBits(bits) & ID_REGION_MASK2) === ID_REGION_ARRAY2;
+    return !AnimatedFloatExpression.isMathOperatorBits(bits) && !isVectorOpBits(bits) && !isArray;
   }
   var _VectorExpression = class _VectorExpression extends Operation {
     constructor(mId, mDimension, mFlags, mSrcValue) {
@@ -12702,15 +13673,15 @@ var RC = (() => {
     }
     updateVariables(context) {
       for (let i = 0; i < this.mSrcValue.length; i++) {
-        const v = this.mSrcValue[i];
-        this.mPreCalc[i] = isResolvable2(v) ? context.getFloat(idFromNan(v)) : v;
+        const b = this.mSrcValue[i];
+        this.mPreCalc[i] = isResolvableBits3(b) ? floatToRawIntBits(context.getFloat(idFromBits(b))) : b;
       }
     }
     registerListening(context) {
       context.putObject(this.mId, this);
-      for (const v of this.mSrcValue) {
-        if (isResolvable2(v)) {
-          context.listensTo(idFromNan(v), this);
+      for (const b of this.mSrcValue) {
+        if (isResolvableBits3(b)) {
+          context.listensTo(idFromBits(b), this);
         }
       }
     }
@@ -12764,9 +13735,9 @@ var RC = (() => {
       const dimension = buffer.readByte();
       const flags = buffer.readByte();
       const len = buffer.readShort();
-      const values = new Float32Array(len);
+      const values = new Int32Array(len);
       for (let i = 0; i < len; i++) {
-        values[i] = buffer.readNanId();
+        values[i] = buffer.readNanIdBits();
       }
       operations.push(new _VectorExpression(id, dimension, flags, values));
     }
@@ -14913,8 +15884,10 @@ var RC = (() => {
       }
       selfMeasure.setW(w);
       selfMeasure.setH(h);
-      const horizontalWrap = wMod?.getType() === WidthModifier.WRAP;
-      const verticalWrap = hMod?.getType() === HeightModifier.WRAP;
+      const widthWeightUnpinned = wMod?.getType() === WidthModifier.WEIGHT && minWidth <= this.mPadBeforeWidth;
+      const heightWeightUnpinned = hMod?.getType() === HeightModifier.WEIGHT && minHeight <= this.mPadBeforeHeight;
+      const horizontalWrap = wMod?.getType() === WidthModifier.WRAP || widthWeightUnpinned;
+      const verticalWrap = hMod?.getType() === HeightModifier.WRAP || heightWeightUnpinned;
       if (horizontalWrap || verticalWrap) {
         this.mCachedWrapSize.clear();
         const childMaxW = (horizontalWrap ? maxWidth : w) - padding_w;
@@ -17053,12 +18026,12 @@ var RC = (() => {
   function asNan2(v) {
     return intBitsToFloat(v | -8388608);
   }
-  function fromNaN2(v) {
+  function fromNaN(v) {
     return floatToRawIntBits(v) & 4194303;
   }
   var ID_REGION_ARRAY3 = 2097152;
   function isDataVariable(v) {
-    const id = fromNaN2(v);
+    const id = fromNaN(v);
     return (id & 7340032) === ID_REGION_ARRAY3;
   }
   function isDataVariableBits2(b) {
@@ -17077,7 +18050,7 @@ var RC = (() => {
     static isOperator(v) {
       if (Number.isNaN(v)) {
         if (isDataVariable(v)) return false;
-        const pos = fromNaN2(v);
+        const pos = fromNaN(v);
         return pos > OFFSET2 && pos <= _MatrixOperations.LAST_OP;
       }
       return false;
@@ -17102,7 +18075,7 @@ var RC = (() => {
       for (let i = 0; i < exp.length; i++) {
         const v = exp[i];
         if (Number.isNaN(v)) {
-          this.opEval(i, fromNaN2(v));
+          this.opEval(i, fromNaN(v));
         }
       }
       return this.mMatrices[0];
@@ -18842,7 +19815,8 @@ var RC = (() => {
         context.getTextBounds(this.mTextId, 0, this.mCachedString.length, flags, bounds);
         this.mBaseline = -bounds[1];
       }
-      if (forceComplex || bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0) {
+      const wantsComplex = forceComplex || bounds[2] - bounds[0] > maxWidth && this.mMaxLines > 1 && maxWidth > 0;
+      if (wantsComplex) {
         if (inAutosize) {
           flags |= 1;
         }
@@ -18871,8 +19845,13 @@ var RC = (() => {
           bounds[2] = this.mComputedTextLayout.width;
           bounds[3] = this.mComputedTextLayout.height;
         }
-      } else {
+      } else if (maxWidth > 0) {
         this.mComputedTextLayout = null;
+      } else if (this.mComputedTextLayout) {
+        bounds[0] = 0;
+        bounds[1] = 0;
+        bounds[2] = this.mComputedTextLayout.width;
+        bounds[3] = this.mComputedTextLayout.height;
       }
     }
     paintingComponent(paintContext) {
@@ -20179,12 +21158,12 @@ var RC = (() => {
     }
     apply(context) {
       if (this.mParams.length === 0) return;
-      const typeId = idFromNan(this.mParams[0]);
+      const typeId = idFromBits(this.mParams[0]);
       if (typeId === _SoundExpression.TYPE_TONE && this.mParams.length >= 4) {
         const wav = ToneSynthesizer.synthesizeWav(
-          this.mParams[1],
-          this.mParams[2],
-          this.mParams[3]
+          intBitsToFloat(this.mParams[1]),
+          intBitsToFloat(this.mParams[2]),
+          intBitsToFloat(this.mParams[3])
         );
         context.loadSound(this.mId, wav);
       }
@@ -20201,9 +21180,9 @@ var RC = (() => {
       if (len > _SoundExpression.MAX_PARAMS) {
         throw new Error(`SoundExpression: too many params ${len} > ${_SoundExpression.MAX_PARAMS}`);
       }
-      const params = new Float32Array(len);
+      const params = new Int32Array(len);
       for (let i = 0; i < len; i++) {
-        params[i] = buffer.readFloat();
+        params[i] = buffer.readInt();
       }
       operations.push(new _SoundExpression(id, leftVolume, rightVolume, rate, params));
     }
@@ -20257,6 +21236,42 @@ var RC = (() => {
     }
     apply(context) {
       super.apply(context);
+    }
+    // The same modifier pass as any layout component, then the host draws the content —
+    // what the C++ engine does for opcode 93 in LayoutOperations.cpp.
+    paintingComponent(paintContext) {
+      const context = paintContext.getContext();
+      const host = context.getCustomHost();
+      if (!host) {
+        super.paintingComponent(paintContext);
+        return;
+      }
+      if (Visibility.isGone(this.mVisibility) && this.mAnimateMeasure === null) return;
+      paintContext.matrixSave();
+      paintContext.matrixTranslate(this.mX, this.mY);
+      let tx = 0;
+      let ty = 0;
+      for (const mod of this.mComponentModifiers) {
+        context.incrementOpCount(mod);
+        if (mod.isDirty() && typeof mod.updateVariables === "function") {
+          mod.markNotDirty();
+          mod.updateVariables(context);
+        }
+        if (mod instanceof PaddingModifier) {
+          paintContext.matrixTranslate(mod.mLeftValue, mod.mTopValue);
+          tx += mod.mLeftValue;
+          ty += mod.mTopValue;
+        } else {
+          mod.apply(context);
+        }
+      }
+      paintContext.matrixTranslate(-tx, -ty);
+      paintContext.matrixTranslate(this.mPaddingLeft, this.mPaddingTop);
+      const config = this.mConfigId >= 0 ? context.getText(this.mConfigId) ?? "" : "";
+      const w = this.mWidth - this.mPaddingLeft - this.mPaddingRight;
+      const h = this.mHeight - this.mPaddingTop - this.mPaddingBottom;
+      host.drawCustom(this.getComponentId(), config, paintContext, w, h, context.getAnimationTime());
+      paintContext.matrixRestore();
     }
     deepToString(indent) {
       return `${indent}Custom(${this.getComponentId()}, config=${this.mConfigId}, ${this.mProperties.length} props)`;
@@ -20572,6 +21587,9 @@ var RC = (() => {
       m.set(DrawRoundRect.OP_CODE, DrawRoundRect.read);
       m.set(DrawArc.OP_CODE, DrawArc.read);
       m.set(DrawSector.OP_CODE, DrawSector.read);
+      m.set(AddMesh2D.OP_CODE, AddMesh2D.read);
+      m.set(DrawMesh2D.OP_CODE, DrawMesh2D.read);
+      m.set(MatrixFromMesh2D.OP_CODE, MatrixFromMesh2D.read);
       m.set(DrawPath.OP_CODE, DrawPath.read);
       m.set(DrawTweenPath.OP_CODE, DrawTweenPath.read);
       m.set(DrawContent.OP_CODE, DrawContent.read);
@@ -20772,8 +21790,8 @@ var RC = (() => {
     readId() {
       return this.mContext.resolveId(this.mWrapped.readInt());
     }
-    readNanId() {
-      return this.mContext.resolveNanId(this.mWrapped.readFloat());
+    readNanIdBits() {
+      return this.mContext.resolveNanIdBits(this.mWrapped.readInt());
     }
     readLongNanId() {
       return this.mContext.resolveLongNanId(this.mWrapped.readLong());
@@ -21145,13 +22163,18 @@ var RC = (() => {
       return remapped !== void 0 ? remapped : id;
     }
     /** Resolve a NaN-encoded float id. Non-NaN values pass through. */
-    resolveNanId(v) {
-      if (!Number.isNaN(v)) {
-        return v;
+    /**
+     * Remap a NaN-boxed id, in and out as RAW BITS. Was float-in/float-out, which lost the
+     * id on any engine that canonicalizes NaN (Safari) and silently disabled macro remapping
+     * for every float argument.
+     */
+    resolveNanIdBits(bits) {
+      if (!isNaNBits(bits)) {
+        return bits;
       }
-      const id = idFromNan(v);
+      const id = idFromBits(bits);
       const mapped = this.resolveId(id);
-      return mapped === id ? v : asNan(mapped);
+      return mapped === id ? bits : asNanBits(mapped);
     }
     /** Resolve a NaN-encoded long id (see Utils.longIdFromNan). */
     resolveLongNanId(v) {
@@ -21202,8 +22225,8 @@ var RC = (() => {
     resolveId(id) {
       return id;
     }
-    resolveNanId(v) {
-      return v;
+    resolveNanIdBits(bits) {
+      return bits;
     }
     resolveLongNanId(v) {
       return v;
@@ -23393,12 +24416,12 @@ var RC = (() => {
         }
         order[j + 1] = cur;
       }
-      const vertexCount = kept * 3;
-      if (out.positions.length < vertexCount * 2) {
-        out.positions = new Float32Array(vertexCount * 2);
-        out.uvs = new Float32Array(vertexCount * 2);
-        out.colors = new Int32Array(vertexCount);
-        out.depths = new Float32Array(vertexCount);
+      const vertexCount2 = kept * 3;
+      if (out.positions.length < vertexCount2 * 2) {
+        out.positions = new Float32Array(vertexCount2 * 2);
+        out.uvs = new Float32Array(vertexCount2 * 2);
+        out.colors = new Int32Array(vertexCount2);
+        out.depths = new Float32Array(vertexCount2);
       }
       for (let k = 0; k < kept; k++) {
         const tri = order[k];
@@ -23413,8 +24436,8 @@ var RC = (() => {
           out.depths[v + i] = this.cvTriZ[srcC + i];
         }
       }
-      out.vertexCount = vertexCount;
-      return vertexCount;
+      out.vertexCount = vertexCount2;
+      return vertexCount2;
     }
     projectTriangle(idx, verts, normals, smooth, computeInvW, t, baseColor, w, h) {
       const i0 = idx[t] * 3;
@@ -24327,6 +25350,11 @@ void main() {
       this.filterBitmap = true;
       this.letterSpacing = 0;
       this.gradientStyle = null;
+      // The geometry the gradient was built from, kept so it can be rebuilt in a
+      // transformed space. A CanvasGradient resolves against the user space in force when
+      // it is USED, and text on a path is filled one glyph at a time inside a translate +
+      // rotate — so the gradient has to be re-expressed per glyph. See fillStyleUnderGlyph.
+      this.gradientSpec = null;
       this.fontFamily = "sans-serif";
       this.fontWeight = 400;
       this.fontItalic = false;
@@ -24348,6 +25376,18 @@ void main() {
       this.pathWindingCache = /* @__PURE__ */ new Map();
       // Bitmap cache: id -> ImageBitmap or HTMLImageElement
       this.bitmapCache = /* @__PURE__ */ new Map();
+      // Animated bitmaps (a GIF embedded whole), streamed: one frame decoded at a time, the
+      // next asked for when the document's clock passes the end of the one showing. A long
+      // GIF at full size is hundreds of megabytes as bitmaps, so nothing is decoded ahead —
+      // the C++ player streams through one working buffer for the same reason.
+      this.animatedBitmaps = /* @__PURE__ */ new Map();
+      this.disposed = false;
+      // Bitmaps a host has supplied as video instead: a GIF transcoded once at export time,
+      // decoded by the browser's own video pipeline and drawn frame by frame from the element.
+      // Far cheaper than decoding GIF frames, and the preferred way to animate a bitmap.
+      this.bitmapVideos = /* @__PURE__ */ new Map();
+      /// One stored 2D mesh. Canvas2D has no drawVertices, so drawMesh walks the triangle list.
+      this.meshCache = /* @__PURE__ */ new Map();
       this.bitmapPromises = /* @__PURE__ */ new Map();
       /** Bitmaps converted to ARGB for 3D texturing, kept so the readback happens once. */
       this.texturePixels = /* @__PURE__ */ new Map();
@@ -24372,6 +25412,8 @@ void main() {
       this.mTextMeasureCache = /* @__PURE__ */ new Map();
       this.mainCanvas = null;
       this.bitmapCanvasCache = /* @__PURE__ */ new Map();
+      /** Declared size of a pixel-less bitmap, so its buffer is allocated at that size. */
+      this.emptyBitmapSizes = /* @__PURE__ */ new Map();
       // ---- 3D (Paint3DContext) -----------------------------------------------
       //
       // Only the software backend is implemented here. Every other backend in the mode word
@@ -24402,6 +25444,11 @@ void main() {
     getCanvas() {
       return this.ctx;
     }
+    // An embedded document paints on whatever canvas its host is painting on, which can
+    // change between frames (a resize, a new host document on the same page).
+    setCanvas(canvas) {
+      this.ctx = canvas;
+    }
     // --- Text cache ---
     loadText(id, text) {
       this.textCache.set(id, text);
@@ -24411,6 +25458,15 @@ void main() {
     }
     // --- Bitmap cache ---
     loadBitmap(imageId, encoding, type, width, height, bitmap) {
+      if (this.bitmapPromises.has(imageId)) return;
+      if (encoding === 3 || encoding === 4 || bitmap.length === 0) {
+        if (encoding === 3) this.emptyBitmapSizes.set(imageId, { width, height });
+        return;
+      }
+      const isGif = bitmap.length > 6 && bitmap[0] === 71 && bitmap[1] === 73 && bitmap[2] === 70 && bitmap[3] === 56;
+      if (isGif && !this.bitmapVideos.has(imageId) && typeof globalThis.ImageDecoder !== "undefined") {
+        this.loadAnimatedBitmap(imageId, bitmap);
+      }
       const blob = new Blob([bitmap.buffer], { type: "image/png" });
       const url = URL.createObjectURL(blob);
       const img = new Image();
@@ -24428,6 +25484,134 @@ void main() {
         img.src = url;
       });
       this.bitmapPromises.set(imageId, promise);
+    }
+    // `videos` maps image ids to video URLs. Called before the document's data pass, so a
+    // bitmap with a video never starts a GIF decoder.
+    setBitmapVideos(videos) {
+      for (const v of this.bitmapVideos.values()) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+        v.remove();
+      }
+      this.bitmapVideos.clear();
+      if (!videos || typeof document === "undefined") return;
+      const entries = videos instanceof Map ? [...videos.entries()] : Object.entries(videos).map(([k, v]) => [Number(k), v]);
+      for (const [id, url] of entries) {
+        const video = document.createElement("video");
+        video.muted = true;
+        video.loop = true;
+        video.playsInline = true;
+        video.preload = "auto";
+        video.src = url;
+        video.style.cssText = "position:fixed;left:-4px;top:-4px;width:2px;height:2px;opacity:0;pointer-events:none";
+        document.body.appendChild(video);
+        video.play().catch(() => {
+        });
+        this.bitmapVideos.set(id, video);
+      }
+    }
+    async loadAnimatedBitmap(imageId, bytes) {
+      try {
+        const Decoder = globalThis.ImageDecoder;
+        const decoder = new Decoder({ data: bytes, type: "image/gif" });
+        await decoder.tracks.ready;
+        const track = decoder.tracks.selectedTrack;
+        const count = track ? track.frameCount : 0;
+        if (count < 2 || this.disposed) {
+          decoder.close();
+          return;
+        }
+        const anim = {
+          decoder,
+          count,
+          index: -1,
+          frame: null,
+          frameEnds: 0,
+          decoding: false,
+          failed: false
+        };
+        this.animatedBitmaps.set(imageId, anim);
+        this.needsRepaint();
+      } catch (e) {
+        console.warn(`CanvasPaintContext: cannot animate bitmap ${imageId}`, e);
+      }
+    }
+    // Decode the frame after the one showing, and make it the one showing when it lands.
+    // One decode in flight at a time: a clock that has run ahead is not chased through the
+    // frames in between (a GIF's frames build on each other, so every one would cost), the
+    // picture just plays late until it catches up.
+    advanceAnimated(anim, now) {
+      if (anim.decoding || anim.failed || anim.count < 1) return;
+      anim.decoding = true;
+      const next = (anim.index + 1) % anim.count;
+      anim.decoder.decode({ frameIndex: next }).then((result) => {
+        const image = result.image;
+        let seconds = (image.duration ?? 0) / 1e6;
+        if (!(seconds >= 0.02)) seconds = 0.1;
+        if (this.disposed) {
+          image.close();
+          return;
+        }
+        if (anim.frame) anim.frame.close();
+        anim.frame = image;
+        anim.index = next;
+        anim.frameEnds = Math.max(now, anim.frameEnds) + seconds;
+        anim.decoding = false;
+        this.needsRepaint();
+      }).catch((e) => {
+        anim.failed = true;
+        anim.decoding = false;
+        console.warn("CanvasPaintContext: animated bitmap frame failed", e);
+      });
+    }
+    // The bitmap to draw now: for an animated one, the frame the document's clock is on —
+    // the next one is asked for once the clock passes the end of this one — and a repaint
+    // asked for so it follows.
+    bitmapToDraw(imageId) {
+      const offscreen = this.bitmapCanvasCache.get(imageId);
+      if (offscreen) return offscreen.canvas;
+      const video = this.bitmapVideos.get(imageId);
+      if (video) {
+        this.needsRepaint();
+        if (video.readyState >= 2 && video.videoWidth > 0) {
+          if (video.paused) video.play().catch(() => {
+          });
+          return video;
+        }
+        return this.bitmapCache.get(imageId);
+      }
+      const anim = this.animatedBitmaps.get(imageId);
+      if (!anim) return this.bitmapCache.get(imageId);
+      const context = this.getContext();
+      const now = context ? context.getAnimationTime() : 0;
+      if (anim.index < 0 || now >= anim.frameEnds) this.advanceAnimated(anim, now);
+      this.needsRepaint();
+      return anim.frame ?? this.bitmapCache.get(imageId);
+    }
+    // Let go of what animated bitmaps hold — decoders and frames are not cheap, and a paint
+    // context outlives its document only as garbage.
+    dispose() {
+      this.disposed = true;
+      for (const v of this.bitmapVideos.values()) {
+        v.pause();
+        v.removeAttribute("src");
+        v.load();
+        v.remove();
+      }
+      this.bitmapVideos.clear();
+      for (const anim of this.animatedBitmaps.values()) {
+        try {
+          anim.decoder.close();
+        } catch {
+        }
+        if (anim.frame) anim.frame.close();
+      }
+      this.animatedBitmaps.clear();
+      for (const img of this.bitmapCache.values()) {
+        if (typeof img.close === "function") img.close();
+      }
+      this.bitmapCache.clear();
     }
     // --- Path cache ---
     loadPathData(id, winding, data) {
@@ -24636,13 +25820,69 @@ void main() {
         return null;
       }
     }
-    applyFillStyle() {
-      this.ctx.fillStyle = this.getEffectiveColor();
+    /**
+     * A fill style that still lands correctly when the canvas has been translated to
+     * (x, y) and rotated by `angle`.
+     *
+     * Text on a path is drawn one glyph at a time inside exactly that transform, and a
+     * CanvasGradient resolves against the user space in force when it is USED — so a
+     * gradient authored in document coordinates is sampled, for every glyph, from a space
+     * that has been moved and spun. The glyphs come out filled from whatever part of the
+     * gradient happens to land under them, which for a mostly-transparent gradient means
+     * they do not appear at all. The C++ player has no such problem because Skia applies
+     * the shader's own local matrix.
+     *
+     * The cure is to re-express the gradient in glyph-local space: compose the inverse of
+     * translate(x, y) * rotate(angle) and map the gradient's geometry through it. A
+     * pattern (what the sweep polyfill produces where createConicGradient is missing)
+     * carries its own matrix and only needs that inverse handed to it.
+     */
+    fillStyleUnderGlyph(x, y, angle) {
+      const style = this.gradientStyle;
+      if (!style) return null;
+      const cos = Math.cos(angle), sin = Math.sin(angle);
+      const a = cos, b = -sin, c = sin, d = cos;
+      const e = -(x * cos + y * sin), f = x * sin - y * cos;
+      if (typeof style.setTransform === "function") {
+        const m = this.ctx.getTransform();
+        m.a = a;
+        m.b = b;
+        m.c = c;
+        m.d = d;
+        m.e = e;
+        m.f = f;
+        style.setTransform(m);
+        return style;
+      }
+      const spec = this.gradientSpec;
+      if (!spec) return style;
+      const local = (px, py) => [a * px + c * py + e, b * px + d * py + f];
+      let g = null;
+      if (spec.kind === "sweep") {
+        if (typeof this.ctx.createConicGradient !== "function") return style;
+        const [qx, qy] = local(spec.cx, spec.cy);
+        g = this.ctx.createConicGradient(-angle, qx, qy);
+      } else if (spec.kind === "radial") {
+        const [qx, qy] = local(spec.cx, spec.cy);
+        g = this.ctx.createRadialGradient(qx, qy, 0, qx, qy, spec.radius);
+      } else {
+        const [ax, ay] = local(spec.x1, spec.y1);
+        const [bx, by] = local(spec.x2, spec.y2);
+        g = this.ctx.createLinearGradient(ax, ay, bx, by);
+      }
+      if (!g) return style;
+      for (let s = 0; s < spec.stops.length && s < spec.colors.length; s++) {
+        g.addColorStop(Math.max(0, Math.min(1, spec.stops[s])), argbToRgba(spec.colors[s]));
+      }
+      return g;
+    }
+    applyFillStyle(override) {
+      this.ctx.fillStyle = override ?? this.getEffectiveColor();
       this.ctx.globalAlpha = this.alpha;
       this.ctx.globalCompositeOperation = this.blendMode;
     }
-    applyStrokeStyle() {
-      this.ctx.strokeStyle = this.getEffectiveColor();
+    applyStrokeStyle(override) {
+      this.ctx.strokeStyle = override ?? this.getEffectiveColor();
       this.ctx.lineWidth = this.strokeWidth;
       this.ctx.lineCap = this.lineCap;
       this.ctx.lineJoin = this.lineJoin;
@@ -24669,6 +25909,11 @@ void main() {
     applyPaint(paintData) {
       const arr = paintData.getArray();
       const len = paintData.getLength();
+      const context = this.getContext();
+      const floatArg = (bits) => {
+        if (isNaNBits(bits) && context) return context.getFloat(idFromBits(bits));
+        return intBitsToFloat2(bits);
+      };
       let i = 0;
       while (i < len) {
         const cmd = arr[i++];
@@ -24676,7 +25921,7 @@ void main() {
         const upper = cmd >> 16 & 65535;
         switch (tag) {
           case PaintBundle.TEXT_SIZE:
-            this.textSize = intBitsToFloat2(arr[i++]);
+            this.textSize = floatArg(arr[i++]);
             this.setFont();
             break;
           case PaintBundle.COLOR: {
@@ -24687,10 +25932,10 @@ void main() {
             break;
           }
           case PaintBundle.STROKE_WIDTH:
-            this.strokeWidth = intBitsToFloat2(arr[i++]);
+            this.strokeWidth = floatArg(arr[i++]);
             break;
           case PaintBundle.STROKE_MITER:
-            this.miterLimit = intBitsToFloat2(arr[i++]);
+            this.miterLimit = floatArg(arr[i++]);
             break;
           case PaintBundle.STROKE_CAP:
             this.lineCap = upper === 0 ? "butt" : upper === 1 ? "round" : "square";
@@ -24702,6 +25947,8 @@ void main() {
             const shaderId = arr[i++];
             if (shaderId === 0) {
               this.activeShaderData = null;
+              this.gradientStyle = null;
+              this.gradientSpec = null;
             } else {
               const sd = this.getContext()?.getShader(shaderId);
               this.activeShaderData = sd ?? null;
@@ -24732,6 +25979,18 @@ void main() {
             if (upper === PaintBundle.SWEEP_GRADIENT) {
               const cx = intBitsToFloat2(arr[i++]);
               const cy = intBitsToFloat2(arr[i++]);
+              this.gradientSpec = {
+                kind: "sweep",
+                colors,
+                stops,
+                cx,
+                cy,
+                radius: 0,
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: 0
+              };
               if (typeof this.ctx.createConicGradient === "function") {
                 gradient = this.ctx.createConicGradient(0, cx, cy);
               } else {
@@ -24745,6 +26004,18 @@ void main() {
               const cy = intBitsToFloat2(arr[i++]);
               const radius = intBitsToFloat2(arr[i++]);
               i++;
+              this.gradientSpec = {
+                kind: "radial",
+                colors,
+                stops,
+                cx,
+                cy,
+                radius,
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: 0
+              };
               gradient = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
             } else {
               const startX = intBitsToFloat2(arr[i++]);
@@ -24752,6 +26023,18 @@ void main() {
               const endX = intBitsToFloat2(arr[i++]);
               const endY = intBitsToFloat2(arr[i++]);
               i++;
+              this.gradientSpec = {
+                kind: "linear",
+                colors,
+                stops,
+                cx: 0,
+                cy: 0,
+                radius: 0,
+                x1: startX,
+                y1: startY,
+                x2: endX,
+                y2: endY
+              };
               gradient = this.ctx.createLinearGradient(startX, startY, endX, endY);
             }
             if (gradient) {
@@ -24766,7 +26049,7 @@ void main() {
             break;
           }
           case PaintBundle.ALPHA:
-            this.alpha = intBitsToFloat2(arr[i++]);
+            this.alpha = floatArg(arr[i++]);
             break;
           case PaintBundle.COLOR_FILTER: {
             const cfArgb = arr[i++];
@@ -24859,12 +26142,23 @@ void main() {
             if (count === 0) {
               this.ctx.setLineDash([]);
               this.ctx.lineDashOffset = 0;
-            } else {
+            } else if (count >= 3) {
+              const type = arr[i];
+              const phase = floatArg(arr[i + 1]);
+              const len2 = arr[i + 2];
+              i += 3;
               const intervals = [];
-              for (let k = 0; k < count; k++) {
-                intervals.push(intBitsToFloat2(arr[i++]));
+              for (let k = 0; k < len2 && k < count - 3; k++) intervals.push(floatArg(arr[i++]));
+              for (let k = 3 + len2; k < count; k++) i++;
+              if (type === 1 && intervals.length >= 2 && intervals.length % 2 === 0) {
+                this.ctx.setLineDash(intervals);
+                this.ctx.lineDashOffset = phase;
+              } else {
+                this.ctx.setLineDash([]);
+                this.ctx.lineDashOffset = 0;
               }
-              this.ctx.setLineDash(intervals);
+            } else {
+              i += count;
             }
             break;
           }
@@ -25166,8 +26460,8 @@ void main() {
     drawOval(left, top, right, bottom) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       this.ctx.beginPath();
       this.ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
       this.fillOrStroke(
@@ -25196,8 +26490,8 @@ void main() {
     drawArc(left, top, right, bottom, startAngle, sweepAngle) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       const start = startAngle * Math.PI / 180;
       const end = (startAngle + sweepAngle) * Math.PI / 180;
       this.ctx.beginPath();
@@ -25214,8 +26508,8 @@ void main() {
     drawSector(left, top, right, bottom, startAngle, sweepAngle) {
       const cx = (left + right) / 2;
       const cy = (top + bottom) / 2;
-      const rx = (right - left) / 2;
-      const ry = (bottom - top) / 2;
+      const rx = Math.abs(right - left) / 2;
+      const ry = Math.abs(bottom - top) / 2;
       const start = startAngle * Math.PI / 180;
       const end = (startAngle + sweepAngle) * Math.PI / 180;
       this.ctx.beginPath();
@@ -25230,6 +26524,101 @@ void main() {
           this.ctx.stroke();
         }
       );
+    }
+    // ── 2D vertex meshes ────────────────────────────────────────────────────────────────
+    //
+    // Canvas2D has no drawVertices and no Gouraud shading, so the triangle list is walked
+    // here. Two consequences worth stating rather than discovering:
+    //
+    //   * Per-vertex colour is approximated by filling each triangle with the AVERAGE of its
+    //     three vertex colours. Skia and Android interpolate across the face, so a mesh used
+    //     as a smooth gradient shows faceting here, more visibly as uCount/vCount drop.
+    //   * A textured triangle is drawn by clipping to it and applying the affine that takes
+    //     its uv triangle to its screen triangle — three corresponding points determine that
+    //     exactly, which makes it a real texture map rather than a stretched blit.
+    setMesh(meshId, layout, uCount, vCount, verts, uv, colors, indices) {
+      this.meshCache.set(meshId, { layout, uCount, vCount, verts, uv, colors, indices });
+    }
+    drawMesh(meshId, blend, imageId) {
+      const m = this.meshCache.get(meshId);
+      if (!m) return;
+      const vertexCount2 = m.verts.length / 2;
+      if (vertexCount2 < 3 || m.indices.length < 3) return;
+      let texture;
+      if (blend === BLEND_MODULATE && imageId !== 0 && m.uv.length === m.verts.length) {
+        texture = this.bitmapCache.get(imageId);
+      }
+      this.ctx.save();
+      const texW = texture ? texture.width : 0;
+      const texH = texture ? texture.height : 0;
+      if (!texture && m.colors.length !== vertexCount2) {
+        const all = new Path2D();
+        for (let t = 0; t + 2 < m.indices.length; t += 3) {
+          const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+          if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+          if (i0 >= vertexCount2 || i1 >= vertexCount2 || i2 >= vertexCount2) continue;
+          all.moveTo(m.verts[i0 * 2], m.verts[i0 * 2 + 1]);
+          all.lineTo(m.verts[i1 * 2], m.verts[i1 * 2 + 1]);
+          all.lineTo(m.verts[i2 * 2], m.verts[i2 * 2 + 1]);
+          all.closePath();
+        }
+        this.applyFillStyle();
+        this.ctx.fill(all);
+        this.ctx.restore();
+        return;
+      }
+      for (let t = 0; t + 2 < m.indices.length; t += 3) {
+        const i0 = m.indices[t], i1 = m.indices[t + 1], i2 = m.indices[t + 2];
+        if (i0 < 0 || i1 < 0 || i2 < 0) continue;
+        if (i0 >= vertexCount2 || i1 >= vertexCount2 || i2 >= vertexCount2) continue;
+        const x0 = m.verts[i0 * 2], y0 = m.verts[i0 * 2 + 1];
+        const x1 = m.verts[i1 * 2], y1 = m.verts[i1 * 2 + 1];
+        const x2 = m.verts[i2 * 2], y2 = m.verts[i2 * 2 + 1];
+        const tri = new Path2D();
+        tri.moveTo(x0, y0);
+        tri.lineTo(x1, y1);
+        tri.lineTo(x2, y2);
+        tri.closePath();
+        if (texture) {
+          const u0 = m.uv[i0 * 2] * texW, v0 = m.uv[i0 * 2 + 1] * texH;
+          const u1 = m.uv[i1 * 2] * texW, v1 = m.uv[i1 * 2 + 1] * texH;
+          const u2 = m.uv[i2 * 2] * texW, v2 = m.uv[i2 * 2 + 1] * texH;
+          const det = (u1 - u0) * (v2 - v0) - (u2 - u0) * (v1 - v0);
+          if (Math.abs(det) < 1e-9) continue;
+          const a = ((x1 - x0) * (v2 - v0) - (x2 - x0) * (v1 - v0)) / det;
+          const b = ((y1 - y0) * (v2 - v0) - (y2 - y0) * (v1 - v0)) / det;
+          const c = ((x2 - x0) * (u1 - u0) - (x1 - x0) * (u2 - u0)) / det;
+          const d = ((y2 - y0) * (u1 - u0) - (y1 - y0) * (u2 - u0)) / det;
+          const e = x0 - a * u0 - c * v0;
+          const f = y0 - b * u0 - d * v0;
+          this.ctx.save();
+          this.ctx.clip(tri);
+          this.ctx.transform(a, b, c, d, e, f);
+          this.ctx.drawImage(texture, 0, 0);
+          this.ctx.restore();
+          continue;
+        }
+        if (m.colors.length === vertexCount2) {
+          const c0 = m.colors[i0], c1 = m.colors[i1], c2 = m.colors[i2];
+          const av = (sh) => Math.round(((c0 >>> sh & 255) + (c1 >>> sh & 255) + (c2 >>> sh & 255)) / 3);
+          const alpha = av(24) / 255;
+          this.ctx.fillStyle = "rgba(" + av(16) + "," + av(8) + "," + av(0) + "," + alpha + ")";
+          this.ctx.fill(tri);
+        } else {
+          this.applyFillStyle();
+          this.ctx.fill(tri);
+        }
+      }
+      this.ctx.restore();
+    }
+    matrixFromMesh(meshId, u, v, flags) {
+      const m = this.meshCache.get(meshId);
+      if (!m) return;
+      const frame = new Float32Array(6);
+      if (!sampleFrame(m.layout, m.uCount, m.vCount, m.verts, u, v, frame)) return;
+      const out = new Float32Array(6);
+      buildMatrix(frame, flags, out);
+      this.ctx.transform(out[0], out[1], out[2], out[3], out[4], out[5]);
     }
     drawPath(id, start, end) {
       const data = this.pathDataCache.get(id);
@@ -25278,14 +26667,15 @@ void main() {
         const charCenter = progress + charWidth / 2;
         if (charCenter >= 0 && charCenter <= totalLen) {
           this.ctx.save();
-          this.positionOnPath(segments2, charCenter, vOffset);
+          const at = this.positionOnPath(segments2, charCenter, vOffset);
+          const g = at ? this.fillStyleUnderGlyph(at.x, at.y, at.angle) : null;
           this.fillOrStroke(
             () => {
-              this.applyFillStyle();
+              this.applyFillStyle(g);
               this.ctx.fillText(ch, -charWidth / 2, 0);
             },
             () => {
-              this.applyStrokeStyle();
+              this.applyStrokeStyle(g);
               this.ctx.strokeText(ch, -charWidth / 2, 0);
             }
           );
@@ -25445,7 +26835,7 @@ void main() {
       }
     }
     drawBitmap(imageId, srcLeft, srcTop, srcRight, srcBottom, dstLeft, dstTop, dstRight, dstBottom, _cdId) {
-      const img = this.bitmapCache.get(imageId);
+      const img = this.bitmapToDraw(imageId);
       if (!img) return;
       this.ctx.globalAlpha = this.alpha;
       this.ctx.globalCompositeOperation = this.blendMode;
@@ -25461,7 +26851,7 @@ void main() {
       }
     }
     drawBitmapSimple(id, left, top, right, bottom) {
-      const img = this.bitmapCache.get(id);
+      const img = this.bitmapToDraw(id);
       if (!img) return;
       this.ctx.globalAlpha = this.alpha;
       this.ctx.globalCompositeOperation = this.blendMode;
@@ -25701,10 +27091,11 @@ void main() {
           const ny = Math.cos(angle) * vOffset;
           this.ctx.translate(px + nx, py + ny);
           this.ctx.rotate(angle);
-          return;
+          return { x: px + nx, y: py + ny, angle };
         }
         accum += s.len;
       }
+      return null;
     }
     // --- Clipping ---
     clipRect(left, top, right, bottom) {
@@ -25804,9 +27195,10 @@ void main() {
       }
       let offCtx = this.bitmapCanvasCache.get(bitmapId);
       if (!offCtx) {
+        const declared = this.emptyBitmapSizes.get(bitmapId);
         const img = this.bitmapCache.get(bitmapId);
-        const w = img ? img.width || 256 : 256;
-        const h = img ? img.height || 256 : 256;
+        const w = declared?.width || (img ? img.width : 0) || 256;
+        const h = declared?.height || (img ? img.height : 0) || 256;
         offCtx = this.createLayerCanvas(w, h);
         this.bitmapCanvasCache.set(bitmapId, offCtx);
       }
@@ -26467,6 +27859,527 @@ void main() {
     }
   };
 
+  // players/typescript/src/web/CustomHosts.ts
+  function parseEmbedConfig(config, defaultFit = "fit") {
+    const out = {
+      kind: "",
+      path: config,
+      fit: defaultFit,
+      crop: [0, 0, 1, 1],
+      mirror: false,
+      gate: 0,
+      persist: false,
+      hasStep: false,
+      step: 0,
+      stepId: -1,
+      timeId: -1,
+      prevStepId: -1,
+      prevTimeId: -1,
+      hasWindow: false,
+      from: 0,
+      to: -1,
+      speed: 1,
+      start: 0,
+      still: -1,
+      loop: true,
+      until: -1,
+      zooms: []
+    };
+    const colon = config.indexOf(":");
+    if (colon > 0 && /^[a-z]+$/.test(config.slice(0, colon))) {
+      out.kind = config.slice(0, colon);
+      out.path = config.slice(colon + 1);
+    }
+    if (out.kind === "camera") {
+      out.fit = "fill";
+      if (!out.path || out.path.startsWith("#")) out.path = "default" + out.path;
+    }
+    const hash = out.path.indexOf("#");
+    if (hash >= 0) {
+      const opts = out.path.slice(hash + 1);
+      out.path = out.path.slice(0, hash);
+      for (const tok of opts.split("&")) {
+        const eq = tok.indexOf("=");
+        if (eq < 0) {
+          if (tok === "persist") out.persist = true;
+          else if (tok === "once") out.loop = false;
+          else if (tok === "mirror") out.mirror = true;
+          else if (tok) out.fit = tok;
+          continue;
+        }
+        const k = tok.slice(0, eq), v = tok.slice(eq + 1);
+        if (k === "fit") out.fit = v;
+        else if (k === "mirror") out.mirror = !(v === "0" || v === "false" || v === "off");
+        else if (k === "persist") out.persist = !(v === "0" || v === "false" || v === "off");
+        else if (k === "step") {
+          out.hasStep = true;
+          out.step = parseFloat(v) || 0;
+          out.persist = true;
+        } else if (k === "stepid") out.stepId = parseInt(v, 10);
+        else if (k === "timeid") out.timeId = parseInt(v, 10);
+        else if (k === "prevstepid") out.prevStepId = parseInt(v, 10);
+        else if (k === "prevtimeid") out.prevTimeId = parseInt(v, 10);
+        else if (k === "from") {
+          out.hasWindow = true;
+          out.from = parseFloat(v) || 0;
+          out.persist = true;
+        } else if (k === "to") {
+          out.hasWindow = true;
+          out.to = parseFloat(v);
+          out.persist = true;
+        } else if (k === "speed") out.speed = parseFloat(v) || 1;
+        else if (k === "start") out.start = Math.max(0, parseFloat(v) || 0);
+        else if (k === "until") out.until = parseFloat(v);
+        else if (k === "loop") out.loop = !["0", "false", "off", "no", "once"].includes(v);
+        else if (k === "zooms") out.zooms = parseZooms(v);
+        else if (k === "still") {
+          const t = parseFloat(v);
+          out.still = isNaN(t) ? -1 : Math.max(0, t);
+        } else if (k === "gate") out.gate = parseFloat(v) || 0;
+        else if (k === "crop") {
+          const t = v.split(",").map(parseFloat);
+          if (t.length === 4 && t.every((x) => !isNaN(x))) out.crop = [t[0], t[1], t[2], t[3]];
+        }
+      }
+    }
+    return out;
+  }
+  function fitInto(w, h, cropW, cropH, fit) {
+    let s;
+    if (fit === "fill") s = Math.max(w / cropW, h / cropH);
+    else if (fit === "native") s = 1;
+    else s = Math.min(w / cropW, h / cropH);
+    const dw = cropW * s, dh = cropH * s;
+    return { s, ox: (w - dw) * 0.5, oy: (h - dh) * 0.5 };
+  }
+  var ZOOM_DUR = 0.55;
+  function parseZooms(v) {
+    const keys = [];
+    for (const k of v.split(";")) {
+      const at = k.indexOf("@");
+      if (at < 0) continue;
+      const [x, y, z] = k.slice(at + 1).split(",").map(parseFloat);
+      keys.push({
+        t: parseFloat(k.slice(0, at)) || 0,
+        x: isNaN(x) ? 0.5 : x,
+        y: isNaN(y) ? 0.5 : y,
+        z: Math.max(1, isNaN(z) ? 1 : z)
+      });
+    }
+    return keys.sort((a, b) => a.t - b.t);
+  }
+  function zoomCrop(keys, t, base) {
+    if (!keys.length) return base;
+    const ease = (u) => 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 4);
+    const mix = (a, b, e) => ({
+      x: a.x + (b.x - a.x) * e,
+      y: a.y + (b.y - a.y) * e,
+      lz: a.lz + (b.lz - a.lz) * e
+    });
+    let from = { x: 0.5, y: 0.5, lz: 0 }, to = from, t0 = -1e9;
+    for (const k of keys) {
+      if (k.t > t) break;
+      from = mix(from, to, ease((k.t - t0) / ZOOM_DUR));
+      to = { x: k.x, y: k.y, lz: Math.log(k.z) };
+      t0 = k.t;
+    }
+    const v = mix(from, to, ease((t - t0) / ZOOM_DUR));
+    const half = 0.5 / Math.exp(v.lz);
+    const cx = Math.min(1 - half, Math.max(half, v.x)), cy = Math.min(1 - half, Math.max(half, v.y));
+    const bw = base[2] - base[0], bh = base[3] - base[1];
+    return [base[0] + (cx - half) * bw, base[1] + (cy - half) * bh, base[0] + (cx + half) * bw, base[1] + (cy + half) * bh];
+  }
+  var WebCustomHost = class {
+    constructor(resolver) {
+      this.docs = /* @__PURE__ */ new Map();
+      this.videos = /* @__PURE__ */ new Map();
+      this.camera = null;
+      this.take = null;
+      this.defaultFit = "fit";
+      // Something asked to be painted before it was ready; the page is told so it paints again.
+      this.pending = 0;
+      this.resolver = resolver ?? (async (path) => {
+        try {
+          const response = await fetch(path);
+          return response.ok ? await response.arrayBuffer() : null;
+        } catch {
+          return null;
+        }
+      });
+    }
+    setResolver(resolver) {
+      this.resolver = resolver;
+    }
+    setDefaultFit(fit) {
+      this.defaultFit = fit;
+    }
+    // The camera take for the slide being shown, or null for none. A camera box then draws
+    // the recording instead of asking the viewer for their own camera. `framed` says the
+    // file has already been cut to the part of the frame the box shows and scaled to the
+    // size it shows it at — which is how the web export ships one — so the crop in the
+    // slide's config has been applied and must not be applied twice.
+    setCameraTake(src, framed = false) {
+      if (this.take && this.take.src === src) {
+        this.take.framed = framed;
+        return;
+      }
+      if (this.take) {
+        this.take.element.pause();
+        this.take.element.remove();
+        this.take = null;
+      }
+      if (!src || typeof document === "undefined") return;
+      const element = document.createElement("video");
+      element.src = src;
+      element.muted = true;
+      element.playsInline = true;
+      element.preload = "auto";
+      element.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+      document.body.appendChild(element);
+      const take = { element, src, ready: false, framed };
+      element.addEventListener("loadeddata", () => {
+        take.ready = true;
+      });
+      this.take = take;
+    }
+    // Where the narration has got to, and whether it is running: the take follows it rather
+    // than its own clock, so the speaker's face and their voice stay together. Seeking every
+    // frame would stall the decoder, so it plays and is nudged back only when it drifts.
+    setCameraTakeTime(seconds, playing) {
+      const take = this.take;
+      if (!take || !take.ready) return;
+      const element = take.element;
+      if (playing && element.paused) element.play().catch(() => {
+      });
+      if (!playing && !element.paused) element.pause();
+      if (Math.abs(element.currentTime - seconds) > 0.25) {
+        try {
+          element.currentTime = seconds;
+        } catch {
+        }
+      }
+    }
+    // A new host document: embeds that do not persist go with the old one. The persistent
+    // ones — a film running across slides — carry on, clock and all.
+    retire() {
+      for (const [key, nested] of this.docs) {
+        if (!nested.persist) {
+          if (nested.paint) nested.paint.dispose();
+          this.docs.delete(key);
+        }
+      }
+      for (const [key, video] of this.videos) {
+        video.element.pause();
+        video.element.removeAttribute("src");
+        this.videos.delete(key);
+      }
+    }
+    reset() {
+      for (const nested of this.docs.values()) if (nested.paint) nested.paint.dispose();
+      this.docs.clear();
+      this.retire();
+    }
+    drawCustom(_componentId, config, pc, w, h, timeSec) {
+      if (w <= 0 || h <= 0) return false;
+      const cfg = parseEmbedConfig(config, this.defaultFit);
+      if (!cfg.path) return false;
+      if (cfg.kind === "video") return this.drawVideo(cfg, pc, w, h);
+      if (cfg.kind === "camera") return this.drawCamera(cfg, pc, w, h);
+      if (cfg.kind === "web") return this.drawWebFrame(cfg, pc, w, h);
+      if (cfg.kind && cfg.kind !== "rc") return false;
+      return this.drawRc(cfg, config, pc, w, h, timeSec);
+    }
+    // ── Embedded documents ────────────────────────────────────────────
+    drawRc(cfg, config, pc, w, h, timeSec) {
+      if (cfg.gate > 0 && timeSec < cfg.gate) return true;
+      const host = pc;
+      if (typeof host.getCanvas !== "function") return false;
+      const canvas = host.getCanvas();
+      const key = cfg.persist ? "persist:" + cfg.path : config;
+      let nested = this.docs.get(key);
+      if (!nested) {
+        nested = {
+          persist: cfg.persist,
+          ok: false,
+          failed: false,
+          doc: null,
+          ctx: null,
+          paint: null,
+          hostBase: 0,
+          hostLast: 0,
+          curStep: -1,
+          prevStep: -1,
+          prevTime: 0
+        };
+        this.docs.set(key, nested);
+        this.load(nested, cfg.path, canvas);
+      }
+      if (!nested.ok) {
+        if (!nested.failed) pc.needsRepaint();
+        return true;
+      }
+      const doc = nested.doc, ctx = nested.ctx, paint = nested.paint;
+      let docW = doc.getWidth(), docH = doc.getHeight();
+      if (docW <= 0) docW = w;
+      if (docH <= 0) docH = h;
+      const zc = zoomCrop(cfg.zooms, timeSec, cfg.crop);
+      if (cfg.zooms.length) pc.needsRepaint();
+      const cropX = zc[0] * docW, cropY = zc[1] * docH;
+      let cropW = (zc[2] - zc[0]) * docW, cropH = (zc[3] - zc[1]) * docH;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = docW;
+        cropH = docH;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      let docTime = timeSec;
+      if (cfg.hasStep && cfg.step !== nested.curStep) {
+        if (nested.curStep >= 0) {
+          nested.prevStep = nested.curStep;
+          nested.prevTime = nested.hostLast;
+        }
+        nested.curStep = cfg.step;
+      }
+      if (nested.persist) {
+        if (timeSec + 1e-6 < nested.hostLast) nested.hostBase += nested.hostLast;
+        nested.hostLast = timeSec;
+        docTime = nested.hostBase + timeSec;
+      }
+      paint.setCanvas(canvas);
+      ctx.mWidth = docW;
+      ctx.mHeight = docH;
+      ctx.currentTime = Date.now();
+      if (cfg.hasWindow) {
+        let t = timeSec * cfg.speed;
+        if (cfg.to > cfg.from) t = Math.min(t, cfg.to - cfg.from);
+        docTime = cfg.from + Math.max(t, 0);
+      }
+      ctx.overrideFloat(RemoteContext.ID_ANIMATION_TIME, docTime);
+      ctx.setAnimationTime(docTime);
+      if (cfg.hasStep && cfg.stepId >= 0) ctx.overrideFloat(cfg.stepId, cfg.step);
+      if (cfg.timeId >= 0) ctx.overrideFloat(cfg.timeId, timeSec);
+      if (cfg.prevStepId >= 0) ctx.overrideFloat(cfg.prevStepId, nested.prevStep);
+      if (cfg.prevTimeId >= 0) ctx.overrideFloat(cfg.prevTimeId, nested.prevTime);
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.translate(ox, oy);
+      canvas.scale(s, s);
+      canvas.translate(-cropX, -cropY);
+      canvas.beginPath();
+      canvas.rect(0, 0, docW, docH);
+      canvas.clip();
+      paint.reset();
+      paint.clearNeedsRepaint();
+      try {
+        doc.paint(ctx, Theme.DARK);
+      } finally {
+        canvas.restore();
+      }
+      if (doc.needsRepaint() >= 0 || paint.doesNeedsRepaint()) pc.needsRepaint();
+      return true;
+    }
+    async load(nested, path, canvas) {
+      this.pending++;
+      try {
+        const data = await this.resolver(path);
+        if (!data || data.byteLength === 0) {
+          nested.failed = true;
+          return;
+        }
+        const doc = new CoreDocument();
+        doc.initFromBuffer(RemoteComposeBuffer.fromArrayBuffer(data));
+        const paint = new CanvasPaintContext(null, canvas);
+        const ctx = new WebRemoteContext(paint);
+        doc.initializeContext(ctx);
+        ctx.setPaintContext(paint);
+        paint.setContext(ctx);
+        ctx.mWidth = doc.getWidth();
+        ctx.mHeight = doc.getHeight();
+        ctx.setDensity(1);
+        ctx.setCustomHost(this);
+        doc.applyDataOperations(ctx);
+        await new Promise((resolve2) => setTimeout(resolve2, 50));
+        nested.doc = doc;
+        nested.ctx = ctx;
+        nested.paint = paint;
+        nested.ok = true;
+      } catch (e) {
+        console.error("embed: cannot load " + path, e);
+        nested.failed = true;
+      } finally {
+        this.pending--;
+      }
+    }
+    // ── Videos ────────────────────────────────────────────────────────
+    drawVideo(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function" || typeof document === "undefined") return false;
+      const canvas = host.getCanvas();
+      const still = cfg.still >= 0;
+      const stretch = cfg.until > cfg.start;
+      const key = still ? cfg.path + "@" + cfg.still : cfg.path + "#" + cfg.start + (stretch ? "-" + cfg.until : "");
+      let video = this.videos.get(key);
+      if (!video) {
+        const element = document.createElement("video");
+        element.src = cfg.path;
+        element.muted = true;
+        element.loop = !still && !stretch && cfg.loop && cfg.start <= 0;
+        element.playsInline = true;
+        element.preload = "auto";
+        const v = { element, ready: false };
+        video = v;
+        const at = still ? cfg.still : cfg.start;
+        if (at > 0) {
+          element.addEventListener("loadedmetadata", () => {
+            element.currentTime = at;
+          }, { once: true });
+          element.addEventListener("seeked", () => {
+            v.ready = true;
+          }, { once: true });
+        } else {
+          element.addEventListener("loadeddata", () => {
+            v.ready = true;
+          });
+        }
+        if (!still) {
+          if (cfg.loop && !stretch && cfg.start > 0) element.addEventListener("ended", () => {
+            element.currentTime = cfg.start;
+            element.play().catch(() => {
+            });
+          });
+          element.play().catch(() => {
+          });
+        }
+        this.videos.set(key, video);
+      }
+      const vw = video.element.videoWidth, vh = video.element.videoHeight;
+      if (!still || !video.ready) pc.needsRepaint();
+      if (!video.ready || vw <= 0 || vh <= 0) return true;
+      const held = stretch && video.element.currentTime >= cfg.until;
+      if (held && !video.element.paused) {
+        video.element.pause();
+        video.element.currentTime = cfg.until;
+      }
+      if (!still && !held && video.element.paused && !video.element.ended) video.element.play().catch(() => {
+      });
+      const zc = zoomCrop(cfg.zooms, still ? cfg.still : video.element.currentTime, cfg.crop);
+      if (cfg.zooms.length && !still) pc.needsRepaint();
+      const cropX = zc[0] * vw, cropY = zc[1] * vh;
+      let cropW = (zc[2] - zc[0]) * vw, cropH = (zc[3] - zc[1]) * vh;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = vw;
+        cropH = vh;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.drawImage(video.element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+      canvas.restore();
+      return true;
+    }
+    // ── The camera ────────────────────────────────────────────────────
+    // The viewer's own camera in the box, the way the desktop player puts the speaker's
+    // there. The stream is asked for once, on the first camera embed, and kept for the
+    // page; the browser's own prompt does the asking. Until it arrives — or when it is
+    // refused — the box is a dark plate, as on the desktop.
+    drawCamera(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function" || typeof document === "undefined") return false;
+      const canvas = host.getCanvas();
+      if (this.take) {
+        const framed = this.take.framed ? { ...cfg, crop: [0, 0, 1, 1] } : cfg;
+        this.drawVideoInto(canvas, this.take.element, framed, w, h, this.take.ready);
+        pc.needsRepaint();
+        return true;
+      }
+      if (!this.camera) {
+        const element = document.createElement("video");
+        element.muted = true;
+        element.playsInline = true;
+        element.autoplay = true;
+        element.style.cssText = "position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none";
+        document.body.appendChild(element);
+        const feed2 = { element, ready: false, failed: false, stream: null };
+        this.camera = feed2;
+        const media = typeof navigator !== "undefined" ? navigator.mediaDevices : void 0;
+        if (!media || !media.getUserMedia) {
+          feed2.failed = true;
+        } else {
+          media.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }).then((stream) => {
+            feed2.stream = stream;
+            element.srcObject = stream;
+            element.addEventListener("loadeddata", () => {
+              feed2.ready = true;
+            });
+            element.play().catch(() => {
+            });
+          }).catch((e) => {
+            console.warn("camera: not available", e);
+            feed2.failed = true;
+          });
+        }
+      }
+      const feed = this.camera;
+      this.drawVideoInto(canvas, feed.element, cfg, w, h, feed.ready);
+      if (!feed.failed) pc.needsRepaint();
+      return true;
+    }
+    // One video element into a camera box: cropped, fitted, mirrored when asked, and a dark
+    // plate until there are frames — the same thing the desktop player draws.
+    drawVideoInto(canvas, element, cfg, w, h, ready) {
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      const vw = element.videoWidth, vh = element.videoHeight;
+      if (!ready || vw <= 0 || vh <= 0) {
+        canvas.fillStyle = "#101318";
+        canvas.fillRect(0, 0, w, h);
+        canvas.restore();
+        return;
+      }
+      const cropX = cfg.crop[0] * vw, cropY = cfg.crop[1] * vh;
+      let cropW = (cfg.crop[2] - cfg.crop[0]) * vw, cropH = (cfg.crop[3] - cfg.crop[1]) * vh;
+      if (cropW <= 0 || cropH <= 0) {
+        cropW = vw;
+        cropH = vh;
+      }
+      const { s, ox, oy } = fitInto(w, h, cropW, cropH, cfg.fit);
+      if (cfg.mirror) {
+        canvas.translate(w, 0);
+        canvas.scale(-1, 1);
+      }
+      canvas.drawImage(element, cropX, cropY, cropW, cropH, ox, oy, cropW * s, cropH * s);
+      canvas.restore();
+    }
+    // ── Web pages ─────────────────────────────────────────────────────
+    drawWebFrame(cfg, pc, w, h) {
+      const host = pc;
+      if (typeof host.getCanvas !== "function") return false;
+      const canvas = host.getCanvas();
+      canvas.save();
+      canvas.beginPath();
+      canvas.rect(0, 0, w, h);
+      canvas.clip();
+      canvas.fillStyle = "#171a20";
+      canvas.fillRect(0, 0, w, h);
+      canvas.strokeStyle = "#2a2f38";
+      canvas.lineWidth = 2;
+      canvas.strokeRect(1, 1, w - 2, h - 2);
+      canvas.fillStyle = "#868d9c";
+      const size = Math.max(12, Math.min(w * 0.03, h * 0.08));
+      canvas.font = `${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif`;
+      canvas.textAlign = "center";
+      canvas.textBaseline = "middle";
+      canvas.fillText(cfg.path, w * 0.5, h * 0.5, w * 0.9);
+      canvas.restore();
+      return true;
+    }
+  };
+
   // players/typescript/src/web/RcPlayerElement.ts
   function base64ToArrayBuffer(base64) {
     const binary = atob(base64);
@@ -26525,7 +28438,7 @@ void main() {
         player.resize(width, height);
       },
       destroy() {
-        player.stop();
+        player.destroy();
         canvas.remove();
       },
       player,
@@ -26599,6 +28512,28 @@ void main() {
   };
   RcPlayerElement.observedAttributes = ["src", "data", "width", "height", "theme", "background"];
 
+  // players/typescript/src/core/ClockPin.ts
+  var PIN_EPOCH = new Date(2026, 0, 1, 0, 0, 0, 0).getTime();
+  function pinClock(player, seconds) {
+    const doc = player && player.document;
+    const tv = doc && doc.mTimeVariables;
+    const millis = PIN_EPOCH + Math.round(seconds * 1e3);
+    let pinned = false;
+    const clocks = [
+      tv && tv.getClock && tv.getClock(),
+      doc && doc.getClock && doc.getClock(),
+      player && player.remoteContext && player.remoteContext.getClock && player.remoteContext.getClock()
+    ];
+    for (const c of clocks) {
+      if (!c) continue;
+      c.millis = () => millis;
+      c.snapshot = () => createSnapshot(millis);
+      pinned = true;
+    }
+    if (tv) tv.getElapsedSeconds = () => seconds;
+    return pinned;
+  }
+
   // players/typescript/src/web/main.ts
   var TOUCH_SLOP = 8;
   var RcdPlayer = class {
@@ -26640,6 +28575,12 @@ void main() {
       this.mContentOffsetX = 0;
       this.mContentOffsetY = 0;
       this.isPaused = false;
+      // Draws the custom components — embedded documents, videos — for every document this
+      // player shows. It outlives the documents, so an embed marked `persist` carries across
+      // them; a new document retires the rest.
+      this.customHost = new WebCustomHost();
+      // Bitmaps the page supplies as video (see setBitmapVideos), for the next document.
+      this.bitmapVideos = null;
       this.onPointerDown = (e) => {
         if (!this.document || !this.remoteContext) return;
         this.pointerIsDown = true;
@@ -26857,11 +28798,15 @@ void main() {
       const docHeight = this.canvas.height;
       doc.setWidth(docWidth);
       doc.setHeight(docHeight);
+      if (this.paintContext) this.paintContext.dispose();
       this.paintContext = new CanvasPaintContext(null, this.ctx);
+      this.paintContext.setBitmapVideos(this.bitmapVideos);
       this.remoteContext = new WebRemoteContext(this.paintContext);
       doc.initializeContext(this.remoteContext);
       this.remoteContext.setPaintContext(this.paintContext);
       this.paintContext.setContext(this.remoteContext);
+      this.customHost.retire();
+      this.remoteContext.setCustomHost(this.customHost);
       this.remoteContext.mWidth = docWidth;
       this.remoteContext.mHeight = docHeight;
       this.remoteContext.setDensity(density);
@@ -26930,6 +28875,34 @@ void main() {
         this.document.invalidateMeasure();
       }
       this.repaint();
+    }
+    /**
+     * How embedded documents and videos are fetched: by path, relative to the page, unless
+     * a page supplies its own — a deck opened off the disk cannot fetch, so its embeds
+     * travel inside the page and this hands them over.
+     */
+    setEmbedResolver(resolver) {
+      this.customHost.setResolver(resolver);
+    }
+    /**
+     * Bitmaps of the *next* document to load that should be drawn from a video instead of
+     * their own bytes: image id → URL. An exporter transcodes an animated GIF once and hands
+     * the page the result; the browser's video pipeline then does the decoding.
+     */
+    setBitmapVideos(videos) {
+      this.bitmapVideos = videos;
+    }
+    // The camera take for the slide being shown (a recording of the speaker), and where its
+    // narration has got to. With a take set, a camera box draws it instead of asking the
+    // viewer for their own camera.
+    setCameraTake(src, framed = false) {
+      this.customHost.setCameraTake(src, framed);
+    }
+    setCameraTakeTime(seconds, playing) {
+      this.customHost.setCameraTakeTime(seconds, playing);
+    }
+    getCustomHost() {
+      return this.customHost;
     }
     getDocument() {
       return this.document;
