@@ -448,3 +448,12 @@ export function designNotes(json) {
     return ["design warnings (fix these; audit gives details):",
         ...findings.map((f) => `- [${f.code}] ${f.title}. ${f.message}`)].join("\n");
 }
+
+// The design problems a document must not ship with: its structure is wrong, not just its style
+// (literal colours and fixed dates in a demo are advice; these break on another screen or device).
+export const BLOCKING = new Set(["absolute_layout", "fixed_coordinates", "text_anchor", "glyph_icon", "expression_too_long"]);
+
+/** The blocking design warnings of a JSON document (findings at warning level in BLOCKING). */
+export function blockingFindings(json) {
+    try { return designAudit(json).filter((f) => f.severity === "warning" && BLOCKING.has(f.code)); } catch { return []; }
+}

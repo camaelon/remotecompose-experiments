@@ -298,7 +298,8 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     const GENERIC = new Set(["current", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
         "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
         "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
-        "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live"]);
+        "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
+        "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables"]);
     const generic = (w) => GENERIC.has(w) || /ly$/.test(w);
     const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {
@@ -332,8 +333,11 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     kit.sort((a, b) => (b.about ? 1 : 0) - (a.about ? 1 : 0) || (a.about && b.about ? b.value - a.value : 0) || a.e.level - b.e.level);
     // How to structure the screen: the best-matching example that is laid out with components
     // (not a canvas-only demo), else the reference app layout.
-    const model = byText.find((x) => !canvasOnly(x.e) && (x.e.level ?? 1) >= 3)?.e
-        ?? LAYOUT_MODELS.map((id) => C.examples.find((e) => e.id === id)).find(Boolean);
+    // The layout model: among the reference screens, the one closest to the goal, else the first.
+    const models = LAYOUT_MODELS.map((id) => C.examples.find((e) => e.id === id)).filter(Boolean);
+    // Earlier references are the stronger models: a near tie goes to them.
+    const model = models.map((e, i) => ({ e, ...textScore(e), rank: (models.length - i) * 0.75 })).filter((x) => x.score >= 3)
+        .sort((a, b) => (b.score + b.rank) - (a.score + a.rank))[0]?.e ?? models[0];
     // Words an example is about, and proper nouns (capitalised mid-goal: "San Francisco"), are not
     // things the library lacks.
     const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
@@ -391,7 +395,7 @@ function suggestIcons(goal, r) {
 
 // Reference screens laid out with components, with a drawing in a canvas and values computed
 // from the clock: the default layout_model when no better-matching one exists.
-const LAYOUT_MODELS = ["TIM-12", "TIM-11", "CMP-05", "CMP-08"];
+const LAYOUT_MODELS = ["TIM-12", "TIM-11", "TIM-10", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
 
 // Examples that teach drawing a shape from a value, for a component the library lacks.
 const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];

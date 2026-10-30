@@ -10,7 +10,7 @@ import path from "node:path";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import {
     EXAMPLES_DIR, buildKit, componentSummary, exampleDoc, findComponents, findExamples,
-    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons } from "./lib/catalog.mjs";
+    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly } from "./lib/catalog.mjs";
 import { lintComponent, loadLibrary } from "./lib/components.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { definition as renderServer } from "./rc-render-server.mjs";
@@ -126,7 +126,10 @@ export const definition = {
             },
             handler: async ({ id, parts = ["meta", "json"] }) => {
                 const e = exampleById(id);
-                const out = { id: e.id, folder: e.folder };
+                // A canvas-only demo says so whatever parts are asked for: models fetch an
+                // example's JSON alone and copy its structure.
+                const out = { id: e.id, folder: e.folder,
+                    ...(canvasOnly(e) ? { structure: "canvas", structure_note: "A canvas-only feature demo: take the technique (the drawing, the expressions), NOT the structure. Lay a screen out with column/row/text and components (see build_kit's layout_model, e.g. TIM-12) and keep a canvas only for the drawing itself." } : {}) };
                 if (parts.includes("meta")) Object.assign(out, summarizeExample(e), { prompt: e.prompt, check: e.check, related: e.related, derived: e.derived });
                 if (parts.includes("snippets") && !parts.includes("meta")) out.snippets = summarizeExample(e).snippets;
                 if (parts.includes("json")) out.json = exampleDoc(e);

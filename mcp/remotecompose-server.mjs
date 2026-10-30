@@ -22,7 +22,7 @@ import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
-import { designNotes } from "./lib/design-audit.mjs";
+import { designNotes, blockingFindings } from "./lib/design-audit.mjs";
 
 const resolveIn = (p) => resolvePath(p, "json_path");
 
@@ -34,10 +34,12 @@ function jsonOf(args) {
     } catch { return null; }
 }
 /** A tool's content with the document's design warnings appended (see designNotes). */
-function withDesign(content, args) {
+function withDesign(content, args, { first = false } = {}) {
     const json = jsonOf(args);
     const notes = json ? designNotes(json) : "";
-    return notes ? [...content, { type: "text", text: notes }] : content;
+    if (!notes) return content;
+    const block = { type: "text", text: "NOT DONE YET: this document has design problems to fix before it is shown or published.\n" + notes };
+    return first ? [block, ...content] : [...content, block];
 }
 
 const tool = (def, name) => {
@@ -232,7 +234,7 @@ const tools = [
                 if (!json) throw new Error("render: componentTheme needs a JSON document (json or json_path)");
                 const { json_path: _, ...rest } = args;
                 return t.handler({ ...rest, json: { ...(typeof json === "string" ? JSON.parse(json) : json), componentTheme } });
-            })(), args),
+            })(), args, { first: true }),
         };
     })(),
     tool(inspect, "audit"),
@@ -262,8 +264,27 @@ const tools = [
     (() => {
         const t = tool(deploy, "package_web");
         return { ...t, name: "publish",
-            description: t.description + " Its result ends with the document's design warnings, if any: fix them before sharing.",
-            handler: async (args = {}) => withDesign(await t.handler(args), args) };
+            description: t.description + " A JSON document with structural design problems (the whole UI drawn on one canvas, " +
+                "fixed coordinates that don't relayout, text cut by its anchor, glyph icons, expressions Android rejects) is " +
+                "NOT published: fix them first (the result says how). Only if the user explicitly wants it as it is, pass " +
+                "accept_design_warnings: true with a reason.",
+            // Always the playground (controls): the bare-player page (controls: false) hides the
+            // document's JSON, the variables and the theme, so it is not offered for now.
+            inputSchema: { ...t.inputSchema, properties: { ...Object.fromEntries(Object.entries(t.inputSchema.properties).filter(([k]) => k !== "controls")),
+                accept_design_warnings: { type: "boolean", description: "Publish despite blocking design warnings (only when the user asked for it as it is)." },
+                reason: { type: "string", description: "With accept_design_warnings: why (logged)." } } },
+            handler: async ({ accept_design_warnings, reason, controls: _ignored, ...args } = {}) => {
+                args = { ...args, controls: true };
+                const json = jsonOf(args);
+                const blocking = json ? blockingFindings(json) : [];
+                if (blocking.length && !(accept_design_warnings && reason)) {
+                    throw new Error("Not published: the document has design problems that make it break on other screens or devices. " +
+                        "Fix them, render again to check, then publish.\n" +
+                        blocking.map((f) => `- [${f.code}] ${f.title}. ${f.message}`).join("\n") +
+                        "\n(build_kit's layout_model shows the structure to use; reference topic \"format\" has the rules.)");
+                }
+                return withDesign(await t.handler(args), args, { first: true });
+            } };
     })(),
     dispatcher({
         name: "pages", title: "Published pages", selector: "action", fallback: "list",
