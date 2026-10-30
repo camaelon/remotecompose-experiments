@@ -2909,6 +2909,11 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     // Translate to component position
     pc->matrixTranslate(m.x, m.y);
     ctx.pushTranslate(m.x, m.y);
+    // Where this component sits in the document; the canvas touch bounds and POS_ROOT_X/Y
+    // use it. mTranslateX/Y then follows the padding and scroll below, so a child's origin
+    // includes them (Java getLocationInWindow).
+    const float rootX = ctx.mTranslateX, rootY = ctx.mTranslateY;
+    int contentPushed = 0;
 
 
     // A scroll container clips at its full bounds unless a clip modifier says otherwise.
@@ -2986,6 +2991,10 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             }
         }
         pc->matrixTranslate(ls.paddingLeft - tx, ls.paddingTop - ty);
+        ctx.pushTranslate(ls.paddingLeft, ls.paddingTop);
+        contentPushed++;
+        // A canvas's content sits at the padding; its POS_ROOT_X/Y reads this.
+        for (int id : ls.canvasContentIds) ctx.setComponentRoot(id, ctx.mTranslateX, ctx.mTranslateY);
     }
 
     // Apply scroll translation (direction: 0=vertical, 1=horizontal, matching Java)
@@ -2998,9 +3007,12 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
                 : static_cast<ModifierScroll*>(ls.scrollOp)->scrollOffset;
         if (ls.scrollDirection == 0) {
             pc->matrixTranslate(0, -scrollPos);  // vertical scroll
+            ctx.pushTranslate(0, -scrollPos);
         } else {
             pc->matrixTranslate(-scrollPos, 0);  // horizontal scroll
+            ctx.pushTranslate(-scrollPos, 0);
         }
+        contentPushed++;
     }
 
     // Paint children
@@ -3113,7 +3125,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         // StateLayout.paint: during a transition, first the previous state's children that
         // are not in the new one (by paint id: the animation id, else the component id), so
         // they can play their exit animation; then the current state.
-        ctx.pushCanvasBounds(m.w, m.h);
+        ctx.pushCanvasBounds(rootX, rootY, m.w, m.h);
         auto* sl = static_cast<StateLayout*>(op);
         Operation* cur = stateAt(ls, sl->measuredIndex);
         Operation* prev = stateAt(ls, sl->previousIndex);
@@ -3138,7 +3150,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         if (cur) paintLayoutComponent(cur, ctx, measure);
     } else {
         // Push canvas bounds for touch hit-testing (uses current translate position)
-        ctx.pushCanvasBounds(m.w, m.h);
+        ctx.pushCanvasBounds(rootX, rootY, m.w, m.h);
 
         // Execute canvas draw operations BEFORE children (matching TS order)
         if (!ls.canvasOps.empty()) {
@@ -3167,6 +3179,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
     if (blurLayer) pc->restoreLayer();   // LIFO: blur pushed after alpha
     if (animLayer) pc->restoreLayer();
     pc->matrixRestore();
+    for (int i = 0; i < contentPushed; i++) ctx.popTranslate();
     for (int i = 0; i < offsetsPushed; i++) ctx.popTranslate();
     ctx.popTranslate();
 }

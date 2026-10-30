@@ -639,8 +639,17 @@ void ComponentValueOp::apply(RemoteContext& context) {
                 case 1: context.loadFloat(valueId, dim->h); break;   // HEIGHT
                 case 2: context.loadFloat(valueId, dim->x); break;   // POS_X
                 case 3: context.loadFloat(valueId, dim->y); break;   // POS_Y
-                case 4: context.loadFloat(valueId, dim->x); break;   // POS_ROOT_X (simplified)
-                case 5: context.loadFloat(valueId, dim->y); break;   // POS_ROOT_Y (simplified)
+                // POS_ROOT_X/Y of a canvas's content: the document position the paint walk
+                // recorded, as Java's getLocationInWindow gives (a Slider subtracts it from
+                // touchX()). For a layout component Java loads the value before positions
+                // settle: layout-specs componentValues.all wants 0 for a row inside a padded
+                // column, which the parent-relative x gives.
+                case 4: case 5: {
+                    bool root = dim->hasRoot;
+                    float v = type == 4 ? (root ? dim->rootX : dim->x) : (root ? dim->rootY : dim->y);
+                    context.loadFloat(valueId, v);
+                    break;
+                }
                 case 6: context.loadFloat(valueId, dim->w); break;   // CONTENT_WIDTH
                 case 7: context.loadFloat(valueId, dim->h); break;   // CONTENT_HEIGHT
                 default: context.loadFloat(valueId, 0.0f); break;

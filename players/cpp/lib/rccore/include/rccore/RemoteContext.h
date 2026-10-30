@@ -345,7 +345,16 @@ public:
     // padX/padY: where the component's children are placed from, relative to (x, y) — its
     // padding (and offset). Children's (x, y) are relative to that, not to the component's
     // own corner. visible: false for GONE / INVISIBLE, which take no clicks.
-    struct ComponentDim { float w = 0, h = 0, x = 0, y = 0, padX = 0, padY = 0; bool visible = true; };
+    struct ComponentDim {
+        float w = 0, h = 0, x = 0, y = 0, padX = 0, padY = 0; bool visible = true;
+        // A canvas content's position in the document (getLocationInWindow), recorded by
+        // the paint pass: ancestors' positions, paddings and scrolls included.
+        float rootX = 0, rootY = 0; bool hasRoot = false;
+    };
+    void setComponentRoot(int componentId, float x, float y) {
+        auto& d = mComponentDims[componentId];
+        d.rootX = x; d.rootY = y; d.hasRoot = true;
+    }
     void setComponentDimension(int componentId, float w, float h, float x = 0, float y = 0) {
         auto& d = mComponentDims[componentId];
         d.w = w; d.h = h; d.x = x; d.y = y;
@@ -476,6 +485,9 @@ public:
     void pushCanvasBounds(float w, float h) {
         float x = mTranslateX;
         float y = mTranslateY;
+        mCanvasBoundsStack.push_back({x, y, w, h});
+    }
+    void pushCanvasBounds(float x, float y, float w, float h) {
         mCanvasBoundsStack.push_back({x, y, w, h});
     }
     void popCanvasBounds() {
