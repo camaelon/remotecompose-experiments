@@ -293,8 +293,14 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // Examples about the goal's subject: its words in an example's title, keywords or prompt
     // ("sunrise" -> the sun arc example), which capabilities alone don't reach.
     // Words too generic to name a subject ("current", "today", "screen").
-    const GENERIC = new Set(["current", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust"]);
-    const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !GENERIC.has(w));
+    // Also the adjectives and filler a model adds when it rewrites the user's request
+    // ("beautiful polished responsive ... themed"): none of them is a thing to build.
+    const GENERIC = new Set(["current", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
+        "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
+        "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
+        "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live"]);
+    const generic = (w) => GENERIC.has(w) || /ly$/.test(w);
+    const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {
         const t = ` ${normalizeWords(e.title ?? "").join(" ")} `, k = ` ${normalizeWords((e.keywords ?? []).join(" ")).join(" ")} `,
               p = ` ${normalizeWords(e.prompt ?? "").join(" ")} `;
@@ -313,8 +319,14 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
             || (goalWords.length <= 3 && goalWords.some((w) => ` ${normalizeWords(x.e.title ?? "").join(" ")} `.includes(` ${w} `)))))
         .sort((a, b) => b.score - a.score);
     for (const x of byText.slice(0, 2)) {
-        if (kit.some((k) => k.e.id === x.e.id) || kit.length >= max_examples + 1) continue;
+        const have = kit.find((k) => k.e.id === x.e.id);
+        if (have) { have.about = x.hits; have.value = x.score; continue; }   // a capability pick that is also the subject
         kit.unshift({ e: x.e, covers: [], value: x.score, about: x.hits });
+    }
+    // max_examples holds: the goal's own subject first, then the capability picks that fit.
+    if (kit.length > max_examples) {
+        const about = kit.filter((k) => k.about), rest = kit.filter((k) => !k.about);
+        kit.splice(0, kit.length, ...about.slice(0, max_examples), ...rest.slice(0, Math.max(0, max_examples - about.length)));
     }
     // The goal's own subject first, best match first; then the capability picks, simplest first.
     kit.sort((a, b) => (b.about ? 1 : 0) - (a.about ? 1 : 0) || (a.about && b.about ? b.value - a.value : 0) || a.e.level - b.e.level);
@@ -326,7 +338,7 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // things the library lacks.
     const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
     const proper = new Set(String(goal).split(/\s+/).slice(1).filter((w) => /^[A-Z][a-z]/.test(w)).flatMap((w) => normalizeWords(w)));
-    const needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !GENERIC.has(w)) }, C);
+    const needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w)) }, C);
     const icons = suggestIcons(goal, r);
     // Suggested icons are drawn with the Icon component: list it with its call and params.
     if (icons?.suggestions.length && !comps.some((c) => c.name === "Icon")) {

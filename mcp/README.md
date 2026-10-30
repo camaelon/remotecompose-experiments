@@ -42,8 +42,11 @@ the schemas the servers actually accept. To add a server, export its `definition
 
 ## Logs: retracing a session
 
-Every tool call logs one line (stderr; `journalctl` on the VPS) with a short client id (a hash of
-the caller's address and user agent, never the token), what was asked and what came back:
+Every tool call logs one line (stderr; `journalctl` on the VPS) with a short session id, what was
+asked and what came back. The id is the start of the `Mcp-Session-Id` the server assigns at
+`initialize` (clients send it back on every request, so a session's calls share it even from
+changing addresses); a client that sends none gets `~` and a hash of its address and user agent.
+Never the token:
 
 ```
 initialize {"client":"bb4cde","clientInfo":{"name":"…","version":"…"},"ua":"…"}

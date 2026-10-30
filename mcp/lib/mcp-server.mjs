@@ -6,7 +6,7 @@
 // Hand-rolled rather than built on @modelcontextprotocol/sdk so the servers run from a bare
 // checkout with nothing but `node` — no npm install, same on macOS and Linux.
 
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
@@ -221,12 +221,21 @@ function serveHttp(def, handle, port) {
         const batch = Array.isArray(msg);
         // Who is calling: the client's address (behind the proxy, X-Forwarded-For) and user agent,
         // hashed to a short id that groups one client's calls in the log. Never the token.
+        // The session: an initialize gets a new Mcp-Session-Id (Streamable HTTP), which clients
+        // send back on every later request, so one client's calls share an id in the log even
+        // when they arrive from different addresses (ChatGPT's do). The server keeps no state
+        // for it. Without one (an older client), the hash of address + user agent stands in.
+        const msgs = batch ? msg : [msg];
+        const isInit = msgs.some((m) => m?.method === "initialize");
+        const sent = String(req.headers["mcp-session-id"] ?? "");
+        const session = isInit ? randomUUID() : sent;
         const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
         const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
-        const ctx = { client: createHash("sha1").update(addr + "|" + ua).digest("hex").slice(0, 6), ua };
-        const out = (await Promise.all((batch ? msg : [msg]).map((m) => handle(m, ctx)))).filter(Boolean);
-        if (!out.length) return reply(res, 202);   // only notifications / responses
-        reply(res, 200, batch ? out : out[0]);
+        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update(addr + "|" + ua).digest("hex").slice(0, 6), ua };
+        const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);
+        const headers = isInit ? { "Mcp-Session-Id": session } : {};
+        if (!out.length) return reply(res, 202, undefined, headers);   // only notifications / responses
+        reply(res, 200, batch ? out : out[0], headers);
     });
     server.on("error", (e) => {
         log(e.code === "EADDRINUSE"
