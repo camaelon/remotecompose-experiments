@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-10-29T21:41:35.631Z",
+ "built_at": "2026-10-30T07:20:45.005Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -4282,6 +4282,420 @@
    }
   },
   {
+   "id": "CMP-03",
+   "name": "slider-gallery",
+   "version": 1,
+   "kind": "gallery",
+   "title": "Slider gallery",
+   "summary": "Three library Sliders over different ranges (0 to 1 with two decimals, 0 to 100, and -50 to 50), each bound to a document variable and printing its value, plus a summary line below them that reads the same variables.",
+   "prompt": "Add three sliders, opacity from 0 to 1, volume from 0 to 100 and balance from -50 to 50, each showing its value, and a line under them repeating the volume and balance.",
+   "level": 3,
+   "family": "CMP",
+   "components": [
+    "Slider"
+   ],
+   "capabilities": {
+    "primary": [
+     "input.drag"
+    ],
+    "secondary": [
+     "text.dynamic",
+     "a11y.labels",
+     "text.basic"
+    ]
+   },
+   "use_cases": [
+    "control"
+   ],
+   "form_factor": "square",
+   "keywords": [
+    "slider",
+    "sliders",
+    "seek bar",
+    "range",
+    "volume",
+    "balance",
+    "opacity",
+    "negative range",
+    "settings",
+    "component library"
+   ],
+   "teaches": [
+    "min and max set the range, negative ones included (balance: -50 to 50); decimals sets the digits of the printed value (opacity: 0.8; textFromFloat drops trailing zeros)",
+    "Bind each slider to a document variable and read it below the slider: the summary line follows the drags",
+    "Each slider maps the finger through its own position (componentValue POS_ROOT_X), so they work stacked anywhere in the layout"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "input.drag",
+     "note": "0 to 1, two decimals"
+    },
+    {
+     "pointer": "/root/column/children/7",
+     "shows": "input.drag",
+     "note": "-50 to 50: min and max can be negative"
+    },
+    {
+     "pointer": "/root/column/children/9/row/children/1",
+     "shows": "text.dynamic",
+     "note": "reads @volume after the slider: the dragged value"
+    },
+    {
+     "pointer": "/root/column/children/5",
+     "shows": "a11y.labels",
+     "note": "the slider's label is its accessibility label; the visible name is the text above it"
+    }
+   ],
+   "pitfalls": [
+    "Read a slider's variable after the slider in document order: the slider rebinds the name to its touch value from there on, so a text placed above it (or an expression in resources) keeps the starting value",
+    "The touch mapping needs componentValue POS_ROOT_X and a touch expression owned by its canvas. Java gets both right; the TS and C++ players do since the T32, T33 and C50 fixes (2026-10-30); older ones put drags off by the slider's x, or move every slider at once"
+   ],
+   "inputs": {
+    "variables": {
+     "opacity": 0.8,
+     "volume": 40,
+     "balance": -10
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Opacity at 0.8, Volume at 40 and Balance at -10 (its thumb left of centre, purple), each printing its value at the end of its track, and the summary line 'Volume 40 Balance -10'. Drags were checked in the Java reference (RcTouch harness): each value follows the finger within its range and clamps at the ends, and the summary line follows. render-dragged (C++ player): a drag ending mid-track sets Volume to 50, a press past the end of Balance clamps it to 50 and one left of Opacity clamps it to 0; only the slider under the finger moves. Resized, the tracks fill the width at 240 and at 480 dp with the thumbs at the same fractions.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "dragged",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 146,
+        "y": 133
+       },
+       {
+        "t": 0.2,
+        "type": "move",
+        "x": 120,
+        "y": 133
+       },
+       {
+        "t": 0.3,
+        "type": "move",
+        "x": 146,
+        "y": 133
+       },
+       {
+        "t": 0.4,
+        "type": "up",
+        "x": 146,
+        "y": 133
+       },
+       {
+        "t": 0.6,
+        "type": "down",
+        "x": 265,
+        "y": 187
+       },
+       {
+        "t": 0.7,
+        "type": "up",
+        "x": 265,
+        "y": 187
+       },
+       {
+        "t": 0.9,
+        "type": "down",
+        "x": 20,
+        "y": 78
+       },
+       {
+        "t": 1,
+        "type": "up",
+        "x": 20,
+        "y": 78
+       }
+      ],
+      "duration": 1.5
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 260
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 260
+     }
+    ]
+   },
+   "related": [
+    "INT-04",
+    "CMP-02",
+    "CMP-12"
+   ],
+   "folder": "CMP-03-slider-gallery",
+   "derived": {
+    "bytes": 3072,
+    "op_count": 171,
+    "header": {
+     "width": 340,
+     "height": 260
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "Slider"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2484,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2484,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "dragged": {
+      "render": "render-dragged.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 3,
+     "click": 0,
+     "area": 0,
+     "touch": 3
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "input.drag": [
+      "touchExpression"
+     ],
+     "text.dynamic": [
+      "textFromFloat"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "text.basic": [
+      "text",
+      "drawTextAnchored"
+     ]
+    },
+    "json_keys": [
+     "Slider",
+     "apiLevel",
+     "background",
+     "balance",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "componentValue",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "decimals",
+     "defaultValue",
+     "drawCircle",
+     "drawLine",
+     "drawTextAnchored",
+     "expression",
+     "flags",
+     "fontSize",
+     "header",
+     "height",
+     "id",
+     "label",
+     "light",
+     "max",
+     "min",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "opacity",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "row",
+     "secondary",
+     "semantics",
+     "showValue",
+     "slider1_x0",
+     "slider2_x0",
+     "slider3_x0",
+     "spacedBy",
+     "spacer",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "text",
+     "textSize",
+     "touchExpression",
+     "touchMode",
+     "track",
+     "type",
+     "value",
+     "valueType",
+     "variables",
+     "volume",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
    "id": "CMP-04",
    "name": "chips-badges",
    "version": 3,
@@ -6448,6 +6862,464 @@
    }
   },
   {
+   "id": "CMP-09",
+   "name": "charts-gallery",
+   "version": 1,
+   "kind": "gallery",
+   "title": "Charts from one dataset",
+   "summary": "The library Sparkline, BarChart and DonutChart all reading the same exported 8-value float array: a trend line beside its label, labelled weekly columns that fill the card, and a ring of the weeks' shares with the total in the centre. Setting the array redraws all three.",
+   "prompt": "Show eight weeks of visits three ways from one dataset: a sparkline next to its label, a bar chart with week labels, and a donut with the total in the middle. The host should be able to push new numbers.",
+   "level": 3,
+   "family": "CMP",
+   "components": [
+    "Sparkline",
+    "BarChart",
+    "DonutChart"
+   ],
+   "capabilities": {
+    "primary": [
+     "data.array",
+     "data.loop"
+    ],
+    "secondary": [
+     "draw.shapes",
+     "draw.arc",
+     "draw.transform",
+     "host.variables",
+     "layout.weight"
+    ]
+   },
+   "use_cases": [
+    "dashboard",
+    "finance"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "chart",
+    "charts",
+    "sparkline",
+    "bar chart",
+    "donut chart",
+    "pie chart",
+    "column chart",
+    "trend line",
+    "dataset",
+    "float array",
+    "data series",
+    "dashboard",
+    "component library",
+    "analytics",
+    "weekly visits"
+   ],
+   "teaches": [
+    "Declare the data once as an exported float array (resources.floatArrays) and pass its name to every chart: {\"BarChart\": {\"values\": \"@visits\"}}",
+    "A host that sets the array (render_rc variables {visits: [...]}) redraws every chart, at any length, with no new document",
+    "Charts scale to their box: Sparkline beside a weighted label at 120 × 32, BarChart with fill: true in a box with verticalWeight 1 (the height that is left), DonutChart with fill: true in a fixed-height box",
+    "In a column, give the stretching child verticalWeight: plain weight is horizontal, and in a column it leaves the box 0 wide (with fillMaxWidth before it) or lets it take the whole height, pushing the next children out. Weights ignore spacedBy, so the gaps are top paddings"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/floatArrays/visits",
+     "shows": "host.variables",
+     "note": "the one dataset, exported so the host can replace it"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/1",
+     "shows": "data.array",
+     "note": "Sparkline reading @visits"
+    },
+    {
+     "pointer": "/root/column/children/3/box/children/0",
+     "shows": "data.loop",
+     "note": "BarChart: one bar per value, in a loop over the array"
+    },
+    {
+     "pointer": "/root/column/children/5/box/children/0",
+     "shows": "draw.arc",
+     "note": "DonutChart: one arc per value, the canvas rotated after each"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "layout.weight",
+     "note": "verticalWeight: the bar chart takes the height that is left"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "visits": {
+      "type": "float_array",
+      "meaning": "weekly visits, oldest first; values >= 0, any length (the bar labels stay W1..W8)",
+      "default": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "A rising blue sparkline ending on a dot at 84; eight blue columns W1..W8 rising to W8; a ring of eight slices from solid to pale blue with 490 visits in the centre. With variables {visits: [90, 75, 80, 50, 40, 45, 30, 20]} all three change: the line and the bars fall, the first slices grow and the total reads 430. At 252 and 540 dp wide the line and bars follow the width and the ring stays centred at 120 dp.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 252,
+      "height": 440
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 440
+     },
+     {
+      "name": "dataset-b",
+      "variables": {
+       "visits": [
+        90,
+        75,
+        80,
+        50,
+        40,
+        45,
+        30,
+        20
+       ]
+      }
+     }
+    ]
+   },
+   "related": [
+    "CMP-08",
+    "HST-02",
+    "VAR-06",
+    "EXP-08"
+   ],
+   "pitfalls": [
+    "values is a float array's name, not a JSON list: an inline [42, 55, ...] cannot be replaced by the host and the charts' loops need arrayGet",
+    "The bar labels are written when the document is built: a host can send new numbers but not new labels, so keep the array 8 long, or drop labels",
+    "Each chart rescales to its own data (the sparkline to min..max, the bars to 0..max, the ring to the sum): they agree on shape, not on a shared axis"
+   ],
+   "folder": "CMP-09-charts-gallery",
+   "derived": {
+    "bytes": 3849,
+    "op_count": 193,
+    "header": {
+     "width": 360,
+     "height": 440
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "components": [
+     "BarChart",
+     "DonutChart",
+     "Sparkline"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 3334,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 3334,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "dataset-b": {
+      "render": "render-dataset-b.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawCircle",
+      "drawLine"
+     ],
+     "draw.arc": [
+      "drawArc"
+     ],
+     "draw.transform": [
+      "save",
+      "rotate",
+      "scale",
+      "translate"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "layout.weight": [
+      "weight",
+      "verticalWeight"
+     ]
+    },
+    "json_keys": [
+     "BarChart",
+     "DonutChart",
+     "Sparkline",
+     "alpha",
+     "angle",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawArc",
+     "drawCircle",
+     "drawLine",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "export",
+     "fill",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "index",
+     "label",
+     "labels",
+     "left",
+     "light",
+     "loop",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "outline",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "scale",
+     "semantics",
+     "size",
+     "startAngle",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "sweepAngle",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "translate",
+     "type",
+     "until",
+     "value",
+     "values",
+     "verticalAlignment",
+     "verticalWeight",
+     "visits",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
    "id": "CMP-10",
    "name": "time-gallery",
    "version": 3,
@@ -6807,6 +7679,486 @@
      "until",
      "value",
      "verticalAlignment",
+     "weight",
+     "whole",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "id": "CMP-11",
+   "name": "status-gallery",
+   "version": 1,
+   "kind": "gallery",
+   "title": "Status gallery",
+   "summary": "The library WeatherIcon in every condition, BatteryIndicator at the host battery level and at 95, 40 and 10 % (green, amber, red), and Banner in its info, warn and error kinds.",
+   "prompt": "Show status symbols: a weather icon for sunny, cloudy, rain, snow and storm, labelled; battery indicators for the device's battery and for 95, 40 and 10 percent, coloured by level; and an info, a warning and an error banner.",
+   "level": 2,
+   "family": "CMP",
+   "components": [
+    "WeatherIcon",
+    "BatteryIndicator",
+    "Banner"
+   ],
+   "capabilities": {
+    "primary": [
+     "draw.shapes",
+     "data.condition"
+    ],
+    "secondary": [
+     "host.variables",
+     "text.dynamic",
+     "data.loop",
+     "layout.flow",
+     "layout.weight",
+     "layout.decoration"
+    ]
+   },
+   "use_cases": [
+    "widget",
+    "weather"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "status",
+    "status icons",
+    "weather",
+    "weather icon",
+    "forecast",
+    "battery",
+    "battery indicator",
+    "low battery",
+    "charge level",
+    "component library",
+    "banner",
+    "alert",
+    "warning banner",
+    "error banner"
+   ],
+   "teaches": [
+    "{\"WeatherIcon\": {\"condition\": \"storm\", \"size\": 40}}: five static conditions, drawn with circles, rounded rects and lines",
+    "{\"BatteryIndicator\": {\"level\": \"@battery\"}} follows an exported host float; literal levels fold to numbers, so the 95/40/10 icons cost no variable",
+    "The battery colour is green, amber below 50 and red with a ! below 20, chosen by conditionalOperations: the low render (battery = 10) turns the host icon red",
+    "{\"Banner\": {\"text\": ..., \"kind\": \"warn\"}} frames a message in the kind's colour with its own icon shape; each unbound banner keeps its own visible variable, and dismissible: false drops the cross"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "draw.shapes",
+     "note": "the five weather conditions in weighted columns"
+    },
+    {
+     "pointer": "/root/column/children/4/flow/children/0",
+     "shows": "host.variables",
+     "note": "the battery bound to the host level"
+    },
+    {
+     "pointer": "/root/column/children/4/flow/children/3",
+     "shows": "data.condition",
+     "note": "10 %: red, with a !"
+    },
+    {
+     "pointer": "/root/column/children/7",
+     "shows": "layout.decoration",
+     "note": "a warn Banner"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "battery": {
+      "type": "float",
+      "meaning": "battery charge, percent",
+      "default": 76,
+      "min": 0,
+      "max": 100
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Five distinct weather icons (an amber sun with rays, a grey cloud, a cloud with blue drops, a cloud with blue dots, a cloud with an amber bolt), each labelled. Battery icons: the host level 76 (green, three quarters), 95 (green), 40 (amber), 10 (red with a !). Three banners: info (blue, circled i, with a cross), warn (amber, triangle, with a cross) and error (red, circled !, no cross). With battery = 10 (the low render) the first battery turns red, shows the ! and reads 10%. Resized, the weather columns are weighted (closer at 260 dp, spread at 520), the batteries wrap in a flow (two lines at 260 dp) and the banners fill the width.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "low",
+      "variables": {
+       "battery": 10
+      }
+     },
+     {
+      "name": "narrow",
+      "width": 260,
+      "height": 480
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 440
+     }
+    ]
+   },
+   "related": [
+    "HST-03",
+    "CMP-07",
+    "CMP-08"
+   ],
+   "pitfalls": [
+    "The format has no portable system battery level (batteryLevel() is a json2rc extension the Java parser rejects, U31): the host sets an exported float, so render with variables {\"battery\": 10}, not system_variables",
+    "WeatherIcon's condition is static: a host-chosen condition needs the five icons behind a stateLayout or visibility"
+   ],
+   "folder": "CMP-11-status-gallery",
+   "derived": {
+    "bytes": 6852,
+    "op_count": 466,
+    "header": {
+     "width": 360,
+     "height": 440
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "battery",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Banner",
+     "BatteryIndicator",
+     "WeatherIcon"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 6235,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "battery",
+        "type": "float",
+        "value": 76
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 6235,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "battery",
+        "type": "float",
+        "value": 76
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "low": {
+      "render": "render-low.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 2,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 4
+    },
+    "evidence": {
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawCircle",
+      "drawLine"
+     ],
+     "data.condition": [
+      "conditionalOperations",
+      "step()"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "layout.flow": [
+      "flow"
+     ],
+     "layout.weight": [
+      "weight"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ]
+    },
+    "json_keys": [
+     "Banner",
+     "BatteryIndicator",
+     "WeatherIcon",
+     "angle",
+     "animationSpec",
+     "apiLevel",
+     "background",
+     "banner1_visible",
+     "banner2_visible",
+     "banner3_visible",
+     "battery",
+     "batteryindicator1_lv",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "condition",
+     "conditionalOperations",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "dismissible",
+     "drawCircle",
+     "drawLine",
+     "drawRoundRect",
+     "dx",
+     "dy",
+     "end",
+     "enterAnimation",
+     "enterSequence",
+     "error",
+     "exitAnimation",
+     "exitSequence",
+     "export",
+     "flags",
+     "flow",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "id1",
+     "id2",
+     "index",
+     "kind",
+     "left",
+     "level",
+     "light",
+     "loop",
+     "modifiers",
+     "motionDuration",
+     "muted",
+     "onClick",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "semantics",
+     "size",
+     "spacedBy",
+     "spacer",
+     "step",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "success",
+     "surface",
+     "target",
+     "text",
+     "top",
+     "translate",
+     "type",
+     "until",
+     "v1",
+     "v2",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "visibility",
+     "visibilityDuration",
+     "warning",
      "weight",
      "whole",
      "width",
@@ -7728,6 +9080,374 @@
      "y",
      "y1",
      "y2"
+    ]
+   }
+  },
+  {
+   "id": "CMP-14",
+   "name": "nested-components",
+   "version": 1,
+   "kind": "gallery",
+   "title": "Nested components",
+   "summary": "Components inside components: Cards whose content slot holds ListItems whose trailing slot holds a Switch; every Switch gets its own state variable.",
+   "prompt": "Build a settings screen of cards; each card lists rows with a title, a subtitle and a switch at the end, and each switch toggles on its own.",
+   "level": 3,
+   "family": "CMP",
+   "components": [
+    "Card",
+    "ListItem",
+    "Switch"
+   ],
+   "capabilities": {
+    "primary": [
+     "input.toggle",
+     "layout.stack"
+    ],
+    "secondary": [
+     "a11y.labels",
+     "layout.decoration",
+     "layout.weight"
+    ]
+   },
+   "use_cases": [
+    "list",
+    "control"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "settings",
+    "settings screen",
+    "nested components",
+    "slots",
+    "card",
+    "list item",
+    "switch",
+    "toggle row",
+    "preferences",
+    "component library"
+   ],
+   "teaches": [
+    "A slot takes any JSON nodes, other component calls included: {\"Card\": {\"children\": [{\"ListItem\": {\"slots\": {\"trailing\": [{\"Switch\": {...}}]}}}]}}",
+    "A Switch whose checked is not bound gets a variable of its own per call (switch1_checked, switch2_checked, ...), starting at the number given: four switches, four states, no collisions",
+    "Inside a Card, pass ListItem padding 0: the card already pads its content by 16 dp"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "layout.stack",
+     "note": "a Card whose content is three ListItems"
+    },
+    {
+     "pointer": "/root/column/children/1/Card/children/0/ListItem/slots/trailing/0",
+     "shows": "input.toggle",
+     "note": "a Switch in the row's trailing slot, starting on, with its own state"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Two cards: Connectivity with Wi-Fi (on), Bluetooth (off) and Airplane mode (off), and Notifications with Do not disturb (on); each row has its title (and subtitle) at the start and its switch at the end. The expansion declares four switch variables. Tapping the Bluetooth switch (the tapped render) turns it on and leaves the other three as they were. Resized, the rows keep the switch at the end and shorten the text with an ellipsis: at 260 dp and at 520 dp.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 260,
+      "height": 500
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 500
+     },
+     {
+      "name": "tapped",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 302,
+        "y": 214
+       }
+      ],
+      "duration": 0.8
+     }
+    ]
+   },
+   "related": [
+    "CMP-05",
+    "CMP-02",
+    "CMP-12"
+   ],
+   "pitfalls": [
+    "Bind a switch (\"checked\": \"@wifi\") only when the document reads the state; two switches bound to the same variable move together",
+    "Every component with a label expands (U7), so a screen of nested rows is written out in full: about one ListItem plus one Switch per row"
+   ],
+   "folder": "CMP-14-nested-components",
+   "derived": {
+    "bytes": 3752,
+    "op_count": 229,
+    "header": {
+     "width": 360,
+     "height": 500
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "Card",
+     "ListItem",
+     "Switch"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2848,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2848,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "tapped": {
+      "render": "render-tapped.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 4,
+     "click": 4,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 5
+    },
+    "evidence": {
+     "input.toggle": [
+      "valueFloatExpressionChange",
+      "onClick"
+     ],
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ],
+     "layout.weight": [
+      "weight"
+     ]
+    },
+    "json_keys": [
+     "Card",
+     "ListItem",
+     "Switch",
+     "alpha",
+     "anim",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "checked",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "drawCircle",
+     "drawRoundRect",
+     "fontSize",
+     "header",
+     "height",
+     "label",
+     "left",
+     "light",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onSurface",
+     "ops",
+     "overflow",
+     "padding",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "roundedRect",
+     "row",
+     "rx",
+     "ry",
+     "semantics",
+     "size",
+     "slots",
+     "spacedBy",
+     "style",
+     "subtitle",
+     "surface",
+     "switch1_checked",
+     "switch2_checked",
+     "switch3_checked",
+     "switch4_checked",
+     "target",
+     "text",
+     "title",
+     "top",
+     "track",
+     "trailing",
+     "type",
+     "value",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "weight",
+     "width"
     ]
    }
   },
@@ -30249,6 +31969,1227 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "Banner",
+   "name": "banner",
+   "version": 1,
+   "title": "Banner",
+   "components": [
+    "Banner",
+    "Button"
+   ],
+   "prompt": "Show an info banner, an offline warning with a Retry action and a storage-full error that can't be dismissed, plus a Show all button that brings dismissed banners back.",
+   "level": 2,
+   "use_cases": [
+    "notification",
+    "control"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "banner",
+    "alert",
+    "notice",
+    "toast",
+    "snackbar",
+    "message bar",
+    "warning",
+    "error message",
+    "info message",
+    "dismissible",
+    "callout"
+   ],
+   "teaches": [
+    "kind picks the colour and the icon (info, warn, error); the icon's shape, not only its colour, tells them apart",
+    "visible is an integer variable: the cross sets it to 0 (the banner slides away, then the gap closes) and valueIntegerChange to 1 fades it back in",
+    "slots.action puts a short action before the cross; dismissible: false drops the cross"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "layout.decoration",
+     "note": "info: a 1.5 dp primary ring around a surface fill"
+    },
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "anim.visibility",
+     "note": "bound to the int @offlineShown; Retry and the cross both set it to 0"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "a11y.labels",
+     "note": "error, not dismissible; the cross elsewhere is labelled Dismiss: <text>"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "syncShown": 1,
+     "offlineShown": 1
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Three framed banners: blue info with a circled i, amber 'You are offline' with a triangle and a Retry action, red 'Storage almost full' with a circled ! and no cross. Tapping the info cross (x=300, y=72) at 0.1 s: 0.12 s later it is halfway out to the right (render-dismiss), and after the 300 ms exit the others have moved up into its place (render-dismissed). Resized, the banners fill the width: at 240 dp the messages wrap ('Sync finished: 12 new photos' takes two lines and the frame grows; the C++ renderer clips the wrapped offline message, which has a Retry action beside it, to its first line, C51; the TS player gives it its three lines), at 480 dp every message fits on one line.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "dismiss",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 300,
+        "y": 72
+       }
+      ],
+      "duration": 0.22
+     },
+     {
+      "name": "dismissed",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 300,
+        "y": 72
+       }
+      ],
+      "duration": 1.2
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 300
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 260
+     }
+    ]
+   },
+   "related": [
+    "ANM-06",
+    "CMP-11"
+   ],
+   "summary": "A one-line message in a rounded frame with an info, warning or error icon, an optional action and a dismiss cross: dismissing it slides it away and the space closes; setting its variable back to 1 fades it in again.",
+   "capabilities": {
+    "primary": [
+     "layout.decoration",
+     "anim.visibility",
+     "a11y.labels"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "visible must be an INTEGER variable: `visibility` reads an int id, so a float variable (or a plain number passed as visible) hides it for good. Declare it {\"type\": \"int\", \"value\": 1} in resources.variables and change it with valueIntegerChange",
+    "Dismissing slides it out to the right (exitSequence BEFORE) and then closes the gap; showing it opens the gap and then fades it in (AFTER). Components below it move smoothly only if they have an animationSpec of their own; otherwise they jump when the space closes",
+    "The frame is two stacked backgrounds (a 1.5 dp ring in the kind colour around a surface fill), not a border: border can't take a theme colour",
+    "In mono the kinds are told apart by the icon (circled i, triangle, circled !), since every colour is white; there is no slide or fade (mono has no motion)"
+   ],
+   "folder": "components/Banner",
+   "derived": {
+    "bytes": 3675,
+    "op_count": 250,
+    "header": {
+     "width": 340,
+     "height": 260
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Banner",
+     "Button"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2874,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2874,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "dismiss": {
+      "render": "render-dismiss.png"
+     },
+     "dismissed": {
+      "render": "render-dismissed.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 4,
+     "click": 4,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 4
+    },
+    "evidence": {
+     "layout.decoration": [
+      "background",
+      "clip"
+     ],
+     "anim.visibility": [
+      "enterAnimation",
+      "exitAnimation",
+      "enterSequence",
+      "exitSequence",
+      "visibilityDuration"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ]
+    },
+    "json_keys": [
+     "Banner",
+     "Button",
+     "action",
+     "animationSpec",
+     "apiLevel",
+     "background",
+     "banner3_visible",
+     "box",
+     "canvas",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "dismissible",
+     "drawCircle",
+     "drawLine",
+     "enabled",
+     "enterAnimation",
+     "enterSequence",
+     "error",
+     "exitAnimation",
+     "exitSequence",
+     "fontSize",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "kind",
+     "label",
+     "light",
+     "maxLines",
+     "modifiers",
+     "motionDuration",
+     "muted",
+     "offlineShown",
+     "onClick",
+     "onSurface",
+     "ops",
+     "overflow",
+     "padding",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "row",
+     "semantics",
+     "size",
+     "slots",
+     "spacedBy",
+     "spacer",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "surface",
+     "syncShown",
+     "target",
+     "text",
+     "type",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "visibility",
+     "visibilityDuration",
+     "visible",
+     "warning",
+     "weight",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "BarChart",
+   "name": "bar-chart",
+   "version": 1,
+   "title": "BarChart",
+   "prompt": "Chart weekly visits as labelled columns across a card, with a tiny steps chart next to the title.",
+   "level": 2,
+   "use_cases": [
+    "dashboard",
+    "finance"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "bar chart",
+    "column chart",
+    "histogram",
+    "columns",
+    "bars",
+    "weekly chart",
+    "data series",
+    "float array chart"
+   ],
+   "teaches": [
+    "Call {\"BarChart\": {\"values\": \"@visits\"}} with the name of a float array in resources.floatArrays; export it and the host can replace the data",
+    "labels: [\"W1\", ...] puts a short label under each bar (18 dp reserved under the baseline)",
+    "A fixed width × height (240 × 120 by default), or fill: true in a sized or weighted parent; the bars scale to 0..max of the data"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "data.array",
+     "note": "bound to the exported float array visits"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "data.loop",
+     "note": "one drawRoundRect per value, in a loop over the array"
+    },
+    {
+     "pointer": "/root/column/children/0/row/children/1",
+     "shows": "draw.shapes",
+     "note": "84 × 28 without labels: a word-sized bar chart"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "visits": {
+      "type": "float_array",
+      "meaning": "weekly visits, values >= 0, any length",
+      "default": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Eight blue columns labelled W1..W8 rising to 84 at W8, on a grey baseline filling the card; a small violet 7-bar chart beside the title, tallest on day 6. With variables {visits: [84, 69, 73, 58, 61, 48, 55, 42]} the big chart falls instead. At 234 and 540 dp wide the columns narrow and widen with the card.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 234,
+      "height": 220
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 220
+     },
+     {
+      "name": "falling",
+      "variables": {
+       "visits": [
+        84,
+        69,
+        73,
+        58,
+        61,
+        48,
+        55,
+        42
+       ]
+      }
+     }
+    ]
+   },
+   "related": [
+    "CMP-09",
+    "VAR-06",
+    "EXP-08"
+   ],
+   "summary": "A column chart of a float array: one rounded bar per value from a zero baseline up to the largest value, scaled to the canvas, with optional labels under the bars.",
+   "capabilities": {
+    "primary": [
+     "data.array",
+     "data.loop",
+     "draw.shapes"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "BarChart"
+   ],
+   "pitfalls": [
+    "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: one loop draws every bar with arrayGet, so a host that sets the exported array redraws the chart, whatever its length",
+    "labels are text drawn when the document is built ($each over a list): a host can change the numbers but not the labels, so keep the array's length matching them",
+    "Bars are rounded at the top only: each is a drawRoundRect that reaches 4 dp below the baseline, clipped to the plot area, so the ends sit flat on the baseline",
+    "The scale is 0..max of the data, recomputed from the array: comparing two charts needs the same max, which this component doesn't share",
+    "Everything scales with componentWidth() and componentHeight(), read inline in each coordinate; it keeps the call out of pattern mode, which is fine for a chart drawn once or twice"
+   ],
+   "folder": "components/BarChart",
+   "derived": {
+    "bytes": 2875,
+    "op_count": 158,
+    "header": {
+     "width": 360,
+     "height": 220
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "steps",
+      "type": "float_array",
+      "value": [
+       6200,
+       8400,
+       7100,
+       10300,
+       5600,
+       12100,
+       9000
+      ]
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "components": [
+     "BarChart"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2227,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "steps",
+        "type": "float_array",
+        "value": [
+         6200,
+         8400,
+         7100,
+         10300,
+         5600,
+         12100,
+         9000
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2227,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "steps",
+        "type": "float_array",
+        "value": [
+         6200,
+         8400,
+         7100,
+         10300,
+         5600,
+         12100,
+         9000
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "falling": {
+      "render": "render-falling.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawLine"
+     ]
+    },
+    "json_keys": [
+     "BarChart",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "drawLine",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "export",
+     "fill",
+     "floatArrays",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "index",
+     "label",
+     "labels",
+     "left",
+     "light",
+     "loop",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "outline",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "primary",
+     "profiles",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "secondary",
+     "semantics",
+     "size",
+     "steps",
+     "strokeWidth",
+     "style",
+     "text",
+     "textSize",
+     "top",
+     "translate",
+     "until",
+     "value",
+     "values",
+     "verticalAlignment",
+     "verticalWeight",
+     "visits",
+     "weight",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "BatteryIndicator",
+   "name": "battery-indicator",
+   "version": 1,
+   "title": "Battery indicator",
+   "prompt": "Show the phone's battery level as a battery icon with the percentage, green when charged, amber at half and red with a warning mark when low.",
+   "level": 1,
+   "use_cases": [
+    "widget",
+    "watch-face"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "battery",
+    "battery indicator",
+    "battery icon",
+    "battery level",
+    "charge level",
+    "low battery",
+    "battery percentage",
+    "status bar",
+    "power"
+   ],
+   "teaches": [
+    "{\"BatteryIndicator\": {\"level\": \"@battery\"}} draws a battery filled to an exported host float, with \"76%\" after it",
+    "The fill turns amber below warnAt (50) and red below lowAt (20) through conditionalOperations around a paint change, and low also draws a !, so mono shows it by shape",
+    "size scales the icon (it is half as tall as it is wide); showPercent: false leaves only the icon"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/variables",
+     "shows": "host.variables",
+     "note": "battery, set by the host"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "text.dynamic",
+     "note": "bound to the host level, with the percentage"
+    },
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "data.condition",
+     "note": "95, 40 and 10 % in a flow: green, amber, red with a !"
+    },
+    {
+     "pointer": "/root/column/children/3",
+     "shows": "draw.shapes",
+     "note": "72 dp, icon only"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "battery": {
+      "type": "float",
+      "meaning": "battery charge, percent",
+      "default": 76,
+      "min": 0,
+      "max": 100
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "The host level (76) gives a green icon about three quarters full and \"76%\"; the flow shows 95 (green, nearly full), 40 (amber) and 10 (red, with a red ! in the empty part); the large icon follows the host level. With battery = 15 (the low render) the first and last icons turn red and show the !. The icons keep their size and the three sit in a flow: at 240 dp the 10% one wraps to a second line, at 420 dp everything stays at the start.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "low",
+      "variables": {
+       "battery": 15
+      }
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 210
+     },
+     {
+      "name": "wide",
+      "width": 420,
+      "height": 210
+     }
+    ]
+   },
+   "related": [
+    "CMP-11",
+    "HST-03",
+    "SHW-04"
+   ],
+   "summary": "A horizontal battery icon filled to a level (0..100) and coloured by it (green, amber below warnAt, red with a ! below lowAt), with an optional percentage.",
+   "capabilities": {
+    "primary": [
+     "draw.shapes",
+     "data.condition",
+     "text.dynamic",
+     "host.variables"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "BatteryIndicator"
+   ],
+   "pitfalls": [
+    "There is no portable system battery level: batteryLevel() (system variable 38) is an rcj/json2rc extension that the Java parser rejects and Android's RemoteContext does not define. Export a host float (resources.variables {\"battery\": {\"value\": 76, \"export\": true}}) and pass \"@battery\"; the host updates it",
+    "The fill colour is chosen with conditionalOperations around a paint change (success, then warning below warnAt, then error below lowAt): there are no colour expressions",
+    "Low is shown by shape too: a ! in the empty part of the body, so it reads in mono (where every colour is white or black) and without colour vision",
+    "The percentage is a layout text after the icon, so the call is as wide as the icon plus the number: in a tight row, pass showPercent: false and show the level elsewhere"
+   ],
+   "folder": "components/BatteryIndicator",
+   "derived": {
+    "bytes": 3220,
+    "op_count": 207,
+    "header": {
+     "width": 300,
+     "height": 210
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "battery",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "BatteryIndicator"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2608,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "battery",
+        "type": "float",
+        "value": 76
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2608,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "battery",
+        "type": "float",
+        "value": 76
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "low": {
+      "render": "render-low.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawCircle"
+     ],
+     "data.condition": [
+      "conditionalOperations"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "BatteryIndicator",
+     "apiLevel",
+     "background",
+     "battery",
+     "batteryindicator1_lv",
+     "batteryindicator5_lv",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "condition",
+     "conditionalOperations",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "drawRoundRect",
+     "end",
+     "error",
+     "export",
+     "flags",
+     "flow",
+     "fontSize",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "left",
+     "level",
+     "light",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "rx",
+     "ry",
+     "semantics",
+     "showPercent",
+     "size",
+     "spacedBy",
+     "strokeWidth",
+     "style",
+     "success",
+     "text",
+     "top",
+     "type",
+     "v1",
+     "v2",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "warning",
+     "whole",
+     "width"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Button",
    "name": "button",
    "version": 2,
@@ -31479,6 +34420,336 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "DateLabel",
+   "name": "date-label",
+   "version": 1,
+   "title": "Date label",
+   "prompt": "Show today's date as text in several formats: a long one with the weekday and month names, a short one, and ISO and numeric day/month/year forms.",
+   "level": 1,
+   "use_cases": [
+    "widget",
+    "watch-face"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "date",
+    "date label",
+    "today",
+    "today's date",
+    "weekday",
+    "month name",
+    "calendar date",
+    "iso date",
+    "date format",
+    "dd/mm/yyyy"
+   ],
+   "teaches": [
+    "{\"DateLabel\": {}} shows \"Thu 29 Oct\" from the host clock; format picks medium (29 Oct 2026), long (Thursday, 29 October 2026), iso, dmy or mdy",
+    "Weekday and month names are cut from one constant string with textSubtext at (weekDay() - 1) × width, which the Java parser converts (textLookup over a data list does not, U4); full names are padded to 9 characters and trimmed",
+    "The parts are joined with textMerge into one string and drawn with drawTextAnchored, so align start, center or end places the whole date in the width the label fills",
+    "A date wider than its label is measured with textMeasure and drawn under one scale of min(1, componentWidth() / width), so it shrinks instead of being cut off"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "time.date",
+     "note": "the long format, with full weekday and month names"
+    },
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "expr.string",
+     "note": "the short format: 3-letter names cut with textSubtext"
+    },
+    {
+     "pointer": "/root/column/children/4",
+     "shows": "text.dynamic",
+     "note": "ISO 8601, zero-padded with textFromFloat flags 12"
+    },
+    {
+     "pointer": "/root/column/children/6",
+     "shows": "text.anchor",
+     "note": "align: end, drawn at componentWidth() with panX 1"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": "2026-10-29T22:10:05",
+    "touch": false
+   },
+   "check": {
+    "describe": "On Thursday 29 October 2026 the labels read \"Thursday, 29 October 2026\", \"Thu 29 Oct\" (centred), \"29 Oct 2026\", \"2026-10-29\" (blue), \"29/10/2026\" and \"10/29/2026\" (end-aligned). On Sunday 3 January 2027 (the january render) the names change to \"Sunday, 3 January 2027\" and \"Sun 3 Jan\". Each label fills the column's width: at 200 dp the 18 dp long date is wider than the column and is scaled down to fit on its line; at 420 dp the centred and end-aligned ones follow the width.",
+    "render": {
+     "clock": "2026-10-29T22:10:05"
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 200,
+      "height": 260
+     },
+     {
+      "name": "wide",
+      "width": 420,
+      "height": 260
+     },
+     {
+      "name": "january",
+      "clock": "2027-01-03T09:00:00"
+     }
+    ]
+   },
+   "related": [
+    "CMP-10",
+    "TIM-03",
+    "TXT-10",
+    "EXP-12"
+   ],
+   "summary": "Today's date from the host clock, drawn as one line that fills its width, in a static format: \"Thu 29 Oct\", \"29 Oct 2026\", \"Thursday, 29 October 2026\", 2026-10-29, 29/10/2026 or 10/29/2026.",
+   "capabilities": {
+    "primary": [
+     "time.date",
+     "text.dynamic",
+     "expr.string",
+     "text.anchor"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "DateLabel"
+   ],
+   "pitfalls": [
+    "A date wider than the label is scaled down to fit (textMeasure, then one scale about the anchor), never cut off or wrapped",
+    "The date is drawn on a canvas that fills its parent's width (fillMaxWidth, 1.4 × fontSize tall): in a row, put it in a weighted box, or it has no width. It is drawn because the Java parser accepts textSubtext and textTransform only among canvas commands, not in a layout text, and the names need them",
+    "weekDay() is 1 (Monday) to 7 (Sunday) and calendarMonth() 1 to 12: subtract 1 before indexing",
+    "Names come from one constant string cut with textSubtext at (field - 1) × width: 3-letter names need nothing else; full names are padded to 9 characters and trimmed (textTransform operation 3). textLookup over an addDataList would be shorter to write, but the Java parser drops the list's id (U4), so the document would only convert with json2rc",
+    "The names are English; for another language, copy the component and change the two name strings (keep every name the same width)",
+    "Each call writes its name texts under fixed names (dateLabelDay, dateLabelMonth): a later DateLabel redefines them after an earlier one has used them, which is fine, but don't read them from outside the component",
+    "The date changes at midnight with no repaint of its own: a document that shows only a date is redrawn when the host redraws it"
+   ],
+   "folder": "components/DateLabel",
+   "derived": {
+    "bytes": 3056,
+    "op_count": 182,
+    "header": {
+     "width": 300,
+     "height": 260
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     }
+    ],
+    "components": [
+     "DateLabel"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2648,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2648,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "january": {
+      "render": "render-january.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "time.date": [
+      "weekDay",
+      "dayOfMonth",
+      "calendarMonth",
+      "year"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "expr.string": [
+      "textMerge",
+      "textTransform",
+      "textSubtext",
+      "textMeasure"
+     ],
+     "text.anchor": [
+      "drawTextAnchored"
+     ]
+    },
+    "json_keys": [
+     "DateLabel",
+     "align",
+     "apiLevel",
+     "background",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "commit",
+     "contentDescription",
+     "dark",
+     "decimal",
+     "drawTextAnchored",
+     "flags",
+     "fontSize",
+     "format",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "len",
+     "light",
+     "mode",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "operation",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "resources",
+     "root",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "start",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "textSubtext",
+     "textTransform",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "vtype",
+     "whole",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "DigitalClock",
    "name": "digital-clock",
    "version": 1,
@@ -32026,6 +35297,434 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "DonutChart",
+   "name": "donut-chart",
+   "version": 1,
+   "title": "DonutChart",
+   "prompt": "Show weekly visits as a donut chart with the total in the middle, next to a donut of traffic sources.",
+   "level": 2,
+   "use_cases": [
+    "dashboard",
+    "finance"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "donut chart",
+    "pie chart",
+    "doughnut chart",
+    "donut",
+    "pie",
+    "ring chart",
+    "share",
+    "part to whole",
+    "float array chart"
+   ],
+   "teaches": [
+    "Call {\"DonutChart\": {\"values\": \"@visits\", \"label\": \"visits\"}} with the name of a float array in resources.floatArrays; export it and the host can replace the data",
+    "Each slice is its value's share of the sum, clockwise from 12 o'clock; the sum is printed in the centre (showTotal) above the label",
+    "fill: true in a sized or weighted parent scales the ring to fit, centred"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/row/children/0/box/children/0",
+     "shows": "data.array",
+     "note": "bound to the exported float array visits"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0/box/children/0",
+     "shows": "data.loop",
+     "note": "one drawArc per value, in a loop over the array"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/1/box/children/0",
+     "shows": "draw.arc",
+     "note": "three slices, thinner ring, secondary colour"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0/box/children/0",
+     "shows": "draw.transform",
+     "note": "the loop rotates the canvas by each slice's angle, so the next starts where it ended"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "visits": {
+      "type": "float_array",
+      "meaning": "weekly visits, values >= 0, any length",
+      "default": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Left: a blue ring of eight slices, solid to pale clockwise from 12 o'clock, 490 visits in the centre; right: a violet ring of three slices (58, 27, 15) with 100 sources %. With variables {visits: [10, 10, 10, 10, 10, 10, 10, 90]} the last slice takes more than half the ring and the total reads 160. At 234 and 540 dp wide the rings shrink to share the row, or stay at the row's height, centred.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 234,
+      "height": 200
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 200
+     },
+     {
+      "name": "skewed",
+      "variables": {
+       "visits": [
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        10,
+        90
+       ]
+      }
+     }
+    ]
+   },
+   "related": [
+    "CMP-09",
+    "Gauge",
+    "ProgressRing",
+    "DRW-02"
+   ],
+   "summary": "A donut (ring) chart of a float array: one slice per value, clockwise from 12 o'clock, each value's share of the total, in tones of one colour separated by 2 dp gaps, with the total and a caption in the centre.",
+   "capabilities": {
+    "primary": [
+     "data.array",
+     "data.loop",
+     "draw.arc",
+     "draw.transform"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "DonutChart"
+   ],
+   "pitfalls": [
+    "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: one loop draws every slice, so a host that sets the exported array redraws the ring, whatever its length",
+    "There is no running sum in an expression, so each slice starts at 12 o'clock and the loop rotates the canvas by that slice's angle after drawing it: the rotations accumulate across iterations, inside one save",
+    "Slices are told apart by a 2 dp gap and by tone (paint alpha falls with the index), not by a palette: the library has no categorical colours. In mono there is no tone: slices alternate thick and thin",
+    "A fixed `size` does not shrink. Where the space varies, pass fill: true in a sized or weighted parent; the ring is drawn at `size` and one translate + scale fits it, so stroke widths scale with it"
+   ],
+   "folder": "components/DonutChart",
+   "derived": {
+    "bytes": 2703,
+    "op_count": 144,
+    "header": {
+     "width": 360,
+     "height": 200
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "sources",
+      "type": "float_array",
+      "value": [
+       58,
+       27,
+       15
+      ]
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "components": [
+     "DonutChart"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2157,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "sources",
+        "type": "float_array",
+        "value": [
+         58,
+         27,
+         15
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2157,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "sources",
+        "type": "float_array",
+        "value": [
+         58,
+         27,
+         15
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "skewed": {
+      "render": "render-skewed.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "draw.arc": [
+      "drawArc"
+     ],
+     "draw.transform": [
+      "save",
+      "rotate",
+      "scale",
+      "translate"
+     ]
+    },
+    "json_keys": [
+     "DonutChart",
+     "alpha",
+     "angle",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "decimal",
+     "drawArc",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "export",
+     "fill",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "index",
+     "label",
+     "left",
+     "light",
+     "loop",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "save",
+     "scale",
+     "secondary",
+     "semantics",
+     "sources",
+     "start",
+     "startAngle",
+     "strokeWidth",
+     "style",
+     "sweepAngle",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "thickness",
+     "top",
+     "translate",
+     "type",
+     "until",
+     "value",
+     "values",
+     "verticalAlignment",
+     "verticalWeight",
+     "visits",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Gauge",
    "name": "gauge",
    "version": 2,
@@ -32386,6 +36085,374 @@
      "width",
      "x",
      "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "IconButton",
+   "name": "icon-button",
+   "version": 1,
+   "title": "IconButton",
+   "prompt": "A toolbar of round icon buttons: menu, a filled add button that counts taps, outlined search, a close button that resets the count, and a disabled one.",
+   "level": 1,
+   "use_cases": [
+    "control"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "icon button",
+    "icon",
+    "toolbar button",
+    "round button",
+    "action icon",
+    "fab",
+    "close button",
+    "menu button",
+    "toolbar"
+   ],
+   "teaches": [
+    "The icon goes in slots.icon (about 24 dp); the button draws only the round face, filled or ringed, and the press ripple",
+    "label is the accessibility label: an icon button has no visible text, so say what it does",
+    "enabled: false dims the icon, drops the click and announces it as disabled"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/row/children/1",
+     "shows": "input.tap",
+     "note": "filled: each tap adds one to @added"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0",
+     "shows": "a11y.labels",
+     "note": "standard: the icon alone, labelled Menu"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/2",
+     "shows": "layout.decoration",
+     "note": "outlined: a ring of two stacked backgrounds"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "added": 0
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Five 40 dp round buttons in a row: a menu icon, a blue disc with a white plus, a blue ring with a magnifier, a close cross and a grey disabled disc; tapping the plus adds one to the count below it, the cross sets it back to 0. The row keeps its size when resized: at 260 dp it still fits, at 450 dp the free space is at the end.",
+    "render": {
+     "touch_events": [
+      {
+       "t": 0.1,
+       "type": "tap",
+       "x": 84,
+       "y": 70
+      },
+      {
+       "t": 0.3,
+       "type": "tap",
+       "x": 84,
+       "y": 70
+      }
+     ],
+     "duration": 1.6
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 260,
+      "height": 124
+     },
+     {
+      "name": "wide",
+      "width": 450,
+      "height": 124
+     }
+    ]
+   },
+   "related": [
+    "CMP-01",
+    "Button"
+   ],
+   "summary": "A round 40 dp button holding only an icon: standard (icon alone), filled or outlined. Labelled for accessibility from its label; enabled: false dims it and drops the click.",
+   "capabilities": {
+    "primary": [
+     "input.tap",
+     "a11y.labels",
+     "layout.decoration"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "IconButton"
+   ],
+   "pitfalls": [
+    "The icon is the caller's: draw it in a colour that reads on the face (onPrimary on a filled button, which is black in mono and white otherwise; onSurface or the button colour on the others)",
+    "40 dp round face; the touch target is the face itself, so leave a little space between neighbours (a row with spacedBy 4 or more)",
+    "The outlined ring is two stacked backgrounds, not a border (border can't take a theme colour): set surface to whatever the button sits on, or the inside shows the background colour",
+    "In mono a disabled filled button becomes a grey ring (a grey disc would hide its grey icon); every other face keeps its shape",
+    "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face"
+   ],
+   "folder": "components/IconButton",
+   "derived": {
+    "bytes": 2626,
+    "op_count": 177,
+    "header": {
+     "width": 300,
+     "height": 124
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onDisabled",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     }
+    ],
+    "components": [
+     "IconButton"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2127,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onDisabled",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2127,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onDisabled",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 2,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 3
+    },
+    "evidence": {
+     "input.tap": [
+      "onClick",
+      "valueFloatChange"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ]
+    },
+    "json_keys": [
+     "IconButton",
+     "added",
+     "alpha",
+     "apiLevel",
+     "background",
+     "box",
+     "canvas",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "disabled",
+     "drawCircle",
+     "drawLine",
+     "enabled",
+     "flags",
+     "fontSize",
+     "graphicsLayer",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "icon",
+     "label",
+     "light",
+     "modifiers",
+     "muted",
+     "onClick",
+     "onDisabled",
+     "onPrimary",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "row",
+     "semantics",
+     "size",
+     "slots",
+     "spacedBy",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "target",
+     "text",
+     "type",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "whole",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
     ]
    }
   },
@@ -34092,6 +38159,1017 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "Skeleton",
+   "name": "skeleton",
+   "version": 1,
+   "title": "Skeleton",
+   "prompt": "A loading placeholder for a list row (an avatar circle and two text lines) above an image block, with a shimmer sweeping across.",
+   "level": 2,
+   "use_cases": [
+    "loading-state"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "skeleton",
+    "shimmer",
+    "placeholder",
+    "loading",
+    "loading placeholder",
+    "skeleton screen",
+    "content loader",
+    "ghost element"
+   ],
+   "teaches": [
+    "shape picks a line (text), a circle (an avatar, `height` wide) or a block (an image); width omitted fills the space",
+    "The shimmer is a linear gradient whose ends move with continuousSec(), so every skeleton sweeps on the same clock",
+    "Mono draws a static grey outline: no gradient and no motion"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0/row/children/0",
+     "shows": "draw.shapes",
+     "note": "circle, 40 dp: an avatar placeholder"
+    },
+    {
+     "pointer": "/root/column/children/0/row/children/1/column/children/0",
+     "shows": "draw.gradient",
+     "note": "a 150 dp text line"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "time.animation",
+     "note": "a block filling the width; the band crosses it every 1.5 s"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": "2026-10-29T10:00:00.750",
+    "touch": false
+   },
+   "check": {
+    "describe": "A grey avatar circle and two grey text lines, and a wide grey block below, each with a lighter band (darker in dark) crossing it; render-later, 0.5 s on, has every band further right. Resized, the block and the lines' column keep their sizes but the block fills the width: 200 dp narrow, 450 dp wide.",
+    "render": {
+     "clock": 1793268600750
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "later",
+      "clock": 1793268601250
+     },
+     {
+      "name": "narrow",
+      "width": 200,
+      "height": 150
+     },
+     {
+      "name": "wide",
+      "width": 450,
+      "height": 150
+     }
+    ]
+   },
+   "related": [
+    "CMP-07"
+   ],
+   "summary": "A loading placeholder: a grey line, circle or block with a light band sweeping across it every 1.5 s, standing in for text, an avatar or an image until the content arrives.",
+   "capabilities": {
+    "primary": [
+     "draw.gradient",
+     "time.animation",
+     "draw.shapes"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "Skeleton"
+   ],
+   "pitfalls": [
+    "The sweep is a linear gradient (colour, highlight, colour) whose ends move with continuousSec(): the document repaints every frame while a skeleton is on screen, so replace it with the content as soon as it arrives",
+    "Its colours are theme colours inside the gradient (the parsers mark them as colour ids), so light and dark both work: surfaceHigh with a surface band (lighter in light, darker in dark)",
+    "Each skeleton sweeps on its own width but on the same clock, so a column of them shimmers together; the band is 240 dp wide whatever the shape",
+    "Mono has no motion and no gradient: a 1.5 dp grey outline of the shape"
+   ],
+   "folder": "components/Skeleton",
+   "derived": {
+    "bytes": 1699,
+    "op_count": 87,
+    "header": {
+     "width": 300,
+     "height": 150
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF263042"
+     }
+    ],
+    "components": [
+     "Skeleton"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 918,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 918,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "later": {
+      "render": "render-later.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "continuous",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "draw.gradient": [
+      "linearGradient"
+     ],
+     "time.animation": [
+      "continuousSec"
+     ],
+     "draw.shapes": [
+      "drawRoundRect"
+     ]
+    },
+    "json_keys": [
+     "Skeleton",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "drawRoundRect",
+     "header",
+     "height",
+     "left",
+     "light",
+     "linearGradient",
+     "modifiers",
+     "ops",
+     "padding",
+     "paint",
+     "profiles",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "rx",
+     "ry",
+     "shader",
+     "shape",
+     "spacedBy",
+     "style",
+     "surface",
+     "surfaceHigh",
+     "top",
+     "verticalAlignment",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "Slider",
+   "name": "slider",
+   "version": 1,
+   "title": "Slider",
+   "prompt": "A volume slider from 0 to 100 that shows its value, and a brightness slider with its own state.",
+   "level": 2,
+   "use_cases": [
+    "control"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "slider",
+    "seek bar",
+    "seekbar",
+    "range",
+    "range input",
+    "volume",
+    "brightness",
+    "drag",
+    "scrubber",
+    "track bar"
+   ],
+   "teaches": [
+    "Bind value to a document variable ({\"value\": \"@volume\", \"max\": 100}) to preset it and read it below the slider; omitted (or a number), the slider keeps its own state, starting there",
+    "showValue prints the live value at the end of the track (decimals sets the digits after the point)",
+    "Dragging is a touchExpression in absolute mode: the thumb jumps under the finger and the value stays clamped to min..max"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "input.drag",
+     "note": "bound to @volume (40), 0 to 100, value shown"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "text.dynamic",
+     "note": "showValue: textFromFloat of the live value"
+    },
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "a11y.labels",
+     "note": "unbound: its own state, starting at 0.7; label is the accessibility label"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "volume": 40
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Volume shows a blue track 40% full with 40 at its end; Brightness is an amber track 70% full. A tap on a track jumps the thumb under the finger and a drag follows it, clamped at the ends (checked in the Java reference: a tap at x=150 on Volume gives 50). Resized, the tracks fill the width: at 200 dp they are shorter with the thumbs at the same fractions, at 450 dp longer.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 200,
+      "height": 140
+     },
+     {
+      "name": "wide",
+      "width": 450,
+      "height": 140
+     }
+    ]
+   },
+   "related": [
+    "INT-04",
+    "CMP-03"
+   ],
+   "summary": "A horizontal slider: dragging or tapping the track sets its variable between min and max (the thumb jumps under the finger and follows it); it can show the value at its end.",
+   "capabilities": {
+    "primary": [
+     "input.drag",
+     "text.dynamic",
+     "a11y.labels"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "Slider"
+   ],
+   "pitfalls": [
+    "The drag is a touchExpression in absolute mode (touchMode 6) named after the bound variable: from the slider on, \"@volume\" is the touch value (it starts at the variable's own value and keeps where the finger left it). Read the value AFTER the slider in the document: the parsers bind names in document order, so a text placed before it, or an expression in resources, keeps reading the starting value",
+    "touchX() is in document coordinates, so the slider measures where it sits (componentValue POS_ROOT_X into a local) and subtracts it: it works anywhere in the layout, scrolled or padded",
+    "Players that predate the T31-T33 / C49-C50 fixes (2026-10-30) map the drag wrong: the TS player read 0 for POS_ROOT_X and let every slider take every touch, and the C++ player hit-tested a nested touch expression in its own coordinates. Java, and the TS and C++ players from that date, put the value under the finger",
+    "The value is continuous: there are no steps (the notch stop modes need touchSpec, which the Java parser ignores, U8). Round where you read it (textFromFloat decimals, floor())",
+    "It fills the width it is given (fillMaxWidth) and is 40 dp tall: in a row, give it a weight or a box with a width",
+    "No easing on the value: the thumb follows the finger frame for frame (an animated value would trail it). In mono it looks the same, a thin grey track, a thicker white active part and a smaller thumb"
+   ],
+   "folder": "components/Slider",
+   "derived": {
+    "bytes": 1886,
+    "op_count": 108,
+    "header": {
+     "width": 300,
+     "height": 140
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Slider"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 1392,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 1392,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 0,
+     "area": 0,
+     "touch": 2
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "input.drag": [
+      "touchExpression"
+     ],
+     "text.dynamic": [
+      "textFromFloat"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ]
+    },
+    "json_keys": [
+     "Slider",
+     "apiLevel",
+     "background",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "componentValue",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "defaultValue",
+     "drawCircle",
+     "drawLine",
+     "drawTextAnchored",
+     "expression",
+     "flags",
+     "fontSize",
+     "header",
+     "height",
+     "id",
+     "label",
+     "light",
+     "max",
+     "min",
+     "modifiers",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "semantics",
+     "showValue",
+     "slider1_x0",
+     "slider2_value",
+     "slider2_x0",
+     "spacedBy",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "text",
+     "textSize",
+     "touchExpression",
+     "touchMode",
+     "track",
+     "type",
+     "value",
+     "valueType",
+     "variables",
+     "volume",
+     "warning",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "Sparkline",
+   "name": "sparkline",
+   "version": 1,
+   "title": "Sparkline",
+   "prompt": "Show weekly visits as a small trend line next to its label, and a temperature series as a sparkline across the card.",
+   "level": 2,
+   "use_cases": [
+    "dashboard",
+    "finance"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "sparkline",
+    "trend line",
+    "mini chart",
+    "line chart",
+    "trend",
+    "micro chart",
+    "data series",
+    "float array chart"
+   ],
+   "teaches": [
+    "Call {\"Sparkline\": {\"values\": \"@visits\"}} with the name of a float array in resources.floatArrays; export it and the host can replace the series",
+    "A fixed width × height (120 × 32 by default) sits beside a label; fill: true takes the space of a sized or weighted parent",
+    "The line spans the data's min..max and ends on a dot at the latest value"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/row/children/1",
+     "shows": "data.array",
+     "note": "bound to the exported float array visits"
+    },
+    {
+     "pointer": "/root/column/children/2/box/children/0",
+     "shows": "data.loop",
+     "note": "one drawLine per pair of values, in a loop over the array"
+    },
+    {
+     "pointer": "/root/column/children/2/box/children/0",
+     "shows": "draw.shapes",
+     "note": "fill: true, scaled with componentWidth()/componentHeight()"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "visits": {
+      "type": "float_array",
+      "meaning": "weekly visits, any length >= 2",
+      "default": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "A blue rising line 120 × 32 beside 'Visits, 8 weeks', ending on a dot at 84; under it a violet line across the full width, peaking at the ninth value. With variables {visits: [84, 69, 73, 58, 61, 48, 55, 42]} the small line falls instead. At 234 and 540 dp wide the lower line stretches to the width; the small one stays 120 dp.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 234,
+      "height": 168
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 168
+     },
+     {
+      "name": "falling",
+      "variables": {
+       "visits": [
+        84,
+        69,
+        73,
+        58,
+        61,
+        48,
+        55,
+        42
+       ]
+      }
+     }
+    ]
+   },
+   "related": [
+    "CMP-09",
+    "HST-02",
+    "StatTile"
+   ],
+   "summary": "A word-sized trend line: one stroke through every value of a float array, scaled from its min to its max to fill the canvas, with a dot on the latest value.",
+   "capabilities": {
+    "primary": [
+     "data.array",
+     "data.loop",
+     "draw.shapes"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "Sparkline"
+   ],
+   "pitfalls": [
+    "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: the chart reads it with arrayGet in a loop, so a host that sets the exported array redraws it with no new document, and any length works",
+    "The line is a loop of drawLine segments (round caps hide the joins), not an SVG path: a path string costs about 4 KB in Java",
+    "The y range is the data's own min..max, so a flat series sits on the bottom edge and small changes look large; that is what a sparkline is for, but don't put one next to a bar chart and expect the same scale",
+    "Everything scales with componentWidth() and componentHeight(), read inline in each coordinate; it keeps the call out of pattern mode, which is fine for a chart drawn once or twice"
+   ],
+   "folder": "components/Sparkline",
+   "derived": {
+    "bytes": 2601,
+    "op_count": 125,
+    "header": {
+     "width": 360,
+     "height": 168
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "temp",
+      "type": "float_array",
+      "value": [
+       11.5,
+       13,
+       12.1999998,
+       15.8000002,
+       17.1000004,
+       16.3999996,
+       19.8999996,
+       18.2000008,
+       21.2999992,
+       20.1000004,
+       17.6000004,
+       14.8999996
+      ]
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "components": [
+     "Sparkline"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2031,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "temp",
+        "type": "float_array",
+        "value": [
+         11.5,
+         13,
+         12.1999998,
+         15.8000002,
+         17.1000004,
+         16.3999996,
+         19.8999996,
+         18.2000008,
+         21.2999992,
+         20.1000004,
+         17.6000004,
+         14.8999996
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2031,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "temp",
+        "type": "float_array",
+        "value": [
+         11.5,
+         13,
+         12.1999998,
+         15.8000002,
+         17.1000004,
+         16.3999996,
+         19.8999996,
+         18.2000008,
+         21.2999992,
+         20.1000004,
+         17.6000004,
+         14.8999996
+        ]
+       },
+       {
+        "name": "visits",
+        "type": "float_array",
+        "value": [
+         42,
+         55,
+         48,
+         61,
+         58,
+         73,
+         69,
+         84
+        ]
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "falling": {
+      "render": "render-falling.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "data.loop": [
+      "loop"
+     ],
+     "draw.shapes": [
+      "drawCircle",
+      "drawLine"
+     ]
+    },
+    "json_keys": [
+     "Sparkline",
+     "apiLevel",
+     "background",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "drawCircle",
+     "drawLine",
+     "dx",
+     "dy",
+     "export",
+     "fill",
+     "floatArrays",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "index",
+     "label",
+     "light",
+     "loop",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "row",
+     "secondary",
+     "semantics",
+     "size",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "temp",
+     "text",
+     "top",
+     "translate",
+     "until",
+     "value",
+     "values",
+     "verticalAlignment",
+     "verticalWeight",
+     "visits",
+     "weight",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "StatTile",
    "name": "stat-tile",
    "version": 2,
@@ -35721,6 +40799,333 @@
      "value",
      "variables",
      "verticalAlignment",
+     "weight",
+     "width",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "WeatherIcon",
+   "name": "weather-icon",
+   "version": 1,
+   "title": "Weather icon",
+   "prompt": "Draw weather symbols for sunny, cloudy, rain, snow and thunderstorm, without images or SVG paths, labelled underneath.",
+   "level": 1,
+   "use_cases": [
+    "widget",
+    "watch-face"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "weather",
+    "weather icon",
+    "weather symbol",
+    "sun icon",
+    "cloud icon",
+    "rain icon",
+    "snow icon",
+    "storm",
+    "thunderstorm",
+    "forecast"
+   ],
+   "teaches": [
+    "{\"WeatherIcon\": {\"condition\": \"rain\"}} draws a 48 dp symbol; condition is static (sun, cloud, rain, snow, storm) and size scales the 24-unit drawing",
+    "A cloud is three circles over a rounded rectangle; the mono outline is the same shapes drawn larger in onSurface and then in the background colour, which outlines their union",
+    "Sun rays are one line in a loop that rotates the canvas 45° per pass, so the paint is set once"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/row/children/0/column/children/0",
+     "shows": "data.loop",
+     "note": "sun: disc and eight rays from a rotate loop"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/2/column/children/0",
+     "shows": "draw.shapes",
+     "note": "rain: cloud of circles and a rounded rect, three slanted lines"
+    },
+    {
+     "pointer": "/root/column/children/2/row/children/0",
+     "shows": "draw.transform",
+     "note": "storm at 32 dp with its own label"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Five distinct 48 dp icons in equal columns, each labelled: an amber sun with eight rays, a grey cloud centred in its square, a cloud over three slanted blue drops, a cloud over three blue dots, and a cloud over an amber bolt; below, a 32 dp storm icon. In mono the sun is a ring with rays and the clouds are white outlines. The columns are weighted: at 260 dp they get closer, at 480 dp they spread out; the icons keep their size.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 280,
+      "height": 200
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     }
+    ]
+   },
+   "related": [
+    "CMP-11"
+   ],
+   "summary": "A square weather symbol drawn with circles, rounded rectangles and lines: sun, cloud, rain, snow or storm.",
+   "capabilities": {
+    "primary": [
+     "draw.shapes",
+     "draw.transform",
+     "data.loop"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "WeatherIcon"
+   ],
+   "pitfalls": [
+    "condition is static: each condition is a different drawing written into the document. To show a condition the host chooses at run time, put the five icons in a stateLayout (or behind visibility) driven by a host integer",
+    "No SVG paths: the cloud is three circles over a rounded rectangle, and the bolt three round-capped lines (an SVG path string costs about 4 KB in Java, padded to 1024 floats)",
+    "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
+    "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)"
+   ],
+   "folder": "components/WeatherIcon",
+   "derived": {
+    "bytes": 2776,
+    "op_count": 193,
+    "header": {
+     "width": 320,
+     "height": 200
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "WeatherIcon"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 2629,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 2629,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawCircle",
+      "drawLine"
+     ],
+     "draw.transform": [
+      "save",
+      "rotate",
+      "translate"
+     ],
+     "data.loop": [
+      "loop"
+     ]
+    },
+    "json_keys": [
+     "WeatherIcon",
+     "angle",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "condition",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "drawCircle",
+     "drawLine",
+     "drawRoundRect",
+     "dx",
+     "dy",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "index",
+     "label",
+     "left",
+     "light",
+     "loop",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "semantics",
+     "size",
+     "spacedBy",
+     "step",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "text",
+     "top",
+     "translate",
+     "until",
+     "value",
+     "verticalAlignment",
+     "warning",
      "weight",
      "width",
      "x1",

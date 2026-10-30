@@ -1,0 +1,545 @@
+{
+ "id": "CMP-09",
+ "name": "charts-gallery",
+ "version": 1,
+ "kind": "gallery",
+ "title": "Charts from one dataset",
+ "summary": "The library Sparkline, BarChart and DonutChart all reading the same exported 8-value float array: a trend line beside its label, labelled weekly columns that fill the card, and a ring of the weeks' shares with the total in the centre. Setting the array redraws all three.",
+ "prompt": "Show eight weeks of visits three ways from one dataset: a sparkline next to its label, a bar chart with week labels, and a donut with the total in the middle. The host should be able to push new numbers.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "Sparkline",
+  "BarChart",
+  "DonutChart"
+ ],
+ "capabilities": {
+  "primary": [
+   "data.array",
+   "data.loop"
+  ],
+  "secondary": [
+   "draw.shapes",
+   "draw.arc",
+   "draw.transform",
+   "host.variables",
+   "layout.weight"
+  ]
+ },
+ "use_cases": [
+  "dashboard",
+  "finance"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "chart",
+  "charts",
+  "sparkline",
+  "bar chart",
+  "donut chart",
+  "pie chart",
+  "column chart",
+  "trend line",
+  "dataset",
+  "float array",
+  "data series",
+  "dashboard",
+  "component library",
+  "analytics",
+  "weekly visits"
+ ],
+ "teaches": [
+  "Declare the data once as an exported float array (resources.floatArrays) and pass its name to every chart: {\"BarChart\": {\"values\": \"@visits\"}}",
+  "A host that sets the array (render_rc variables {visits: [...]}) redraws every chart, at any length, with no new document",
+  "Charts scale to their box: Sparkline beside a weighted label at 120 × 32, BarChart with fill: true in a box with verticalWeight 1 (the height that is left), DonutChart with fill: true in a fixed-height box",
+  "In a column, give the stretching child verticalWeight: plain weight is horizontal, and in a column it leaves the box 0 wide (with fillMaxWidth before it) or lets it take the whole height, pushing the next children out. Weights ignore spacedBy, so the gaps are top paddings"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/floatArrays/visits",
+   "shows": "host.variables",
+   "note": "the one dataset, exported so the host can replace it"
+  },
+  {
+   "pointer": "/root/column/children/1/row/children/1",
+   "shows": "data.array",
+   "note": "Sparkline reading @visits"
+  },
+  {
+   "pointer": "/root/column/children/3/box/children/0",
+   "shows": "data.loop",
+   "note": "BarChart: one bar per value, in a loop over the array"
+  },
+  {
+   "pointer": "/root/column/children/5/box/children/0",
+   "shows": "draw.arc",
+   "note": "DonutChart: one arc per value, the canvas rotated after each"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "layout.weight",
+   "note": "verticalWeight: the bar chart takes the height that is left"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "visits": {
+    "type": "float_array",
+    "meaning": "weekly visits, oldest first; values >= 0, any length (the bar labels stay W1..W8)",
+    "default": [
+     42,
+     55,
+     48,
+     61,
+     58,
+     73,
+     69,
+     84
+    ]
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "A rising blue sparkline ending on a dot at 84; eight blue columns W1..W8 rising to W8; a ring of eight slices from solid to pale blue with 490 visits in the centre. With variables {visits: [90, 75, 80, 50, 40, 45, 30, 20]} all three change: the line and the bars fall, the first slices grow and the total reads 430. At 252 and 540 dp wide the line and bars follow the width and the ring stays centred at 120 dp.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "narrow",
+    "width": 252,
+    "height": 440
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 440
+   },
+   {
+    "name": "dataset-b",
+    "variables": {
+     "visits": [
+      90,
+      75,
+      80,
+      50,
+      40,
+      45,
+      30,
+      20
+     ]
+    }
+   }
+  ]
+ },
+ "related": [
+  "CMP-08",
+  "HST-02",
+  "VAR-06",
+  "EXP-08"
+ ],
+ "pitfalls": [
+  "values is a float array's name, not a JSON list: an inline [42, 55, ...] cannot be replaced by the host and the charts' loops need arrayGet",
+  "The bar labels are written when the document is built: a host can send new numbers but not new labels, so keep the array 8 long, or drop labels",
+  "Each chart rescales to its own data (the sparkline to min..max, the bars to 0..max, the ring to the sum): they agree on shape, not on a shared axis"
+ ],
+ "derived": {
+  "components": [
+   "BarChart",
+   "DonutChart",
+   "Sparkline"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "Sparkline": "expand",
+   "BarChart": "expand",
+   "DonutChart": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3849,
+  "header": {
+   "width": 360,
+   "height": 440
+  },
+  "op_count": 193,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 31,
+   "CLIP_RECT": 1,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 3,
+   "CoreText": 4,
+   "DATA_TEXT": 15,
+   "DRAW_ARC": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 2,
+   "DRAW_ROUND_RECT": 1,
+   "DRAW_TEXT_ANCHOR": 10,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 2,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 11,
+   "LoopOperation": 13,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 2,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 3,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_WIDTH": 8,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 9,
+   "THEME": 15,
+   "TextFromFloat": 1
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "visits",
+    "type": "float_array",
+    "value": [
+     42,
+     55,
+     48,
+     61,
+     58,
+     73,
+     69,
+     84
+    ]
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 3334,
+    "component_modes": {
+     "Sparkline": "expand",
+     "BarChart": "expand",
+     "DonutChart": "expand"
+    },
+    "op_count": 151,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 3334,
+    "component_modes": {
+     "Sparkline": "expand",
+     "BarChart": "expand",
+     "DonutChart": "expand"
+    },
+    "op_count": 151,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "visits",
+      "type": "float_array",
+      "value": [
+       42,
+       55,
+       48,
+       61,
+       58,
+       73,
+       69,
+       84
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     252,
+     440
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     440
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "dataset-b": {
+    "render": "render-dataset-b.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "BarChart",
+   "DonutChart",
+   "Sparkline",
+   "alpha",
+   "angle",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clipRect",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "export",
+   "fill",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "from",
+   "header",
+   "height",
+   "index",
+   "label",
+   "labels",
+   "left",
+   "light",
+   "loop",
+   "modifiers",
+   "muted",
+   "onSurface",
+   "ops",
+   "outline",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "startAngle",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "values",
+   "verticalAlignment",
+   "verticalWeight",
+   "visits",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "layout.weight": [
+    "weight",
+    "verticalWeight"
+   ]
+  },
+  "built_at": "2026-10-30T07:17:46.488Z"
+ }
+}

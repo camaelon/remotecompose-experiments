@@ -1,0 +1,924 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 300,
+  "height": 210,
+  "profiles": 513,
+  "contentDescription": "BatteryIndicator component: the host battery level, then 95, 40 and 10 percent, and a large icon without the percentage"
+ },
+ "resources": {
+  "variables": {
+   "battery": {
+    "value": 76,
+    "export": true
+   },
+   "batteryindicator1_lv": "clamp(0, 100, @battery)",
+   "batteryindicator5_lv": "clamp(0, 100, @battery)"
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "error": {
+    "light": "#FFC62828",
+    "dark": "#FFEF5350"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "success": {
+    "light": "#FF2E7D32",
+    "dark": "#FF66BB6A"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "BatteryIndicator",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "spacedBy": 6
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "width": 40
+          },
+          {
+           "height": 20
+          },
+          {
+           "semantics": {
+            "contentDescription": "Battery"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 1,
+            "top": 1,
+            "right": 34.2,
+            "bottom": 19,
+            "rx": 4,
+            "ry": 4
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 36.2,
+            "top": 6.4,
+            "right": 40,
+            "bottom": 13.6,
+            "rx": 1.6,
+            "ry": 1.6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator1_lv",
+            "v2": 50,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator1_lv",
+            "v2": 20,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 16.35,
+               "top": 4.8,
+               "right": 18.85,
+               "bottom": 11.6,
+               "rx": 1.25,
+               "ry": 1.25
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 17.6,
+               "cy": 14.4,
+               "radius": 1.4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 4,
+            "top": 4,
+            "right": "4 + (40 * 0.88 - 8) * @batteryindicator1_lv / 100",
+            "bottom": 16,
+            "rx": 1,
+            "ry": 1
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@batteryindicator1_lv",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 4
+          },
+          "id2": "%"
+         },
+         "fontSize": 13,
+         "color": "@colors.onSurface"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "flow": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "padding": {
+            "end": 12,
+            "bottom": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 40
+                },
+                {
+                 "height": 20
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Battery"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 34.2,
+                  "bottom": 19,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 36.2,
+                  "top": 6.4,
+                  "right": 40,
+                  "bottom": 13.6,
+                  "rx": 1.6,
+                  "ry": 1.6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 95,
+                  "v2": 50,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 95,
+                  "v2": 20,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 16.35,
+                     "top": 4.8,
+                     "right": 18.85,
+                     "bottom": 11.6,
+                     "rx": 1.25,
+                     "ry": 1.25
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 17.6,
+                     "cy": 14.4,
+                     "radius": 1.4
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 4,
+                  "top": 4,
+                  "right": 29.84,
+                  "bottom": 16,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": 95,
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 4
+                },
+                "id2": "%"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "padding": {
+            "end": 12,
+            "bottom": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 40
+                },
+                {
+                 "height": 20
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Battery"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 34.2,
+                  "bottom": 19,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 36.2,
+                  "top": 6.4,
+                  "right": 40,
+                  "bottom": 13.6,
+                  "rx": 1.6,
+                  "ry": 1.6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 40,
+                  "v2": 50,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 40,
+                  "v2": 20,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 16.35,
+                     "top": 4.8,
+                     "right": 18.85,
+                     "bottom": 11.6,
+                     "rx": 1.25,
+                     "ry": 1.25
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 17.6,
+                     "cy": 14.4,
+                     "radius": 1.4
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 4,
+                  "top": 4,
+                  "right": 14.88,
+                  "bottom": 16,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": 40,
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 4
+                },
+                "id2": "%"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "padding": {
+            "end": 12,
+            "bottom": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 40
+                },
+                {
+                 "height": 20
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Battery"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 34.2,
+                  "bottom": 19,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 36.2,
+                  "top": 6.4,
+                  "right": 40,
+                  "bottom": 13.6,
+                  "rx": 1.6,
+                  "ry": 1.6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 10,
+                  "v2": 50,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 10,
+                  "v2": 20,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 16.35,
+                     "top": 4.8,
+                     "right": 18.85,
+                     "bottom": 11.6,
+                     "rx": 1.25,
+                     "ry": 1.25
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 17.6,
+                     "cy": 14.4,
+                     "radius": 1.4
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 4,
+                  "top": 4,
+                  "right": 6.72,
+                  "bottom": 16,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": 10,
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 4
+                },
+                "id2": "%"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "spacedBy": 6
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "width": 72
+          },
+          {
+           "height": 36
+          },
+          {
+           "semantics": {
+            "contentDescription": "Battery"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 1,
+            "top": 1,
+            "right": 62.36,
+            "bottom": 35,
+            "rx": 7.2,
+            "ry": 7.2
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 64.36,
+            "top": 11.52,
+            "right": 72,
+            "bottom": 24.48,
+            "rx": 2.88,
+            "ry": 2.88
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.success"
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator5_lv",
+            "v2": 50,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "lt",
+            "v1": "@batteryindicator5_lv",
+            "v2": 20,
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 30.43,
+               "top": 8.64,
+               "right": 32.93,
+               "bottom": 20.88,
+               "rx": 1.25,
+               "ry": 1.25
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 31.68,
+               "cy": 25.92,
+               "radius": 1.4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 4,
+            "top": 4,
+            "right": "4 + (72 * 0.88 - 8) * @batteryindicator5_lv / 100",
+            "bottom": 32,
+            "rx": 4.2,
+            "ry": 4.2
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

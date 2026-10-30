@@ -1,0 +1,853 @@
+{
+ "component": "WeatherIcon",
+ "version": 1,
+ "summary": "A square weather symbol drawn with circles, rounded rectangles and lines: sun, cloud, rain, snow or storm.",
+ "params": {
+  "condition": {
+   "type": "enum",
+   "values": [
+    "sun",
+    "cloud",
+    "rain",
+    "snow",
+    "storm"
+   ],
+   "default": "sun",
+   "static": true,
+   "doc": "sun: an amber disc with eight rays; cloud: a grey cloud; rain: a cloud over three slanted blue drops; snow: a cloud over three blue flakes (dots); storm: a cloud over an amber lightning bolt"
+  },
+  "size": {
+   "type": "float",
+   "default": 48,
+   "static": true,
+   "doc": "Width and height in dp; the drawing is on a 24-unit grid scaled to it"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility label; by default Sunny, Cloudy, Rain, Snow or Thunderstorm"
+  }
+ },
+ "locals": {
+  "u": "@size / 24"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "draw.transform",
+  "data.loop"
+ ],
+ "call": {
+  "WeatherIcon": {
+   "condition": "rain"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": "@size"
+    },
+    {
+     "semantics": {
+      "contentDescription": {
+       "$if": "label",
+       "then": "@label",
+       "else": {
+        "$if": "condition == 'sun'",
+        "then": "Sunny",
+        "else": {
+         "$if": "condition == 'cloud'",
+         "then": "Cloudy",
+         "else": {
+          "$if": "condition == 'rain'",
+          "then": "Rain",
+          "else": {
+           "$if": "condition == 'snow'",
+           "then": "Snow",
+           "else": "Thunderstorm"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "commands": [
+    {
+     "$if": "condition == 'sun'",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@u * 1.5"
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawCircle": {
+         "cx": "@u * 12",
+         "cy": "@u * 12",
+         "radius": "@u * 4.25"
+        }
+       },
+       "else": {
+        "drawCircle": {
+         "cx": "@u * 12",
+         "cy": "@u * 12",
+         "radius": "@u * 4.75"
+        }
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 8,
+        "step": 1,
+        "commands": [
+         {
+          "rotate": {
+           "angle": 45,
+           "pivotX": "@u * 12",
+           "pivotY": "@u * 12"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@u * 12",
+           "y1": "@u * 2.5",
+           "x2": "@u * 12",
+           "y2": "@u * 4.75"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 12",
+          "cy": "@u * 12",
+          "radius": "@u * 4.75"
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "$if": "condition == 'cloud'",
+     "then": {
+      "save": {
+       "commands": [
+        {
+         "translate": {
+          "dx": 0,
+          "dy": "@u * 3"
+         }
+        },
+        {
+         "$if": "theme.mono",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 8",
+            "cy": "@u * 11",
+            "radius": "@u * 5.25"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 13",
+            "cy": "@u * 8.5",
+            "radius": "@u * 6.75"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 17.5",
+            "cy": "@u * 11.5",
+            "radius": "@u * 4.75"
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@u * 2.75",
+            "top": "@u * 9.75",
+            "right": "@u * 22.25",
+            "bottom": "@u * 16.25",
+            "rx": "@u * 3.25",
+            "ry": "@u * 3.25"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 8",
+            "cy": "@u * 11",
+            "radius": "@u * 4"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 13",
+            "cy": "@u * 8.5",
+            "radius": "@u * 5.5"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 17.5",
+            "cy": "@u * 11.5",
+            "radius": "@u * 3.5"
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@u * 4",
+            "top": "@u * 11",
+            "right": "@u * 21",
+            "bottom": "@u * 15",
+            "rx": "@u * 2",
+            "ry": "@u * 2"
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 8",
+            "cy": "@u * 11",
+            "radius": "@u * 4"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 13",
+            "cy": "@u * 8.5",
+            "radius": "@u * 5.5"
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@u * 17.5",
+            "cy": "@u * 11.5",
+            "radius": "@u * 3.5"
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@u * 4",
+            "top": "@u * 11",
+            "right": "@u * 21",
+            "bottom": "@u * 15",
+            "rx": "@u * 2",
+            "ry": "@u * 2"
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "condition == 'rain'",
+     "then": [
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 5.25"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 6.75"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 4.75"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 2.75",
+          "top": "@u * 9.75",
+          "right": "@u * 22.25",
+          "bottom": "@u * 16.25",
+          "rx": "@u * 3.25",
+          "ry": "@u * 3.25"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@u * 1.5"
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 8.5",
+        "y1": "@u * 17.5",
+        "x2": "@u * 7.5",
+        "y2": "@u * 21.5"
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 13",
+        "y1": "@u * 17.5",
+        "x2": "@u * 12",
+        "y2": "@u * 21.5"
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 17.5",
+        "y1": "@u * 17.5",
+        "x2": "@u * 16.5",
+        "y2": "@u * 21.5"
+       }
+      }
+     ]
+    },
+    {
+     "$if": "condition == 'snow'",
+     "then": [
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 5.25"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 6.75"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 4.75"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 2.75",
+          "top": "@u * 9.75",
+          "right": "@u * 22.25",
+          "bottom": "@u * 16.25",
+          "rx": "@u * 3.25",
+          "ry": "@u * 3.25"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@u * 8",
+        "cy": "@u * 18.5",
+        "radius": "@u * 1.4"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@u * 12.5",
+        "cy": "@u * 21",
+        "radius": "@u * 1.4"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@u * 17",
+        "cy": "@u * 18.5",
+        "radius": "@u * 1.4"
+       }
+      }
+     ]
+    },
+    {
+     "$if": "condition == 'storm'",
+     "then": [
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 5.25"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 6.75"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 4.75"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 2.75",
+          "top": "@u * 9.75",
+          "right": "@u * 22.25",
+          "bottom": "@u * 16.25",
+          "rx": "@u * 3.25",
+          "ry": "@u * 3.25"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 8",
+          "cy": "@u * 11",
+          "radius": "@u * 4"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 13",
+          "cy": "@u * 8.5",
+          "radius": "@u * 5.5"
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@u * 17.5",
+          "cy": "@u * 11.5",
+          "radius": "@u * 3.5"
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@u * 4",
+          "top": "@u * 11",
+          "right": "@u * 21",
+          "bottom": "@u * 15",
+          "rx": "@u * 2",
+          "ry": "@u * 2"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@u * 1.5"
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "strokeJoin": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 14",
+        "y1": "@u * 15.5",
+        "x2": "@u * 11",
+        "y2": "@u * 19.5"
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 11",
+        "y1": "@u * 19.5",
+        "x2": "@u * 14",
+        "y2": "@u * 19.5"
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@u * 14",
+        "y1": "@u * 19.5",
+        "x2": "@u * 11.5",
+        "y2": "@u * 23"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "condition is static: each condition is a different drawing written into the document. To show a condition the host chooses at run time, put the five icons in a stateLayout (or behind visibility) driven by a host integer",
+  "No SVG paths: the cloud is three circles over a rounded rectangle, and the bolt three round-capped lines (an SVG path string costs about 4 KB in Java, padded to 1024 floats)",
+  "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
+  "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)"
+ ]
+}

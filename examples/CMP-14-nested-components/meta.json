@@ -1,0 +1,459 @@
+{
+ "id": "CMP-14",
+ "name": "nested-components",
+ "version": 1,
+ "kind": "gallery",
+ "title": "Nested components",
+ "summary": "Components inside components: Cards whose content slot holds ListItems whose trailing slot holds a Switch; every Switch gets its own state variable.",
+ "prompt": "Build a settings screen of cards; each card lists rows with a title, a subtitle and a switch at the end, and each switch toggles on its own.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "Card",
+  "ListItem",
+  "Switch"
+ ],
+ "capabilities": {
+  "primary": [
+   "input.toggle",
+   "layout.stack"
+  ],
+  "secondary": [
+   "a11y.labels",
+   "layout.decoration",
+   "layout.weight"
+  ]
+ },
+ "use_cases": [
+  "list",
+  "control"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "settings",
+  "settings screen",
+  "nested components",
+  "slots",
+  "card",
+  "list item",
+  "switch",
+  "toggle row",
+  "preferences",
+  "component library"
+ ],
+ "teaches": [
+  "A slot takes any JSON nodes, other component calls included: {\"Card\": {\"children\": [{\"ListItem\": {\"slots\": {\"trailing\": [{\"Switch\": {...}}]}}}]}}",
+  "A Switch whose checked is not bound gets a variable of its own per call (switch1_checked, switch2_checked, ...), starting at the number given: four switches, four states, no collisions",
+  "Inside a Card, pass ListItem padding 0: the card already pads its content by 16 dp"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "layout.stack",
+   "note": "a Card whose content is three ListItems"
+  },
+  {
+   "pointer": "/root/column/children/1/Card/children/0/ListItem/slots/trailing/0",
+   "shows": "input.toggle",
+   "note": "a Switch in the row's trailing slot, starting on, with its own state"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Two cards: Connectivity with Wi-Fi (on), Bluetooth (off) and Airplane mode (off), and Notifications with Do not disturb (on); each row has its title (and subtitle) at the start and its switch at the end. The expansion declares four switch variables. Tapping the Bluetooth switch (the tapped render) turns it on and leaves the other three as they were. Resized, the rows keep the switch at the end and shorten the text with an ellipsis: at 260 dp and at 520 dp.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "narrow",
+    "width": 260,
+    "height": 500
+   },
+   {
+    "name": "wide",
+    "width": 520,
+    "height": 500
+   },
+   {
+    "name": "tapped",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 302,
+      "y": 214
+     }
+    ],
+    "duration": 0.8
+   }
+  ]
+ },
+ "related": [
+  "CMP-05",
+  "CMP-02",
+  "CMP-12"
+ ],
+ "pitfalls": [
+  "Bind a switch (\"checked\": \"@wifi\") only when the document reads the state; two switches bound to the same variable move together",
+  "Every component with a label expands (U7), so a screen of nested rows is written out in full: about one ListItem plus one Switch per row"
+ ],
+ "derived": {
+  "components": [
+   "Card",
+   "ListItem",
+   "Switch"
+  ],
+  "component_instances": 10,
+  "component_modes": {
+   "Card": "expand",
+   "ListItem": "expand",
+   "Switch": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3752,
+  "header": {
+   "width": 360,
+   "height": 500
+  },
+  "op_count": 229,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 8,
+   "ANIMATED_FLOAT": 12,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "CanvasContent": 4,
+   "CoreText": 11,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 11,
+   "DRAW_CIRCLE": 4,
+   "DRAW_ROUND_RECT": 8,
+   "HEADER": 1,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 26,
+   "LoopOperation": 12,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_WIDTH": 19,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 12,
+   "RoundedClipRectModifierOperation": 2,
+   "THEME": 18,
+   "ValueFloatExpressionChangeActionOperation": 4
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 5
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: layout_touch_target",
+   "info: unused_variables",
+   "info: repaint_continuous",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 4,
+   "click": 4,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 2848,
+    "component_modes": {
+     "Switch": "pattern",
+     "Card": "expand",
+     "ListItem": "expand"
+    },
+    "op_count": 201,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 2848,
+    "component_modes": {
+     "Switch": "pattern",
+     "Card": "expand",
+     "ListItem": "expand"
+    },
+    "op_count": 201,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     260,
+     500
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     520,
+     500
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: repaint_continuous",
+     "info: never_executed"
+    ]
+   },
+   "tapped": {
+    "render": "render-tapped.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "Card",
+   "ListItem",
+   "Switch",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "checked",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "drawCircle",
+   "drawRoundRect",
+   "fontSize",
+   "header",
+   "height",
+   "label",
+   "left",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onSurface",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "roundedRect",
+   "row",
+   "rx",
+   "ry",
+   "semantics",
+   "size",
+   "slots",
+   "spacedBy",
+   "style",
+   "subtitle",
+   "surface",
+   "switch1_checked",
+   "switch2_checked",
+   "switch3_checked",
+   "switch4_checked",
+   "target",
+   "text",
+   "title",
+   "top",
+   "track",
+   "trailing",
+   "type",
+   "value",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "weight",
+   "width"
+  ],
+  "evidence": {
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "layout.weight": [
+    "weight"
+   ]
+  },
+  "built_at": "2026-10-30T07:17:57.246Z"
+ }
+}

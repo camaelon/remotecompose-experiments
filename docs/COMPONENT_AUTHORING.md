@@ -102,6 +102,10 @@ arithmetic). Static values fold to literals, which is smaller than an expression
 - `{"$each": "labels", "as": "label", "index": "i", "count": "n", "do": X}`: X once per
   item of a list param (or `count` times for a number).
 - `{"$count": "labels"}`: the number of items, as a literal.
+- `{"$name": "value"}`: the bare name (`vol` for `"@vol"`) of the variable a `variable` param
+  or a state local is bound to, for an op that declares a name. Slider names its
+  `touchExpression` after its `value`, so from the slider on the caller's variable is the
+  touch value. It keeps the call out of pattern mode.
 - An optional param with no default, used as a whole value (`"onClick": "@onClick"`), drops
   its key when the caller leaves it out.
 

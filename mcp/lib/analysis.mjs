@@ -109,7 +109,9 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
     if (tapped) {
         const releases = log.split("\n").filter((l) => /^up t=/.test(l));
         const hits = releases.filter((l) => /click hit/.test(l)).length;
-        if (releases.length && hits === 0) {
+        // A document driven by touch expressions (a slider, a scroll) takes presses with no
+        // click target, so a release that hits none is not a miss there.
+        if (releases.length && hits === 0 && !f.touch) {
             add("warning", "taps_missed",
                 f.clickAreas
                     ? `None of the ${releases.length} release(s) hit a click target — check the coordinates are in document space.`

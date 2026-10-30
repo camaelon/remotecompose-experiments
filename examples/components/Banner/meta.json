@@ -1,0 +1,476 @@
+{
+ "id": "Banner",
+ "name": "banner",
+ "version": 1,
+ "title": "Banner",
+ "components": [
+  "Banner",
+  "Button"
+ ],
+ "prompt": "Show an info banner, an offline warning with a Retry action and a storage-full error that can't be dismissed, plus a Show all button that brings dismissed banners back.",
+ "level": 2,
+ "use_cases": [
+  "notification",
+  "control"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "banner",
+  "alert",
+  "notice",
+  "toast",
+  "snackbar",
+  "message bar",
+  "warning",
+  "error message",
+  "info message",
+  "dismissible",
+  "callout"
+ ],
+ "teaches": [
+  "kind picks the colour and the icon (info, warn, error); the icon's shape, not only its colour, tells them apart",
+  "visible is an integer variable: the cross sets it to 0 (the banner slides away, then the gap closes) and valueIntegerChange to 1 fades it back in",
+  "slots.action puts a short action before the cross; dismissible: false drops the cross"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1",
+   "shows": "layout.decoration",
+   "note": "info: a 1.5 dp primary ring around a surface fill"
+  },
+  {
+   "pointer": "/root/column/children/2",
+   "shows": "anim.visibility",
+   "note": "bound to the int @offlineShown; Retry and the cross both set it to 0"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "a11y.labels",
+   "note": "error, not dismissible; the cross elsewhere is labelled Dismiss: <text>"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "syncShown": 1,
+   "offlineShown": 1
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Three framed banners: blue info with a circled i, amber 'You are offline' with a triangle and a Retry action, red 'Storage almost full' with a circled ! and no cross. Tapping the info cross (x=300, y=72) at 0.1 s: 0.12 s later it is halfway out to the right (render-dismiss), and after the 300 ms exit the others have moved up into its place (render-dismissed). Resized, the banners fill the width: at 240 dp the messages wrap ('Sync finished: 12 new photos' takes two lines and the frame grows; the C++ renderer clips the wrapped offline message, which has a Retry action beside it, to its first line, C51; the TS player gives it its three lines), at 480 dp every message fits on one line.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "dismiss",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 300,
+      "y": 72
+     }
+    ],
+    "duration": 0.22
+   },
+   {
+    "name": "dismissed",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 300,
+      "y": 72
+     }
+    ],
+    "duration": 1.2
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 300
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 260
+   }
+  ]
+ },
+ "related": [
+  "ANM-06",
+  "CMP-11"
+ ],
+ "derived": {
+  "components": [
+   "Banner",
+   "Button"
+  ],
+  "component_instances": 5,
+  "component_modes": {
+   "Button": "expand",
+   "Banner": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3675,
+  "header": {
+   "width": 340,
+   "height": 260
+  },
+  "op_count": 250,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATION_SPEC": 3,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "CanvasContent": 5,
+   "CoreText": 6,
+   "DATA_INT": 3,
+   "DATA_TEXT": 8,
+   "DRAW_CIRCLE": 5,
+   "DRAW_LINE": 10,
+   "HEADER": 1,
+   "LAYOUT_BOX": 14,
+   "LAYOUT_CANVAS": 5,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 4,
+   "LayoutComponentContent": 30,
+   "LoopOperation": 14,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_RIPPLE": 2,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 22,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 8,
+   "RoundedClipRectModifierOperation": 10,
+   "THEME": 21,
+   "VALUE_INTEGER_CHANGE_ACTION": 5
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 4
+  },
+  "audit_findings": [
+   "info: layout_touch_target",
+   "info: layout_empty_container",
+   "info: unused_variables",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 4,
+   "click": 4,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 2874,
+    "component_modes": {
+     "Button": "expand",
+     "Banner": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 191,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 2874,
+    "component_modes": {
+     "Button": "expand",
+     "Banner": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 191,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "dismiss": {
+    "render": "render-dismiss.png",
+    "render_findings": []
+   },
+   "dismissed": {
+    "render": "render-dismissed.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     300
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_empty_container",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     480,
+     260
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_empty_container",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Banner",
+   "Button",
+   "action",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "banner3_visible",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "dismissible",
+   "drawCircle",
+   "drawLine",
+   "enabled",
+   "enterAnimation",
+   "enterSequence",
+   "error",
+   "exitAnimation",
+   "exitSequence",
+   "fontSize",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "kind",
+   "label",
+   "light",
+   "maxLines",
+   "modifiers",
+   "motionDuration",
+   "muted",
+   "offlineShown",
+   "onClick",
+   "onSurface",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "slots",
+   "spacedBy",
+   "spacer",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "surface",
+   "syncShown",
+   "target",
+   "text",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "visibilityDuration",
+   "visible",
+   "warning",
+   "weight",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "anim.visibility": [
+    "enterAnimation",
+    "exitAnimation",
+    "enterSequence",
+    "exitSequence",
+    "visibilityDuration"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-30T07:19:52.667Z"
+ }
+}

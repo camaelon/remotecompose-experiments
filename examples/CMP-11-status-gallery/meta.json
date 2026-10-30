@@ -1,0 +1,582 @@
+{
+ "id": "CMP-11",
+ "name": "status-gallery",
+ "version": 1,
+ "kind": "gallery",
+ "title": "Status gallery",
+ "summary": "The library WeatherIcon in every condition, BatteryIndicator at the host battery level and at 95, 40 and 10 % (green, amber, red), and Banner in its info, warn and error kinds.",
+ "prompt": "Show status symbols: a weather icon for sunny, cloudy, rain, snow and storm, labelled; battery indicators for the device's battery and for 95, 40 and 10 percent, coloured by level; and an info, a warning and an error banner.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "WeatherIcon",
+  "BatteryIndicator",
+  "Banner"
+ ],
+ "capabilities": {
+  "primary": [
+   "draw.shapes",
+   "data.condition"
+  ],
+  "secondary": [
+   "host.variables",
+   "text.dynamic",
+   "data.loop",
+   "layout.flow",
+   "layout.weight",
+   "layout.decoration"
+  ]
+ },
+ "use_cases": [
+  "widget",
+  "weather"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "status",
+  "status icons",
+  "weather",
+  "weather icon",
+  "forecast",
+  "battery",
+  "battery indicator",
+  "low battery",
+  "charge level",
+  "component library",
+  "banner",
+  "alert",
+  "warning banner",
+  "error banner"
+ ],
+ "teaches": [
+  "{\"WeatherIcon\": {\"condition\": \"storm\", \"size\": 40}}: five static conditions, drawn with circles, rounded rects and lines",
+  "{\"BatteryIndicator\": {\"level\": \"@battery\"}} follows an exported host float; literal levels fold to numbers, so the 95/40/10 icons cost no variable",
+  "The battery colour is green, amber below 50 and red with a ! below 20, chosen by conditionalOperations: the low render (battery = 10) turns the host icon red",
+  "{\"Banner\": {\"text\": ..., \"kind\": \"warn\"}} frames a message in the kind's colour with its own icon shape; each unbound banner keeps its own visible variable, and dismissible: false drops the cross"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/2",
+   "shows": "draw.shapes",
+   "note": "the five weather conditions in weighted columns"
+  },
+  {
+   "pointer": "/root/column/children/4/flow/children/0",
+   "shows": "host.variables",
+   "note": "the battery bound to the host level"
+  },
+  {
+   "pointer": "/root/column/children/4/flow/children/3",
+   "shows": "data.condition",
+   "note": "10 %: red, with a !"
+  },
+  {
+   "pointer": "/root/column/children/7",
+   "shows": "layout.decoration",
+   "note": "a warn Banner"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "battery": {
+    "type": "float",
+    "meaning": "battery charge, percent",
+    "default": 76,
+    "min": 0,
+    "max": 100
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Five distinct weather icons (an amber sun with rays, a grey cloud, a cloud with blue drops, a cloud with blue dots, a cloud with an amber bolt), each labelled. Battery icons: the host level 76 (green, three quarters), 95 (green), 40 (amber), 10 (red with a !). Three banners: info (blue, circled i, with a cross), warn (amber, triangle, with a cross) and error (red, circled !, no cross). With battery = 10 (the low render) the first battery turns red, shows the ! and reads 10%. Resized, the weather columns are weighted (closer at 260 dp, spread at 520), the batteries wrap in a flow (two lines at 260 dp) and the banners fill the width.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "low",
+    "variables": {
+     "battery": 10
+    }
+   },
+   {
+    "name": "narrow",
+    "width": 260,
+    "height": 480
+   },
+   {
+    "name": "wide",
+    "width": 520,
+    "height": 440
+   }
+  ]
+ },
+ "related": [
+  "HST-03",
+  "CMP-07",
+  "CMP-08"
+ ],
+ "pitfalls": [
+  "The format has no portable system battery level (batteryLevel() is a json2rc extension the Java parser rejects, U31): the host sets an exported float, so render with variables {\"battery\": 10}, not system_variables",
+  "WeatherIcon's condition is static: a host-chosen condition needs the five icons behind a stateLayout or visibility"
+ ],
+ "derived": {
+  "components": [
+   "Banner",
+   "BatteryIndicator",
+   "WeatherIcon"
+  ],
+  "component_instances": 12,
+  "component_modes": {
+   "WeatherIcon": "expand",
+   "BatteryIndicator": "expand",
+   "Banner": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 6852,
+  "header": {
+   "width": 360,
+   "height": 440
+  },
+  "op_count": 466,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 11,
+   "ANIMATED_FLOAT": 2,
+   "ANIMATION_SPEC": 3,
+   "COLOR_CONSTANT": 16,
+   "COLOR_EXPRESSIONS": 16,
+   "CanvasContent": 14,
+   "ConditionalOperations": 8,
+   "CoreText": 16,
+   "DATA_FLOAT": 1,
+   "DATA_INT": 3,
+   "DATA_TEXT": 22,
+   "DRAW_CIRCLE": 26,
+   "DRAW_LINE": 17,
+   "DRAW_ROUND_RECT": 20,
+   "HEADER": 1,
+   "LAYOUT_BOX": 15,
+   "LAYOUT_CANVAS": 14,
+   "LAYOUT_COLUMN": 6,
+   "LAYOUT_FLOW": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 8,
+   "LayoutComponentContent": 60,
+   "LoopOperation": 17,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 2,
+   "MODIFIER_HEIGHT": 17,
+   "MODIFIER_PADDING": 11,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 36,
+   "NAMED_VARIABLE": 9,
+   "PAINT_VALUES": 37,
+   "RoundedClipRectModifierOperation": 8,
+   "THEME": 24,
+   "TextFromFloat": 4,
+   "TextMerge": 4,
+   "VALUE_INTEGER_CHANGE_ACTION": 2
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "battery",
+    "type": "float",
+    "value": 76
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 4
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: layout_touch_target",
+   "info: unused_variables",
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 6235,
+    "component_modes": {
+     "WeatherIcon": "expand",
+     "BatteryIndicator": "expand",
+     "Banner": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 417,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "battery",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 6235,
+    "component_modes": {
+     "WeatherIcon": "expand",
+     "BatteryIndicator": "expand",
+     "Banner": "expand"
+    },
+    "motion_removed": 3,
+    "op_count": 417,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "battery",
+      "type": "float",
+      "value": 76
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "low": {
+    "render": "render-low.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     260,
+     480
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     520,
+     440
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: layout_touch_target",
+     "info: unused_variables",
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Banner",
+   "BatteryIndicator",
+   "WeatherIcon",
+   "angle",
+   "animationSpec",
+   "apiLevel",
+   "background",
+   "banner1_visible",
+   "banner2_visible",
+   "banner3_visible",
+   "battery",
+   "batteryindicator1_lv",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "condition",
+   "conditionalOperations",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "dismissible",
+   "drawCircle",
+   "drawLine",
+   "drawRoundRect",
+   "dx",
+   "dy",
+   "end",
+   "enterAnimation",
+   "enterSequence",
+   "error",
+   "exitAnimation",
+   "exitSequence",
+   "export",
+   "flags",
+   "flow",
+   "fontSize",
+   "from",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "index",
+   "kind",
+   "left",
+   "level",
+   "light",
+   "loop",
+   "modifiers",
+   "motionDuration",
+   "muted",
+   "onClick",
+   "onSurface",
+   "ops",
+   "padding",
+   "paint",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "semantics",
+   "size",
+   "spacedBy",
+   "spacer",
+   "step",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "surface",
+   "target",
+   "text",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "v1",
+   "v2",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "visibilityDuration",
+   "warning",
+   "weight",
+   "whole",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle",
+    "drawLine"
+   ],
+   "data.condition": [
+    "conditionalOperations",
+    "step()"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "data.loop": [
+    "loop"
+   ],
+   "layout.flow": [
+    "flow"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ]
+  },
+  "built_at": "2026-10-30T07:17:50.864Z"
+ }
+}

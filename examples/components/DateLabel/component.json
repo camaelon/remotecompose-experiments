@@ -1,0 +1,438 @@
+{
+ "component": "DateLabel",
+ "version": 1,
+ "summary": "Today's date from the host clock, drawn as one line that fills its width, in a static format: \"Thu 29 Oct\", \"29 Oct 2026\", \"Thursday, 29 October 2026\", 2026-10-29, 29/10/2026 or 10/29/2026.",
+ "params": {
+  "format": {
+   "type": "enum",
+   "values": [
+    "short",
+    "medium",
+    "long",
+    "iso",
+    "dmy",
+    "mdy"
+   ],
+   "default": "short",
+   "static": true,
+   "doc": "short: Thu 29 Oct; medium: 29 Oct 2026; long: Thursday, 29 October 2026; iso: 2026-10-29; dmy: 29/10/2026; mdy: 10/29/2026 (English names, day and month zero-padded only in the numeric formats)"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 15,
+   "static": true,
+   "doc": "Text size in dp (drawn on a canvas: it does not follow the system font scale); the label is 1.4 × this tall"
+  },
+  "align": {
+   "type": "enum",
+   "values": [
+    "start",
+    "center",
+    "end"
+   ],
+   "default": "start",
+   "static": true,
+   "doc": "Where the text sits in the width the label fills"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "Text colour"
+  },
+  "label": {
+   "type": "string",
+   "default": "Date",
+   "doc": "Accessibility label (the date is drawn, not a text node)"
+  }
+ },
+ "capabilities": [
+  "time.date",
+  "text.dynamic",
+  "expr.string",
+  "text.anchor"
+ ],
+ "call": {
+  "DateLabel": {
+   "format": "long"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": "@fontSize * 1.4"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "$if": "format == 'short'",
+     "then": {
+      "textSubtext": {
+       "text": "MonTueWedThuFriSatSun",
+       "start": "(weekDay() - 1) * 3",
+       "len": 3,
+       "varName": "dateLabelDay"
+      }
+     }
+    },
+    {
+     "$if": "format == 'long'",
+     "then": [
+      {
+       "textSubtext": {
+        "text": "Monday   Tuesday  WednesdayThursday Friday   Saturday Sunday   ",
+        "start": "(weekDay() - 1) * 9",
+        "len": 9,
+        "varName": "dateLabelDay9"
+       }
+      },
+      {
+       "textTransform": {
+        "text": "@dateLabelDay9",
+        "start": 0,
+        "len": -1,
+        "operation": 3,
+        "varName": "dateLabelDay"
+       }
+      }
+     ]
+    },
+    {
+     "$if": "format == 'short'",
+     "then": {
+      "textSubtext": {
+       "text": "JanFebMarAprMayJunJulAugSepOctNovDec",
+       "start": "(calendarMonth() - 1) * 3",
+       "len": 3,
+       "varName": "dateLabelMonth"
+      }
+     }
+    },
+    {
+     "$if": "format == 'medium'",
+     "then": {
+      "textSubtext": {
+       "text": "JanFebMarAprMayJunJulAugSepOctNovDec",
+       "start": "(calendarMonth() - 1) * 3",
+       "len": 3,
+       "varName": "dateLabelMonth"
+      }
+     }
+    },
+    {
+     "$if": "format == 'long'",
+     "then": [
+      {
+       "textSubtext": {
+        "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+        "start": "(calendarMonth() - 1) * 9",
+        "len": 9,
+        "varName": "dateLabelMonth9"
+       }
+      },
+      {
+       "textTransform": {
+        "text": "@dateLabelMonth9",
+        "start": 0,
+        "len": -1,
+        "operation": 3,
+        "varName": "dateLabelMonth"
+       }
+      }
+     ]
+    },
+    {
+     "variable": {
+      "name": "dateLabelText",
+      "vtype": "string",
+      "commit": true,
+      "value": {
+       "$if": "format == 'short'",
+       "then": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": "@dateLabelDay",
+           "id2": " "
+          },
+          "id2": {
+           "type": "textFromFloat",
+           "value": "dayOfMonth()",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 4
+          }
+         },
+         "id2": " "
+        },
+        "id2": "@dateLabelMonth"
+       },
+       "else": {
+        "$if": "format == 'medium'",
+        "then": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "dayOfMonth()",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 4
+            },
+            "id2": " "
+           },
+           "id2": "@dateLabelMonth"
+          },
+          "id2": " "
+         },
+         "id2": {
+          "type": "textFromFloat",
+          "value": "year()",
+          "whole": 4,
+          "decimal": 0,
+          "flags": 4
+         }
+        },
+        "else": {
+         "$if": "format == 'long'",
+         "then": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@dateLabelDay",
+               "id2": ", "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "dayOfMonth()",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 4
+              }
+             },
+             "id2": " "
+            },
+            "id2": "@dateLabelMonth"
+           },
+           "id2": " "
+          },
+          "id2": {
+           "type": "textFromFloat",
+           "value": "year()",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 4
+          }
+         },
+         "else": {
+          "$if": "format == 'iso'",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "year()",
+               "whole": 4,
+               "decimal": 0,
+               "flags": 4
+              },
+              "id2": "-"
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "calendarMonth()",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             }
+            },
+            "id2": "-"
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "dayOfMonth()",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          },
+          "else": {
+           "$if": "format == 'dmy'",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "dayOfMonth()",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 12
+               },
+               "id2": "/"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "calendarMonth()",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             },
+             "id2": "/"
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "year()",
+             "whole": 4,
+             "decimal": 0,
+             "flags": 4
+            }
+           },
+           "else": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "calendarMonth()",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 12
+               },
+               "id2": "/"
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "dayOfMonth()",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             },
+             "id2": "/"
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "year()",
+             "whole": 4,
+             "decimal": 0,
+             "flags": 4
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       },
+       {
+        "textSize": "@fontSize"
+       }
+      ]
+     }
+    },
+    {
+     "textMeasure": {
+      "text": "@dateLabelText",
+      "mode": 0,
+      "name": "dateLabelWidth"
+     }
+    },
+    {
+     "scale": {
+      "sx": "min(1, componentWidth() / @dateLabelWidth)",
+      "sy": "min(1, componentWidth() / @dateLabelWidth)",
+      "pivotX": {
+       "$if": "align == 'start'",
+       "then": 0,
+       "else": {
+        "$if": "align == 'center'",
+        "then": "componentWidth() / 2",
+        "else": "componentWidth()"
+       }
+      },
+      "pivotY": "@fontSize * 0.7"
+     }
+    },
+    {
+     "drawTextAnchored": {
+      "text": "@dateLabelText",
+      "x": {
+       "$if": "align == 'start'",
+       "then": 0,
+       "else": {
+        "$if": "align == 'center'",
+        "then": "componentWidth() / 2",
+        "else": "componentWidth()"
+       }
+      },
+      "y": "@fontSize * 0.7",
+      "panX": {
+       "$if": "align == 'start'",
+       "then": -1,
+       "else": {
+        "$if": "align == 'center'",
+        "then": 0,
+        "else": 1
+       }
+      },
+      "panY": 0
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "A date wider than the label is scaled down to fit (textMeasure, then one scale about the anchor), never cut off or wrapped",
+  "The date is drawn on a canvas that fills its parent's width (fillMaxWidth, 1.4 × fontSize tall): in a row, put it in a weighted box, or it has no width. It is drawn because the Java parser accepts textSubtext and textTransform only among canvas commands, not in a layout text, and the names need them",
+  "weekDay() is 1 (Monday) to 7 (Sunday) and calendarMonth() 1 to 12: subtract 1 before indexing",
+  "Names come from one constant string cut with textSubtext at (field - 1) × width: 3-letter names need nothing else; full names are padded to 9 characters and trimmed (textTransform operation 3). textLookup over an addDataList would be shorter to write, but the Java parser drops the list's id (U4), so the document would only convert with json2rc",
+  "The names are English; for another language, copy the component and change the two name strings (keep every name the same width)",
+  "Each call writes its name texts under fixed names (dateLabelDay, dateLabelMonth): a later DateLabel redefines them after an earlier one has used them, which is fine, but don't read them from outside the component",
+  "The date changes at midnight with no repaint of its own: a document that shows only a date is redrawn when the host redraws it"
+ ]
+}

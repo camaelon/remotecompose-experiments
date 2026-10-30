@@ -1,0 +1,284 @@
+{
+ "component": "Slider",
+ "version": 1,
+ "summary": "A horizontal slider: dragging or tapping the track sets its variable between min and max (the thumb jumps under the finger and follows it); it can show the value at its end.",
+ "params": {
+  "value": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The value, kept in min..max. Bind a document variable (\"@volume\") to preset it and read it after the slider; omitted, the slider keeps its own"
+  },
+  "min": {
+   "type": "float",
+   "default": 0,
+   "doc": "Value at the left end of the track"
+  },
+  "max": {
+   "type": "float",
+   "default": 1,
+   "doc": "Value at the right end of the track"
+  },
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Accessibility label (the slider draws no title): put the visible name next to it and pass the same words"
+  },
+  "showValue": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Print the value at the right end (the track gets 48 dp shorter)"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the printed value"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Active track and thumb"
+  }
+ },
+ "capabilities": [
+  "input.drag",
+  "text.dynamic",
+  "a11y.labels"
+ ],
+ "call": {
+  "Slider": {
+   "label": "Volume",
+   "value": "@volume",
+   "max": 100,
+   "showValue": true
+  }
+ },
+ "locals": {
+  "x0": 0,
+  "end": {
+   "$if": "showValue",
+   "then": 60,
+   "else": 12
+  },
+  "trk": "12 + @end",
+  "span": "@max - @min",
+  "tx": {
+   "$if": "min",
+   "then": "12 + (componentWidth() - @trk) * (@value - @min) / @span",
+   "else": "12 + (componentWidth() - @trk) * @value / @span"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "height": "@theme.control_height"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "componentValue": {
+      "id": "@x0",
+      "valueType": 4
+     }
+    },
+    {
+     "touchExpression": {
+      "name": {
+       "$name": "value"
+      },
+      "defaultValue": "@value",
+      "min": "@min",
+      "max": "@max",
+      "expression": [
+       {
+        "$if": "min",
+        "then": "@min + (touchX() - @x0 - 12) / (componentWidth() - @trk) * @span",
+        "else": "(touchX() - @x0 - 12) / (componentWidth() - @trk) * @span"
+       }
+      ],
+      "touchMode": 6
+     }
+    },
+    {
+     "$if": "theme.mono",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 12,
+        "y1": 20,
+        "x2": "componentWidth() - @end",
+        "y2": 20
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "strokeWidth": 3
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 12,
+        "y1": 20,
+        "x2": "@tx",
+        "y2": 20
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@tx",
+        "cy": 20,
+        "radius": 7
+       }
+      }
+     ],
+     "else": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 4
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 12,
+        "y1": 20,
+        "x2": "componentWidth() - @end",
+        "y2": 20
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 12,
+        "y1": 20,
+        "x2": "@tx",
+        "y2": 20
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@tx",
+        "cy": 20,
+        "radius": 10
+       }
+      }
+     ]
+    },
+    {
+     "$if": "showValue",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": "@theme.text_md"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "@value",
+         "whole": 4,
+         "decimal": "@decimals",
+         "flags": 5
+        },
+        "x": "componentWidth()",
+        "y": 20,
+        "panX": 1,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The drag is a touchExpression in absolute mode (touchMode 6) named after the bound variable: from the slider on, \"@volume\" is the touch value (it starts at the variable's own value and keeps where the finger left it). Read the value AFTER the slider in the document: the parsers bind names in document order, so a text placed before it, or an expression in resources, keeps reading the starting value",
+  "touchX() is in document coordinates, so the slider measures where it sits (componentValue POS_ROOT_X into a local) and subtracts it: it works anywhere in the layout, scrolled or padded",
+  "Players that predate the T31-T33 / C49-C50 fixes (2026-10-30) map the drag wrong: the TS player read 0 for POS_ROOT_X and let every slider take every touch, and the C++ player hit-tested a nested touch expression in its own coordinates. Java, and the TS and C++ players from that date, put the value under the finger",
+  "The value is continuous: there are no steps (the notch stop modes need touchSpec, which the Java parser ignores, U8). Round where you read it (textFromFloat decimals, floor())",
+  "It fills the width it is given (fillMaxWidth) and is 40 dp tall: in a row, give it a weight or a box with a width",
+  "No easing on the value: the thumb follows the finger frame for frame (an animated value would trail it). In mono it looks the same, a thin grey track, a thicker white active part and a smaller thumb"
+ ]
+}

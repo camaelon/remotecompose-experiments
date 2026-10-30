@@ -1,0 +1,369 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 220,
+  "profiles": 513,
+  "contentDescription": "BarChart component: weekly visits as labelled bars filling the card, and a small unlabelled chart of daily steps"
+ },
+ "resources": {
+  "floatArrays": {
+   "visits": {
+    "value": [
+     42,
+     55,
+     48,
+     61,
+     58,
+     73,
+     69,
+     84
+    ],
+    "export": true
+   },
+   "steps": [
+    6200,
+    8400,
+    7100,
+    10300,
+    5600,
+    12100,
+    9000
+   ]
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "BarChart",
+         "fontSize": 20,
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            84,
+            28
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Steps, last 7 days"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "translate": {
+            "dx": 0,
+            "dy": "componentHeight() - 0"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             }
+            ]
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": 0,
+               "top": "-componentHeight()",
+               "right": "componentWidth()",
+               "bottom": 0
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": "arrayLength(@steps)",
+               "commands": [
+                {
+                 "drawRoundRect": {
+                  "left": "(i + 0.15) * componentWidth() / (arrayLength(@steps))",
+                  "top": "-arrayGet(@steps, i) * (componentHeight() - 0 - 4) / (max(arrayMax(@steps), 0.001))",
+                  "right": "(i + 0.85) * componentWidth() / (arrayLength(@steps))",
+                  "bottom": 4,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.outline"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 0,
+            "y1": 0,
+            "x2": "componentWidth()",
+            "y2": 0
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "verticalWeight": 1
+       },
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 12
+        }
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Visits per week, last 8 weeks"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "translate": {
+            "dx": 0,
+            "dy": "componentHeight() - 18"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             }
+            ]
+           }
+          },
+          {
+           "save": {
+            "commands": [
+             {
+              "clipRect": {
+               "left": 0,
+               "top": "-componentHeight()",
+               "right": "componentWidth()",
+               "bottom": 0
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": "arrayLength(@visits)",
+               "commands": [
+                {
+                 "drawRoundRect": {
+                  "left": "(i + 0.15) * componentWidth() / (arrayLength(@visits))",
+                  "top": "-arrayGet(@visits, i) * (componentHeight() - 18 - 4) / (max(arrayMax(@visits), 0.001))",
+                  "right": "(i + 0.85) * componentWidth() / (arrayLength(@visits))",
+                  "bottom": 4,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.outline"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 0,
+            "y1": 0,
+            "x2": "componentWidth()",
+            "y2": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 11
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W1",
+            "x": "(0 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W2",
+            "x": "(1 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W3",
+            "x": "(2 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W4",
+            "x": "(3 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W5",
+            "x": "(4 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W6",
+            "x": "(5 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W7",
+            "x": "(6 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "W8",
+            "x": "(7 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "y": 11,
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

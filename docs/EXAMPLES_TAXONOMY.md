@@ -456,14 +456,21 @@ accessibility warning.
 
 ### The initial library
 
-**Built so far (2026-10-29):**
-- 20 components: Button, Switch, Checkbox, Chip, Badge, ProgressBar, ProgressRing, Divider,
-  KeyValueRow, Stepper, Card, Avatar, ListItem, TopBar, Tabs, PagerDots, StatTile, Gauge,
-  AnalogClock and DigitalClock.
-- Every one is in a gallery: CMP-01 (Button), CMP-02 (Switch, Checkbox), CMP-04 (Chip, Badge),
+**Built so far (2026-10-30):**
+- 30 components: Button, IconButton, Switch, Checkbox, Slider, Chip, Badge, ProgressBar,
+  ProgressRing, Divider, KeyValueRow, Stepper, Card, Avatar, ListItem, TopBar, Tabs, PagerDots,
+  StatTile, Gauge, Sparkline, BarChart, DonutChart, AnalogClock, DigitalClock, DateLabel,
+  WeatherIcon, BatteryIndicator, Banner and Skeleton. Each has its own demo.
+- Galleries: CMP-01 (Button), CMP-02 (Switch, Checkbox), CMP-03 (Slider), CMP-04 (Chip, Badge),
   CMP-05 (TopBar, Card, ListItem, Avatar, Divider), CMP-06 (Tabs, PagerDots), CMP-07
-  (ProgressBar, ProgressRing), CMP-08 (Gauge, StatTile), CMP-10 (AnalogClock, DigitalClock),
-  CMP-12 (KeyValueRow, Stepper) and CMP-13 (the library re-themed). Chip's and Tabs' selected
+  (ProgressBar, ProgressRing), CMP-08 (Gauge, StatTile), CMP-09 (Sparkline, BarChart,
+  DonutChart from one exported float array), CMP-10 (AnalogClock, DigitalClock), CMP-11
+  (WeatherIcon, BatteryIndicator, Banner), CMP-12 (KeyValueRow, Stepper), CMP-13 (the library
+  re-themed) and CMP-14 (Card > ListItem > Switch, nested slots). IconButton, DateLabel and
+  Skeleton are shown by their demos only.
+- Library-wide limits: BatteryIndicator's `level` is required (Java has no system battery
+  level, U31); DateLabel is drawn on a canvas (U32); Slider's drag needs the T31–T33 / C49–C50
+  player fixes outside Java. Chip's and Tabs' selected
   states are `graphicsLayer` alpha overlays; Tabs draws one underline that slides with an
   animated selection.
 
@@ -955,7 +962,7 @@ mode, then compared in `pattern` mode.
 | CMP-08 | gauges-stats | 3 | `Gauge`s with green/amber/red zones at three values, and `StatTile`s with positive and negative deltas. | `Gauge`, `StatTile` | Zone colours and delta colours follow the values (`variables`) |
 | CMP-09 | charts-gallery | 3 | `Sparkline`, `BarChart` and `DonutChart` from the same 8-value dataset. | `Sparkline`, `BarChart`, `DonutChart` | All three change with a different dataset |
 | CMP-10 | time-gallery | 2 | `AnalogClock` (with and without seconds), `DigitalClock` 12/24 h, and `DateLabel` formats. | `AnalogClock`, `DigitalClock`, `DateLabel` | Correct at `clock` 2026-10-28T10:10:05 |
-| CMP-11 | status-gallery | 2 | `WeatherIcon` (every condition), `BatteryIndicator` (95, 40, 10%), and `Banner` (info, warn, error). | `WeatherIcon`, `BatteryIndicator`, `Banner` | Battery colour follows `system_variables`; every icon is distinct |
+| CMP-11 | status-gallery | 2 | `WeatherIcon` (every condition), `BatteryIndicator` (95, 40, 10%), and `Banner` (info, warn, error). | `WeatherIcon`, `BatteryIndicator`, `Banner` | Battery colour follows a host `battery` variable (no system battery in Java, U31); every icon is distinct |
 | CMP-12 | form-rows | 2 | A settings screen of `KeyValueRow`s and a `Stepper`. | `KeyValueRow`, `Stepper` | The stepper clamps at its min and max |
 | CMP-13 | themed-library | 3 | CMP-01, CMP-02 and CMP-08 together, rendered with the default theme and with an overridden one (a brand palette and larger radii). | theme tokens | Every component picks up the override; nothing hard-codes a colour |
 | CMP-14 | nested-components | 3 | A `Card` whose content slot holds a `ListItem` whose trailing slot holds a `Switch`. | slots, `uses` | Expands without collisions; each `Switch` keeps its own state |

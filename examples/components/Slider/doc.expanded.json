@@ -1,0 +1,282 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 300,
+  "height": 140,
+  "profiles": 513,
+  "contentDescription": "Slider component: a volume slider bound to a variable showing its value, and a brightness slider with its own state"
+ },
+ "resources": {
+  "variables": {
+   "volume": 40,
+   "slider1_x0": 0,
+   "slider2_value": 0.7,
+   "slider2_x0": 0
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "track": {
+    "light": "#FFB0B8C4",
+    "dark": "#FF2A3342"
+   },
+   "warning": {
+    "light": "#FFA15C00",
+    "dark": "#FFFFB74D"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 4
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Slider",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 40
+       },
+       {
+        "semantics": {
+         "contentDescription": "Volume"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "componentValue": {
+         "id": "@slider1_x0",
+         "valueType": 4
+        }
+       },
+       {
+        "touchExpression": {
+         "name": "volume",
+         "defaultValue": "@volume",
+         "min": 0,
+         "max": 100,
+         "expression": [
+          "(touchX() - @slider1_x0 - 12) / (componentWidth() - 72) * 100"
+         ],
+         "touchMode": 6
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.track"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 4
+          },
+          {
+           "strokeCap": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": 12,
+         "y1": 20,
+         "x2": "componentWidth() - 60",
+         "y2": 20
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.primary"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": 12,
+         "y1": 20,
+         "x2": "12 + (componentWidth() - 72) * @volume / 100",
+         "y2": 20
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          }
+         ]
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "12 + (componentWidth() - 72) * @volume / 100",
+         "cy": 20,
+         "radius": 10
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "textSize": 15
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textFromFloat",
+          "value": "@volume",
+          "whole": 4,
+          "decimal": 0,
+          "flags": 5
+         },
+         "x": "componentWidth()",
+         "y": 20,
+         "panX": 1,
+         "panY": 0
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 40
+       },
+       {
+        "semantics": {
+         "contentDescription": "Brightness"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "componentValue": {
+         "id": "@slider2_x0",
+         "valueType": 4
+        }
+       },
+       {
+        "touchExpression": {
+         "name": "slider2_value",
+         "defaultValue": "@slider2_value",
+         "min": 0,
+         "max": 1,
+         "expression": [
+          "(touchX() - @slider2_x0 - 12) / (componentWidth() - 24) * 1"
+         ],
+         "touchMode": 6
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.track"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 4
+          },
+          {
+           "strokeCap": "round"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": 12,
+         "y1": 20,
+         "x2": "componentWidth() - 12",
+         "y2": 20
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.warning"
+          }
+         ]
+        }
+       },
+       {
+        "drawLine": {
+         "x1": 12,
+         "y1": 20,
+         "x2": "12 + (componentWidth() - 24) * @slider2_value / 1",
+         "y2": 20
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          }
+         ]
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "12 + (componentWidth() - 24) * @slider2_value / 1",
+         "cy": 20,
+         "radius": 10
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

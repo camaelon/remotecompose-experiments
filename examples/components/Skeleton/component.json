@@ -1,0 +1,156 @@
+{
+ "component": "Skeleton",
+ "version": 1,
+ "summary": "A loading placeholder: a grey line, circle or block with a light band sweeping across it every 1.5 s, standing in for text, an avatar or an image until the content arrives.",
+ "params": {
+  "shape": {
+   "type": "enum",
+   "values": [
+    "line",
+    "circle",
+    "block"
+   ],
+   "default": "line",
+   "static": true,
+   "doc": "line: a pill (a line of text); circle: a disc `height` wide (an avatar); block: a rounded rectangle (an image or a card)"
+  },
+  "width": {
+   "type": "float",
+   "static": true,
+   "doc": "Width in dp; omitted, it fills the width it is given (a circle is always `height` wide)"
+  },
+  "height": {
+   "type": "float",
+   "default": 14,
+   "static": true,
+   "doc": "Height in dp: about the text size for a line, the diameter for a circle"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.surfaceHigh",
+   "doc": "The placeholder colour"
+  },
+  "highlight": {
+   "type": "color",
+   "default": "@colors.surface",
+   "doc": "The colour of the sweeping band"
+  }
+ },
+ "capabilities": [
+  "draw.gradient",
+  "time.animation",
+  "draw.shapes"
+ ],
+ "call": {
+  "Skeleton": {
+   "width": 160
+  }
+ },
+ "locals": {
+  "r": {
+   "$if": "shape == 'block'",
+   "then": "@theme.radius_sm",
+   "else": "@height / 2"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "shape == 'circle'",
+     "then": {
+      "width": "@height"
+     },
+     "else": {
+      "$if": "width",
+      "then": {
+       "width": "@width"
+      },
+      "else": "fillMaxWidth"
+     }
+    },
+    {
+     "height": "@height"
+    }
+   ],
+   "commands": {
+    "$if": "theme.mono",
+    "then": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "color": "@colors.track"
+        },
+        {
+         "style": "stroke"
+        },
+        {
+         "strokeWidth": 1.5
+        },
+        {
+         "alpha": 1
+        }
+       ]
+      }
+     },
+     {
+      "drawRoundRect": {
+       "left": 0.75,
+       "top": 0.75,
+       "right": "componentWidth() - 0.75",
+       "bottom": "@height - 0.75",
+       "rx": "@r - 0.75",
+       "ry": "@r - 0.75"
+      }
+     }
+    ],
+    "else": [
+     {
+      "paint": {
+       "ops": [
+        {
+         "linearGradient": {
+          "x1": "(continuousSec() % 1.5) / 1.5 * (componentWidth() + 240) - 240",
+          "y1": 0,
+          "x2": "(continuousSec() % 1.5) / 1.5 * (componentWidth() + 240)",
+          "y2": 0,
+          "colors": [
+           "@color",
+           "@highlight",
+           "@color"
+          ]
+         }
+        },
+        {
+         "style": "fill"
+        }
+       ]
+      }
+     },
+     {
+      "drawRoundRect": {
+       "left": 0,
+       "top": 0,
+       "right": "componentWidth()",
+       "bottom": "@height",
+       "rx": "@r",
+       "ry": "@r"
+      }
+     },
+     {
+      "paint": {
+       "shader": 0
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "The sweep is a linear gradient (colour, highlight, colour) whose ends move with continuousSec(): the document repaints every frame while a skeleton is on screen, so replace it with the content as soon as it arrives",
+  "Its colours are theme colours inside the gradient (the parsers mark them as colour ids), so light and dark both work: surfaceHigh with a surface band (lighter in light, darker in dark)",
+  "Each skeleton sweeps on its own width but on the same clock, so a column of them shimmers together; the band is 240 dp wide whatever the shape",
+  "Mono has no motion and no gradient: a 1.5 dp grey outline of the shape"
+ ]
+}

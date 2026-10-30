@@ -1,0 +1,491 @@
+{
+ "id": "CMP-03",
+ "name": "slider-gallery",
+ "version": 1,
+ "kind": "gallery",
+ "title": "Slider gallery",
+ "summary": "Three library Sliders over different ranges (0 to 1 with two decimals, 0 to 100, and -50 to 50), each bound to a document variable and printing its value, plus a summary line below them that reads the same variables.",
+ "prompt": "Add three sliders, opacity from 0 to 1, volume from 0 to 100 and balance from -50 to 50, each showing its value, and a line under them repeating the volume and balance.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "Slider"
+ ],
+ "capabilities": {
+  "primary": [
+   "input.drag"
+  ],
+  "secondary": [
+   "text.dynamic",
+   "a11y.labels",
+   "text.basic"
+  ]
+ },
+ "use_cases": [
+  "control"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "slider",
+  "sliders",
+  "seek bar",
+  "range",
+  "volume",
+  "balance",
+  "opacity",
+  "negative range",
+  "settings",
+  "component library"
+ ],
+ "teaches": [
+  "min and max set the range, negative ones included (balance: -50 to 50); decimals sets the digits of the printed value (opacity: 0.8; textFromFloat drops trailing zeros)",
+  "Bind each slider to a document variable and read it below the slider: the summary line follows the drags",
+  "Each slider maps the finger through its own position (componentValue POS_ROOT_X), so they work stacked anywhere in the layout"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "input.drag",
+   "note": "0 to 1, two decimals"
+  },
+  {
+   "pointer": "/root/column/children/7",
+   "shows": "input.drag",
+   "note": "-50 to 50: min and max can be negative"
+  },
+  {
+   "pointer": "/root/column/children/9/row/children/1",
+   "shows": "text.dynamic",
+   "note": "reads @volume after the slider: the dragged value"
+  },
+  {
+   "pointer": "/root/column/children/5",
+   "shows": "a11y.labels",
+   "note": "the slider's label is its accessibility label; the visible name is the text above it"
+  }
+ ],
+ "pitfalls": [
+  "Read a slider's variable after the slider in document order: the slider rebinds the name to its touch value from there on, so a text placed above it (or an expression in resources) keeps the starting value",
+  "The touch mapping needs componentValue POS_ROOT_X and a touch expression owned by its canvas. Java gets both right; the TS and C++ players do since the T32, T33 and C50 fixes (2026-10-30); older ones put drags off by the slider's x, or move every slider at once"
+ ],
+ "inputs": {
+  "variables": {
+   "opacity": 0.8,
+   "volume": 40,
+   "balance": -10
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Opacity at 0.8, Volume at 40 and Balance at -10 (its thumb left of centre, purple), each printing its value at the end of its track, and the summary line 'Volume 40 Balance -10'. Drags were checked in the Java reference (RcTouch harness): each value follows the finger within its range and clamps at the ends, and the summary line follows. render-dragged (C++ player): a drag ending mid-track sets Volume to 50, a press past the end of Balance clamps it to 50 and one left of Opacity clamps it to 0; only the slider under the finger moves. Resized, the tracks fill the width at 240 and at 480 dp with the thumbs at the same fractions.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "dragged",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 146,
+      "y": 133
+     },
+     {
+      "t": 0.2,
+      "type": "move",
+      "x": 120,
+      "y": 133
+     },
+     {
+      "t": 0.3,
+      "type": "move",
+      "x": 146,
+      "y": 133
+     },
+     {
+      "t": 0.4,
+      "type": "up",
+      "x": 146,
+      "y": 133
+     },
+     {
+      "t": 0.6,
+      "type": "down",
+      "x": 265,
+      "y": 187
+     },
+     {
+      "t": 0.7,
+      "type": "up",
+      "x": 265,
+      "y": 187
+     },
+     {
+      "t": 0.9,
+      "type": "down",
+      "x": 20,
+      "y": 78
+     },
+     {
+      "t": 1,
+      "type": "up",
+      "x": 20,
+      "y": 78
+     }
+    ],
+    "duration": 1.5
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 260
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 260
+   }
+  ]
+ },
+ "related": [
+  "INT-04",
+  "CMP-02",
+  "CMP-12"
+ ],
+ "derived": {
+  "components": [
+   "Slider"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "Slider": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3072,
+  "header": {
+   "width": 340,
+   "height": 260
+  },
+  "op_count": 171,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 12,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 3,
+   "CoreText": 8,
+   "DATA_FLOAT": 6,
+   "DATA_TEXT": 7,
+   "DRAW_CIRCLE": 3,
+   "DRAW_LINE": 6,
+   "DRAW_TEXT_ANCHOR": 3,
+   "HEADER": 1,
+   "LAYOUT_BOX": 2,
+   "LAYOUT_CANVAS": 3,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 15,
+   "LoopOperation": 12,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 6,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 12,
+   "THEME": 18,
+   "TextFromFloat": 3,
+   "TouchExpression": 3
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_empty_container",
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 0,
+   "area": 0,
+   "touch": 3
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 2484,
+    "component_modes": {
+     "Slider": "expand"
+    },
+    "op_count": 123,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 2484,
+    "component_modes": {
+     "Slider": "expand"
+    },
+    "op_count": 123,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "dragged": {
+    "render": "render-dragged.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     260
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     480,
+     260
+    ],
+    "audit_findings": [
+     "info: layout_empty_container",
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "Slider",
+   "apiLevel",
+   "background",
+   "balance",
+   "canvas",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "componentValue",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "decimals",
+   "defaultValue",
+   "drawCircle",
+   "drawLine",
+   "drawTextAnchored",
+   "expression",
+   "flags",
+   "fontSize",
+   "header",
+   "height",
+   "id",
+   "label",
+   "light",
+   "max",
+   "min",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "opacity",
+   "ops",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "row",
+   "secondary",
+   "semantics",
+   "showValue",
+   "slider1_x0",
+   "slider2_x0",
+   "slider3_x0",
+   "spacedBy",
+   "spacer",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "text",
+   "textSize",
+   "touchExpression",
+   "touchMode",
+   "track",
+   "type",
+   "value",
+   "valueType",
+   "variables",
+   "volume",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "input.drag": [
+    "touchExpression"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.basic": [
+    "text",
+    "drawTextAnchored"
+   ]
+  },
+  "built_at": "2026-10-30T07:17:33.671Z"
+ }
+}

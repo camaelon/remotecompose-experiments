@@ -179,6 +179,9 @@ test("lintComponent reports unusable definitions and the format's traps", () => 
     assert.ok(r.errors.some((e) => /\$slot/.test(e)));
     assert.ok(r.warnings.some((w) => /clamp/.test(w)));
     assert.ok(r.warnings.some((w) => /@nope/.test(w)));
+    // A text the body names itself (varName) is not a caller's variable.
+    assert.deepEqual(lintComponent({ summary: "s", call: {}, params: {}, body: { box: { children: [
+        { textSubtext: { text: "abc", start: 0, len: 1, varName: "first" } }, { text: { value: "@first" } }] } } }, "M").warnings, []);
     for (const [name, def] of loadLibrary().components) assert.deepEqual(lintComponent(def, name), { errors: [], warnings: [] }, name);
 });
 

@@ -39,6 +39,8 @@
 //                       numbers ("@size / 2", "clamp(0, 240, 0.72 * 240)", with min, max,
 //                       abs, clamp and step) folds to a number
 //   {"$slot": "icon"}   the call's slot content, spliced in (dropped when not given)
+//   {"$name": "value"}  the bare name ("vol") of the variable a `variable` param or a state
+//                       local is bound to, for an op that declares a name (touchExpression)
 //   {"$each": "labels", "as": "label", "index": "i", "count": "n", "do": X}
 //                       X repeated for each item of a static list param (or a count), with
 //                       @label, @i and (when `count` is given) @n, the number of items
@@ -905,6 +907,17 @@ function substitute(node, env, state, name) {
             if (!Array.isArray(list)) throw new Error(`${name}: $count needs a list, '${node.$count}' is ${JSON.stringify(list)}`);
             return list.length;
         }
+        if ("$name" in node) {
+            // {"$name": "value"}: the bare name of the variable a `variable` param (or a state
+            // local) is bound to, "vol" for "@vol", for an op that declares a name
+            // (touchExpression's `name`: the touch value then replaces that variable for
+            // everything parsed after it). A template cannot rename a parameter: expand.
+            const k = node.$name;
+            const v = k in env.params ? env.params[k] : env.locals[k]?.ref;
+            if (env.inPattern) throw new PatternUnfit(`a variable name ({"$name": "${k}"}) cannot be a pattern parameter`);
+            if (typeof v !== "string" || !/^[@$][A-Za-z_]\w*$/.test(v)) throw new Error(`${name}: $name needs a variable param or a state local, '${k}' is ${JSON.stringify(v)}`);
+            return v.slice(1);
+        }
         if ("$slot" in node) {
             const content = env.slots[node.$slot];
             if (content === undefined) return DROP;
@@ -1061,7 +1074,12 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             if (typeof n.$slot === "string") slotsUsed.add(n.$slot);
             if (typeof n.$each === "string") refs.add(n.$each);
             if (typeof n.$count === "string") refs.add(n.$count);
+            if (typeof n.$name === "string") refs.add(n.$name);
             for (const k of ["as", "index", "count"]) if (n.$each !== undefined && typeof n[k] === "string") bound.add(n[k]);
+            // Names the body gives itself: a text op's varName (textSubtext, textTransform,
+            // textLookup), a tree variable, a measure.
+            if (typeof n.varName === "string") bound.add(n.varName);
+            for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") bound.add(n[k].name);
             if (typeof n.$if === "string") {
                 const t = n.$if.replace(/'[^']*'|"[^"]*"/g, "");
                 for (const m of t.matchAll(/@?theme\.([A-Za-z_]\w*)/g)) refs.add(`theme.${m[1]}`);

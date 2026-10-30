@@ -1,0 +1,263 @@
+{
+ "component": "DonutChart",
+ "version": 1,
+ "summary": "A donut (ring) chart of a float array: one slice per value, clockwise from 12 o'clock, each value's share of the total, in tones of one colour separated by 2 dp gaps, with the total and a caption in the centre.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays (export it to let the host replace the data); values ≥ 0, any count: each slice is value / sum of the ring"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Slice colour: the first slice is solid and each later one lighter (alpha 1 down to 0.3); in mono the slices are onSurface, alternately thick and thin"
+  },
+  "size": {
+   "type": "float",
+   "default": 120,
+   "static": true,
+   "doc": "Diameter in dp (with fill, the design size the drawing is scaled from)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space the caller gives it (fillMaxSize) and scale the ring to fit, centred, instead of a fixed size; give it a parent with a size or a weight"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 18,
+   "static": true,
+   "doc": "Ring width in dp"
+  },
+  "showTotal": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Draw the sum of the values in the centre"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the centre total"
+  },
+  "label": {
+   "type": "string",
+   "default": "",
+   "doc": "Caption under the total, e.g. \"visits\"; also the accessibility label"
+  }
+ },
+ "locals": {
+  "n": "arrayLength(@values)",
+  "sum": "max(arraySum(@values), 0.001)",
+  "gap": "114.6 / (@size - @thickness)"
+ },
+ "capabilities": [
+  "data.array",
+  "data.loop",
+  "draw.arc",
+  "draw.transform"
+ ],
+ "call": {
+  "DonutChart": {
+   "values": "@visits",
+   "label": "visits"
+  }
+ },
+ "pitfalls": [
+  "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: one loop draws every slice, so a host that sets the exported array redraws the ring, whatever its length",
+  "There is no running sum in an expression, so each slice starts at 12 o'clock and the loop rotates the canvas by that slice's angle after drawing it: the rotations accumulate across iterations, inside one save",
+  "Slices are told apart by a 2 dp gap and by tone (paint alpha falls with the index), not by a palette: the library has no categorical colours. In mono there is no tone: slices alternate thick and thin",
+  "A fixed `size` does not shrink. Where the space varies, pass fill: true in a sized or weighted parent; the ring is drawn at `size` and one translate + scale fits it, so stroke widths scale with it"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": {
+      "size": "@size"
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "$if": "fill",
+     "then": [
+      {
+       "translate": {
+        "dx": "(componentWidth() - @size) / 2",
+        "dy": "(componentHeight() - @size) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
+        "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
+        "pivotX": "@size / 2",
+        "pivotY": "@size / 2"
+       }
+      }
+     ]
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.onSurface"
+        },
+        "else": {
+         "color": "@color"
+        }
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "$if": "theme.mono",
+        "else": {
+         "strokeWidth": "@thickness"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "save": {
+      "commands": [
+       {
+        "loop": {
+         "index": "i",
+         "from": 0,
+         "until": "@n",
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "$if": "theme.mono",
+              "then": {
+               "strokeWidth": "2 + (1 - i % 2) * (@thickness / 2 - 2)"
+              },
+              "else": {
+               "alpha": "1 - 0.7 * i / @n"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawArc": {
+            "left": "@thickness / 2",
+            "top": "@thickness / 2",
+            "right": "@size - @thickness / 2",
+            "bottom": "@size - @thickness / 2",
+            "startAngle": "@gap / 2 - 90",
+            "sweepAngle": "max(360 * arrayGet(@values, i) / @sum - @gap, 0)"
+           }
+          },
+          {
+           "rotate": {
+            "angle": "360 * arrayGet(@values, i) / @sum",
+            "pivotX": "@size / 2",
+            "pivotY": "@size / 2"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "showTotal",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         },
+         {
+          "textSize": "@size * 0.2"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "arraySum(@values)",
+         "whole": 6,
+         "decimal": "@decimals",
+         "flags": 5
+        },
+        "x": "@size / 2",
+        "y": {
+         "$if": "label",
+         "then": "@size * 0.46",
+         "else": "@size / 2"
+        },
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    },
+    {
+     "$if": "label",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         },
+         {
+          "textSize": "@size * 0.1"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@label",
+        "x": "@size / 2",
+        "y": {
+         "$if": "showTotal",
+         "then": "@size * 0.64",
+         "else": "@size / 2"
+        },
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,275 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 168,
+  "profiles": 513,
+  "contentDescription": "Sparkline component: weekly visits as a small trend line next to its label, and a temperature series filling the width"
+ },
+ "resources": {
+  "floatArrays": {
+   "visits": {
+    "value": [
+     42,
+     55,
+     48,
+     61,
+     58,
+     73,
+     69,
+     84
+    ],
+    "export": true
+   },
+   "temp": [
+    11.5,
+    13,
+    12.2,
+    15.8,
+    17.1,
+    16.4,
+    19.9,
+    18.2,
+    21.3,
+    20.1,
+    17.6,
+    14.9
+   ]
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "secondary": {
+    "light": "#FF6B3FD9",
+    "dark": "#FF7C4DFF"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Sparkline",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 12
+        }
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Visits, 8 weeks",
+         "fontSize": 15,
+         "color": "@colors.muted",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            120,
+            32
+           ]
+          },
+          {
+           "semantics": {
+            "contentDescription": "Visits, last 8 weeks"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "translate": {
+            "dx": 4,
+            "dy": "componentHeight() - 4"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "arrayLength(@visits) - 1",
+            "commands": [
+             {
+              "drawLine": {
+               "x1": "i * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
+               "y1": "((arrayMin(@visits)) - arrayGet(@visits, i)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
+               "x2": "(i + 1) * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
+               "y2": "((arrayMin(@visits)) - arrayGet(@visits, i + 1)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "componentWidth() - 8",
+            "cy": "((arrayMin(@visits)) - arrayGet(@visits, (arrayLength(@visits) - 1))) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
+            "radius": 3
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "verticalWeight": 1
+       },
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 12
+        }
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "semantics": {
+            "contentDescription": "Temperature, last 12 hours"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "translate": {
+            "dx": 4,
+            "dy": "componentHeight() - 4"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.secondary"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": "arrayLength(@temp) - 1",
+            "commands": [
+             {
+              "drawLine": {
+               "x1": "i * (componentWidth() - 8) / (arrayLength(@temp) - 1)",
+               "y1": "((arrayMin(@temp)) - arrayGet(@temp, i)) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))",
+               "x2": "(i + 1) * (componentWidth() - 8) / (arrayLength(@temp) - 1)",
+               "y2": "((arrayMin(@temp)) - arrayGet(@temp, i + 1)) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "componentWidth() - 8",
+            "cy": "((arrayMin(@temp)) - arrayGet(@temp, (arrayLength(@temp) - 1))) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))",
+            "radius": 3
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

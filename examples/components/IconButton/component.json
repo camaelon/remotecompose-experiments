@@ -1,0 +1,472 @@
+{
+ "component": "IconButton",
+ "version": 1,
+ "summary": "A round 40 dp button holding only an icon: standard (icon alone), filled or outlined. Labelled for accessibility from its label; enabled: false dims it and drops the click.",
+ "params": {
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "Accessibility label (the button shows no text): say what it does, \"Add to favourites\""
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "standard",
+    "filled",
+    "outlined"
+   ],
+   "default": "standard",
+   "static": true,
+   "doc": "standard: the icon alone (toolbars); filled: a solid circle (the main action); outlined: a 1.5 dp ring"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Fill (filled) or ring (outlined); draw the icon itself in onPrimary on a filled button"
+  },
+  "surface": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "outlined: the colour the button sits on, which fills the inside of the ring (@colors.surface in a Card)"
+  },
+  "enabled": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false: the icon is dimmed, the click dropped, and it is announced as disabled"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Any click action (valueFloatChange, valueFloatExpressionChange, hostNamedAction, ...). Omitted: not clickable"
+  }
+ },
+ "slots": {
+  "icon": {
+   "doc": "The icon, about 24 dp square (a canvas or an image), drawn by the caller in its colour: onSurface or the button colour for standard and outlined, onPrimary for filled"
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "a11y.labels",
+  "layout.decoration"
+ ],
+ "call": {
+  "IconButton": {
+   "label": "Close",
+   "onClick": {
+    "type": "valueFloatChange",
+    "target": "@open",
+    "value": 0
+   },
+   "slots": {
+    "icon": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": [
+          24,
+          24
+         ]
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 7,
+          "y1": 7,
+          "x2": 17,
+          "y2": 17
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 17,
+          "y1": 7,
+          "x2": 7,
+          "y2": 17
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ },
+ "body": {
+  "$if": "style == 'standard'",
+  "then": {
+   "box": {
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "modifiers": [
+     {
+      "size": [
+       "@theme.control_height",
+       "@theme.control_height"
+      ]
+     },
+     {
+      "clip": 20
+     },
+     {
+      "semantics": {
+       "contentDescription": "@label",
+       "enabled": "@enabled",
+       "clickable": "@enabled"
+      }
+     },
+     {
+      "$if": "enabled",
+      "then": {
+       "onClick": "@onClick"
+      }
+     }
+    ],
+    "children": [
+     {
+      "$if": "enabled",
+      "then": {
+       "$slot": "icon"
+      },
+      "else": {
+       "box": {
+        "modifiers": [
+         {
+          "graphicsLayer": {
+           "alpha": 0.38
+          }
+         }
+        ],
+        "children": [
+         {
+          "$slot": "icon"
+         }
+        ]
+       }
+      }
+     }
+    ]
+   }
+  },
+  "else": {
+   "$if": "style == 'outlined'",
+   "then": {
+    "box": {
+     "modifiers": [
+      {
+       "size": [
+        "@theme.control_height",
+        "@theme.control_height"
+       ]
+      },
+      {
+       "clip": 20
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "background": "@color"
+       },
+       "else": {
+        "background": "@colors.disabled"
+       }
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 1,
+        "else": 1.5
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": "@enabled",
+        "clickable": "@enabled"
+       }
+      },
+      {
+       "$if": "enabled",
+       "then": {
+        "onClick": "@onClick"
+       }
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "clip": 19
+         },
+         {
+          "background": "@surface"
+         }
+        ],
+        "children": [
+         {
+          "$if": "enabled",
+          "then": {
+           "$slot": "icon"
+          },
+          "else": {
+           "box": {
+            "modifiers": [
+             {
+              "graphicsLayer": {
+               "alpha": 0.38
+              }
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "else": {
+    "$if": "enabled",
+    "then": {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "size": [
+         "@theme.control_height",
+         "@theme.control_height"
+        ]
+       },
+       {
+        "clip": 20
+       },
+       {
+        "background": "@color"
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "enabled": "@enabled",
+         "clickable": "@enabled"
+        }
+       },
+       {
+        "$if": "enabled",
+        "then": {
+         "onClick": "@onClick"
+        }
+       }
+      ],
+      "children": [
+       {
+        "$if": "enabled",
+        "then": {
+         "$slot": "icon"
+        },
+        "else": {
+         "box": {
+          "modifiers": [
+           {
+            "graphicsLayer": {
+             "alpha": 0.38
+            }
+           }
+          ],
+          "children": [
+           {
+            "$slot": "icon"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "$if": "theme.mono",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "size": [
+          "@theme.control_height",
+          "@theme.control_height"
+         ]
+        },
+        {
+         "clip": 20
+        },
+        {
+         "$if": "enabled",
+         "then": {
+          "background": "@color"
+         },
+         "else": {
+          "background": "@colors.disabled"
+         }
+        },
+        {
+         "padding": {
+          "$if": "theme.mono",
+          "then": 1,
+          "else": 1.5
+         }
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "enabled": "@enabled",
+          "clickable": "@enabled"
+         }
+        },
+        {
+         "$if": "enabled",
+         "then": {
+          "onClick": "@onClick"
+         }
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "clip": 19
+           },
+           {
+            "background": "@surface"
+           }
+          ],
+          "children": [
+           {
+            "$if": "enabled",
+            "then": {
+             "$slot": "icon"
+            },
+            "else": {
+             "box": {
+              "modifiers": [
+               {
+                "graphicsLayer": {
+                 "alpha": 0.38
+                }
+               }
+              ],
+              "children": [
+               {
+                "$slot": "icon"
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     "else": {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "size": [
+          "@theme.control_height",
+          "@theme.control_height"
+         ]
+        },
+        {
+         "clip": 20
+        },
+        {
+         "background": "@colors.disabled"
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "enabled": "@enabled",
+          "clickable": "@enabled"
+         }
+        },
+        {
+         "$if": "enabled",
+         "then": {
+          "onClick": "@onClick"
+         }
+        }
+       ],
+       "children": [
+        {
+         "$if": "enabled",
+         "then": {
+          "$slot": "icon"
+         },
+         "else": {
+          "box": {
+           "modifiers": [
+            {
+             "graphicsLayer": {
+              "alpha": 0.38
+             }
+            }
+           ],
+           "children": [
+            {
+             "$slot": "icon"
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "pitfalls": [
+  "The icon is the caller's: draw it in a colour that reads on the face (onPrimary on a filled button, which is black in mono and white otherwise; onSurface or the button colour on the others)",
+  "40 dp round face; the touch target is the face itself, so leave a little space between neighbours (a row with spacedBy 4 or more)",
+  "The outlined ring is two stacked backgrounds, not a border (border can't take a theme colour): set surface to whatever the button sits on, or the inside shows the background colour",
+  "In mono a disabled filled button becomes a grey ring (a grey disc would hide its grey icon); every other face keeps its shape",
+  "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face"
+ ]
+}

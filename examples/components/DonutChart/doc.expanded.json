@@ -1,0 +1,410 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "DonutChart component: weekly visits as a ring of eight slices with the total in the centre, and a smaller ring of traffic sources"
+ },
+ "resources": {
+  "floatArrays": {
+   "visits": {
+    "value": [
+     42,
+     55,
+     48,
+     61,
+     58,
+     73,
+     69,
+     84
+    ],
+    "export": true
+   },
+   "sources": [
+    58,
+    27,
+    15
+   ]
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "secondary": {
+    "light": "#FF6B3FD9",
+    "dark": "#FF7C4DFF"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "DonutChart",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "verticalWeight": 1
+       },
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 12
+        }
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight"
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "visits"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "translate": {
+               "dx": "(componentWidth() - 120) / 2",
+               "dy": "(componentHeight() - 120) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 120",
+               "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 120",
+               "pivotX": 60,
+               "pivotY": 60
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 18
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "loop": {
+                  "index": "i",
+                  "from": 0,
+                  "until": "arrayLength(@visits)",
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "alpha": "1 - 0.7 * i / (arrayLength(@visits))"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawArc": {
+                     "left": 9,
+                     "top": 9,
+                     "right": 111,
+                     "bottom": 111,
+                     "startAngle": -89.438235,
+                     "sweepAngle": "max(360 * arrayGet(@visits, i) / (max(arraySum(@visits), 0.001)) - 1.123529, 0)"
+                    }
+                   },
+                   {
+                    "rotate": {
+                     "angle": "360 * arrayGet(@visits, i) / (max(arraySum(@visits), 0.001))",
+                     "pivotX": 60,
+                     "pivotY": 60
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 24
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "arraySum(@visits)",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 60,
+               "y": 55.2,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 12
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "visits",
+               "x": 60,
+               "y": 76.8,
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight",
+          {
+           "padding": {
+            "start": 16
+           }
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "sources %"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "translate": {
+               "dx": "(componentWidth() - 120) / 2",
+               "dy": "(componentHeight() - 120) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 120",
+               "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 120",
+               "pivotX": 60,
+               "pivotY": 60
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.secondary"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 12
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "loop": {
+                  "index": "i",
+                  "from": 0,
+                  "until": "arrayLength(@sources)",
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "alpha": "1 - 0.7 * i / (arrayLength(@sources))"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawArc": {
+                     "left": 6,
+                     "top": 6,
+                     "right": 114,
+                     "bottom": 114,
+                     "startAngle": -89.469444,
+                     "sweepAngle": "max(360 * arrayGet(@sources, i) / (max(arraySum(@sources), 0.001)) - 1.061111, 0)"
+                    }
+                   },
+                   {
+                    "rotate": {
+                     "angle": "360 * arrayGet(@sources, i) / (max(arraySum(@sources), 0.001))",
+                     "pivotX": 60,
+                     "pivotY": 60
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 24
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "arraySum(@sources)",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 60,
+               "y": 55.2,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 12
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "sources %",
+               "x": 60,
+               "y": 76.8,
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,213 @@
+{
+ "component": "BarChart",
+ "version": 1,
+ "summary": "A column chart of a float array: one rounded bar per value from a zero baseline up to the largest value, scaled to the canvas, with optional labels under the bars.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays (export it to let the host replace the data); values ≥ 0, any count: the tallest bar is the largest value"
+  },
+  "labels": {
+   "type": "list",
+   "doc": "Optional category labels, one short string per bar (\"M\", \"T\", ...), drawn 11 dp under the baseline; fixed when the document is built, so keep the array the same length"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Bar colour (in mono the bars are onSurface outlines)"
+  },
+  "width": {
+   "type": "float",
+   "default": 240,
+   "static": true,
+   "doc": "Width in dp (ignored with fill)"
+  },
+  "height": {
+   "type": "float",
+   "default": 120,
+   "static": true,
+   "doc": "Height in dp, labels included (ignored with fill)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space the caller gives it (fillMaxSize) instead of width × height; give it a parent with a size or a weight"
+  },
+  "label": {
+   "type": "string",
+   "default": "Bar chart",
+   "doc": "Accessibility label, e.g. \"Visits per week\""
+  }
+ },
+ "locals": {
+  "n": "arrayLength(@values)",
+  "max": "max(arrayMax(@values), 0.001)",
+  "base": {
+   "$if": "labels",
+   "then": 18,
+   "else": 0
+  }
+ },
+ "capabilities": [
+  "data.array",
+  "data.loop",
+  "draw.shapes"
+ ],
+ "call": {
+  "BarChart": {
+   "values": "@visits"
+  }
+ },
+ "pitfalls": [
+  "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: one loop draws every bar with arrayGet, so a host that sets the exported array redraws the chart, whatever its length",
+  "labels are text drawn when the document is built ($each over a list): a host can change the numbers but not the labels, so keep the array's length matching them",
+  "Bars are rounded at the top only: each is a drawRoundRect that reaches 4 dp below the baseline, clipped to the plot area, so the ends sit flat on the baseline",
+  "The scale is 0..max of the data, recomputed from the array: comparing two charts needs the same max, which this component doesn't share",
+  "Everything scales with componentWidth() and componentHeight(), read inline in each coordinate; it keeps the call out of pattern mode, which is fine for a chart drawn once or twice"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": {
+      "size": ["@width", "@height"]
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "translate": {
+      "dx": 0,
+      "dy": "componentHeight() - @base"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.onSurface"
+        },
+        "else": {
+         "color": "@color"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "style": "stroke"
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": {
+         "strokeWidth": 1.5
+        }
+       }
+      ]
+     }
+    },
+    {
+     "save": {
+      "commands": [
+       {
+        "clipRect": {
+         "left": 0,
+         "top": "-componentHeight()",
+         "right": "componentWidth()",
+         "bottom": 0
+        }
+       },
+       {
+        "loop": {
+         "index": "i",
+         "from": 0,
+         "until": "@n",
+         "commands": [
+          {
+           "drawRoundRect": {
+            "left": "(i + 0.15) * componentWidth() / @n",
+            "top": "-arrayGet(@values, i) * (componentHeight() - @base - 4) / @max",
+            "right": "(i + 0.85) * componentWidth() / @n",
+            "bottom": 4,
+            "rx": 4,
+            "ry": 4
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.outline"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": 0,
+      "y1": 0,
+      "x2": "componentWidth()",
+      "y2": 0
+     }
+    },
+    {
+     "$if": "labels",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "$each": "labels",
+       "as": "text",
+       "index": "k",
+       "do": {
+        "drawTextAnchored": {
+         "text": "@text",
+         "x": "(@k + 0.5) * componentWidth() / @n",
+         "y": 11,
+         "panX": 0,
+         "panY": 0
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

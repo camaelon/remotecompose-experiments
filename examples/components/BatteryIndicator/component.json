@@ -1,0 +1,232 @@
+{
+ "component": "BatteryIndicator",
+ "version": 1,
+ "summary": "A horizontal battery icon filled to a level (0..100) and coloured by it (green, amber below warnAt, red with a ! below lowAt), with an optional percentage.",
+ "params": {
+  "level": {
+   "type": "float",
+   "required": true,
+   "doc": "Charge in percent, 0..100 (clamped): a number, or a host variable such as \"@battery\" (exported in resources.variables). The format has no system battery value the Java parser accepts, so the host sets it"
+  },
+  "size": {
+   "type": "float",
+   "default": 40,
+   "static": true,
+   "doc": "Icon width in dp; the icon is half as tall"
+  },
+  "showPercent": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Write the level as \"76%\" after the icon"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 13,
+   "static": true,
+   "doc": "Size of the percentage, in sp"
+  },
+  "warnAt": {
+   "type": "float",
+   "default": 50,
+   "doc": "Below this the fill is @colors.warning"
+  },
+  "lowAt": {
+   "type": "float",
+   "default": 20,
+   "doc": "Below this the fill is @colors.error and a ! is drawn in the empty part"
+  },
+  "label": {
+   "type": "string",
+   "default": "Battery",
+   "doc": "Accessibility label of the icon"
+  }
+ },
+ "locals": {
+  "lv": "clamp(0, 100, @level)"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "data.condition",
+  "text.dynamic",
+  "host.variables"
+ ],
+ "call": {
+  "BatteryIndicator": {
+   "level": "@battery"
+  }
+ },
+ "body": {
+  "row": {
+   "verticalAlignment": "center",
+   "modifiers": [
+    {
+     "spacedBy": "@theme.space_1 + 2"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "width": "@size"
+       },
+       {
+        "height": "@size * 0.5"
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": "@theme.stroke"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": 1,
+         "top": 1,
+         "right": "@size * 0.88 - 1",
+         "bottom": "@size * 0.5 - 1",
+         "rx": "@size * 0.1",
+         "ry": "@size * 0.1"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": "@size * 0.88 + 1",
+         "top": "@size * 0.16",
+         "right": "@size",
+         "bottom": "@size * 0.34",
+         "rx": "@size * 0.04",
+         "ry": "@size * 0.04"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.success"
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "lt",
+         "v1": "@lv",
+         "v2": "@warnAt",
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "conditionalOperations": {
+         "condition": "lt",
+         "v1": "@lv",
+         "v2": "@lowAt",
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.error"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "@size * 0.44 - 1.25",
+            "top": "@size * 0.12",
+            "right": "@size * 0.44 + 1.25",
+            "bottom": "@size * 0.29",
+            "rx": 1.25,
+            "ry": 1.25
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@size * 0.44",
+            "cy": "@size * 0.36",
+            "radius": 1.4
+           }
+          }
+         ]
+        }
+       },
+       {
+        "drawRoundRect": {
+         "left": 4,
+         "top": 4,
+         "right": "4 + (@size * 0.88 - 8) * @lv / 100",
+         "bottom": "@size * 0.5 - 4",
+         "rx": "@size * 0.1 - 3",
+         "ry": "@size * 0.1 - 3"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "showPercent",
+     "then": {
+      "text": {
+       "value": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "@lv",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 4
+        },
+        "id2": "%"
+       },
+       "fontSize": "@fontSize",
+       "color": "@colors.onSurface"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "There is no portable system battery level: batteryLevel() (system variable 38) is an rcj/json2rc extension that the Java parser rejects and Android's RemoteContext does not define. Export a host float (resources.variables {\"battery\": {\"value\": 76, \"export\": true}}) and pass \"@battery\"; the host updates it",
+  "The fill colour is chosen with conditionalOperations around a paint change (success, then warning below warnAt, then error below lowAt): there are no colour expressions",
+  "Low is shown by shape too: a ! in the empty part of the body, so it reads in mono (where every colour is white or black) and without colour vision",
+  "The percentage is a layout text after the icon, so the call is as wide as the icon plus the number: in a tight row, pass showPercent: false and show the level elsewhere"
+ ]
+}

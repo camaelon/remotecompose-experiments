@@ -1,0 +1,122 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 340,
+  "height": 260,
+  "profiles": 513,
+  "contentDescription": "Banner component: an info banner, a warning with a Retry action, and an error banner that cannot be dismissed; Show all brings dismissed banners back"
+ },
+ "resources": {
+  "variables": {
+   "syncShown": {
+    "type": "int",
+    "value": 1
+   },
+   "offlineShown": {
+    "type": "int",
+    "value": 1
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 8
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Banner",
+            "fontSize": 20,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "Button": {
+         "label": "Show all",
+         "style": "text",
+         "onClick": [
+          {
+           "type": "valueIntegerChange",
+           "target": "@syncShown",
+           "value": 1
+          },
+          {
+           "type": "valueIntegerChange",
+           "target": "@offlineShown",
+           "value": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "Banner": {
+      "text": "Sync finished: 12 new photos",
+      "visible": "@syncShown"
+     }
+    },
+    {
+     "Banner": {
+      "text": "You are offline",
+      "kind": "warn",
+      "visible": "@offlineShown",
+      "slots": {
+       "action": [
+        {
+         "Button": {
+          "label": "Retry",
+          "style": "text",
+          "color": "@colors.warning",
+          "surface": "@colors.surface",
+          "onClick": {
+           "type": "valueIntegerChange",
+           "target": "@offlineShown",
+           "value": 0
+          }
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "Banner": {
+      "text": "Storage almost full",
+      "kind": "error",
+      "dismissible": false
+     }
+    }
+   ]
+  }
+ }
+}

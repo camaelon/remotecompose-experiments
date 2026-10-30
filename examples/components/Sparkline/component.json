@@ -1,0 +1,162 @@
+{
+ "component": "Sparkline",
+ "version": 1,
+ "summary": "A word-sized trend line: one stroke through every value of a float array, scaled from its min to its max to fill the canvas, with a dot on the latest value.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays (export it to let the host replace the series); 2 or more values, any range: the line spans min..max"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Line and dot colour (onSurface in mono)"
+  },
+  "width": {
+   "type": "float",
+   "default": 120,
+   "static": true,
+   "doc": "Width in dp (ignored with fill)"
+  },
+  "height": {
+   "type": "float",
+   "default": 32,
+   "static": true,
+   "doc": "Height in dp (ignored with fill)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Fill the space the caller gives it (fillMaxSize) instead of width × height; give it a parent with a size or a weight"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 2,
+   "static": true,
+   "doc": "Line width in dp"
+  },
+  "showDot": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Mark the last value with a 3 dp dot"
+  },
+  "label": {
+   "type": "string",
+   "default": "Trend",
+   "doc": "Accessibility label, e.g. \"Visits, last 8 weeks\""
+  }
+ },
+ "locals": {
+  "last": "arrayLength(@values) - 1",
+  "lo": "arrayMin(@values)",
+  "span": "max(arrayMax(@values) - @lo, 0.001)"
+ },
+ "capabilities": [
+  "data.array",
+  "data.loop",
+  "draw.shapes"
+ ],
+ "call": {
+  "Sparkline": {
+   "values": "@visits"
+  }
+ },
+ "pitfalls": [
+  "values is the name of a float array (\"@visits\" declared in resources.floatArrays), not a JSON list: the chart reads it with arrayGet in a loop, so a host that sets the exported array redraws it with no new document, and any length works",
+  "The line is a loop of drawLine segments (round caps hide the joins), not an SVG path: a path string costs about 4 KB in Java",
+  "The y range is the data's own min..max, so a flat series sits on the bottom edge and small changes look large; that is what a sparkline is for, but don't put one next to a bar chart and expect the same scale",
+  "Everything scales with componentWidth() and componentHeight(), read inline in each coordinate; it keeps the call out of pattern mode, which is fine for a chart drawn once or twice"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": {
+      "size": [
+       "@width",
+       "@height"
+      ]
+     }
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "translate": {
+      "dx": 4,
+      "dy": "componentHeight() - 4"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": {
+         "$if": "theme.mono",
+         "then": "@colors.onSurface",
+         "else": "@color"
+        }
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": "@thickness"
+       },
+       {
+        "strokeCap": "round"
+       }
+      ]
+     }
+    },
+    {
+     "loop": {
+      "index": "i",
+      "from": 0,
+      "until": "@last",
+      "commands": [
+       {
+        "drawLine": {
+         "x1": "i * (componentWidth() - 8) / @last",
+         "y1": "(@lo - arrayGet(@values, i)) * (componentHeight() - 8) / @span",
+         "x2": "(i + 1) * (componentWidth() - 8) / @last",
+         "y2": "(@lo - arrayGet(@values, i + 1)) * (componentHeight() - 8) / @span"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "showDot",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "componentWidth() - 8",
+        "cy": "(@lo - arrayGet(@values, @last)) * (componentHeight() - 8) / @span",
+        "radius": 3
+       }
+      }
+     ]
+    }
+   ]
+  }
+ }
+}
