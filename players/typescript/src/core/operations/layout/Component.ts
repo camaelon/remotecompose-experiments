@@ -156,6 +156,13 @@ export class Component extends PaintOperation implements Container {
             if (op instanceof Component) {
                 op.setParent(this);
             }
+            // Java Component.inflate: a touch listener in our own list belongs to us. Left
+            // unowned, a canvas's TouchExpression registered as a document-wide listener and
+            // took every touch: each Slider on a page moved wherever the finger went.
+            const t = op as any;
+            if (typeof t.setComponent === 'function' && typeof t.touchDown === 'function') {
+                t.setComponent(this);
+            }
         }
     }
 
@@ -453,8 +460,13 @@ export class Component extends PaintOperation implements Container {
         let y = this.mY;
         let parent = this.mParent;
         while (parent) {
-            x += parent.mX;
-            y += parent.mY;
+            // A layout parent places its children inside its padding and shifts them by its
+            // scroll (LayoutComponent.getLocationInWindow does the same). Without it a
+            // canvas's content in a padded column read POS_ROOT_X as 0, and the Slider
+            // component, which subtracts it from touchX(), landed off by the padding.
+            const p = parent as any;
+            x += parent.mX + (p.mPaddingLeft ?? 0) + parent.getScrollX();
+            y += parent.mY + (p.mPaddingTop ?? 0) + parent.getScrollY();
             parent = parent.getParent();
         }
         return [x, y];

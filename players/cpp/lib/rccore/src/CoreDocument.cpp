@@ -289,6 +289,25 @@ void CoreDocument::applyOperations(RemoteContext& context,
 
 // ── Touch dispatch ────────────────────────────────────────────────────
 
+// Where a component's children sit, in the coordinates of its own origin: inside its
+// padding, shifted by its scroll as paintComponent translates them (the position variable
+// when the scroll is document-driven, the modifier's own drag offset otherwise). Java's
+// getLocationInWindow(forSelf=false) adds getScrollX/Y for the same reason; without the
+// scroll, taps on a scrolled list landed on the items that were there before the scroll.
+static void childOrigin(RemoteContext& context, const Operation* op,
+                        const RemoteContext::ComponentDim* dim, float& ox, float& oy) {
+    if (!dim) return;
+    ox += dim->padX;
+    oy += dim->padY;
+    for (const auto& child : op->mChildren) {
+        if (child->opcode() != Operations::MODIFIER_SCROLL) continue;
+        auto* s = static_cast<const ModifierScroll*>(child.get());
+        float pos = Utils::isVariable(s->position)
+                ? context.getFloat(Utils::idFromNan(s->position)) : s->scrollOffset;
+        if (s->direction == 0) oy -= pos; else ox -= pos;
+    }
+}
+
 static bool rippleRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
                             float x, float y, float parentX, float parentY);
 
@@ -312,9 +331,11 @@ static void collectScrollTargets(RemoteContext& context,
                 if (!Utils::isVariable(s->position)) out.push_back(s);
             }
         }
-        if (!op->mChildren.empty())
-            collectScrollTargets(context, op->mChildren, x, y,
-                                 dim ? absX + dim->padX : absX, dim ? absY + dim->padY : absY, out);
+        if (!op->mChildren.empty()) {
+            float ox = absX, oy = absY;
+            childOrigin(context, op.get(), dim, ox, oy);
+            collectScrollTargets(context, op->mChildren, x, y, ox, oy, out);
+        }
     }
 }
 
@@ -349,9 +370,9 @@ static bool rippleRecursive(RemoteContext& context, const std::vector<std::uniqu
         if (cid != -1 && !dim) continue;
         if (dim && !dim->visible) continue;
         float absX = dim ? parentX + dim->x : parentX, absY = dim ? parentY + dim->y : parentY;
-        if (!op->mChildren.empty() &&
-            rippleRecursive(context, op->mChildren, x, y,
-                            dim ? absX + dim->padX : absX, dim ? absY + dim->padY : absY))
+        float ox = absX, oy = absY;
+        childOrigin(context, op.get(), dim, ox, oy);
+        if (!op->mChildren.empty() && rippleRecursive(context, op->mChildren, x, y, ox, oy))
             return true;
         if (!dim || x < absX || x > absX + dim->w || y < absY || y > absY + dim->h) continue;
         for (const auto& child : op->mChildren) {
@@ -523,16 +544,21 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
                 float absX = parentX + dim->x;
                 float absY = parentY + dim->y;
                 
-                // Check children first (back to front). They are placed inside this one's
-                // padding (and offset), so that is their origin, not its corner.
+                // Component.onClick: a tap outside this component reaches none of its
+                // children (a scrolled-away row is not hit through what covers it).
+                if (x < absX || x > absX + dim->w || y < absY || y > absY + dim->h) continue;
+
+                // Children first (back to front), from their origin: inside this one's
+                // padding and shifted by its scroll.
                 if (!op->mChildren.empty()) {
-                    if (onClickRecursive(context, op->mChildren, x, y, absX + dim->padX, absY + dim->padY, op.get())) {
+                    float ox = absX, oy = absY;
+                    childOrigin(context, op.get(), dim, ox, oy);
+                    if (onClickRecursive(context, op->mChildren, x, y, ox, oy, op.get())) {
                         return true;
                     }
                 }
-                
-                // Check component bounds
-                if (x >= absX && x <= absX + dim->w && y >= absY && y <= absY + dim->h) {
+
+                {
                     for (const auto& child : op->mChildren) {
                         if (child->opcode() == 59) { // MODIFIER_CLICK
                             // ClickModifierOperation.onClick: a ripple from the click point

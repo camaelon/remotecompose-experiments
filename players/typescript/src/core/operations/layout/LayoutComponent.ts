@@ -202,9 +202,7 @@ export class LayoutComponent extends Component {
                     if (contentOp instanceof Component) {
                         contentOp.setParent(this);
                         this.mChildrenComponents.push(contentOp);
-                        if (contentOp instanceof LayoutComponent) {
-                            contentOp.inflate();
-                        }
+                        contentOp.inflate();
                         // Detect CanvasContent nested inside LayoutComponentContent
                         if (contentOp instanceof CanvasContent) {
                             this.mHasCanvasLayoutContent = true;
@@ -229,9 +227,7 @@ export class LayoutComponent extends Component {
             } else if (op instanceof Component) {
                 op.setParent(this);
                 this.mChildrenComponents.push(op);
-                if (op instanceof LayoutComponent) {
-                    op.inflate();
-                }
+                op.inflate();
             } else {
                 // Other operations go into component modifiers or content
                 if (this.mDrawContentOperations !== null) {
@@ -736,17 +732,22 @@ export class LayoutComponent extends Component {
     }
 
     onClick(context: RemoteContext, doc: any, x: number, y: number): boolean {
-        // Check children first
+        // Java Component.onClick: a tap outside this component reaches none of its
+        // children (a scrolled-away child is not hit through the header above it), and
+        // children are hit in content coordinates, i.e. shifted back by the scroll offset
+        // the content is painted with. Without both, taps after scrolling went to the
+        // items that sat under the finger before the scroll.
+        if (!(x >= this.mX && x <= this.mX + this.mWidth &&
+              y >= this.mY && y <= this.mY + this.mHeight)) return false;
+        const cx = x - this.mX - this.mPaddingLeft - this.getScrollX();
+        const cy = y - this.mY - this.mPaddingTop - this.getScrollY();
         for (let i = this.mChildrenComponents.length - 1; i >= 0; i--) {
             const child = this.mChildrenComponents[i];
             if (child instanceof Component) {
-                if (child.onClick(context, doc, x - this.mX - this.mPaddingLeft,
-                                   y - this.mY - this.mPaddingTop)) return true;
+                if (child.onClick(context, doc, cx, cy)) return true;
             }
         }
-        // Check if click is within our bounds
-        if (x >= this.mX && x <= this.mX + this.mWidth &&
-            y >= this.mY && y <= this.mY + this.mHeight) {
+        {
             // ComponentModifiers.onClick: every ClickHandler gets the tap (a MultiClickModifier
             // acts only when it is the single-tap kind), last first, and any one handling
             // it handles the click.
@@ -959,8 +960,10 @@ export class LayoutComponent extends Component {
             x += parent.mX;
             y += parent.mY;
             if (parent instanceof LayoutComponent) {
-                x += parent.mPaddingLeft;
-                y += parent.mPaddingTop;
+                // Java getLocationInWindow(forSelf=false) adds each ancestor's scroll: the
+                // content of a scrolled parent is painted shifted by it.
+                x += parent.mPaddingLeft + parent.getScrollX();
+                y += parent.mPaddingTop + parent.getScrollY();
             }
             parent = parent.getParent();
         }
