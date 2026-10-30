@@ -7,6 +7,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLibrary, loadIconCatalog } from "./components.mjs";
+import { designAudit } from "./design-audit.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -17,7 +18,7 @@ const STOP = new Set(["a", "an", "the", "and", "or", "with", "of", "for", "to", 
     "my", "me", "some", "show", "showing", "make", "build", "create", "want", "need", "like", "using",
     "use", "which", "when", "from", "by", "as", "at", "is", "be", "can", "should", "one", "two", "into",
     "this", "these", "those", "your", "our", "its", "please", "app", "application", "let", "have", "get",
-    "i", "we", "you", "also", "so", "are", "will", "would", "could", "about", "nice", "good", "simple", "new", "whether", "shows"]);
+    "i", "we", "you", "also", "so", "are", "will", "would", "could", "about", "nice", "good", "simple", "new", "whether", "shows", "remotecompose", "ui", "display", "displays", "displaying"]);
 
 let cache = null;
 
@@ -158,9 +159,38 @@ function scoreExample(e, q, words) {
     return { score, why, matched, lacking };
 }
 
+// Whether an example draws its whole UI on canvases (a feature demo), from its doc: such an
+// example teaches a technique, and its structure must not be copied for a screen.
+const canvasOnlyCache = new Map();
+export function canvasOnly(e) {
+    if (canvasOnlyCache.has(e.id)) return canvasOnlyCache.get(e.id);
+    let v = false;
+    try {
+        // The root is a canvas (alone, or the only child of one container), or the audit says
+        // the whole UI is hand-placed on canvases.
+        const d = exampleDoc(e);
+        const unwrap = (n) => {
+            if (!n || typeof n !== "object") return n;
+            if (Array.isArray(n)) return n.length === 1 ? unwrap(n[0]) : n;
+            const k = typeof n.type === "string" ? n.type.toLowerCase() : Object.keys(n)[0]?.toLowerCase();
+            const body = typeof n.type === "string" ? n : n[Object.keys(n)[0]];
+            if (["box", "column", "row"].includes(k) && Array.isArray(body?.children) && body.children.length === 1) return unwrap(body.children[0]);
+            return n;
+        };
+        const root = unwrap(d?.root);
+        const isCanvas = root && typeof root === "object" && (String(root.type).toLowerCase() === "canvas" || "canvas" in root);
+        v = Boolean(d && (isCanvas || designAudit(d).some((f) => f.code === "absolute_layout")));
+    } catch { /* unreadable */ }
+    canvasOnlyCache.set(e.id, v);
+    return v;
+}
+const CANVAS_NOTE = "A canvas-only feature demo: take the technique (the drawing, the expressions), not the " +
+    "structure. Lay a screen out with column/row/text and components, and keep a canvas for the drawing itself.";
+
 export function summarizeExample(e, { matched = [] } = {}) {
     const snippets = (e.snippets ?? []).filter((s) => !matched.length || matched.includes(s.shows));
     return {
+        ...(canvasOnly(e) ? { structure: "canvas", structure_note: CANVAS_NOTE } : {}),
         id: e.id, folder: e.folder, title: e.title, summary: e.summary, level: e.level, family: e.family,
         kind: e.kind ?? "example",
         capabilities: e.capabilities, use_cases: e.use_cases, form_factor: e.form_factor,
@@ -260,8 +290,43 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         pool.splice(pool.indexOf(best.e), 1);
         kit.push(best);
     }
-    kit.sort((a, b) => a.e.level - b.e.level);
-    const needs = needsComponent(r, C);
+    // Examples about the goal's subject: its words in an example's title, keywords or prompt
+    // ("sunrise" -> the sun arc example), which capabilities alone don't reach.
+    // Words too generic to name a subject ("current", "today", "screen").
+    const GENERIC = new Set(["current", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust"]);
+    const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !GENERIC.has(w));
+    const textScore = (e) => {
+        const t = ` ${normalizeWords(e.title ?? "").join(" ")} `, k = ` ${normalizeWords((e.keywords ?? []).join(" ")).join(" ")} `,
+              p = ` ${normalizeWords(e.prompt ?? "").join(" ")} `;
+        const hits = goalWords.filter((w) => t.includes(` ${w}`) || k.includes(` ${w}`) || p.includes(` ${w}`));
+        const score = goalWords.reduce((n, w) => n + (t.includes(` ${w}`) ? 2 : 0) + (k.includes(` ${w}`) ? 1.5 : 0) + (p.includes(` ${w}`) ? 1 : 0), 0);
+        return { hits, score };
+    };
+    // Not promoted: examples that knowingly show an anti-pattern (an expected design finding:
+    // a fixed date, glyph stars); a canvas-only demo counts for less than a laid-out screen.
+    const DESIGN_CODES = new Set(["hardcoded_date", "glyph_icon", "absolute_layout", "fixed_coordinates", "text_anchor"]);
+    const byText = C.examples.filter((e) => e.kind !== "gallery" && !(e.expect_findings ?? []).some((c) => DESIGN_CODES.has(c)))
+        .map((e) => { const t = textScore(e); return { e, ...t, score: t.score * (canvasOnly(e) ? 0.6 : 1) }; })
+        // Two of the goal's words, or one in the title: a single shared word in passing ("target"
+        // in a touch-target example for a thermostat's target) is not the subject.
+        .filter((x) => x.score >= 3 && (new Set(x.hits).size >= 2
+            || (goalWords.length <= 3 && goalWords.some((w) => ` ${normalizeWords(x.e.title ?? "").join(" ")} `.includes(` ${w} `)))))
+        .sort((a, b) => b.score - a.score);
+    for (const x of byText.slice(0, 2)) {
+        if (kit.some((k) => k.e.id === x.e.id) || kit.length >= max_examples + 1) continue;
+        kit.unshift({ e: x.e, covers: [], value: x.score, about: x.hits });
+    }
+    // The goal's own subject first, best match first; then the capability picks, simplest first.
+    kit.sort((a, b) => (b.about ? 1 : 0) - (a.about ? 1 : 0) || (a.about && b.about ? b.value - a.value : 0) || a.e.level - b.e.level);
+    // How to structure the screen: the best-matching example that is laid out with components
+    // (not a canvas-only demo), else the reference app layout.
+    const model = byText.find((x) => !canvasOnly(x.e) && (x.e.level ?? 1) >= 3)?.e
+        ?? LAYOUT_MODELS.map((id) => C.examples.find((e) => e.id === id)).find(Boolean);
+    // Words an example is about, and proper nouns (capitalised mid-goal: "San Francisco"), are not
+    // things the library lacks.
+    const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
+    const proper = new Set(String(goal).split(/\s+/).slice(1).filter((w) => /^[A-Z][a-z]/.test(w)).flatMap((w) => normalizeWords(w)));
+    const needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !GENERIC.has(w)) }, C);
     const icons = suggestIcons(goal, r);
     // Suggested icons are drawn with the Icon component: list it with its call and params.
     if (icons?.suggestions.length && !comps.some((c) => c.name === "Icon")) {
@@ -273,14 +338,20 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
                     components: r.components, matched: r.matched },
         unmatched_terms: r.unmatched_terms,
         components: comps,
-        examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers }), contributes: k.covers })),
+        examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers }), contributes: k.covers,
+            ...(k.about ? { about: `the goal's subject: ${k.about.join(", ")}` } : {}) })),
+        ...(model ? { layout_model: {
+            id: model.id, title: model.title, folder: model.folder,
+            why: "Structure the screen like this: layout components (column, row, text, library components) for the " +
+                 "structure and every text, a canvas only for a drawing, values computed in the document. get it for the full JSON.",
+        } } : {}),
         not_covered: [...remaining],
         ...(needs ? { needs_component: needs } : {}),
         ...(icons ? { icons } : {}),
         design: designRules(goal, r, needed),
         next_steps: [
             needs ? `Write the component(s) in needs_component first and check_component each with a sweep until every rendered state is right.` : null,
-            "Assemble one document: library and inline component calls, the examples' snippets, values computed in the document rather than pasted.",
+            "Assemble one document structured like layout_model (components for layout and text, canvases only for drawings): library and inline component calls, the examples' techniques, values computed in the document rather than pasted.",
             "rc-render.validate and render_rc it, look at the image, and rc-inspect.audit it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
             "Components expand automatically in every tool.",
         ].filter(Boolean),
@@ -305,6 +376,10 @@ function suggestIcons(goal, r) {
         how: "Every symbol on screen (status, action, navigation, category) is {\"Icon\": {\"name\": ...}} (style outlined|rounded|sharp, filled for a selected state, size, color, label). find kind \"icons\" searches 4,157 Material Symbols by meaning.",
     };
 }
+
+// Reference screens laid out with components, with a drawing in a canvas and values computed
+// from the clock: the default layout_model when no better-matching one exists.
+const LAYOUT_MODELS = ["TIM-12", "TIM-11", "CMP-05", "CMP-08"];
 
 // Examples that teach drawing a shape from a value, for a component the library lacks.
 const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];

@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { jsonToRc } from "./lib/json2rc.mjs";
+import { designNotes } from "./lib/design-audit.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 
@@ -81,7 +82,11 @@ export const definition = {
             writeFileSync(out, Buffer.from(bytes));
             const result = { rc_path: displayPath(out), bytes: bytes.length };
             if (include_base64) result.rc_base64 = Buffer.from(bytes).toString("base64");
-            return [{ type: "text", text: JSON.stringify(result) }];
+            // The design warnings (a UI hand-drawn on a canvas, glyph icons, hard-coded dates...):
+            // here, because converting is the one step every client takes.
+            let notes = "";
+            try { notes = designNotes(typeof source === "string" ? JSON.parse(source) : source); } catch { /* not JSON we can read */ }
+            return [{ type: "text", text: JSON.stringify(result) }, ...(notes ? [{ type: "text", text: notes }] : [])];
         },
     }],
 };

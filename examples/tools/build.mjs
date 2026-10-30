@@ -318,7 +318,9 @@ for (const { dir, kind, name } of dirs) {
     }
     for (const u of meta.use_cases ?? []) if (!VOCAB.use_cases[u]) problems.push(`use case ${u} is not in the vocabulary`);
     if (meta.form_factor && !VOCAB.form_factors[meta.form_factor]) problems.push(`form factor ${meta.form_factor} is not in the vocabulary`);
-    for (const c of meta.components ?? []) if (!VOCAB.components?.[c]) warnings.push(`component ${c} is not in the vocabulary`);
+    // A component the document defines itself (top-level `components`) is not a library one.
+    const ownComponents = new Set(Object.keys(doc.components ?? {}));
+    for (const c of meta.components ?? []) if (!VOCAB.components?.[c] && !ownComponents.has(c)) warnings.push(`component ${c} is not in the vocabulary`);
     if (kind === "component" && !(derived.components ?? []).includes(name)) problems.push(`the demo does not call ${name}`);
     for (const c of derived.components ?? []) {
         if (!(meta.components ?? []).includes(c)) warnings.push(`uses component ${c}; list it in meta.components`);

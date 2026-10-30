@@ -22,8 +22,23 @@ import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
+import { designNotes } from "./lib/design-audit.mjs";
 
 const resolveIn = (p) => resolvePath(p, "json_path");
+
+/** The JSON document a call is about (inline or a file), or null for binary input. */
+function jsonOf(args) {
+    try {
+        const j = args.json ?? ((args.json_path ?? args.input_path) ? readFileSync(resolveIn(args.json_path ?? args.input_path), "utf8") : null);
+        return typeof j === "string" ? JSON.parse(j) : j;
+    } catch { return null; }
+}
+/** A tool's content with the document's design warnings appended (see designNotes). */
+function withDesign(content, args) {
+    const json = jsonOf(args);
+    const notes = json ? designNotes(json) : "";
+    return notes ? [...content, { type: "text", text: notes }] : content;
+}
 
 const tool = (def, name) => {
     const t = def.tools.find((x) => x.name === name);
@@ -79,6 +94,37 @@ Look things up with find (examples, components, capabilities) and get; reference
 component authoring guide and full documentation for every tool. inspect answers questions
 about a document (layout, variables, accessibility, interactions, bytes, runtime).`;
 
+const FORMAT = `RemoteCompose JSON essentials (get an example with \`get\` for full syntax):
+
+Structure
+- {"header": {"apiLevel": 7, "width", "height", "profiles": 513, "contentDescription"}, "resources": {...}, "root": {...}}.
+- Lay a UI out with components: column, row, box, flow, text, spacer, image, statelayout, collapsibleRow/Column,
+  and library components (Card, ListItem, StatTile, Icon, Gauge, ...: find kind "components"). They measure and
+  wrap text, follow the font scale and the screen size, and expose text to screen readers.
+- A canvas is for drawings (a chart, a dial, an arc), sized by its modifiers inside the layout. Do not draw a
+  whole screen on one canvas: its texts are placed by hand and nothing relayouts when the size changes.
+- Modifiers are a list: ["fillMaxWidth", {"padding": 16}, {"spacedBy": 8}, {"background": "@colors.surface"},
+  {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column)].
+- Trap: weighted children ignore spacedBy (the weights share the whole width, then the gaps overflow it). In a
+  row or column with weights, put fixed spacer boxes ({"box": {"modifiers": [{"width": 8}]}}) between them.
+
+Canvas (when you do draw)
+- Derive coordinates from componentWidth() / componentHeight() (named "variable" commands, then reused), or
+  scale a fixed design box to the size: literal coordinates only fit the header size.
+- The paint is sticky: set color/style/strokeWidth/textSize before each kind of draw.
+- drawTextAnchored {text, x, y, panX, panY}: the pan says where the TEXT goes relative to (x, y):
+  panX -1 = to the right of x (left-aligned), 0 = centred on x, 1 = to the left of x (right-aligned);
+  panY -1 = above y, 0 = centred on y, 1 = below y.
+- Never SVG path strings: use pathExpression or the components (Java writes SVG strings as empty paths).
+
+Values
+- Colours: theme colours "@colors.onSurface" etc. (light, dark and mono follow); literal "#AARRGGBB" otherwise.
+- Expressions are strings: "componentWidth() / 2", "@progress * 360"; Android rejects one over 32 entries:
+  split long formulas into named variables.
+- Anything that depends on the date or time (today, this month, "in 3 days") is computed from the clock
+  (dayOfMonth(), calendarMonth(), year(), timeInMin(), ...), never typed in.
+- Icons: {"Icon": {"name": "wifi"}} (find kind "icons"), never text glyphs or emoji.`;
+
 const tools = [
     {
         ...tool(examples, "build_kit"),
@@ -129,6 +175,9 @@ const tools = [
         name: "convert",
         annotations: { title: "Convert JSON to .rc (and check it)", ...RO },
         description:
+            "Before writing a new document, call build_kit: it returns the components, layout patterns and " +
+            "design rules for the goal (a UI is laid out with column/row/text and library components, not drawn " +
+            "on one canvas). " +
             "Convert a RemoteCompose JSON document to a binary .rc (component calls expand " +
             "automatically). check: true also parses and runs the document like a player and reports " +
             "problems (and renders it unless render: false). expanded: true returns the plain JSON that " +
@@ -152,7 +201,7 @@ const tools = [
                 return tool(examples, "expand_components").handler({ ...args, json });
             }
             const out = await tool(json2rc, "json2rc").handler({ ...args, ...(file ? { input_path: file } : {}) });
-            if (!check) return out;
+            if (!check) return out;   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
             const v = await tool(render, "validate").handler({ ...vargs, ...(file ? { json_path: file } : {}), render: doRender ?? true });
             return [...out, ...v];
@@ -164,17 +213,26 @@ const tools = [
         const t = tool(render, "render_rc");
         return {
             ...t, name: "render",
-            description: t.description + " componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome variant " +
+            description: t.description + " The result ends with the document's design warnings, if any (a UI hand-drawn on a canvas, " +
+                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome variant " +
                 "of a JSON document (always-on displays, e-ink) without editing it.",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
                 componentTheme: { type: "string", enum: ["auto", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the component theme to expand with." } } },
-            handler: async ({ componentTheme, ...args } = {}) => {
+            handler: async ({ componentTheme, ...args } = {}) => withDesign(await (async () => {
+                // One of width/height: the other from the document's own aspect ratio.
+                if ((args.width === undefined) !== (args.height === undefined)) {
+                    const h = jsonOf(args)?.header;
+                    const r = h?.width && h?.height ? h.height / h.width : null;
+                    if (!r) throw new Error("render: give both width and height (the document's header has no size to keep the ratio of)");
+                    if (args.height === undefined) args = { ...args, height: Math.round(args.width * r) };
+                    else args = { ...args, width: Math.round(args.height / r) };
+                }
                 if (!componentTheme) return t.handler(args);
                 const json = args.json ?? (args.json_path ? JSON.parse(readFileSync(resolveIn(args.json_path), "utf8")) : null);
                 if (!json) throw new Error("render: componentTheme needs a JSON document (json or json_path)");
                 const { json_path: _, ...rest } = args;
                 return t.handler({ ...rest, json: { ...(typeof json === "string" ? JSON.parse(json) : json), componentTheme } });
-            },
+            })(), args),
         };
     })(),
     tool(inspect, "audit"),
@@ -201,7 +259,12 @@ const tools = [
             operation: tool(inspect, "get_operation"),
         },
     }),
-    { ...tool(deploy, "package_web"), name: "publish" },
+    (() => {
+        const t = tool(deploy, "package_web");
+        return { ...t, name: "publish",
+            description: t.description + " Its result ends with the document's design warnings, if any: fix them before sharing.",
+            handler: async (args = {}) => withDesign(await t.handler(args), args) };
+    })(),
     dispatcher({
         name: "pages", title: "Published pages", selector: "action", fallback: "list",
         description: "The pages published with publish: action \"list\" (default) or \"unpublish\" (with page_id).",
@@ -216,19 +279,21 @@ tools.push({
     name: "reference",
     annotations: { title: "Workflow, guides and tool documentation", ...RO },
     description:
-        "topic \"workflow\" (default): how to go from a request to a verified document. topic " +
+        "topic \"workflow\" (default): how to go from a request to a verified document. topic \"format\": the " +
+        "JSON essentials and its traps (layout vs canvas, text anchoring, sizes, expressions). topic " +
         "\"components\": the component authoring guide (syntax, light/dark/mono, animation, drawing " +
         "something the library lacks). topic \"tools\": every tool's full schema and options, or one " +
         "with tool: <name>.",
     inputSchema: {
         type: "object",
         properties: {
-            topic: { type: "string", enum: ["workflow", "components", "tools"] },
+            topic: { type: "string", enum: ["workflow", "format", "components", "tools"] },
             tool: { type: "string", description: "With topic \"tools\": one tool name." },
         },
     },
     handler: async ({ topic = "workflow", tool: name } = {}) => {
         if (topic === "components") return tool(examples, "component_authoring_guide").handler({});
+        if (topic === "format") return text(FORMAT);
         if (topic === "tools") {
             const list = name ? tools.filter((t) => t.name === name) : tools;
             if (!list.length) throw new Error(`no tool '${name}'`);

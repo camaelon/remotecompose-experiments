@@ -339,11 +339,14 @@ const renderRc = renderServer.tools.find((t) => t.name === "render_rc").handler;
  * at the default value, looks fine.
  */
 function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, width) {
-    const cols = Math.max(1, Math.min(columns, values.length));
-    const rows = Math.ceil(values.length / cols);
+    let cols = Math.max(1, Math.min(columns, values.length));
     // The cells are as wide as the grid allows and as tall as the component asks: its `size`
     // (the call's, else the param default) or its `height`, else square.
     const dim = (k) => [args[k], body.params?.[k]?.default].find((v) => typeof v === "number");
+    // A component wider than a cell gets fewer columns, so cells never overlap.
+    const want = dim("size") ?? dim("width");
+    if (want) cols = Math.max(1, Math.min(cols, Math.floor((width - 24) / (want + 8))));
+    const rows = Math.ceil(values.length / cols);
     const cellW = (width - 32 - 8 * (cols - 1)) / cols;
     const cellH = Math.round(cell || Math.max(dim("size") ?? dim("height") ?? cellW, 24)) + 22;
     const label = (v) => `${param} ${typeof v === "number" ? +v.toFixed(4) : String(v)}`;
@@ -369,6 +372,7 @@ function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, wi
 }
 
 async function checkComponent({ definition: def, name, call, doc, variables = {}, width = 360, height = 200, render = true, sweep }) {
+    if (sweep) render = true;   // a sweep is a render: asking for one is asking to see it
     if (typeof def === "string") def = JSON.parse(def);
     name ??= def?.component;
     const lint = lintComponent(def, name);

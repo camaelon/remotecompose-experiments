@@ -2,7 +2,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { dateKind, designAudit, isGlyphText, readsClock, textAudit } from "./design-audit.mjs";
+import { designNotes, dateKind, designAudit, isGlyphText, readsClock, textAudit } from "./design-audit.mjs";
 
 const header = { apiLevel: 7, width: 360, height: 640, profiles: 513 };
 const codes = (fs) => fs.map((f) => `${f.severity}:${f.code}`).sort();
@@ -116,4 +116,22 @@ test("textAudit: the binary document's best effort", () => {
     assert.deepEqual(codes(textAudit(["○", "◐", "OCTOBER 2026", "Hello"], { readsClock: false })), ["warning:glyph_icon", "warning:hardcoded_date"]);
     assert.deepEqual(codes(textAudit(["OCTOBER 2026"])), ["info:hardcoded_date"]);
     assert.deepEqual(textAudit(["Hello", "42", "12:30"]), []);
+});
+
+test("layout: a UI drawn on one canvas at fixed coordinates, and centred text at an edge", () => {
+    const t = (text, x, y, panX = -1) => ({ drawTextAnchored: { text, x, y, panX, panY: 0 } });
+    const texts = Array.from({ length: 12 }, (_, i) => t(`Line ${i}`, 42, 60 + 40 * i));
+    const doc = { header: { apiLevel: 7, width: 390, height: 780 }, root: { type: "canvas", modifiers: ["fillMaxSize"], commands: [
+        { paint: { textSize: 31 } }, t("San Francisco", 42, 111, 0), ...texts,
+        { drawRoundRect: { left: 20, top: 22, right: 370, bottom: 758, rx: 30, ry: 30 } }] } };
+    const codes = Object.fromEntries(designAudit(doc).map((f) => [f.code, f.severity]));
+    assert.equal(codes.absolute_layout, "warning");
+    assert.equal(codes.fixed_coordinates, "warning");
+    assert.equal(codes.text_anchor, "warning");
+    assert.match(designNotes(doc), /absolute_layout/);
+    // The same texts in layout components: none of the three.
+    const ok = { header: { apiLevel: 7, width: 390, height: 780 }, root: { column: { modifiers: ["fillMaxSize"],
+        children: [{ text: { value: "San Francisco", fontSize: 31 } }, { text: { value: "6:13 PM" } }] } } };
+    const okCodes = designAudit(ok).map((f) => f.code);
+    for (const c of ["absolute_layout", "fixed_coordinates", "text_anchor"]) assert.ok(!okCodes.includes(c), c);
 });

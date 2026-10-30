@@ -40,6 +40,25 @@ the schemas the servers actually accept. To add a server, export its `definition
 `guide` block and list it in `SERVERS` in `guide-server.mjs`. On a deployment,
 `MCP_PUBLIC_BASE_URL` makes the guide show the remote endpoints.
 
+## Logs: retracing a session
+
+Every tool call logs one line (stderr; `journalctl` on the VPS) with a short client id (a hash of
+the caller's address and user agent, never the token), what was asked and what came back:
+
+```
+initialize {"client":"bb4cde","clientInfo":{"name":"…","version":"…"},"ua":"…"}
+build_kit ok 228ms {"client":"bb4cde","args":{"goal":"…the user's prompt…"},"result":{"examples":["TIM-12","EXP-14"],"layout_model":"TIM-12","components":["Icon"],"icons":["wb_twilight"],"unmatched":["sunset"]}}
+render ok 35ms {"client":"bb4cde","args":{"json":{"bytes":515,"sha":"bdfa1028"}},"result":{"images":1,"design_warnings":["fixed_coordinates","text_anchor"]}}
+```
+
+Prompts and queries are logged in full; documents only as size and hash (the same `sha` across
+calls is the same document). `MCP_LOG_CALLS=0` keeps only the `<tool> ok <ms>` part.
+
+```sh
+journalctl -u rcmcp@remotecompose --since today | grep -E ' (ok|error) |initialize'   # a day's calls
+journalctl -u rcmcp@remotecompose --since today | grep '"client":"bb4cde"'          # one client's session
+```
+
 ## Setup (local)
 
 The renderer needs `rc2image` built (`players/cpp`, see its BUILDING.md). On Linux the

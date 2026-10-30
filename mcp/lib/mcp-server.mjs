@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { createServer } from "node:http";
 import { createInterface } from "node:readline";
 import { workspaceRoot } from "./workspace.mjs";
+import { callDetails } from "./calllog.mjs";
 
 const DEFAULT_PROTOCOL = "2025-06-18";
 const MAX_BODY = 32 << 20;   // inline JSON documents and base64 .rc files can be large
@@ -30,7 +31,9 @@ function createHandler({ name, version, instructions, tools }) {
     const ok = (id, result) => ({ jsonrpc: "2.0", id, result });
     const err = (id, code, message) => ({ jsonrpc: "2.0", id, error: { code, message } });
 
-    return async function handle(msg) {
+    // ctx: {client} — who is calling (a short id per address + user agent over HTTP, "stdio"),
+    // so the log lines of one session can be followed.
+    return async function handle(msg, ctx = {}) {
         if (!msg || typeof msg !== "object" || msg.jsonrpc !== "2.0") {
             return err(msg?.id ?? null, -32600, "invalid request");
         }
@@ -39,6 +42,7 @@ function createHandler({ name, version, instructions, tools }) {
         if (!method) return null;   // a response to something we never send
         switch (method) {
             case "initialize":
+                log(`initialize ${JSON.stringify({ client: ctx.client, clientInfo: params?.clientInfo, protocol: params?.protocolVersion, ua: ctx.ua })}`);
                 return ok(id, {
                     protocolVersion: params?.protocolVersion ?? DEFAULT_PROTOCOL,
                     capabilities: { tools: {} },
@@ -58,10 +62,11 @@ function createHandler({ name, version, instructions, tools }) {
                 const started = Date.now();
                 try {
                     const content = await tool.handler(params.arguments ?? {});
-                    log(`${tool.name} ok ${Date.now() - started}ms`);
+                    log(`${tool.name} ok ${Date.now() - started}ms` + callDetails({ client: ctx.client, args: params.arguments, content }));
                     return ok(id, { content });
                 } catch (e) {
-                    log(`${tool.name} error ${Date.now() - started}ms: ${String(e?.message ?? e).split("\n")[0]}`);
+                    log(`${tool.name} error ${Date.now() - started}ms: ${String(e?.message ?? e).split("\n")[0]}` +
+                        callDetails({ client: ctx.client, args: params.arguments, error: e?.message ?? e }));
                     return ok(id, {
                         content: [{ type: "text", text: String(e?.message ?? e) }],
                         isError: true,
@@ -106,7 +111,7 @@ function serveStdio(handle) {
         try { msg = JSON.parse(line); } catch {
             return send({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } });
         }
-        for (const m of Array.isArray(msg) ? msg : [msg]) handle(m).then(send);
+        for (const m of Array.isArray(msg) ? msg : [msg]) handle(m, { client: "stdio" }).then(send);
     });
     rl.on("close", () => process.exit(0));
 }
@@ -214,7 +219,12 @@ function serveHttp(def, handle, port) {
             return reply(res, 400, { jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } });
         }
         const batch = Array.isArray(msg);
-        const out = (await Promise.all((batch ? msg : [msg]).map(handle))).filter(Boolean);
+        // Who is calling: the client's address (behind the proxy, X-Forwarded-For) and user agent,
+        // hashed to a short id that groups one client's calls in the log. Never the token.
+        const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
+        const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
+        const ctx = { client: createHash("sha1").update(addr + "|" + ua).digest("hex").slice(0, 6), ua };
+        const out = (await Promise.all((batch ? msg : [msg]).map((m) => handle(m, ctx)))).filter(Boolean);
         if (!out.length) return reply(res, 202);   // only notifications / responses
         reply(res, 200, batch ? out : out[0]);
     });

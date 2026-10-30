@@ -1,0 +1,1020 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Sunrise and sunset today for the chosen place: the sun's path across the day with its current position, and the times of first light, sunrise, solar noon, golden hour, sunset and last light"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Panel": {
+   "params": {},
+   "slots": {
+    "content": {
+     "doc": "The panel's rows; a child with verticalWeight takes the height left"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "verticalWeight": 1
+      },
+      {
+       "clip": {
+        "roundedRect": 16
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 15
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  },
+  "TimeTile": {
+   "params": {
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "What the time is"
+    },
+    "minutes": {
+     "type": "float",
+     "required": true,
+     "doc": "Local minutes since midnight, already rounded"
+    },
+    "tint": {
+     "type": "color",
+     "default": "@colors.warning",
+     "doc": "Icon colour"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "clip": {
+        "roundedRect": 12
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 11
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "@icon",
+        "size": 24,
+        "color": "@tint"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 10
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         },
+         {
+          "spacedBy": 2
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@label",
+           "fontSize": 12,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "floor(@minutes / 60)",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ":",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@minutes % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 13
+             }
+            }
+           },
+           "fontSize": 20,
+           "color": "@colors.onSurface",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "latitude": {
+    "value": 37.7749,
+    "export": true
+   },
+   "longitude": {
+    "value": -122.4194,
+    "export": true
+   },
+   "off": "offsetToUtc() / 60",
+   "n": "365 * (year() - 2000) + floor((year() - 1997) / 4) + dayOfYear() - 1 - offsetToUtc() / 86400",
+   "L": "(280.46 + 0.9856474 * @n) % 360",
+   "g": "0.0174533 * ((357.528 + 0.9856003 * @n) % 360)",
+   "lam": "0.0174533 * (@L + 1.915 * sin(@g) + 0.02 * sin(2 * @g))",
+   "eps": "0.0174533 * (23.439 - 0.0000004 * @n)",
+   "dec": "asin(sin(@eps) * sin(@lam))",
+   "ra": "57.29578 * atan2(cos(@eps) * sin(@lam), cos(@lam))",
+   "E": "@L - @ra",
+   "eot": "4 * (@E - 360 * floor((@E + 180) / 360))",
+   "noon": "720 - 4 * @longitude - @eot + @off",
+   "phi": "0.0174533 * @latitude",
+   "A": "sin(@phi) * sin(@dec)",
+   "B": "cos(@phi) * cos(@dec)",
+   "H0": "229.18312 * acos(clamp(-1, 1, (-0.0145439 - @A) / @B))",
+   "Hc": "229.18312 * acos(clamp(-1, 1, (-0.1045285 - @A) / @B))",
+   "H6": "229.18312 * acos(clamp(-1, 1, (0.1045285 - @A) / @B))",
+   "rise": "@noon - @H0",
+   "set": "@noon + @H0",
+   "riseR": "floor(@rise + 0.5)",
+   "setR": "floor(@set + 0.5)",
+   "dawnR": "floor(@noon - @Hc + 0.5)",
+   "duskR": "floor(@noon + @Hc + 0.5)",
+   "noonR": "floor(@noon + 0.5)",
+   "goldR": "floor(@noon + @H6 + 0.5)",
+   "dayLen": "@setR - @riseR",
+   "now": "timeInMin()",
+   "sNow": "@A + @B * cos((@now - @noon) * 0.0043633)",
+   "left": "floor(min(@dayLen, max(0, @set - @now)))",
+   "alt": "57.29578 * asin(@sNow)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "place",
+    "vtype": "string",
+    "value": "San Francisco",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "spacedBy": 10
+        }
+       ],
+       "children": [
+        {
+         "Icon": {
+          "name": "location_on",
+          "size": 28,
+          "color": "@colors.primary"
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@place",
+             "fontSize": 22,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "DateLabel": {
+             "format": "long",
+             "fontSize": 14,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@latitude",
+                "whole": 3,
+                "decimal": 2,
+                "flags": 517
+               },
+               "id2": "°, "
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@longitude",
+                "whole": 3,
+                "decimal": 2,
+                "flags": 517
+               },
+               "id2": "°"
+              }
+             },
+             "fontSize": 12,
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "Panel": {
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "spacedBy": 8
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "light_mode",
+             "size": 20,
+             "color": "@colors.warning"
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Sun altitude ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(@alt)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": "°"
+              }
+             },
+             "fontSize": 15,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 6
+           }
+          ]
+         }
+        },
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           },
+           {
+            "semantics": {
+             "contentDescription": "The sun's path today: its height above or below the horizon from midnight to midnight, the daylight part highlighted, and a dot where the sun is now"
+            }
+           }
+          ],
+          "commands": [
+           {
+            "variable": {
+             "name": "W",
+             "value": "componentWidth()"
+            }
+           },
+           {
+            "variable": {
+             "name": "px",
+             "value": "8"
+            }
+           },
+           {
+            "variable": {
+             "name": "pw",
+             "value": "@W - 16"
+            }
+           },
+           {
+            "variable": {
+             "name": "hy",
+             "value": "componentHeight() * 0.64"
+            }
+           },
+           {
+            "variable": {
+             "name": "ku",
+             "value": "@hy - 12"
+            }
+           },
+           {
+            "variable": {
+             "name": "kd",
+             "value": "componentHeight() - @hy - 6"
+            }
+           },
+           {
+            "pathExpression": {
+             "id": "path",
+             "expressionX": "@px + @pw * a[0] / 1440",
+             "expressionY": "@hy - @ku * max(0, @A + @B * cos((a[0] - @noon) * 0.0043633)) - @kd * min(0, @A + @B * cos((a[0] - @noon) * 0.0043633))",
+             "start": 0,
+             "end": 1440,
+             "count": 96
+            }
+           },
+           {
+            "pathExpression": {
+             "id": "day",
+             "expressionX": "@px + @pw * (@rise + a[0] * (@set - @rise)) / 1440",
+             "expressionY": "@hy - @ku * max(0, @A + @B * cos((@rise + a[0] * (@set - @rise) - @noon) * 0.0043633))",
+             "start": 0,
+             "end": 1,
+             "count": 64
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.warning"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 0.16
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "day"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 1
+              },
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 2
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "path"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.warning"
+              },
+              {
+               "strokeWidth": 3
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": "day"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "strokeWidth": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 0,
+             "y1": "@hy",
+             "x2": "@W",
+             "y2": "@hy"
+            }
+           },
+           {
+            "loop": {
+             "index": "i",
+             "from": 0,
+             "until": 9,
+             "commands": [
+              {
+               "drawLine": {
+                "x1": "@px + @pw * i / 8",
+                "y1": "@hy - 3",
+                "x2": "@px + @pw * i / 8",
+                "y2": "@hy + 3"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.primary"
+              },
+              {
+               "strokeWidth": 5
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@px + @pw * @dawnR / 1440",
+             "y1": "@hy",
+             "x2": "@px + @pw * @duskR / 1440",
+             "y2": "@hy"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.warning"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@px + @pw * @rise / 1440",
+             "y1": "@hy",
+             "x2": "@px + @pw * @set / 1440",
+             "y2": "@hy"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "strokeWidth": 1
+              },
+              {
+               "alpha": 0.6
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@px + @pw * @noon / 1440",
+             "y1": "@hy",
+             "x2": "@px + @pw * @noon / 1440",
+             "y2": "@hy - @ku * (@A + @B)"
+            }
+           },
+           {
+            "variable": {
+             "name": "sx",
+             "value": "@px + @pw * @now / 1440"
+            }
+           },
+           {
+            "variable": {
+             "name": "sy",
+             "value": "@hy - @ku * max(0, @sNow) - @kd * min(0, @sNow)"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              },
+              {
+               "color": "@colors.warning"
+              },
+              {
+               "alpha": "0.1 + 0.2 * step(@sNow, -0.0145439)"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": 14
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": "0.45 + 0.55 * step(@sNow, -0.0145439)"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@sx",
+             "cy": "@sy",
+             "radius": 7
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "horizontalArrangement": "spaceBetween",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "0:00",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "12:00",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "24:00",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 6
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "spacedBy": 8
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@dayLen / 60)",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": " h ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@dayLen % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " min of daylight"
+               }
+              }
+             },
+             "fontSize": 14,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@left / 60)",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": " h ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@left % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " min left"
+               }
+              }
+             },
+             "fontSize": 13,
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "wb_twilight",
+             "label": "Sunrise",
+             "minutes": "@riseR"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 10
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "wb_twilight_2",
+             "label": "Sunset",
+             "minutes": "@setR"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "routine",
+             "label": "First light",
+             "minutes": "@dawnR",
+             "tint": "@colors.primary"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 10
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "bedtime",
+             "label": "Last light",
+             "minutes": "@duskR",
+             "tint": "@colors.primary"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "light_mode",
+             "label": "Solar noon",
+             "minutes": "@noonR"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 10
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "TimeTile": {
+             "icon": "photo_camera",
+             "label": "Golden hour",
+             "minutes": "@goldR"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

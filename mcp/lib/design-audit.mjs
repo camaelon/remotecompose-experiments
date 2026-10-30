@@ -281,6 +281,115 @@ function colorFindings(doc) {
     }];
 }
 
+// ── Layout: a whole UI hand-placed on a canvas ───────────────────────
+
+const LAYOUT_KINDS = new Set(["column", "row", "box", "text", "flow", "fitbox", "statelayout", "collapsiblerow",
+    "collapsiblecolumn", "image", "spacer", "button"]);
+const TEXT_DRAWS = new Set(["drawText", "drawTextAnchored", "drawTextRun", "drawTextOnPath", "drawTextOnCircle"]);
+const DRAWS = /^draw/;
+const SIZE_EXPR = /\b(?:componentWidth|componentHeight|windowWidth|windowHeight|contentWidth|contentHeight)\s*\(/;
+const RESIZING = (m) => m === "fillMaxSize" || m === "fillMaxWidth" || m === "fillMaxHeight"
+    || (isObj(m) && ("weight" in m || "verticalWeight" in m || "horizontalWeight" in m));
+
+/** Every canvas in the document (its commands and modifiers), and whether any layout component exists. */
+function scanLayout(doc) {
+    const canvases = [];
+    let layout = 0;
+    const visit = (node) => {
+        if (Array.isArray(node)) return node.forEach(visit);
+        if (!isObj(node)) return;
+        if (isCall(node)) layout++;          // a library or inline component lays itself out
+        const kind = typeof node.type === "string" ? node.type.toLowerCase() : null;
+        for (const [k, v] of Object.entries(node)) {
+            const lk = k.toLowerCase();
+            if (lk === "canvas" && isObj(v)) canvases.push(v);
+            else if (LAYOUT_KINDS.has(lk) && isObj(v)) layout++;
+            visit(v);
+        }
+        if (kind === "canvas") canvases.push(node);
+        else if (kind && LAYOUT_KINDS.has(kind)) layout++;
+    };
+    visit(doc.root ?? doc);
+    return { canvases, layout };
+}
+const commandsOf = (c) => (Array.isArray(c.commands) ? c.commands : []);
+const flatCommands = (cmds) => cmds.flatMap((x) => (isObj(x) && Array.isArray(x.save) ? flatCommands(x.save) : [x]));
+const commandName = (x) => (isObj(x) ? Object.keys(x)[0] : "");
+
+const LAYOUT_FIX =
+    "Lay text and structure out with components (column, row, box, text, and library components such as " +
+    "Card, ListItem, StatTile, Icon) and keep canvases for drawings (a chart, a dial, a path). Layout " +
+    "components measure their text, wrap it, follow the font scale and the screen size, and expose the text " +
+    "to screen readers; text drawn on a canvas does none of that.";
+
+function layoutFindings(doc) {
+    const out = [];
+    const { canvases, layout } = scanLayout(doc);
+    const W = Number(doc.header?.width) || 0;
+    const allText = canvases.reduce((n, c) => n + flatCommands(commandsOf(c)).filter((x) => TEXT_DRAWS.has(commandName(x))).length, 0);
+    if (allText >= 4 && layout === 0) {
+        out.push({
+            // A drawing demo labels a few things on its canvas; a UI drawn this way has many texts.
+            severity: allText >= 12 ? "warning" : "info", code: "absolute_layout",
+            title: `The whole UI is drawn on a canvas (${allText} texts placed by hand)`,
+            message: `No layout component: every text and box is positioned at fixed coordinates. ${LAYOUT_FIX}`,
+            count: allText,
+        });
+    }
+    for (const c of canvases) {
+        const cmds = flatCommands(commandsOf(c));
+        const draws = cmds.filter((x) => DRAWS.test(commandName(x)));
+        const resizes = (c.modifiers ?? []).some(RESIZING);
+        // Fixed: every coordinate of every draw is a literal (no expression, no variable) and
+        // nothing scales the drawing to the component's size.
+        const literalOnly = draws.every((x) => Object.entries(Object.values(x)[0] ?? {})
+            .every(([k, v]) => k === "text" || k === "path" || typeof v !== "string"));
+        const scaled = cmds.some((x) => ["scale", "translate", "matrix"].includes(commandName(x)) && /[@a-z(]/i.test(JSON.stringify(Object.values(x)[0])));
+        // ...and the drawing spans the header-sized layout (coordinates past half the header
+        // width or height), so it only fits that size; small offsets from the top left are fine.
+        const H = Number(doc.header?.height) || 0;
+        const reach = (keys) => Math.max(0, ...draws.flatMap((x) => Object.entries(Object.values(x)[0] ?? {})
+            .filter(([k, v]) => keys.test(k) && typeof v === "number").map(([, v]) => v)));
+        const spans = (W && reach(/^(?:x|x1|x2|cx|left|right)$/) > 0.6 * W) || (H && reach(/^(?:y|y1|y2|cy|top|bottom)$/) > 0.6 * H);
+        if (resizes && draws.length >= 6 && literalOnly && !scaled && spans && !SIZE_EXPR.test(JSON.stringify(cmds))) {
+            out.push({
+                severity: "warning", code: "fixed_coordinates",
+                title: `A canvas that resizes draws at fixed coordinates (${draws.length} draws)`,
+                message: "It fills its parent, but every coordinate is a literal laid out for the header size, so " +
+                    "on another screen the drawing is cut off or leaves empty space. Derive positions from " +
+                    "componentWidth() / componentHeight() (named `variable`s once, then reused), scale a fixed " +
+                    "design box to the size, or use layout components for anything that isn't a drawing.",
+                count: draws.length,
+            });
+        }
+        // drawTextAnchored: panX/panY say where the text goes relative to (x, y): -1 right of / above,
+        // 0 centred, 1 left of / below. 0 near an edge cuts the text in half.
+        let textSize = 14;
+        // Coordinates relative to a translate, scale or loop are not the canvas's own.
+        const relative = cmds.some((x) => ["translate", "scale", "matrix", "loop", "rotate"].includes(commandName(x)));
+        for (const x of relative ? [] : cmds) {
+            if (isObj(x) && isObj(x.paint) && typeof x.paint.textSize === "number") textSize = x.paint.textSize;
+            const t = isObj(x) ? x.drawTextAnchored : null;
+            if (!isObj(t) || typeof t.x !== "number" || !W || typeof t.text !== "string" || /^[@$]/.test(t.text)) continue;
+            // Roughly half the text's width (0.55 em per character): centred on x, does it cross an edge?
+            const half = 0.55 * textSize * t.text.length / 2;
+            if (t.panX === 0 && (t.x - half < -2 || t.x + half > W + 2)) {
+                out.push({
+                    severity: "warning", code: "text_anchor",
+                    title: `Centred text anchored near the edge ("${String(t.text).slice(0, 30)}" at x=${t.x})`,
+                    message: "drawTextAnchored panX 0 CENTRES the text on x, so text anchored near an edge is cut in " +
+                        "half. panX -1 puts the text to the right of x (left-aligned), 1 to the left of x " +
+                        "(right-aligned); panY -1 puts it above y, 0 centres it, 1 below. Better still, use a text " +
+                        "component in a row or column.",
+                });
+                break;
+            }
+        }
+    }
+    if (out.some((f) => f.code === "fixed_coordinates")) for (const f of out) if (f.code === "absolute_layout") f.severity = "warning";
+    return out;
+}
+
 /** Whether anything in the document reads the date or time of day. */
 export function readsClock(doc) {
     let found = false;
@@ -309,6 +418,7 @@ export function designAudit(json) {
         ...repeatedFindings(doc),
         ...dateFindings(strings, readsClock(doc)),
         ...colorFindings(doc),
+        ...layoutFindings(doc),
     ];
     // Literal colours are advice for a feature demo; in a document that is also hard-wired
     // otherwise (glyphs, copies, a fixed date), they are part of the same problem.
@@ -325,4 +435,16 @@ export function designAudit(json) {
 export function textAudit(strings, { readsClock: clock = true } = {}) {
     const items = strings.filter((s) => typeof s === "string").map((value) => ({ value }));
     return [...glyphFindings(items), ...dateFindings(items, clock)];
+}
+
+/**
+ * The design warnings of a JSON document as a short text block for a tool result (convert,
+ * render), or "" when there are none: a model that never calls audit still reads them.
+ */
+export function designNotes(json) {
+    let findings;
+    try { findings = designAudit(json).filter((f) => f.severity === "warning"); } catch { return ""; }
+    if (!findings.length) return "";
+    return ["design warnings (fix these; audit gives details):",
+        ...findings.map((f) => `- [${f.code}] ${f.title}. ${f.message}`)].join("\n");
 }

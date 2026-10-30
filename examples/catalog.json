@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-10-30T17:33:00.738Z",
+ "built_at": "2026-10-30T19:03:12.003Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -582,7 +582,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "a11y.document": [
@@ -10632,7 +10632,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "draw.stroke": [
@@ -13263,7 +13263,8 @@
     "touch": false
    },
    "expect_findings": [
-    "blank"
+    "blank",
+    "text_anchor"
    ],
    "check": {
     "describe": "render_rc and validate report only blank; the audit has no finding (it does not check where draw operations land). Resized it stays blank: the badge at (450, 320) is outside any box up to 410×280.",
@@ -13311,7 +13312,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 0
     },
     "evidence": {
@@ -14089,7 +14090,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.shaping": [
@@ -28436,6 +28437,649 @@
    }
   },
   {
+   "id": "TIM-12",
+   "name": "sunrise-sunset",
+   "version": 1,
+   "title": "Sunrise, sunset and the sun's path",
+   "summary": "Today's sunrise, sunset, first and last light, solar noon, the evening golden hour and the day length for a place given as host variables (San Francisco by default), with the sun's path from midnight to midnight and a dot where it is now. Everything is computed from the clock and the latitude and longitude with the Astronomical Almanac's low-precision sun (declination and equation of time) and the sunrise hour angle, in local time through offsetToUtc(). The structure is layout: a column of rows, text components for every word and number, library Icons and two small inline components; the only canvas is the sun-path drawing, sized by the layout and drawn from componentWidth() and componentHeight().",
+   "prompt": "create a RemoteCompose UI that displays the sunrise/sunset times and sun path for San Francisco",
+   "level": 4,
+   "family": "TIM",
+   "capabilities": {
+    "primary": [
+     "time.date",
+     "expr.trig",
+     "layout.weight"
+    ],
+    "secondary": [
+     "time.clock",
+     "time.countdown",
+     "expr.math",
+     "expr.format",
+     "text.dynamic",
+     "draw.plot",
+     "draw.path",
+     "draw.shapes",
+     "host.variables",
+     "image.icon",
+     "a11y.labels",
+     "layout.decoration",
+     "layout.spacing",
+     "data.tokens"
+    ]
+   },
+   "use_cases": [
+    "weather",
+    "widget",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "sunrise",
+    "sunset",
+    "sun path",
+    "sun position",
+    "solar noon",
+    "daylight",
+    "day length",
+    "golden hour",
+    "civil twilight",
+    "dawn",
+    "dusk",
+    "first light",
+    "last light",
+    "sun altitude",
+    "sun elevation",
+    "daylight left",
+    "weather widget",
+    "san francisco",
+    "latitude longitude",
+    "location",
+    "noaa",
+    "solar calculator",
+    "equation of time",
+    "declination"
+   ],
+   "teaches": [
+    "Layout for structure and text, a canvas only for the drawing: a column of rows holds the place, the date, the altitude line, the axis labels and six time tiles as text components (they measure, wrap, follow the font scale and reach screen readers); the one canvas is the sun path, given the panel's remaining height by verticalWeight and drawn from componentWidth() and componentHeight()",
+    "Small inline components (top-level `components`) for what repeats: TimeTile (icon, label, local minutes formatted H:MM) is called six times, Panel is the rounded surface with a mono outline; the icons are the Icon library component (wb_twilight, wb_twilight_2, routine, bedtime, light_mode, photo_camera)",
+    "Days since J2000 at local noon: n = 365 * (year() - 2000) + floor((year() - 1997) / 4) + dayOfYear() - 1 - offsetToUtc() / 86400, then the Almanac's sun: L = 280.46 + 0.9856474 n, g = 357.528 + 0.9856003 n, ecliptic longitude λ = L + 1.915 sin g + 0.02 sin 2g, obliquity ε = 23.439 - 0.0000004 n; declination δ = asin(sin ε sin λ), right ascension atan2(cos ε sin λ, cos λ), equation of time 4 (L - RA) wrapped to ±180°",
+    "Solar noon in local minutes = 720 - 4 × longitude - EoT + offsetToUtc() / 60; an event at sun altitude h is noon ± 229.18 × acos((sin h - sin φ sin δ) / (cos φ cos δ)) minutes: h = -0.833° for sunrise and sunset (refraction and the sun's radius), -6° for civil twilight (first and last light), +6° for the evening golden hour. clamp the acos argument to [-1, 1] so polar day and night give a full or empty day instead of NaN",
+    "The sun now: sin(altitude) = sin φ sin δ + cos φ cos δ cos((timeInMin() - noon) × 0.0043633); the same expression with a[0] in place of timeInMin() is the pathExpression of the whole day's curve, scaled up above the horizon and down below it with max(0, s) and min(0, s)",
+    "Round once (floor(x + 0.5)) into a variable and format from it: hours floor(m / 60) with flags 5, minutes m % 60 zero-padded with flags 13; the day length is setR - riseR so it always agrees with the two times shown",
+    "Location as exported host variables (latitude, longitude, the place name as a string variable): the host moves the document anywhere without regenerating it (the sydney render)"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/variables/n",
+     "shows": "time.date",
+     "note": "days since J2000 at local noon today, from year(), dayOfYear() and offsetToUtc()"
+    },
+    {
+     "pointer": "/resources/variables/n",
+     "shows": "time.countdown",
+     "note": "offsetToUtc() turns the local day into UTC days"
+    },
+    {
+     "pointer": "/resources/variables/ra",
+     "shows": "expr.trig",
+     "note": "the sun's right ascension with atan2, for the equation of time"
+    },
+    {
+     "pointer": "/resources/variables/H0",
+     "shows": "expr.trig",
+     "note": "sunrise hour angle in minutes: acos of a clamped argument"
+    },
+    {
+     "pointer": "/resources/variables/eot",
+     "shows": "expr.math",
+     "note": "equation of time: L - RA wrapped to ±180° with floor"
+    },
+    {
+     "pointer": "/resources/variables/sNow",
+     "shows": "time.clock",
+     "note": "sin of the sun's altitude now, from timeInMin()"
+    },
+    {
+     "pointer": "/resources/variables/latitude",
+     "shows": "host.variables",
+     "note": "exported location, San Francisco by default"
+    },
+    {
+     "pointer": "/root/0",
+     "shows": "host.variables",
+     "note": "the place name as an exported string variable"
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/2",
+     "shows": "layout.weight",
+     "note": "the only canvas: fillMaxWidth and verticalWeight 1 inside a panel that itself has verticalWeight 1"
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/2/canvas/commands/6",
+     "shows": "draw.plot",
+     "note": "the day's altitude curve as a pathExpression over a[0] = minutes 0..1440"
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/2/canvas/commands/7",
+     "shows": "draw.plot",
+     "note": "the daylight part, a[0] in 0..1 mapped to sunrise..sunset, filled and stroked"
+    },
+    {
+     "pointer": "/components/TimeTile",
+     "shows": "expr.format",
+     "note": "H:MM from rounded local minutes: flags 5 hours, flags 13 minutes"
+    },
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "image.icon",
+     "note": "header row: Icon, then a column of text, DateLabel and the coordinates"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "latitude": {
+      "type": "float",
+      "meaning": "latitude in degrees, north positive",
+      "default": 37.7749,
+      "min": -66,
+      "max": 66,
+      "step": 0.0001
+     },
+     "longitude": {
+      "type": "float",
+      "meaning": "longitude in degrees, east positive (San Francisco is negative)",
+      "default": -122.4194,
+      "min": -180,
+      "max": 180,
+      "step": 0.0001
+     },
+     "place": {
+      "type": "string",
+      "meaning": "the place name shown at the top",
+      "default": "San Francisco"
+     }
+    },
+    "clock": "2026-10-30T15:00",
+    "touch": false
+   },
+   "check": {
+    "describe": "Renders pin the clock and the UTC offset (system variable 10) so they don't depend on the build machine's zone. Reference: the NOAA solar calculator algorithm (Meeus, iterated on each event), computed offline. Canonical, San Francisco 2026-10-30 15:00 PDT (-7 h): first light 7:06, sunrise 7:33, solar noon 12:53, golden hour 17:36, sunset 18:13, last light 18:40, 10 h 40 min of daylight, 3 h 13 min left, sun altitude 30° (NOAA geometric 30.3°), the dot on the descending side of the curve. june (2026-06-21 10:00 PDT): 5:17, 5:48, 13:12, 19:56, 20:35, 21:06, 14 h 47 min, 10 h 34 min left, altitude 47°, the tallest curve. december (2026-12-21 20:00 PST, -8 h): 6:52, 7:22 (NOAA 7:21.5), 12:08, 16:13, 16:54, 17:24, 9 h 32 min, 0 h 0 min left, altitude -36°, the dim dot below the horizon on the night curve. sydney (host variables -33.8688, 151.2093, \"Sydney\", 2026-10-30 15:00 at +11 h): 5:31, 5:57, 12:39, 18:47, 19:21, 19:47, 13 h 24 min, altitude 52°. Every time within a minute of NOAA. light and mono re-colour the same layout (mono: the panel and tiles outlined in grey). narrow (300 x 600) and wide (640 x 520): the canvas takes the panel's remaining height and the curve, horizon (64% down) and dot scale with it; the tiles split the width in two.",
+    "render": {
+     "clock": "2026-10-30T15:00",
+     "system_variables": {
+      "10": -25200
+     }
+    },
+    "renders": [
+     {
+      "name": "june",
+      "clock": "2026-06-21T10:00"
+     },
+     {
+      "name": "december",
+      "clock": "2026-12-21T20:00",
+      "system_variables": {
+       "10": -28800
+      }
+     },
+     {
+      "name": "sydney",
+      "clock": "2026-10-30T15:00",
+      "system_variables": {
+       "10": 39600
+      },
+      "variables": {
+       "latitude": -33.8688,
+       "longitude": 151.2093,
+       "place": "Sydney"
+      }
+     },
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "narrow",
+      "width": 300,
+      "height": 600
+     },
+     {
+      "name": "wide",
+      "width": 640,
+      "height": 520
+     }
+    ]
+   },
+   "pitfalls": [
+    "Don't draw the whole UI on one full-screen canvas with every text placed at fixed coordinates: it doesn't relayout on another screen, ignores the font scale, and screen readers get nothing. Text and structure are layout components (column, row, text, Icon, small inline components); the canvas is only the drawing, sized by the layout",
+    "Don't type the date or the times in (\"Thursday, Oct 30\", \"Sunrise 7:33 AM\"): the document is wrong tomorrow. Read the date from the clock (DateLabel, dayOfYear(), year()) and compute the times from the location",
+    "Local time vs UTC: the solar formulas give UTC; offsetToUtc() (seconds, local minus UTC: -25200 in PDT) converts to local minutes (+ offsetToUtc() / 60) and shifts the day count (- offsetToUtc() / 86400). For renders, pin system variable 10, or the result depends on the build machine's zone",
+    "Longitude sign: east is positive, so San Francisco is -122.42 and solar noon there is 720 + 4 × 122.42 minutes UTC; a positive west longitude puts noon around 04:00",
+    "A float expression holds at most 32 entries on Android (rc-inspect expression_too_long): the solar position is ten named variables (n, L, g, lam, eps, dec, ra, E, eot, noon), not one formula; the curve's pathExpression is 31 entries because it reuses A and B",
+    "The mean-sun shortcut (noon = 12:00 + longitude offset, a fixed 12 h day) is off by up to 16 minutes (equation of time) and hours (season). The NOAA 'fractional year' Fourier series is within about 2.5 minutes for San Francisco; the Almanac formula used here is within a minute",
+    "Weights ignore spacedBy (EXAMPLES_FINDINGS U3): a column with a verticalWeight child and spacedBy overflows by the gaps. Use fixed spacer boxes between the children of such a column, and between weighted tiles in a row",
+    "textSubtext and textTransform are canvas commands in the JSON: a text component can't pick a word from a table, and a choice of whole text (above/below, until sunrise/left) needs a visibility state. Keep the dynamic texts to numbers (\"Sun altitude -36°\", \"0 h 0 min left\"), and use DateLabel for the day and month names",
+    "If drawTextAnchored is used for a label on the drawing, panX 0 centres the text on x (-1 puts it right of x, 1 left of x): centred text at an edge is cut in half. Here the axis labels are text components in a spaceBetween row under the canvas instead",
+    "Date functions alone never schedule a repaint: the altitude and the dot read timeInMin(), which repaints once a minute and rolls the day over at midnight"
+   ],
+   "related": [
+    "EXP-14",
+    "TIM-11",
+    "TIM-10",
+    "TIM-08",
+    "DateLabel",
+    "Icon"
+   ],
+   "components": [
+    "Icon",
+    "DateLabel",
+    "TimeTile",
+    "Panel"
+   ],
+   "folder": "TIM-12-sunrise-sunset",
+   "derived": {
+    "bytes": 16028,
+    "op_count": 565,
+    "header": {
+     "width": 360,
+     "height": 640
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "latitude",
+      "type": "float",
+      "value": 37.7748985
+     },
+     {
+      "name": "longitude",
+      "type": "float",
+      "value": -122.419403
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "place",
+      "type": "string",
+      "value": "San Francisco"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "DateLabel",
+     "Icon",
+     "Panel",
+     "TimeTile"
+    ],
+    "java_identical": true,
+    "renders": {
+     "june": {
+      "render": "render-june.png"
+     },
+     "december": {
+      "render": "render-december.png"
+     },
+     "sydney": {
+      "render": "render-sydney.png"
+     },
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 15811,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "latitude",
+        "type": "float",
+        "value": 37.7748985
+       },
+       {
+        "name": "longitude",
+        "type": "float",
+        "value": -122.419403
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "place",
+        "type": "string",
+        "value": "San Francisco"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 3
+    },
+    "evidence": {
+     "time.date": [
+      "weekDay",
+      "dayOfMonth",
+      "calendarMonth",
+      "year",
+      "dayOfYear"
+     ],
+     "expr.trig": [
+      "sin(",
+      "cos(",
+      "atan2(",
+      "asin(",
+      "acos("
+     ],
+     "layout.weight": [
+      "weight",
+      "verticalWeight"
+     ],
+     "time.clock": [
+      "timeInMin"
+     ],
+     "time.countdown": [
+      "offsetToUtc",
+      "dayOfYear"
+     ],
+     "expr.math": [
+      "floor(",
+      "round(",
+      "min(",
+      "max("
+     ],
+     "expr.format": [
+      "textFromFloat"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "draw.plot": [
+      "pathExpression"
+     ],
+     "draw.path": [
+      "drawPath"
+     ],
+     "draw.shapes": [
+      "drawCircle",
+      "drawLine"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "image.icon": [
+      "icon_"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ],
+     "layout.spacing": [
+      "padding",
+      "offset",
+      "spacedBy"
+     ],
+     "data.tokens": [
+      "resources",
+      "variables",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "$if",
+     "$slot",
+     "A",
+     "B",
+     "DateLabel",
+     "E",
+     "H0",
+     "H6",
+     "Hc",
+     "Icon",
+     "L",
+     "Panel",
+     "TimeTile",
+     "alpha",
+     "alt",
+     "apiLevel",
+     "background",
+     "body",
+     "box",
+     "canvas",
+     "children",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "commit",
+     "componentTheme",
+     "components",
+     "content",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "dawnR",
+     "dayLen",
+     "dec",
+     "decimal",
+     "default",
+     "doc",
+     "drawCircle",
+     "drawLine",
+     "drawPath",
+     "drawTextAnchored",
+     "duskR",
+     "else",
+     "end",
+     "eot",
+     "eps",
+     "export",
+     "expressionX",
+     "expressionY",
+     "flags",
+     "fontSize",
+     "format",
+     "from",
+     "g",
+     "goldR",
+     "header",
+     "height",
+     "horizontalArrangement",
+     "icon",
+     "icon_bedtime_outlined",
+     "icon_light_mode_outlined",
+     "icon_location_on_outlined",
+     "icon_photo_camera_outlined",
+     "icon_routine_outlined",
+     "icon_wb_twilight_2_outlined",
+     "icon_wb_twilight_outlined",
+     "id",
+     "id1",
+     "id2",
+     "index",
+     "label",
+     "lam",
+     "latitude",
+     "left",
+     "len",
+     "light",
+     "longitude",
+     "loop",
+     "maxLines",
+     "minutes",
+     "mode",
+     "modifiers",
+     "muted",
+     "n",
+     "name",
+     "noon",
+     "noonR",
+     "now",
+     "off",
+     "onSurface",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "params",
+     "path",
+     "pathExpression",
+     "paths",
+     "phi",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "ra",
+     "radius",
+     "required",
+     "resources",
+     "rise",
+     "riseR",
+     "root",
+     "roundedRect",
+     "row",
+     "sNow",
+     "save",
+     "scale",
+     "semantics",
+     "set",
+     "setR",
+     "size",
+     "slots",
+     "spacedBy",
+     "start",
+     "static",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "surface",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "textSubtext",
+     "textTransform",
+     "then",
+     "tint",
+     "type",
+     "until",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalWeight",
+     "vtype",
+     "warning",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
    "id": "TXT-01",
    "name": "text-basic",
    "version": 2,
@@ -29241,7 +29885,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "text.anchor": [
@@ -30577,7 +31221,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "data.expression": [
