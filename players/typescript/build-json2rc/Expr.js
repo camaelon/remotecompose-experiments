@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ExpressionParser = exports.ExpressionError = void 0;
+exports.ExpressionParser = exports.MAX_EXPRESSION_SIZE = exports.ExpressionError = void 0;
+exports.checkExpressionSize = checkExpressionSize;
 exports.isVariableRef = isVariableRef;
 exports.variableNameFromRef = variableNameFromRef;
 /**
@@ -22,6 +23,17 @@ const WireBuffer_1 = require("./WireBuffer");
 class ExpressionError extends Error {
 }
 exports.ExpressionError = ExpressionError;
+/** Limits.MAX_EXPRESSION_SIZE: FloatExpression.apply refuses a longer RPN array
+ *  ("<expr> to long") and the player's FloatExpression.read refuses to load one. */
+exports.MAX_EXPRESSION_SIZE = 32;
+/** Refuse a float expression Android cannot hold, as Java's parser does, but saying what
+ *  to do about it. `source` is the expression as written, when known. */
+function checkExpressionSize(ops, source) {
+    if (ops.length <= exports.MAX_EXPRESSION_SIZE)
+        return;
+    throw new ExpressionError(`float expression has ${ops.length} entries; Android accepts at most ${exports.MAX_EXPRESSION_SIZE}` +
+        ` — split it into named variables` + (source !== undefined ? `: ${source}` : ""));
+}
 const OFFSET = 3211264;
 const RAND_SEED_OP = 40;
 const OPERATORS = { "+": 1, "-": 2, "*": 3, "/": 4, "%": 5, "u-": 73 };
@@ -47,10 +59,13 @@ class ExpressionParser {
     }
     parseExpression(value) {
         if (typeof value === "string") {
-            return this.writer.floatExpression(this.infixToRpn(value));
+            const ops = this.infixToRpn(value);
+            checkExpressionSize(ops, value);
+            return this.writer.floatExpression(ops);
         }
         if (value && typeof value === "object") {
             const ops = this.infixToRpn(String(value.value));
+            checkExpressionSize(ops, String(value.value));
             const duration = Number(value.anim ?? 1.0);
             // anim(duration) with the default easing writes nothing extra at 1.0.
             return this.writer.floatExpression(ops, duration !== 1.0 ? [duration] : null);

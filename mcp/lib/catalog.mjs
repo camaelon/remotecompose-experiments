@@ -300,7 +300,8 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
         "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
         "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
-        "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status"]);
+        "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status",
+        "widget", "hour", "hours", "minute", "next", "previous", "last", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
     const generic = (w) => GENERIC.has(w) || /ly$/.test(w);
     const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {
@@ -317,8 +318,9 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         .map((e) => { const t = textScore(e); return { e, ...t, score: t.score * (canvasOnly(e) ? 0.6 : 1) }; })
         // Two of the goal's words, or one in the title: a single shared word in passing ("target"
         // in a touch-target example for a thermostat's target) is not the subject.
-        .filter((x) => x.score >= 3 && (new Set(x.hits).size >= 2
-            || (goalWords.length <= 3 && goalWords.some((w) => ` ${normalizeWords(x.e.title ?? "").join(" ")} `.includes(` ${w} `)))))
+        .filter((x) => x.score >= (goalWords.length <= 2 ? 1.5 : 3) && (new Set(x.hits).size >= 2
+            || (goalWords.length <= 3 && goalWords.some((w) => ` ${normalizeWords(x.e.title ?? "").join(" ")} `.includes(` ${w} `)))
+            || (goalWords.length <= 2 && x.hits.length >= 1)))
         .sort((a, b) => b.score - a.score);
     for (const x of byText.slice(0, 2)) {
         const have = kit.find((k) => k.e.id === x.e.id);
@@ -343,6 +345,16 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // things the library lacks.
     const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
     const proper = new Set(String(goal).split(/\s+/).slice(1).filter((w) => /^[A-Z][a-z]/.test(w)).flatMap((w) => normalizeWords(w)));
+    // The layout model is an example too, ahead of the capability picks (models fetch what the
+    // kit lists); max_examples still holds, the weakest capability picks go first.
+    if (model && !kit.some((k) => k.e.id === model.id)) {
+        kit.splice(kit.filter((k) => k.about).length, 0, { e: model, covers: [], value: 0, layout: true });
+        while (kit.length > Math.max(max_examples, 2)) {
+            const i = kit.map((k, j) => [k, j]).reverse().find(([k]) => !k.about && !k.layout)?.[1];
+            if (i === undefined) break;
+            kit.splice(i, 1);
+        }
+    }
     const needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w)) }, C);
     const icons = suggestIcons(goal, r);
     // Suggested icons are drawn with the Icon component: list it with its call and params.
@@ -356,7 +368,8 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         unmatched_terms: r.unmatched_terms,
         components: comps,
         examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers }), contributes: k.covers,
-            ...(k.about ? { about: `the goal's subject: ${k.about.join(", ")}` } : {}) })),
+            ...(k.about ? { about: `the goal's subject: ${k.about.join(", ")}` } : {}),
+            ...(k.layout ? { about: "the layout model: structure the screen like this" } : {}) })),
         ...(model ? { layout_model: {
             id: model.id, title: model.title, folder: model.folder,
             why: "Structure the screen like this: layout components (column, row, text, library components) for the " +
@@ -437,7 +450,7 @@ function needsComponent(r, C) {
 // Phrases that mean the content depends on the current date or time.
 const NOW_WORDS = /\b(today|tonight|now|current|this (day|week|month|year)|next (week|month)|upcoming|calendar|month|week|daily|weekly)\b/;
 // Words for a quantity worth a visual.
-const QUANTITY_WORDS = /\b(percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left)\b/;
+const QUANTITY_WORDS = /\b(percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left|curves?|charts?|graphs?|tides?|over time|hourly|daily)\b/;
 
 /** Design rules for this goal: when to use which capability, not only how. */
 function designRules(goal, r, needed) {
@@ -454,7 +467,7 @@ function designRules(goal, r, needed) {
     });
     if (QUANTITY_WORDS.test(g)) rules.push({
         rule: "Give quantities a visual",
-        how: "A value with a range or a meaning (percent, level, phase, trend) gets a drawing: ProgressBar, ProgressRing, Gauge, Sparkline, BarChart, or your own component; the number as text is secondary.",
+        how: "A value with a range or a meaning (percent, level, phase, trend) gets a drawing: ProgressBar, ProgressRing, Gauge, Sparkline, BarChart, LineChart (a value over time, or a curve computed from the clock: tide, temperature, sun), or your own component; the number as text is secondary.",
     });
     rules.push({
         rule: "Look before answering",

@@ -22,7 +22,7 @@ import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
-import { designNotes, blockingFindings } from "./lib/design-audit.mjs";
+import { designNotes, blockingFindings, readsClock } from "./lib/design-audit.mjs";
 
 const resolveIn = (p) => resolvePath(p, "json_path");
 
@@ -127,10 +127,47 @@ Values
   (dayOfMonth(), calendarMonth(), year(), timeInMin(), ...), never typed in.
 - Icons: {"Icon": {"name": "wifi"}} (find kind "icons"), never text glyphs or emoji.`;
 
+/**
+ * render with variants: the states a user will reach, in one call, each captioned: the
+ * themes (and mono for always-on and e-ink), a narrow and a wide size, another time of day
+ * for a document that reads the clock. A model checks what is cheap to check.
+ */
+async function renderVariants(t, args) {
+    const json = jsonOf(args);
+    const header = json?.header ?? {};
+    const W = args.width ?? header.width ?? 360, H = args.height ?? header.height ?? 640;
+    const base = { ...args, width: W, height: H };
+    const clockShift = () => {
+        const c = args.clock ? new Date(args.clock) : new Date();
+        const d = new Date(c.getTime() + 7 * 3600_000);
+        const p = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    };
+    const plan = [
+        ["dark theme", { ...base, theme: "dark" }],
+        ["light theme", { ...base, theme: "light" }],
+        ...(json ? [["mono (always-on displays)", { ...base, json: { ...json, componentTheme: "mono" }, json_path: undefined }]] : []),
+        [`narrow ${Math.round(W * 0.72)}×${H}`, { ...base, width: Math.round(W * 0.72) }],
+        [`wide ${Math.round(W * 1.6)}×${Math.round(H * 0.75)}`, { ...base, width: Math.round(W * 1.6), height: Math.round(H * 0.75) }],
+        ...(json && readsClock(json) ? [["seven hours later", { ...base, clock: clockShift() }]] : []),
+    ];
+    const content = [];
+    for (const [label, a] of plan) {
+        const clean = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined));
+        try {
+            const r = await t.handler(clean);
+            content.push({ type: "text", text: `── ${label}` }, ...r.filter((c) => c.type === "image"),
+                ...r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text)).map((c) => ({ type: "text", text: c.text })));
+        } catch (e) { content.push({ type: "text", text: `── ${label}: ${String(e?.message ?? e).split("\n")[0]}` }); }
+    }
+    return withDesign(content, args, { first: true });
+}
+
 const tools = [
     {
         ...tool(examples, "build_kit"),
-        description: "START HERE for a new document. " + tool(examples, "build_kit").description,
+        description: "START HERE for a new document. Pass the user's request as they wrote it (not a rewritten or " +
+            "embellished version: extra adjectives only add noise). " + tool(examples, "build_kit").description,
     },
     dispatcher({
         name: "find", title: "Search examples, components, icons, capabilities", selector: "kind", fallback: "examples", annotations: RO,
@@ -162,14 +199,23 @@ const tools = [
                 id: { type: "string", description: "Example id (e.g. \"EXP-06\") or component name (e.g. \"ProgressRing\")." },
                 ...tool(examples, "get_example").inputSchema.properties,
                 ...tool(examples, "get_component").inputSchema.properties,
+                parts: { type: "array", items: { type: "string" }, description:
+                    "For an example (default [\"meta\", \"json\"]): meta, json, expanded_json, snippets, render, rc_base64. " +
+                    "For a component: demo_json, render (and definition: true for its full definition)." },
             },
         },
         handler: async ({ id, name, ...rest } = {}) => {
             const key = id ?? name;
             if (!key) throw new Error("get: give an example id or a component name");
-            return /^[A-Z0-9]+-\d+/.test(key)
+            const out = await (/^[A-Z0-9]+-\d+/.test(key)
                 ? tool(examples, "get_example").handler({ id: key, ...rest })
-                : tool(examples, "get_component").handler({ name: key, ...rest });
+                : tool(examples, "get_component").handler({ name: key, ...rest }));
+            // Compact JSON: documents are half the size without the indentation, which matters
+            // in a model's context (and clients that re-fetch large results).
+            return out.map((c) => {
+                if (c.type !== "text") return c;
+                try { return { ...c, text: JSON.stringify(JSON.parse(c.text)) }; } catch { return c; }
+            });
         },
     },
     tool(examples, "check_component"),
@@ -203,13 +249,6 @@ const tools = [
                 return tool(examples, "expand_components").handler({ ...args, json });
             }
             const out = await tool(json2rc, "json2rc").handler({ ...args, ...(file ? { input_path: file } : {}) });
-            // The source JSON beside the .rc (doc-….rc -> doc-….json): publish works from the
-            // JSON (its design check, the page's JSON viewer) even when given the .rc.
-            try {
-                const rcPath = JSON.parse(out[0].text).rc_path;
-                const json = jsonOf({ ...args, json_path: file });
-                if (rcPath && json) writeFileSync(resolveIn(rcPath).replace(/\.rc$/i, ".json"), JSON.stringify(json));
-            } catch { /* nothing to keep */ }
             if (!check) return out;   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
             const v = await tool(render, "validate").handler({ ...vargs, ...(file ? { json_path: file } : {}), render: doRender ?? true });
@@ -226,8 +265,9 @@ const tools = [
                 "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome variant " +
                 "of a JSON document (always-on displays, e-ink) without editing it.",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
+                variants: { type: "boolean", description: "Check every state in one call: light, dark and mono, narrow and wide, and (when the document reads the clock) another time of day, each image captioned. Use it before publishing." },
                 componentTheme: { type: "string", enum: ["auto", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the component theme to expand with." } } },
-            handler: async ({ componentTheme, ...args } = {}) => withDesign(await (async () => {
+            handler: async ({ componentTheme, variants, ...args } = {}) => variants ? renderVariants(t, args) : withDesign(await (async () => {
                 // One of width/height: the other from the document's own aspect ratio.
                 if ((args.width === undefined) !== (args.height === undefined)) {
                     const h = jsonOf(args)?.header;
@@ -270,39 +310,21 @@ const tools = [
     }),
     (() => {
         const t = tool(deploy, "package_web");
+        // The publishing rules (JSON only, playground only, the design gate) are package_web's own,
+        // for this server and rc-deploy alike. Here: no controls option, warnings at the top.
         return { ...t, name: "publish",
-            description: t.description + " A JSON document with structural design problems (the whole UI drawn on one canvas, " +
-                "fixed coordinates that don't relayout, text cut by its anchor, glyph icons, expressions Android rejects) is " +
-                "NOT published: fix them first (the result says how). Only if the user explicitly wants it as it is, pass " +
-                "accept_design_warnings: true with a reason.",
-            // Always the playground (controls): the bare-player page (controls: false) hides the
-            // document's JSON, the variables and the theme, so it is not offered for now.
-            inputSchema: { ...t.inputSchema, properties: { ...Object.fromEntries(Object.entries(t.inputSchema.properties).filter(([k]) => k !== "controls")),
-                accept_design_warnings: { type: "boolean", description: "Publish despite blocking design warnings (only when the user asked for it as it is)." },
-                reason: { type: "string", description: "With accept_design_warnings: why (logged)." } } },
-            handler: async ({ accept_design_warnings, reason, controls: _ignored, ...args } = {}) => {
-                args = { ...args, controls: true };
-                // Always from the JSON: it is what the design check reads and what the page's JSON
-                // viewer shows. A .rc that convert wrote has its JSON beside it; a bare binary is refused.
-                if (!args.json && !args.json_path) {
-                    const sibling = args.rc_path ? args.rc_path.replace(/\.rc$/i, ".json") : null;
-                    if (sibling && existsSync(resolveIn(sibling))) {
-                        const { rc_path: _, ...rest } = args;
-                        args = { ...rest, json_path: sibling };
-                    } else {
-                        throw new Error("publish takes the JSON document (json or json_path), not a binary .rc: the page shows " +
-                            "its JSON and the design check reads it. Publish the JSON you converted.");
-                    }
-                }
-                const json = jsonOf(args);
-                const blocking = json ? blockingFindings(json) : [];
-                if (blocking.length && !(accept_design_warnings && reason)) {
-                    throw new Error("Not published: the document has design problems that make it break on other screens or devices. " +
-                        "Fix them, render again to check, then publish.\n" +
-                        blocking.map((f) => `- [${f.code}] ${f.title}. ${f.message}`).join("\n") +
-                        "\n(build_kit's layout_model shows the structure to use; reference topic \"format\" has the rules.)");
-                }
-                return withDesign(await t.handler(args), args, { first: true });
+            description: t.description + " A public page is always the playground, made from the JSON (given a .rc that " +
+                "convert wrote, its JSON beside it), and is refused while the document has structural design problems " +
+                "(the result lists the fixes).",
+            inputSchema: { ...t.inputSchema, properties: {
+                ...Object.fromEntries(Object.entries(t.inputSchema.properties).filter(([k]) => k !== "controls")),
+                layout: { type: "string", enum: ["fill", "fixed"], description: "Leave it out: the page fills the window and the document relayouts to it (the viewer can still pick sizes). \"fixed\" only when the user asks for one fixed size." } } },
+            handler: async ({ controls: _ignored, ...args } = {}) => {
+                // The layout: the page fills the window unless the user asked for a fixed size.
+                args = { layout: "fill", ...args };
+                const out = await t.handler(args);
+                const src = args.json || args.json_path ? args : (args.rc_path ? { json_path: args.rc_path.replace(/\.rc$/i, ".json") } : args);
+                return withDesign(out, src, { first: true });
             } };
     })(),
     dispatcher({

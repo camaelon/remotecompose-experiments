@@ -339,6 +339,21 @@ function layoutFindings(doc) {
     for (const c of canvases) {
         const cmds = flatCommands(commandsOf(c));
         const draws = cmds.filter((x) => DRAWS.test(commandName(x)));
+        // Labels hand-placed inside a drawing, in a document that otherwise has a layout: they
+        // scale with the drawing instead of relaying out, and screen readers can't reach them.
+        // (Loops draw the same label repeatedly: count the commands, not their iterations.)
+        const texts = cmds.filter((x) => TEXT_DRAWS.has(commandName(x))).length;
+        if (layout > 0 && texts >= 5) {
+            out.push({
+                severity: texts >= 12 ? "warning" : "info", code: "text_in_canvas",
+                title: `${texts} texts drawn inside a canvas`,
+                message: "Labels, values and titles drawn on a canvas are placed by hand: they don't measure or wrap, " +
+                    "scale with the drawing instead of relaying out, and screen readers can't read them. Put them in " +
+                    "text components around the drawing (a row of axis labels under a chart, a column of values beside " +
+                    "it; LineChart and the other library charts do this) and keep the canvas for the shapes.",
+                count: texts,
+            });
+        }
         const resizes = (c.modifiers ?? []).some(RESIZING);
         // Fixed: every coordinate of every draw is a literal (no expression, no variable) and
         // nothing scales the drawing to the component's size.

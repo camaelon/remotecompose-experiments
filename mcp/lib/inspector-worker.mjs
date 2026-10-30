@@ -510,9 +510,17 @@ function audit() {
             const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
             if (bits && bits.length > 32) long.push({ index: idxOf(op), entries: bits.length, expression: exprOf(op) });
         }
+        // Path expressions too (Android's PathExpression.read: "Path too long", J43): each of
+        // the x and y expressions is limited the same way.
+        for (const op of ops) {
+            if (!nameOf(op).includes("PathExpression")) continue;
+            for (const [axis, e] of [["x", op.mExprX], ["y", op.mExprY]]) {
+                if (e && e.length > 32) long.push({ index: idxOf(op), entries: e.length, expression: `path ${axis}` });
+            }
+        }
         if (long.length) add("warning", "expression_too_long",
-            `${long.length} float expression(s) longer than 32 entries`,
-            `Android rejects a float expression over 32 entries (operands and operators); the document fails to load there although it renders here. Longest: ${Math.max(...long.map((l) => l.entries))} entries. ` +
+            `${long.length} expression(s) longer than 32 entries`,
+            `Android rejects a float or path expression over 32 entries (operands and operators); the document fails to load there although it renders here. Longest: ${Math.max(...long.map((l) => l.entries))} entries. ` +
             "Split it: compute parts into named `variable`s (or resources.variables) and combine them.",
             { count: long.length, examples: long.slice(0, 5) });
     } catch {}

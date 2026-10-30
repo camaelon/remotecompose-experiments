@@ -17,6 +17,9 @@ class WireBuffer {
     constructor() {
         this.buf = new Uint8Array(1024);
         this.len = 0;
+        /** Operations this document's version and profiles do not allow (setValidOperations),
+         *  with the hint the refusal carries; null allows everything. */
+        this.refusedOps = null;
     }
     ensure(n) {
         if (this.len + n <= this.buf.length)
@@ -87,6 +90,10 @@ class WireBuffer {
     }
     /** WireBuffer.start(type): the opcode byte, nothing else — there is no length field. */
     start(opCode) {
+        const hint = this.refusedOps?.get(opCode);
+        if (hint !== undefined) {
+            throw new Error(`Operation ${opCode} is not supported for this version (${hint})`);
+        }
         this.writeByte(opCode);
     }
     overwriteInt(position, value) {

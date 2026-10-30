@@ -135,3 +135,14 @@ test("layout: a UI drawn on one canvas at fixed coordinates, and centred text at
     const okCodes = designAudit(ok).map((f) => f.code);
     for (const c of ["absolute_layout", "fixed_coordinates", "text_anchor"]) assert.ok(!okCodes.includes(c), c);
 });
+
+test("text_in_canvas: labels hand-drawn in a drawing that sits in a layout", () => {
+    const t = (text, x, y) => ({ drawTextAnchored: { text, x, y, panX: -1, panY: 0 } });
+    const canvas = { canvas: { modifiers: ["fillMaxWidth", { height: 200 }], commands: [
+        { scale: { sx: "componentWidth() / 440", sy: "componentHeight() / 300" } },
+        ...Array.from({ length: 12 }, (_, i) => t(`${i * 2}h`, 20 + 30 * i, 280))] } };
+    const doc = { header: { apiLevel: 7, width: 440, height: 300 }, root: { column: { children: [{ text: { value: "Tides" } }, canvas] } } };
+    const f = designAudit(doc).find((x) => x.code === "text_in_canvas");
+    assert.equal(f?.severity, "warning");
+    assert.ok(!designAudit(doc).some((x) => x.code === "absolute_layout"));
+});

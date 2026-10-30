@@ -87,8 +87,16 @@ export class WireBuffer {
         this.writeBuffer(new TextEncoder().encode(s));
     }
 
+    /** Operations this document's version and profiles do not allow (setValidOperations),
+     *  with the hint the refusal carries; null allows everything. */
+    refusedOps: Map<number, string> | null = null;
+
     /** WireBuffer.start(type): the opcode byte, nothing else — there is no length field. */
     start(opCode: number): void {
+        const hint = this.refusedOps?.get(opCode);
+        if (hint !== undefined) {
+            throw new Error(`Operation ${opCode} is not supported for this version (${hint})`);
+        }
         this.writeByte(opCode);
     }
 

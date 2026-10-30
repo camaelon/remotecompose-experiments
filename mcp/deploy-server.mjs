@@ -20,6 +20,7 @@ import { compileComponents } from "./lib/json2rc.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { checkReport } from "./lib/rc2image.mjs";
 import { buildPage, formatBytes } from "./lib/web-page.mjs";
+import { blockingFindings } from "./lib/design-audit.mjs";
 import { playerBundle } from "./lib/web-player.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 
@@ -215,6 +216,13 @@ const PACKAGE_WEB_PROPS = {
         description: "Page background, any CSS colour (default: black for fill, light grey for fixed; a checkerboard behind the frame with controls).",
     },
     theme: { type: "string", enum: ["light", "dark", "auto"], description: "Colour theme; \"auto\" follows the viewer's system setting. Default auto." },
+    accept_design_warnings: {
+        type: "boolean",
+        description: "A public page is refused when the document's structure breaks on other screens or devices " +
+            "(the whole UI drawn on one canvas, fixed coordinates, text cut by its anchor, glyph icons, expressions " +
+            "Android rejects). Fix them; only if the user explicitly wants it as it is, pass true with a reason.",
+    },
+    reason: { type: "string", description: "With accept_design_warnings: why (logged)." },
     variable_ranges: {
         type: "object",
         description: "Per host variable, the playground editor's {min, max, step, meaning}: the slider " +
@@ -252,6 +260,37 @@ const PACKAGE_WEB_PROPS = {
             : "Host the page at a public URL. Not available on this server (needs HTTP mode and MCP_PUBLIC_URL).",
     },
 };
+
+/**
+ * The rules for a public page (the front door and this server alike):
+ * - it is made from the JSON, which the page's JSON viewer shows and the design check reads: a
+ *   .rc that json2rc wrote has its JSON beside it; a bare binary is refused;
+ * - it is always the playground (controls): the bare player hides the JSON and the variables;
+ * - a document whose structure breaks on other screens or devices (blockingFindings) is refused,
+ *   unless accept_design_warnings comes with a reason (both logged with the call).
+ */
+function publishable(a) {
+    if (a.json === undefined && a.json_path === undefined) {
+        const sibling = typeof a.rc_path === "string" ? a.rc_path.replace(/\.rc$/i, ".json") : null;
+        if (!sibling || !existsSync(resolvePath(sibling, "rc_path"))) {
+            throw new Error("publish takes the JSON document (json or json_path), not a binary .rc: the page shows its JSON " +
+                            "and the design check reads it. Publish the JSON you converted.");
+        }
+        const { rc_path: _, rc_base64: __, ...rest } = a;
+        a = { ...rest, json_path: sibling };
+    }
+    let json = a.json;
+    if (json === undefined) json = readFileSync(resolvePath(a.json_path, "json_path"), "utf8");
+    try { json = typeof json === "string" ? JSON.parse(json) : json; } catch { json = null; }
+    const blocking = json ? blockingFindings(json) : [];
+    if (blocking.length && !(a.accept_design_warnings && a.reason)) {
+        throw new Error("Not published: the document has design problems that make it break on other screens or devices. " +
+            "Fix them, render again to check, then publish.\n" +
+            blocking.map((f) => `- [${f.code}] ${f.title}. ${f.message}`).join("\n") +
+            "\n(build_kit's layout_model shows the structure to use; reference topic \"format\" has the rules.)");
+    }
+    return { ...a, controls: true };
+}
 
 export const definition = {
     name: "rc-deploy",
@@ -314,7 +353,8 @@ export const definition = {
                 throw new Error("publishing is not available on this server (it needs HTTP mode and MCP_PUBLIC_URL); " +
                                 "pass publish: false and output_path to get the file");
             }
-            const controls = a.controls !== false;
+            if (publish) a = publishable(a);
+            const controls = publish ? true : a.controls !== false;
             const layout = a.layout ?? "fill";
             if (layout !== "fill" && layout !== "fixed") throw new Error('layout is "fill" or "fixed"');
             if (a.density !== undefined && a.density !== "device" && !(typeof a.density === "number" && a.density > 0)) {

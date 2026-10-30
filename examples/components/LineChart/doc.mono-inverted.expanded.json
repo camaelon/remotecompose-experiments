@@ -1,0 +1,1023 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 520,
+  "profiles": 513,
+  "contentDescription": "LineChart component: today's temperature hour by hour with its high and low marked, and today's tide as a curve with high and low water and a line at the current time"
+ },
+ "resources": {
+  "floatArrays": {
+   "temps": {
+    "value": [
+     9.8,
+     9.1,
+     8.6,
+     8.2,
+     7.9,
+     7.8,
+     8.4,
+     9.6,
+     11.3,
+     13.2,
+     15,
+     16.6,
+     17.8,
+     18.7,
+     19.2,
+     19.4,
+     18.9,
+     17.8,
+     16.2,
+     14.6,
+     13.3,
+     12.2,
+     11.3,
+     10.6
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "tideMean": {
+    "value": 1.6,
+    "export": true
+   },
+   "tideAmp": {
+    "value": 1.2,
+    "export": true
+   },
+   "tideHigh": {
+    "value": 312,
+    "export": true
+   },
+   "tideLevel": "@tideMean + @tideAmp * cos((timeInMin() - @tideHigh) * 0.0084315)",
+   "linechart2_nx": "clamp(0, 1440, (timeInMin()))"
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "primary": "#FF000000",
+   "surface": "#FFFFFFFF",
+   "track": "#FF616161"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "clip": {
+         "roundedRect": 16
+        }
+       },
+       {
+        "background": "@colors.surface"
+       },
+       {
+        "padding": 12
+       },
+       {
+        "spacedBy": 8
+       }
+      ],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Temperature",
+            "fontSize": 15,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textFromFloat",
+             "value": "arrayMin(@temps)",
+             "whole": 2,
+             "decimal": 1,
+             "flags": 5
+            },
+            "fontSize": 13,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "text": {
+            "value": "° – ",
+            "fontSize": 13,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textFromFloat",
+             "value": "arrayMax(@temps)",
+             "whole": 2,
+             "decimal": 1,
+             "flags": 5
+            },
+            "fontSize": 13,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "text": {
+            "value": "°",
+            "fontSize": 13,
+            "color": "@colors.muted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 110
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "verticalAlignment": "spaceBetween",
+               "horizontalAlignment": "end",
+               "modifiers": [
+                {
+                 "width": 32
+                },
+                "fillMaxHeight",
+                {
+                 "padding": {
+                  "end": 6
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "20°",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": "15°",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": "10°",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": "5°",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "weight": 1
+                },
+                "fillMaxHeight",
+                {
+                 "semantics": {
+                  "contentDescription": "Temperature today, hour by hour: low 7.8 degrees at 5 h, high 19.4 degrees at 15 h"
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "linechart1_x0",
+                  "value": "componentWidth() * 0.1"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_kx",
+                  "value": "(componentWidth() - 2 * @linechart1_x0) / 23"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_cx",
+                  "value": "@linechart1_x0"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_ky",
+                  "value": "(componentHeight() - 14) / max(20 - 5, 0.001)"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_cy",
+                  "value": "7 + 20 * @linechart1_ky"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_by",
+                  "value": "componentHeight() - 7"
+                 }
+                },
+                {
+                 "pathExpression": {
+                  "id": "linechart1_line",
+                  "expressionX": "@linechart1_cx + u * @linechart1_kx",
+                  "expressionY": "@linechart1_cy - arraySpline(@temps, u / 23) * @linechart1_ky",
+                  "start": 0,
+                  "end": 23,
+                  "count": "(arrayLength(@temps)) * 6 - 5",
+                  "flags": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.track"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "i",
+                  "from": 0,
+                  "until": 4,
+                  "commands": [
+                   {
+                    "drawLine": {
+                     "x1": 0,
+                     "y1": "7 + i * (componentHeight() - 14) / (4 - 1)",
+                     "x2": "componentWidth()",
+                     "y2": "7 + i * (componentHeight() - 14) / (4 - 1)"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "linechart1_line"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "loop": {
+                  "index": "i",
+                  "from": 0,
+                  "until": "arrayLength(@temps)",
+                  "commands": [
+                   {
+                    "drawCircle": {
+                     "cx": "@linechart1_cx + i * 23 / ((arrayLength(@temps)) - 1) * @linechart1_kx",
+                     "cy": "@linechart1_cy - arrayGet(@temps, i) * @linechart1_ky",
+                     "radius": "4 * (step(arrayGet(@temps, i), arrayMax(@temps) - 0.0001) + step(arrayMin(@temps) + 0.0001, arrayGet(@temps, i)))"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "stroke"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "padding": {
+               "start": 32,
+               "top": 4
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "0h",
+               "fontSize": 11,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "6h",
+               "fontSize": 11,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "12h",
+               "fontSize": 11,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "18h",
+               "fontSize": 11,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "23h",
+               "fontSize": 11,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       },
+       {
+        "clip": {
+         "roundedRect": 16
+        }
+       },
+       {
+        "background": "@colors.surface"
+       },
+       {
+        "padding": 12
+       },
+       {
+        "spacedBy": 8
+       }
+      ],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Tide · Harbour",
+            "fontSize": 15,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textFromFloat",
+             "value": "@tideLevel",
+             "whole": 2,
+             "decimal": 1,
+             "flags": 5
+            },
+            "fontSize": 15,
+            "color": "@colors.primary"
+           }
+          },
+          {
+           "text": {
+            "value": " m now",
+            "fontSize": 13,
+            "color": "@colors.muted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "children": [
+             {
+              "row": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "verticalWeight": 1
+                }
+               ],
+               "children": [
+                {
+                 "column": {
+                  "verticalAlignment": "spaceBetween",
+                  "horizontalAlignment": "end",
+                  "modifiers": [
+                   {
+                    "width": 32
+                   },
+                   "fillMaxHeight",
+                   {
+                    "padding": {
+                     "end": 6
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "text": {
+                     "value": "3 m",
+                     "fontSize": 11,
+                     "color": "@colors.muted",
+                     "maxLines": 1
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": "2 m",
+                     "fontSize": 11,
+                     "color": "@colors.muted",
+                     "maxLines": 1
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": "1 m",
+                     "fontSize": 11,
+                     "color": "@colors.muted",
+                     "maxLines": 1
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": "0 m",
+                     "fontSize": 11,
+                     "color": "@colors.muted",
+                     "maxLines": 1
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "canvas": {
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   },
+                   "fillMaxHeight",
+                   {
+                    "semantics": {
+                     "contentDescription": "Water level today, a tide curve with high and low water marked and a line at the current time"
+                    }
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "variable": {
+                     "name": "linechart2_x0",
+                     "value": "componentWidth() * 0.1"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart2_kx",
+                     "value": "(componentWidth() - 2 * @linechart2_x0) / 1440"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart2_cx",
+                     "value": "@linechart2_x0"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart2_ky",
+                     "value": "(componentHeight() - 14) / (3 - 0)"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart2_cy",
+                     "value": "7 + 3 * @linechart2_ky"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart2_by",
+                     "value": "componentHeight() - 7"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_line",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": 0,
+                     "end": 1440,
+                     "count": 64,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.track"
+                      },
+                      {
+                       "style": "stroke"
+                      },
+                      {
+                       "strokeWidth": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "loop": {
+                     "index": "i",
+                     "from": 0,
+                     "until": 4,
+                     "commands": [
+                      {
+                       "drawLine": {
+                        "x1": 0,
+                        "y1": "7 + i * (componentHeight() - 14) / (4 - 1)",
+                        "x2": "componentWidth()",
+                        "y2": "7 + i * (componentHeight() - 14) / (4 - 1)"
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.muted"
+                      },
+                      {
+                       "style": "stroke"
+                      },
+                      {
+                       "strokeWidth": 1
+                      },
+                      {
+                       "alpha": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawLine": {
+                     "x1": "@linechart2_cx + @linechart2_nx * @linechart2_kx",
+                     "y1": 0,
+                     "x2": "@linechart2_cx + @linechart2_nx * @linechart2_kx",
+                     "y2": "componentHeight()"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onSurface"
+                      },
+                      {
+                       "style": "stroke"
+                      },
+                      {
+                       "strokeWidth": 2
+                      },
+                      {
+                       "strokeCap": "round"
+                      },
+                      {
+                       "strokeJoin": "round"
+                      },
+                      {
+                       "alpha": 1
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_line"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_mark0",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx + 99999 * step(abs(u - 720), 720.144)",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@tideHigh - 372.6",
+                     "end": "@tideHigh - 372.6",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 8
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_mark0"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_mark1",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx + 99999 * step(abs(u - 720), 720.144)",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@tideHigh",
+                     "end": "@tideHigh",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 8
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_mark1"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_mark2",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx + 99999 * step(abs(u - 720), 720.144)",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@tideHigh + 372.6",
+                     "end": "@tideHigh + 372.6",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 8
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_mark2"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_mark3",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx + 99999 * step(abs(u - 720), 720.144)",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@tideHigh + 745.2",
+                     "end": "@tideHigh + 745.2",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 8
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_mark3"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_mark4",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx + 99999 * step(abs(u - 720), 720.144)",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@tideHigh + 1117.8",
+                     "end": "@tideHigh + 1117.8",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 8
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_mark4"
+                    }
+                   },
+                   {
+                    "pathExpression": {
+                     "id": "linechart2_nowdot",
+                     "expressionX": "@linechart2_cx + u * @linechart2_kx",
+                     "expressionY": "@linechart2_cy - (@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)) * @linechart2_ky",
+                     "start": "@linechart2_nx",
+                     "end": "@linechart2_nx",
+                     "count": 2,
+                     "flags": 4
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "strokeWidth": 11
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "linechart2_nowdot"
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "padding": {
+                  "start": 32,
+                  "top": 4
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "00",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "textAlign": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "06",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "textAlign": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "12",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "textAlign": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "18",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "textAlign": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "24",
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "textAlign": "center",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

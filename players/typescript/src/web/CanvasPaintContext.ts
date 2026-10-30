@@ -26,6 +26,138 @@ function argbToRgba(argb: number): string {
 }
 
 /** Fallback text size when the paint carries none. */
+// A decoded path segment in absolute coordinates (see CanvasPaintContext.decodePath).
+type PathSeg = ['M', number, number] | ['L', number, number, number, number]
+    | ['Q', number, number, number, number, number, number]
+    | ['C', number, number, number, number, number, number, number, number] | ['Z'];
+
+// One drawing piece of a measured contour: control points from its start point on
+// (2 for a line, 3 for a quad, 4 for a cubic), with a cumulative arc-length table.
+interface MeasuredPiece { pts: number[]; len: number; cum: Float64Array | null; }
+
+const TRIM_STEPS = 32;
+
+function evalBezier(pts: number[], t: number): [number, number] {
+    // de Casteljau over 2..4 points, returns the point at t
+    const xs: number[] = [], ys: number[] = [];
+    for (let k = 0; k < pts.length; k += 2) { xs.push(pts[k]); ys.push(pts[k + 1]); }
+    for (let n = xs.length - 1; n > 0; n--) {
+        for (let k = 0; k < n; k++) {
+            xs[k] += (xs[k + 1] - xs[k]) * t;
+            ys[k] += (ys[k + 1] - ys[k]) * t;
+        }
+    }
+    return [xs[0], ys[0]];
+}
+
+// The part of a Bezier between t0 and t1 (0 <= t0 <= t1 <= 1), same degree.
+function subBezier(pts: number[], t0: number, t1: number): number[] {
+    const split = (p: number[], t: number, left: boolean): number[] => {
+        const n = p.length / 2;
+        const xs: number[] = [], ys: number[] = [];
+        for (let k = 0; k < n; k++) { xs.push(p[2 * k]); ys.push(p[2 * k + 1]); }
+        const lx = [xs[0]], ly = [ys[0]], rx = [xs[n - 1]], ry = [ys[n - 1]];
+        for (let m = n - 1; m > 0; m--) {
+            for (let k = 0; k < m; k++) {
+                xs[k] += (xs[k + 1] - xs[k]) * t;
+                ys[k] += (ys[k + 1] - ys[k]) * t;
+            }
+            lx.push(xs[0]); ly.push(ys[0]); rx.push(xs[m - 1]); ry.push(ys[m - 1]);
+        }
+        const out: number[] = [];
+        if (left) for (let k = 0; k < n; k++) out.push(lx[k], ly[k]);
+        else for (let k = n - 1; k >= 0; k--) out.push(rx[k], ry[k]);
+        return out;
+    };
+    let p = t1 < 1 ? split(pts, t1, true) : pts;
+    if (t0 > 0) p = split(p, t1 > 0 ? t0 / t1 : 0, false);
+    return p;
+}
+
+function measurePiece(pts: number[]): MeasuredPiece {
+    if (pts.length === 4) {
+        return { pts, len: Math.hypot(pts[2] - pts[0], pts[3] - pts[1]), cum: null };
+    }
+    const cum = new Float64Array(TRIM_STEPS + 1);
+    let [px, py] = [pts[0], pts[1]];
+    for (let k = 1; k <= TRIM_STEPS; k++) {
+        const [x, y] = evalBezier(pts, k / TRIM_STEPS);
+        cum[k] = cum[k - 1] + Math.hypot(x - px, y - py);
+        px = x; py = y;
+    }
+    return { pts, len: cum[TRIM_STEPS], cum };
+}
+
+// Distance along a piece (0..len) to its curve parameter t.
+function pieceT(m: MeasuredPiece, d: number): number {
+    if (m.len <= 0) return 0;
+    if (!m.cum) return Math.min(1, Math.max(0, d / m.len));
+    const cum = m.cum;
+    let k = 1;
+    while (k < TRIM_STEPS && cum[k] < d) k++;
+    const span = cum[k] - cum[k - 1];
+    const frac = span > 0 ? (d - cum[k - 1]) / span : 0;
+    return Math.min(1, Math.max(0, (k - 1 + frac) / TRIM_STEPS));
+}
+
+// The pieces of the first contour that has a length, as android.graphics.PathMeasure
+// (Skia's SkContourMeasureIter, forceClosed = false) sees them: a contour begins at a
+// moveTo (or at the last moveTo point / the origin when drawing starts without one), a
+// close adds the line back to that point and ends the contour.
+function firstContour(segs: PathSeg[]): MeasuredPiece[] {
+    let pieces: MeasuredPiece[] = [];
+    let total = 0;
+    let mx = 0, my = 0, cx = 0, cy = 0;
+    const flush = (): boolean => total > 0;
+    const add = (pts: number[]) => { const m = measurePiece(pts); pieces.push(m); total += m.len; };
+    for (const s of segs) {
+        switch (s[0]) {
+            case 'M':
+                if (flush()) return pieces;
+                pieces = []; total = 0;
+                mx = cx = s[1]; my = cy = s[2];
+                break;
+            case 'L': add([cx, cy, s[3], s[4]]); cx = s[3]; cy = s[4]; break;
+            case 'Q': add([cx, cy, s[3], s[4], s[5], s[6]]); cx = s[5]; cy = s[6]; break;
+            case 'C': add([cx, cy, s[3], s[4], s[5], s[6], s[7], s[8]]); cx = s[7]; cy = s[8]; break;
+            case 'Z':
+                add([cx, cy, mx, my]);
+                cx = mx; cy = my;
+                if (flush()) return pieces;
+                pieces = []; total = 0;
+                break;
+        }
+    }
+    return flush() ? pieces : [];
+}
+
+// PathMeasure.getSegment(start * len, stop * len, dst, startWithMoveTo = true) over the
+// first contour; 0 <= start < stop <= 1.
+function trimPathSegs(segs: PathSeg[], start: number, stop: number): Path2D {
+    const out = new Path2D();
+    const pieces = firstContour(segs);
+    let total = 0;
+    for (const m of pieces) total += m.len;
+    if (total <= 0) return out;
+    const d0 = start * total, d1 = stop * total;
+    let acc = 0, started = false;
+    for (const m of pieces) {
+        const a = acc, b = acc + m.len;
+        acc = b;
+        if (m.len <= 0 || b < d0 || a > d1) continue;
+        const t0 = pieceT(m, Math.max(0, d0 - a));
+        const t1 = pieceT(m, Math.min(m.len, d1 - a));
+        if (t1 < t0) continue;
+        const p = subBezier(m.pts, t0, t1);
+        if (!started) { out.moveTo(p[0], p[1]); started = true; }
+        if (p.length === 4) out.lineTo(p[2], p[3]);
+        else if (p.length === 6) out.quadraticCurveTo(p[2], p[3], p[4], p[5]);
+        else out.bezierCurveTo(p[2], p[3], p[4], p[5], p[6], p[7]);
+        if (b >= d1) break;
+    }
+    return out;
+}
+
 const DEFAULT_TEXT_SIZE = 14;
 /** Ascent / descent as fractions of the text size — roughly Roboto's, i.e. a phone's. */
 const ASCENT_RATIO = 0.92;
@@ -368,8 +500,12 @@ export class CanvasPaintContext extends PaintContext {
     // NanMap path command base (Java convention used in binary PathData)
     private static readonly NANMAP_PATH_BASE = 0x300000;
 
-    private buildPath2D(data: Int32Array, start = 0, end = 1): Path2D {
-        const path = new Path2D();
+    // Decode path data into absolute segments: [op, x0, y0, ...control/end points].
+    // op: 'M' (x, y), 'L' (from, to), 'Q' (from, cp, to), 'C' (from, cp1, cp2, to), 'Z'.
+    // Conics are kept as quadratics (weight ignored), as the untrimmed path always drew them.
+    private decodePath(data: Int32Array): PathSeg[] {
+        const segs: PathSeg[] = [];
+        const f = (k: number) => intBitsToFloat(data[k]);
         let i = 0;
         while (i < data.length) {
             const bits = data[i];
@@ -384,45 +520,59 @@ export class CanvasPaintContext extends PaintContext {
             switch (cmd) {
                 case CanvasPaintContext.PATH_MOVE:
                     // Format: [MOVE, x, y] = 3 positions
-                    i++;
-                    path.moveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
-                    i += 2;
+                    segs.push(['M', f(i + 1), f(i + 2)]);
+                    i += 3;
                     break;
                 case CanvasPaintContext.PATH_LINE:
                     // Format: [LINE, startX, startY, endX, endY] = 5 positions
-                    // startX,startY are redundant (previous endpoint), skip them
-                    i += 3;
-                    path.lineTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]));
-                    i += 2;
+                    segs.push(['L', f(i + 1), f(i + 2), f(i + 3), f(i + 4)]);
+                    i += 5;
                     break;
                 case CanvasPaintContext.PATH_QUADRATIC:
                     // Format: [QUAD, startX, startY, cpX, cpY, endX, endY] = 7 positions
-                    i += 3;
-                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
-                    i += 4;
+                    segs.push(['Q', f(i + 1), f(i + 2), f(i + 3), f(i + 4), f(i + 5), f(i + 6)]);
+                    i += 7;
                     break;
                 case CanvasPaintContext.PATH_CONIC:
                     // Format: [CONIC, startX, startY, cpX, cpY, endX, endY, weight] = 8 positions
                     // Approximate conic as quadratic (ignore weight)
-                    i += 3;
-                    path.quadraticCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]));
-                    i += 5;
+                    segs.push(['Q', f(i + 1), f(i + 2), f(i + 3), f(i + 4), f(i + 5), f(i + 6)]);
+                    i += 8;
                     break;
                 case CanvasPaintContext.PATH_CUBIC:
                     // Format: [CUBIC, startX, startY, cp1X, cp1Y, cp2X, cp2Y, endX, endY] = 9 positions
-                    i += 3;
-                    path.bezierCurveTo(intBitsToFloat(data[i]), intBitsToFloat(data[i + 1]), intBitsToFloat(data[i + 2]), intBitsToFloat(data[i + 3]), intBitsToFloat(data[i + 4]), intBitsToFloat(data[i + 5]));
-                    i += 6;
+                    segs.push(['C', f(i + 1), f(i + 2), f(i + 3), f(i + 4), f(i + 5), f(i + 6), f(i + 7), f(i + 8)]);
+                    i += 9;
                     break;
                 case CanvasPaintContext.PATH_CLOSE:
-                    path.closePath();
+                    segs.push(['Z']);
                     i++;
                     break;
                 case CanvasPaintContext.PATH_DONE:
-                    return path;
+                    return segs;
                 default:
                     i++; // skip unknown command
                     break;
+            }
+        }
+        return segs;
+    }
+
+    private buildPath2D(data: Int32Array, start = 0, end = 1): Path2D {
+        const segs = this.decodePath(data);
+        // Trim like Android's FloatsToPath.genPath: PathMeasure over the first contour,
+        // getSegment(start * len, stop * len); nothing at all when start >= stop.
+        if (start > 0 || end < 1) {
+            return start < end ? trimPathSegs(segs, Math.max(start, 0), Math.min(end, 1)) : new Path2D();
+        }
+        const path = new Path2D();
+        for (const s of segs) {
+            switch (s[0]) {
+                case 'M': path.moveTo(s[1], s[2]); break;
+                case 'L': path.lineTo(s[3], s[4]); break;
+                case 'Q': path.quadraticCurveTo(s[3], s[4], s[5], s[6]); break;
+                case 'C': path.bezierCurveTo(s[3], s[4], s[5], s[6], s[7], s[8]); break;
+                case 'Z': path.closePath(); break;
             }
         }
         return path;

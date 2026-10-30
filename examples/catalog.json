@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-10-30T20:59:07.399Z",
+ "built_at": "2026-10-30T21:43:18.823Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -14358,7 +14358,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "expr.shaping": [
@@ -14618,7 +14618,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.trig": [
@@ -14876,7 +14876,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.select": [
@@ -15121,7 +15121,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.conditional": [
@@ -15261,7 +15261,8 @@
     "arrayGet takes (array, index), array first",
     "textFromFloat with decimal 0 cuts the fraction (8385.7 prints 8385) unless the rounding flag 512 is set; round() in the expression does the same and keeps the flags simple",
     "floatArrays are exported by default: a host can replace the week's values and every statistic follows",
-    "Bars placed at 29 + i * 45.714 only span the header width: derive the slot from componentWidth() ((@r - 20) / 7) so they spread over any width, and scale the chart down as a whole where the four figures would no longer fit"
+    "Bars placed at 29 + i * 45.714 only span the header width: derive the slot from componentWidth() ((@r - 20) / 7) so they spread over any width, and scale the chart down as a whole where the four figures would no longer fit",
+    "The values are labelled on the canvas to keep the lesson on expressions in one place (rc-inspect flags it: text_in_canvas). In a real screen put labels and values in text components around the drawing."
    ],
    "snippets": [
     {
@@ -15313,6 +15314,9 @@
    "prerequisites": [
     "VAR-06"
    ],
+   "expect_findings": [
+    "text_in_canvas"
+   ],
    "folder": "EXP-08-array-stats",
    "derived": {
     "bytes": 2205,
@@ -15354,7 +15358,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 0
     },
     "evidence": {
@@ -16375,7 +16379,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.string": [
@@ -16521,7 +16525,8 @@
     "componentWidth() is the size of the component the expression belongs to, here the canvas; on a modifier it is that component's size",
     "Pin the clock (render clock) when checking a time-dependent document; without it every time value reads the wall clock",
     "fontSize() is the host's text size setting, 14 by default in the renderers",
-    "Right-aligned captions at componentWidth() - 24 collide with values at a fixed x = 112 once the host is narrow: below the design width, scale the drawing (and divide componentWidth() by the scale for its geometry) rather than overlapping"
+    "Right-aligned captions at componentWidth() - 24 collide with values at a fixed x = 112 once the host is narrow: below the design width, scale the drawing (and divide componentWidth() by the scale for its geometry) rather than overlapping",
+    "The values are labelled on the canvas to keep the lesson on expressions in one place (rc-inspect flags it: text_in_canvas). In a real screen put labels and values in text components around the drawing."
    ],
    "snippets": [
     {
@@ -16580,6 +16585,9 @@
     "HST-07",
     "DOC-04"
    ],
+   "expect_findings": [
+    "text_in_canvas"
+   ],
    "folder": "EXP-13-system-values",
    "derived": {
     "bytes": 2193,
@@ -16607,8 +16615,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
-     "info": 2
+     "warning": 2,
+     "info": 1
     },
     "evidence": {
      "expr.system": [
@@ -16872,7 +16880,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 1
+     "info": 2
     },
     "evidence": {
      "expr.shaping": [
@@ -24118,7 +24126,7 @@
     "audit": {
      "error": 0,
      "warning": 1,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "struct.loop": [
@@ -28252,7 +28260,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 2
+     "info": 3
     },
     "evidence": {
      "time.date": [
@@ -38627,6 +38635,619 @@
      "weight",
      "whole",
      "width"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "LineChart",
+   "name": "line-chart",
+   "version": 1,
+   "title": "LineChart",
+   "prompt": "Chart today's temperature hour by hour with the high and low marked, and a tide widget: the day's water level curve with high and low water, the hours under it, the metres beside it and a line at the current time.",
+   "level": 3,
+   "use_cases": [
+    "dashboard",
+    "weather"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "line chart",
+    "line graph",
+    "curve",
+    "time series",
+    "chart over time",
+    "tide curve",
+    "temperature graph",
+    "trend chart"
+   ],
+   "teaches": [
+    "Array mode: {\"LineChart\": {\"values\": \"@temps\", \"x_min\": 0, \"x_max\": 23}} draws a monotone spline through an exported float array, spread evenly over x",
+    "Function mode: \"fn\" is y as an expression of u (the x value), drawn with pathExpression over x_min..x_max; now: \"timeInMin()\" adds a line and a dot on the curve that follow the clock",
+    "Axis labels are text components: xLabels is a row under the plot (each centred on its x), yLabels a column beside it with a grid line per label; the canvas fills the width and derives every coordinate from componentWidth()/componentHeight()"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0/column/children/1",
+     "shows": "data.array",
+     "note": "bound to the exported float array temps, with extremes marked"
+    },
+    {
+     "pointer": "/root/column/children/1/column/children/1/box/children/0",
+     "shows": "draw.plot",
+     "note": "a tide model as fn of u, drawn with pathExpression"
+    },
+    {
+     "pointer": "/root/column/children/1/column/children/1/box/children/0",
+     "shows": "data.expression",
+     "note": "now: timeInMin() and marks computed from tideHigh"
+    },
+    {
+     "pointer": "/root/column/children/1/column/children/1",
+     "shows": "layout.weight",
+     "note": "fill: true inside a box with verticalWeight 1: the plot takes the card's remaining height"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "temps": {
+      "type": "float_array",
+      "meaning": "hourly temperatures, any length >= 2, spread over x_min..x_max",
+      "default": [
+       9.8,
+       9.1,
+       8.6,
+       8.2,
+       7.9,
+       7.8,
+       8.4,
+       9.6,
+       11.3,
+       13.2,
+       15,
+       16.6,
+       17.8,
+       18.7,
+       19.2,
+       19.4,
+       18.9,
+       17.8,
+       16.2,
+       14.6,
+       13.3,
+       12.2,
+       11.3,
+       10.6
+      ]
+     },
+     "tideMean": {
+      "type": "float",
+      "meaning": "mean water level in metres",
+      "default": 1.6,
+      "min": 0,
+      "max": 5
+     },
+     "tideAmp": {
+      "type": "float",
+      "meaning": "tidal amplitude in metres (half the range)",
+      "default": 1.2,
+      "min": 0,
+      "max": 3
+     },
+     "tideHigh": {
+      "type": "float",
+      "meaning": "minute of the day of the first high water",
+      "default": 312,
+      "min": 0,
+      "max": 745
+     }
+    },
+    "clock": "2026-10-30T15:00",
+    "touch": false
+   },
+   "check": {
+    "describe": "Pinned clock 2026-10-30 15:00. Top card ('Temperature'): 24 hourly temperatures as an amber monotone curve over a light amber wash, grid lines at 20/15/10/5° lined up with the labels in the column on the left, hours 0h 6h 12h 18h 23h centred under their x, dots on the low (7.8° at 5 h) and the high (19.4° at 15 h); the header reads 7.8° – 19.4° from the array. Bottom card: the tide fn 1.6 + 1.2·cos((u − 312)·0.0084315) over 00..24 h fills the rest of the height: high water 2.8 m at 05:12 and 17:37, low 0.4 m at 11:25 and 23:50, each with a small dot (the fifth mark, 312 − 372.6, is before midnight and not drawn); a grey vertical line at 15:00 with a large dot on the rising curve at 1.9 m, which the header's '1.9 m now' matches. dark: the same on the dark palette; mono / mono-inverted: no wash, white (black) 2 dp lines and dots, grey grid. narrow (234) and wide (540): the plots and the x labels follow the width, the y labels keep their 32 dp column. shifted (tideHigh 600, a cooling day): high water moves to 10:00 and 22:25 and low water to 03:47 and 16:13, all four dotted (the marks list has five times; the ones outside 00..24 h are not drawn); the now dot sits on the falling side at 0.6 m, as the header says; the temperature curve falls from 19° to 6° with the extremes dotted at its ends and the header reads 6.0° – 19.0°.",
+    "render": {
+     "clock": "2026-10-30T15:00"
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "mono-inverted",
+      "componentTheme": "mono-inverted"
+     },
+     {
+      "name": "narrow",
+      "width": 234,
+      "height": 520
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 520
+     },
+     {
+      "name": "shifted",
+      "variables": {
+       "tideHigh": 600,
+       "temps": [
+        19,
+        18.6,
+        18,
+        17.2,
+        16.5,
+        15.9,
+        15.2,
+        14.4,
+        13.8,
+        13.1,
+        12.5,
+        11.8,
+        11.2,
+        10.6,
+        10.1,
+        9.6,
+        9.1,
+        8.6,
+        8.1,
+        7.6,
+        7.2,
+        6.8,
+        6.4,
+        6
+       ]
+      }
+     }
+    ]
+   },
+   "related": [
+    "Sparkline",
+    "BarChart",
+    "TIM-12"
+   ],
+   "summary": "A value-over-time chart that fills its width: a smooth line through a float array or along a function of x, with an optional area fill, baseline, \"now\" marker and highlighted points, and its axis labels as text components (a row under the chart, a column beside it).",
+   "capabilities": {
+    "primary": [
+     "draw.plot",
+     "data.array",
+     "data.expression",
+     "layout.weight"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "LineChart"
+   ],
+   "pitfalls": [
+    "Which chart: LineChart for a value over time or over a range of x (a day of temperatures, a tide, a price, the sun's altitude) at card or screen width, with axis labels, a now marker or marked points; Sparkline for a word-sized trend beside a label (no axes, no labels); BarChart for separate quantities per category or period (steps per day, visits per week)",
+    "Don't hand-draw the chart on a canvas with literal coordinates and drawText labels: this component fills its width, derives every coordinate from componentWidth()/componentHeight() (named canvas variables), and puts its labels in text components, so it relayouts on resize and screen readers reach the labels",
+    "Two modes. values is the name of a float array (\"@temps\" in resources.floatArrays), not a JSON list: the curve is arraySpline through every value, spread evenly over x_min..x_max, so a host that sets the exported array redraws it, any length. fn is y as an expression of u, the x value (pathExpression's sample variable: write u, never x or a name of your own); it is spliced into the path's expressions, so it may read document variables and the clock (\"@mean + @amp * cos((u - @high) * 0.0084315)\"). Give one or the other",
+    "fn must stay within 20 expression entries (each number, variable, operator and function is one): the area path wraps it in 12 more and Android refuses a path expression over 32 entries with \"Path too long\" — json2rc and the Java parser write it anyway, so only a device shows the failure. Move constants into variables (\"@k\" is one entry; \"2 * 3.14159 / 745.2\" is five) and drop the area if needed",
+    "Function mode has no data to scale from: give y_min and y_max (default 0..1). Array mode scales to the array's own min..max unless you give them; a flat series sits on the top edge, and two charts only compare when they share y_min/y_max. Pass the same y_min/y_max the yLabels name: the labels are evenly spaced from y_max down to y_min and only the component's arithmetic, not the text, places the curve",
+    "xLabels are evenly spaced from x_min to x_max, each centred in an equal cell under its x, so the plot is inset by half a cell on each side (a 5-label axis on a 300 dp plot loses 30 dp per side); pick labels that divide the range evenly (0, 6, 12, 18, 24 h over 0..1440 min). A label at a data position (\"High 05:12, 2.8 m\") belongs in the caller's layout, a row of text above or below the chart, not on the canvas",
+    "now and marks put a dot on the curve itself: each is a two-point path at that x through the same function (a zero-length stroke with a round cap), so the dot follows the curve in either mode with nothing computed twice; now also draws a vertical line and is clamped to x_min..x_max; a mark outside x_min..x_max is not drawn (its dot is moved off the canvas). marks is a list fixed in length when the document is built, but each item may be an expression (\"@high + 372.6\"). A literal 0 for now, baseline, y_min or y_max counts as given",
+    "baseline draws a line at that value (0 °C, mean sea level, the horizon) and the area then fills between the curve and it, above and below; without it the area fills to the bottom of the plot. extremes (array mode) dots every value equal to the array's max or min",
+    "Mono drops the area wash (no alpha fills on AOD or e-ink) and draws the line in onSurface at 2 dp; the grid, baseline and now line stay the one grey",
+    "The body declares named canvas variables and paths, so every call is expanded (about 1.1 KB for a function chart, 1.6 KB with both label rows), never a pattern: fine for the one or two charts a screen shows"
+   ],
+   "folder": "components/LineChart",
+   "derived": {
+    "bytes": 7000,
+    "op_count": 331,
+    "header": {
+     "width": 360,
+     "height": 520
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       9.80000019,
+       9.10000038,
+       8.60000038,
+       8.19999981,
+       7.9000001,
+       7.80000019,
+       8.39999962,
+       9.60000038,
+       11.3000002,
+       13.1999998,
+       15,
+       16.6000004,
+       17.7999992,
+       18.7000008,
+       19.2000008,
+       19.3999996,
+       18.8999996,
+       17.7999992,
+       16.2000008,
+       14.6000004,
+       13.3000002,
+       12.1999998,
+       11.3000002,
+       10.6000004
+      ]
+     },
+     {
+      "name": "tideAmp",
+      "type": "float",
+      "value": 1.20000005
+     },
+     {
+      "name": "tideHigh",
+      "type": "float",
+      "value": 312
+     },
+     {
+      "name": "tideMean",
+      "type": "float",
+      "value": 1.60000002
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "LineChart"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 5708,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "temps",
+        "type": "float_array",
+        "value": [
+         9.80000019,
+         9.10000038,
+         8.60000038,
+         8.19999981,
+         7.9000001,
+         7.80000019,
+         8.39999962,
+         9.60000038,
+         11.3000002,
+         13.1999998,
+         15,
+         16.6000004,
+         17.7999992,
+         18.7000008,
+         19.2000008,
+         19.3999996,
+         18.8999996,
+         17.7999992,
+         16.2000008,
+         14.6000004,
+         13.3000002,
+         12.1999998,
+         11.3000002,
+         10.6000004
+        ]
+       },
+       {
+        "name": "tideAmp",
+        "type": "float",
+        "value": 1.20000005
+       },
+       {
+        "name": "tideHigh",
+        "type": "float",
+        "value": 312
+       },
+       {
+        "name": "tideMean",
+        "type": "float",
+        "value": 1.60000002
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-inverted": {
+      "render": "render-mono-inverted.png",
+      "componentTheme": "mono-inverted",
+      "bytes": 5708,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "temps",
+        "type": "float_array",
+        "value": [
+         9.80000019,
+         9.10000038,
+         8.60000038,
+         8.19999981,
+         7.9000001,
+         7.80000019,
+         8.39999962,
+         9.60000038,
+         11.3000002,
+         13.1999998,
+         15,
+         16.6000004,
+         17.7999992,
+         18.7000008,
+         19.2000008,
+         19.3999996,
+         18.8999996,
+         17.7999992,
+         16.2000008,
+         14.6000004,
+         13.3000002,
+         12.1999998,
+         11.3000002,
+         10.6000004
+        ]
+       },
+       {
+        "name": "tideAmp",
+        "type": "float",
+        "value": 1.20000005
+       },
+       {
+        "name": "tideHigh",
+        "type": "float",
+        "value": 312
+       },
+       {
+        "name": "tideMean",
+        "type": "float",
+        "value": 1.60000002
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "shifted": {
+      "render": "render-shifted.png"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "draw.plot": [
+      "pathExpression"
+     ],
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "data.expression": [
+      "pathExpression",
+      "<arithmetic>"
+     ],
+     "layout.weight": [
+      "weight",
+      "verticalWeight"
+     ]
+    },
+    "json_keys": [
+     "LineChart",
+     "alpha",
+     "apiLevel",
+     "background",
+     "box",
+     "canvas",
+     "children",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "drawLine",
+     "drawPath",
+     "end",
+     "export",
+     "expressionX",
+     "expressionY",
+     "extremes",
+     "fill",
+     "flags",
+     "floatArrays",
+     "fn",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "id",
+     "index",
+     "label",
+     "light",
+     "linechart2_nx",
+     "loop",
+     "marks",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "name",
+     "now",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "path",
+     "pathExpression",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "roundedRect",
+     "row",
+     "semantics",
+     "spacedBy",
+     "start",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "surface",
+     "temps",
+     "text",
+     "textAlign",
+     "tideAmp",
+     "tideHigh",
+     "tideLevel",
+     "tideMean",
+     "top",
+     "track",
+     "type",
+     "until",
+     "value",
+     "values",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalWeight",
+     "warning",
+     "weight",
+     "whole",
+     "width",
+     "x1",
+     "x2",
+     "xLabels",
+     "x_max",
+     "x_min",
+     "y1",
+     "y2",
+     "yLabels",
+     "y_max",
+     "y_min"
     ]
    }
   },

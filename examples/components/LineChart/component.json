@@ -1,0 +1,837 @@
+{
+ "component": "LineChart",
+ "version": 1,
+ "summary": "A value-over-time chart that fills its width: a smooth line through a float array or along a function of x, with an optional area fill, baseline, \"now\" marker and highlighted points, and its axis labels as text components (a row under the chart, a column beside it).",
+ "params": {
+  "values": {
+   "type": "float",
+   "doc": "Array mode: a float array, \"@name\" of resources.floatArrays (export it to let the host replace it), 2 or more values spread evenly over x_min..x_max; the curve is a monotone spline through every value. Give values or fn"
+  },
+  "fn": {
+   "type": "float",
+   "doc": "Function mode: y as an expression of u, the x value (u is pathExpression's sample variable; write u, not x), e.g. \"@mean + @amp * cos((u - @high) * 0.004363)\"; drawn over x_min..x_max. At most 20 entries (each number, variable, operator and function is one): the area fill adds 12 and Android refuses a path expression over 32. Needs y_min and y_max"
+  },
+  "x_min": {
+   "type": "float",
+   "default": 0,
+   "doc": "x at the left edge (e.g. 0 minutes)"
+  },
+  "x_max": {
+   "type": "float",
+   "default": 1,
+   "doc": "x at the right edge (e.g. 1440 minutes for a day)"
+  },
+  "y_min": {
+   "type": "float",
+   "doc": "Value at the bottom of the plot; default: the array's minimum (array mode), 0 (function mode)"
+  },
+  "y_max": {
+   "type": "float",
+   "doc": "Value at the top of the plot; default: the array's maximum (array mode), 1 (function mode)"
+  },
+  "baseline": {
+   "type": "float",
+   "doc": "Draw a horizontal line at this value (0 °C, mean sea level, the horizon); the area then fills down (or up) to it instead of the bottom"
+  },
+  "now": {
+   "type": "float",
+   "doc": "An x value (e.g. \"timeInMin()\" or a variable) to mark with a vertical line and a dot on the curve; clamped to x_min..x_max"
+  },
+  "marks": {
+   "type": "list",
+   "doc": "x values to mark with a dot on the curve (numbers or \"@variables\", e.g. the times of high and low tide); fixed in number when the document is built"
+  },
+  "extremes": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Array mode: a dot on the highest and the lowest value"
+  },
+  "area": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Fill under the line with a 16% wash of its colour (down to the baseline when given; none in mono)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Line, area and dot colour (onSurface in mono)"
+  },
+  "thickness": {
+   "type": "float",
+   "default": 2.5,
+   "static": true,
+   "doc": "Line width in dp (2 in mono)"
+  },
+  "xLabels": {
+   "type": "list",
+   "doc": "Texts under the plot, evenly spaced from x_min (first) to x_max (last), each centred under its x: [\"00\", \"06\", \"12\", \"18\", \"24\"]. The plot is inset by half a label cell on each side to line up with them"
+  },
+  "yLabels": {
+   "type": "list",
+   "doc": "Texts beside the plot, evenly spaced from y_max (first, top) to y_min (last, bottom), with a faint grid line at each: set y_min and y_max to the values they name"
+  },
+  "yLabelWidth": {
+   "type": "float",
+   "default": 32,
+   "static": true,
+   "doc": "Width in dp of the yLabels column (right-aligned text)"
+  },
+  "height": {
+   "type": "float",
+   "default": 120,
+   "static": true,
+   "doc": "Plot height in dp, labels not included (ignored with fill)"
+  },
+  "fill": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Take the height the caller gives it (fillMaxSize, the plot takes what the labels leave) instead of `height`; give it a parent with a size or a weight"
+  },
+  "samples": {
+   "type": "float",
+   "default": 64,
+   "static": true,
+   "doc": "Function mode: points the curve is sampled at (array mode samples 6 per value step)"
+  },
+  "label": {
+   "type": "string",
+   "default": "Line chart",
+   "doc": "Accessibility label, e.g. \"Water level today, high tide at 3:12\""
+  }
+ },
+ "locals": {
+  "span": "@x_max - @x_min",
+  "n": {
+   "$if": "fn",
+   "then": 0,
+   "else": "arrayLength(@values)"
+  },
+  "cnt": {
+   "$if": "fn",
+   "then": "@samples",
+   "else": "@n * 6 - 5"
+  },
+  "s": "@span / (@cnt - 1)",
+  "mid": "(@x_min + @x_max) / 2",
+  "half": "@span / 2 + @s / 2",
+  "inside": "@span * 0.5001",
+  "lo": {
+   "$if": "y_min",
+   "then": "@y_min",
+   "else": {
+    "$if": "y_min != 'undefined'",
+    "then": "@y_min",
+    "else": {
+     "$if": "fn",
+     "then": 0,
+     "else": "arrayMin(@values)"
+    }
+   }
+  },
+  "hi": {
+   "$if": "y_max",
+   "then": "@y_max",
+   "else": {
+    "$if": "y_max != 'undefined'",
+    "then": "@y_max",
+    "else": {
+     "$if": "fn",
+     "then": 1,
+     "else": "arrayMax(@values)"
+    }
+   }
+  },
+  "nxl": {
+   "$if": "xLabels",
+   "then": {
+    "$count": "xLabels"
+   },
+   "else": 1
+  },
+  "xin": {
+   "$if": "xLabels",
+   "then": "0.5 / @nxl",
+   "else": 0
+  },
+  "nyl": {
+   "$if": "yLabels",
+   "then": {
+    "$count": "yLabels"
+   },
+   "else": 2
+  },
+  "nx": {
+   "$if": "now",
+   "then": "clamp(@x_min, @x_max, @now)",
+   "else": {
+    "$if": "now != 'undefined'",
+    "then": "clamp(@x_min, @x_max, @now)",
+    "else": 0
+   }
+  }
+ },
+ "capabilities": [
+  "draw.plot",
+  "data.array",
+  "data.expression",
+  "layout.weight"
+ ],
+ "call": {
+  "LineChart": {
+   "values": "@temps",
+   "xLabels": [
+    "00",
+    "06",
+    "12",
+    "18",
+    "24"
+   ]
+  }
+ },
+ "pitfalls": [
+  "Which chart: LineChart for a value over time or over a range of x (a day of temperatures, a tide, a price, the sun's altitude) at card or screen width, with axis labels, a now marker or marked points; Sparkline for a word-sized trend beside a label (no axes, no labels); BarChart for separate quantities per category or period (steps per day, visits per week)",
+  "Don't hand-draw the chart on a canvas with literal coordinates and drawText labels: this component fills its width, derives every coordinate from componentWidth()/componentHeight() (named canvas variables), and puts its labels in text components, so it relayouts on resize and screen readers reach the labels",
+  "Two modes. values is the name of a float array (\"@temps\" in resources.floatArrays), not a JSON list: the curve is arraySpline through every value, spread evenly over x_min..x_max, so a host that sets the exported array redraws it, any length. fn is y as an expression of u, the x value (pathExpression's sample variable: write u, never x or a name of your own); it is spliced into the path's expressions, so it may read document variables and the clock (\"@mean + @amp * cos((u - @high) * 0.0084315)\"). Give one or the other",
+  "fn must stay within 20 expression entries (each number, variable, operator and function is one): the area path wraps it in 12 more and Android refuses a path expression over 32 entries with \"Path too long\" — json2rc and the Java parser write it anyway, so only a device shows the failure. Move constants into variables (\"@k\" is one entry; \"2 * 3.14159 / 745.2\" is five) and drop the area if needed",
+  "Function mode has no data to scale from: give y_min and y_max (default 0..1). Array mode scales to the array's own min..max unless you give them; a flat series sits on the top edge, and two charts only compare when they share y_min/y_max. Pass the same y_min/y_max the yLabels name: the labels are evenly spaced from y_max down to y_min and only the component's arithmetic, not the text, places the curve",
+  "xLabels are evenly spaced from x_min to x_max, each centred in an equal cell under its x, so the plot is inset by half a cell on each side (a 5-label axis on a 300 dp plot loses 30 dp per side); pick labels that divide the range evenly (0, 6, 12, 18, 24 h over 0..1440 min). A label at a data position (\"High 05:12, 2.8 m\") belongs in the caller's layout, a row of text above or below the chart, not on the canvas",
+  "now and marks put a dot on the curve itself: each is a two-point path at that x through the same function (a zero-length stroke with a round cap), so the dot follows the curve in either mode with nothing computed twice; now also draws a vertical line and is clamped to x_min..x_max; a mark outside x_min..x_max is not drawn (its dot is moved off the canvas). marks is a list fixed in length when the document is built, but each item may be an expression (\"@high + 372.6\"). A literal 0 for now, baseline, y_min or y_max counts as given",
+  "baseline draws a line at that value (0 °C, mean sea level, the horizon) and the area then fills between the curve and it, above and below; without it the area fills to the bottom of the plot. extremes (array mode) dots every value equal to the array's max or min",
+  "Mono drops the area wash (no alpha fills on AOD or e-ink) and draws the line in onSurface at 2 dp; the grid, baseline and now line stay the one grey",
+  "The body declares named canvas variables and paths, so every call is expanded (about 1.1 KB for a function chart, 1.6 KB with both label rows), never a pattern: fine for the one or two charts a screen shows"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    {
+     "$if": "fill",
+     "then": "fillMaxSize",
+     "else": "fillMaxWidth"
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "$if": "fill",
+        "then": {
+         "verticalWeight": 1
+        },
+        "else": {
+         "height": "@height"
+        }
+       }
+      ],
+      "children": [
+       {
+        "$if": "yLabels",
+        "then": {
+         "column": {
+          "verticalAlignment": "spaceBetween",
+          "horizontalAlignment": "end",
+          "modifiers": [
+           {
+            "width": "@yLabelWidth"
+           },
+           "fillMaxHeight",
+           {
+            "padding": {
+             "end": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "$each": "yLabels",
+            "as": "t",
+            "do": {
+             "text": {
+              "value": "@t",
+              "fontSize": 11,
+              "color": "@colors.muted",
+              "maxLines": 1
+             }
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight",
+          {
+           "semantics": {
+            "contentDescription": "@label"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "x0",
+            "value": {
+             "$if": "xLabels",
+             "then": "componentWidth() * @xin",
+             "else": 6
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "kx",
+            "value": "(componentWidth() - 2 * @x0) / @span"
+           }
+          },
+          {
+           "variable": {
+            "name": "cx",
+            "value": {
+             "$if": "x_min",
+             "then": "@x0 - @x_min * @kx",
+             "else": "@x0"
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "ky",
+            "value": {
+             "$if": "fn",
+             "then": "(componentHeight() - 14) / (@hi - @lo)",
+             "else": "(componentHeight() - 14) / max(@hi - @lo, 0.001)"
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "cy",
+            "value": "7 + @hi * @ky"
+           }
+          },
+          {
+           "variable": {
+            "name": "by",
+            "value": {
+             "$if": "baseline",
+             "then": "@cy - @baseline * @ky",
+             "else": {
+              "$if": "baseline != 'undefined'",
+              "then": "@cy - @baseline * @ky",
+              "else": "componentHeight() - 7"
+             }
+            }
+           }
+          },
+          {
+           "pathExpression": {
+            "id": "line",
+            "expressionX": "@cx + u * @kx",
+            "expressionY": {
+             "$if": "fn",
+             "then": "@cy - @fn * @ky",
+             "else": {
+              "$if": "x_min",
+              "then": "@cy - arraySpline(@values, (u - @x_min) / @span) * @ky",
+              "else": "@cy - arraySpline(@values, u / @span) * @ky"
+             }
+            },
+            "start": "@x_min",
+            "end": "@x_max",
+            "count": "@cnt",
+            "flags": 4
+           }
+          },
+          {
+           "$if": "yLabels",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.track"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1
+               }
+              ]
+             }
+            },
+            {
+             "loop": {
+              "index": "i",
+              "from": 0,
+              "until": "@nyl",
+              "commands": [
+               {
+                "drawLine": {
+                 "x1": 0,
+                 "y1": "7 + i * (componentHeight() - 14) / (@nyl - 1)",
+                 "x2": "componentWidth()",
+                 "y2": "7 + i * (componentHeight() - 14) / (@nyl - 1)"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          },
+          {
+           "$if": "area",
+           "then": {
+            "$if": "!theme.mono",
+            "then": [
+             {
+              "$if": "!fn",
+              "then": [
+               {
+                "variable": {
+                 "name": "st",
+                 "value": "@s"
+                }
+               },
+               {
+                "variable": {
+                 "name": "hw",
+                 "value": "@span / 2 + @st / 2"
+                }
+               }
+              ]
+             },
+             {
+              "pathExpression": {
+               "id": "under",
+               "expressionX": "@cx + clamp(@x_min, @x_max, u) * @kx",
+               "expressionY": {
+                "$if": "fn",
+                "then": "ifElse(@cy - @fn * @ky, @by, step(abs(u - @mid), @half))",
+                "else": {
+                 "$if": "x_min",
+                 "then": "ifElse(@cy - arraySpline(@values, (u - @x_min) / @span) * @ky, @by, step(abs(u - @mid), @hw))",
+                 "else": "ifElse(@cy - arraySpline(@values, u / @span) * @ky, @by, step(abs(u - @mid), @hw))"
+                }
+               },
+               "start": {
+                "$if": "fn",
+                "then": "@x_min - @s",
+                "else": "@x_min - @st"
+               },
+               "end": {
+                "$if": "fn",
+                "then": "@x_max + @s",
+                "else": "@x_max + @st"
+               },
+               "count": "@cnt + 2",
+               "flags": 4
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@color"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 0.16
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "under"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "baseline",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.outline"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1
+               },
+               {
+                "alpha": 1
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 0,
+              "y1": "@by",
+              "x2": "componentWidth()",
+              "y2": "@by"
+             }
+            }
+           ],
+           "else": {
+            "$if": "baseline != 'undefined'",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.outline"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 0,
+               "y1": "@by",
+               "x2": "componentWidth()",
+               "y2": "@by"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "now",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1
+               },
+               {
+                "alpha": 1
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": "@cx + @nx * @kx",
+              "y1": 0,
+              "x2": "@cx + @nx * @kx",
+              "y2": "componentHeight()"
+             }
+            }
+           ],
+           "else": {
+            "$if": "now != 'undefined'",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": "@cx + @nx * @kx",
+               "y1": 0,
+               "x2": "@cx + @nx * @kx",
+               "y2": "componentHeight()"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@color"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": {
+               "$if": "theme.mono",
+               "then": "@theme.stroke",
+               "else": "@thickness"
+              }
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "strokeJoin": "round"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "line"
+           }
+          },
+          {
+           "$if": "extremes",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "loop": {
+              "index": "i",
+              "from": 0,
+              "until": "@n",
+              "commands": [
+               {
+                "drawCircle": {
+                 "cx": {
+                  "$if": "x_min",
+                  "then": "@cx + (@x_min + i * @span / (@n - 1)) * @kx",
+                  "else": "@cx + i * @span / (@n - 1) * @kx"
+                 },
+                 "cy": "@cy - arrayGet(@values, i) * @ky",
+                 "radius": "4 * (step(arrayGet(@values, i), arrayMax(@values) - 0.0001) + step(arrayMin(@values) + 0.0001, arrayGet(@values, i)))"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "stroke"
+               }
+              ]
+             }
+            }
+           ]
+          },
+          {
+           "$if": "marks",
+           "then": [
+            {
+             "$each": "marks",
+             "as": "m",
+             "index": "k",
+             "do": [
+              {
+               "pathExpression": {
+                "id": "mark@k",
+                "expressionX": "@cx + u * @kx + 99999 * step(abs(u - @mid), @inside)",
+                "expressionY": {
+                 "$if": "fn",
+                 "then": "@cy - @fn * @ky",
+                 "else": {
+                  "$if": "x_min",
+                  "then": "@cy - arraySpline(@values, (u - @x_min) / @span) * @ky",
+                  "else": "@cy - arraySpline(@values, u / @span) * @ky"
+                 }
+                },
+                "start": "@m",
+                "end": "@m",
+                "count": 2,
+                "flags": 4
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "strokeWidth": 8
+                 }
+                ]
+               }
+              },
+              {
+               "drawPath": {
+                "path": "mark@k"
+               }
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "$if": "now",
+           "then": [
+            {
+             "pathExpression": {
+              "id": "nowdot",
+              "expressionX": "@cx + u * @kx",
+              "expressionY": {
+               "$if": "fn",
+               "then": "@cy - @fn * @ky",
+               "else": {
+                "$if": "x_min",
+                "then": "@cy - arraySpline(@values, (u - @x_min) / @span) * @ky",
+                "else": "@cy - arraySpline(@values, u / @span) * @ky"
+               }
+              },
+              "start": "@nx",
+              "end": "@nx",
+              "count": 2,
+              "flags": 4
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "strokeWidth": 11
+               }
+              ]
+             }
+            },
+            {
+             "drawPath": {
+              "path": "nowdot"
+             }
+            }
+           ],
+           "else": {
+            "$if": "now != 'undefined'",
+            "then": [
+             {
+              "pathExpression": {
+               "id": "nowdot",
+               "expressionX": "@cx + u * @kx",
+               "expressionY": {
+                "$if": "fn",
+                "then": "@cy - @fn * @ky",
+                "else": {
+                 "$if": "x_min",
+                 "then": "@cy - arraySpline(@values, (u - @x_min) / @span) * @ky",
+                 "else": "@cy - arraySpline(@values, u / @span) * @ky"
+                }
+               },
+               "start": "@nx",
+               "end": "@nx",
+               "count": 2,
+               "flags": 4
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "strokeWidth": 11
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": "nowdot"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "xLabels",
+     "then": {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "padding": {
+          "start": {
+           "$if": "yLabels",
+           "then": "@yLabelWidth",
+           "else": 0
+          },
+          "top": 4
+         }
+        }
+       ],
+       "children": [
+        {
+         "$each": "xLabels",
+         "as": "t",
+         "do": {
+          "text": {
+           "value": "@t",
+           "fontSize": 11,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "textAlign": "center",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

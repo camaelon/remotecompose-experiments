@@ -1,0 +1,85 @@
+{
+ "header": {
+  "apiLevel": 7, "width": 360, "height": 520, "profiles": 513,
+  "contentDescription": "LineChart component: today's temperature hour by hour with its high and low marked, and today's tide as a curve with high and low water and a line at the current time"
+ },
+ "resources": {
+  "floatArrays": {
+   "temps": { "value": [9.8, 9.1, 8.6, 8.2, 7.9, 7.8, 8.4, 9.6, 11.3, 13.2, 15, 16.6, 17.8, 18.7, 19.2, 19.4, 18.9, 17.8, 16.2, 14.6, 13.3, 12.2, 11.3, 10.6], "export": true }
+  },
+  "variables": {
+   "tideMean": { "value": 1.6, "export": true },
+   "tideAmp": { "value": 1.2, "export": true },
+   "tideHigh": { "value": 312, "export": true },
+   "tideLevel": "@tideMean + @tideAmp * cos((timeInMin() - @tideHigh) * 0.0084315)"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": ["fillMaxSize", { "background": "@colors.background" }, { "padding": 16 }, { "spacedBy": 12 }],
+   "children": [
+    {
+     "column": {
+      "modifiers": ["fillMaxWidth", { "clip": { "roundedRect": 16 } }, { "background": "@colors.surface" }, { "padding": 12 }, { "spacedBy": 8 }],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": ["fillMaxWidth"],
+         "children": [
+          { "text": { "value": "Temperature", "fontSize": 15, "color": "@colors.onSurface", "modifiers": [{ "weight": 1 }] } },
+          { "text": { "value": { "type": "textFromFloat", "value": "arrayMin(@temps)", "whole": 2, "decimal": 1, "flags": 5 }, "fontSize": 13, "color": "@colors.muted" } },
+          { "text": { "value": "° – ", "fontSize": 13, "color": "@colors.muted" } },
+          { "text": { "value": { "type": "textFromFloat", "value": "arrayMax(@temps)", "whole": 2, "decimal": 1, "flags": 5 }, "fontSize": 13, "color": "@colors.muted" } },
+          { "text": { "value": "°", "fontSize": 13, "color": "@colors.muted" } }
+         ]
+        }
+       },
+       {
+        "LineChart": {
+         "values": "@temps", "x_min": 0, "x_max": 23, "y_min": 5, "y_max": 20,
+         "extremes": true, "color": "@colors.warning", "height": 110,
+         "xLabels": ["0h", "6h", "12h", "18h", "23h"], "yLabels": ["20°", "15°", "10°", "5°"],
+         "label": "Temperature today, hour by hour: low 7.8 degrees at 5 h, high 19.4 degrees at 15 h"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": ["fillMaxWidth", { "verticalWeight": 1 }, { "clip": { "roundedRect": 16 } }, { "background": "@colors.surface" }, { "padding": 12 }, { "spacedBy": 8 }],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": ["fillMaxWidth"],
+         "children": [
+          { "text": { "value": "Tide · Harbour", "fontSize": 15, "color": "@colors.onSurface", "modifiers": [{ "weight": 1 }] } },
+          { "text": { "value": { "type": "textFromFloat", "value": "@tideLevel", "whole": 2, "decimal": 1, "flags": 5 }, "fontSize": 15, "color": "@colors.primary" } },
+          { "text": { "value": " m now", "fontSize": 13, "color": "@colors.muted" } }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": ["fillMaxWidth", { "verticalWeight": 1 }],
+         "children": [{
+        "LineChart": {
+         "fn": "@tideMean + @tideAmp * cos((u - @tideHigh) * 0.0084315)",
+         "x_min": 0, "x_max": 1440, "y_min": 0, "y_max": 3,
+         "now": "timeInMin()", "marks": ["@tideHigh - 372.6", "@tideHigh", "@tideHigh + 372.6", "@tideHigh + 745.2", "@tideHigh + 1117.8"],
+         "fill": true,
+         "xLabels": ["00", "06", "12", "18", "24"], "yLabels": ["3 m", "2 m", "1 m", "0 m"],
+         "label": "Water level today, a tide curve with high and low water marked and a line at the current time"
+        }
+         }]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

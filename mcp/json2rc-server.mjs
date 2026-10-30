@@ -80,6 +80,12 @@ export const definition = {
 
             const bytes = jsonToRc(source, dir);
             writeFileSync(out, Buffer.from(bytes));
+            // The source JSON beside the .rc (x.rc -> x.json), unless it is already there: a page
+            // published from the .rc is then made from its JSON (the JSON viewer, the design check).
+            const sidecar = out.replace(/\.rc$/i, ".json");
+            if (sidecar !== out && sidecar !== input) {
+                try { writeFileSync(sidecar, typeof source === "string" ? source : JSON.stringify(source)); } catch { /* best effort */ }
+            }
             const result = { rc_path: displayPath(out), bytes: bytes.length };
             if (include_base64) result.rc_base64 = Buffer.from(bytes).toString("base64");
             // The design warnings (a UI hand-drawn on a canvas, glyph icons, hard-coded dates...):

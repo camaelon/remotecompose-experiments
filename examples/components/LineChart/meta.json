@@ -1,0 +1,662 @@
+{
+ "id": "LineChart",
+ "name": "line-chart",
+ "version": 1,
+ "title": "LineChart",
+ "prompt": "Chart today's temperature hour by hour with the high and low marked, and a tide widget: the day's water level curve with high and low water, the hours under it, the metres beside it and a line at the current time.",
+ "level": 3,
+ "use_cases": [
+  "dashboard",
+  "weather"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "line chart",
+  "line graph",
+  "curve",
+  "time series",
+  "chart over time",
+  "tide curve",
+  "temperature graph",
+  "trend chart"
+ ],
+ "teaches": [
+  "Array mode: {\"LineChart\": {\"values\": \"@temps\", \"x_min\": 0, \"x_max\": 23}} draws a monotone spline through an exported float array, spread evenly over x",
+  "Function mode: \"fn\" is y as an expression of u (the x value), drawn with pathExpression over x_min..x_max; now: \"timeInMin()\" adds a line and a dot on the curve that follow the clock",
+  "Axis labels are text components: xLabels is a row under the plot (each centred on its x), yLabels a column beside it with a grid line per label; the canvas fills the width and derives every coordinate from componentWidth()/componentHeight()"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/0/column/children/1",
+   "shows": "data.array",
+   "note": "bound to the exported float array temps, with extremes marked"
+  },
+  {
+   "pointer": "/root/column/children/1/column/children/1/box/children/0",
+   "shows": "draw.plot",
+   "note": "a tide model as fn of u, drawn with pathExpression"
+  },
+  {
+   "pointer": "/root/column/children/1/column/children/1/box/children/0",
+   "shows": "data.expression",
+   "note": "now: timeInMin() and marks computed from tideHigh"
+  },
+  {
+   "pointer": "/root/column/children/1/column/children/1",
+   "shows": "layout.weight",
+   "note": "fill: true inside a box with verticalWeight 1: the plot takes the card's remaining height"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "temps": {
+    "type": "float_array",
+    "meaning": "hourly temperatures, any length >= 2, spread over x_min..x_max",
+    "default": [
+     9.8,
+     9.1,
+     8.6,
+     8.2,
+     7.9,
+     7.8,
+     8.4,
+     9.6,
+     11.3,
+     13.2,
+     15,
+     16.6,
+     17.8,
+     18.7,
+     19.2,
+     19.4,
+     18.9,
+     17.8,
+     16.2,
+     14.6,
+     13.3,
+     12.2,
+     11.3,
+     10.6
+    ]
+   },
+   "tideMean": {
+    "type": "float",
+    "meaning": "mean water level in metres",
+    "default": 1.6,
+    "min": 0,
+    "max": 5
+   },
+   "tideAmp": {
+    "type": "float",
+    "meaning": "tidal amplitude in metres (half the range)",
+    "default": 1.2,
+    "min": 0,
+    "max": 3
+   },
+   "tideHigh": {
+    "type": "float",
+    "meaning": "minute of the day of the first high water",
+    "default": 312,
+    "min": 0,
+    "max": 745
+   }
+  },
+  "clock": "2026-10-30T15:00",
+  "touch": false
+ },
+ "check": {
+  "describe": "Pinned clock 2026-10-30 15:00. Top card ('Temperature'): 24 hourly temperatures as an amber monotone curve over a light amber wash, grid lines at 20/15/10/5° lined up with the labels in the column on the left, hours 0h 6h 12h 18h 23h centred under their x, dots on the low (7.8° at 5 h) and the high (19.4° at 15 h); the header reads 7.8° – 19.4° from the array. Bottom card: the tide fn 1.6 + 1.2·cos((u − 312)·0.0084315) over 00..24 h fills the rest of the height: high water 2.8 m at 05:12 and 17:37, low 0.4 m at 11:25 and 23:50, each with a small dot (the fifth mark, 312 − 372.6, is before midnight and not drawn); a grey vertical line at 15:00 with a large dot on the rising curve at 1.9 m, which the header's '1.9 m now' matches. dark: the same on the dark palette; mono / mono-inverted: no wash, white (black) 2 dp lines and dots, grey grid. narrow (234) and wide (540): the plots and the x labels follow the width, the y labels keep their 32 dp column. shifted (tideHigh 600, a cooling day): high water moves to 10:00 and 22:25 and low water to 03:47 and 16:13, all four dotted (the marks list has five times; the ones outside 00..24 h are not drawn); the now dot sits on the falling side at 0.6 m, as the header says; the temperature curve falls from 19° to 6° with the extremes dotted at its ends and the header reads 6.0° – 19.0°.",
+  "render": {
+   "clock": "2026-10-30T15:00"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 520
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 520
+   },
+   {
+    "name": "shifted",
+    "variables": {
+     "tideHigh": 600,
+     "temps": [
+      19,
+      18.6,
+      18,
+      17.2,
+      16.5,
+      15.9,
+      15.2,
+      14.4,
+      13.8,
+      13.1,
+      12.5,
+      11.8,
+      11.2,
+      10.6,
+      10.1,
+      9.6,
+      9.1,
+      8.6,
+      8.1,
+      7.6,
+      7.2,
+      6.8,
+      6.4,
+      6
+     ]
+    }
+   }
+  ]
+ },
+ "related": [
+  "Sparkline",
+  "BarChart",
+  "TIM-12"
+ ],
+ "derived": {
+  "components": [
+   "LineChart"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "LineChart": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 7000,
+  "header": {
+   "width": 360,
+   "height": 520
+  },
+  "op_count": 331,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 2,
+   "ANIMATED_FLOAT": 38,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 2,
+   "CoreText": 26,
+   "DATA_FLOAT": 3,
+   "DATA_TEXT": 26,
+   "DRAW_CIRCLE": 1,
+   "DRAW_LINE": 3,
+   "DRAW_PATH": 10,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 1,
+   "LAYOUT_CANVAS": 2,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 6,
+   "LayoutComponentContent": 42,
+   "LoopOperation": 17,
+   "MODIFIER_BACKGROUND": 3,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_WIDTH": 28,
+   "NAMED_VARIABLE": 11,
+   "PAINT_VALUES": 15,
+   "PathExpression": 10,
+   "RoundedClipRectModifierOperation": 2,
+   "THEME": 21,
+   "TextFromFloat": 3
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "temps",
+    "type": "float_array",
+    "value": [
+     9.80000019,
+     9.10000038,
+     8.60000038,
+     8.19999981,
+     7.9000001,
+     7.80000019,
+     8.39999962,
+     9.60000038,
+     11.3000002,
+     13.1999998,
+     15,
+     16.6000004,
+     17.7999992,
+     18.7000008,
+     19.2000008,
+     19.3999996,
+     18.8999996,
+     17.7999992,
+     16.2000008,
+     14.6000004,
+     13.3000002,
+     12.1999998,
+     11.3000002,
+     10.6000004
+    ]
+   },
+   {
+    "name": "tideAmp",
+    "type": "float",
+    "value": 1.20000005
+   },
+   {
+    "name": "tideHigh",
+    "type": "float",
+    "value": 312
+   },
+   {
+    "name": "tideMean",
+    "type": "float",
+    "value": 1.60000002
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "scheduled",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 5708,
+    "component_modes": {
+     "LineChart": "expand"
+    },
+    "op_count": 260,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       9.80000019,
+       9.10000038,
+       8.60000038,
+       8.19999981,
+       7.9000001,
+       7.80000019,
+       8.39999962,
+       9.60000038,
+       11.3000002,
+       13.1999998,
+       15,
+       16.6000004,
+       17.7999992,
+       18.7000008,
+       19.2000008,
+       19.3999996,
+       18.8999996,
+       17.7999992,
+       16.2000008,
+       14.6000004,
+       13.3000002,
+       12.1999998,
+       11.3000002,
+       10.6000004
+      ]
+     },
+     {
+      "name": "tideAmp",
+      "type": "float",
+      "value": 1.20000005
+     },
+     {
+      "name": "tideHigh",
+      "type": "float",
+      "value": 312
+     },
+     {
+      "name": "tideMean",
+      "type": "float",
+      "value": 1.60000002
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 5708,
+    "component_modes": {
+     "LineChart": "expand"
+    },
+    "op_count": 260,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       9.80000019,
+       9.10000038,
+       8.60000038,
+       8.19999981,
+       7.9000001,
+       7.80000019,
+       8.39999962,
+       9.60000038,
+       11.3000002,
+       13.1999998,
+       15,
+       16.6000004,
+       17.7999992,
+       18.7000008,
+       19.2000008,
+       19.3999996,
+       18.8999996,
+       17.7999992,
+       16.2000008,
+       14.6000004,
+       13.3000002,
+       12.1999998,
+       11.3000002,
+       10.6000004
+      ]
+     },
+     {
+      "name": "tideAmp",
+      "type": "float",
+      "value": 1.20000005
+     },
+     {
+      "name": "tideHigh",
+      "type": "float",
+      "value": 312
+     },
+     {
+      "name": "tideMean",
+      "type": "float",
+      "value": 1.60000002
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "scheduled",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     520
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     520
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "shifted": {
+    "render": "render-shifted.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "LineChart",
+   "alpha",
+   "apiLevel",
+   "background",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "extremes",
+   "fill",
+   "flags",
+   "floatArrays",
+   "fn",
+   "fontSize",
+   "from",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id",
+   "index",
+   "label",
+   "light",
+   "linechart2_nx",
+   "loop",
+   "marks",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "now",
+   "onSurface",
+   "ops",
+   "padding",
+   "paint",
+   "path",
+   "pathExpression",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "semantics",
+   "spacedBy",
+   "start",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "surface",
+   "temps",
+   "text",
+   "textAlign",
+   "tideAmp",
+   "tideHigh",
+   "tideLevel",
+   "tideMean",
+   "top",
+   "track",
+   "type",
+   "until",
+   "value",
+   "values",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "warning",
+   "weight",
+   "whole",
+   "width",
+   "x1",
+   "x2",
+   "xLabels",
+   "x_max",
+   "x_min",
+   "y1",
+   "y2",
+   "yLabels",
+   "y_max",
+   "y_min"
+  ],
+  "evidence": {
+   "draw.plot": [
+    "pathExpression"
+   ],
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.expression": [
+    "pathExpression",
+    "<arithmetic>"
+   ],
+   "layout.weight": [
+    "weight",
+    "verticalWeight"
+   ]
+  },
+  "built_at": "2026-10-30T21:42:50.179Z"
+ }
+}
