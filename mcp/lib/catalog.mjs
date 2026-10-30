@@ -25,7 +25,7 @@ let cache = null;
 /** Lower case; - _ / and spaces equivalent; a trailing plural s dropped from each word. */
 export function normalizeWords(s) {
     return String(s).toLowerCase().replace(/[-_/]+/g, " ").replace(/[^a-z0-9.+ ]+/g, " ")
-        .split(/\s+/).filter(Boolean).map(singular);
+        .split(/\s+/).map((w) => w.replace(/^\.+|\.+$/g, "")).filter(Boolean).map(singular);
 }
 function singular(w) {
     // Not plurals: this, status, bus, analysis, canvas, gps.
@@ -299,7 +299,8 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
         "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
         "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
-        "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables"]);
+        "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
+        "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status"]);
     const generic = (w) => GENERIC.has(w) || /ly$/.test(w);
     const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {

@@ -83,7 +83,7 @@ export function summarizeResult(content) {
             if (codes.length) out.design_warnings = [...new Set([...(out.design_warnings ?? []), ...codes])];
             const finds = [...c.text.matchAll(/^(error|warning|info): \[([a-z_]+)\]/gm)].map((m) => `${m[1]}:${m[2]}`);
             if (finds.length) out.findings = [...new Set([...(out.findings ?? []), ...finds])].slice(0, 15);
-            const url = /https?:\/\/\S+\/pages\/[^\s"]+/.exec(c.text);
+            const url = /https?:\/\/\S+\/pages\/[A-Za-z0-9_-]{8,}\/?/.exec(c.text);
             if (url && !out.url) out.url = url[0];
         }
     }

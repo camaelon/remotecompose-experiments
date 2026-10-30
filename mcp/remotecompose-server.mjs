@@ -20,7 +20,7 @@ import { definition as inspect } from "./inspect-server.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
 import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
 import { designNotes, blockingFindings } from "./lib/design-audit.mjs";
 
@@ -203,6 +203,13 @@ const tools = [
                 return tool(examples, "expand_components").handler({ ...args, json });
             }
             const out = await tool(json2rc, "json2rc").handler({ ...args, ...(file ? { input_path: file } : {}) });
+            // The source JSON beside the .rc (doc-….rc -> doc-….json): publish works from the
+            // JSON (its design check, the page's JSON viewer) even when given the .rc.
+            try {
+                const rcPath = JSON.parse(out[0].text).rc_path;
+                const json = jsonOf({ ...args, json_path: file });
+                if (rcPath && json) writeFileSync(resolveIn(rcPath).replace(/\.rc$/i, ".json"), JSON.stringify(json));
+            } catch { /* nothing to keep */ }
             if (!check) return out;   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
             const v = await tool(render, "validate").handler({ ...vargs, ...(file ? { json_path: file } : {}), render: doRender ?? true });
@@ -275,6 +282,18 @@ const tools = [
                 reason: { type: "string", description: "With accept_design_warnings: why (logged)." } } },
             handler: async ({ accept_design_warnings, reason, controls: _ignored, ...args } = {}) => {
                 args = { ...args, controls: true };
+                // Always from the JSON: it is what the design check reads and what the page's JSON
+                // viewer shows. A .rc that convert wrote has its JSON beside it; a bare binary is refused.
+                if (!args.json && !args.json_path) {
+                    const sibling = args.rc_path ? args.rc_path.replace(/\.rc$/i, ".json") : null;
+                    if (sibling && existsSync(resolveIn(sibling))) {
+                        const { rc_path: _, ...rest } = args;
+                        args = { ...rest, json_path: sibling };
+                    } else {
+                        throw new Error("publish takes the JSON document (json or json_path), not a binary .rc: the page shows " +
+                            "its JSON and the design check reads it. Publish the JSON you converted.");
+                    }
+                }
                 const json = jsonOf(args);
                 const blocking = json ? blockingFindings(json) : [];
                 if (blocking.length && !(accept_design_warnings && reason)) {
