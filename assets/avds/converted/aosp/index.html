@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AOSP frameworks/base — converted AVDs</title>
+<style>
+  :root { --bg: #F5F7FA; --tile: #FFFFFF; --line: #DCE1E8; --text: #111827; --muted: #5A6475; --accent: #1565D8; }
+  :root[data-theme="dark"] { --bg: #101828; --tile: #1C2433; --line: #2A3342; --text: #E6EAF2; --muted: #8A94A6; --accent: #4DA3FF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+           padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  header a { color: var(--accent); }
+  button { font: inherit; color: var(--text); background: var(--tile); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  input[type=search] { font: inherit; color: var(--text); background: var(--tile); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 160px; }
+  main { padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); gap: 12px; }
+  .tile { background: var(--tile); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .stage { height: 120px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; min-width: 0; }
+  .stage canvas { display: block; max-width: 100%; }
+  .name { font-weight: 600; overflow-wrap: anywhere; font-size: 12px; }
+  .path { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+  .row button { padding: 2px 8px; font-size: 11px; }
+  .failed { margin-top: 24px; color: var(--muted); }
+  .failed li { overflow-wrap: anywhere; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title"></h1>
+  <input type="search" id="filter" placeholder="Filter by name" aria-label="Filter by name">
+  <button id="replay">Replay all</button>
+  <button id="theme" aria-pressed="false">Light</button>
+  <a href="../index.html">All sources</a>
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="failed" id="failed"></div>
+</main>
+<script src="../player.min.js"></script>
+<script src="avds.js"></script>
+<script>
+(function () {
+  "use strict";
+  var G = window.AVD_GALLERY, grid = document.getElementById("grid");
+  var theme = "dark";
+  try { theme = localStorage.getItem("avd-gallery-theme") || theme; } catch (e) {}
+  document.getElementById("title").textContent = G.title + " — " + G.items.length + " converted AVDs";
+  var tiles = [];
+
+  function setTheme(t) {
+    theme = t;
+    document.documentElement.setAttribute("data-theme", t);
+    var b = document.getElementById("theme");
+    b.textContent = t === "dark" ? "Light" : "Dark";
+    b.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+    try { localStorage.setItem("avd-gallery-theme", t); } catch (e) {}
+    tiles.forEach(function (tl) { if (tl.handle) tl.handle.player.setTheme(t); });
+  }
+
+  // a tile's player exists only while the tile is on screen
+  function start(tl) {
+    if (tl.handle) return;
+    var it = tl.item, box = Math.min(120, tl.stage.clientWidth || 120), d = window.devicePixelRatio || 1;
+    var s = Math.min(box / it.w, box / it.h), w = Math.max(1, Math.round(it.w * s)), h = Math.max(1, Math.round(it.h * s));
+    try {
+      tl.handle = RC.createPlayer(tl.stage, { theme: theme });
+      tl.handle.player.setDensity(d);
+      tl.handle.resize(Math.round(w * d), Math.round(h * d));
+      tl.handle.canvas.style.width = w + "px";
+      tl.handle.canvas.style.height = h + "px";
+      tl.handle.loadFromBase64(it.b).catch(function (e) { tl.stage.textContent = "load failed: " + e; });
+    } catch (e) {
+      tl.stage.textContent = "player error: " + e;
+    }
+  }
+  function stop(tl) {
+    if (!tl.handle) return;
+    tl.handle.destroy();
+    tl.handle = null;
+  }
+  function replay(tl) {
+    stop(tl);
+    start(tl);
+  }
+
+  G.items.forEach(function (it) {
+    var el = document.createElement("div");
+    el.className = "tile";
+    var stage = document.createElement("div");
+    stage.className = "stage";
+    var name = document.createElement("div");
+    name.className = "name";
+    name.textContent = it.n;
+    var path = document.createElement("div");
+    path.className = "path";
+    path.textContent = it.p;
+    path.title = "from " + it.s;
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("span");
+    info.textContent = (it.loop ? "loops" : it.d + " s") + " · " + it.w + "×" + it.h + " dp";
+    row.appendChild(info);
+    var tl = { item: it, el: el, stage: stage, handle: null };
+    if (!it.loop) {
+      var b = document.createElement("button");
+      b.textContent = "Replay";
+      b.setAttribute("aria-label", "Replay " + it.n);
+      b.addEventListener("click", function () { replay(tl); });
+      row.appendChild(b);
+    }
+    el.appendChild(stage); el.appendChild(name); el.appendChild(path); el.appendChild(row);
+    grid.appendChild(el);
+    tiles.push(tl);
+  });
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      var tl = tiles[+en.target.dataset.i];
+      if (en.isIntersecting) start(tl); else stop(tl);
+    });
+  }, { rootMargin: "200px" });
+  tiles.forEach(function (tl, i) { tl.el.dataset.i = i; io.observe(tl.el); });
+
+  document.getElementById("replay").addEventListener("click", function () {
+    tiles.forEach(function (tl) { if (tl.handle) replay(tl); });
+  });
+  document.getElementById("theme").addEventListener("click", function () { setTheme(theme === "dark" ? "light" : "dark"); });
+  document.getElementById("filter").addEventListener("input", function (e) {
+    var q = e.target.value.toLowerCase();
+    tiles.forEach(function (tl) { tl.el.classList.toggle("hidden", q && tl.item.n.toLowerCase().indexOf(q) < 0); });
+  });
+  setTheme(theme);
+
+  if (G.failed.length) {
+    var f = document.getElementById("failed");
+    var h = document.createElement("h2");
+    h.style.fontSize = "14px";
+    h.textContent = "Not converted (" + G.failed.length + ")";
+    var ul = document.createElement("ul");
+    G.failed.forEach(function (x) {
+      var li = document.createElement("li");
+      li.textContent = x.path + " — " + x.error;
+      ul.appendChild(li);
+    });
+    f.appendChild(h); f.appendChild(ul);
+  }
+})();
+</script>
+</body>
+</html>

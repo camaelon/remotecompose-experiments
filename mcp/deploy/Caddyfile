@@ -1,13 +1,17 @@
 # Caddy fetches and renews the TLS certificate for the domain by itself; the domain's DNS
 # A/AAAA record must point at this machine and ports 80/443 must be open.
 #
+#   https://DOMAIN/mcp             ->  remotecompose, the single front door (127.0.0.1:8814),
+#   https://DOMAIN/                     which also serves the example gallery (/, /components/,
+#                                      /play/<id>/), published pages (/pages/, /pages/<id>/)
+#                                      and rendered images (/images/<id>) at the root
 #   https://DOMAIN/json2rc/mcp     ->  json2rc   (127.0.0.1:8808)
 #   https://DOMAIN/rc-render/mcp   ->  rc-render (127.0.0.1:8809)
 #   https://DOMAIN/guide/mcp       ->  rc-guide  (127.0.0.1:8810)
 #   https://DOMAIN/deploy/mcp      ->  rc-deploy (127.0.0.1:8811), and its published pages,
 #   https://DOMAIN/deploy/pages/<id>/   which are public (no token) by design
-#   https://DOMAIN/pages           ->  rc-deploy's public index of those pages
-#                                      (off with MCP_PAGE_INDEX=0 in deploy.env)
+#   (the front door's /pages/ index lists pages published through it or through rc-deploy:
+#    they share the workspace; off with MCP_PAGE_INDEX=0)
 #   https://DOMAIN/inspect/mcp     ->  rc-inspect (127.0.0.1:8812)
 #   https://DOMAIN/examples/mcp    ->  rc-examples (127.0.0.1:8813), and its public pages:
 #   https://DOMAIN/examples/            the example grid, /examples/components/ the component
@@ -34,12 +38,8 @@ DOMAIN {
 	handle_path /examples/* {
 		reverse_proxy 127.0.0.1:8813
 	}
-	@pagesIndex path /pages /pages/
-	handle @pagesIndex {
-		rewrite * /pages/
-		reverse_proxy 127.0.0.1:8811
-	}
+	# Everything else: the front door (its MCP endpoint at /mcp and its public pages).
 	handle {
-		respond 404
+		reverse_proxy 127.0.0.1:8814
 	}
 }

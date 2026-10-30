@@ -1,0 +1,147 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 24,
+  "height": 24,
+  "contentDescription": "spinner"
+ },
+ "resources": {
+  "colors": {
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   }
+  },
+  "paths": {
+   "p0": [
+    {
+     "type": "moveTo",
+     "x": 12,
+     "y": 3
+    },
+    {
+     "type": "cubicTo",
+     "x1": 14.3869,
+     "y1": 3,
+     "x2": 16.6761,
+     "y2": 3.9482,
+     "x3": 18.364,
+     "y3": 5.636
+    },
+    {
+     "type": "cubicTo",
+     "x1": 20.0518,
+     "y1": 7.3239,
+     "x2": 21,
+     "y2": 9.6131,
+     "x3": 21,
+     "y3": 12
+    },
+    {
+     "type": "cubicTo",
+     "x1": 21,
+     "y1": 14.3869,
+     "x2": 20.0518,
+     "y2": 16.6761,
+     "x3": 18.364,
+     "y3": 18.364
+    },
+    {
+     "type": "cubicTo",
+     "x1": 16.6761,
+     "y1": 20.0518,
+     "x2": 14.3869,
+     "y2": 21,
+     "x3": 12,
+     "y3": 21
+    },
+    {
+     "type": "cubicTo",
+     "x1": 9.6131,
+     "y1": 21,
+     "x2": 7.3239,
+     "y2": 20.0518,
+     "x3": 5.636,
+     "y3": 18.364
+    },
+    {
+     "type": "cubicTo",
+     "x1": 3.9482,
+     "y1": 16.6761,
+     "x2": 3,
+     "y2": 14.3869,
+     "x3": 3,
+     "y3": 12
+    }
+   ]
+  },
+  "variables": {
+   "play": {
+    "value": -1000,
+    "export": true
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "onClick": {
+     "type": "valueFloatExpressionChange",
+     "target": "@play",
+     "value": "animationTime()"
+    }
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "t",
+     "value": "animationTime() - @play"
+    }
+   },
+   {
+    "variable": {
+     "name": "v1",
+     "value": "fract(max(@t, 0))"
+    }
+   },
+   {
+    "save": [
+     {
+      "scale": {
+       "sx": "componentWidth() / 24",
+       "sy": "componentHeight() / 24"
+      }
+     },
+     {
+      "save": [
+       {
+        "rotate": {
+         "angle": "360 * @v1",
+         "pivotX": 12,
+         "pivotY": 12
+        }
+       },
+       {
+        "paint": {
+         "color": "@colors.primary",
+         "strokeJoin": "miter",
+         "strokeCap": "round",
+         "style": "stroke",
+         "strokeWidth": 2.5
+        }
+       },
+       {
+        "drawPath": {
+         "path": "$paths.p0"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

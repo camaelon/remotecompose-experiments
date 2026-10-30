@@ -215,7 +215,9 @@ for (const { dir, kind, name } of dirs) {
         } catch (e) { problems.push(`render: ${e.message}`); }
         // 4. audit
         try {
-            const a = await inspect(new Uint8Array(bytes), "audit", { width: r.width, height: r.height });
+            // The authored JSON too: the design rules that need it (repeated subtrees, literal
+            // colours) look at what was written, before components expand.
+            const a = await inspect(new Uint8Array(bytes), "audit", { width: r.width, height: r.height, source_json: doc });
             derived.audit = a.counts;
             derived.audit_findings = a.findings.map((f) => `${f.severity}: ${f.code}`);
             for (const f of a.findings.filter((f) => f.severity !== "info")) {

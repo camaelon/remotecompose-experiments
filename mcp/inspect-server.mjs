@@ -13,7 +13,7 @@ import { rmSync, readFileSync } from "node:fs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
 import { inspect } from "./lib/inspector.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
-import { workspaceRoot } from "./lib/workspace.mjs";
+import { resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 
 // RC.pinClock counts seconds from this instant (players/typescript/src/core/ClockPin.ts).
 const PIN_EPOCH = new Date(2026, 0, 1, 0, 0, 0, 0).getTime();
@@ -74,6 +74,8 @@ function tool(name, title, description, task, extraProps = {}, { required = [], 
                     width: a.width, height: a.height, density: a.density, theme: a.theme, variables: a.variables,
                     clock: (clockMs(a.clock) - PIN_EPOCH) / 1000,
                     ...(mapOptions ? mapOptions(a) : {}),
+                    // The JSON as written, for the design audit (before library components expand).
+                    ...(doc.source === "json" && (task === "audit" || task === "summary") ? { source_json: sourceJson(a) } : {}),
                 };
                 for (const k of ["width", "height", "density"]) {
                     if (options[k] !== undefined && !(typeof options[k] === "number" && options[k] > 0)) throw new Error(`${k} must be a number > 0`);
@@ -86,6 +88,15 @@ function tool(name, title, description, task, extraProps = {}, { required = [], 
             }
         },
     };
+}
+
+/** The JSON document given (json or json_path), parsed; undefined when it cannot be read. */
+function sourceJson(a) {
+    try {
+        if (a.json !== undefined) return typeof a.json === "string" ? JSON.parse(a.json) : a.json;
+        if (a.json_path !== undefined) return JSON.parse(readFileSync(resolvePath(a.json_path, "json_path"), "utf8"));
+    } catch {}
+    return undefined;
 }
 
 const pick = (...keys) => (a) => Object.fromEntries(keys.filter((k) => a[k] !== undefined).map((k) => [k, a[k]]));
@@ -134,7 +145,12 @@ export const definition = {
             "(component ids and bounds, or operation indices): zero-size components, content overflowing " +
             "the layout box, deep nesting, empty containers; dead code (expressions nothing uses, unread " +
             "variables); clickable components without accessibility semantics or labels; continuous " +
-            "repaints; operations never executed over a short run; size dominated by one category or op. " +
+            "repaints; operations never executed over a short run; size dominated by one category or op; " +
+            "and design problems, each naming the fix: symbols/emoji drawn as text icons (glyph_icon), " +
+            "the same subtree written out many times instead of an inline component (repeated_subtree, " +
+            "JSON input only), dates typed in instead of read from the clock (hardcoded_date), and " +
+            "literal colours that cannot follow light/dark/mono (hardcoded_colors, JSON input only). " +
+            "Also float expressions longer than Android accepts (expression_too_long: over 32 entries, the document fails to load on a device although it renders here). " +
             "Re-run at other sizes (width/height) to find size-dependent problems.",
             "audit", { frames: { type: "integer", description: "Frames simulated for execution coverage (default 30)." } },
             { mapOptions: pick("frames"), examples: [{ what: "Audit at a phone size", arguments: { rc_path: "docs/card.rc", width: 360, height: 780 } }] }),

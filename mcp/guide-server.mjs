@@ -139,8 +139,13 @@ function endpoints(entry) {
 // ── Output ───────────────────────────────────────────────────────────
 
 function overviewMarkdown() {
+    const base = (process.env.MCP_PUBLIC_BASE_URL ?? "").replace(/\/+$/, "");
     const md = ["# RemoteCompose MCP servers", "",
-        `${SERVERS.length + 1} servers. Start here; \`describe\` gives every option of a server or tool.`, ""];
+        "**One endpoint for everything: `remotecompose`** " + (base ? `(${base}/mcp)` : "(remotecompose-server.mjs)") +
+        ". It regroups every tool below into eleven (build_kit, find, get, check_component, convert, render, audit, " +
+        "inspect, publish, pages, reference) with one workflow in its instructions; prefer it to configuring the " +
+        "single-purpose servers, which remain available.", "",
+        `${SERVERS.length + 1} single-purpose servers follow. \`describe\` gives every option of a server or tool.`, ""];
     for (const entry of SERVERS) {
         const { def } = entry;
         md.push(`## ${def.name}`, "", def.guide?.summary ?? "", "");

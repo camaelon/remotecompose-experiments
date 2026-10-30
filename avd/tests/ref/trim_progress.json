@@ -1,0 +1,224 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 48,
+  "height": 48,
+  "contentDescription": "trim progress"
+ },
+ "resources": {
+  "paths": {
+   "p0": [
+    {
+     "type": "moveTo",
+     "x": 24,
+     "y": 6
+    },
+    {
+     "type": "cubicTo",
+     "x1": 28.7739,
+     "y1": 6,
+     "x2": 33.3523,
+     "y2": 7.8964,
+     "x3": 36.7279,
+     "y3": 11.2721
+    },
+    {
+     "type": "cubicTo",
+     "x1": 40.1036,
+     "y1": 14.6477,
+     "x2": 42,
+     "y2": 19.2261,
+     "x3": 42,
+     "y3": 24
+    },
+    {
+     "type": "cubicTo",
+     "x1": 42,
+     "y1": 28.7739,
+     "x2": 40.1036,
+     "y2": 33.3523,
+     "x3": 36.7279,
+     "y3": 36.7279
+    },
+    {
+     "type": "cubicTo",
+     "x1": 33.3523,
+     "y1": 40.1036,
+     "x2": 28.7739,
+     "y2": 42,
+     "x3": 24,
+     "y3": 42
+    },
+    {
+     "type": "cubicTo",
+     "x1": 19.2261,
+     "y1": 42,
+     "x2": 14.6477,
+     "y2": 40.1036,
+     "x3": 11.2721,
+     "y3": 36.7279
+    },
+    {
+     "type": "cubicTo",
+     "x1": 7.8964,
+     "y1": 33.3523,
+     "x2": 6,
+     "y2": 28.7739,
+     "x3": 6,
+     "y3": 24
+    },
+    {
+     "type": "cubicTo",
+     "x1": 6,
+     "y1": 19.2261,
+     "x2": 7.8964,
+     "y2": 14.6477,
+     "x3": 11.2721,
+     "y3": 11.2721
+    },
+    {
+     "type": "cubicTo",
+     "x1": 14.6477,
+     "y1": 7.8964,
+     "x2": 19.2261,
+     "y2": 6,
+     "x3": 24,
+     "y3": 6
+    }
+   ]
+  },
+  "floatArrays": {
+   "k0": {
+    "value": [
+     0,
+     0.009283,
+     0.042969,
+     0.113874,
+     0.236595,
+     0.401428,
+     0.559729,
+     0.683594,
+     0.775544,
+     0.84375,
+     0.894457,
+     0.932026,
+     0.959352,
+     0.978503,
+     0.990974,
+     0.997844,
+     1
+    ],
+    "export": false
+   },
+   "k1": {
+    "value": [
+     0,
+     0,
+     0,
+     0,
+     0.00961,
+     0.050411,
+     0.124955,
+     0.231145,
+     0.360751,
+     0.5,
+     0.633887,
+     0.751099,
+     0.845813,
+     0.916594,
+     0.964462,
+     0.991489,
+     1
+    ],
+    "export": false
+   }
+  }
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize"
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "v0",
+     "value": "clamp((animationTime() - 0.3) / 0.8, 1, 0)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v1",
+     "value": "spline(@k0, @v0)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v2",
+     "value": "clamp(animationTime() / 0.8, 1, 0)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v3",
+     "value": "spline(@k1, @v2)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v4",
+     "value": "clamp(animationTime() / 1.1, 1, 0)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v5",
+     "value": "fract(0.5 * @v1 + 0.6 * @v4 + 1)"
+    }
+   },
+   {
+    "variable": {
+     "name": "v6",
+     "value": "fract(0.75 * @v3 + 0.6 * @v4 + 1)"
+    }
+   },
+   {
+    "save": [
+     {
+      "scale": {
+       "sx": "componentWidth() / 48",
+       "sy": "componentHeight() / 48"
+      }
+     },
+     {
+      "paint": {
+       "color": "#FFE91E63",
+       "strokeJoin": "miter",
+       "strokeCap": "square",
+       "style": "stroke",
+       "strokeWidth": 4
+      }
+     },
+     {
+      "drawTweenPath": {
+       "path1": "$paths.p0",
+       "path2": "$paths.p0",
+       "tween": 0,
+       "start": "ifElse(@v5, 0, step(0.0001, abs(0.5 * @v1) + abs(1 - 0.75 * @v3)))",
+       "stop": "ifElse(ifElse(@v6, 1, @v5 - @v6), 1, step(0.0001, abs(0.5 * @v1) + abs(1 - 0.75 * @v3)))"
+      }
+     },
+     {
+      "drawTweenPath": {
+       "path1": "$paths.p0",
+       "path2": "$paths.p0",
+       "tween": 0,
+       "start": 0,
+       "stop": "ifElse(0, @v6, @v5 - @v6) * (1 - step(0.0001, abs(0.5 * @v1) + abs(1 - 0.75 * @v3)))"
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

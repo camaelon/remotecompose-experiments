@@ -1,0 +1,68 @@
+{
+ "component": "Icon",
+ "version": 1,
+ "summary": "A Material Symbols icon (4,157 icons, outlined, rounded or sharp, plain or filled) drawn as a vector path, tinted with one colour. Use it for every symbol on screen instead of a text glyph or emoji.",
+ "params": {
+  "name": {
+   "type": "string",
+   "required": true,
+   "static": true,
+   "doc": "The icon's Material Symbols name, e.g. wifi, home, settings, battery_charging_full, arrow_upward. Search with find kind \"icons\" (by name, tag or category)"
+  },
+  "style": {
+   "type": "enum",
+   "values": ["outlined", "rounded", "sharp"],
+   "default": "outlined",
+   "doc": "The icon family's style; keep one style across a screen"
+  },
+  "filled": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "The filled variant: for a selected or active state (a selected tab, a liked heart)"
+  },
+  "size": {
+   "type": "float",
+   "default": 24,
+   "static": true,
+   "doc": "Size in dp (icons are designed at 24; 20 to 48 work well)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "Tint; a theme colour keeps light, dark and mono right"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility label. Give one when the icon means something on its own (a status, an icon-only button); leave it out when a text next to it says the same"
+  }
+ },
+ "capabilities": ["draw.path", "image.icon", "a11y.labels"],
+ "call": {
+  "Icon": {
+   "name": "wifi",
+   "label": "Wi-Fi connected"
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {"size": "@size"},
+    {"semantics": {"contentDescription": "@label"}}
+   ],
+   "commands": [
+    {"save": [
+     {"scale": {"sx": "componentWidth() / 960", "sy": "componentHeight() / 960"}},
+     {"paint": {"color": "@color", "style": "fill"}},
+     {"drawPath": {"path": {"$icon": {"name": "@name", "style": "@style", "filled": "@filled"}}}}
+    ]}
+   ]
+  }
+ },
+ "pitfalls": [
+  "Icons replace text glyphs and emoji (◐ ★ ☀ ✓): those render differently per font, can't take theme colours and are usually only approximations",
+  "The name must exist: an unknown name fails with the closest matches; search by meaning with find kind \"icons\" (tags such as 'battery', 'signal', 'weather')",
+  "Each icon's path is stored once per document however many times it is called; different icons each add about 0.5 to 2 KB",
+  "autoMirrored icons (arrows, back) are not flipped for right-to-left layouts"
+ ]
+}

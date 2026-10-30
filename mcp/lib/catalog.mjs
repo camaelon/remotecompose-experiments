@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLibrary } from "./components.mjs";
+import { loadLibrary, loadIconCatalog } from "./components.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -15,7 +15,9 @@ const VOCAB_PATH = process.env.RC_EXAMPLES_VOCAB ?? path.join(ROOT, "docs", "exa
 
 const STOP = new Set(["a", "an", "the", "and", "or", "with", "of", "for", "to", "in", "on", "that", "it",
     "my", "me", "some", "show", "showing", "make", "build", "create", "want", "need", "like", "using",
-    "use", "which", "when", "from", "by", "as", "at", "is", "be", "can", "should", "one", "two", "into"]);
+    "use", "which", "when", "from", "by", "as", "at", "is", "be", "can", "should", "one", "two", "into",
+    "this", "these", "those", "your", "our", "its", "please", "app", "application", "let", "have", "get",
+    "i", "we", "you", "also", "so", "are", "will", "would", "could", "about", "nice", "good", "simple", "new", "whether", "shows"]);
 
 let cache = null;
 
@@ -25,7 +27,8 @@ export function normalizeWords(s) {
         .split(/\s+/).filter(Boolean).map(singular);
 }
 function singular(w) {
-    if (w.length <= 3 || !w.endsWith("s") || w.endsWith("ss") || w.includes(".")) return w;
+    // Not plurals: this, status, bus, analysis, canvas, gps.
+    if (w.length <= 3 || !w.endsWith("s") || /(ss|is|us|as|ps)$/.test(w) || w.includes(".")) return w;
     if (/(ch|sh|x|z|ss)es$/.test(w)) return w.slice(0, -2);   // switches, boxes
     if (/[^aeiou]ies$/.test(w)) return w.slice(0, -3) + "y";  // entries
     return w.slice(0, -1);
@@ -91,6 +94,9 @@ export function resolveTerms(input) {
         for (let i = 0; i < words.length;) {
             let hit = null, n = Math.min(C.maxPhrase, words.length - i);
             for (; n > 0; n--) {
+                // A stopword alone is never a term ("for" is a synonym of loops only in
+                // "for loop"; "an app for the moon" is not asking for one).
+                if (n === 1 && STOP.has(words[i])) continue;
                 const p = words.slice(i, i + n).join(" ");
                 if (C.phrases.has(p)) { hit = { phrase: p, ids: C.phrases.get(p) }; break; }
             }
@@ -235,9 +241,16 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
             const { primary, secondary } = exampleCaps(e);
             const covers = [...remaining].filter((c) => primary.includes(c) || secondary.includes(c));
             if (!covers.length) continue;
-            const useBonus = (r.use_cases.some((u) => (e.use_cases ?? []).includes(u)) ? 0.5 : 0)
+            const titleWords = ` ${normalizeWords(e.title ?? "").join(" ")} `;
+            const titleBonus = r.matched.some((m) => titleWords.includes(` ${m.term} `.replace(/^ this /, " "))) ? 0.5 : 0;
+            // An example built with a component the goal asks for shows that component in use.
+            const compBonus = r.components.some((c) => (e.components ?? []).includes(c)) ? 1 : 0;
+            const useBonus = titleBonus + compBonus + (r.use_cases.some((u) => (e.use_cases ?? []).includes(u)) ? 0.5 : 0)
                 + (r.form_factors.includes(e.form_factor) ? 0.5 : 0);
-            const value = (covers.length + useBonus) / (1 + 0.25 * (e.level ?? 1));
+            // An example ABOUT a capability (primary) teaches it better than one that uses it
+            // in passing (secondary): "this month" wants the calendar, not a text demo with a date.
+            const weight = covers.reduce((n, c) => n + (primary.includes(c) ? 1 : 0.5), 0);
+            const value = (weight + useBonus) / (1 + 0.25 * (e.level ?? 1));
             if (!best || value > best.value || (value === best.value && (e.derived?.op_count ?? 0) < (best.e.derived?.op_count ?? 0))) {
                 best = { e, covers, value };
             }
@@ -248,6 +261,13 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         kit.push(best);
     }
     kit.sort((a, b) => a.e.level - b.e.level);
+    const needs = needsComponent(r, C);
+    const icons = suggestIcons(goal, r);
+    // Suggested icons are drawn with the Icon component: list it with its call and params.
+    if (icons?.suggestions.length && !comps.some((c) => c.name === "Icon")) {
+        const icon = componentSummary("Icon");
+        if (icon) comps.push(icon);
+    }
     return {
         resolved: { capabilities: [...needed], use_cases: r.use_cases, form_factors: r.form_factors,
                     components: r.components, matched: r.matched },
@@ -255,9 +275,100 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         components: comps,
         examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers }), contributes: k.covers })),
         not_covered: [...remaining],
-        next_steps: "Copy the snippets (and component calls) into one document, then rc-render.validate, " +
-                    "render_rc and rc-inspect.audit it. Components expand automatically in every tool.",
+        ...(needs ? { needs_component: needs } : {}),
+        ...(icons ? { icons } : {}),
+        design: designRules(goal, r, needed),
+        next_steps: [
+            needs ? `Write the component(s) in needs_component first and check_component each with a sweep until every rendered state is right.` : null,
+            "Assemble one document: library and inline component calls, the examples' snippets, values computed in the document rather than pasted.",
+            "rc-render.validate and render_rc it, look at the image, and rc-inspect.audit it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
+            "Components expand automatically in every tool.",
+        ].filter(Boolean),
     };
+}
+
+/**
+ * Icons for the goal: Material Symbols matching its content words (the matched terms and the
+ * unmatched ones), so a symbol on screen is an {"Icon": ...} call, not a glyph or a drawing.
+ */
+function suggestIcons(goal, r) {
+    let out = [];
+    const terms = [...new Set([...r.unmatched_terms, ...r.matched.map((m) => m.term)])].filter((t) => t.length > 2);
+    try {
+        for (const t of terms) {
+            const hit = findIcons({ query: t, limit: 3 }).icons.map((i) => i.name);
+            if (hit.length) out.push({ for: t, icons: hit });
+        }
+    } catch { return undefined; }   // no icon catalog on this install
+    return {
+        suggestions: out.slice(0, 8),
+        how: "Every symbol on screen (status, action, navigation, category) is {\"Icon\": {\"name\": ...}} (style outlined|rounded|sharp, filled for a selected state, size, color, label). find kind \"icons\" searches 4,157 Material Symbols by meaning.",
+    };
+}
+
+// Examples that teach drawing a shape from a value, for a component the library lacks.
+const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];
+// Library components to model a new one on: a value-driven drawing, a family of pictograms.
+const MODEL_COMPONENTS = ["ProgressRing", "WeatherIcon", "Gauge"];
+
+/**
+ * The words of the goal that nothing in the catalog or library stands for. When one names
+ * something to show (an object, a symbol, a quantity: a moon phase, a wind arrow, a tide), the
+ * model must draw it, and a component is how to draw it once, correctly, and check it: the
+ * failure this prevents is a text glyph (◐) or N hand-pasted canvases, one of them wrong.
+ */
+function needsComponent(r, C) {
+    const terms = r.unmatched_terms.filter((w) => w.length > 2);
+    if (!terms.length) return null;
+    const pick = (ids) => ids.map((id) => C.examples.find((e) => e.id === id)).filter(Boolean)
+        .map((e) => ({ id: e.id, title: e.title, folder: e.folder }));
+    return {
+        terms,
+        why: `Nothing in the catalog or the component library stands for: ${terms.join(", ")}. If one of ` +
+             "them is something to SHOW (an object, a symbol, a state or quantity such as a phase or a level), " +
+             "draw it with a component you define, not a text glyph (◐ ☾ ★ ☀) and not a canvas pasted once per use.",
+        recipe: [
+            "First check whether an icon already shows it (find kind \"icons\"; a static symbol needs no new component). Otherwise name the component after the thing (MoonPhase, WindArrow). Its params are what varies, normalised: a fraction 0..1 for anything cyclic or partial (phase, level, progress), an angle in degrees, an enum for discrete kinds; plus size and color with theme defaults (@colors.*).",
+            "Draw in a fixed unit box (e.g. 0..100) and scale to the size once; derive every coordinate from the params with expressions, so one definition serves every value. Prefer circles, arcs, clips and pathExpression over SVG path strings.",
+            "Work out the geometry of each regime separately before writing it: the ranges of the param where the shape changes kind (which side is filled, whether a curve bulges in or out, which half of a cycle it is, below or above a threshold). Write down what each regime must look like, then express the switch with step()/ifElse (see EXP-06).",
+            "check_component with sweep: {param, values} covering both ends, the midpoints and both halves of anything cyclic (e.g. phase 0, .125, .25, ..., .875). Compare every cell of the contact sheet with what the thing really looks like; fix and repeat until all are right.",
+            "Define it once under the document's top-level `components` and call it wherever it appears (every day cell, the hero, the legend), passing the computed value.",
+        ],
+        learn_from: {
+            examples: pick(DRAWING_KIT),
+            components: MODEL_COMPONENTS.filter((n) => C.library.components.has(n)),
+            guide: "component_authoring_guide",
+        },
+    };
+}
+
+// Phrases that mean the content depends on the current date or time.
+const NOW_WORDS = /\b(today|tonight|now|current|this (day|week|month|year)|next (week|month)|upcoming|calendar|month|week|daily|weekly)\b/;
+// Words for a quantity worth a visual.
+const QUANTITY_WORDS = /\b(percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left)\b/;
+
+/** Design rules for this goal: when to use which capability, not only how. */
+function designRules(goal, r, needed) {
+    const g = String(goal).toLowerCase();
+    const rules = [
+        { rule: "Show meaning with drawing, not characters", how: "A symbol (status, action, navigation, category) is an Icon ({\"Icon\": {\"name\": \"wifi\"}}; see icons, and find kind \"icons\"); a visual that depends on a value (a phase, a level, a progress) is a library component or one you define (see needs_component). Never text glyphs or emoji (◐ ★ ☀ ✓): they render inconsistently, can't be themed, sized or animated, and are usually approximations." },
+        { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
+        { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
+        { rule: "Adapt to the size", how: "Fill the width, scale drawings to their box (componentWidth()/componentHeight()), and check a narrow and a wide render." },
+    ];
+    if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
+        rule: "Compute dates from the clock",
+        how: "\"this month\", \"today\", \"now\": the month name, its number of days, the weekday of the 1st, today's highlight and anything derived (a moon phase, a countdown) are expressions over the time variables, so the document stays right tomorrow and next month. Don't paste values computed offline, and don't state precise data (event times) you cannot compute or source.",
+    });
+    if (QUANTITY_WORDS.test(g)) rules.push({
+        rule: "Give quantities a visual",
+        how: "A value with a range or a meaning (percent, level, phase, trend) gets a drawing: ProgressBar, ProgressRing, Gauge, Sparkline, BarChart, or your own component; the number as text is secondary.",
+    });
+    rules.push({
+        rule: "Look before answering",
+        how: "Render the document (render_rc) and look at it; for every component you wrote, check_component with a sweep over its parameter range. Check the states a user will reach (other days, other values, light and dark), not only the first render.",
+    });
+    return rules;
 }
 
 export function componentSummary(name) {
@@ -314,5 +425,46 @@ export function listCapabilities({ prefix = "", with_counts = true } = {}) {
         use_cases: Object.keys(C.vocab.use_cases), form_factors: Object.keys(C.vocab.form_factors),
         components: [...C.library.components.keys()].sort(),
         examples: C.examples.length,
+    };
+}
+
+/**
+ * Material Symbols icons for a query: name words, Google's search tags and categories, most
+ * popular first among equal scores. Each result carries its call snippet.
+ */
+export function findIcons({ query = "", category, limit = 12 } = {}) {
+    const c = loadIconCatalog();
+    // Only the emptiest words: "like", "show" or "new" are meaningful icon queries.
+    const ICON_STOP = new Set(["a", "an", "the", "of", "for", "with", "and", "or", "to", "icon", "icons"]);
+    const words = String(query).toLowerCase().split(/[^a-z0-9]+/).filter((w) => w && !ICON_STOP.has(w));
+    const stem = (w) => singular(w);
+    const q = words.map(stem);
+    const scored = [];
+    for (const icon of c.icons) {
+        if (category && !(icon.categories ?? []).some((x) => x.toLowerCase() === String(category).toLowerCase())) continue;
+        const nameWords = icon.name.split("_").map(stem);
+        const tags = (icon.tags ?? []).map((t) => t.toLowerCase());
+        const tagWords = new Set(tags.flatMap((t) => t.split(/[^a-z0-9]+/)).map(stem));
+        let score = 0;
+        if (q.length && icon.name === q.join("_")) score += 10;
+        for (const w of q) {
+            if (nameWords.includes(w)) score += 2;
+            else if (tagWords.has(w)) score += 1.5;
+        }
+        if (q.length > 1 && tags.includes(words.join(" "))) score += 3;
+        if (!q.length) score = 1;
+        // Popularity (Google's usage count, median ~240, max ~180k) as up to ~4.4 points: a
+        // common icon tagged with the word ("favorite" for heart) beats a rare one named with it.
+        if (score > 0) scored.push({ icon, score: score + Math.log10(1 + (icon.popularity ?? 0)) / 1.2 });
+    }
+    scored.sort((a, b) => b.score - a.score || (b.icon.popularity ?? 0) - (a.icon.popularity ?? 0));
+    return {
+        count: scored.length,
+        icons: scored.slice(0, limit).map(({ icon }) => ({
+            name: icon.name, categories: icon.categories ?? [], tags: (icon.tags ?? []).slice(0, 12),
+            styles: icon.styles, filled: (icon.fills ?? []).length > 1,
+            call: { Icon: { name: icon.name } },
+        })),
+        usage: "Call {\"Icon\": {\"name\": ...}} (style outlined|rounded|sharp, filled, size, color, label); see get Icon.",
     };
 }

@@ -332,6 +332,40 @@ Traps the library hit (the linter catches the first four):
   Start each branch that later fades with `{"alpha": 1}` in its first paint (Switch and
   Checkbox mono).
 
+## Drawing something the library doesn't have
+
+When a screen needs to show a thing the library has no component for (a moon phase, a wind
+arrow, a tide curve, a fuel gauge of an unusual shape), `build_kit` lists it under
+`needs_component`. Write a component for it rather than:
+
+- a text glyph or emoji (◐ ☾ ★ ☀ ✓): it renders differently per font, can't take theme colours
+  or sizes, and is usually only an approximation of the state it should show;
+- the same canvas pasted for every occurrence with one number changed: it is large, and one
+  wrong copy, or one wrong half of the range, goes unnoticed.
+
+How:
+
+1. **Params are what varies, normalised.** A fraction 0..1 for anything partial or cyclic
+   (phase, level, progress), degrees for a direction, an enum for discrete kinds; `size` and
+   `color` with theme defaults.
+2. **Draw in a unit box** (say 0..100) and scale to `size` once; every coordinate is an
+   expression of the params, so one definition draws every state.
+3. **List the regimes before writing the geometry.** Where does the shape change kind as the
+   param moves: which side is filled, whether a curve bulges in or out, the first or second
+   half of a cycle, below or above a threshold? Write down what each regime must look like,
+   then switch with `step()` / `ifElse` (EXP-06). Most drawing bugs live in the regime you
+   didn't picture.
+4. **Sweep it.** `check_component` with `sweep: {"param": "phase", "values": [0, 0.125, 0.25,
+   0.375, 0.5, 0.625, 0.75, 0.875]}` renders one captioned cell per value. Cover both ends, the
+   middle and both halves of a cycle, and compare every cell with the real thing. Iterate until
+   all are right.
+5. **Call it everywhere it appears** (each list row or day cell, the hero, the legend), with
+   the value computed in the document (from the clock, a host variable, an expression), not
+   values computed offline and pasted.
+
+Good models: ProgressRing (a drawing driven by one fraction), Gauge (zones and a needle),
+WeatherIcon (a family of pictograms from one enum).
+
 ## Workflow
 
 1. `find_components` to check it doesn't exist yet. Then `get_component` with
@@ -339,8 +373,9 @@ Traps the library hit (the linter catches the first four):
 2. Write the definition.
 3. Run `check_component {"definition": ..., "variables": {...}}`. It lints, expands the call,
    converts, renders it in light, dark and mono, and measures the cost per instance in both
-   modes (and why a call can't be a pattern) and the bytes per theme. Iterate until there are no errors
-   or warnings and the render looks right.
+   modes (and why a call can't be a pattern) and the bytes per theme. For anything drawn from
+   a value, add `sweep` to see every state in one contact sheet. Iterate until there are no
+   errors or warnings and every render looks right.
 4. Use it inline under `components` in your document. Or, to add it to the library, add
    the folder and run `node examples/tools/build.mjs <Name> --java`, which requires bytes
    identical to the Java parser's output, and add it to a CMP gallery.

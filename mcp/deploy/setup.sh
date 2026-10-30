@@ -9,8 +9,9 @@
 #   - creates the `rcmcp` user and the workspace /var/lib/rcmcp,
 #   - writes /etc/rcmcp/*.env, generating a token the first time,
 #   - builds the TypeScript web player once (rc-deploy embeds it in the pages it makes),
-#   - installs and (re)starts rcmcp@json2rc, rcmcp@rc-render, rcmcp@guide, rcmcp@deploy and
-#     rcmcp@inspect, rcmcp@examples,
+#   - installs and (re)starts rcmcp@remotecompose (the single front door over all of them),
+#     and rcmcp@json2rc, rcmcp@rc-render, rcmcp@guide, rcmcp@deploy, rcmcp@inspect and
+#     rcmcp@examples,
 #     and the Caddy site.
 set -euo pipefail
 
@@ -28,7 +29,7 @@ apt-get update -qq
 # needed, no X server. Without a font Skia draws text as nothing, silently: fonts-dejavu-core.
 apt-get install -y -qq git cmake pkg-config build-essential curl ca-certificates rsync \
     libfontconfig1-dev libfreetype-dev libgl1-mesa-dev libglfw3-dev \
-    libx11-dev libxext-dev libxrender-dev fonts-dejavu-core nodejs
+    libx11-dev libxext-dev libxrender-dev fonts-dejavu-core nodejs python3
 if ! command -v caddy >/dev/null && ! apt-get install -y -qq caddy; then
     echo "caddy is not in this distro's repositories; add Caddy's own apt repo first:" >&2
     echo "  https://caddyserver.com/docs/install#debian-ubuntu-raspbian" >&2
@@ -51,6 +52,9 @@ if [[ "$SRC" != "$DEST" ]]; then
     rsync -a --delete \
         --exclude .git --exclude node_modules --exclude 'players/cpp/build*' \
         --exclude 'players/cpp/apps/iosViewer' --exclude 'players/compose' \
+        --exclude 'assets/icons/converted/material-symbols/*/' \
+        --exclude 'assets/icons/converted/material-symbols/.stamp' \
+        --exclude 'assets/icons/converted/gallery/' \
         "$SRC/" "$DEST/"
 fi
 
@@ -63,6 +67,12 @@ echo "== web player"
 # The services cannot write the checkout, so the bundle is built here, as root, once.
 (cd "$DEST" && npm ci --no-audit --no-fund --loglevel=error)
 node "$DEST/mcp/lib/web-player.mjs" --build
+
+echo "== icons"
+# The converted Material Symbols are not in git (25k files): regenerate them from
+# assets/icons/source. Incremental (the rsync above keeps them), so a re-run is quick. The
+# Icon component reads them, and the gallery page needs its data chunks.
+python3 "$DEST/avd/convert_icons.py"
 
 echo "== user, workspace, config"
 id rcmcp &>/dev/null || useradd --system --home /var/lib/rcmcp --shell /usr/sbin/nologin rcmcp
@@ -89,12 +99,15 @@ printf 'MCP_HTTP_PORT=8810\nMCP_PUBLIC_BASE_URL=https://%s\n' "$DOMAIN" > /etc/r
 printf 'MCP_HTTP_PORT=8811\nMCP_PUBLIC_URL=https://%s/deploy\n' "$DOMAIN" > /etc/rcmcp/deploy.env
 echo "MCP_HTTP_PORT=8812" > /etc/rcmcp/inspect.env
 echo "MCP_HTTP_PORT=8813" > /etc/rcmcp/examples.env
+# The front door serves at the domain root: its public routes (example gallery, playgrounds,
+# published pages, rendered images) live there too.
+printf 'MCP_HTTP_PORT=8814\nMCP_PUBLIC_URL=https://%s\n' "$DOMAIN" > /etc/rcmcp/remotecompose.env
 
 echo "== services"
 install -m 644 "$DEST/mcp/deploy/rcmcp@.service" /etc/systemd/system/rcmcp@.service
 systemctl daemon-reload
-systemctl enable --now rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect rcmcp@examples
-systemctl restart rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect rcmcp@examples
+systemctl enable --now rcmcp@remotecompose rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect rcmcp@examples
+systemctl restart rcmcp@remotecompose rcmcp@json2rc rcmcp@rc-render rcmcp@guide rcmcp@deploy rcmcp@inspect rcmcp@examples
 
 echo "== caddy"
 install -d /etc/caddy/sites
@@ -103,7 +116,7 @@ grep -q 'import sites/\*' /etc/caddy/Caddyfile 2>/dev/null || echo 'import sites
 systemctl reload caddy || systemctl restart caddy
 
 # Give each server a few seconds to come up; on failure show why, rather than pointing at logs.
-for svc in json2rc:8808 rc-render:8809 guide:8810 deploy:8811 inspect:8812 examples:8813; do
+for svc in remotecompose:8814 json2rc:8808 rc-render:8809 guide:8810 deploy:8811 inspect:8812 examples:8813; do
     name="${svc%%:*}" port="${svc##*:}"
     for _ in $(seq 20); do curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1 && break; sleep 0.5; done
     if ! curl -fsS "http://127.0.0.1:$port/healthz" >/dev/null 2>&1; then
@@ -116,8 +129,14 @@ done
 TOKEN="$(sed -n 's/^MCP_TOKEN=//p' /etc/rcmcp/common.env)"
 cat <<EOF
 
-Done. Endpoints:
-  https://$DOMAIN/guide/mcp       start here: describes the others
+Done. Endpoint (one for everything):
+  https://$DOMAIN/mcp             remotecompose: build_kit, find, get, check_component, convert,
+                                  render, audit, inspect, publish, pages, reference
+  https://$DOMAIN/                browse the examples (and /components/), public; published
+                                  pages at https://$DOMAIN/pages/
+
+The single-purpose servers are still there:
+  https://$DOMAIN/guide/mcp       describes the others
   https://$DOMAIN/json2rc/mcp
   https://$DOMAIN/rc-render/mcp
   https://$DOMAIN/deploy/mcp      published pages: https://$DOMAIN/pages
@@ -126,9 +145,8 @@ Done. Endpoints:
   https://$DOMAIN/examples/        browse the examples (and /examples/components/), public
 Token (keep secret): $TOKEN
 
-Claude Code:  claude mcp add --transport http rc-render https://$DOMAIN/rc-render/mcp --header "Authorization: Bearer $TOKEN"
-              (same for json2rc, guide, deploy, inspect and examples)
-claude.ai:    add a custom connector with URL https://$DOMAIN/rc-render/mcp/$TOKEN
-              (and the same for /json2rc/, /guide/, /deploy/, /inspect/ and /examples/)
+Claude Code:  claude mcp add --transport http remotecompose https://$DOMAIN/mcp --header "Authorization: Bearer $TOKEN"
+              (or a single-purpose one: https://$DOMAIN/rc-render/mcp, /json2rc/, /guide/, ...)
+claude.ai:    add a custom connector with URL https://$DOMAIN/mcp/$TOKEN
 Logs:         journalctl -u 'rcmcp@*' -f
 EOF

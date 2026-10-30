@@ -472,3 +472,25 @@ test("componentTraps in the document overrides the default traps", () => {
     assert.equal(compile(doc, { Label }).modes.Label, "expand");
     assert.equal(compile({ ...doc, componentTraps: ["color"] }, { Label }).modes.Label, "pattern");
 });
+
+test("names a body declares are scoped per call", () => {
+    // A canvas `variable` is document-global: two calls sharing "c" would both draw with
+    // the last one's value. Each call gets its own name, and its references follow.
+    const Dot = { params: { x: { type: "float", required: true } }, body: { canvas: { modifiers: [{ size: 10 }], commands: [
+        { variable: { name: "c", value: "@x * 2" } },
+        { pathExpression: { id: "p", expressionX: "@c", expressionY: "0", start: 0, end: 1, count: 2 } },
+        { drawCircle: { cx: "@c", cy: 5, radius: 2 } }, { drawPath: { path: "p" } }] } } };
+    const doc = { header: HEADER, root: { column: { children: [{ Dot: { x: 1 } }, { Dot: { x: 2 } }] } } };
+    const out = JSON.stringify(compile(doc, { Dot }).doc);
+    const names = [...out.matchAll(/"name":"(\w+)"/g)].map((m) => m[1]);
+    assert.equal(new Set(names).size, 2, out);
+    assert.ok(!/"@c"|"path":"p"/.test(out), out);
+    for (const n of names) assert.ok(out.includes(`"cx":"@${n}"`), n);
+});
+
+test("a component made of canvas commands is never a pattern", () => {
+    const Mark = { params: { r: { type: "float", default: 2 } }, body: [{ paint: { color: "#FF000000" } }, { drawCircle: { cx: 5, cy: 5, radius: "@r" } }] };
+    const doc = { header: HEADER, componentMode: "pattern", root: { canvas: { modifiers: [{ size: 10 }], commands: [{ Mark: { r: 1 } }, { Mark: { r: 3 } }] } } };
+    assert.equal(compile(doc, { Mark }).modes.Mark, "expand");
+    assert.ok(jsonToRc({ ...doc, components: { Mark } }).length > 0);
+});

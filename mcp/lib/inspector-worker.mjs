@@ -14,6 +14,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { parentPort, workerData } from "node:worker_threads";
+import { designAudit, textAudit } from "./design-audit.mjs";
 import { installEnvironment } from "./inspector-env.mjs";
 
 const { bundlePath, panelsDir, bytes, task, options: O = {} } = workerData;
@@ -365,6 +366,28 @@ function insideViewport(c, byKey) {
     return false;
 }
 
+// System variables that carry the date (players/typescript/src/json2rc/Expr.ts): month,
+// weekday, day of month, epoch seconds, day of year, year.
+const DATE_VARS = new Set([9, 11, 12, 32, 34, 35]);
+
+function designFindings() {
+    if (O.source_json !== undefined && O.source_json !== null) return designAudit(O.source_json);
+    const texts = ops.filter((op) => nameOf(op) === "TextData" && typeof op.mText === "string").map((op) => op.mText);
+    let clock = false;
+    for (const op of ops) {
+        let ids = [];
+        try { ids = OPP.getOpVarReferences(op); } catch {}
+        if (ids.some((id) => DATE_VARS.has(id))) { clock = true; break; }
+    }
+    if (!clock) {
+        clock = graph().nodes.some((n) => [...(n.inputs ?? [])].some((x) => {
+            const m = /^sys_(\d+)$/.exec(String(x));
+            return m && DATE_VARS.has(Number(m[1]));
+        }));
+    }
+    return textAudit(texts, { readsClock: clock });
+}
+
 function audit() {
     const findings = [];
     const add = (severity, code, title, message, extra = {}) => findings.push({ severity, code, title, message, ...extra });
@@ -472,6 +495,27 @@ function audit() {
         add("info", "size_single_op", `One operation is ${Math.round((top.s / bc.total) * 100)}% of the file`,
             `#${top.i} ${nameOf(ops[top.i])}, ${top.s} bytes — usually an embedded bitmap or font.`, { op: { index: top.i, op: nameOf(ops[top.i]) } });
     }
+
+    // Design: valid, but built in a way that makes it worse (design-audit.mjs). From the JSON
+    // as written when there is one; from the text data alone for a binary document.
+    try { for (const f of designFindings()) findings.push(f); } catch {}
+
+    // Android caps a float expression at 32 entries (Limits.MAX_EXPRESSION_SIZE): the Java
+    // parser and player both reject a longer one, while json2rc, rc2image and the TS player
+    // accept it, so the document only fails on a device (EXAMPLES_FINDINGS J39, I19).
+    try {
+        const long = [];
+        for (const op of ops) {
+            if (!(opcodeOf(op) === 81 || nameOf(op).includes("FloatExpression"))) continue;
+            const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
+            if (bits && bits.length > 32) long.push({ index: idxOf(op), entries: bits.length, expression: exprOf(op) });
+        }
+        if (long.length) add("warning", "expression_too_long",
+            `${long.length} float expression(s) longer than 32 entries`,
+            `Android rejects a float expression over 32 entries (operands and operators); the document fails to load there although it renders here. Longest: ${Math.max(...long.map((l) => l.entries))} entries. ` +
+            "Split it: compute parts into named `variable`s (or resources.variables) and combine them.",
+            { count: long.length, examples: long.slice(0, 5) });
+    } catch {}
 
     // Execution coverage over a short run.
     const cov = runCoverage(O.frames ?? 30);

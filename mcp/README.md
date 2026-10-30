@@ -1,6 +1,25 @@
 # MCP servers
 
-Five [MCP](https://modelcontextprotocol.io) servers. Over stdio they're registered for
+**Use `remotecompose-server.mjs`: one server for everything.** It imports the single-purpose
+servers below and regroups their tools into eleven, with one workflow in its instructions
+(deployed at `https://DOMAIN/mcp`, which also serves the example gallery and published pages
+at the domain root):
+
+| tool | what | from |
+| :--- | :--- | :--- |
+| `build_kit` | start here: components, examples, design rules and `needs_component` for a goal | rc-examples |
+| `find` (`kind`: examples, components, icons, capabilities, terms) | search the catalog and the 4,157 Material Symbols icons (drawn with the `Icon` component) | rc-examples |
+| `get` | one example (by id) or component (by name) | rc-examples |
+| `check_component` | lint, expand, render, size and `sweep` a component you write | rc-examples |
+| `convert` (`check`, `expanded`) | JSON to .rc; validate it; or show the expanded JSON | json2rc, rc-render, rc-examples |
+| `render` | render a document to PNG (states, sizes, themes, touch) | rc-render |
+| `audit` | problems and design issues, each naming the fix | rc-inspect |
+| `inspect` (`task`: summary, layout, variables, interact, ...) | answer a question about a document | rc-inspect |
+| `publish`, `pages` | package as a web page; list or unpublish pages | rc-deploy |
+| `reference` (`topic`: workflow, components, tools) | the workflow, the authoring guide, every tool's schema | all |
+
+Six single-purpose [MCP](https://modelcontextprotocol.io) servers (the front door's building
+blocks, still served on their own). Over stdio they're registered for
 this repo in `../.mcp.json`. Over HTTP they're meant for a VPS (see below). Both are plain
 Node (18+) with no dependencies, so they run from a bare checkout on macOS or Linux.
 
@@ -345,6 +364,13 @@ target whose modifier runs no actions.
 | `never_executed` | info | operations no frame of a short run executed |
 | `click_types` | info | long-press or double-tap targets, which the TypeScript player does not dispatch |
 | `deep_expressions`, `size_dominated`, `size_single_op` | info | long expression chains; one category or one op dominating the file |
+| `glyph_icon` | warning (info: one glyph under 24 sp) | a symbol or emoji (◐ ☾ ★ ✓ …) drawn as text where an icon belongs: draw it on a canvas, or use a library or inline component |
+| `repeated_subtree` | warning at ≥ 20 copies or ≥ 12 KB, else info | ≥ 4 structurally identical subtrees (≥ 150 B each, ≥ 3 KB in all) differing in a few literals, with the differing paths: make it an inline component. JSON input only, before library components expand |
+| `hardcoded_date` | warning when nothing reads the clock or the day numbers 1..28+ are literal texts, else info | "OCTOBER 2026", "Oct 30", "2026-10-30" typed in: compute it from calendarMonth(), dayOfMonth(), year(), weekDay() |
+| `hardcoded_colors` | info (warning next to another design warning) | ≥ 16 literal colour uses, ≥ 6 distinct, ≥ 90% of all colours: use `@colors.*` theme roles or `{light, dark}` colours. JSON input only |
+
+The design rules (the last four, `mcp/lib/design-audit.mjs`) read the JSON as written when the
+input is JSON; for an `.rc` they look at its text data only (glyphs and dates).
 
 **Limits.**
 - **Text widths are estimates.** Text is measured with standard Helvetica advance widths

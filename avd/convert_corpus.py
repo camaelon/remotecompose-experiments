@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+"""
+convert_corpus.py — regenerate assets/avds/converted/ from assets/avds/source/.
+
+    python3 avd/convert_corpus.py                 # every source
+    python3 avd/convert_corpus.py --source aosp   # one
+
+For each <animated-vector> (and each AVD transition of an <animated-selector>) under
+assets/avds/source/<source>/, writes the RemoteCompose JSON and its .rc (json2rc) at the same
+relative path under assets/avds/converted/<source>/ (`x.xml` -> `x.json` + `x.rc`; a selector
+transition -> `<selector>__<from>_to_<to>.json`). Then, per source, the licence files, a
+gallery page (index.html + avds.js, the documents embedded as base64, playing in the
+TypeScript player copied next to it as player.min.js) and a top-level index.html and
+README.md. Deterministic: the same sources give the same files.
+"""
+
+import argparse
+import base64
+import json
+import os
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+REPO = HERE.parent
+sys.path.insert(0, str(HERE))
+from avdrc import convert as conv  # noqa: E402
+from avdrc.emit import Emitter, Options  # noqa: E402
+from avdrc.xmlutil import ConvertError  # noqa: E402
+
+SRC = REPO / 'assets' / 'avds' / 'source'
+OUT = REPO / 'assets' / 'avds' / 'converted'
+PLAYER = REPO / 'players' / 'typescript' / 'build-mcp' / 'player.min.js'
+JSON2RC = REPO / 'players' / 'typescript' / 'build-json2rc' / 'Parser.js'
+SOURCES = {
+    'aosp': ('AOSP frameworks/base', ['NOTICE']),
+    'material-components': ('material-components-android', ['LICENSE']),
+    'androidx': ('AndroidX', ['LICENSE.txt']),
+}
+
+
+def json2rc_batch(pairs):
+    script = """
+const {convert} = require(%r);
+const fs = require('fs');
+const out = {};
+for (const [j, r] of JSON.parse(fs.readFileSync(0, 'utf8'))) {
+  try { fs.writeFileSync(r, Buffer.from(convert(fs.readFileSync(j, 'utf8')))); out[j] = null; }
+  catch (e) { out[j] = String(e && e.message || e); }
+}
+process.stdout.write(JSON.stringify(out));
+""" % str(JSON2RC)
+    r = subprocess.run(['node', '-e', script], input=json.dumps(pairs), capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit('json2rc failed: ' + r.stderr[-400:])
+    return json.loads(r.stdout)
+
+
+def convert_source(src):
+    root = SRC / src
+    out_root = OUT / src
+    if out_root.exists():
+        shutil.rmtree(out_root)
+    out_root.mkdir(parents=True)
+    items, failed = [], []
+    for path in sorted(root.rglob('*.xml')):
+        head = path.read_bytes()[:4096]
+        if b'<animated-vector' not in head and b'<animated-selector' not in head:
+            continue
+        rel = path.relative_to(root)
+        try:
+            results = conv.convert_file(str(path), Options())
+        except ConvertError as e:
+            failed.append({'path': str(rel), 'error': str(e)})
+            continue
+        for r in results:
+            name = r.name
+            dst = out_root / rel.parent / (name + '.json')
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(conv.dumps(r.doc) + '\n')
+            # the span to show: once-only animations get a replay button
+            em = Emitter(_doc_for(path, name), _res(), Options())
+            em.build_timeline()
+            items.append({'name': name, 'path': str(rel.parent / (name + '.json')), 'source': str(rel),
+                          'kind': r.kind, 'w': r.doc['header']['width'], 'h': r.doc['header']['height'],
+                          'infinite': em.infinite, 'duration': round(em.end if not em.infinite else em.span, 3),
+                          'warnings': r.warnings, 'json': dst})
+    pairs = [[str(it['json']), str(it['json'].with_suffix('.rc'))] for it in items]
+    errs = json2rc_batch(pairs)
+    ok = []
+    for it in items:
+        e = errs.get(str(it['json']))
+        if e:
+            failed.append({'path': it['path'], 'error': 'json2rc: ' + e})
+            continue
+        it['rc'] = it['json'].with_suffix('.rc')
+        ok.append(it)
+    for lic in SOURCES[src][1]:
+        shutil.copy(root / lic, out_root / lic)
+    return ok, failed
+
+
+_LOAD_CACHE = {}
+
+
+def _res():
+    from avdrc.resources import Resources
+    return Resources()
+
+
+def _doc_for(path, name):
+    from avdrc import avd
+    key = str(path)
+    if key not in _LOAD_CACHE:
+        _LOAD_CACHE[key] = avd.load(str(path), _res())
+    return [d for d in _LOAD_CACHE[key] if d.name == name][0]
+
+
+def write_gallery(src, ok, failed):
+    out_root = OUT / src
+    entries = []
+    for it in ok:
+        entries.append({'n': it['name'], 'p': it['path'], 's': it['source'], 'w': it['w'], 'h': it['h'],
+                        'loop': it['infinite'], 'd': it['duration'],
+                        'b': base64.b64encode(it['rc'].read_bytes()).decode('ascii')})
+    data = {'source': src, 'title': SOURCES[src][0], 'items': entries, 'failed': failed}
+    (out_root / 'avds.js').write_text('// generated by avd/convert_corpus.py: the converted documents of this source, as base64 .rc\n'
+                                      'window.AVD_GALLERY = ' + json.dumps(data, separators=(',', ':')) + ';\n')
+    (out_root / 'index.html').write_text(GALLERY_HTML.replace('{{TITLE}}', '%s — converted AVDs' % SOURCES[src][0])
+                                         .replace('{{PLAYER}}', '../player.min.js'))
+
+
+def write_top(summary):
+    rows = ''.join('<li><a href="%s/index.html">%s</a> <span>%d converted, %d not converted</span></li>\n' % (s, SOURCES[s][0], n, f)
+                   for s, n, f in summary)
+    (OUT / 'index.html').write_text(TOP_HTML.replace('{{ROWS}}', rows))
+    lines = ['# Converted animated vector drawables', '',
+             'RemoteCompose versions of the animated vector drawables in `../source/`, converted by',
+             '`avd/avd2rc.py` (regenerate everything with `python3 avd/convert_corpus.py`). Each',
+             '`x.xml` animated vector became `x.json` (RemoteCompose JSON, what json2rc and the Java',
+             'parser read) and `x.rc` (the document, via json2rc); a selector transition becomes',
+             '`<selector>__<from>_to_<to>.json`. Open `index.html` for a gallery playing every one in the',
+             'TypeScript player.', '',
+             'These files are derived works of the sources listed in [`../SOURCES.md`](../SOURCES.md): they',
+             'were modified (converted) by avd2rc and remain under the Apache License 2.0; each source',
+             'folder carries its licence / NOTICE file. The licence grants no trademark rights.', '',
+             '| source | converted | not converted |', '| :--- | ---: | ---: |']
+    for s, n, f in summary:
+        lines.append('| [%s](%s/index.html) | %d | %d |' % (SOURCES[s][0], s, n, f))
+    lines += ['', 'Files that are not converted need values the corpus does not contain (Material\'s',
+              '`@string/` path data and `@dimen/` sizes) or are intentionally invalid test inputs; each',
+              'gallery lists them with the reason.']
+    (OUT / 'README.md').write_text('\n'.join(lines) + '\n')
+
+
+GALLERY_HTML = r'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}}</title>
+<style>
+  :root { --bg: #F5F7FA; --tile: #FFFFFF; --line: #DCE1E8; --text: #111827; --muted: #5A6475; --accent: #1565D8; }
+  :root[data-theme="dark"] { --bg: #101828; --tile: #1C2433; --line: #2A3342; --text: #E6EAF2; --muted: #8A94A6; --accent: #4DA3FF; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { position: sticky; top: 0; z-index: 1; display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center;
+           padding: 12px 16px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  header a { color: var(--accent); }
+  button { font: inherit; color: var(--text); background: var(--tile); border: 1px solid var(--line); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+  input[type=search] { font: inherit; color: var(--text); background: var(--tile); border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; width: 160px; }
+  main { padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr)); gap: 12px; }
+  .tile { background: var(--tile); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .stage { height: 120px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; min-width: 0; }
+  .stage canvas { display: block; max-width: 100%; }
+  .name { font-weight: 600; overflow-wrap: anywhere; font-size: 12px; }
+  .path { color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+  .row { display: flex; justify-content: space-between; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; }
+  .row button { padding: 2px 8px; font-size: 11px; }
+  .failed { margin-top: 24px; color: var(--muted); }
+  .failed li { overflow-wrap: anywhere; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title"></h1>
+  <input type="search" id="filter" placeholder="Filter by name" aria-label="Filter by name">
+  <button id="replay">Replay all</button>
+  <button id="theme" aria-pressed="false">Light</button>
+  <a href="../index.html">All sources</a>
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="failed" id="failed"></div>
+</main>
+<script src="{{PLAYER}}"></script>
+<script src="avds.js"></script>
+<script>
+(function () {
+  "use strict";
+  var G = window.AVD_GALLERY, grid = document.getElementById("grid");
+  var theme = "dark";
+  try { theme = localStorage.getItem("avd-gallery-theme") || theme; } catch (e) {}
+  document.getElementById("title").textContent = G.title + " — " + G.items.length + " converted AVDs";
+  var tiles = [];
+
+  function setTheme(t) {
+    theme = t;
+    document.documentElement.setAttribute("data-theme", t);
+    var b = document.getElementById("theme");
+    b.textContent = t === "dark" ? "Light" : "Dark";
+    b.setAttribute("aria-pressed", t === "light" ? "true" : "false");
+    try { localStorage.setItem("avd-gallery-theme", t); } catch (e) {}
+    tiles.forEach(function (tl) { if (tl.handle) tl.handle.player.setTheme(t); });
+  }
+
+  // a tile's player exists only while the tile is on screen
+  function start(tl) {
+    if (tl.handle) return;
+    var it = tl.item, box = Math.min(120, tl.stage.clientWidth || 120), d = window.devicePixelRatio || 1;
+    var s = Math.min(box / it.w, box / it.h), w = Math.max(1, Math.round(it.w * s)), h = Math.max(1, Math.round(it.h * s));
+    try {
+      tl.handle = RC.createPlayer(tl.stage, { theme: theme });
+      tl.handle.player.setDensity(d);
+      tl.handle.resize(Math.round(w * d), Math.round(h * d));
+      tl.handle.canvas.style.width = w + "px";
+      tl.handle.canvas.style.height = h + "px";
+      tl.handle.loadFromBase64(it.b).catch(function (e) { tl.stage.textContent = "load failed: " + e; });
+    } catch (e) {
+      tl.stage.textContent = "player error: " + e;
+    }
+  }
+  function stop(tl) {
+    if (!tl.handle) return;
+    tl.handle.destroy();
+    tl.handle = null;
+  }
+  function replay(tl) {
+    stop(tl);
+    start(tl);
+  }
+
+  G.items.forEach(function (it) {
+    var el = document.createElement("div");
+    el.className = "tile";
+    var stage = document.createElement("div");
+    stage.className = "stage";
+    var name = document.createElement("div");
+    name.className = "name";
+    name.textContent = it.n;
+    var path = document.createElement("div");
+    path.className = "path";
+    path.textContent = it.p;
+    path.title = "from " + it.s;
+    var row = document.createElement("div");
+    row.className = "row";
+    var info = document.createElement("span");
+    info.textContent = (it.loop ? "loops" : it.d + " s") + " · " + it.w + "×" + it.h + " dp";
+    row.appendChild(info);
+    var tl = { item: it, el: el, stage: stage, handle: null };
+    if (!it.loop) {
+      var b = document.createElement("button");
+      b.textContent = "Replay";
+      b.setAttribute("aria-label", "Replay " + it.n);
+      b.addEventListener("click", function () { replay(tl); });
+      row.appendChild(b);
+    }
+    el.appendChild(stage); el.appendChild(name); el.appendChild(path); el.appendChild(row);
+    grid.appendChild(el);
+    tiles.push(tl);
+  });
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      var tl = tiles[+en.target.dataset.i];
+      if (en.isIntersecting) start(tl); else stop(tl);
+    });
+  }, { rootMargin: "200px" });
+  tiles.forEach(function (tl, i) { tl.el.dataset.i = i; io.observe(tl.el); });
+
+  document.getElementById("replay").addEventListener("click", function () {
+    tiles.forEach(function (tl) { if (tl.handle) replay(tl); });
+  });
+  document.getElementById("theme").addEventListener("click", function () { setTheme(theme === "dark" ? "light" : "dark"); });
+  document.getElementById("filter").addEventListener("input", function (e) {
+    var q = e.target.value.toLowerCase();
+    tiles.forEach(function (tl) { tl.el.classList.toggle("hidden", q && tl.item.n.toLowerCase().indexOf(q) < 0); });
+  });
+  setTheme(theme);
+
+  if (G.failed.length) {
+    var f = document.getElementById("failed");
+    var h = document.createElement("h2");
+    h.style.fontSize = "14px";
+    h.textContent = "Not converted (" + G.failed.length + ")";
+    var ul = document.createElement("ul");
+    G.failed.forEach(function (x) {
+      var li = document.createElement("li");
+      li.textContent = x.path + " — " + x.error;
+      ul.appendChild(li);
+    });
+    f.appendChild(h); f.appendChild(ul);
+  }
+})();
+</script>
+</body>
+</html>
+'''
+
+TOP_HTML = r'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Converted AVDs</title>
+<style>
+  :root { --bg: #F5F7FA; --text: #111827; --muted: #5A6475; --accent: #1565D8; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #101828; --text: #E6EAF2; --muted: #8A94A6; --accent: #4DA3FF; } }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 640px; margin: 0 auto; }
+  h1 { font-size: 20px; }
+  a { color: var(--accent); }
+  li span { color: var(--muted); font-size: 13px; margin-left: 6px; }
+  p { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+<h1>Animated vector drawables in RemoteCompose</h1>
+<p>Android animated vector drawables converted to RemoteCompose by avd2rc, each playing in the TypeScript player.
+Sources and licences: <a href="../SOURCES.md">SOURCES.md</a>; see <a href="README.md">README.md</a>.</p>
+<ul>
+{{ROWS}}</ul>
+</main>
+</body>
+</html>
+'''
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('--source', action='append', choices=list(SOURCES))
+    args = ap.parse_args()
+    sources = args.source or list(SOURCES)
+    OUT.mkdir(parents=True, exist_ok=True)
+    if not PLAYER.exists():
+        raise SystemExit('build the player first: node mcp/lib/web-player.mjs --build')
+    shutil.copy(PLAYER, OUT / 'player.min.js')
+    summary = []
+    for src in list(SOURCES):
+        if src in sources:
+            ok, failed = convert_source(src)
+            write_gallery(src, ok, failed)
+            print('%-20s %3d converted, %d not converted' % (src, len(ok), len(failed)))
+            summary.append((src, len(ok), len(failed)))
+        elif (OUT / src / 'avds.js').exists():
+            g = json.loads((OUT / src / 'avds.js').read_text().split('=', 1)[1].rstrip().rstrip(';'))
+            summary.append((src, len(g['items']), len(g['failed'])))
+    write_top(summary)
+    print('wrote', OUT)
+
+
+if __name__ == '__main__':
+    main()

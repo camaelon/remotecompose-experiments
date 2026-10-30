@@ -1,0 +1,192 @@
+{
+ "component": "MoonPhase",
+ "version": 1,
+ "summary": "The moon at a phase of its cycle (0 new, 0.25 first quarter, 0.5 full, 0.75 last quarter), drawn from circles, a half-disc and an elliptical terminator in a square canvas.",
+ "params": {
+  "phase": {
+   "type": "float",
+   "required": true,
+   "doc": "0..1 through the lunation: 0 new, 0.125 waxing crescent, 0.25 first quarter, 0.5 full, 0.75 last quarter. A number, a \"@variable\" or an expression (computed from the clock in the document); it wraps, so a lunation count works too"
+  },
+  "size": {
+   "type": "float",
+   "default": 48,
+   "static": true,
+   "doc": "Width and height in dp; the drawing is on a 100-unit box scaled to it"
+  },
+  "lit": {
+   "type": "color",
+   "default": "@colors.warning",
+   "doc": "The sunlit part"
+  },
+  "shade": {
+   "type": "color",
+   "default": "@colors.surfaceHigh",
+   "doc": "The unlit part (earthshine)"
+  },
+  "rim": {
+   "type": "color",
+   "default": "@colors.outline",
+   "doc": "A 1 dp ring around the disc, so a new moon is still a visible circle"
+  },
+  "label": {
+   "type": "string",
+   "default": "Moon phase",
+   "doc": "Accessibility label; say the phase name when the document computes it"
+  }
+ },
+ "locals": {
+  "r": {
+   "$if": "theme.mono",
+   "then": "50 - 150 / @size",
+   "else": "50 - 100 / @size"
+  },
+  "p": "@phase - floor(@phase)",
+  "c": "cos(6.2831853 * @p)"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "draw.arc",
+  "draw.transform",
+  "data.expression"
+ ],
+ "call": {
+  "MoonPhase": {
+   "phase": 0.3
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": "@size"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@label"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "scale": {
+      "sx": "@size / 100",
+      "sy": "@size / 100"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.outline"
+        },
+        "else": {
+         "color": "@rim"
+        }
+       },
+       {
+        "style": "fill"
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": 50,
+      "cy": 50,
+      "radius": 50
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.background"
+        },
+        "else": {
+         "color": "@shade"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": 50,
+      "cy": 50,
+      "radius": "@r"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.onSurface"
+        },
+        "else": {
+         "color": "@lit"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawSector": {
+      "left": "50 - @r",
+      "top": "50 - @r",
+      "right": "50 + @r",
+      "bottom": "50 + @r",
+      "startAngle": "-90 + 180 * step(@p, 0.5)",
+      "sweepAngle": "180 * step(0.9999, @c)"
+     }
+    },
+    {
+     "drawOval": {
+      "left": "50 - @r * max(0, -@c)",
+      "top": "50 - @r",
+      "right": "50 + @r * max(0, -@c)",
+      "bottom": "50 + @r"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "$if": "theme.mono",
+        "then": {
+         "color": "@colors.background"
+        },
+        "else": {
+         "color": "@shade"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "drawOval": {
+      "left": "50 - @r * max(0, @c)",
+      "top": "50 - @r",
+      "right": "50 + @r * max(0, @c)",
+      "bottom": "50 + @r"
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Don't draw a moon as a text glyph (🌒 ◐ ☾): it depends on the device's fonts, can't take theme colours or a size, and shows eight phases at best. Call MoonPhase with the phase computed in the document",
+  "Waxing is lit on the right (phase < 0.5) and waning on the left, as seen from the northern hemisphere; for the southern hemisphere mirror it (a scale of -1 around the centre) or pass 1 - phase",
+  "phase is the fraction of the lunation, not the fraction lit: the lit fraction is (1 - cos(2π · phase)) / 2, so a quarter moon (0.25) is half lit, and 0.125 is about 15% lit",
+  "The terminator is an ellipse of half-width r · |cos(2π · phase)|, in the shade colour for a crescent (cos > 0) and in the lit colour for a gibbous moon (cos < 0). Each is drawn with a width of max(0, ±cos), so the other one has zero width: no paint alpha to switch and reset",
+  "At exactly new moon the lit half isn't drawn (its sweep is 180 · step(0.9999, cos)): the shaded ellipse covers it, but the half-disc's antialiased edge would still leave a lit hairline on the limb",
+  "The edge ring is a disc 1 dp larger drawn first, not a stroke drawn last: a stroke over the disc dulls the lit limb",
+  "Mono ignores lit, shade and rim: the lit part is onSurface and the rest background inside a 1.5 dp outline ring, so the phase reads as shape. On black (mono) that is a white full moon; in mono inverted (e-ink) the lit part is the ink, so a full moon is a black disc, the reverse of a printed almanac's ● new / ○ full: label the phases there"
+ ]
+}

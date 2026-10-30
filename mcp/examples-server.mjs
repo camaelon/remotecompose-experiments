@@ -10,8 +10,7 @@ import path from "node:path";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import {
     EXAMPLES_DIR, buildKit, componentSummary, exampleDoc, findComponents, findExamples,
-    listCapabilities, loadCatalog, resolveTerms, summarizeExample,
-} from "./lib/catalog.mjs";
+    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons } from "./lib/catalog.mjs";
 import { lintComponent, loadLibrary } from "./lib/components.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { definition as renderServer } from "./rc-render-server.mjs";
@@ -52,7 +51,10 @@ export const definition = {
         "A catalog of verified RemoteCompose JSON examples and a library of reusable components " +
         "(Button, Switch, Card, ProgressRing, ...). To build a document from scratch, call " +
         "`build_kit` with the goal in plain words: it returns the components to call and the " +
-        "smallest set of examples covering the goal, each with the JSON fragments to copy. Use " +
+        "smallest set of examples covering the goal, each with the JSON fragments to copy, design " +
+        "rules for the goal, and `needs_component` for anything to show that the library lacks: write " +
+        "that component yourself (inline, under top-level `components`) and check it across its whole " +
+        "range with `check_component` and a `sweep` before building the screen around it. Use " +
         "`find_examples` to search, `get_example` for a whole document, `find_components` / " +
         "`get_component` for the library. To write your own component, read " +
         "`component_authoring_guide` and get_component (definition: true) of a similar one, then " +
@@ -70,7 +72,11 @@ export const definition = {
                 "(their call snippet and params), then the smallest set of examples that together cover " +
                 "the rest, simplest first, each with the capabilities it contributes and the JSON " +
                 "snippet showing each, its pitfalls, and `not_covered` for anything the catalog has no " +
-                "example of. `unmatched_terms` are words the vocabulary does not know.",
+                "example of. `unmatched_terms` are words the vocabulary does not know. Read `design` (rules " +
+                "for THIS goal: draw meaning rather than use glyphs, repeat by component not by copy, " +
+                "compute dates from the clock, theme colours, render and look) and, when present, " +
+                "`needs_component`: the things in the goal the library has no component for, with a recipe " +
+                "to write one inline and verify it with check_component's sweep before using it.",
             inputSchema: {
                 type: "object",
                 properties: {
@@ -146,6 +152,24 @@ export const definition = {
             handler: async (a) => json(findComponents(a)),
         },
         {
+            name: "find_icons",
+            annotations: { title: "Search Material Symbols icons", ...RO },
+            description:
+                "Search the 4,157 Material Symbols icons by meaning (name words, Google's search tags, " +
+                "categories), most relevant and popular first. Each result has its call, " +
+                "{\"Icon\": {\"name\": ...}}: use an icon for every symbol on screen instead of a text " +
+                "glyph or emoji. The Icon component takes style (outlined, rounded, sharp), filled, size, color and label.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    query: { type: "string", description: "What the icon should mean: \"wifi\", \"battery charging\", \"like\", \"arrow back\"." },
+                    category: { type: "string", description: "Only this category (e.g. Android, Maps, Social, Audio&Video)." },
+                    limit: { type: "number", description: "Default 12." },
+                },
+            },
+            handler: async (a) => json(findIcons(a)),
+        },
+        {
             name: "get_component",
             annotations: { title: "One component", ...RO },
             description:
@@ -214,6 +238,8 @@ export const definition = {
                 "`themes` gives the bytes per componentTheme (auto: themed light/dark colours, mono, mono-inverted). " +
                 "The render comes four times, each after a text line naming it: light and dark " +
                 "theme, and the mono and mono-inverted expansions (check the component's {\"$if\": \"theme.mono\"} variant). " +
+                "For a component drawn from a value, pass `sweep` ({param, values}) to see every state in one " +
+                "captioned contact sheet; a single render at the default value hides most geometry bugs. " +
                 "Give `call` (the args of one call, default the definition's own `call`) or a whole " +
                 "`doc` that calls it. Variables the call references (\"@cpu\") are declared for the " +
                 "demo; set their values with `variables`. A definition that passes can be pasted into " +
@@ -230,6 +256,17 @@ export const definition = {
                     width: { type: "number", description: "Demo width (default 360)." },
                     height: { type: "number", description: "Demo height (default 200)." },
                     render: { type: "boolean", description: "Render the demo in light, dark and mono (default true)." },
+                    sweep: {
+                        type: "object",
+                        description: "Also render a contact sheet: the component once per value of one param, captioned, in a grid. Use it for anything drawn from a value: cover both ends, the middle and both halves of a cycle (e.g. {\"param\": \"phase\", \"values\": [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875]}).",
+                        properties: {
+                            param: { type: "string" },
+                            values: { type: "array", description: "Values to try (numbers, strings for an enum, colours)." },
+                            columns: { type: "number", description: "Cells per row (default 4)." },
+                            themes: { type: "array", items: { type: "string" }, description: "Default [\"light\"]; any of light, dark, mono, mono-inverted." },
+                        },
+                        required: ["param", "values"],
+                    },
                 },
                 required: ["definition"],
             },
@@ -295,7 +332,43 @@ definition.publicRoute = publicRoute;
 const renderRc = renderServer.tools.find((t) => t.name === "render_rc").handler;
 
 /** check_component: lint, expand one call (or a doc), convert, render, measure per-instance bytes. */
-async function checkComponent({ definition: def, name, call, doc, variables = {}, width = 360, height = 200, render = true }) {
+/**
+ * A contact sheet: the component once per value of one param, in a grid, each cell captioned
+ * with its value. One image shows the whole range, which is where a drawing that depends on a
+ * value goes wrong (the other half of a cycle, the far end of a range) and a single render,
+ * at the default value, looks fine.
+ */
+function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, width) {
+    const cols = Math.max(1, Math.min(columns, values.length));
+    const rows = Math.ceil(values.length / cols);
+    // The cells are as wide as the grid allows and as tall as the component asks: its `size`
+    // (the call's, else the param default) or its `height`, else square.
+    const dim = (k) => [args[k], body.params?.[k]?.default].find((v) => typeof v === "number");
+    const cellW = (width - 32 - 8 * (cols - 1)) / cols;
+    const cellH = Math.round(cell || Math.max(dim("size") ?? dim("height") ?? cellW, 24)) + 22;
+    const label = (v) => `${param} ${typeof v === "number" ? +v.toFixed(4) : String(v)}`;
+    const cellOf = (v) => ({ column: { horizontalAlignment: "center",
+        modifiers: [{ weight: 1 }, { spacedBy: 4 }],
+        children: [
+            { box: { modifiers: ["fillMaxWidth", { height: cellH - 22 }], horizontalAlignment: "center", verticalAlignment: "center",
+                     children: [{ [name]: { ...structuredClone(args), [param]: v } }] } },
+            { text: { value: label(v), fontSize: 11, color: "@colors.muted" } }] } });
+    const grid = [];
+    for (let r = 0; r < rows; r++) {
+        const vs = values.slice(r * cols, r * cols + cols);
+        const cells = vs.map(cellOf);
+        // Pad the last row so every cell keeps the same width.
+        for (let i = vs.length; i < cols; i++) cells.push({ box: { modifiers: [{ weight: 1 }, { height: cellH }] } });
+        grid.push({ row: { modifiers: ["fillMaxWidth", { spacedBy: 8 }], children: cells } });
+    }
+    return {
+        header: { apiLevel: 7, width, height: rows * cellH + (rows - 1) * 8 + 32, profiles: 513 },
+        components: { [name]: body },
+        root: { column: { modifiers: ["fillMaxSize", { background: "@colors.background" }, { padding: 16 }, { spacedBy: 8 }], children: grid } },
+    };
+}
+
+async function checkComponent({ definition: def, name, call, doc, variables = {}, width = 360, height = 200, render = true, sweep }) {
     if (typeof def === "string") def = JSON.parse(def);
     name ??= def?.component;
     const lint = lintComponent(def, name);
@@ -354,6 +427,21 @@ async function checkComponent({ definition: def, name, call, doc, variables = {}
                 const text = r.filter((c) => c.type === "text").map((c) => c.text).join("\n");
                 out.render_findings[label] = text.split("\n").filter((l) => /^(error|warning|info): |^findings: /.test(l));
                 images.push({ type: "text", text: label.startsWith("mono") ? `${label} (componentTheme "${label}")` : `${label} theme` }, ...r.filter((c) => c.type === "image"));
+            }
+            if (sweep) {
+                if (!sweep.param || !Array.isArray(sweep.values) || !sweep.values.length) throw new Error("sweep needs {param, values: [...]}");
+                if (!(sweep.param in (def.params ?? {}))) throw new Error(`sweep: '${sweep.param}' is not a param of ${name}`);
+                const sheet = sweepDoc(name, body, args, sweep, Math.max(width, 360));
+                // The other inline components the document defines (helpers this one calls).
+                const docComps = doc ? (typeof doc === "string" ? JSON.parse(doc) : doc).components : null;
+                if (docComps) sheet.components = { ...docComps, [name]: body };
+                out.sweep = { param: sweep.param, values: sweep.values, bytes: jsonToRc(sheet).length };
+                for (const theme of sweep.themes ?? ["light"]) {
+                    const mono = theme.startsWith("mono");
+                    const r = await renderRc({ json: mono ? { ...sheet, componentTheme: theme } : sheet, ...(mono ? {} : { theme }), public_link: false });
+                    images.push({ type: "text", text: `sweep of ${sweep.param} (${theme}): one cell per value, captioned. Check EVERY cell against what it should look like.` },
+                                ...r.filter((c) => c.type === "image"));
+                }
             }
             out.ok = true;
             return [...json(out), ...images];

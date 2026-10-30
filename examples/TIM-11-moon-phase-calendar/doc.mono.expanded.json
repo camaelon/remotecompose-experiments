@@ -1,0 +1,944 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Moon phases for this month: tonight's moon with its phase name, how much is lit and the days to the next full and new moon, and a calendar of the month with each day's moon"
+ },
+ "resources": {
+  "variables": {
+   "d0": "365 * (year() - 2000) + floor((year() - 1997) / 4) + dayOfYear() - 1 - offsetToUtc() / 86400",
+   "d1": "@d0 + 1",
+   "la0": "0.8104301 + 0.033863192 * @d0 + 0.017469 * sin(2.241546 + 0.2280275 * @d0) + 0.003539 * sin(7.942619 + 0.19750992 * @d0)",
+   "la": "@la0 + 0.001828 * sin(10.184165 + 0.42553742 * @d0) - 0.005836 * sin(6.231459 + 0.01720197 * @d0) + 0.000593 * sin(4.483093 + 0.456055 * @d0)",
+   "lb0": "0.8104301 + 0.033863192 * @d1 + 0.017469 * sin(2.241546 + 0.2280275 * @d1) + 0.003539 * sin(7.942619 + 0.19750992 * @d1)",
+   "lb": "@lb0 + 0.001828 * sin(10.184165 + 0.42553742 * @d1) - 0.005836 * sin(6.231459 + 0.01720197 * @d1) + 0.000593 * sin(4.483093 + 0.456055 * @d1)",
+   "ln": "@la + (@lb - @la) * timeInMin() / 1440",
+   "f": "@ln - floor(@ln)",
+   "qa": "floor(4 * @la)",
+   "qb": "floor(4 * @lb)",
+   "ni": "(@qb - @qa) * 2 * (@qb % 4) + (1 - @qb + @qa) * (2 * (@qa % 4) + 1)",
+   "NF": "floor(@la - 0.5) + 1.5",
+   "tF1": "@d0 + (@NF - @la) * 29.530589",
+   "lF1a": "0.8104301 + 0.033863192 * @tF1 + 0.017469 * sin(2.241546 + 0.2280275 * @tF1) + 0.003539 * sin(7.942619 + 0.19750992 * @tF1)",
+   "lF1": "@lF1a + 0.001828 * sin(10.184165 + 0.42553742 * @tF1) - 0.005836 * sin(6.231459 + 0.01720197 * @tF1) + 0.000593 * sin(4.483093 + 0.456055 * @tF1)",
+   "tF2": "@tF1 - (@lF1 - @NF) * 29.530589",
+   "lF2a": "0.8104301 + 0.033863192 * @tF2 + 0.017469 * sin(2.241546 + 0.2280275 * @tF2) + 0.003539 * sin(7.942619 + 0.19750992 * @tF2)",
+   "lF2": "@lF2a + 0.001828 * sin(10.184165 + 0.42553742 * @tF2) - 0.005836 * sin(6.231459 + 0.01720197 * @tF2) + 0.000593 * sin(4.483093 + 0.456055 * @tF2)",
+   "tF3": "@tF2 - (@lF2 - @NF) * 29.530589",
+   "toFull": "floor(@tF3 - @d0)",
+   "NN": "floor(@la) + 1",
+   "tN1": "@d0 + (@NN - @la) * 29.530589",
+   "lN1a": "0.8104301 + 0.033863192 * @tN1 + 0.017469 * sin(2.241546 + 0.2280275 * @tN1) + 0.003539 * sin(7.942619 + 0.19750992 * @tN1)",
+   "lN1": "@lN1a + 0.001828 * sin(10.184165 + 0.42553742 * @tN1) - 0.005836 * sin(6.231459 + 0.01720197 * @tN1) + 0.000593 * sin(4.483093 + 0.456055 * @tN1)",
+   "tN2": "@tN1 - (@lN1 - @NN) * 29.530589",
+   "lN2a": "0.8104301 + 0.033863192 * @tN2 + 0.017469 * sin(2.241546 + 0.2280275 * @tN2) + 0.003539 * sin(7.942619 + 0.19750992 * @tN2)",
+   "lN2": "@lN2a + 0.001828 * sin(10.184165 + 0.42553742 * @tN2) - 0.005836 * sin(6.231459 + 0.01720197 * @tN2) + 0.000593 * sin(4.483093 + 0.456055 * @tN2)",
+   "tN3": "@tN2 - (@lN2 - @NN) * 29.530589",
+   "toNew": "floor(@tN3 - @d0)",
+   "moonphase1_p": "@f - floor(@f)",
+   "moonphase1_c": "cos(6.2831853 * @moonphase1_p)"
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "outline": "#FF9E9E9E",
+   "primary": "#FFFFFFFF",
+   "surfaceHigh": "#FF000000",
+   "warning": "#FFFFFFFF"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 16
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "spacedBy": 16
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": 112
+          },
+          {
+           "semantics": {
+            "contentDescription": "Tonight's moon"
+           }
+          }
+         ],
+         "commands": [
+          {
+           "scale": {
+            "sx": 1.12,
+            "sy": 1.12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.outline"
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 50,
+            "cy": 50,
+            "radius": 50
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 50,
+            "cy": 50,
+            "radius": 48.660714
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             }
+            ]
+           }
+          },
+          {
+           "drawSector": {
+            "left": 1.339286,
+            "top": 1.339286,
+            "right": 98.660714,
+            "bottom": 98.660714,
+            "startAngle": "-90 + 180 * step(@moonphase1_p, 0.5)",
+            "sweepAngle": "180 * step(0.9999, @moonphase1_c)"
+           }
+          },
+          {
+           "drawOval": {
+            "left": "50 - 48.660714 * max(0, -@moonphase1_c)",
+            "top": 1.339286,
+            "right": "50 + 48.660714 * max(0, -@moonphase1_c)",
+            "bottom": 98.660714
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             }
+            ]
+           }
+          },
+          {
+           "drawOval": {
+            "left": "50 - 48.660714 * max(0, @moonphase1_c)",
+            "top": 1.339286,
+            "right": "50 + 48.660714 * max(0, @moonphase1_c)",
+            "bottom": 98.660714
+           }
+          }
+         ]
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "height": 120
+          }
+         ],
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "New Moon       Waxing CrescentFirst Quarter  Waxing Gibbous Full Moon      Waning Gibbous Last Quarter   Waning Crescent",
+            "start": "@ni * 15",
+            "len": 15,
+            "varName": "pn15"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@pn15",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "phaseName"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 12
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "TONIGHT",
+            "x": 0,
+            "y": 8,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "textSize": 20
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "@phaseName",
+            "x": 0,
+            "y": 31,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 13
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "50 * (1 - cos(6.2831853 * @f))",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": "% illuminated"
+            },
+            "x": 0,
+            "y": 55,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": "Moon age ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@f * 29.530589",
+               "whole": 2,
+               "decimal": 1,
+               "flags": 5
+              },
+              "id2": " days"
+             }
+            },
+            "x": 0,
+            "y": 74,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "alpha": "step(@toFull, 1.5)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": "Full moon in ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@toFull",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " days"
+             }
+            },
+            "x": 0,
+            "y": 96,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "step(@toFull, 0.5) * step(1.5, @toFull)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Full moon tomorrow",
+            "x": 0,
+            "y": 96,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "step(0.5, @toFull)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Full moon today",
+            "x": 0,
+            "y": 96,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "alpha": "step(@toNew, 1.5)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": {
+             "type": "textMerge",
+             "id1": "New moon in ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@toNew",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " days"
+             }
+            },
+            "x": 0,
+            "y": 114,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "step(@toNew, 0.5) * step(1.5, @toNew)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "New moon tomorrow",
+            "x": 0,
+            "y": 114,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "step(0.5, @toNew)"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "New moon today",
+            "x": 0,
+            "y": 114,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       }
+      ],
+      "commands": [
+       {
+        "variable": {
+         "name": "m",
+         "value": "calendarMonth()"
+        }
+       },
+       {
+        "variable": {
+         "name": "fw",
+         "value": "(weekDay() - dayOfMonth() + 35) % 7"
+        }
+       },
+       {
+        "variable": {
+         "name": "leap",
+         "value": "1 - min(1, year() % 4) - (1 - min(1, year() % 100)) + (1 - min(1, year() % 400))"
+        }
+       },
+       {
+        "variable": {
+         "name": "nd",
+         "value": "30 + (@m + floor(@m / 8)) % 2 - (1 - min(1, abs(@m - 2))) * (2 - @leap)"
+        }
+       },
+       {
+        "variable": {
+         "name": "cw",
+         "value": "componentWidth() / 7"
+        }
+       },
+       {
+        "variable": {
+         "name": "rh",
+         "value": "(componentHeight() - 52) / 6"
+        }
+       },
+       {
+        "variable": {
+         "name": "u",
+         "value": "min(@cw, @rh)"
+        }
+       },
+       {
+        "variable": {
+         "name": "ts",
+         "value": "clamp(10, 15, 0.26 * @u)"
+        }
+       },
+       {
+        "textSubtext": {
+         "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+         "start": "(@m - 1) * 9",
+         "len": 9,
+         "varName": "month9"
+        }
+       },
+       {
+        "textTransform": {
+         "text": "@month9",
+         "start": 0,
+         "len": -1,
+         "operation": 3,
+         "varName": "month"
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "textSize": 18
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textMerge",
+          "id1": "@month",
+          "id2": {
+           "type": "textMerge",
+           "id1": " ",
+           "id2": {
+            "type": "textFromFloat",
+            "value": "year()",
+            "whole": 4,
+            "decimal": 0,
+            "flags": 5
+           }
+          }
+         },
+         "x": 0,
+         "y": 12,
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "textSize": 12
+          }
+         ]
+        }
+       },
+       {
+        "loop": {
+         "index": "wd",
+         "from": 0,
+         "until": 7,
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "MTWTFSS",
+            "start": "wd",
+            "len": 1,
+            "varName": "initial"
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "@initial",
+            "x": "@cw * (wd + 0.5)",
+            "y": 40,
+            "panX": 0,
+            "panY": 0
+           }
+          }
+         ]
+        }
+       },
+       {
+        "loop": {
+         "index": "week",
+         "from": 0,
+         "until": 6,
+         "commands": [
+          {
+           "loop": {
+            "index": "wd",
+            "from": 0,
+            "until": 7,
+            "commands": [
+             {
+              "variable": {
+               "name": "day",
+               "value": "week * 7 + wd + 1 - @fw"
+              }
+             },
+             {
+              "variable": {
+               "name": "inMonth",
+               "value": "step(@day, 0.5) * step(@nd + 0.5, @day)"
+              }
+             },
+             {
+              "variable": {
+               "name": "isToday",
+               "value": "1 - min(1, abs(@day - dayOfMonth()))"
+              }
+             },
+             {
+              "variable": {
+               "name": "k",
+               "value": "@d0 - dayOfMonth() + @day"
+              }
+             },
+             {
+              "variable": {
+               "name": "k1",
+               "value": "@k + 1"
+              }
+             },
+             {
+              "variable": {
+               "name": "lk0",
+               "value": "0.8104301 + 0.033863192 * @k + 0.017469 * sin(2.241546 + 0.2280275 * @k) + 0.003539 * sin(7.942619 + 0.19750992 * @k)"
+              }
+             },
+             {
+              "variable": {
+               "name": "lk",
+               "value": "@lk0 + 0.001828 * sin(10.184165 + 0.42553742 * @k) - 0.005836 * sin(6.231459 + 0.01720197 * @k) + 0.000593 * sin(4.483093 + 0.456055 * @k)"
+              }
+             },
+             {
+              "variable": {
+               "name": "lk10",
+               "value": "0.8104301 + 0.033863192 * @k1 + 0.017469 * sin(2.241546 + 0.2280275 * @k1) + 0.003539 * sin(7.942619 + 0.19750992 * @k1)"
+              }
+             },
+             {
+              "variable": {
+               "name": "lk1",
+               "value": "@lk10 + 0.001828 * sin(10.184165 + 0.42553742 * @k1) - 0.005836 * sin(6.231459 + 0.01720197 * @k1) + 0.000593 * sin(4.483093 + 0.456055 * @k1)"
+              }
+             },
+             {
+              "variable": {
+               "name": "q1",
+               "value": "floor(4 * @lk1)"
+              }
+             },
+             {
+              "variable": {
+               "name": "ev",
+               "value": "@inMonth * (@q1 - floor(4 * @lk))"
+              }
+             },
+             {
+              "variable": {
+               "name": "ph",
+               "value": "(@lk + @lk1) / 2"
+              }
+             },
+             {
+              "variable": {
+               "name": "c",
+               "value": "cos(6.2831853 * @ph)"
+              }
+             },
+             {
+              "variable": {
+               "name": "x",
+               "value": "@cw * (wd + 0.5)"
+              }
+             },
+             {
+              "variable": {
+               "name": "y0",
+               "value": "52 + @rh * week"
+              }
+             },
+             {
+              "variable": {
+               "name": "cy",
+               "value": "@y0 + 0.52 * @rh"
+              }
+             },
+             {
+              "variable": {
+               "name": "r",
+               "value": "0.27 * @u * @inMonth"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                },
+                {
+                 "alpha": "@isToday"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": "@x - @cw / 2 + 2",
+               "top": "@y0 + 1",
+               "right": "@x + @cw / 2 - 2",
+               "bottom": "@y0 + @rh - 1",
+               "rx": 8,
+               "ry": 8
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": "@ts"
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@day",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": "@x",
+               "y": "@y0 + 0.17 * @rh",
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "alpha": "@inMonth * (1 - @isToday)"
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@day",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": "@x",
+               "y": "@y0 + 0.17 * @rh",
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.outline"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@x",
+               "cy": "@cy",
+               "radius": "@r + min(1, @r)"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.surfaceHigh"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "@x",
+               "cy": "@cy",
+               "radius": "@r"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                }
+               ]
+              }
+             },
+             {
+              "drawSector": {
+               "left": "@x - @r",
+               "top": "@cy - @r",
+               "right": "@x + @r",
+               "bottom": "@cy + @r",
+               "startAngle": "-90 + 180 * step(@ph - floor(@ph), 0.5)",
+               "sweepAngle": "180 * step(0.9999, @c)"
+              }
+             },
+             {
+              "drawOval": {
+               "left": "@x - @r * max(0, -@c)",
+               "top": "@cy - @r",
+               "right": "@x + @r * max(0, -@c)",
+               "bottom": "@cy + @r"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.surfaceHigh"
+                }
+               ]
+              }
+             },
+             {
+              "drawOval": {
+               "left": "@x - @r * max(0, @c)",
+               "top": "@cy - @r",
+               "right": "@x + @r * max(0, @c)",
+               "bottom": "@cy + @r"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "New   1st Q Full  Last Q",
+               "start": "(@q1 % 4) * 6",
+               "len": 6,
+               "varName": "ev6"
+              }
+             },
+             {
+              "textTransform": {
+               "text": "@ev6",
+               "start": 0,
+               "len": -1,
+               "operation": 3,
+               "varName": "evName"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "textSize": "@ts * 0.8"
+                },
+                {
+                 "alpha": "@ev"
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "@evName",
+               "x": "@x",
+               "y": "@y0 + 0.88 * @rh",
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

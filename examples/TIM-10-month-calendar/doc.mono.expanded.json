@@ -1,0 +1,270 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 320,
+  "profiles": 513,
+  "contentDescription": "This month's calendar: month and year, weekday initials and a grid of days with today circled"
+ },
+ "root": {
+  "type": "canvas",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.surface"
+   }
+  ],
+  "commands": [
+   {
+    "variable": {
+     "name": "fw",
+     "value": "(weekDay() - dayOfMonth() + 35) % 7"
+    }
+   },
+   {
+    "variable": {
+     "name": "m",
+     "value": "calendarMonth()"
+    }
+   },
+   {
+    "variable": {
+     "name": "leap",
+     "value": "1 - min(1, year() % 4) - (1 - min(1, year() % 100)) + (1 - min(1, year() % 400))"
+    }
+   },
+   {
+    "variable": {
+     "name": "nd",
+     "value": "30 + (@m + floor(@m / 8)) % 2 - (1 - min(1, abs(@m - 2))) * (2 - @leap)"
+    }
+   },
+   {
+    "variable": {
+     "name": "cw",
+     "value": "(componentWidth() - 16) / 7"
+    }
+   },
+   {
+    "variable": {
+     "name": "rh",
+     "value": "(componentHeight() - 80) / 6"
+    }
+   },
+   {
+    "variable": {
+     "name": "ts",
+     "value": "clamp(9, 20, 0.36 * min(@cw, @rh))"
+    }
+   },
+   {
+    "textSubtext": {
+     "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+     "start": "(@m - 1) * 9",
+     "len": 9,
+     "varName": "month9"
+    }
+   },
+   {
+    "textTransform": {
+     "text": "@month9",
+     "start": 0,
+     "len": -1,
+     "operation": 3,
+     "varName": "month"
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.onSurface"
+      },
+      {
+       "textSize": 18
+      }
+     ]
+    }
+   },
+   {
+    "drawTextAnchored": {
+     "text": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textMerge",
+       "id1": "@month",
+       "id2": " "
+      },
+      "id2": {
+       "type": "textFromFloat",
+       "value": "year()",
+       "whole": 4,
+       "decimal": 0,
+       "flags": 4
+      }
+     },
+     "x": 8,
+     "y": 30,
+     "panX": -1,
+     "panY": 0
+    }
+   },
+   {
+    "paint": {
+     "ops": [
+      {
+       "color": "@colors.muted"
+      },
+      {
+       "textSize": 12
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "wd",
+     "from": 0,
+     "until": 7,
+     "commands": [
+      {
+       "textSubtext": {
+        "text": "MTWTFSS",
+        "start": "wd",
+        "len": 1,
+        "varName": "initial"
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@initial",
+        "x": "8 + @cw * (wd + 0.5)",
+        "y": 64,
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   {
+    "loop": {
+     "index": "week",
+     "from": 0,
+     "until": 6,
+     "commands": [
+      {
+       "loop": {
+        "index": "wd",
+        "from": 0,
+        "until": 7,
+        "commands": [
+         {
+          "variable": {
+           "name": "day",
+           "value": "week * 7 + wd + 1 - @fw"
+          }
+         },
+         {
+          "variable": {
+           "name": "inMonth",
+           "value": "step(@day, 0.5) * step(@nd + 0.5, @day)"
+          }
+         },
+         {
+          "variable": {
+           "name": "isToday",
+           "value": "1 - min(1, abs(@day - dayOfMonth()))"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "8 + @cw * (wd + 0.5)",
+           "cy": "80 + @rh * (week + 0.5)",
+           "radius": "0.42 * min(@cw, @rh) * @isToday"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "textSize": "@ts"
+            },
+            {
+             "alpha": "@inMonth * (1 - @isToday) * (1 - 0.45 * step(wd, 4.5))"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textFromFloat",
+            "value": "@day",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 4
+           },
+           "x": "8 + @cw * (wd + 0.5)",
+           "y": "80 + @rh * (week + 0.5)",
+           "panX": 0,
+           "panY": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onPrimary"
+            },
+            {
+             "alpha": "@isToday"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textFromFloat",
+            "value": "@day",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 4
+           },
+           "x": "8 + @cw * (wd + 0.5)",
+           "y": "80 + @rh * (week + 0.5)",
+           "panX": 0,
+           "panY": 0
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "resources": {
+  "colors": {
+   "muted": "#FF9E9E9E",
+   "onPrimary": "#FF000000",
+   "onSurface": "#FFFFFFFF",
+   "primary": "#FFFFFFFF",
+   "surface": "#FF000000"
+  }
+ }
+}

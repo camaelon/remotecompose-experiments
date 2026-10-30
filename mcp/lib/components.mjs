@@ -107,6 +107,49 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LIBRARY_DIR = process.env.RC_COMPONENTS_DIR
     ?? path.join(HERE, "..", "..", "examples", "components");
 
+// The converted Material Symbols (assets/icons, avd/convert_icons.py) behind {"$icon": ...}.
+export const ICONS_DIR = process.env.RC_ICONS_DIR
+    ?? path.join(HERE, "..", "..", "assets", "icons", "converted", "material-symbols");
+let iconCatalog = null;
+export function loadIconCatalog() {
+    if (iconCatalog) return iconCatalog;
+    const file = path.join(ICONS_DIR, "catalog.json");
+    if (!existsSync(file)) throw new Error(`no icon catalog at ${file} (run avd/convert_icons.py)`);
+    const c = JSON.parse(readFileSync(file, "utf8"));
+    iconCatalog = { ...c, byName: new Map(c.icons.map((i) => [i.name, i])) };
+    return iconCatalog;
+}
+/** Icon names close to `name`: same prefix, or `name` among their tags, most popular first. */
+export function similarIcons(name, n = 6) {
+    const c = loadIconCatalog(), w = String(name).toLowerCase().replace(/[\s-]+/g, "_");
+    return c.icons.filter((i) => i.name.includes(w) || w.includes(i.name) || (i.tags ?? []).some((t) => t.toLowerCase() === w.replace(/_/g, " ")))
+        .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)).slice(0, n).map((i) => i.name);
+}
+/**
+ * {"$icon": {"name": "wifi", "style": "rounded", "filled": true}}: the icon's path, registered
+ * once per document in resources.paths, as a "$paths.<id>" reference. The icons are 960-unit
+ * viewports with one filled path (the Icon component scales and colours it).
+ */
+function iconPath(spec, state, name) {
+    const c = loadIconCatalog();
+    const icon = c.byName.get(String(spec.name));
+    if (!icon) {
+        const near = similarIcons(spec.name);
+        throw new Error(`${name}: no icon '${spec.name}'` + (near.length ? `; similar: ${near.join(", ")}` : "") + " (find kind \"icons\" searches by tag)");
+    }
+    const style = spec.style ?? "outlined";
+    const filled = [true, 1, "true", "1"].includes(spec.filled);
+    const key = `${style}${filled ? "-filled" : ""}`;
+    const v = icon.variants?.[key];
+    if (!v) throw new Error(`${name}: icon '${spec.name}' has no ${key} variant (has ${Object.keys(icon.variants ?? {}).join(", ")})`);
+    const id = `icon_${icon.name}_${key.replace("-", "_")}`;
+    if (!state.paths.has(id)) {
+        const doc = JSON.parse(readFileSync(path.join(ICONS_DIR, `${v.path}.json`), "utf8"));
+        state.paths.set(id, doc.resources.paths.p0);
+    }
+    return `$paths.${id}`;
+}
+
 const DROP = Symbol("drop");
 let cached = null;
 
@@ -378,7 +421,7 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
     const reserved = new Set(resourceNames);
     walk(out, (n) => { for (const v of Object.values(n)) if (typeof v === "string") for (const m of v.matchAll(/[@$]([A-Za-z_]\w*)/g)) reserved.add(m[1]); });
     const state = { library, theme, patterns: existing, counters: new Map(), used: new Set(), locals: {}, colors: new Set(), instances: 0, resourceNames,
-        reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map() };
+        reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map(), paths: new Map() };
     const expanded = expandNode(out, state, []);
     expanded.resources ??= {};
     const res = expanded.resources;
@@ -386,6 +429,7 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
     if (Object.keys(state.locals).length || Object.keys(hoisted).length) {
         res.variables = { ...(res.variables ?? {}), ...hoisted, ...state.locals };
     }
+    if (state.paths.size) res.paths = { ...Object.fromEntries(state.paths), ...(res.paths ?? {}) };
     if (res.colors) res.colors = docColors(res.colors, theme);
     const defined = new Set(colorEntries(res.colors).map(([n]) => n));
     const missing = [...state.colors].filter((c) => !defined.has(c));
@@ -554,10 +598,48 @@ function expandCall(name, def, given, slots, n, state, stack) {
         }
         env.locals[k] = computedLocal(k, v, unique, env, state, name);
     }
-    const body = substitute(structuredClone(def.body), env, state, name);
+    const scoped = scopeBodyNames(structuredClone(def.body), `${name.toLowerCase()}${n}_`,
+        new Set([...Object.keys(def.params ?? {}), ...Object.keys(def.locals ?? {})]));
+    const body = substitute(scoped, env, state, name);
     const nodes = (Array.isArray(body) ? body : [body]).filter((x) => x !== DROP);
     if (animated.length) declareInBody(nodes, animated, name);
     return expandNode(nodes, state, [...stack, name]);
+}
+
+/**
+ * Names a body declares itself are document-global in the format: a canvas or tree
+ * `variable`, a `textMeasure` / `textLength`, a text op's `varName`, a `pathExpression` id. Two
+ * calls of the same component would share them, and every instance would draw with the
+ * values of whichever wrote last. Each call gets its own: the name and every reference to it
+ * ("@mc" in expressions, `"path": "lit"`) are prefixed with the call's own prefix. Params and
+ * locals keep their names (substitute replaces them).
+ */
+function scopeBodyNames(body, prefix, keep) {
+    const declared = new Set();
+    const collect = (n) => {
+        if (Array.isArray(n)) return n.forEach(collect);
+        if (!n || typeof n !== "object") return;
+        if (typeof n.varName === "string") declared.add(n.varName);
+        for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") declared.add(n[k].name);
+        if (typeof n.pathExpression?.id === "string") declared.add(n.pathExpression.id);
+        Object.values(n).forEach(collect);
+    };
+    collect(body);
+    for (const k of keep) declared.delete(k);
+    if (!declared.size) return body;
+    const names = [...declared].sort((a, b) => b.length - a.length).map((x) => x.replace(/[$^.*+?()[\]{}|\\]/g, "\\$&"));
+    const ref = new RegExp(`@(${names.join("|")})(?![A-Za-z0-9_])`, "g");
+    const rename = (n, key) => {
+        if (typeof n === "string") {
+            // A bare name where a name is expected (varName, a path id or path reference).
+            if (declared.has(n) && ["name", "varName", "id", "path"].includes(key)) return prefix + n;
+            return n.replace(ref, (_, x) => `@${prefix}${x}`);
+        }
+        if (Array.isArray(n)) return n.map((x) => rename(x, key));
+        if (!n || typeof n !== "object") return n;
+        return Object.fromEntries(Object.entries(n).map(([k, v]) => [k, rename(v, k)]));
+    };
+    return rename(body);
 }
 
 /**
@@ -607,7 +689,30 @@ const PATTERN_LIMITS = {
     slot: "a slot placed outside a `children` list cannot be a patternArgument",
     nested: "the body calls another component",
     anim: "an animated local ({value, anim}) has no pattern-local form (mono, which has no motion, can still pattern)",
+    commands: "the body is canvas commands, not a component: a pattern template inflates layout components only",
+    names: "the body declares its own named values (a `variable`, `textMeasure`, `varName` or `pathExpression` id), which every inflation of one template would share; expanded, each call gets its own",
 };
+
+/** Whether a body declares a document-global name of its own (see scopeBodyNames). */
+function declaresNames(body) {
+    let found = false;
+    const scan = (n) => {
+        if (found || !n || typeof n !== "object") return;
+        if (Array.isArray(n)) return n.forEach(scan);
+        if (typeof n.varName === "string" || typeof n.pathExpression?.id === "string"
+            || ["variable", "textMeasure", "textLength"].some((k) => typeof n[k]?.name === "string")) { found = true; return; }
+        Object.values(n).forEach(scan);
+    };
+    scan(body);
+    return found;
+}
+
+// Body nodes that are canvas commands (a component called inside a canvas's `commands`).
+const COMMAND_KEYS = /^(draw|paint$|variable$|translate$|scale$|rotate$|skew$|save$|restore$|clip|pathExpression$|loop$|matrix|textMeasure$|textLength$|conditional)/;
+function isCommandBody(body) {
+    const nodes = Array.isArray(body) ? body : [body];
+    return nodes.some((n) => n && typeof n === "object" && Object.keys(n).some((k) => COMMAND_KEYS.test(k)));
+}
 
 /** Whether a text param is joined into a longer text somewhere ("Decrease @label"). */
 function spliced(def, k) {
@@ -636,6 +741,8 @@ function passable(type, v) {
 }
 
 function compilePattern(name, def, given, slots, state) {
+    if (isCommandBody(def.body)) throw new PatternUnfit(PATTERN_LIMITS.commands);
+    if (declaresNames(def.body)) throw new PatternUnfit(PATTERN_LIMITS.names);
     const pname = (k) => (state.reserved.has(k) ? `${k}_p` : k);
     const values = {}, missing = new Set();
     const runtime = new Set(), locals = [];
@@ -901,6 +1008,11 @@ function substitute(node, env, state, name) {
             const branch = evalIf(node.$if, env.cond ?? env, name) ? node.then : node.else;
             return branch === undefined ? DROP : substitute(branch, env, state, name);
         }
+        if ("$icon" in node) {
+            if (env.inPattern) throw new PatternUnfit("an icon ({\"$icon\": ...}) is chosen when the document is built, not per call");
+            const spec = substitute(structuredClone(node.$icon), env, state, name);
+            return iconPath(spec, state, name);
+        }
         if ("$count" in node) {
             // {"$count": "labels"}: the number of items of a static list param, as a literal.
             const list = paramValue(node.$count, env.cond ?? env, name);
@@ -1075,6 +1187,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             if (typeof n.$each === "string") refs.add(n.$each);
             if (typeof n.$count === "string") refs.add(n.$count);
             if (typeof n.$name === "string") refs.add(n.$name);
+            if (n.$icon && typeof n.$icon === "object") for (const v of Object.values(n.$icon)) if (typeof v === "string" && v.startsWith("@")) refs.add(v.slice(1));
             for (const k of ["as", "index", "count"]) if (n.$each !== undefined && typeof n[k] === "string") bound.add(n[k]);
             // Names the body gives itself: a text op's varName (textSubtext, textTransform,
             // textLookup), a tree variable, a measure.

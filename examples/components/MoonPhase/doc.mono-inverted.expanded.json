@@ -1,0 +1,693 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 340,
+  "profiles": 513,
+  "contentDescription": "MoonPhase component: the eight principal phases from new to waning crescent, and a large moon bound to the variable phase"
+ },
+ "resources": {
+  "variables": {
+   "phase": {
+    "value": 0.3,
+    "export": true
+   },
+   "_n0": 0,
+   "moonphase9_p": "@phase - floor(@phase)",
+   "moonphase9_c": "cos(6.2831853 * @moonphase9_p)"
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "outline": "#FF616161",
+   "surfaceHigh": "#FFFFFFFF",
+   "warning": "#FF000000"
+  }
+ },
+ "root": [
+  {
+   "definePattern": {
+    "name": "MoonPhase__p",
+    "parameters": [
+     "phase_p",
+     "lit",
+     "shade",
+     "rim",
+     "label"
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": 48
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label"
+         }
+        }
+       ],
+       "commands": [
+        {
+         "scale": {
+          "sx": 0.48,
+          "sy": 0.48
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 50,
+          "cy": 50,
+          "radius": 50
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 50,
+          "cy": 50,
+          "radius": 46.875
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           }
+          ]
+         }
+        },
+        {
+         "drawSector": {
+          "left": 3.125,
+          "top": 3.125,
+          "right": 96.875,
+          "bottom": 96.875,
+          "startAngle": "-90 + 180 * step((@phase_p - floor(@phase_p)), 0.5)",
+          "sweepAngle": "180 * step(0.9999, (cos(6.2831853 * (@phase_p - floor(@phase_p)))))"
+         }
+        },
+        {
+         "drawOval": {
+          "left": "50 - 46.875 * max(0, -(cos(6.2831853 * (@phase_p - floor(@phase_p)))))",
+          "top": 3.125,
+          "right": "50 + 46.875 * max(0, -(cos(6.2831853 * (@phase_p - floor(@phase_p)))))",
+          "bottom": 96.875
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.background"
+           }
+          ]
+         }
+        },
+        {
+         "drawOval": {
+          "left": "50 - 46.875 * max(0, (cos(6.2831853 * (@phase_p - floor(@phase_p)))))",
+          "top": 3.125,
+          "right": "50 + 46.875 * max(0, (cos(6.2831853 * (@phase_p - floor(@phase_p)))))",
+          "bottom": 96.875
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 12
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "MoonPhase",
+       "fontSize": 20,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              "@_n0",
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "New moon"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "New",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "moon",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.125,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Waxing crescent"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.125",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Waxing",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "crescent",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.25,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "First quarter"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.25",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "First",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "quarter",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.375,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Waxing gibbous"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.375",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Waxing",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "gibbous",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.5,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Full moon"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.5",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Full",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "moon",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.625,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Waning gibbous"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.625",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Waning",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "gibbous",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.75,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Last quarter"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.75",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Last",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "quarter",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "MoonPhase__p": {
+             "arguments": [
+              0.875,
+              "@colors.warning",
+              "@colors.surfaceHigh",
+              "@colors.outline",
+              "Waning crescent"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "0.875",
+             "fontSize": 12,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": "Waning",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "crescent",
+             "fontSize": 11,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "spacedBy": 12
+        }
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 72
+           },
+           {
+            "semantics": {
+             "contentDescription": "Moon phase"
+            }
+           }
+          ],
+          "commands": [
+           {
+            "scale": {
+             "sx": 0.72,
+             "sy": 0.72
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 50,
+             "cy": 50,
+             "radius": 50
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.background"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 50,
+             "cy": 50,
+             "radius": 47.916667
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              }
+             ]
+            }
+           },
+           {
+            "drawSector": {
+             "left": 2.083333,
+             "top": 2.083333,
+             "right": 97.916667,
+             "bottom": 97.916667,
+             "startAngle": "-90 + 180 * step(@moonphase9_p, 0.5)",
+             "sweepAngle": "180 * step(0.9999, @moonphase9_c)"
+            }
+           },
+           {
+            "drawOval": {
+             "left": "50 - 47.916667 * max(0, -@moonphase9_c)",
+             "top": 2.083333,
+             "right": "50 + 47.916667 * max(0, -@moonphase9_c)",
+             "bottom": 97.916667
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.background"
+              }
+             ]
+            }
+           },
+           {
+            "drawOval": {
+             "left": "50 - 47.916667 * max(0, @moonphase9_c)",
+             "top": 2.083333,
+             "right": "50 + 47.916667 * max(0, @moonphase9_c)",
+             "bottom": 97.916667
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "phase ",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@phase",
+               "whole": 1,
+               "decimal": 2,
+               "flags": 5
+              }
+             },
+             "fontSize": 14,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "50 * (1 - cos(6.2831853 * @phase))",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": "% lit, 72 dp"
+             },
+             "fontSize": 12,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

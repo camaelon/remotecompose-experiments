@@ -1,0 +1,408 @@
+{
+ "id": "TIM-10",
+ "name": "month-calendar",
+ "version": 1,
+ "title": "Evergreen month calendar",
+ "summary": "A month calendar computed entirely from the clock: the month name and year, the weekday of the 1st, the number of days (28 to 31, leap years included) and today's circle all come from date expressions, so the same document is right every month without being regenerated.",
+ "prompt": "Make a month calendar widget for the current month: the month name and year as a title, Monday-first weekday initials, a 6×7 grid of day numbers with weekends dimmed and today circled. It must stay correct next month and next year without regenerating the document.",
+ "level": 4,
+ "family": "TIM",
+ "capabilities": {
+  "primary": [
+   "time.date",
+   "struct.loop"
+  ],
+  "secondary": [
+   "expr.operators",
+   "expr.select",
+   "expr.string",
+   "text.dynamic",
+   "text.anchor",
+   "data.expression",
+   "draw.shapes"
+  ]
+ },
+ "use_cases": [
+  "calendar",
+  "widget"
+ ],
+ "form_factor": "square",
+ "keywords": [
+  "calendar",
+  "month view",
+  "month calendar",
+  "this month",
+  "current month",
+  "calendar widget",
+  "evergreen",
+  "days in month",
+  "leap year",
+  "first day of the month",
+  "weekday offset",
+  "highlight today",
+  "date grid",
+  "perpetual calendar"
+ ],
+ "teaches": [
+  "Weekday of the 1st from today alone: fw = (weekDay() - dayOfMonth() + 35) % 7 (0 = Monday; the + 35 keeps the left side positive, so % never sees a negative number)",
+  "Days in the month without a table: 30 + (m + floor(m / 8)) % 2 for every month but February (31/30 alternate and flip at August), minus (2 - leap) when m = 2, with leap = [y%4=0] - [y%100=0] + [y%400=0] and each [x=0] written 1 - min(1, x)",
+  "Month name without a data list: textSubtext of a 12 × 9-character table at (calendarMonth() - 1) * 9, then textTransform operation 3 (trim) to drop the padding; textMerge it with textFromFloat(year())",
+  "One cell definition for all 42 cells: a week loop around a weekday loop, day = week * 7 + wd + 1 - @fw; step masks hide the days outside 1..@nd and circle the one equal to dayOfMonth()",
+  "Theme colours (@colors.surface, onSurface, muted, primary, onPrimary) with \"componentTheme\": \"auto\" at the top give light, dark and (built with componentTheme mono) monochrome from one document"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/commands/0",
+   "shows": "time.date",
+   "note": "weekday of the 1st: (weekDay() - dayOfMonth() + 35) % 7"
+  },
+  {
+   "pointer": "/root/commands/3",
+   "shows": "time.date",
+   "note": "days in the month from calendarMonth() and the leap-year flag"
+  },
+  {
+   "pointer": "/root/commands/2",
+   "shows": "expr.operators",
+   "note": "Gregorian leap year with % and 1 - min(1, x) as 'is zero'"
+  },
+  {
+   "pointer": "/root/commands/7",
+   "shows": "expr.string",
+   "note": "month name: a 9-character slot of a padded table, picked by calendarMonth()"
+  },
+  {
+   "pointer": "/root/commands/13",
+   "shows": "struct.loop",
+   "note": "the 6 × 7 grid: one cell body inside a week loop and a weekday loop"
+  },
+  {
+   "pointer": "/root/commands/13/loop/commands/0/loop/commands/1",
+   "shows": "expr.select",
+   "note": "inMonth: 1 for 1 <= day <= @nd, else 0"
+  },
+  {
+   "pointer": "/root/commands/13/loop/commands/0/loop/commands/2",
+   "shows": "expr.select",
+   "note": "isToday: 1 when day = dayOfMonth()"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": "2026-10-30",
+  "touch": false
+ },
+ "check": {
+  "describe": "Canonical 2026-10-30: October 2026, the 1st under Thursday, 31 days, 30 circled. feb-leap (2028-02-14): February 2028, 1st on Tuesday, 29 days, 14 (a Monday) circled. feb-common (2027-02-01): February 2027 fills exactly four rows, 1st on Monday circled, 28 days. jan-sat (2022-01-31): January 2022 starts on Saturday, 31 days spill into a sixth row, 31 (Monday) circled. sep-sun (2024-09-30): September 2024 starts on Sunday, 30 days, 30 alone on the sixth row. Weekend columns are dimmed; no number appears before the 1st or after the last day. light and mono re-colour the same layout. Resized (small 200×210, wide 460×300) the cells are (componentWidth() - 16) / 7 by (componentHeight() - 80) / 6 and the day text scales with them (9 to 20).",
+  "render": {
+   "clock": "2026-10-30T12:00"
+  },
+  "renders": [
+   {
+    "name": "feb-leap",
+    "clock": "2028-02-14T12:00"
+   },
+   {
+    "name": "feb-common",
+    "clock": "2027-02-01T12:00"
+   },
+   {
+    "name": "jan-sat",
+    "clock": "2022-01-31T12:00"
+   },
+   {
+    "name": "sep-sun",
+    "clock": "2024-09-30T12:00"
+   },
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "small",
+    "width": 200,
+    "height": 210
+   },
+   {
+    "name": "wide",
+    "width": 460,
+    "height": 300
+   }
+  ]
+ },
+ "pitfalls": [
+  "Hard-coding the month: a literal \"October 2026\", a firstWeekday of 3 or a monthDays of 31 makes a document that is wrong in two days. Derive all three from weekDay(), dayOfMonth(), calendarMonth() and year()",
+  "weekDay() is 1 = Monday … 7 = Sunday and dayOfMonth() starts at 1: the 1st's offset is (weekDay() - dayOfMonth()) mod 7, and a negative left side must be lifted (+ 35) before %, which keeps the sign of the dividend",
+  "Day count: (m + floor(m / 8)) % 2 gives 31 for Jan, Mar, May, Jul, Aug, Oct, Dec; forgetting the August flip (m % 2 alone) makes August 30 days and September 31. February is 28 + leap, and leap needs the 100 and 400 rules (2100 is not leap, 2000 was)",
+  "Writing 31 (or 42) cell copies by hand: one loop body with a computed day number and step masks is a fraction of the size and covers every month shape (4, 5 or 6 rows)",
+  "There is no break: loop over the worst case (6 weeks × 7 days) and hide the extra cells with a 0/1 alpha mask; step(a, b) is strict, so 1 <= day <= nd is step(day, 0.5) * step(nd + 0.5, day)",
+  "Don't build the month name with addDataList + textLookup: the Java parser drops the list id (U4). A fixed-width textSubtext table plus a trim converts identically everywhere",
+  "Today's text sits on the primary circle: draw the number twice, onSurface with alpha inMonth * (1 - isToday) and onPrimary with alpha isToday, rather than one colour that is unreadable on the circle",
+  "Date fields alone never schedule a repaint (only continuousSec, timeInSec, timeInMin and wakeIn do, EXAMPLES_FINDINGS U6): this document is idle and turns the page at the host's next redraw. If it must flip at midnight on its own, also read timeInMin() somewhere (a repaint a minute)"
+ ],
+ "related": [
+  "TIM-03",
+  "STR-01",
+  "CMP-10"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 2215,
+  "header": {
+   "width": 320,
+   "height": 320
+  },
+  "op_count": 96,
+  "operations": {
+   "ANIMATED_FLOAT": 19,
+   "COLOR_CONSTANT": 9,
+   "COLOR_EXPRESSIONS": 8,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "DATA_TEXT": 5,
+   "DRAW_CIRCLE": 1,
+   "DRAW_TEXT_ANCHOR": 4,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 1,
+   "LoopOperation": 11,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 5,
+   "PAINT_VALUES": 5,
+   "THEME": 12,
+   "TextFromFloat": 2,
+   "TextMerge": 2,
+   "TextSubtext": 2,
+   "TextTransform": 1
+  },
+  "host_variables": [
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "feb-leap": {
+    "render": "render-feb-leap.png",
+    "render_findings": []
+   },
+   "feb-common": {
+    "render": "render-feb-common.png",
+    "render_findings": []
+   },
+   "jan-sat": {
+    "render": "render-jan-sat.png",
+    "render_findings": []
+   },
+   "sep-sun": {
+    "render": "render-sep-sun.png",
+    "render_findings": []
+   },
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 1807,
+    "component_modes": {},
+    "op_count": 64,
+    "host_variables": [
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     200,
+     210
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     460,
+     300
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   }
+  },
+  "json_keys": [
+   "alpha",
+   "apiLevel",
+   "background",
+   "color",
+   "colors",
+   "commands",
+   "componentTheme",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawCircle",
+   "drawTextAnchored",
+   "flags",
+   "from",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "index",
+   "len",
+   "light",
+   "loop",
+   "modifiers",
+   "muted",
+   "name",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "ops",
+   "paint",
+   "panX",
+   "panY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "start",
+   "surface",
+   "text",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "type",
+   "until",
+   "value",
+   "varName",
+   "variable",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "time.date": [
+    "weekDay",
+    "dayOfMonth",
+    "calendarMonth",
+    "year"
+   ],
+   "struct.loop": [
+    "loop"
+   ],
+   "expr.operators": [
+    "<arithmetic>"
+   ],
+   "expr.select": [
+    "step("
+   ],
+   "expr.string": [
+    "textMerge",
+    "textTransform",
+    "textSubtext"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "text.anchor": [
+    "drawTextAnchored"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ]
+  },
+  "built_at": "2026-10-30T17:31:47.196Z"
+ }
+}
