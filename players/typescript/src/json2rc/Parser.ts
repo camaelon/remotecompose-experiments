@@ -11,7 +11,7 @@ import { Writer, Emit, hostAction, TYPE_EXACT, TYPE_FILL, modBorder, modGraphics
     from "./Writer";
 import { floatToRawIntBits, idFromNanBits, asNanBits, f32FromBits } from "./WireBuffer";
 import { HEADER_KEY_TO_TAG, Tag } from "./Header";
-import { ExpressionParser } from "./Expr";
+import { ExpressionParser, checkExpressionSize } from "./Expr";
 
 export class NotImplementedComponent extends Error {
     // An empty `extends Error` inherits `name` from Error.prototype, so `e.name` reads
@@ -705,7 +705,7 @@ export class Parser {
             if (tag === undefined) throw new NotImplementedComponent(`Unknown header tag: ${key}`);
             tags.push([tag, value as number | string]);
         }
-        this.writer = new Writer(apiLevel, tags);
+        this.writer = new Writer(apiLevel, tags, this.profiles);
         this.expr = new ExpressionParser(this.writer, this.variables);
         // First use of a deferred variable materialises it, wherever that happens to be.
         this.variables.resolver = (_name, cmd) => this.materialiseVariable(cmd);
@@ -2969,10 +2969,23 @@ export class Parser {
             else this.variables.defer(name, command);
             return;
         }
+        if (vtype === "floatarrays") {
+            // RemoteComposeJsonParser "variable" floatArrays: written where it stands (never
+            // deferred), named with NAMED_VARIABLE FLOAT_ARRAY_TYPE only when exported.
+            const val = command.value;
+            const arr = val !== null && typeof val === "object" && !Array.isArray(val) ? (val as J).value : val;
+            if (!Array.isArray(arr)) {
+                throw new NotImplementedComponent(`variable '${name}': floatArrays needs an array value`);
+            }
+            const data = (arr as J[]).map(Number);
+            const aid = optBoolean(command.export, false)
+                ? this.writer.addNamedFloatArray(name, data) : this.writer.addFloatArray(data);
+            this.variables.set(name, (aid | 0xff800000) >>> 0);
+            return;
+        }
         if (vtype !== "float") {
             throw new NotImplementedComponent(`variable vtype '${vtype}'`);
         }
-        if (command.export) throw new NotImplementedComponent("named/export float variable TBD");
         if (!(this.inFirstPass || commit || flush)) {
             this.variables.defer(name, command);      // emitted at first use
             return;
@@ -2987,7 +3000,9 @@ export class Parser {
             if (val !== null && typeof val === "object") {
                 this.variables.set(name, asNanBits(targetId));
             } else if (typeof val === "string" && /[+\-*/%(),]/.test(val)) {
-                this.writer.floatExpressionAt(targetId, this.expr.infixToRpn(val));
+                const ops = this.expr.infixToRpn(val);
+                checkExpressionSize(ops, val);
+                this.writer.floatExpressionAt(targetId, ops);
                 this.variables.set(name, asNanBits(targetId));
             } else if (typeof val === "number") {
                 this.writer.floatConstantAt(targetId, val);
@@ -2997,7 +3012,7 @@ export class Parser {
             }
             return;
         }
-        this.variables.set(name, this.materialiseFloatVar(command));
+        this.variables.set(name, this.materialiseFloatVar(command, false));
     }
 
     /** A colour, string or integer variable, as the reference's "variable" command. */
@@ -3020,22 +3035,46 @@ export class Parser {
             const id = named ? this.writer.addNamedInt(name, v) : this.writer.addInteger(v);
             return asNanBits(id);
         }
-        return this.materialiseFloatVar(command);
+        return this.materialiseFloatVar(command, true);
     }
 
-    private materialiseFloatVar(command: J): number {
+    /**
+     * A float variable, written in the first pass (or with commit / flush) or, `deferred`,
+     * at its first use (resolveDeferredVariable). With `export` it is named: a constant
+     * becomes addNamedFloat, anything else (an expression, a reference) setFloatName on the
+     * id it resolved to. The two reference paths differ on objects: the first pass names no
+     * object value, the deferred one names a textFromFloat / textMerge as a string and
+     * resolves any other object as a named float.
+     */
+    private materialiseFloatVar(command: J, deferred: boolean): number {
         const value = command.value;
-        if (typeof value === "number") return this.writer.addFloatConstant(value);
-        if (value && typeof value === "object" && !Array.isArray(value)) {
+        const name = String(command.name);
+        const named = optBoolean(command.export, false);
+        const isObject = value !== null && typeof value === "object" && !Array.isArray(value);
+        if (isObject) {
             const kind = String((value as J).type ?? "").toLowerCase();
             if (kind === "textfromfloat" || kind === "textmerge") {
                 // A *text* id held in a float variable, and stored as a plain float rather
                 // than NaN-boxed — it names a string, not a number, so nothing downstream
                 // should read it as a variable reference. Note `decimal` defaults to 3 in
                 // resolveTextId and to 0 on the text-component path; not the same default.
-                return floatToRawIntBits(this.resolveTextId(value));
+                const textId = this.resolveTextId(value);
+                if (named && deferred) this.writer.setStringName(textId, name);
+                return floatToRawIntBits(textId);
             }
         }
+        if (named && !(isObject && !deferred)) {
+            if (!deferred && Boolean(command.flush)) {
+                const bits = this.fbits(value);
+                if (isNanBits(bits)) this.writer.setFloatName(idFromNanBits(bits), name);
+                return bits;
+            }
+            const bits = typeof value === "number" ? floatToRawIntBits(value) : this.fbits(value);
+            if (!isNanBits(bits)) return this.writer.addNamedFloat(name, f32FromBits(bits));
+            this.writer.setFloatName(idFromNanBits(bits), name);
+            return bits;
+        }
+        if (typeof value === "number") return this.writer.addFloatConstant(value);
         return this.fbits(value);
     }
 
