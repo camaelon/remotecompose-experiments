@@ -558,7 +558,9 @@ void SkiaPaintContext::drawTweenPath(int path1Id, int path2Id, float tween,
     // If both paths exist, interpolate between them
     SkPath tweened;
     if (has1 && has2 && tween > 0.0f && tween < 1.0f) {
-        if (path1.interpolate(path2, tween, &tweened)) {
+        // SkPath::interpolate weighs *this* path (out = this*w + other*(1-w)); a tween of t
+        // means path1 + (path2 - path1)*t (Android's getPathArray, the TS player), so w = 1 - t.
+        if (path1.interpolate(path2, 1.0f - tween, &tweened)) {
             drawPath = &tweened;
         }
     } else if (has1 && has2 && tween >= 1.0f) {
@@ -605,7 +607,7 @@ void SkiaPaintContext::tweenPath(int outId, int pathId1, int pathId2, float twee
         result = path1;
     } else if (t >= 1.0f) {
         result = path2;
-    } else if (!path1.interpolate(path2, t, &result)) {
+    } else if (!path1.interpolate(path2, 1.0f - t, &result)) {   // weight of path1: see drawTweenPath
         result = path1; // fallback if paths are incompatible
     }
     mPaths[outId] = std::move(result);
