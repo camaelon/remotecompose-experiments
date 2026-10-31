@@ -35,7 +35,7 @@
   },
   "now": {
    "type": "float",
-   "doc": "An x value (e.g. \"timeInMin()\" or a variable) to mark with a vertical line and a dot on the curve; clamped to x_min..x_max"
+   "doc": "x of the 'now' marker (a vertical line and a dot on the curve). For a chart over today, \"timeInMin()\": the device's current minute of the day, so the marker moves by itself. Never a variable frozen at a value. An x value (e.g. \"timeInMin()\" or a variable) to mark with a vertical line and a dot on the curve; clamped to x_min..x_max"
   },
   "marks": {
    "type": "list",
@@ -192,6 +192,7 @@
   }
  },
  "pitfalls": [
+  "A chart of today's values: now is \"timeInMin()\" (with x_min 0, x_max 1440), not a host variable set once; and whatever depends on now in the text around the chart (rising or falling, the next event, the current value) is computed from timeInMin() and the data too (see TIM examples), never typed in.",
   "Which chart: LineChart for a value over time or over a range of x (a day of temperatures, a tide, a price, the sun's altitude) at card or screen width, with axis labels, a now marker or marked points; Sparkline for a word-sized trend beside a label (no axes, no labels); BarChart for separate quantities per category or period (steps per day, visits per week)",
   "Don't hand-draw the chart on a canvas with literal coordinates and drawText labels: this component fills its width, derives every coordinate from componentWidth()/componentHeight() (named canvas variables), and puts its labels in text components, so it relayouts on resize and screen readers reach the labels",
   "Two modes. values is the name of a float array (\"@temps\" in resources.floatArrays), not a JSON list: the curve is arraySpline through every value, spread evenly over x_min..x_max, so a host that sets the exported array redraws it, any length. fn is y as an expression of u, the x value (pathExpression's sample variable: write u, never x or a name of your own); it is spliced into the path's expressions, so it may read document variables and the clock (\"@mean + @amp * cos((u - @high) * 0.0084315)\"). Give one or the other",

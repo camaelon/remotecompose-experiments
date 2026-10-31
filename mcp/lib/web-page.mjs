@@ -82,6 +82,17 @@ const COMMON_JS = `
  *                                      document fetched from url, or on the text given
  * }
  */
+/**
+ * The player script: inline (a page that stands alone, e.g. a download), or by URL ({src}: a
+ * published page, so the ~480 KB bundle is fetched once per browser and cached, not resent
+ * inside every page).
+ */
+function bundleTag(bundle) {
+    return typeof bundle === "object" && bundle?.src
+        ? `<script src="${bundle.src.replace(/"/g, "%22")}"></script>`
+        : `<script>\n${scriptSafe(bundle)}\n</script>`;
+}
+
 export function buildPage({ bundle, rcBase64, config }) {
     return config.controls ? playgroundPage(bundle, rcBase64, config) : barePage(bundle, rcBase64, config);
 }
@@ -111,9 +122,7 @@ function barePage(bundle, rcBase64, config) {
 <body>
 <div id="rc" role="img" aria-label="${escapeHtml(config.title)}"></div>
 <div id="rc-error" hidden></div>
-<script>
-${scriptSafe(bundle)}
-</script>
+${bundleTag(bundle)}
 <script>
 (function () {
   var C = ${jsonInScript(config)};
@@ -581,9 +590,7 @@ function playgroundPage(bundle, rcBase64, config) {
   </header>
   <pre id="json-pre" tabindex="0"></pre>
 </dialog>
-<script>
-${scriptSafe(bundle)}
-</script>
+${bundleTag(bundle)}
 <script>
 (function () {
   var C = ${jsonInScript(config)};

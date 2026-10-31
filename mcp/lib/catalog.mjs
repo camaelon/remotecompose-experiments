@@ -301,8 +301,11 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
         "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
         "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status",
-        "widget", "hour", "hours", "minute", "next", "previous", "last", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
-    const generic = (w) => GENERIC.has(w) || /ly$/.test(w);
+        "widget", "hour", "hours", "minute", "next", "previous", "last",
+        "plotted", "plot", "grid", "sample", "samples", "emoji", "emojis", "typography", "font", "background", "card", "cards",
+        "red", "orange", "yellow", "green", "blue", "cyan", "teal", "purple", "pink", "white", "black", "grey", "gray", "navy", "gold", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
+    // Sizes and numbers ("420x540", "24") are no subject either.
+    const generic = (w) => GENERIC.has(w) || /ly$/.test(w) || /^\d+(x\d+)?$/.test(w);
     const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {
         const t = ` ${normalizeWords(e.title ?? "").join(" ")} `, k = ` ${normalizeWords((e.keywords ?? []).join(" ")).join(" ")} `,
@@ -409,7 +412,7 @@ function suggestIcons(goal, r) {
 
 // Reference screens laid out with components, with a drawing in a canvas and values computed
 // from the clock: the default layout_model when no better-matching one exists.
-const LAYOUT_MODELS = ["TIM-12", "TIM-11", "TIM-10", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
+const LAYOUT_MODELS = ["TIM-12", "TIM-13", "TIM-11", "TIM-10", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
 
 // Examples that teach drawing a shape from a value, for a component the library lacks.
 const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];
@@ -449,6 +452,8 @@ function needsComponent(r, C) {
 
 // Phrases that mean the content depends on the current date or time.
 const NOW_WORDS = /\b(today|tonight|now|current|this (day|week|month|year)|next (week|month)|upcoming|calendar|month|week|daily|weekly)\b/;
+// Words for a status that depends on the current time.
+const LIVE_WORDS = /\b(right now|now|current(?:ly)?|rising|falling|next|upcoming|remaining|left|until|countdown|live|in progress|status)\b/;
 // Words for a quantity worth a visual.
 const QUANTITY_WORDS = /\b(percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left|curves?|charts?|graphs?|tides?|over time|hourly|daily)\b/;
 
@@ -464,6 +469,13 @@ function designRules(goal, r, needed) {
     if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
         rule: "Compute dates from the clock",
         how: "\"this month\", \"today\", \"now\": the month name, its number of days, the weekday of the 1st, today's highlight and anything derived (a moon phase, a countdown) are expressions over the time variables, so the document stays right tomorrow and next month. Don't paste values computed offline, and don't state precise data (event times) you cannot compute or source.",
+    });
+    if (LIVE_WORDS.test(g)) rules.push({
+        rule: "Compute what depends on now",
+        how: "\"right now\", \"current\", \"rising or falling\", \"next\", \"in 2 h\": the status, the next event, the current value " +
+            "and a chart's now marker are expressions of the clock (timeInMin(), dayOfMonth()...) and the data, so they stay right " +
+            "as the day goes on. Data that comes from outside (a forecast, a schedule) is exported host variables or arrays; the " +
+            "live parts are computed from it, never typed in. Render with variants to see another time of day.",
     });
     if (QUANTITY_WORDS.test(g)) rules.push({
         rule: "Give quantities a visual",

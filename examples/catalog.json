@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-10-30T21:43:18.823Z",
+ "built_at": "2026-10-31T00:42:58.925Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -16586,7 +16586,8 @@
     "DOC-04"
    ],
    "expect_findings": [
-    "text_in_canvas"
+    "text_in_canvas",
+    "hardcoded_colors"
    ],
    "folder": "EXP-13-system-values",
    "derived": {
@@ -29096,6 +29097,896 @@
    }
   },
   {
+   "id": "TIM-13",
+   "name": "tide-today",
+   "version": 1,
+   "title": "Today's tides: a forecast curve with live status",
+   "summary": "Today's tides for a harbour (Brest by default): the host pushes the day's forecast as exported data (a water-level array sampled every 30 minutes, the turning points' times, heights and kinds, and the place name), and everything that depends on now is computed from the clock: the current level interpolated on the curve at timeInMin(), rising or falling, the next high or low tide and the time left until it, which of the day's tides are past, and the chart's now line. The structure is layout: a header with Icon and DateLabel, a panel with the status texts switched by visibility and a LineChart that takes the remaining height, and a row of four tiles for the turning points; the only canvas is inside LineChart.",
+   "prompt": "Make a remotecompose widget that shows the tides for today in Brest: a curve of the water level over the day, the times of the high and low tides, and whether it's rising or falling right now",
+   "level": 4,
+   "family": "TIM",
+   "capabilities": {
+    "primary": [
+     "host.variables",
+     "time.clock",
+     "data.array",
+     "layout.state"
+    ],
+    "secondary": [
+     "expr.array",
+     "expr.select",
+     "data.spline",
+     "draw.plot",
+     "text.dynamic",
+     "expr.format",
+     "image.icon",
+     "a11y.labels",
+     "layout.weight",
+     "layout.decoration",
+     "time.date",
+     "data.tokens"
+    ]
+   },
+   "use_cases": [
+    "weather",
+    "widget",
+    "chart",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "tide",
+    "tides",
+    "tide times",
+    "tide table",
+    "high tide",
+    "low tide",
+    "high water",
+    "low water",
+    "water level",
+    "sea level",
+    "rising",
+    "falling",
+    "flood",
+    "ebb",
+    "incoming tide",
+    "outgoing tide",
+    "next high tide",
+    "next low tide",
+    "tide clock",
+    "tide chart",
+    "tide curve",
+    "tide widget",
+    "harbour",
+    "harbor",
+    "marina",
+    "port",
+    "sailing",
+    "fishing",
+    "brest",
+    "forecast curve",
+    "today's forecast",
+    "daily forecast",
+    "forecast from server",
+    "host pushes data",
+    "live status",
+    "current value on a curve",
+    "interpolate at now",
+    "next event",
+    "time until",
+    "countdown to next event",
+    "turning points",
+    "now marker",
+    "now line",
+    "24-hour curve"
+   ],
+   "teaches": [
+    "Split the data from the clock: the host pushes what it knows about the day (the forecast) and the document computes what depends on now. The forecast is exported resources: floatArrays waterLevel (49 half-hourly levels, 00:00 to 24:00), tideTime (turning points in local minutes since midnight, ascending), tideHeight and tideKind (1 high, 0 low), and the place as an exported string variable. Now is timeInMin() (local minutes, repainted once a minute), never a host variable set to a time: a status or a countdown stored as data is right for one minute",
+    "The current level is the curve read at now: arraySpline(@waterLevel, clamp(0, 1, @now / 1440)), the same mapping LineChart uses for its line, so the number and the chart's now dot agree. LineChart draws the forecast (values \"@waterLevel\", x_min 0, x_max 1440, now \"timeInMin()\", marks at the event times, xLabels and yLabels as texts) and takes the panel's remaining height with fill",
+    "The next turning point without a loop: each event time ti is arrayGet(@tideTime, min(i, @nEv - 1)) + 9999 * (1 - step(@nEv, i + 0.5)) (a missing 4th event moves past the end of the day), k = step(@now, @t0) + ... + step(@now, @t3) counts the events already passed, and the next one is index min(@k, @nEv - 1): nextT = arrayGet(@tideTime, @ki). after = step(@k, @nEv - 0.5) is 1 once the day's last tide has passed",
+    "Rising or falling is the kind of the next turning point (rising when it is a high), and after the last one the opposite of the last kind: rising = abs(arrayGet(@tideKind, @ki) - @after). Deriving it from the next event, not from the curve's slope, keeps the status and the \"High tide at ...\" line consistent at the turning point itself",
+    "Whole texts switch with visibility bound to float variables that are exactly 0 or 1 (step, 1 - x, products): visibility reads the variable's integer value, and a float variable's integer is its truncation, so \"Rising\"/\"Falling\", the north/south Icon, \"High tide\"/\"Low tide\", the \"at 9:52, in 1 h 22 min\" part (before), the hours part (hidden under an hour) and \" tomorrow\" (after) are separate text components and each shows only when it applies. Only the numbers are formatted (textFromFloat, H:MM with flags 5 and 13)",
+    "Per-event tiles from one small inline component (TideTile): visibility gone for a missing event, \"High\"/\"Low\" by kind, and the passed ones dimmed with graphicsLayer alpha 1 - 0.5 * step(@now, @ti); the spacing is padding inside each weighted box, so it disappears with the tile and a three-event day gives three wider tiles",
+    "The date comes from the clock (DateLabel), never typed in"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/floatArrays/waterLevel",
+     "shows": "host.variables",
+     "note": "the day's forecast curve as an exported float array the host replaces"
+    },
+    {
+     "pointer": "/resources/floatArrays/tideTime",
+     "shows": "data.array",
+     "note": "turning points in local minutes since midnight; tideHeight and tideKind run parallel"
+    },
+    {
+     "pointer": "/resources/variables/now",
+     "shows": "time.clock",
+     "note": "now from the clock, in local minutes"
+    },
+    {
+     "pointer": "/resources/variables/level",
+     "shows": "data.spline",
+     "note": "the current level: the forecast curve read at now with arraySpline"
+    },
+    {
+     "pointer": "/resources/variables/t3",
+     "shows": "expr.array",
+     "note": "an event time guarded by the array's length: a missing event moves to 9999"
+    },
+    {
+     "pointer": "/resources/variables/k",
+     "shows": "expr.select",
+     "note": "how many turning points have passed: a sum of steps, no loop"
+    },
+    {
+     "pointer": "/resources/variables/rising",
+     "shows": "expr.select",
+     "note": "rising when the next turning point is a high, or after the last one when it was a low"
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/0/row/children/3",
+     "shows": "layout.state",
+     "note": "\"Rising\" and \"Falling\" as two texts, each with a visibility bound to a 0/1 float variable"
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/2",
+     "shows": "text.dynamic",
+     "note": "the next-event line: kind word, \"at H:MM, in\", hours (hidden under an hour), minutes, or \"tomorrow\""
+    },
+    {
+     "pointer": "/root/1/column/children/2/Panel/children/4/box/children/0",
+     "shows": "draw.plot",
+     "note": "LineChart in array mode: now = timeInMin(), marks at the event times, fill"
+    },
+    {
+     "pointer": "/components/TideTile",
+     "shows": "layout.weight",
+     "note": "a tile in a weighted box whose padding is the gap, gone when the event is missing"
+    },
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "image.icon",
+     "note": "header: Icon, the exported place name and DateLabel"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "waterLevel": {
+      "type": "float array",
+      "meaning": "today's predicted water level in metres, sampled every 30 minutes from 00:00 to 24:00 (49 values; any count spread evenly over the day works)",
+      "default": "a Brest spring-tide day: 4.7 m at midnight, low 2.0 m at 03:40, high 6.4 m at 09:52, low 1.9 m at 16:04, high 6.0 m at 22:16"
+     },
+     "tideTime": {
+      "type": "float array",
+      "meaning": "today's high and low tides in local minutes since midnight, ascending (3 or 4 of them; up to 4 are shown)",
+      "default": [
+       220,
+       592,
+       964,
+       1336
+      ]
+     },
+     "tideHeight": {
+      "type": "float array",
+      "meaning": "their heights in metres",
+      "default": [
+       2,
+       6.4,
+       1.9,
+       6
+      ]
+     },
+     "tideKind": {
+      "type": "float array",
+      "meaning": "1 for a high tide, 0 for a low tide",
+      "default": [
+       0,
+       1,
+       0,
+       1
+      ]
+     },
+     "place": {
+      "type": "string",
+      "meaning": "the harbour's name",
+      "default": "Brest"
+     }
+    },
+    "clock": "2026-10-30T18:45",
+    "touch": false
+   },
+   "check": {
+    "describe": "Renders pin the clock (local). Data: the default Brest day, low 2.0 m at 3:40, high 6.4 m at 9:52, low 1.9 m at 16:04, high 6.0 m at 22:16 (a cosine between turning points, sampled every 30 min). Canonical (2026-10-30 18:45): 3.5 m now, north arrow, \"Rising\", \"High tide at 22:16, in 3 h 31 min\", the now line at 18:45 with its dot on the rising flank, the first three tiles dimmed (passed) and 22:16 bright. night (02:00, before the first low): 2.7 m, south arrow, \"Falling\", \"Low tide at 3:40, in 1 h 40 min\", no tile dimmed, the now line left of the first mark. morning (09:20, rising mid-morning): 6.3 m, \"Rising\", \"High tide at 9:52, in 32 min\" (the hours part gone), only 3:40 dimmed. late (23:00, after the evening high): 5.9 m, \"Falling\", \"Low tide tomorrow\" (no countdown), all four tiles dimmed, the now dot past the last mark on the falling curve. three (host data for a neap day, 2026-11-05 20:00, \"Le Conquet\", three turning points: low 2.4 m 5:50, high 5.8 m 12:02, low 2.5 m 18:14): 3.1 m, \"Rising\", \"High tide tomorrow\", three wider tiles, all dimmed, the date from the clock (Thursday, 5 November 2026). light and mono re-colour the same layout (mono: the panel and tiles outlined, no area wash, passed tiles grey). narrow (300 x 600) and wide (640 x 520): the chart takes the panel's remaining height and width, the tiles split the width in four.",
+    "render": {
+     "clock": "2026-10-30T18:45"
+    },
+    "renders": [
+     {
+      "name": "night",
+      "clock": "2026-10-30T02:00"
+     },
+     {
+      "name": "morning",
+      "clock": "2026-10-30T09:20"
+     },
+     {
+      "name": "late",
+      "clock": "2026-10-30T23:00"
+     },
+     {
+      "name": "three",
+      "clock": "2026-11-05T20:00",
+      "variables": {
+       "waterLevel": [
+        5.67,
+        5.54,
+        5.32,
+        5.02,
+        4.65,
+        4.24,
+        3.83,
+        3.43,
+        3.06,
+        2.76,
+        2.54,
+        2.42,
+        2.41,
+        2.5,
+        2.69,
+        2.97,
+        3.33,
+        3.73,
+        4.16,
+        4.58,
+        4.97,
+        5.31,
+        5.57,
+        5.74,
+        5.8,
+        5.75,
+        5.61,
+        5.36,
+        5.05,
+        4.67,
+        4.26,
+        3.85,
+        3.45,
+        3.1,
+        2.81,
+        2.61,
+        2.51,
+        2.51,
+        2.62,
+        2.81,
+        3.08,
+        3.41,
+        3.79,
+        4.18,
+        4.56,
+        4.91,
+        5.21,
+        5.43,
+        5.56
+       ],
+       "tideTime": [
+        350,
+        722,
+        1094
+       ],
+       "tideHeight": [
+        2.4,
+        5.8,
+        2.5
+       ],
+       "tideKind": [
+        0,
+        1,
+        0
+       ],
+       "place": "Le Conquet"
+      }
+     },
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "mono",
+      "componentTheme": "mono"
+     },
+     {
+      "name": "narrow",
+      "width": 300,
+      "height": 600
+     },
+     {
+      "name": "wide",
+      "width": 640,
+      "height": 520
+     }
+    ]
+   },
+   "pitfalls": [
+    "Don't freeze now: a host variable \"nowMinutes\" or a status string \"Rising\" stored in the data is right when it is sent and wrong a minute later (and a widget is refreshed rarely). Read timeInMin() and compute the current level, the status, the next event and the countdown from it",
+    "Don't type in the status, the next event or the date (\"Rising · High tide at 9:52 in 1 h 22 min\", \"Friday 30 October\"): each is a value of the clock and the forecast. Only the forecast itself is data",
+    "A float expression holds at most 32 entries (json2rc refuses longer ones, Android throws): name the pieces (nEv, t0..t3, k, ki, after, um) instead of one formula for \"the next event\"",
+    "arrayGet with an index past the end throws in the Java player and the document stops (EXAMPLES_FINDINGS U34; the C++ player clamps, so only a device shows it), and expressions evaluate every branch (ifElse included): clamp the index with min(i, arrayLength(@a) - 1) and mask the result with step(arrayLength(@a), i + 0.5) to support days with three turning points",
+    "visibility takes a variable that is exactly 0, 1 or 2: it reads the variable's integer value, so a float variable works only when its value is a whole number (step(), 1 - x, products of those); 0.999 truncates to 0 and hides the text",
+    "A layout text can't pick a word with textSubtext (canvas only, EXAMPLES_FINDINGS U32): switch whole text components with visibility instead, one per wording",
+    "Weights ignore spacedBy (EXAMPLES_FINDINGS U3): the status row and the tile row use fixed spacer boxes or padding inside the weighted box, not spacedBy, or the last child is pushed out (the current level was cut off before this fix)",
+    "After the day's last turning point there is no next event in today's data: say so (\"Low tide tomorrow\") and let the host push tomorrow's forecast, instead of showing a negative countdown or the last event again",
+    "Event times are local minutes since midnight, like timeInMin(): a server sending UTC times must convert them (or the document adds offsetToUtc() / 60, as TIM-12 does)"
+   ],
+   "related": [
+    "TIM-12",
+    "HST-02",
+    "LAY-12",
+    "EXP-15",
+    "LineChart",
+    "Icon",
+    "DateLabel"
+   ],
+   "components": [
+    "LineChart",
+    "Icon",
+    "DateLabel",
+    "Panel",
+    "TideTile"
+   ],
+   "folder": "TIM-13-tide-today",
+   "derived": {
+    "bytes": 15577,
+    "op_count": 655,
+    "header": {
+     "width": 360,
+     "height": 640
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "place",
+      "type": "string",
+      "value": "Brest"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "tideHeight",
+      "type": "float_array",
+      "value": [
+       2,
+       6.4000001,
+       1.89999998,
+       6
+      ]
+     },
+     {
+      "name": "tideKind",
+      "type": "float_array",
+      "value": [
+       0,
+       1,
+       0,
+       1
+      ]
+     },
+     {
+      "name": "tideTime",
+      "type": "float_array",
+      "value": [
+       220,
+       592,
+       964,
+       1336
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     },
+     {
+      "name": "waterLevel",
+      "type": "float_array",
+      "value": [
+       4.69000006,
+       4.17000008,
+       3.6400001,
+       3.1400001,
+       2.71000004,
+       2.3599999,
+       2.11999989,
+       2.00999999,
+       2.02999997,
+       2.19000006,
+       2.48000002,
+       2.88000011,
+       3.36999989,
+       3.9000001,
+       4.46000004,
+       5,
+       5.48999977,
+       5.88999987,
+       6.19000006,
+       6.36000013,
+       6.38999987,
+       6.28999996,
+       6.03999996,
+       5.67000008,
+       5.21000004,
+       4.67999983,
+       4.11000013,
+       3.54999995,
+       3.02999997,
+       2.56999993,
+       2.22000003,
+       1.99000001,
+       1.89999998,
+       1.95000005,
+       2.13000011,
+       2.42000008,
+       2.80999994,
+       3.26999998,
+       3.77999997,
+       4.28999996,
+       4.78999996,
+       5.23000002,
+       5.59000015,
+       5.8499999,
+       5.98000002,
+       5.98999977,
+       5.86999989,
+       5.63000011,
+       5.30000019
+      ]
+     }
+    ],
+    "components": [
+     "DateLabel",
+     "Icon",
+     "LineChart",
+     "Panel",
+     "TideTile"
+    ],
+    "java_identical": true,
+    "renders": {
+     "night": {
+      "render": "render-night.png"
+     },
+     "morning": {
+      "render": "render-morning.png"
+     },
+     "late": {
+      "render": "render-late.png"
+     },
+     "three": {
+      "render": "render-three.png"
+     },
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "mono": {
+      "render": "render-mono.png",
+      "componentTheme": "mono",
+      "bytes": 15000,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "place",
+        "type": "string",
+        "value": "Brest"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "tideHeight",
+        "type": "float_array",
+        "value": [
+         2,
+         6.4000001,
+         1.89999998,
+         6
+        ]
+       },
+       {
+        "name": "tideKind",
+        "type": "float_array",
+        "value": [
+         0,
+         1,
+         0,
+         1
+        ]
+       },
+       {
+        "name": "tideTime",
+        "type": "float_array",
+        "value": [
+         220,
+         592,
+         964,
+         1336
+        ]
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "waterLevel",
+        "type": "float_array",
+        "value": [
+         4.69000006,
+         4.17000008,
+         3.6400001,
+         3.1400001,
+         2.71000004,
+         2.3599999,
+         2.11999989,
+         2.00999999,
+         2.02999997,
+         2.19000006,
+         2.48000002,
+         2.88000011,
+         3.36999989,
+         3.9000001,
+         4.46000004,
+         5,
+         5.48999977,
+         5.88999987,
+         6.19000006,
+         6.36000013,
+         6.38999987,
+         6.28999996,
+         6.03999996,
+         5.67000008,
+         5.21000004,
+         4.67999983,
+         4.11000013,
+         3.54999995,
+         3.02999997,
+         2.56999993,
+         2.22000003,
+         1.99000001,
+         1.89999998,
+         1.95000005,
+         2.13000011,
+         2.42000008,
+         2.80999994,
+         3.26999998,
+         3.77999997,
+         4.28999996,
+         4.78999996,
+         5.23000002,
+         5.59000015,
+         5.8499999,
+         5.98000002,
+         5.98999977,
+         5.86999989,
+         5.63000011,
+         5.30000019
+        ]
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "time.clock": [
+      "timeInMin"
+     ],
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "layout.state": [
+      "visibility"
+     ],
+     "expr.array": [
+      "arrayLength(",
+      "arrayGet("
+     ],
+     "expr.select": [
+      "ifElse(",
+      "step("
+     ],
+     "data.spline": [
+      "spline"
+     ],
+     "draw.plot": [
+      "pathExpression"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "expr.format": [
+      "textFromFloat"
+     ],
+     "image.icon": [
+      "icon_"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "layout.weight": [
+      "weight",
+      "verticalWeight"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ],
+     "time.date": [
+      "weekDay",
+      "dayOfMonth",
+      "calendarMonth",
+      "year"
+     ],
+     "data.tokens": [
+      "resources",
+      "variables",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "$if",
+     "$slot",
+     "DateLabel",
+     "Icon",
+     "LineChart",
+     "Panel",
+     "TideTile",
+     "after",
+     "alpha",
+     "apiLevel",
+     "background",
+     "before",
+     "body",
+     "box",
+     "canvas",
+     "children",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "commit",
+     "componentTheme",
+     "components",
+     "content",
+     "contentDescription",
+     "count",
+     "dark",
+     "decimal",
+     "default",
+     "dim",
+     "dim0",
+     "dim1",
+     "dim2",
+     "dim3",
+     "doc",
+     "drawLine",
+     "drawPath",
+     "drawTextAnchored",
+     "else",
+     "end",
+     "ex0",
+     "ex1",
+     "ex2",
+     "ex3",
+     "export",
+     "expressionX",
+     "expressionY",
+     "falling",
+     "fill",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "format",
+     "from",
+     "gap",
+     "graphicsLayer",
+     "hasH",
+     "header",
+     "height",
+     "hi0",
+     "hi1",
+     "hi2",
+     "hi3",
+     "high",
+     "horizontalAlignment",
+     "i",
+     "icon_north_outlined",
+     "icon_south_outlined",
+     "icon_waves_outlined",
+     "id",
+     "id1",
+     "id2",
+     "index",
+     "k",
+     "ki",
+     "label",
+     "len",
+     "level",
+     "light",
+     "linechart1_nx",
+     "lo0",
+     "lo1",
+     "lo2",
+     "lo3",
+     "loop",
+     "low",
+     "marks",
+     "maxLines",
+     "mode",
+     "modifiers",
+     "muted",
+     "nEv",
+     "name",
+     "nextT",
+     "now",
+     "onSurface",
+     "operation",
+     "ops",
+     "overflow",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "params",
+     "path",
+     "pathExpression",
+     "paths",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "required",
+     "resources",
+     "rising",
+     "root",
+     "roundedRect",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "show",
+     "size",
+     "slots",
+     "spacedBy",
+     "start",
+     "static",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "surface",
+     "sx",
+     "sy",
+     "t",
+     "t0",
+     "t1",
+     "t2",
+     "t3",
+     "text",
+     "textAlign",
+     "textMeasure",
+     "textSize",
+     "textSubtext",
+     "textTransform",
+     "then",
+     "tideHeight",
+     "tideKind",
+     "tideTime",
+     "top",
+     "track",
+     "type",
+     "um",
+     "until",
+     "value",
+     "values",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalWeight",
+     "visibility",
+     "vtype",
+     "waterLevel",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "xLabels",
+     "x_max",
+     "x_min",
+     "y",
+     "y1",
+     "y2",
+     "yLabels",
+     "y_max",
+     "y_min"
+    ]
+   }
+  },
+  {
    "id": "TXT-01",
    "name": "text-basic",
    "version": 2,
@@ -33605,7 +34496,7 @@
     "secondary": []
    },
    "pitfalls": [
-    "visible must be an INTEGER variable: `visibility` reads an int id, so a float variable (or a plain number passed as visible) hides it for good. Declare it {\"type\": \"int\", \"value\": 1} in resources.variables and change it with valueIntegerChange",
+    "visible is an integer variable here ({\"type\": \"int\", \"value\": 1}, changed with valueIntegerChange) so the cross and the Show button set it directly; a float variable or expression that is exactly 0 or 1 also drives `visibility` (the player stores (int) value), so a computed condition works too",
     "Dismissing slides it out to the right (exitSequence BEFORE) and then closes the gap; showing it opens the gap and then fades it in (AFTER). Components below it move smoothly only if they have an animationSpec of their own; otherwise they jump when the space closes",
     "The frame is two stacked backgrounds (a 1.5 dp ring in the kind colour around a surface fill), not a border: border can't take a theme colour",
     "In mono the kinds are told apart by the icon (circled i, triangle, circled !), since every colour is white; there is no slide or fade (mono has no motion)"
@@ -38831,6 +39722,7 @@
     "LineChart"
    ],
    "pitfalls": [
+    "A chart of today's values: now is \"timeInMin()\" (with x_min 0, x_max 1440), not a host variable set once; and whatever depends on now in the text around the chart (rising or falling, the next event, the current value) is computed from timeInMin() and the data too (see TIM examples), never typed in.",
     "Which chart: LineChart for a value over time or over a range of x (a day of temperatures, a tide, a price, the sun's altitude) at card or screen width, with axis labels, a now marker or marked points; Sparkline for a word-sized trend beside a label (no axes, no labels); BarChart for separate quantities per category or period (steps per day, visits per week)",
     "Don't hand-draw the chart on a canvas with literal coordinates and drawText labels: this component fills its width, derives every coordinate from componentWidth()/componentHeight() (named canvas variables), and puts its labels in text components, so it relayouts on resize and screen readers reach the labels",
     "Two modes. values is the name of a float array (\"@temps\" in resources.floatArrays), not a JSON list: the curve is arraySpline through every value, spread evenly over x_min..x_max, so a host that sets the exported array redraws it, any length. fn is y as an expression of u, the x value (pathExpression's sample variable: write u, never x or a name of your own); it is spliced into the path's expressions, so it may read document variables and the clock (\"@mean + @amp * cos((u - @high) * 0.0084315)\"). Give one or the other",

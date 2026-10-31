@@ -1,0 +1,914 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Today's tides for a harbour (Brest by default): the water level over the day with the high and low tides marked and a line at the current time, the current level, whether the tide is rising or falling and when the next high or low tide is, and the day's high and low tides"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Panel": {
+   "params": {},
+   "slots": {
+    "content": {
+     "doc": "The panel's rows; a child with verticalWeight takes the height left"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "verticalWeight": 1
+      },
+      {
+       "clip": {
+        "roundedRect": 16
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 15
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  },
+  "TideTile": {
+   "params": {
+    "i": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "Index of the turning point in tideTime / tideHeight"
+    },
+    "t": {
+     "type": "float",
+     "required": true,
+     "doc": "Its time, local minutes (a variable)"
+    },
+    "show": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Visibility variable: 1 when the event exists"
+    },
+    "high": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Visibility variable: 1 for a high tide"
+    },
+    "low": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Visibility variable: 1 for a low tide"
+    },
+    "dim": {
+     "type": "float",
+     "required": true,
+     "doc": "Alpha: 1 ahead, 0.5 once passed"
+    },
+    "gap": {
+     "type": "float",
+     "default": 8,
+     "static": true,
+     "doc": "Space before the tile (0 for the first)"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      {
+       "padding": {
+        "start": "@gap"
+       }
+      },
+      {
+       "visibility": "@show"
+      }
+     ],
+     "children": [
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "graphicsLayer": {
+           "alpha": "@dim"
+          }
+         },
+         {
+          "clip": {
+           "roundedRect": 12
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "background": "@colors.outline"
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "padding": 1
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "clip": {
+            "roundedRect": 11
+           }
+          }
+         },
+         {
+          "background": "@colors.surface"
+         },
+         {
+          "padding": {
+           "$if": "theme.mono",
+           "then": [
+            7,
+            7
+           ],
+           "else": [
+            8,
+            8
+           ]
+          }
+         },
+         {
+          "spacedBy": 2
+         }
+        ],
+        "children": [
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "visibility": "@high"
+            },
+            {
+             "spacedBy": 2
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "north",
+              "size": 14,
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "text": {
+              "value": "High",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         },
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "visibility": "@low"
+            },
+            {
+             "spacedBy": 2
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "south",
+              "size": 14,
+              "color": "@colors.muted"
+             }
+            },
+            {
+             "text": {
+              "value": "Low",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "floor(@t / 60)",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ":",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@t % 60",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 13
+             }
+            }
+           },
+           "fontSize": 16,
+           "color": "@colors.onSurface",
+           "maxLines": 1
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "arrayGet(@tideHeight, @i)",
+             "whole": 2,
+             "decimal": 1,
+             "flags": 5
+            },
+            "id2": " m"
+           },
+           "fontSize": 12,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "waterLevel": {
+    "value": [
+     4.69,
+     4.17,
+     3.64,
+     3.14,
+     2.71,
+     2.36,
+     2.12,
+     2.01,
+     2.03,
+     2.19,
+     2.48,
+     2.88,
+     3.37,
+     3.9,
+     4.46,
+     5.0,
+     5.49,
+     5.89,
+     6.19,
+     6.36,
+     6.39,
+     6.29,
+     6.04,
+     5.67,
+     5.21,
+     4.68,
+     4.11,
+     3.55,
+     3.03,
+     2.57,
+     2.22,
+     1.99,
+     1.9,
+     1.95,
+     2.13,
+     2.42,
+     2.81,
+     3.27,
+     3.78,
+     4.29,
+     4.79,
+     5.23,
+     5.59,
+     5.85,
+     5.98,
+     5.99,
+     5.87,
+     5.63,
+     5.3
+    ],
+    "export": true
+   },
+   "tideTime": {
+    "value": [
+     220,
+     592,
+     964,
+     1336
+    ],
+    "export": true
+   },
+   "tideHeight": {
+    "value": [
+     2.0,
+     6.4,
+     1.9,
+     6.0
+    ],
+    "export": true
+   },
+   "tideKind": {
+    "value": [
+     0,
+     1,
+     0,
+     1
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "now": "timeInMin()",
+   "nEv": "arrayLength(@tideTime)",
+   "ex0": "step(@nEv, 0.5)",
+   "t0": "arrayGet(@tideTime, 0) + 9999 * (1 - @ex0)",
+   "hi0": "@ex0 * arrayGet(@tideKind, 0)",
+   "lo0": "@ex0 - @hi0",
+   "dim0": "1 - 0.5 * step(@now, @t0)",
+   "ex1": "step(@nEv, 1.5)",
+   "t1": "arrayGet(@tideTime, min(1, @nEv - 1)) + 9999 * (1 - @ex1)",
+   "hi1": "@ex1 * arrayGet(@tideKind, min(1, @nEv - 1))",
+   "lo1": "@ex1 - @hi1",
+   "dim1": "1 - 0.5 * step(@now, @t1)",
+   "ex2": "step(@nEv, 2.5)",
+   "t2": "arrayGet(@tideTime, min(2, @nEv - 1)) + 9999 * (1 - @ex2)",
+   "hi2": "@ex2 * arrayGet(@tideKind, min(2, @nEv - 1))",
+   "lo2": "@ex2 - @hi2",
+   "dim2": "1 - 0.5 * step(@now, @t2)",
+   "ex3": "step(@nEv, 3.5)",
+   "t3": "arrayGet(@tideTime, min(3, @nEv - 1)) + 9999 * (1 - @ex3)",
+   "hi3": "@ex3 * arrayGet(@tideKind, min(3, @nEv - 1))",
+   "lo3": "@ex3 - @hi3",
+   "dim3": "1 - 0.5 * step(@now, @t3)",
+   "k": "step(@now, @t0) + step(@now, @t1) + step(@now, @t2) + step(@now, @t3)",
+   "after": "step(@k, @nEv - 0.5)",
+   "before": "1 - @after",
+   "ki": "min(@k, @nEv - 1)",
+   "nextT": "arrayGet(@tideTime, @ki)",
+   "rising": "abs(arrayGet(@tideKind, @ki) - @after)",
+   "falling": "1 - @rising",
+   "um": "max(0, @nextT - @now)",
+   "hasH": "@before * step(@um, 59.5)",
+   "level": "arraySpline(@waterLevel, clamp(0, 1, @now / 1440))"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "place",
+    "vtype": "string",
+    "value": "Brest",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "Icon": {
+          "name": "waves",
+          "size": 28,
+          "color": "@colors.primary"
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 10
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Tides · ",
+              "id2": "@place"
+             },
+             "fontSize": 22,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "DateLabel": {
+             "format": "long",
+             "fontSize": 14,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 12
+        }
+       ]
+      }
+     },
+     {
+      "Panel": {
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@rising"
+              }
+             ],
+             "children": [
+              {
+               "Icon": {
+                "name": "north",
+                "size": 32,
+                "color": "@colors.primary"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@falling"
+              }
+             ],
+             "children": [
+              {
+               "Icon": {
+                "name": "south",
+                "size": 32,
+                "color": "@colors.primary"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Rising",
+                "fontSize": 22,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@rising"
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Falling",
+                "fontSize": 22,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@falling"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "horizontalAlignment": "end",
+             "modifiers": [
+              {
+               "spacedBy": 0
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@level",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 24,
+                "color": "@colors.primary",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": "now",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 2
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "High tide",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@rising"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Low tide",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@falling"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": " at ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@nextT / 60)",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@nextT % 60",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 }
+                }
+               },
+               "id2": ", in "
+              }
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@before"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@um / 60)",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " h "
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@hasH"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@um % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " min"
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@before"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": " tomorrow",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@after"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 10
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "children": [
+           {
+            "LineChart": {
+             "values": "@waterLevel",
+             "x_min": 0,
+             "x_max": 1440,
+             "y_min": 0,
+             "y_max": 8,
+             "now": "timeInMin()",
+             "marks": [
+              "@t0",
+              "@t1",
+              "@t2",
+              "@t3"
+             ],
+             "fill": true,
+             "xLabels": [
+              "00",
+              "06",
+              "12",
+              "18",
+              "24"
+             ],
+             "yLabels": [
+              "8 m",
+              "6 m",
+              "4 m",
+              "2 m",
+              "0 m"
+             ],
+             "label": "Water level today from midnight to midnight, with the high and low tides marked and a line at the current time"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "TideTile": {
+          "i": 0,
+          "t": "@t0",
+          "show": "@ex0",
+          "high": "@hi0",
+          "low": "@lo0",
+          "dim": "@dim0",
+          "gap": 0
+         }
+        },
+        {
+         "TideTile": {
+          "i": 1,
+          "t": "@t1",
+          "show": "@ex1",
+          "high": "@hi1",
+          "low": "@lo1",
+          "dim": "@dim1",
+          "gap": 6
+         }
+        },
+        {
+         "TideTile": {
+          "i": 2,
+          "t": "@t2",
+          "show": "@ex2",
+          "high": "@hi2",
+          "low": "@lo2",
+          "dim": "@dim2",
+          "gap": 6
+         }
+        },
+        {
+         "TideTile": {
+          "i": 3,
+          "t": "@t3",
+          "show": "@ex3",
+          "high": "@hi3",
+          "low": "@lo3",
+          "dim": "@dim3",
+          "gap": 6
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

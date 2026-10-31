@@ -11,7 +11,8 @@
 // Unless MCP_PAGE_INDEX=0, <MCP_PUBLIC_URL>/pages/ is also a public index of every page,
 // which makes them all discoverable: the ids then no longer keep anything private.
 
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { usesComponents } from "./lib/components.mjs";
@@ -138,7 +139,57 @@ ${rows}
 }
 
 /** GET <base>/pages/ — the index; GET <base>/pages/<id>/ — the published page itself. No auth. */
+/** The player bundle under pages/_player/<hash>.js (written once per bundle version). */
+function sharedBundle(code) {
+    const name = createHash("sha256").update(code).digest("hex").slice(0, 16) + ".js";
+    const dir = path.join(PAGES_DIR, "_player");
+    const file = path.join(dir, name);
+    if (!existsSync(file)) { mkdirSync(dir, { recursive: true }); writeFileSync(file, code); }
+    return name;
+}
+
+// Compressed copies of served files, by path and mtime: pages and the player bundle compress
+// to about a quarter (brotli), whether or not a proxy in front compresses.
+const compressed = new Map();
+function sendFile(req, res, file, type, cache) {
+    const st = statSync(file);
+    const accept = String(req.headers["accept-encoding"] ?? "");
+    const enc = /\bbr\b/.test(accept) ? "br" : /\bgzip\b/.test(accept) ? "gzip" : null;
+    let body;
+    if (enc) {
+        const key = `${file}|${st.mtimeMs}|${enc}`;
+        body = compressed.get(key);
+        if (!body) {
+            const raw = readFileSync(file);
+            body = enc === "br" ? brotliCompressSync(raw, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 } }) : gzipSync(raw, { level: 9 });
+            if (compressed.size > 200) compressed.clear();
+            compressed.set(key, body);
+        }
+    } else body = readFileSync(file);
+    res.writeHead(200, {
+        "Content-Type": type, "Content-Length": body.length, "Cache-Control": cache, "Vary": "Accept-Encoding",
+        ...(enc ? { "Content-Encoding": enc } : {}),
+        "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex",
+    });
+    res.end(req.method === "HEAD" ? undefined : body);
+    return true;
+}
+
 function publicRoute(req, url, res) {
+    // The shared player script: named by its hash, so it never changes and caches for good.
+    const pm = /^\/pages\/_player\/([0-9a-f]{16}\.js)$/.exec(url.pathname);
+    if (pm && PAGES_DIR) {
+        const file = path.join(PAGES_DIR, "_player", pm[1]);
+        if (!existsSync(file)) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
+        return sendFile(req, res, file, "text/javascript; charset=utf-8", "public, max-age=31536000, immutable");
+    }
+    // A page's JSON documents (the viewer fetches them on click).
+    const jm = /^\/pages\/([A-Za-z0-9_-]{22})\/([\w.-]+\.json)$/.exec(url.pathname);
+    if (jm && PAGES_DIR && jm[2] !== "meta.json") {
+        const file = path.join(PAGES_DIR, jm[1], jm[2]);
+        if (!existsSync(file)) { res.writeHead(404, { "Content-Type": "text/plain" }); res.end("not found\n"); return true; }
+        return sendFile(req, res, file, "application/json; charset=utf-8", "public, max-age=300");
+    }
     if (PAGE_INDEX && PAGES_DIR && (url.pathname === "/pages" || url.pathname === "/pages/")) {
         if (req.method !== "GET" && req.method !== "HEAD") {
             res.writeHead(405, { Allow: "GET, HEAD" });
@@ -176,17 +227,7 @@ function publicRoute(req, url, res) {
         res.end();
         return true;
     }
-    const body = readFileSync(file);
-    res.writeHead(200, {
-        "Content-Type": "text/html; charset=utf-8",
-        "Content-Length": body.length,
-        "Cache-Control": "no-cache",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "no-referrer",
-        "X-Robots-Tag": "noindex",
-    });
-    res.end(req.method === "HEAD" ? undefined : body);
-    return true;
+    return sendFile(req, res, file, "text/html; charset=utf-8", "no-cache");
 }
 
 const PACKAGE_WEB_PROPS = {
@@ -403,8 +444,14 @@ export const definition = {
                 // A page published from JSON shows it (and its component expansion) in the
                 // playground's JSON viewer; from an .rc there is no JSON to show.
                 const json = controls ? jsonViews(a, fileName.replace(/\.rc$/, "")) : [];
+                // A published page loads the shared player script and fetches its JSON on demand;
+                // a file to keep (output_path, publish: false) carries everything inline.
+                const bundleCode = await playerBundle();
+                const shared = publish && a.output_path === undefined;
+                const bundleFile = shared ? sharedBundle(bundleCode) : null;
+                const jsonForPage = shared ? json.map((j) => ({ label: j.label, file: j.file, title: j.title, url: j.file })) : json;
                 const html = buildPage({
-                    bundle: await playerBundle(),
+                    bundle: shared ? { src: `../_player/${bundleFile}` } : bundleCode,
                     rcBase64: rcBytes.toString("base64"),
                     config: {
                         title, layout, width, height, controls,
@@ -420,7 +467,7 @@ export const definition = {
                         declared: settable,
                         urlVariables: a.url_variables !== false,
                         ranges: a.variable_ranges ?? {},
-                        ...(json.length ? { json } : {}),
+                        ...(jsonForPage.length ? { json: jsonForPage } : {}),
                     },
                 });
 
@@ -436,6 +483,7 @@ export const definition = {
                     const dir = path.join(PAGES_DIR, id);
                     mkdirSync(dir, { recursive: true });
                     writeFileSync(path.join(dir, "index.html"), html);
+                    if (shared) for (const j of json) writeFileSync(path.join(dir, j.file), j.text);
                     writeFileSync(path.join(dir, "meta.json"), JSON.stringify({
                         id, title, created: new Date().toISOString(), bytes: result.bytes, rc_bytes: rcBytes.length, controls,
                         source: source ?? (a.json !== undefined ? "inline json" : "inline rc"),

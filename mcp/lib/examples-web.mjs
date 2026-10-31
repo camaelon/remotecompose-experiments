@@ -19,6 +19,8 @@
 // relative, so the pages work under any prefix.
 
 import { existsSync, readFileSync, statSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import path from "node:path";
 import { EXAMPLES_DIR, loadCatalog } from "./catalog.mjs";
 import { buildPage, escapeHtml as esc, formatBytes } from "./web-page.mjs";
@@ -37,11 +39,36 @@ function entry(id) {
     return C.byId.get(id) ?? C.demos.get(id) ?? null;
 }
 
-function send(req, res, status, type, body) {
-    const buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
-    res.writeHead(status, { "Content-Type": type, "Content-Length": buf.length, ...HEADERS });
+// Compressed bodies (brotli or gzip, as the browser accepts), cached by content hash: the
+// pages are mostly text and compress to about a quarter.
+const squeezed = new Map();
+function send(req, res, status, type, body, extra = {}) {
+    let buf = Buffer.isBuffer(body) ? body : Buffer.from(body);
+    const accept = String(req.headers["accept-encoding"] ?? "");
+    const enc = buf.length > 1024 && !/^image\//.test(type) ? (/\bbr\b/.test(accept) ? "br" : /\bgzip\b/.test(accept) ? "gzip" : null) : null;
+    if (enc) {
+        const key = createHash("sha1").update(buf).digest("hex") + enc;
+        let z = squeezed.get(key);
+        if (!z) {
+            z = enc === "br" ? brotliCompressSync(buf, { params: { [zlibConstants.BROTLI_PARAM_QUALITY]: 9 } }) : gzipSync(buf, { level: 9 });
+            if (squeezed.size > 300) squeezed.clear();
+            squeezed.set(key, z);
+        }
+        buf = z;
+    }
+    res.writeHead(status, { "Content-Type": type, "Content-Length": buf.length, ...HEADERS, "Vary": "Accept-Encoding",
+        ...(enc ? { "Content-Encoding": enc } : {}), ...extra });
     res.end(req.method === "HEAD" ? undefined : buf);
     return true;
+}
+
+// The player script, served once under its hash (/player/<hash>.js) so every playground page
+// references it instead of inlining ~480 KB, and the browser caches it for good.
+let playerFile = null;
+async function playerScript() {
+    const code = await playerBundle();
+    if (!playerFile || playerFile.code !== code) playerFile = { code, name: createHash("sha256").update(code).digest("hex").slice(0, 16) + ".js" };
+    return playerFile;
 }
 
 const playCache = new Map();   // id[/variant] -> {mtime, html}
@@ -112,8 +139,9 @@ async function playground(e, variant) {
     // 2x screen. Only a document laid out in dp (header densityBehavior) follows the device.
     let dp = false;
     try { dp = !!JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")).header?.densityBehavior; } catch { /* keep 1 */ }
+    const player = await playerScript();
     const html = buildPage({
-        bundle: await playerBundle(),
+        bundle: { src: `${variant ? "../../../" : "../../"}player/${player.name}` },
         rcBase64: rcBytes.toString("base64"),
         config: {
             title: `${e.id}${variant ? ` (${variant})` : ""} · ${e.title ?? e.id}`, layout: "fill", width, height, controls: true,
@@ -294,6 +322,12 @@ function componentsPage() {
 /** lib/mcp-server.mjs publicRoute: true when it answered the request. */
 export async function publicRoute(req, url, res) {
     const p = url.pathname;
+    const pm = /^\/player\/([0-9a-f]{16}\.js)$/.exec(p);
+    if (pm) {
+        const player = await playerScript();
+        if (pm[1] !== player.name) return send(req, res, 404, "text/plain", "not found\n");
+        return send(req, res, 200, "text/javascript; charset=utf-8", player.code, { "Cache-Control": "public, max-age=31536000, immutable" });
+    }
     const known = p === "/" || p === "" || /^\/(components|play|img|json)(\/|$)/.test(p);
     if (!known) return false;
     if (req.method !== "GET" && req.method !== "HEAD") {

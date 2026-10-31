@@ -1,0 +1,3168 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Today's tides for a harbour (Brest by default): the water level over the day with the high and low tides marked and a line at the current time, the current level, whether the tide is rising or falling and when the next high or low tide is, and the day's high and low tides"
+ },
+ "resources": {
+  "floatArrays": {
+   "waterLevel": {
+    "value": [
+     4.69,
+     4.17,
+     3.64,
+     3.14,
+     2.71,
+     2.36,
+     2.12,
+     2.01,
+     2.03,
+     2.19,
+     2.48,
+     2.88,
+     3.37,
+     3.9,
+     4.46,
+     5,
+     5.49,
+     5.89,
+     6.19,
+     6.36,
+     6.39,
+     6.29,
+     6.04,
+     5.67,
+     5.21,
+     4.68,
+     4.11,
+     3.55,
+     3.03,
+     2.57,
+     2.22,
+     1.99,
+     1.9,
+     1.95,
+     2.13,
+     2.42,
+     2.81,
+     3.27,
+     3.78,
+     4.29,
+     4.79,
+     5.23,
+     5.59,
+     5.85,
+     5.98,
+     5.99,
+     5.87,
+     5.63,
+     5.3
+    ],
+    "export": true
+   },
+   "tideTime": {
+    "value": [
+     220,
+     592,
+     964,
+     1336
+    ],
+    "export": true
+   },
+   "tideHeight": {
+    "value": [
+     2,
+     6.4,
+     1.9,
+     6
+    ],
+    "export": true
+   },
+   "tideKind": {
+    "value": [
+     0,
+     1,
+     0,
+     1
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "now": "timeInMin()",
+   "nEv": "arrayLength(@tideTime)",
+   "ex0": "step(@nEv, 0.5)",
+   "t0": "arrayGet(@tideTime, 0) + 9999 * (1 - @ex0)",
+   "hi0": "@ex0 * arrayGet(@tideKind, 0)",
+   "lo0": "@ex0 - @hi0",
+   "dim0": "1 - 0.5 * step(@now, @t0)",
+   "ex1": "step(@nEv, 1.5)",
+   "t1": "arrayGet(@tideTime, min(1, @nEv - 1)) + 9999 * (1 - @ex1)",
+   "hi1": "@ex1 * arrayGet(@tideKind, min(1, @nEv - 1))",
+   "lo1": "@ex1 - @hi1",
+   "dim1": "1 - 0.5 * step(@now, @t1)",
+   "ex2": "step(@nEv, 2.5)",
+   "t2": "arrayGet(@tideTime, min(2, @nEv - 1)) + 9999 * (1 - @ex2)",
+   "hi2": "@ex2 * arrayGet(@tideKind, min(2, @nEv - 1))",
+   "lo2": "@ex2 - @hi2",
+   "dim2": "1 - 0.5 * step(@now, @t2)",
+   "ex3": "step(@nEv, 3.5)",
+   "t3": "arrayGet(@tideTime, min(3, @nEv - 1)) + 9999 * (1 - @ex3)",
+   "hi3": "@ex3 * arrayGet(@tideKind, min(3, @nEv - 1))",
+   "lo3": "@ex3 - @hi3",
+   "dim3": "1 - 0.5 * step(@now, @t3)",
+   "k": "step(@now, @t0) + step(@now, @t1) + step(@now, @t2) + step(@now, @t3)",
+   "after": "step(@k, @nEv - 0.5)",
+   "before": "1 - @after",
+   "ki": "min(@k, @nEv - 1)",
+   "nextT": "arrayGet(@tideTime, @ki)",
+   "rising": "abs(arrayGet(@tideKind, @ki) - @after)",
+   "falling": "1 - @rising",
+   "um": "max(0, @nextT - @now)",
+   "hasH": "@before * step(@um, 59.5)",
+   "level": "arraySpline(@waterLevel, clamp(0, 1, @now / 1440))",
+   "linechart1_nx": "clamp(0, 1440, (timeInMin()))"
+  },
+  "paths": {
+   "icon_waves_outlined": [
+    {
+     "type": "moveTo",
+     "x": 80,
+     "y": 814
+    },
+    {
+     "type": "lineTo",
+     "x": 80,
+     "y": 736
+    },
+    {
+     "type": "quadTo",
+     "x1": 109,
+     "y1": 736,
+     "x2": 129.5,
+     "y2": 727
+    },
+    {
+     "type": "quadTo",
+     "x1": 150,
+     "y1": 718,
+     "x2": 171,
+     "y2": 707.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 192,
+     "y1": 697,
+     "x2": 217.5,
+     "y2": 688.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 243,
+     "y1": 680,
+     "x2": 280,
+     "y2": 680
+    },
+    {
+     "type": "quadTo",
+     "x1": 318,
+     "y1": 680,
+     "x2": 342.5,
+     "y2": 688.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 367,
+     "y1": 697,
+     "x2": 388,
+     "y2": 707.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 409,
+     "y1": 718,
+     "x2": 430,
+     "y2": 727
+    },
+    {
+     "type": "quadTo",
+     "x1": 451,
+     "y1": 736,
+     "x2": 480,
+     "y2": 736
+    },
+    {
+     "type": "quadTo",
+     "x1": 509,
+     "y1": 736,
+     "x2": 530,
+     "y2": 727
+    },
+    {
+     "type": "quadTo",
+     "x1": 551,
+     "y1": 718,
+     "x2": 572,
+     "y2": 707.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 593,
+     "y1": 697,
+     "x2": 618,
+     "y2": 688.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 643,
+     "y1": 680,
+     "x2": 680,
+     "y2": 680
+    },
+    {
+     "type": "quadTo",
+     "x1": 718,
+     "y1": 680,
+     "x2": 743,
+     "y2": 688.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 768,
+     "y1": 697,
+     "x2": 789,
+     "y2": 707.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 810,
+     "y1": 718,
+     "x2": 831,
+     "y2": 727
+    },
+    {
+     "type": "quadTo",
+     "x1": 852,
+     "y1": 736,
+     "x2": 880,
+     "y2": 736
+    },
+    {
+     "type": "lineTo",
+     "x": 880,
+     "y": 814
+    },
+    {
+     "type": "quadTo",
+     "x1": 842,
+     "y1": 814,
+     "x2": 816.5,
+     "y2": 805
+    },
+    {
+     "type": "quadTo",
+     "x1": 791,
+     "y1": 796,
+     "x2": 770,
+     "y2": 785.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 749,
+     "y1": 775,
+     "x2": 729,
+     "y2": 766.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 709,
+     "y1": 758,
+     "x2": 680,
+     "y2": 758
+    },
+    {
+     "type": "quadTo",
+     "x1": 652,
+     "y1": 758,
+     "x2": 631.5,
+     "y2": 766.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 611,
+     "y1": 775,
+     "x2": 590.5,
+     "y2": 785.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 570,
+     "y1": 796,
+     "x2": 544.5,
+     "y2": 805
+    },
+    {
+     "type": "quadTo",
+     "x1": 519,
+     "y1": 814,
+     "x2": 480,
+     "y2": 814
+    },
+    {
+     "type": "quadTo",
+     "x1": 441,
+     "y1": 814,
+     "x2": 415.5,
+     "y2": 805
+    },
+    {
+     "type": "quadTo",
+     "x1": 390,
+     "y1": 796,
+     "x2": 369.5,
+     "y2": 785.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 349,
+     "y1": 775,
+     "x2": 329,
+     "y2": 766.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 309,
+     "y1": 758,
+     "x2": 280,
+     "y2": 758
+    },
+    {
+     "type": "quadTo",
+     "x1": 252,
+     "y1": 758,
+     "x2": 231.5,
+     "y2": 766.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 211,
+     "y1": 775,
+     "x2": 190,
+     "y2": 785.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 169,
+     "y1": 796,
+     "x2": 143.5,
+     "y2": 805
+    },
+    {
+     "type": "quadTo",
+     "x1": 118,
+     "y1": 814,
+     "x2": 80,
+     "y2": 814
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 80,
+     "y": 636
+    },
+    {
+     "type": "lineTo",
+     "x": 80,
+     "y": 558
+    },
+    {
+     "type": "quadTo",
+     "x1": 109,
+     "y1": 558,
+     "x2": 129.5,
+     "y2": 549
+    },
+    {
+     "type": "quadTo",
+     "x1": 150,
+     "y1": 540,
+     "x2": 171,
+     "y2": 529.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 192,
+     "y1": 519,
+     "x2": 217.5,
+     "y2": 510.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 243,
+     "y1": 502,
+     "x2": 280,
+     "y2": 502
+    },
+    {
+     "type": "quadTo",
+     "x1": 318,
+     "y1": 502,
+     "x2": 342.5,
+     "y2": 510.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 367,
+     "y1": 519,
+     "x2": 388,
+     "y2": 529.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 409,
+     "y1": 540,
+     "x2": 430,
+     "y2": 549
+    },
+    {
+     "type": "quadTo",
+     "x1": 451,
+     "y1": 558,
+     "x2": 480,
+     "y2": 558
+    },
+    {
+     "type": "quadTo",
+     "x1": 509,
+     "y1": 558,
+     "x2": 530,
+     "y2": 549
+    },
+    {
+     "type": "quadTo",
+     "x1": 551,
+     "y1": 540,
+     "x2": 572,
+     "y2": 529.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 593,
+     "y1": 519,
+     "x2": 618,
+     "y2": 510.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 643,
+     "y1": 502,
+     "x2": 680,
+     "y2": 502
+    },
+    {
+     "type": "quadTo",
+     "x1": 718,
+     "y1": 502,
+     "x2": 743,
+     "y2": 510.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 768,
+     "y1": 519,
+     "x2": 789,
+     "y2": 529.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 810,
+     "y1": 540,
+     "x2": 831,
+     "y2": 549
+    },
+    {
+     "type": "quadTo",
+     "x1": 852,
+     "y1": 558,
+     "x2": 880,
+     "y2": 558
+    },
+    {
+     "type": "lineTo",
+     "x": 880,
+     "y": 636
+    },
+    {
+     "type": "quadTo",
+     "x1": 842,
+     "y1": 636,
+     "x2": 816.5,
+     "y2": 627
+    },
+    {
+     "type": "quadTo",
+     "x1": 791,
+     "y1": 618,
+     "x2": 770,
+     "y2": 607.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 749,
+     "y1": 597,
+     "x2": 729,
+     "y2": 588.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 709,
+     "y1": 580,
+     "x2": 680,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 651,
+     "y1": 580,
+     "x2": 630.5,
+     "y2": 588.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 610,
+     "y1": 597,
+     "x2": 589.5,
+     "y2": 607.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 569,
+     "y1": 618,
+     "x2": 544,
+     "y2": 627
+    },
+    {
+     "type": "quadTo",
+     "x1": 519,
+     "y1": 636,
+     "x2": 480,
+     "y2": 636
+    },
+    {
+     "type": "quadTo",
+     "x1": 441,
+     "y1": 636,
+     "x2": 415.5,
+     "y2": 627
+    },
+    {
+     "type": "quadTo",
+     "x1": 390,
+     "y1": 618,
+     "x2": 369.5,
+     "y2": 607.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 349,
+     "y1": 597,
+     "x2": 329,
+     "y2": 588.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 309,
+     "y1": 580,
+     "x2": 280,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 252,
+     "y1": 580,
+     "x2": 231.5,
+     "y2": 588.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 211,
+     "y1": 597,
+     "x2": 190,
+     "y2": 607.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 169,
+     "y1": 618,
+     "x2": 143.5,
+     "y2": 627
+    },
+    {
+     "type": "quadTo",
+     "x1": 118,
+     "y1": 636,
+     "x2": 80,
+     "y2": 636
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 80,
+     "y": 458
+    },
+    {
+     "type": "lineTo",
+     "x": 80,
+     "y": 380
+    },
+    {
+     "type": "quadTo",
+     "x1": 109,
+     "y1": 380,
+     "x2": 129.5,
+     "y2": 371
+    },
+    {
+     "type": "quadTo",
+     "x1": 150,
+     "y1": 362,
+     "x2": 171,
+     "y2": 351.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 192,
+     "y1": 341,
+     "x2": 217.5,
+     "y2": 332.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 243,
+     "y1": 324,
+     "x2": 280,
+     "y2": 324
+    },
+    {
+     "type": "quadTo",
+     "x1": 318,
+     "y1": 324,
+     "x2": 342.5,
+     "y2": 332.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 367,
+     "y1": 341,
+     "x2": 388,
+     "y2": 351.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 409,
+     "y1": 362,
+     "x2": 430,
+     "y2": 371
+    },
+    {
+     "type": "quadTo",
+     "x1": 451,
+     "y1": 380,
+     "x2": 480,
+     "y2": 380
+    },
+    {
+     "type": "quadTo",
+     "x1": 509,
+     "y1": 380,
+     "x2": 530,
+     "y2": 371
+    },
+    {
+     "type": "quadTo",
+     "x1": 551,
+     "y1": 362,
+     "x2": 572,
+     "y2": 351.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 593,
+     "y1": 341,
+     "x2": 618,
+     "y2": 332.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 643,
+     "y1": 324,
+     "x2": 680,
+     "y2": 324
+    },
+    {
+     "type": "quadTo",
+     "x1": 718,
+     "y1": 324,
+     "x2": 743,
+     "y2": 332.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 768,
+     "y1": 341,
+     "x2": 789,
+     "y2": 351.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 810,
+     "y1": 362,
+     "x2": 831,
+     "y2": 371
+    },
+    {
+     "type": "quadTo",
+     "x1": 852,
+     "y1": 380,
+     "x2": 880,
+     "y2": 380
+    },
+    {
+     "type": "lineTo",
+     "x": 880,
+     "y": 458
+    },
+    {
+     "type": "quadTo",
+     "x1": 842,
+     "y1": 458,
+     "x2": 816.5,
+     "y2": 449
+    },
+    {
+     "type": "quadTo",
+     "x1": 791,
+     "y1": 440,
+     "x2": 770,
+     "y2": 429.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 749,
+     "y1": 419,
+     "x2": 729,
+     "y2": 410.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 709,
+     "y1": 402,
+     "x2": 680,
+     "y2": 402
+    },
+    {
+     "type": "quadTo",
+     "x1": 652,
+     "y1": 402,
+     "x2": 631.5,
+     "y2": 410.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 611,
+     "y1": 419,
+     "x2": 590.5,
+     "y2": 429.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 570,
+     "y1": 440,
+     "x2": 544.5,
+     "y2": 449
+    },
+    {
+     "type": "quadTo",
+     "x1": 519,
+     "y1": 458,
+     "x2": 480,
+     "y2": 458
+    },
+    {
+     "type": "quadTo",
+     "x1": 441,
+     "y1": 458,
+     "x2": 415.5,
+     "y2": 449
+    },
+    {
+     "type": "quadTo",
+     "x1": 390,
+     "y1": 440,
+     "x2": 369.5,
+     "y2": 429.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 349,
+     "y1": 419,
+     "x2": 329,
+     "y2": 410.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 309,
+     "y1": 402,
+     "x2": 280,
+     "y2": 402
+    },
+    {
+     "type": "quadTo",
+     "x1": 252,
+     "y1": 402,
+     "x2": 231.5,
+     "y2": 410.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 211,
+     "y1": 419,
+     "x2": 190,
+     "y2": 429.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 169,
+     "y1": 440,
+     "x2": 143.5,
+     "y2": 449
+    },
+    {
+     "type": "quadTo",
+     "x1": 118,
+     "y1": 458,
+     "x2": 80,
+     "y2": 458
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 80,
+     "y": 280
+    },
+    {
+     "type": "lineTo",
+     "x": 80,
+     "y": 202
+    },
+    {
+     "type": "quadTo",
+     "x1": 109,
+     "y1": 202,
+     "x2": 129.5,
+     "y2": 193
+    },
+    {
+     "type": "quadTo",
+     "x1": 150,
+     "y1": 184,
+     "x2": 171,
+     "y2": 173.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 192,
+     "y1": 163,
+     "x2": 217.5,
+     "y2": 154.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 243,
+     "y1": 146,
+     "x2": 280,
+     "y2": 146
+    },
+    {
+     "type": "quadTo",
+     "x1": 318,
+     "y1": 146,
+     "x2": 342.5,
+     "y2": 154.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 367,
+     "y1": 163,
+     "x2": 388,
+     "y2": 173.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 409,
+     "y1": 184,
+     "x2": 430,
+     "y2": 193
+    },
+    {
+     "type": "quadTo",
+     "x1": 451,
+     "y1": 202,
+     "x2": 480,
+     "y2": 202
+    },
+    {
+     "type": "quadTo",
+     "x1": 509,
+     "y1": 202,
+     "x2": 530,
+     "y2": 193
+    },
+    {
+     "type": "quadTo",
+     "x1": 551,
+     "y1": 184,
+     "x2": 572,
+     "y2": 173.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 593,
+     "y1": 163,
+     "x2": 618,
+     "y2": 154.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 643,
+     "y1": 146,
+     "x2": 680,
+     "y2": 146
+    },
+    {
+     "type": "quadTo",
+     "x1": 718,
+     "y1": 146,
+     "x2": 743,
+     "y2": 154.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 768,
+     "y1": 163,
+     "x2": 789,
+     "y2": 173.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 810,
+     "y1": 184,
+     "x2": 831,
+     "y2": 193
+    },
+    {
+     "type": "quadTo",
+     "x1": 852,
+     "y1": 202,
+     "x2": 880,
+     "y2": 202
+    },
+    {
+     "type": "lineTo",
+     "x": 880,
+     "y": 280
+    },
+    {
+     "type": "quadTo",
+     "x1": 842,
+     "y1": 280,
+     "x2": 816.5,
+     "y2": 271
+    },
+    {
+     "type": "quadTo",
+     "x1": 791,
+     "y1": 262,
+     "x2": 770,
+     "y2": 251.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 749,
+     "y1": 241,
+     "x2": 729,
+     "y2": 232.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 709,
+     "y1": 224,
+     "x2": 680,
+     "y2": 224
+    },
+    {
+     "type": "quadTo",
+     "x1": 652,
+     "y1": 224,
+     "x2": 631.5,
+     "y2": 232.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 611,
+     "y1": 241,
+     "x2": 590.5,
+     "y2": 251.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 570,
+     "y1": 262,
+     "x2": 544.5,
+     "y2": 271
+    },
+    {
+     "type": "quadTo",
+     "x1": 519,
+     "y1": 280,
+     "x2": 480,
+     "y2": 280
+    },
+    {
+     "type": "quadTo",
+     "x1": 441,
+     "y1": 280,
+     "x2": 415.5,
+     "y2": 271
+    },
+    {
+     "type": "quadTo",
+     "x1": 390,
+     "y1": 262,
+     "x2": 369.5,
+     "y2": 251.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 349,
+     "y1": 241,
+     "x2": 329,
+     "y2": 232.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 309,
+     "y1": 224,
+     "x2": 280,
+     "y2": 224
+    },
+    {
+     "type": "quadTo",
+     "x1": 252,
+     "y1": 224,
+     "x2": 231.5,
+     "y2": 232.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 211,
+     "y1": 241,
+     "x2": 190,
+     "y2": 251.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 169,
+     "y1": 262,
+     "x2": 143.5,
+     "y2": 271
+    },
+    {
+     "type": "quadTo",
+     "x1": 118,
+     "y1": 280,
+     "x2": 80,
+     "y2": 280
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "icon_north_outlined": [
+    {
+     "type": "moveTo",
+     "x": 440,
+     "y": 880
+    },
+    {
+     "type": "lineTo",
+     "x": 440,
+     "y": 233
+    },
+    {
+     "type": "lineTo",
+     "x": 256,
+     "y": 416
+    },
+    {
+     "type": "lineTo",
+     "x": 200,
+     "y": 360
+    },
+    {
+     "type": "lineTo",
+     "x": 480,
+     "y": 80
+    },
+    {
+     "type": "lineTo",
+     "x": 760,
+     "y": 360
+    },
+    {
+     "type": "lineTo",
+     "x": 704,
+     "y": 417
+    },
+    {
+     "type": "lineTo",
+     "x": 520,
+     "y": 233
+    },
+    {
+     "type": "lineTo",
+     "x": 520,
+     "y": 880
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "icon_south_outlined": [
+    {
+     "type": "moveTo",
+     "x": 480,
+     "y": 880
+    },
+    {
+     "type": "lineTo",
+     "x": 200,
+     "y": 600
+    },
+    {
+     "type": "lineTo",
+     "x": 256,
+     "y": 544
+    },
+    {
+     "type": "lineTo",
+     "x": 440,
+     "y": 727
+    },
+    {
+     "type": "lineTo",
+     "x": 440,
+     "y": 80
+    },
+    {
+     "type": "lineTo",
+     "x": 520,
+     "y": 80
+    },
+    {
+     "type": "lineTo",
+     "x": 520,
+     "y": 727
+    },
+    {
+     "type": "lineTo",
+     "x": 704,
+     "y": 543
+    },
+    {
+     "type": "lineTo",
+     "x": 760,
+     "y": 600
+    },
+    {
+     "type": "close"
+    }
+   ]
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "outline": "#FF9E9E9E",
+   "primary": "#FFFFFFFF",
+   "surface": "#FF000000",
+   "track": "#FF9E9E9E"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "place",
+    "vtype": "string",
+    "value": "Brest",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 28
+           }
+          ],
+          "commands": [
+           {
+            "save": [
+             {
+              "scale": {
+               "sx": "componentWidth() / 960",
+               "sy": "componentHeight() / 960"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.primary",
+               "style": "fill"
+              }
+             },
+             {
+              "drawPath": {
+               "path": "$paths.icon_waves_outlined"
+              }
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 10
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Tides · ",
+              "id2": "@place"
+             },
+             "fontSize": 22,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "canvas": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 19.6
+              },
+              {
+               "semantics": {
+                "contentDescription": "Date"
+               }
+              }
+             ],
+             "commands": [
+              {
+               "textSubtext": {
+                "text": "Monday   Tuesday  WednesdayThursday Friday   Saturday Sunday   ",
+                "start": "(weekDay() - 1) * 9",
+                "len": 9,
+                "varName": "datelabel1_dateLabelDay9"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@datelabel1_dateLabelDay9",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "datelabel1_dateLabelDay"
+               }
+              },
+              {
+               "textSubtext": {
+                "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+                "start": "(calendarMonth() - 1) * 9",
+                "len": 9,
+                "varName": "datelabel1_dateLabelMonth9"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@datelabel1_dateLabelMonth9",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "datelabel1_dateLabelMonth"
+               }
+              },
+              {
+               "variable": {
+                "name": "datelabel1_dateLabelText",
+                "vtype": "string",
+                "commit": true,
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "@datelabel1_dateLabelDay",
+                      "id2": ", "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "dayOfMonth()",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 4
+                     }
+                    },
+                    "id2": " "
+                   },
+                   "id2": "@datelabel1_dateLabelMonth"
+                  },
+                  "id2": " "
+                 },
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "year()",
+                  "whole": 4,
+                  "decimal": 0,
+                  "flags": 4
+                 }
+                }
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.muted"
+                 },
+                 {
+                  "textSize": 14
+                 }
+                ]
+               }
+              },
+              {
+               "textMeasure": {
+                "text": "@datelabel1_dateLabelText",
+                "mode": 0,
+                "name": "datelabel1_dateLabelWidth"
+               }
+              },
+              {
+               "scale": {
+                "sx": "min(1, componentWidth() / @datelabel1_dateLabelWidth)",
+                "sy": "min(1, componentWidth() / @datelabel1_dateLabelWidth)",
+                "pivotX": 0,
+                "pivotY": 9.8
+               }
+              },
+              {
+               "drawTextAnchored": {
+                "text": "@datelabel1_dateLabelText",
+                "x": 0,
+                "y": 9.8,
+                "panX": -1,
+                "panY": 0
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 12
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "verticalWeight": 1
+        },
+        {
+         "clip": {
+          "roundedRect": 16
+         }
+        },
+        {
+         "background": "@colors.outline"
+        },
+        {
+         "padding": 1
+        },
+        {
+         "clip": {
+          "roundedRect": 15
+         }
+        },
+        {
+         "background": "@colors.surface"
+        },
+        {
+         "padding": 11
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@rising"
+              }
+             ],
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 32
+                 }
+                ],
+                "commands": [
+                 {
+                  "save": [
+                   {
+                    "scale": {
+                     "sx": "componentWidth() / 960",
+                     "sy": "componentHeight() / 960"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "color": "@colors.primary",
+                     "style": "fill"
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "$paths.icon_north_outlined"
+                    }
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@falling"
+              }
+             ],
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 32
+                 }
+                ],
+                "commands": [
+                 {
+                  "save": [
+                   {
+                    "scale": {
+                     "sx": "componentWidth() / 960",
+                     "sy": "componentHeight() / 960"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "color": "@colors.primary",
+                     "style": "fill"
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "$paths.icon_south_outlined"
+                    }
+                   }
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Rising",
+                "fontSize": 22,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@rising"
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Falling",
+                "fontSize": 22,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "visibility": "@falling"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "horizontalAlignment": "end",
+             "modifiers": [
+              {
+               "spacedBy": 0
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@level",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 24,
+                "color": "@colors.primary",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": "now",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 2
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "High tide",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@rising"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Low tide",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@falling"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": " at ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@nextT / 60)",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@nextT % 60",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 }
+                }
+               },
+               "id2": ", in "
+              }
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@before"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@um / 60)",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " h "
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@hasH"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@um % 60",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " min"
+             },
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@before"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": " tomorrow",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@after"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 10
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "verticalWeight": 1
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "verticalWeight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "column": {
+                   "verticalAlignment": "spaceBetween",
+                   "horizontalAlignment": "end",
+                   "modifiers": [
+                    {
+                     "width": 32
+                    },
+                    "fillMaxHeight",
+                    {
+                     "padding": {
+                      "end": 6
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "8 m",
+                      "fontSize": 11,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "6 m",
+                      "fontSize": 11,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "4 m",
+                      "fontSize": 11,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "2 m",
+                      "fontSize": 11,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "0 m",
+                      "fontSize": 11,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    },
+                    "fillMaxHeight",
+                    {
+                     "semantics": {
+                      "contentDescription": "Water level today from midnight to midnight, with the high and low tides marked and a line at the current time"
+                     }
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "linechart1_x0",
+                      "value": "componentWidth() * 0.1"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "linechart1_kx",
+                      "value": "(componentWidth() - 2 * @linechart1_x0) / 1440"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "linechart1_cx",
+                      "value": "@linechart1_x0"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "linechart1_ky",
+                      "value": "(componentHeight() - 14) / max(8 - 0, 0.001)"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "linechart1_cy",
+                      "value": "7 + 8 * @linechart1_ky"
+                     }
+                    },
+                    {
+                     "variable": {
+                      "name": "linechart1_by",
+                      "value": "componentHeight() - 7"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_line",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": 0,
+                      "end": 1440,
+                      "count": "(arrayLength(@waterLevel)) * 6 - 5",
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.track"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "loop": {
+                      "index": "i",
+                      "from": 0,
+                      "until": 5,
+                      "commands": [
+                       {
+                        "drawLine": {
+                         "x1": 0,
+                         "y1": "7 + i * (componentHeight() - 14) / (5 - 1)",
+                         "x2": "componentWidth()",
+                         "y2": "7 + i * (componentHeight() - 14) / (5 - 1)"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 1
+                       },
+                       {
+                        "alpha": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": "@linechart1_cx + @linechart1_nx * @linechart1_kx",
+                      "y1": 0,
+                      "x2": "@linechart1_cx + @linechart1_nx * @linechart1_kx",
+                      "y2": "componentHeight()"
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.onSurface"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 2
+                       },
+                       {
+                        "strokeCap": "round"
+                       },
+                       {
+                        "strokeJoin": "round"
+                       },
+                       {
+                        "alpha": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_line"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_mark0",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx + 99999 * step(abs(u - 720), 720.144)",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": "@t0",
+                      "end": "@t0",
+                      "count": 2,
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "strokeWidth": 8
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_mark0"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_mark1",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx + 99999 * step(abs(u - 720), 720.144)",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": "@t1",
+                      "end": "@t1",
+                      "count": 2,
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "strokeWidth": 8
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_mark1"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_mark2",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx + 99999 * step(abs(u - 720), 720.144)",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": "@t2",
+                      "end": "@t2",
+                      "count": 2,
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "strokeWidth": 8
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_mark2"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_mark3",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx + 99999 * step(abs(u - 720), 720.144)",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": "@t3",
+                      "end": "@t3",
+                      "count": 2,
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "strokeWidth": 8
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_mark3"
+                     }
+                    },
+                    {
+                     "pathExpression": {
+                      "id": "linechart1_nowdot",
+                      "expressionX": "@linechart1_cx + u * @linechart1_kx",
+                      "expressionY": "@linechart1_cy - arraySpline(@waterLevel, u / 1440) * @linechart1_ky",
+                      "start": "@linechart1_nx",
+                      "end": "@linechart1_nx",
+                      "count": 2,
+                      "flags": 4
+                     }
+                    },
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "strokeWidth": 11
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawPath": {
+                      "path": "linechart1_nowdot"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 32,
+                   "top": 4
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "00",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "textAlign": "center",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "06",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "textAlign": "center",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "12",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "textAlign": "center",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "18",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "textAlign": "center",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "24",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "textAlign": "center",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "height": 10
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 0
+            }
+           },
+           {
+            "visibility": "@ex0"
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "graphicsLayer": {
+                "alpha": "@dim0"
+               }
+              },
+              {
+               "clip": {
+                "roundedRect": 12
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": {
+                "roundedRect": 11
+               }
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": [
+                7,
+                7
+               ]
+              },
+              {
+               "spacedBy": 2
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@hi0"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.primary",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_north_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "High",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@lo0"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.muted",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_south_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Low",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@t0 / 60)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@t0 % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 16,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "arrayGet(@tideHeight, 0)",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           },
+           {
+            "visibility": "@ex1"
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "graphicsLayer": {
+                "alpha": "@dim1"
+               }
+              },
+              {
+               "clip": {
+                "roundedRect": 12
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": {
+                "roundedRect": 11
+               }
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": [
+                7,
+                7
+               ]
+              },
+              {
+               "spacedBy": 2
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@hi1"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.primary",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_north_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "High",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@lo1"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.muted",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_south_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Low",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@t1 / 60)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@t1 % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 16,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "arrayGet(@tideHeight, 1)",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           },
+           {
+            "visibility": "@ex2"
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "graphicsLayer": {
+                "alpha": "@dim2"
+               }
+              },
+              {
+               "clip": {
+                "roundedRect": 12
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": {
+                "roundedRect": 11
+               }
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": [
+                7,
+                7
+               ]
+              },
+              {
+               "spacedBy": 2
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@hi2"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.primary",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_north_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "High",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@lo2"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.muted",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_south_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Low",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@t2 / 60)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@t2 % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 16,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "arrayGet(@tideHeight, 2)",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           },
+           {
+            "visibility": "@ex3"
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "graphicsLayer": {
+                "alpha": "@dim3"
+               }
+              },
+              {
+               "clip": {
+                "roundedRect": 12
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": {
+                "roundedRect": 11
+               }
+              },
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "padding": [
+                7,
+                7
+               ]
+              },
+              {
+               "spacedBy": 2
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@hi3"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.primary",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_north_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "High",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 {
+                  "visibility": "@lo3"
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 14
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "save": [
+                      {
+                       "scale": {
+                        "sx": "componentWidth() / 960",
+                        "sy": "componentHeight() / 960"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "color": "@colors.muted",
+                        "style": "fill"
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_south_outlined"
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Low",
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "floor(@t3 / 60)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@t3 % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 16,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "arrayGet(@tideHeight, 3)",
+                  "whole": 2,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": " m"
+                },
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
