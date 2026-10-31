@@ -701,16 +701,25 @@ static float computeModifierDefinedWidth(const LayoutState& ls, const RemoteCont
     // the modifier list and breaks at the size modifier, which is Compose's ordering
     // rule. Using total padding here makes `.width(200).padding(30)` 260 wide instead
     // of 200 with 140 of content.
+    // A widthIn minimum raises the value, exact or not (the reference's
+    // computeModifierDefinedWidth: Math.max(width, widthIn.min)).
+    float w = 0.0f;
     if (ls.widthType == DimType::EXACT || ls.widthType == DimType::EXACT_DP) {
-        return ls.padBeforeWidth + resolveVar(ls.widthValue, ctx) * dimScale(ls.widthType);
+        w = resolveVar(ls.widthValue, ctx) * dimScale(ls.widthType);
+        if (ls.widthInMin >= 0) w = std::max(w, ls.widthInMin);
+        return ls.padBeforeWidth + w;
     }
+    if (ls.widthInMin >= 0) return std::max(ls.paddingLeft + ls.paddingRight, ls.padBeforeWidth + ls.widthInMin);
     return ls.paddingLeft + ls.paddingRight;
 }
 
 static float computeModifierDefinedHeight(const LayoutState& ls, const RemoteContext& ctx) {
     if (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP) {
-        return ls.padBeforeHeight + resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType);
+        float h = resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType);
+        if (ls.heightInMin >= 0) h = std::max(h, ls.heightInMin);
+        return ls.padBeforeHeight + h;
     }
+    if (ls.heightInMin >= 0) return std::max(ls.paddingTop + ls.paddingBottom, ls.padBeforeHeight + ls.heightInMin);
     return ls.paddingTop + ls.paddingBottom;
 }
 
@@ -908,6 +917,7 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     const float lsPx = lsEm * fsize;
     float textW = (pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size())
                   + lsPx * utf8Count(text);
+    ls.lastTextW = textW;
     float lineH = pc ? pc->measureTextHeight(text, fsize) : fsize * 1.2f;
     // Capture the baseline with this component's own typeface applied (the guard is
     // still active here), so getAlignByValue can align mixed styles on one baseline.
@@ -982,10 +992,23 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
 static void minIntrinsicSize(Operation* op, PaintContext* pc, RemoteContext& ctx,
                              MeasurePass& measure, float& w, float& h) {
     int oc = op->opcode();
+    // A child its visibility modifier hides is never measured by the reference, so its
+    // intrinsic size is 0 (a hidden wide text made a fitBox reject a layout that fit).
+    {
+        auto& vls = getLS(ctx, op);
+        inflateLayout(op, vls);
+        if (vls.visibilityId >= 0 && ctx.getInteger(vls.visibilityId) == 0) { w = 0.0f; h = 0.0f; return; }
+    }
     if (oc == 208 || oc == 239) {
         measureComponent(op, pc, ctx, 0, 1e9f, 0, 1e9f, measure);
         auto& cm = measure.get(getComponentId(op));
         w = cm.w; h = cm.h;
+        // The reference's CoreText.minIntrinsicWidth is the text's own width: a fill or weight
+        // width measured unbounded would be the bound (U42).
+        auto& tls = getLS(ctx, op);
+        if (tls.widthType != DimType::EXACT && tls.widthType != DimType::EXACT_DP && tls.lastTextW > 0) {
+            w = tls.lastTextW + tls.paddingLeft + tls.paddingRight;
+        }
         return;
     }
     auto& ls = getLS(ctx, op);
@@ -1023,6 +1046,9 @@ static void minIntrinsicSize(Operation* op, PaintContext* pc, RemoteContext& ctx
     w = std::max(mw, cw);
     h = std::max(mh, ch);
 }
+
+// A fitBox none of whose children fit, with each child's minimum size (for the render report).
+static std::unordered_map<int, std::string> gFitBoxNeed;
 
 // ── Measure a layout manager (Box, Row, Column, etc.) ────────────────
 // Ported from Java LayoutManager.measure_v1_1_0()
@@ -1393,6 +1419,9 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
         }
     }
 
+    // A fitBox none of whose children fit is GONE itself (the reference's OVERRIDE_GONE on
+    // self): it takes no room in its parent and the report can say it shows nothing.
+    bool fitBoxEmpty = false;
     // Always re-measure children with the final available space (matching TS computeSize)
     {
         float childMaxW = std::max(0.0f, measuredW - ls.paddingLeft - ls.paddingRight);
@@ -1512,12 +1541,19 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
             // the first child, in order, whose min intrinsic size fits and which, measured
             // from that minimum up to the box, still fits, is shown; every other child is GONE.
             bool found = false;
+            // Each child's minimum, kept for the render report when none fits (the report
+            // runs without a paint context and cannot measure).
+            std::string need;
             for (auto* child : ls.layoutChildren) {
                 unhide(child, ctx, measure);
                 auto& cm = measure.get(getComponentId(child));
                 if (!found) {
                     float iw = 0.0f, ih = 0.0f;
                     minIntrinsicSize(child, pc, ctx, measure, iw, ih);
+                    char nb[96];
+                    std::snprintf(nb, sizeof nb, "%s%s#%d needs %.0fx%.0f", need.empty() ? "" : ", ",
+                        child->name().c_str(), getComponentId(child), iw, ih);
+                    need += nb;
                     if (iw <= childMaxW + 0.5f && ih <= childMaxH + 0.5f) {
                         measureComponent(child, pc, ctx, iw, childMaxW, ih, childMaxH, measure);
                         auto& cm2 = measure.get(getComponentId(child));
@@ -1530,6 +1566,8 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
                 }
                 cm.visibility = VIS_GONE;
             }
+            if (found) gFitBoxNeed.erase(cid); else gFitBoxNeed[cid] = need;
+            fitBoxEmpty = !found && !ls.layoutChildren.empty();
         } else {
             // Box/Canvas/FlowLayout: simple re-measure
             ComponentMeasure parentM;
@@ -1567,6 +1605,7 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     // resized smaller must get a smaller canvas, not one drawn past its box: U40.)
 
     applyVisibility(ls, ctx, m);
+    if (fitBoxEmpty) m.visibility = VIS_GONE;
     m.w = measuredW;
     m.h = measuredH;
     LTRACE("  measureLayout DONE cid=%d opcode=%d w=%.1f h=%.1f wrapW=%.1f wrapH=%.1f hasHWrap=%d hasVWrap=%d\n",
@@ -2395,12 +2434,20 @@ static bool gCountLayoutOverflow = false;   // only the settled layout counts, n
 LayoutOverflowCounts layoutOverflowCounts() { return gLayoutOverflow; }
 void resetLayoutOverflowCounts() { gLayoutOverflow = LayoutOverflowCounts{}; gLayoutOverflowIds.clear(); }
 
+// Inside a GONE component (a fitBox's rejected child, a collapsed one), the subtree keeps the
+// stale measures of the pass that rejected it; the reference never lays it out and reports
+// nothing. Its dimensions are stored as 0 and it is left out of the overflow counts.
+static int gGoneDepth = 0;
+
 static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
     int cid = getComponentId(op);
     auto& ls = getLS(ctx, op);
 
     if (cid != -1 && measure.contains(cid)) {
         auto& m = measure.get(cid);
+        // (The reference keeps a gone subtree's last measures too; only the counts below leave
+        // it out.)
+        const bool goneHere = m.isGone() || gGoneDepth > 0;
         // Store outer dimensions for the component itself
         ctx.setComponentDimension(cid, m.w, m.h, m.x, m.y);
         {
@@ -2419,16 +2466,112 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
         float innerH = std::max(0.0f, m.h - ls.paddingTop - ls.paddingBottom);
         // A visible child placed past the content box, unless this scrolls (the reference
         // clips nothing: it is drawn cut off, which a renderer's report should say).
-        if (!ls.hasScroll && m.isVisible()) {
+        if (gCountLayoutOverflow && !goneHere && !ls.hasScroll && m.isVisible()) {
+            // Past the parent's outer edge (a child spilling into the parent's own padding is
+            // still drawn: nothing clips at the content box). Children sit at the content
+            // origin, so the room to the edge is the size less the leading padding.
+            float roomW = m.w - ls.paddingLeft, roomH = m.h - ls.paddingTop;
+            // A collapsible layout ignores its own padding when it sizes its children (they
+            // get the full width): the usual cause of a child past its edge, worth naming.
+            bool paddedCollapsible = (op->opcode() == 230 || op->opcode() == 233)
+                && (ls.paddingLeft > 0 || ls.paddingRight > 0 || ls.paddingTop > 0 || ls.paddingBottom > 0);
             for (auto* child : ls.layoutChildren) {
                 int ccid = getComponentId(child);
                 if (ccid == -1 || !measure.contains(ccid)) continue;
                 auto& c = measure.get(ccid);
-                if (!c.isVisible() || c.w <= 0 || c.h <= 0) continue;
-                // Past the parent's outer edge (a child spilling into the parent's own padding is
-                // still drawn: nothing clips at the content box). Children sit at the content
-                // origin, so the room to the edge is the size less the leading padding.
-                float roomW = m.w - ls.paddingLeft, roomH = m.h - ls.paddingTop;
+                // A collapsible layout that dropped every child goes GONE by itself (its own
+                // visibility modifier did not ask for it): the layout removed the content.
+                if (c.isGone() && (child->opcode() == 230 || child->opcode() == 233)) {
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
+                    if (!asked && !cls.layoutChildren.empty() && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.zeroSize++;
+                        if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
+                            char buf[240];
+                            std::snprintf(buf, sizeof buf, "%s#%d in %s#%d %.0fx%.0f (a collapsible layout that dropped every child: none fit)",
+                                child->name().c_str(), ccid, op->name().c_str(), cid, roomW, roomH);
+                            gLayoutOverflow.zeroSizeExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
+                // A fitBox none of whose children fit goes GONE by itself too: nothing is drawn
+                // where the widget expected its smallest alternative. Each child's minimum
+                // against the box says why (a row of seven 32 dp discs needs 224 dp).
+                // (Only a fitBox that found nothing itself, not one a stateLayout or a visibility hid.)
+                if (c.isGone() && child->opcode() == 176 && gFitBoxNeed.count(ccid) && roomW > 0.5f && roomH > 0.5f) {
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
+                    if (!asked && !cls.layoutChildren.empty() && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.zeroSize++;
+                        if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
+                            auto it = gFitBoxNeed.find(ccid);
+                            const std::string need = it != gFitBoxNeed.end() ? it->second : std::string("");
+                            char buf[400];
+                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f in %s#%d (a fitBox no child fits: %s)",
+                                child->name().c_str(), ccid, std::max(0.0f, c.w - cls.paddingLeft - cls.paddingRight),
+                                std::max(0.0f, c.h - cls.paddingTop - cls.paddingBottom), op->name().c_str(), cid, need.c_str());
+                            gLayoutOverflow.zeroSizeExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
+                // A child this collapsible layout dropped (GONE without its own visibility
+                // asking): the layout removed content, which the image should explain.
+                if (c.isGone() && (op->opcode() == 230 || op->opcode() == 233)) {
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
+                    if (!asked && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.collapsed++;
+                        if (gLayoutOverflow.collapsedExamples.size() < 6) {
+                            char buf[240];
+                            if (cls.hasCollapsePriority)
+                                std::snprintf(buf, sizeof buf, "%s#%d in %s#%d (priority %.0f)", child->name().c_str(), ccid, op->name().c_str(), cid, cls.collapsePriority);
+                            else
+                                std::snprintf(buf, sizeof buf, "%s#%d in %s#%d (no priority: dropped last, it did not fit on its own)", child->name().c_str(), ccid, op->name().c_str(), cid);
+                            gLayoutOverflow.collapsedExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
+                if (!c.isVisible()) continue;
+                if (c.w <= 0.5f || c.h <= 0.5f) {
+                    // No size at all: a weight with nothing left to share (or next to a
+                    // widthIn/heightIn), a collapsible that dropped every child. A size asked
+                    // to be 0 (a size: 0 canvas holding global commands) is intended.
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    // Intended: an exact size (0 as asked, or clamped by a 0 parent reported on
+                    // its own), or a wrap with nothing inside (a spacer box). Starved: a weight
+                    // or fill given nothing, or a wrap around children that all went.
+                    auto intendedZero = [&](DimType t) {
+                        return t == DimType::EXACT || t == DimType::EXACT_DP
+                            || (t == DimType::WRAP && cls.layoutChildren.empty());
+                    };
+                    bool intended = (c.w > 0.5f || intendedZero(cls.widthType))
+                                 && (c.h > 0.5f || intendedZero(cls.heightType));
+                    if (!intended && roomW > 0.5f && roomH > 0.5f && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.zeroSize++;
+                        if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
+                            char buf[400];
+                            // A fill child of a row (column) takes what is left after the ones
+                            // before it: the second fillMaxWidth cell of a row is 0 wide.
+                            const bool rowHost = op->opcode() == 203 || op->opcode() == 230, colHost = op->opcode() == 204 || op->opcode() == 233;
+                            const char* why = (c.w <= 0.5f && cls.widthType == DimType::WEIGHT) || (c.h <= 0.5f && cls.heightType == DimType::WEIGHT)
+                                ? " (a weight: nothing left to share, or combined with widthIn/heightIn)"
+                                : (c.w <= 0.5f && rowHost && cls.widthType == DimType::FILL) ? " (a fillMaxWidth child of a row gets what the children before it left: give each cell a weight instead)"
+                                : (c.h <= 0.5f && colHost && cls.heightType == DimType::FILL) ? " (a fillMaxHeight child of a column gets what the children before it left: give each a verticalWeight instead)"
+                                : (child->opcode() == 230 || child->opcode() == 233) ? " (a collapsible layout that dropped every child)" : "";
+                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f in %s#%d %.0fx%.0f%s",
+                                child->name().c_str(), ccid, c.w, c.h, op->name().c_str(), cid, roomW, roomH, why);
+                            gLayoutOverflow.zeroSizeExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
                 float right = c.x + c.w - roomW, bottom = c.y + c.h - roomH;
                 // A few pixels are font-metric rounding or a label's trailing space, not a cut
                 // worth a warning: past 8 px and 5% of the box.
@@ -2437,11 +2580,12 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                     if (gLayoutOverflowIds.insert(ccid).second) {
                         gLayoutOverflow.components++;
                         if (gLayoutOverflow.examples.size() < 6) {
-                            char buf[200];
-                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f at %.0f,%.0f in %s#%d %.0fx%.0f: %s%.0f px",
+                            char buf[400];
+                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f at %.0f,%.0f in %s#%d %.0fx%.0f: %s%.0f px%s",
                                 child->name().c_str(), ccid, c.w, c.h, c.x, c.y, op->name().c_str(), cid, innerW, innerH,
                                 bottom > tolH ? "below by " : right > tolW ? "past the right by " : "before the start by ",
-                                bottom > tolH ? bottom : right > tolW ? right : -std::min(c.x, c.y));
+                                bottom > tolH ? bottom : right > tolW ? right : -std::min(c.x, c.y),
+                                paddedCollapsible ? " (the parent is a collapsible layout with its own padding, which it ignores for its children: move the padding to a box around it)" : "");
                             gLayoutOverflow.examples.push_back(buf);
                         }
                     }
@@ -2462,10 +2606,13 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
     // visibility, which is what hit testing reads) are the ones kept.
     Operation* cur = op->opcode() == 217
         ? stateAt(ls, static_cast<StateLayout*>(op)->measuredIndex) : nullptr;
+    const bool goneSub = cid != -1 && measure.contains(cid) && measure.get(cid).isGone();
+    if (goneSub) gGoneDepth++;
     for (auto* child : ls.layoutChildren) {
         if (child != cur) storeMeasuredDimensions(child, ctx, measure);
     }
     if (cur) storeMeasuredDimensions(cur, ctx, measure);
+    if (goneSub) gGoneDepth--;
 }
 
 // ── Paint background modifier ────────────────────────────────────────
@@ -3519,6 +3666,12 @@ void LayoutRoot::apply(RemoteContext& context) {
                     }
                 }
             }
+        } else {
+            // A data op written straight into the root (a TextFromFloat the JSON parser's text
+            // cache shares between a text and a semantics description sits before the first
+            // layout child): run with the root's other data ops. Dropped, it kept its initial
+            // value and the text drew "0" (EXAMPLES_FINDINGS U59).
+            rootDataOps.push_back(child.get());
         }
     }
     if (layoutChildren.empty()) {
@@ -3552,7 +3705,13 @@ void LayoutRoot::apply(RemoteContext& context) {
         resetLayoutOverflowCounts();
 
         context.setMode(ContextMode::DATA);
-        for (auto* op : rootDataOps) { context.incrementOpCount(); op->apply(context); }
+        // As CoreDocument::applyDataOperations: a dirty op (new, or re-dirtied by a listener when
+        // its variable changed) refreshes its cached values first, then is marked clean — an
+        // unconditional refresh clobbered component values before the layout set them (U59).
+        for (auto* op : rootDataOps) {
+            if (op->isVariableSupport() && op->isDirty()) op->updateVariables(context);
+            context.incrementOpCount(); op->apply(context); op->markNotDirty();
+        }
         for (auto* op : rootCanvasOps) { context.incrementOpCount(); op->apply(context); }
         context.setMode(ContextMode::PAINT);
 
@@ -3598,7 +3757,13 @@ void LayoutRoot::apply(RemoteContext& context) {
         // Cached: still evaluate expressions so the paint reads current offset/alpha/colour
         // (the measure/layout itself is reused).
         context.setMode(ContextMode::DATA);
-        for (auto* op : rootDataOps) { context.incrementOpCount(); op->apply(context); }
+        // As CoreDocument::applyDataOperations: a dirty op (new, or re-dirtied by a listener when
+        // its variable changed) refreshes its cached values first, then is marked clean — an
+        // unconditional refresh clobbered component values before the layout set them (U59).
+        for (auto* op : rootDataOps) {
+            if (op->isVariableSupport() && op->isDirty()) op->updateVariables(context);
+            context.incrementOpCount(); op->apply(context); op->markNotDirty();
+        }
         for (auto* op : rootCanvasOps) { context.incrementOpCount(); op->apply(context); }
         for (auto* layoutChild : layoutChildren) applyDataOps(layoutChild, context);
         context.setMode(ContextMode::PAINT);

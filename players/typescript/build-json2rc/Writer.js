@@ -211,6 +211,8 @@ class Writer {
         /** Set by the `spacedBy` modifier (raw float bits: it may be an expression): the next
          *  row/column writes it instead of 0 (RecordingModifier.spacedBy -> getSpacedBy). */
         this.spacedByBits = null;
+        /** Told of every component id handed out, so a parser can map ids to its source paths. */
+        this.onComponentId = null;
         /** The interning caches as each open pattern definition found them (RemoteComposeState's
          *  data scopes). The component-value cache is the writer's own, as in the reference. */
         this.dataScopes = [];
@@ -230,10 +232,14 @@ class Writer {
             const id = this.componentIdOverride;
             this.componentIdOverride = null;
             this.lastComponentId = id;
+            if (this.onComponentId)
+                this.onComponentId(id);
             return id;
         }
         this.componentId -= 1;
         this.lastComponentId = this.componentId;
+        if (this.onComponentId)
+            this.onComponentId(this.componentId);
         return this.componentId;
     }
     allocDataId() {

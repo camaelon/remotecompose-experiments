@@ -83,6 +83,9 @@ export class CoreDocument implements ExpansionDocument {
     mRemoteComposeState = new RemoteComposeState();
     mVersion: Version | null = null;
     mWidth = 256;
+    // The header sizes the document once; after that the host's surface (context.mWidth /
+    // mHeight at every paint) is the size, and windowWidth()/windowHeight() follow it.
+    mHeaderSized = false;
     mHeight = 256;
     mAuthorWidth: number | null = null;
     mAuthorHeight: number | null = null;
@@ -484,6 +487,11 @@ export class CoreDocument implements ExpansionDocument {
         const expression = this.mFloatExpressions.get(expressionId);
         if (expression && typeof expression.evaluate === 'function') {
             context.overrideFloat(targetId, expression.evaluate(context));
+        } else {
+            // The value is a plain variable's id (a bare "continuousSec()" or "@x" in the
+            // action): its current value, as the reference reads it (U46).
+            const v = context.getFloat(expressionId);
+            if (typeof v === 'number' && !Number.isNaN(v)) context.overrideFloat(targetId, v);
         }
     }
 
@@ -702,6 +710,14 @@ export class CoreDocument implements ExpansionDocument {
         if (pc) pc.save();
 
         // Content scaling: if SIZING_SCALE, apply translate + scale before painting
+        // windowWidth()/windowHeight() are the host's surface, as the reference host sets them,
+        // whatever the content scaling (the document's own size stays mWidth). The state is
+        // the context's: the document's own field is not always wired.
+        {
+            const st = (context as any).mRemoteComposeState ?? this.mRemoteComposeState;
+            st?.setWindowWidth?.(context.mWidth);
+            st?.setWindowHeight?.(context.mHeight);
+        }
         if (this.mContentSizing === RootContentBehavior.SIZING_SCALE) {
             const scaleOutput = [1, 1];
             this.computeScale(context.mWidth, context.mHeight, scaleOutput);

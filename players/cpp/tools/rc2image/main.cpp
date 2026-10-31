@@ -817,7 +817,11 @@ static int run(int argc, char* argv[]) {
               std::to_string(maxX + 1) + "," + std::to_string(maxY + 1) + "]";
         auto lo = rccore::layoutOverflowCounts();
         report.push_back({"layout", "{\"overflowing\":" + std::to_string(lo.components) + ",\"examples\":[" +
-            [&]() { std::string e; for (size_t k = 0; k < lo.examples.size(); k++) e += (k ? "," : "") + jsonStr(lo.examples[k]); return e; }() + "]}"});
+            [&]() { std::string e; for (size_t k = 0; k < lo.examples.size(); k++) e += (k ? "," : "") + jsonStr(lo.examples[k]); return e; }() +
+            "],\"zeroSize\":" + std::to_string(lo.zeroSize) + ",\"zeroSizeExamples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < lo.zeroSizeExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.zeroSizeExamples[k]); return e; }() +
+            "],\"collapsed\":" + std::to_string(lo.collapsed) + ",\"collapsedExamples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < lo.collapsedExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.collapsedExamples[k]); return e; }() + "]}"});
         auto tc = rccore::textOverflowCounts();
         report.push_back({"text", "{\"truncated\":" + std::to_string(tc.truncated) +
             ",\"clipped\":" + std::to_string(tc.clipped) +

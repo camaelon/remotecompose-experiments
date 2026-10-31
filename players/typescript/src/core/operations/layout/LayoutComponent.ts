@@ -71,7 +71,8 @@ export class LayoutComponent extends Component {
 
     // ComponentValue bindings (Java ComponentData pattern)
     // Collected during inflate; updated during measure to expose dimensions as float variables
-    private mComponentValues: ComponentValue[] | null = null;
+    // (The base Component's list, typed: public there because a ComponentValue registers itself.)
+    override mComponentValues: ComponentValue[] | null = null;
 
     // Scroll measurement state
     private mScrollModifier: ScrollModifier | null = null;
@@ -732,6 +733,9 @@ export class LayoutComponent extends Component {
     }
 
     onClick(context: RemoteContext, doc: any, x: number, y: number): boolean {
+        // A hidden component takes no tap (two buttons stacked and switched by visibility:
+        // the gone one used to catch the tap, U45).
+        if (!this.isVisible()) return false;
         // Java Component.onClick: a tap outside this component reaches none of its
         // children (a scrolled-away child is not hit through the header above it), and
         // children are hit in content coordinates, i.e. shifted back by the scroll offset

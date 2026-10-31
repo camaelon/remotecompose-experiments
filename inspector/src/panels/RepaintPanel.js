@@ -156,6 +156,16 @@ export function analyzeRepaintSchedule(doc, player) {
     const root = doc.mRootLayoutComponent;
     const layoutRepaint = !!(root && typeof root.needsRepaint === 'function' && root.needsRepaint());
     const boundsAnimation = !!(root && typeof root.needsBoundsAnimation === 'function' && root.needsBoundsAnimation());
+    // The components whose bounds are animating right now: what a flag alone never says.
+    const animating = [];
+    (function walk(c, depth) {
+        if (!c || depth > 64) return;
+        if (c.mAnimateMeasure || (typeof c.needsBoundsAnimation === 'function' && c.needsBoundsAnimation() && !(c.mChildrenComponents || []).some((k) => typeof k.needsBoundsAnimation === 'function' && k.needsBoundsAnimation()))) {
+            animating.push({ component: c.constructor && c.constructor.name, id: c.mComponentId,
+                animating: !!c.mAnimateMeasure, visibility: c.mVisibility, layoutVisibility: c.mLayoutVisibility });
+        }
+        for (const ch of (c.mChildrenComponents || [])) walk(ch, depth + 1);
+    })(root, 0);
 
     const contSec = listenersOn(state, ID_CONTINUOUS_SEC);
     const timeSec = listenersOn(state, ID_TIME_IN_SEC);
@@ -190,7 +200,8 @@ export function analyzeRepaintSchedule(doc, player) {
 
     push('layout', layoutRepaint || boundsAnimation,
         boundsAnimation ? 'Layout bounds animation in progress' : 'Layout requested a repaint',
-        'every frame', []);
+        'every frame', animating,
+        boundsAnimation ? 'The components below are mid-animation between two layouts: a size, position or visibility of theirs differs from one layout pass to the next (a value that changes every frame, or a layout that hides and shows a child on alternate passes).' : undefined);
 
     push('continuousSec', contSec.length > 0,
         `${contSec.length} operation${contSec.length === 1 ? ' listens' : 's listen'} to $CONTINUOUS_SEC`,

@@ -194,15 +194,19 @@ export class Writer {
      *  row/column writes it instead of 0 (RecordingModifier.spacedBy -> getSpacedBy). */
     spacedByBits: number | null = null;
 
+    /** Told of every component id handed out, so a parser can map ids to its source paths. */
+    onComponentId: ((id: number) => void) | null = null;
     allocComponentId(): number {
         if (this.componentIdOverride !== null) {
             const id = this.componentIdOverride;
             this.componentIdOverride = null;
             this.lastComponentId = id;
+            if (this.onComponentId) this.onComponentId(id);
             return id;
         }
         this.componentId -= 1;
         this.lastComponentId = this.componentId;
+        if (this.onComponentId) this.onComponentId(this.componentId);
         return this.componentId;
     }
 

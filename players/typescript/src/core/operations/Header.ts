@@ -84,8 +84,11 @@ export class Header extends Operation {
 
     setVersion(doc: CoreDocument): void {
         doc.setVersion(this.mMajorVersion, this.mMinorVersion, this.mPatchVersion);
-        doc.setWidth(this.mWidth);
-        doc.setHeight(this.mHeight);
+        if (!doc.mHeaderSized) {
+            doc.setWidth(this.mWidth);
+            doc.setHeight(this.mHeight);
+            doc.mHeaderSized = true;
+        }
         doc.setAuthorDimensions(this.mWidth, this.mHeight);
         doc.setRequiredCapabilities(this.mCapabilities);
         doc.setProperties(this.mProperties);

@@ -194,12 +194,16 @@ export abstract class RemoteContext {
     header(majorVersion: number, minorVersion: number, patchVersion: number,
            width: number, height: number, capabilities: number,
            properties: IntMap<any> | null): void {
-        this.mRemoteComposeState.setWindowWidth(width);
-        this.mRemoteComposeState.setWindowHeight(height);
+        // windowWidth()/windowHeight() are the host's surface (set at every paint from
+        // mWidth/mHeight, as the C++ engine does), not the header's design size: the Header op
+        // re-applies each frame and used to reset them after a resize.
         if (this.mDocument) {
             this.mDocument.setVersion(majorVersion, minorVersion, patchVersion);
-            this.mDocument.setWidth(width);
-            this.mDocument.setHeight(height);
+            if (!this.mDocument.mHeaderSized) {
+                this.mDocument.setWidth(width);
+                this.mDocument.setHeight(height);
+                this.mDocument.mHeaderSized = true;
+            }
             this.mDocument.setRequiredCapabilities(capabilities);
             this.mDocument.setProperties(properties);
         }

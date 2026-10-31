@@ -167,7 +167,7 @@ const V_ALIGN: Record<string, number> =
     { start: 1, top: 4, center: 2, bottom: 5, spacebetween: 6, spaceevenly: 7, spacearound: 8 };
 const TEXT_ALIGN: Record<string, number> =
     { left: 1, "1": 1, right: 2, "2": 2, center: 3, "3": 3, justify: 4, "4": 4,
-      start: 5, "5": 5 };
+      start: 5, "5": 5, end: 6, "6": 6 };
 const OVERFLOW: Record<string, number> =
     { clip: 1, ellipsis: 3, visible: 2, start_ellipsis: 4, middle_ellipsis: 5 };
 
@@ -187,7 +187,8 @@ export function hAlignOf(c: J, dflt: string): number {
 export function vAlignOf(c: J, dflt: string): number {
     return parseVAlign(String(c.verticalAlignment ?? c.verticalArrangement ?? dflt));
 }
-export function parseTextAlign(a: string): number { return TEXT_ALIGN[a.toLowerCase()] ?? 5; }
+// An unknown value is LEFT, as in the reference parser (RemoteComposeJsonParser.parseTextAlign).
+export function parseTextAlign(a: string): number { return TEXT_ALIGN[a.toLowerCase()] ?? 1; }
 
 /** `{"column": {...}}` is shorthand for `{"type": "column", ...}`. */
 export function normalizeComponent(c: J): J {
@@ -684,10 +685,10 @@ export class Parser {
      * The document's names and the ids they got: what a tool reading the .rc back (the
      * inspector) cannot see, since only exported variables carry a name in the binary.
      */
-    symbols(): { variables: Record<string, number> } {
+    symbols(): { variables: Record<string, number>; components: Record<number, string> } {
         const variables: Record<string, number> = {};
         for (const [name, bits] of this.variables.entries()) variables[name] = (bits & 0x3fffff);
-        return { variables };
+        return { variables, components: { ...this.componentPaths } };
     }
 
     parse(doc: J): Uint8Array {
@@ -718,6 +719,7 @@ export class Parser {
             tags.push([tag, value as number | string]);
         }
         this.writer = new Writer(apiLevel, tags, this.profiles);
+        this.writer.onComponentId = (id) => { if (!(id in this.componentPaths)) this.componentPaths[id] = this.pathStack.join(".") || "root"; };
         this.expr = new ExpressionParser(this.writer, this.variables);
         // First use of a deferred variable materialises it, wherever that happens to be.
         this.variables.resolver = (_name, cmd) => this.materialiseVariable(cmd);
@@ -1079,6 +1081,8 @@ export class Parser {
         if (typeof obj === "number") return Math.trunc(obj);
         if (typeof obj === "string") {
             const name = isVariableRef(obj) ? variableNameFromRef(obj) : obj;
+            // (A deferred tree variable is NOT materialised here: the reference parser makes a
+            // fresh integer 0 in its place, and the bytes follow it; EXAMPLES_FINDINGS U57.)
             if (this.variables.isMaterialised(name)) return 0x100000000 + (this.variables.get(name)! & 0x3fffff);
             const id = this.writer.addNamedInt(name, 0);
             this.variables.set(name, asNanBits(id));
@@ -1200,7 +1204,21 @@ export class Parser {
         return [v, v, v, v];
     }
 
+    // Where each component id came from, as a path of types with sibling indexes
+    // ("column[0].row[1].text[0]"), for tools that report a component by its id.
+    private pathStack: string[] = [];
+    private childCounts = new Map<string, number>();
+    componentPaths: Record<number, string> = {};
+
     private parseComponent(component: J): void {
+        const parent = this.pathStack.join(".");
+        const n = this.childCounts.get(parent) ?? 0;
+        this.childCounts.set(parent, n + 1);
+        this.pathStack.push(`${String(component?.type ?? "?").toLowerCase()}[${n}]`);
+        try { this.parseComponentAt(component); } finally { this.pathStack.pop(); }
+    }
+
+    private parseComponentAt(component: J): void {
         const ctype = String(component.type).toLowerCase();
         const mods = this.parseModifiers(component.modifiers);
         const kids = (component.children ?? []).map(normalizeComponent);
@@ -1918,6 +1936,12 @@ export class Parser {
                 if (rawValue === undefined || rawValue === null) {
                     throw new NotImplementedComponent(
                         'valueFloatExpressionChange needs a "value" or "expression"');
+                }
+                // The value is an expression ID: a plain number here is read as an id by the
+                // reference (3 -> variable 0, setting nothing) and would not round-trip.
+                if (typeof rawValue === "number" || (typeof rawValue === "string" && /^\s*[-+]?(\d+\.?\d*|\.\d+)\s*$/.test(rawValue))) {
+                    throw new NotImplementedComponent(
+                        `valueFloatExpressionChange: "value" is an expression or a variable ("@name"), not the number ${rawValue}; to set a literal use valueFloatChange`);
                 }
                 actions.push(valueFloatExpressionChange(
                     targetId, idFromNanBits(this.fbits(rawValue))));
@@ -3389,7 +3413,7 @@ export function convert(json: string | J, options: ConvertOptions = {}): Uint8Ar
 }
 
 /** convert, plus the symbol table (see Parser.symbols). */
-export function convertWithSymbols(json: string | J, options: ConvertOptions = {}): { bytes: Uint8Array; symbols: { variables: Record<string, number> } } {
+export function convertWithSymbols(json: string | J, options: ConvertOptions = {}): { bytes: Uint8Array; symbols: { variables: Record<string, number>; components: Record<number, string> } } {
     const doc = typeof json === "string" ? JSON.parse(json) : json;
     const parser = new Parser(options);
     const bytes = parser.parse(unwrap(doc));
