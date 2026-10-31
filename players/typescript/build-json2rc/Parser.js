@@ -688,6 +688,7 @@ class Parser {
         this.patterns = new Map();
         /** Matrices declared by matrixConstant, for `$matrices.name`. */
         this.matrices = new Map();
+        this.computedColors = [];
         this.readFile = options.readFile;
     }
     /** Resolve a canvas float field to raw float32 bits (literal, ref or expression). */
@@ -791,6 +792,34 @@ class Parser {
             }
         }
         this.inFirstPass = false;
+        // EXTENSION (not in the reference JSON parser): a hostNamedAction name used by more
+        // than one action is declared once here, before the tree. The reference writes the
+        // name's text inside the FIRST action list that uses it, and the player registers it
+        // only when that list runs, so every other control sent a nameless action until the
+        // first was tapped (EXAMPLES_FINDINGS U58: five rating stars could not share "rate").
+        // A name used once is left where the reference puts it: those documents' bytes match.
+        {
+            const counts = new Map();
+            const scan = (x) => {
+                if (Array.isArray(x)) {
+                    for (const y of x)
+                        scan(y);
+                    return;
+                }
+                if (!x || typeof x !== "object")
+                    return;
+                const t = String(x.type ?? "").toLowerCase();
+                if ((t === "hostnamedaction" || t === "hostaction" || t === "hostmetadataaction") && typeof x.name === "string") {
+                    counts.set(x.name, (counts.get(x.name) ?? 0) + 1);
+                }
+                for (const v of Object.values(x))
+                    scan(v);
+            };
+            scan(items);
+            for (const [name, n] of counts)
+                if (n > 1)
+                    this.writer.addText(name);
+        }
         this.writer.rootStart();
         for (const item of items) {
             const t = String(item.type ?? "").toLowerCase();
@@ -2055,6 +2084,26 @@ class Parser {
                 else {
                     actions.push((0, Writer_1.hostAction)(actionId, "metadataId" in a ? Number(a.metadataId) : -1));
                 }
+            }
+            else if (isHost && a.valueType !== undefined && "value" in a) {
+                // EXTENSION (not in the reference JSON parser): {"value": "@level", "valueType":
+                // "float"} sends the variable's value — HostNamedAction's FLOAT/INT/STRING/
+                // FLOAT_ARRAY types with the variable's id, read by the player when the action
+                // runs. The reference parser only writes a literal string value.
+                const name = String(a.name);
+                const kinds = { float: 0, int: 1, integer: 1, string: 2, text: 2, floatarray: 3, array: 3 };
+                const vt = String(a.valueType).toLowerCase();
+                const type = vt in kinds ? kinds[vt] : Number(a.valueType);
+                if (!(type >= 0 && type <= 3))
+                    throw new NotImplementedComponent(`hostNamedAction valueType must be float, int, string or floatArray (got ${JSON.stringify(a.valueType)})`);
+                const v = a.value;
+                const valueId = type === 1 ? (this.resolveIntegerId(v) % 0x100000000)
+                    : type === 2 ? this.resolveTextId(v)
+                        : this.resolveId(v);
+                actions.push((w2) => {
+                    const textId = w2.addText(name);
+                    (0, Writer_1.hostNamedAction)(textId, type, valueId)(w2);
+                });
             }
             else if (isHost) {
                 const name = String(a.name);
@@ -3382,6 +3431,7 @@ class Parser {
     parseResources(section) {
         const order = section.order
             ?? Parser.RESOURCE_ORDER.filter((k) => k in section);
+        this.computedColors = [];
         for (const key of order) {
             if (!(key in section))
                 continue;
@@ -3390,6 +3440,34 @@ class Parser {
             }
             this.parseResourceSection(key, section[key]);
         }
+        // Computed colours (hsv / argb) read variables: written after every other section.
+        for (const [name, cfg, value] of this.computedColors)
+            this.addComputedColor(name, cfg, value);
+        this.computedColors = [];
+    }
+    addComputedColor(name, cfg, value) {
+        // EXTENSION (not in the reference JSON parser): a colour computed at run time,
+        // the reference's ColorExpression. {"hsv": [h, s, v], "alpha": 0..255} with h,
+        // s, v in 0..1, or {"argb": [a, r, g, b]} in 0..1 — each a number, a "@var" or
+        // an expression; the players re-evaluate it when an input changes.
+        const comps = (Array.isArray(value.hsv) ? value.hsv : value.argb);
+        if (comps.length !== (Array.isArray(value.hsv) ? 3 : 4)) {
+            throw new NotImplementedComponent(`resources.colors.${name}: "hsv" takes [h, s, v], "argb" takes [a, r, g, b]`);
+        }
+        let id;
+        if (Array.isArray(value.hsv)) {
+            const alpha = Math.max(0, Math.min(255, Math.round(Number(value.alpha ?? 255))));
+            id = this.writer.addColorExpression(4 | (alpha << 16), this.fbits(comps[0]), this.fbits(comps[1]), this.fbits(comps[2]));
+        }
+        else {
+            const aBits = this.fbits(comps[0]);
+            const aIsVar = isNanBits(aBits);
+            const p1 = aIsVar ? (6 | ((aBits & 0x3fffff) << 16)) : (5 | (Math.round(Number(comps[0]) * 1024) << 16));
+            id = this.writer.addColorExpression(p1, this.fbits(comps[1]), this.fbits(comps[2]), this.fbits(comps[3]));
+        }
+        if (cfg === null || cfg.export !== false)
+            this.writer.setColorName(id, name);
+        this.colors.set(name, id);
     }
     parseResourceSection(key, sectionValue) {
         const section = { [key]: sectionValue };
@@ -3401,6 +3479,10 @@ class Parser {
         }
         if ("colors" in section) {
             for (const [name, cfg, value] of eachResource(section.colors)) {
+                if (value && typeof value === "object" && !Array.isArray(value) && (Array.isArray(value.hsv) || Array.isArray(value.argb))) {
+                    this.computedColors.push([name, cfg, value]);
+                    continue;
+                }
                 if (value && typeof value === "object" && !Array.isArray(value)) {
                     // ResourceParser: {"light": c, "dark": c} is a themed colour. Two
                     // "@colors.x" references pair those colours; otherwise each side is a

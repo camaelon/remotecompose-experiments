@@ -242,6 +242,8 @@ public:
     // P_LETTER_SPACING (em), P_LINE_HEIGHT_ADD (px) and P_LINE_HEIGHT_MULTIPLIER: what
     // StaticLayout's setLetterSpacing / setLineSpacing(add, multiplier) get on Android.
     float letterSpacing = 0, lineHeightAdd = 0, lineHeightMultiplier = 1;
+    bool underline = false, strikethrough = false;
+    bool autosize = false; float minFontSize = -1, maxFontSize = -1;   // TextStyle P_AUTOSIZE / P_MIN/MAX_FONT_SIZE
 
     float oFontSize = 36, oFontWeight = 400;
     int getOpComponentId() const override { return componentId; }
@@ -267,8 +269,11 @@ public:
             int id = buf.readByte();
             switch (id) {
                 // Boolean params
-                case 18: case 19: case 22:
-                    buf.readBoolean();
+                // P_UNDERLINE (18), P_STRIKETHROUGH (19) kept for painting; P_AUTOSIZE (22) read past.
+                case 18: op->underline = buf.readBoolean(); break;
+                case 19: op->strikethrough = buf.readBoolean(); break;
+                case 22:
+                    op->autosize = buf.readBoolean();
                     break;
                 // Int array (fontAxis)
                 case 20: {
@@ -307,7 +312,8 @@ public:
                         case 12: { float f; memcpy(&f, &val, sizeof(f)); op->letterSpacing = f; break; }
                         case 13: { float f; memcpy(&f, &val, sizeof(f)); op->lineHeightAdd = f; break; }
                         case 14: { float f; memcpy(&f, &val, sizeof(f)); op->lineHeightMultiplier = f; break; }
-                        case 25: case 26: break; // min/maxFontSize - skip
+                        case 25: { float f; memcpy(&f, &val, sizeof(f)); op->minFontSize = f; break; }
+                        case 26: { float f; memcpy(&f, &val, sizeof(f)); op->maxFontSize = f; break; }
                         default: break;
                     }
                     break;

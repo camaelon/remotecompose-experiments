@@ -1,11 +1,13 @@
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
+#include "rccore/operations/LayoutOperations.h"
 #include "rccore/LayoutSystem.h"
 #include "rcskia/SkiaPaintContext.h"
 #include "rcskia/RcDocumentHost.h"
 
 #include "include/core/SkSurface.h"
+#include "include/core/SkUnPreMultiply.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkData.h"
 #include "include/core/SkPixmap.h"
@@ -27,6 +29,7 @@
 #include <cmath>
 #include <map>
 #include <unordered_set>
+#include <unordered_map>
 #include "rccore/Operations.h"
 #include <sstream>
 #include <string>
@@ -283,6 +286,10 @@ static int run(int argc, char* argv[]) {
                      "  --events SPEC  simulate a touch sequence. SPEC is \"T TYPE X Y [VX VY]\"\n"
                      "             entries separated by ';' or newlines, or @FILE. TYPE is\n"
                      "             down|move|up|tap, T seconds, X/Y document coordinates.\n"
+                     "  --round           a round watch screen: report ink outside the inscribed\n"
+                     "                    circle and paint the outside grey in the image\n"
+                     "  --no-layout-anim  apply layout changes at once (no enter/exit or\n"
+                     "                 resize animation): a simulated run ends in the final state\n"
                      "  --duration S   simulate S seconds frame by frame (default: last\n"
                      "             event time + 0.5 s when --events is given). The clock\n"
                      "             advances with the frames and the LAST frame is at --clock\n"
@@ -305,6 +312,8 @@ static int run(int argc, char* argv[]) {
     int overrideWidth = 0, overrideHeight = 0;
     int fitWidth = 0, fitHeight = 0;   // --fit: surface size, document keeps its own space
     int64_t fixedTimeMs = 0;
+    bool noLayoutAnim = false;
+    bool roundScreen = false;
     int32_t randSeed = 0;
     bool pinSeed = false;
     bool pinClock = false;   // whether a clock flag was GIVEN, not whether it
@@ -366,6 +375,12 @@ static int run(int argc, char* argv[]) {
                 return 1;
             }
             i += 2;
+        } else if (std::strcmp(argv[i], "--no-layout-anim") == 0) {
+            noLayoutAnim = true;
+            i += 1;
+        } else if (std::strcmp(argv[i], "--round") == 0) {
+            roundScreen = true;
+            i += 1;
         } else if (std::strcmp(argv[i], "--duration") == 0 && i + 1 < argc) {
             simDuration = std::max(0.0f, (float) std::atof(argv[i + 1]));
             i += 2;
@@ -571,6 +586,9 @@ static int run(int argc, char* argv[]) {
         context.overrideFloat(rccore::RemoteContext::ID_ANIMATION_TIME, animTimeSec);
     }
 
+    // --no-layout-anim: layout changes (a visibility switch, a resize) apply at once instead of
+    // animating, so a simulated run shows the final state (a settle after host values).
+    if (noLayoutAnim) rccore::setLayoutAnimationEnabled(false);
     // Execute data operations (loads text, expressions, etc.)
     doc.applyDataOperations(context, theme);
 
@@ -787,6 +805,38 @@ static int run(int argc, char* argv[]) {
         return 1;
     }
 
+    // --round: what a round screen hides. Ink (anything but the clear colour and the
+    // document's own surface fill) outside the inscribed circle is cut off on the watch;
+    // then the outside is painted grey, so the image shows the screen as it is.
+    std::string roundJson;
+    if (roundScreen && surfW > 4 && surfH > 4) {
+        const uint32_t bgPM0 = SkPreMultiplyColor(bg);
+        std::unordered_map<uint32_t, int64_t> freq0;
+        for (int y = 0; y < surfH; y += 2) { const uint32_t* row = pixmap.addr32(0, y); for (int x = 0; x < surfW; x += 2) freq0[row[x]]++; }
+        uint32_t dom0 = bgPM0; int64_t best0 = -1;
+        for (auto& kv : freq0) if (kv.second > best0) { best0 = kv.second; dom0 = kv.first; }
+        const double cxr = surfW / 2.0, cyr = surfH / 2.0, r = std::min(surfW, surfH) / 2.0;
+        int64_t outside = 0; int oMinX = surfW, oMinY = surfH, oMaxX = -1, oMaxY = -1;
+        const uint32_t grey = SkPreMultiplyColor(SkColorSetARGB(255, 0x3A, 0x3A, 0x3A));
+        for (int y = 0; y < surfH; y++) {
+            uint32_t* row = pixmap.writable_addr32(0, y);
+            for (int x = 0; x < surfW; x++) {
+                const double dx = x + 0.5 - cxr, dy = y + 0.5 - cyr, d = std::sqrt(dx * dx + dy * dy);
+                if (d <= r) continue;
+                // A 1 dp band at the edge is antialiasing, not content.
+                if (d > r + 1.0 && row[x] != bgPM0 && row[x] != dom0) {
+                    outside++;
+                    oMinX = std::min(oMinX, x); oMaxX = std::max(oMaxX, x);
+                    oMinY = std::min(oMinY, y); oMaxY = std::max(oMaxY, y);
+                }
+                row[x] = grey;
+            }
+        }
+        roundJson = "{\"diameter\":" + std::to_string(std::min(surfW, surfH)) + ",\"inkOutside\":" + std::to_string(outside) +
+            ",\"outsideBounds\":" + (oMaxX < 0 ? std::string("null") : "[" + std::to_string(oMinX) + "," + std::to_string(oMinY) + "," +
+            std::to_string(oMaxX + 1) + "," + std::to_string(oMaxY + 1) + "]") + "}";
+    }
+
     SkPngEncoder::Options pngOpts;
     if (!SkPngEncoder::Encode(&stream, pixmap, pngOpts)) {
         std::cerr << "Error: PNG encoding failed\n";
@@ -815,6 +865,38 @@ static int run(int argc, char* argv[]) {
         std::string bounds = maxX < 0 ? "null"
             : "[" + std::to_string(minX) + "," + std::to_string(minY) + "," +
               std::to_string(maxX + 1) + "," + std::to_string(maxY + 1) + "]";
+        // The dominant colour (a screen's own surface fill, which contentBounds counts as
+        // content) and the bounds of everything else: where the ink is. A phone screen whose
+        // ink stops at two thirds of the height leaves its bottom empty.
+        std::unordered_map<uint32_t, int64_t> freq;
+        for (int y = 0; y < surfH; y += 2) {
+            const uint32_t* row = pixmap.addr32(0, y);
+            for (int x = 0; x < surfW; x += 2) freq[row[x]]++;
+        }
+        uint32_t dominant = bgPM; int64_t best = -1;
+        for (auto& kv : freq) if (kv.second > best) { best = kv.second; dominant = kv.first; }
+        int iMinX = surfW, iMinY = surfH, iMaxX = -1, iMaxY = -1;
+        for (int y = 0; y < surfH; y++) {
+            const uint32_t* row = pixmap.addr32(0, y);
+            for (int x = 0; x < surfW; x++) {
+                uint32_t px = row[x];
+                if (px != dominant && px != bgPM) {
+                    iMinX = std::min(iMinX, x); iMaxX = std::max(iMaxX, x);
+                    iMinY = std::min(iMinY, y); iMaxY = std::max(iMaxY, y);
+                }
+            }
+        }
+        std::string inkBounds = iMaxX < 0 ? "null"
+            : "[" + std::to_string(iMinX) + "," + std::to_string(iMinY) + "," +
+              std::to_string(iMaxX + 1) + "," + std::to_string(iMaxY + 1) + "]";
+        // Corners left at the clear colour while the document paints a different surface: a
+        // rounded card with nothing behind it (white triangles on a dark widget).
+        int clearCorners = 0;
+        if (surfW > 4 && surfH > 4 && dominant != bgPM) {
+            const int cx[4] = {0, surfW - 1, 0, surfW - 1}, cy[4] = {0, 0, surfH - 1, surfH - 1};
+            for (int k = 0; k < 4; k++) if (pixmap.addr32(0, cy[k])[cx[k]] == bgPM) clearCorners++;
+        }
+        if (!roundJson.empty()) { report.push_back({"round", roundJson}); clearCorners = 0; }
         auto lo = rccore::layoutOverflowCounts();
         report.push_back({"layout", "{\"overflowing\":" + std::to_string(lo.components) + ",\"examples\":[" +
             [&]() { std::string e; for (size_t k = 0; k < lo.examples.size(); k++) e += (k ? "," : "") + jsonStr(lo.examples[k]); return e; }() +
@@ -835,7 +917,11 @@ static int run(int argc, char* argv[]) {
             ",\"changedFraction\":" + jsonNum((double) changed / ((double) surfW * surfH)) +
             ",\"distinctColors\":" + std::to_string(colors.size()) +
             ",\"distinctColorsCapped\":" + (colors.size() > 4096 ? "true" : "false") +
-            ",\"contentBounds\":" + bounds + "}"});
+            ",\"contentBounds\":" + bounds +
+            ",\"dominant\":" + hexColor(SkUnPreMultiply::PMColorToColor(dominant)) +
+            ",\"dominantFraction\":" + jsonNum((double) best / ((double) ((surfW + 1) / 2) * ((surfH + 1) / 2))) +
+            ",\"inkBounds\":" + inkBounds +
+            ",\"clearCorners\":" + std::to_string(clearCorners) + "}"});
         writeReport();
     }
 

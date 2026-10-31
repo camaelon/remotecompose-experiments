@@ -213,6 +213,7 @@ struct LayoutState {
     // A text's natural (unwrapped) size from its last measure: its intrinsic size, whatever
     // its width modifier says (a fillMaxWidth text is as wide as its words, not its parent).
     float lastTextW = 0, lastTextH = 0;
+    float autoFontSize = -1;   // CoreText autosize: the size measure chose (paint uses it)
 
     bool inflated = false;
 };

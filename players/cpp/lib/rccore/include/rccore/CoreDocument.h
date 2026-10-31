@@ -106,6 +106,9 @@ private:
     // Scroll modifiers with a constant position that took the current touch down: they
     // scroll themselves under drag (ScrollModifierOperation.onTouchDrag).
     std::vector<class ModifierScroll*> mScrollCaptures;
+    // Components that took the touch-down (the reference's mAppliedTouchOperations): their
+    // onTouchUp / onTouchCancel actions run when the touch ends.
+    std::vector<Operation*> mTouchTargets;
     int mCurrentId = 0;
     int mDensityBehavior = 0;
     LayoutAnimStore mAnimStore;

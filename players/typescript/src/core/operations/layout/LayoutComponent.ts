@@ -870,11 +870,18 @@ export class LayoutComponent extends Component {
             } else if (phase === 'down' && mod instanceof TouchDownModifier) {
                 mod.onTouchDown(context);
                 handled = true;
+            } else if (phase === 'down' && (mod instanceof TouchUpModifier || mod instanceof TouchCancelModifier)) {
+                // The finger may leave this component before it lifts (a swipe): remember it,
+                // so its touch-up / cancel actions run wherever the touch ends (as C++, U70).
+                doc.modifierTouchTarget?.(this);
+                handled = true;
             } else if (phase === 'up' && mod instanceof TouchUpModifier) {
                 mod.onTouchUp(context);
+                doc.touchModifierRan?.(this);
                 handled = true;
             } else if (phase === 'cancel' && mod instanceof TouchCancelModifier) {
                 mod.onTouchCancel(context);
+                doc.touchModifierRan?.(this);
                 handled = true;
             }
         }
@@ -900,6 +907,14 @@ export class LayoutComponent extends Component {
         }
 
         return componentHandled || handled;
+    }
+
+    /** This component's own touch-up / touch-cancel modifier actions (a swipe's release). */
+    runOwnTouchModifiers(context: RemoteContext, phase: 'up' | 'cancel'): void {
+        for (const mod of this.mComponentModifiers) {
+            if (phase === 'up' && mod instanceof TouchUpModifier) mod.onTouchUp(context);
+            else if (phase === 'cancel' && mod instanceof TouchCancelModifier) mod.onTouchCancel(context);
+        }
     }
 
     /** One touch phase on a single expression. Only `down` is bounds-checked, as upstream. */

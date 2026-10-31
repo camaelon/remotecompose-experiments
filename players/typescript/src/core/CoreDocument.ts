@@ -835,12 +835,36 @@ export class CoreDocument implements ExpansionDocument {
         this.mAppliedTouchOperations.add(component);
     }
 
+    /** Components with touch-up / cancel modifiers that took a touch down (U70 in C++). */
+    private mModifierTouchTargets = new Set<any>();
+    private mModifierRan = new Set<any>();
+    modifierTouchTarget(component: any): void {
+        this.mModifierTouchTargets.add(component);
+    }
+    touchModifierRan(component: any): void {
+        this.mModifierRan.add(component);
+    }
+    private runModifierTouchTargets(context: RemoteContext, phase: 'up' | 'cancel'): boolean {
+        let handled = false;
+        for (const c of this.mModifierTouchTargets) {
+            // One already reached through the normal walk ran its modifiers there.
+            if (this.mModifierRan.has(c)) continue;
+            c.runOwnTouchModifiers?.(context, phase);
+            handled = true;
+        }
+        this.mModifierTouchTargets.clear();
+        this.mModifierRan.clear();
+        return handled;
+    }
+
     hasTouchListener(): boolean {
         if (this.mTouchListeners.size > 0) return true;
         return this.mRootLayoutComponent?.getHasTouchListeners() ?? false;
     }
 
     touchDown(context: RemoteContext, x: number, y: number): boolean {
+        this.mModifierTouchTargets.clear();
+        this.mModifierRan.clear();
         context.loadFloat(RemoteContext.ID_TOUCH_POS_X, x);
         context.loadFloat(RemoteContext.ID_TOUCH_POS_Y, y);
         for (const listener of this.mTouchListeners) {
@@ -884,6 +908,7 @@ export class CoreDocument implements ExpansionDocument {
                     handled = true;
                 }
             }
+            if (this.runModifierTouchTargets(context, 'up')) handled = true;
             this.mAppliedTouchOperations.clear();
         }
         this.mNeedsRepaintFlag = 1;
@@ -898,6 +923,7 @@ export class CoreDocument implements ExpansionDocument {
                     handled = true;
                 }
             }
+            if (this.runModifierTouchTargets(context, 'cancel')) handled = true;
             this.mAppliedTouchOperations.clear();
             this.mNeedsRepaintFlag = 1;
             return handled;

@@ -1123,6 +1123,20 @@ export class Writer {
         return this.addThemedColorIds(lightId, darkId);
     }
 
+    /** A COLOR_EXPRESSION with its four raw params (ColorExpression.apply): HSV_MODE (4) with
+     *  the alpha in the top half of param1 and hue/sat/value float bits, or ARGB_MODE (5) /
+     *  IDARGB_MODE (6). A fresh colour id; the players evaluate it and re-evaluate on change. */
+    addColorExpression(p1: number, p2: number, p3: number, p4: number): number {
+        const retId = this.allocDataId();
+        this.buffer.start(OP.COLOR_EXPRESSION);
+        this.buffer.writeInt(retId);
+        this.buffer.writeInt(p1 | 0);
+        this.buffer.writeInt(p2 | 0);
+        this.buffer.writeInt(p3 | 0);
+        this.buffer.writeInt(p4 | 0);
+        return retId;
+    }
+
     /** RemoteComposeWriter.addThemedColor(lightId, darkId): a fresh colour id, set under
      *  THEME(DARK) and under THEME(LIGHT) by a COLOR_EXPRESSION (mode 3: id to id) with tween
      *  0 (the dark id) or 1 (the light id), each in a one-pass loop; then THEME(UNSPECIFIED). */

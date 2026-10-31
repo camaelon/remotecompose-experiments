@@ -63,6 +63,7 @@ static void registerExpressionVars(const std::vector<float>& expr,
 
 void FloatExpression::registerListening(RemoteContext& context) {
     registerExpressionVars(expression, context, this);
+    context.registerFloatExpression(id, this);
 }
 
 void ColorExpressionOp::registerListening(RemoteContext& context) {

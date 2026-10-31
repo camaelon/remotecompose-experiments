@@ -914,6 +914,30 @@ static void measureText(Operation* op, PaintContext* pc, RemoteContext& ctx,
     } guard{pc, styledMeasure};
 
     std::string text = ctx.getText(tid);
+    // CoreText autosize (the reference's measure with TEXT_MEASURE_AUTOSIZE): the largest size
+    // between minFontSize (4) and maxFontSize (400) whose text fits the box, by bisection with
+    // 0.5 steps; lines wrap up to maxLines. Paint uses the same size.
+    ls.autoFontSize = -1;
+    if (op->opcode() != 208 && pc) {
+        auto* ct = static_cast<CoreTextOp*>(op);
+        const float availW = maxW - ls.paddingLeft - ls.paddingRight;
+        const float availH = maxH - ls.paddingTop - ls.paddingBottom;
+        if (ct->autosize && availW > 0 && availW < 1e8f) {
+            const float lo0 = ct->minFontSize > 0 ? ct->minFontSize : 4.0f;
+            const float hi0 = ct->maxFontSize > 0 ? ct->maxFontSize : 400.0f;
+            auto fits = [&](float fs) {
+                float w = pc->measureTextWidth(text, fs) + lsEm * fs * utf8Count(text);
+                float h = pc->measureTextHeight(text, fs) * (lhMul > 0 ? lhMul : 1.0f) + lhAdd;
+                int lines = std::max(1, (int) std::ceil(w / availW - 1e-4f));
+                if (lines > maxLines) return false;
+                return (availH <= 0 || availH > 1e8f || h * lines <= availH + 0.5f);
+            };
+            float lo = lo0, hi = hi0;
+            while (hi - lo >= 0.5f) { float mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
+            fsize = std::floor((lo - lo0) / 0.5f) * 0.5f + lo0;
+            ls.autoFontSize = fsize;
+        }
+    }
     const float lsPx = lsEm * fsize;
     float textW = (pc ? pc->measureTextWidth(text, fsize) : fsize * 0.6f * text.size())
                   + lsPx * utf8Count(text);
@@ -2481,7 +2505,9 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                 auto& c = measure.get(ccid);
                 // A collapsible layout that dropped every child goes GONE by itself (its own
                 // visibility modifier did not ask for it): the layout removed the content.
-                if (c.isGone() && (child->opcode() == 230 || child->opcode() == 233)) {
+                // (A stateLayout hides its other panes: GONE by the selection, not by the layout.)
+                const bool paneOfState = op->opcode() == 217;
+                if (c.isGone() && !paneOfState && (child->opcode() == 230 || child->opcode() == 233)) {
                     auto& cls = getLS(ctx, child);
                     inflateLayout(child, cls);
                     bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
@@ -2500,7 +2526,7 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                 // where the widget expected its smallest alternative. Each child's minimum
                 // against the box says why (a row of seven 32 dp discs needs 224 dp).
                 // (Only a fitBox that found nothing itself, not one a stateLayout or a visibility hid.)
-                if (c.isGone() && child->opcode() == 176 && gFitBoxNeed.count(ccid) && roomW > 0.5f && roomH > 0.5f) {
+                if (c.isGone() && !paneOfState && child->opcode() == 176 && gFitBoxNeed.count(ccid) && roomW > 0.5f && roomH > 0.5f) {
                     auto& cls = getLS(ctx, child);
                     inflateLayout(child, cls);
                     bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
@@ -2547,12 +2573,14 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                     // Intended: an exact size (0 as asked, or clamped by a 0 parent reported on
                     // its own), or a wrap with nothing inside (a spacer box). Starved: a weight
                     // or fill given nothing, or a wrap around children that all went.
-                    auto intendedZero = [&](DimType t) {
-                        return t == DimType::EXACT || t == DimType::EXACT_DP
+                    // (An exact size counts only when it asked for ~0: an exact 48 dp squeezed to 0
+                    // by a column that ran out of room is content lost, not intended.)
+                    auto intendedZero = [&](DimType t, float declared) {
+                        return ((t == DimType::EXACT || t == DimType::EXACT_DP) && resolveVar(declared, ctx) <= 0.5f)
                             || (t == DimType::WRAP && cls.layoutChildren.empty());
                     };
-                    bool intended = (c.w > 0.5f || intendedZero(cls.widthType))
-                                 && (c.h > 0.5f || intendedZero(cls.heightType));
+                    bool intended = (c.w > 0.5f || intendedZero(cls.widthType, cls.widthValue))
+                                 && (c.h > 0.5f || intendedZero(cls.heightType, cls.heightValue));
                     if (!intended && roomW > 0.5f && roomH > 0.5f && gLayoutOverflowIds.insert(ccid).second) {
                         gLayoutOverflow.zeroSize++;
                         if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
@@ -2931,7 +2959,8 @@ TextOverflowCounts textOverflowCounts() { return gTextOverflow; }
 static void paintTextLines(PaintContext* pc, int tid, const std::string& text, float fsize,
                            float contentW, float contentH, float lineH, float fullW,
                            float ascent, int tAlign, int maxLines, int overflow,
-                           float lsPx = 0.0f, float lhAdd = 0.0f, float lhMul = 1.0f) {
+                           float lsPx = 0.0f, float lhAdd = 0.0f, float lhMul = 1.0f,
+                           bool underline = false, bool strikethrough = false) {
     if (maxLines <= 0) maxLines = INT32_MAX;
     const float lineStep = lineH + lineGap(lineH, lhAdd, lhMul);
     const bool ellipsis = overflow == 3 || overflow == 4 || overflow == 5;
@@ -2991,6 +3020,14 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
             int cs = utf8ByteToUtf16Index(text, line.start);
             int ce = utf8ByteToUtf16Index(text, line.end);
             pc->drawTextRun(tid, cs, ce, cs, ce, x, y, false);
+        }
+        // Underline / strikethrough (the reference's platform text layout draws them): a bar
+        // the width of the drawn line, in the text paint, below the baseline / through the
+        // middle of the lowercase letters.
+        if (underline || strikethrough) {
+            const float t = std::max(1.0f, fsize / 16.0f);
+            if (underline) pc->drawRect(x, y + fsize * 0.11f, x + lineW, y + fsize * 0.11f + t);
+            if (strikethrough) pc->drawRect(x, y - fsize * 0.30f - t / 2, x + lineW, y - fsize * 0.30f + t / 2);
         }
     }
     // The count uses the lines as painted (fullW is the unwrapped width: a wrapped text is
@@ -3262,6 +3299,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         int fWeight = 400, fStyle = 0, fFamilyId = 0;
         int tMaxLines = INT32_MAX, tOverflow = 1;
         float tLetterSpacing = 0, tLineAdd = 0, tLineMul = 1;
+        bool tUnderline = false, tStrike = false;
         if (oc == 208) {
             auto* lt = static_cast<LayoutText*>(op);
             tMaxLines = lt->maxLines; tOverflow = lt->overflow;
@@ -3273,6 +3311,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             auto* ct = static_cast<CoreTextOp*>(op);
             tMaxLines = ct->maxLines; tOverflow = ct->overflow;
             tLetterSpacing = ct->letterSpacing;
+            tUnderline = ct->underline; tStrike = ct->strikethrough;
             tLineAdd = ct->lineHeightAdd; tLineMul = ct->lineHeightMultiplier;
             tid = ct->textId; fsize = ct->fontSize; col = ct->color;
             colId = ct->colorId;
@@ -3297,6 +3336,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
         fsize = resolveVar(fsize, ctx);
         if (constSize) fsize *= gDpScale;
         if (fsize <= 0 || std::isnan(fsize)) fsize = 16;
+        if (ls.autoFontSize > 0) fsize = ls.autoFontSize;   // CoreText autosize, chosen at measure
 
         // Resolve color
         int resolvedColor = col;
@@ -3329,7 +3369,7 @@ static void paintLayoutComponent(Operation* op, RemoteContext& ctx, MeasurePass&
             float fullW = pc->measureTextWidth(text, fsize) + lsPx * utf8Count(text);
             float ascent = pc->measureTextAscent(text, fsize);
             paintTextLines(pc, tid, text, fsize, contentW, contentH, lineH, fullW, ascent,
-                           tAlign, tMaxLines, tOverflow, lsPx, tLineAdd, tLineMul);
+                           tAlign, tMaxLines, tOverflow, lsPx, tLineAdd, tLineMul, tUnderline, tStrike);
             pc->restorePaint();
         }
     } else if (oc == 93) {
