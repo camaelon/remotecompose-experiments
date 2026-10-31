@@ -12,7 +12,7 @@
    "type": "float",
    "default": 48,
    "static": true,
-   "doc": "Width and height in dp; the drawing is on a 100-unit box scaled to it"
+   "doc": "Width and height in dp; the drawing is on a 100-unit box scaled to the box the canvas gets (this size unless the parent is smaller)"
   },
   "lit": {
    "type": "color",
@@ -69,9 +69,21 @@
    ],
    "commands": [
     {
+     "variable": {
+      "name": "s",
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "translate": {
+      "dx": "(componentWidth() - @s) / 2",
+      "dy": "(componentHeight() - @s) / 2"
+     }
+    },
+    {
      "scale": {
-      "sx": "@size / 100",
-      "sy": "@size / 100"
+      "sx": "@s / 100",
+      "sy": "@s / 100"
      }
     },
     {
@@ -187,6 +199,7 @@
   "The terminator is an ellipse of half-width r · |cos(2π · phase)|, in the shade colour for a crescent (cos > 0) and in the lit colour for a gibbous moon (cos < 0). Each is drawn with a width of max(0, ±cos), so the other one has zero width: no paint alpha to switch and reset",
   "At exactly new moon the lit half isn't drawn (its sweep is 180 · step(0.9999, cos)): the shaded ellipse covers it, but the half-disc's antialiased edge would still leave a lit hairline on the limb",
   "The edge ring is a disc 1 dp larger drawn first, not a stroke drawn last: a stroke over the disc dulls the lit limb",
-  "Mono ignores lit, shade and rim: the lit part is onSurface and the rest background inside a 1.5 dp outline ring, so the phase reads as shape. On black (mono) that is a white full moon; in mono inverted (e-ink) the lit part is the ink, so a full moon is a black disc, the reverse of a printed almanac's ● new / ○ full: label the phases there"
+  "Mono ignores lit, shade and rim: the lit part is onSurface and the rest background inside a 1.5 dp outline ring, so the phase reads as shape. On black (mono) that is a white full moon; in mono inverted (e-ink) the lit part is the ink, so a full moon is a black disc, the reverse of a printed almanac's ● new / ○ full: label the phases there",
+  "The drawing is scaled to the box the layout actually gives the canvas (min of its width and height, centred), so a call clamped by a smaller parent shrinks instead of being cut off; the 1 dp rim is computed from `size`, so it is thinner in proportion there"
  ]
 }

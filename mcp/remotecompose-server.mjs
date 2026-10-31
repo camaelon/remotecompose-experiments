@@ -96,6 +96,26 @@ Look things up with find (examples, components, capabilities) and get; reference
 component authoring guide and full documentation for every tool. inspect answers questions
 about a document (layout, variables, accessibility, interactions, bytes, runtime).`;
 
+const EXPRESSIONS = `Expressions (a string anywhere a number goes: "componentWidth() / 2", "@progress * 360")
+- Operators: + - * / % and unary -, with parentheses. Numbers are floats; a comparison (a > b, a < b, a == b) is 1 or 0.
+- Functions: sin cos tan asin acos atan atan2(y, x) (radians), sqrt abs pow(x, y) exp log (base 10) ln square hypot(x, y),
+  min max clamp(min, max, x) floor ceil round fract sign step(edge, x) smooth_step(a, b, x) lerp(a, b, t) mad(a, b, c) = a * b + c,
+  ifElse(cond, a, b) (cond non-zero picks a), ping_pong(x, len), rand(), arrayGet(array, i) arrayLength arrayMin arrayMax arraySum,
+  spline / arraySpline(array, t) splineLoop.
+- Variables: "@name" for a resources.variables entry, a named variable command, a component param or a local; a text
+  cannot be read as a number (textFromFloat goes the other way).
+- Clock and calendar (read live, so a document shows now, and pinned by render's clock): timeInSec() (0..86399 of the day),
+  timeInMin() (0..1439), timeInHr() (0..23.99), continuousSec() (seconds running, for motion), year(), calendarMonth() (1..12),
+  dayOfMonth() (1..31), dayOfYear() (1..366), weekDay() (1 = Sunday .. 7), epochSecond(), offsetToUtc() (seconds; pin it with
+  system_variables {"10": 0} to check UTC days), animationTime(), deltaTime().
+- Component and host values: componentWidth() componentHeight() (the canvas's own box, inside a canvas's commands),
+  windowWidth() windowHeight() density() fontSize() apiLevel(), batteryLevel() powerState() networkSignal() memoryFree(),
+  touchX() touchY() touchVelX() touchVelY() touchTime(), accelX/Y/Z() gyroX/Y/Z() magneticX/Y/Z() light().
+- Limits: Android rejects an expression over 32 entries (operands and operators together): split a long formula into
+  named variables (resources.variables or canvas "variable" commands) and combine them; the audit reports the longest.
+  Trig is in radians; a modulo of a negative number keeps its sign (use fract or add the period first).
+`;
+
 const FORMAT = `RemoteCompose JSON essentials (get an example with \`get\` for full syntax):
 
 Structure
@@ -111,13 +131,18 @@ Structure
   box: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers":
   ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [...]}}]}}, with
   {"collapsiblePriority": {"orientation": "vertical", "priority": N}} on the optional children (lowest N dropped first;
-  none = kept). collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
+  none = dropped last, only if it does not fit on its own). A weighted child is never dropped and shrinks first: give a
+  chart a fixed height (or heightIn min) so the optional texts are what goes. collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
 - Text picked by a runtime index (a phase name, a weekday, "Rising"/"Falling"): the TextChoice component
   ({"TextChoice": {"items": ["New moon", ...], "index": "@phaseIndex"}}). A layout text cannot take textSubtext /
   textTransform / textLookup (only canvas commands can); numbers go through textFromFloat, joins through textMerge.
+  textTransform takes "operation": "uppercase" | "lowercase" | "capitalize" (the numbers 1, 2, 3 mean the same).
   A word joined to other text in one wrapping line ("Waning gibbous, 57% lit") is not a TextChoice: compute it as a
   named text in a canvas "global" block (textSubtext over fixed-width names, then textTransform to trim; see
   TIM-11), then use "@name" in a layout text's textMerge.
+- Trap: a weight does not combine with widthIn/heightIn (the child gets 0 and vanishes): give it one or the other.
+- Checking dates: render and inspect take system_variables {"10": 0} to pin offsetToUtc() (UTC days), so a
+  result does not depend on the server's time zone; pass clock too.
 - Trap: weighted children ignore spacedBy (the weights share the whole width, then the gaps overflow it). In a
   row or column with weights, put fixed spacer boxes ({"box": {"modifiers": [{"width": 8}]}}) between them.
 
@@ -179,7 +204,7 @@ async function smallSizeNote(args) {
         "often smaller than designed: drop the least important content first (a collapsibleColumn with collapsiblePriority " +
         "on the optional children, inside a box that carries the padding, horizontalAlignment \"start\", lowest priority " +
         "dropped first: examples LAY-13, LAY-14; reference topic \"format\" has the snippet), switch to a compact layout " +
-        "(StateLayout: LAY-15), or at minimum put the content in a verticalScroll.";
+        "with a fitBox (its first child that fits is shown, full layout first: LAY-09), or at minimum put the content in a verticalScroll.";
 }
 
 async function renderVariants(t, args) {
@@ -187,24 +212,32 @@ async function renderVariants(t, args) {
     const header = json?.header ?? {};
     const W = args.width ?? header.width ?? 360, H = args.height ?? header.height ?? 640;
     const base = { ...args, width: W, height: H };
-    const clockShift = () => {
+    // A document that reads the time of day moves visibly in seven hours; one that reads only
+    // the date (a calendar, a season, a day-length curve) needs weeks to show another state.
+    const timeOfDay = (j) => /\b(timeInMin|timeInSec|timeInHr|hour|minute|second|continuousSec|animationTime|clock)\s*\(/.test(JSON.stringify(j));
+    const clockShift = (hours) => {
         const c = args.clock ? new Date(args.clock) : new Date();
-        const d = new Date(c.getTime() + 7 * 3600_000);
+        const d = new Date(c.getTime() + hours * 3600_000);
         const p = (n) => String(n).padStart(2, "0");
         return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
     };
     const plan = [
         ["dark theme", { ...base, theme: "dark" }],
         ["light theme", { ...base, theme: "light" }],
-        ...(json ? [["mono (always-on displays)", { ...base, json: { ...json, componentTheme: "mono" }, json_path: undefined }]] : []),
+        ...(json ? [["mono (always-on displays)", { ...base, json: { ...json, componentTheme: "mono" }, json_path: undefined }],
+                    ["mono-inverted (e-ink)", { ...base, json: { ...json, componentTheme: "mono-inverted" }, json_path: undefined, theme: "light" }]] : []),
         [`narrow ${Math.round(W * 0.72)}×${H}`, { ...base, width: Math.round(W * 0.72) }],
         [`wide ${Math.round(W * 1.6)}×${Math.round(H * 0.75)}`, { ...base, width: Math.round(W * 1.6), height: Math.round(H * 0.75) }],
         [`short ${W}×${Math.round(H * 0.6)} (a widget resized down)`, { ...base, height: Math.round(H * 0.6) }],
-        ...(json && readsClock(json) ? [["seven hours later", { ...base, clock: clockShift() }]] : []),
+        [`small ${Math.round(W * 0.72)}×${Math.round(H * 0.6)} (narrow and short at once)`, { ...base, width: Math.round(W * 0.72), height: Math.round(H * 0.6) }],
+        ...(json && readsClock(json) ? [[timeOfDay(json) ? "seven hours later" : "45 days later", { ...base, clock: clockShift(timeOfDay(json) ? 7 : 45 * 24) }]] : []),
     ];
     const content = [];
+    // output_path names the set: <stem>-<variant>.png beside it (dark, light, mono, narrow, ...).
+    const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
     for (const [label, a] of plan) {
         const clean = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined));
+        if (stem) clean.output_path = `${stem}-${label.split(/\s/)[0].replace(/[^a-z0-9-]/gi, "")}.png`;
         try {
             const r = await t.handler(clean);
             content.push({ type: "text", text: `── ${label}` }, ...r.filter((c) => c.type === "image"),
@@ -320,7 +353,7 @@ const tools = [
                 "of a JSON document (always-on displays, e-ink) without editing it: the same component calls, expanded with the components' mono " +
                 "implementation. By default the document follows the system's light or dark theme.",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                variants: { type: "boolean", description: "Check every state in one call: light, dark and mono, narrow and wide, and (when the document reads the clock) another time of day, each image captioned. Use it before publishing." },
+                variants: { type: "boolean", description: "Check every state in one call: dark, light, mono and mono-inverted, narrow, wide, short and small (narrow and short), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-dark.png, -light, -mono, -mono-inverted, -narrow, -wide, -short, -small, and -seven.png or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono / mono-inverted: the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
             handler: async ({ componentTheme, variants, ...args } = {}) => variants ? renderVariants(t, args) : withDesign(await (async () => {
                 // One of width/height: the other from the document's own aspect ratio.
@@ -398,20 +431,22 @@ tools.push({
     annotations: { title: "Workflow, guides and tool documentation", ...RO },
     description:
         "topic \"workflow\" (default): how to go from a request to a verified document. topic \"format\": the " +
-        "JSON essentials and its traps (layout vs canvas, text anchoring, sizes, expressions). topic " +
+        "JSON essentials and its traps (layout vs canvas, text anchoring, sizes, expressions). topic \"expressions\": every " +
+        "function, operator and clock/system value an expression can use, with the limits. topic " +
         "\"components\": the component authoring guide (syntax, light/dark/mono, animation, drawing " +
         "something the library lacks). topic \"tools\": every tool's full schema and options, or one " +
         "with tool: <name>.",
     inputSchema: {
         type: "object",
         properties: {
-            topic: { type: "string", enum: ["workflow", "format", "components", "tools"] },
+            topic: { type: "string", enum: ["workflow", "format", "components", "expressions", "tools"] },
             tool: { type: "string", description: "With topic \"tools\": one tool name." },
         },
     },
     handler: async ({ topic = "workflow", tool: name } = {}) => {
         if (topic === "components") return tool(examples, "component_authoring_guide").handler({});
         if (topic === "format") return text(FORMAT);
+        if (topic === "expressions") return text(EXPRESSIONS);
         if (topic === "tools") {
             const list = name ? tools.filter((t) => t.name === name) : tools;
             if (!list.length) throw new Error(`no tool '${name}'`);

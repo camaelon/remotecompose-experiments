@@ -20,7 +20,7 @@
    "type": "float",
    "default": 48,
    "static": true,
-   "doc": "Width and height in dp; the drawing is on a 24-unit grid scaled to it"
+   "doc": "Width and height in dp; the drawing is on a 24-unit grid scaled to it (and down to a smaller box)"
   },
   "label": {
    "type": "string",
@@ -73,6 +73,24 @@
     }
    ],
    "commands": [
+    {
+     "variable": {
+      "name": "s",
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "translate": {
+      "dx": "(componentWidth() - @s) / 2",
+      "dy": "(componentHeight() - @s) / 2"
+     }
+    },
+    {
+     "scale": {
+      "sx": "@s / @size",
+      "sy": "@s / @size"
+     }
+    },
     {
      "$if": "condition == 'sun'",
      "then": [
@@ -848,6 +866,7 @@
   "condition is static: each condition is a different drawing written into the document. To show a condition the host chooses at run time, put the five icons in a stateLayout (or behind visibility) driven by a host integer",
   "No SVG paths: the cloud is three circles over a rounded rectangle, and the bolt three round-capped lines (an SVG path string costs about 4 KB in Java, padded to 1024 floats)",
   "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
-  "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)"
+  "The sun's eight rays are one line drawn in a loop that rotates the canvas 45° per pass (8 × 45° = 360°, back to the start)",
+  "The drawing is scaled to the box the layout actually gives the canvas (min of its width and height, centred), so a call clamped by a smaller parent shrinks instead of being cut off"
  ]
 }

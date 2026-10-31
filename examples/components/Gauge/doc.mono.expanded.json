@@ -12,9 +12,8 @@
     "value": 42,
     "export": true
    },
-   "_n0": 0,
-   "_n100": 100,
-   "_n91": 91
+   "gauge1_frac": "@cpu / 100",
+   "gauge1_sweep": "clamp(0, 240, @gauge1_frac * 240)"
   },
   "colors": {
    "background": "#FF000000",
@@ -24,314 +23,483 @@
    "track": "#FF9E9E9E"
   }
  },
- "root": [
-  {
-   "definePattern": {
-    "name": "Gauge__fill",
-    "parameters": [
-     "value",
-     "min",
-     "max",
-     "label",
-     "warnAt",
-     "alertAt"
-    ],
-    "children": [
-     {
-      "canvas": {
-       "modifiers": [
-        "fillMaxSize",
-        {
-         "semantics": {
-          "contentDescription": "@label"
-         }
-        }
-       ],
-       "commands": [
-        {
-         "translate": {
-          "dx": "(componentWidth() - 140) / 2",
-          "dy": "(componentHeight() - 140) / 2"
-         }
-        },
-        {
-         "scale": {
-          "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 140",
-          "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 140",
-          "pivotX": 70,
-          "pivotY": 70
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.track"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 1.5
-           },
-           {
-            "strokeCap": "round"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 12,
-          "top": 12,
-          "right": 128,
-          "bottom": 128,
-          "startAngle": 150,
-          "sweepAngle": 240
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "strokeWidth": 2
-           },
-           {
-            "strokeCap": "butt"
-           }
-          ]
-         }
-        },
-        {
-         "save": {
-          "commands": [
-           {
-            "rotate": {
-             "angle": "150 + @warnAt * 240",
-             "pivotX": 70,
-             "pivotY": 70
-            }
-           },
-           {
-            "drawLine": {
-             "x1": 119,
-             "y1": 70,
-             "x2": 137,
-             "y2": 70
-            }
-           }
-          ]
-         }
-        },
-        {
-         "save": {
-          "commands": [
-           {
-            "rotate": {
-             "angle": "150 + @alertAt * 240",
-             "pivotX": 70,
-             "pivotY": 70
-            }
-           },
-           {
-            "drawLine": {
-             "x1": 119,
-             "y1": 70,
-             "x2": 137,
-             "y2": 70
-            }
-           }
-          ]
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.success"
-           },
-           {
-            "strokeWidth": 6
-           },
-           {
-            "strokeCap": "round"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 12,
-          "top": 12,
-          "right": 128,
-          "bottom": 128,
-          "startAngle": 150,
-          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
-         }
-        },
-        {
-         "drawArc": {
-          "left": 12,
-          "top": 12,
-          "right": 128,
-          "bottom": 128,
-          "startAngle": 150,
-          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "textSize": 30.8
-           }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": {
-           "type": "textFromFloat",
-           "value": "@value",
-           "whole": 4,
-           "decimal": 0,
-           "flags": 5
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 4
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Gauge",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "weight": 1
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
           },
-          "x": 70,
-          "y": 70,
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.muted"
-           },
-           {
-            "textSize": 14
+          "fillMaxHeight"
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "CPU %"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "gauge1_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @gauge1_s) / 2",
+               "dy": "(componentHeight() - @gauge1_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@gauge1_s / 140",
+               "sy": "@gauge1_s / 140"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": 240
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "strokeWidth": 2
+                },
+                {
+                 "strokeCap": "butt"
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 294,
+                  "pivotX": 70,
+                  "pivotY": 70
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 119,
+                  "y1": 70,
+                  "x2": 137,
+                  "y2": 70
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 354,
+                  "pivotX": 70,
+                  "pivotY": 70
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 119,
+                  "y1": 70,
+                  "x2": 137,
+                  "y2": 70
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.success"
+                },
+                {
+                 "strokeWidth": 6
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": "@gauge1_sweep"
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": "@gauge1_sweep"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 30.8
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@cpu",
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 70,
+               "y": 70,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "textSize": 14
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "CPU %",
+               "x": 70,
+               "y": 100.8,
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "@label",
-          "x": 70,
-          "y": 100.8,
-          "panX": 0,
-          "panY": 0
-         }
+          }
+         ]
         }
-       ]
-      }
-     }
-    ]
-   }
-  },
-  {
-   "column": {
-    "modifiers": [
-     "fillMaxSize",
-     {
-      "background": "@colors.background"
-     },
-     {
-      "padding": 16
-     },
-     {
-      "spacedBy": 4
-     }
-    ],
-    "children": [
-     {
-      "text": {
-       "value": "Gauge",
-       "fontSize": 20,
-       "color": "@colors.onSurface"
-      }
-     },
-     {
-      "row": {
-       "verticalAlignment": "center",
-       "modifiers": [
-        "fillMaxWidth",
-        {
-         "weight": 1
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight",
+          {
+           "padding": {
+            "start": 16
+           }
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Temp °C"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "gauge2_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @gauge2_s) / 2",
+               "dy": "(componentHeight() - @gauge2_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@gauge2_s / 140",
+               "sy": "@gauge2_s / 140"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": 240
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "strokeWidth": 2
+                },
+                {
+                 "strokeCap": "butt"
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 294,
+                  "pivotX": 70,
+                  "pivotY": 70
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 119,
+                  "y1": 70,
+                  "x2": 137,
+                  "y2": 70
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 354,
+                  "pivotX": 70,
+                  "pivotY": 70
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 119,
+                  "y1": 70,
+                  "x2": 137,
+                  "y2": 70
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.success"
+                },
+                {
+                 "strokeWidth": 6
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": 218.4
+              }
+             },
+             {
+              "drawArc": {
+               "left": 12,
+               "top": 12,
+               "right": 128,
+               "bottom": 128,
+               "startAngle": 150,
+               "sweepAngle": 218.4
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 30.8
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": 91,
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 70,
+               "y": 70,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "textSize": 14
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "Temp °C",
+               "x": 70,
+               "y": 100.8,
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
         }
-       ],
-       "children": [
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           },
-           "fillMaxHeight"
-          ],
-          "children": [
-           {
-            "Gauge__fill": {
-             "arguments": [
-              "@cpu",
-              "@_n0",
-              "@_n100",
-              "CPU %",
-              0.6,
-              0.85
-             ]
-            }
-           }
-          ]
-         }
-        },
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           },
-           "fillMaxHeight",
-           {
-            "padding": {
-             "start": 16
-            }
-           }
-          ],
-          "children": [
-           {
-            "Gauge__fill": {
-             "arguments": [
-              "@_n91",
-              "@_n0",
-              "@_n100",
-              "Temp °C",
-              0.6,
-              0.85
-             ]
-            }
-           }
-          ]
-         }
-        }
-       ]
-      }
+       }
+      ]
      }
-    ]
-   }
+    }
+   ]
   }
- ]
+ }
 }

@@ -1,3 +1,4 @@
+#include <set>
 #include "rccore/operations/LayoutOperations.h"
 #include "rccore/easing/CubicEasing.h"
 #include "rccore/operations/AdvancedOperations.h"
@@ -1113,6 +1114,10 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     // Measure children based on layout type
     int oc = op->opcode();
     float wrapW = 0, wrapH = 0;
+    // A collapsible row or column measures its children afresh each time (the reference's
+    // computeVisibleChildren(fresh = true) clears the GONE it gave them): what an earlier
+    // measure in this frame dropped is not gone for good (EXAMPLES_FINDINGS U39).
+    if (oc == 230 || oc == 233) for (auto* child : ls.layoutChildren) unhide(child, ctx, measure);
 
     if (oc == 240) {
         // FlowLayout: wrap children into rows based on available width
@@ -1406,17 +1411,51 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
 
         // Re-measure children with final container dimensions (matching TS computeSize)
         if (oc == 203 || oc == 230) {
-            // Row: simple sequential pass - no special weight handling here
-            // (weight redistribution happens in layoutManager positioning pass)
             if (oc == 230) {
                 measureCollapsibleChildren(ls, pc, ctx, measure, 0, childMaxW, childMaxH,
                                            measuredW, measuredH, hasHWrap, hasVWrap);
             } else {
+                // Row: as the column below, a WEIGHT child gets its share of what the others
+                // leave, as the reference's RowLayout does (childMinWidth = weight * max /
+                // total). Measured at a minimum of 0 it was only as wide as its padding, and a
+                // wrapping text inside it then overflowed and was dropped (a collapsibleColumn
+                // with weight and padding in a row drew nothing: EXAMPLES_FINDINGS U39).
+                float totalWeights = 0;
+                bool hasWeights = false;
+                float totalNonWeightW = 0;
                 float mw = childMaxW;
+                // A GONE weighted child takes no part in the distribution (it is 0 wide).
+                auto goneWeighted = [&](Operation* child) {
+                    int cid = getComponentId(child);
+                    return cid != -1 && measure.contains(cid) && measure.get(cid).isGone();
+                };
                 for (auto* child : ls.layoutChildren) {
-                    measureComponent(child, pc, ctx, 0, mw, 0, childMaxH, measure);
-                    auto& cm = measure.get(getComponentId(child));
-                    if (!cm.isGone()) mw -= cm.w;
+                    auto& childLS = getLS(ctx, child);
+                    if (childLS.widthType == DimType::WEIGHT && !goneWeighted(child)) {
+                        hasWeights = true;
+                        totalWeights += childLS.widthValue;
+                    } else {
+                        measureComponent(child, pc, ctx, 0, mw, 0, childMaxH, measure);
+                        auto& cm = measure.get(getComponentId(child));
+                        if (!cm.isGone()) {
+                            mw -= cm.w;
+                            totalNonWeightW += cm.w;
+                        }
+                    }
+                }
+                if (hasWeights && totalWeights > 0) {
+                    mw = childMaxW;
+                    for (auto* child : ls.layoutChildren) {
+                        auto& childLS = getLS(ctx, child);
+                        if (childLS.widthType == DimType::WEIGHT && !goneWeighted(child)) {
+                            float wW = std::max(0.0f, childMaxW - totalNonWeightW) * childLS.widthValue / totalWeights;
+                            measureComponent(child, pc, ctx, wW, wW, 0, childMaxH, measure);
+                        } else {
+                            measureComponent(child, pc, ctx, 0, mw, 0, childMaxH, measure);
+                        }
+                        auto& cm = measure.get(getComponentId(child));
+                        if (!cm.isGone()) mw -= cm.w;
+                    }
                 }
             }
         } else if (oc == 204 || oc == 233) {
@@ -1522,16 +1561,10 @@ static void measureLayoutManager(Operation* op, PaintContext* pc, RemoteContext&
     if (ls.heightInRequired)
         measuredH = std::max(ls.heightInMin, std::min(measuredH, ls.heightInMax));
 
-    // A canvas (LAYOUT_CANVAS) is an explicitly-sized drawing surface: honour its exact
-    // height even when it exceeds the parent's maxHeight. A canvas doesn't clip its own
-    // drawing, so overflow renders (and scrolls) correctly — mirroring how a wrap-content
-    // column reports its full intrinsic height rather than being clamped. Clamping it would
-    // shrink the enclosing panel's background/clip and hide content scrolled past the
-    // viewport (tall code panels inside a scroll viewport).
-    if (op->opcode() == 205 &&
-        (ls.heightType == DimType::EXACT || ls.heightType == DimType::EXACT_DP)) {
-        measuredH = resolveVar(ls.heightValue, ctx) * dimScale(ls.heightType) + ls.padBeforeHeight;
-    }
+    // (A canvas used to keep its exact height past the parent's maximum here, for tall
+    // drawings in a scroll viewport. The reference clamps it like any component — a scroll
+    // host measures its children unbounded, so the clamp never bites there — and a widget
+    // resized smaller must get a smaller canvas, not one drawn past its box: U40.)
 
     applyVisibility(ls, ctx, m);
     m.w = measuredW;
@@ -2356,6 +2389,12 @@ static void layoutComponent(Operation* op, RemoteContext& ctx, MeasurePass& meas
 }
 
 // ── Store measured dimensions in RemoteContext for COMPONENT_VALUE ────
+static LayoutOverflowCounts gLayoutOverflow;
+static std::set<int> gLayoutOverflowIds;
+static bool gCountLayoutOverflow = false;   // only the settled layout counts, not a bounds animation in flight
+LayoutOverflowCounts layoutOverflowCounts() { return gLayoutOverflow; }
+void resetLayoutOverflowCounts() { gLayoutOverflow = LayoutOverflowCounts{}; gLayoutOverflowIds.clear(); }
+
 static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePass& measure) {
     int cid = getComponentId(op);
     auto& ls = getLS(ctx, op);
@@ -2378,6 +2417,88 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
         // These are separate components that should have the content area dimensions
         float innerW = std::max(0.0f, m.w - ls.paddingLeft - ls.paddingRight);
         float innerH = std::max(0.0f, m.h - ls.paddingTop - ls.paddingBottom);
+        // A visible child placed past the content box, unless this scrolls (the reference
+        // clips nothing: it is drawn cut off, which a renderer's report should say).
+        if (gCountLayoutOverflow && !ls.hasScroll && m.isVisible()) {
+            // Past the parent's outer edge (a child spilling into the parent's own padding is
+            // still drawn: nothing clips at the content box). Children sit at the content
+            // origin, so the room to the edge is the size less the leading padding.
+            float roomW = m.w - ls.paddingLeft, roomH = m.h - ls.paddingTop;
+            // A collapsible layout ignores its own padding when it sizes its children (they
+            // get the full width): the usual cause of a child past its edge, worth naming.
+            bool paddedCollapsible = (op->opcode() == 230 || op->opcode() == 233)
+                && (ls.paddingLeft > 0 || ls.paddingRight > 0 || ls.paddingTop > 0 || ls.paddingBottom > 0);
+            for (auto* child : ls.layoutChildren) {
+                int ccid = getComponentId(child);
+                if (ccid == -1 || !measure.contains(ccid)) continue;
+                auto& c = measure.get(ccid);
+                // A collapsible layout that dropped every child goes GONE by itself (its own
+                // visibility modifier did not ask for it): the layout removed the content.
+                if (c.isGone() && (child->opcode() == 230 || child->opcode() == 233)) {
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
+                    if (!asked && !cls.layoutChildren.empty() && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.zeroSize++;
+                        if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
+                            char buf[240];
+                            std::snprintf(buf, sizeof buf, "%s#%d in %s#%d %.0fx%.0f (a collapsible layout that dropped every child: none fit)",
+                                child->name().c_str(), ccid, op->name().c_str(), cid, roomW, roomH);
+                            gLayoutOverflow.zeroSizeExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
+                if (!c.isVisible()) continue;
+                if (c.w <= 0.5f || c.h <= 0.5f) {
+                    // No size at all: a weight with nothing left to share (or next to a
+                    // widthIn/heightIn), a collapsible that dropped every child. A size asked
+                    // to be 0 (a size: 0 canvas holding global commands) is intended.
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    // Intended: an exact size (0 as asked, or clamped by a 0 parent reported on
+                    // its own), or a wrap with nothing inside (a spacer box). Starved: a weight
+                    // or fill given nothing, or a wrap around children that all went.
+                    auto intendedZero = [&](DimType t) {
+                        return t == DimType::EXACT || t == DimType::EXACT_DP
+                            || (t == DimType::WRAP && cls.layoutChildren.empty());
+                    };
+                    bool intended = (c.w > 0.5f || intendedZero(cls.widthType))
+                                 && (c.h > 0.5f || intendedZero(cls.heightType));
+                    if (!intended && roomW > 0.5f && roomH > 0.5f && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.zeroSize++;
+                        if (gLayoutOverflow.zeroSizeExamples.size() < 6) {
+                            char buf[240];
+                            const char* why = (c.w <= 0.5f && cls.widthType == DimType::WEIGHT) || (c.h <= 0.5f && cls.heightType == DimType::WEIGHT)
+                                ? " (a weight: nothing left to share, or combined with widthIn/heightIn)"
+                                : (child->opcode() == 230 || child->opcode() == 233) ? " (a collapsible layout that dropped every child)" : "";
+                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f in %s#%d %.0fx%.0f%s",
+                                child->name().c_str(), ccid, c.w, c.h, op->name().c_str(), cid, roomW, roomH, why);
+                            gLayoutOverflow.zeroSizeExamples.push_back(buf);
+                        }
+                    }
+                    continue;
+                }
+                float right = c.x + c.w - roomW, bottom = c.y + c.h - roomH;
+                // A few pixels are font-metric rounding or a label's trailing space, not a cut
+                // worth a warning: past 8 px and 5% of the box.
+                float tolW = std::max(8.0f, roomW * 0.05f), tolH = std::max(8.0f, roomH * 0.05f);
+                if (right > tolW || bottom > tolH || c.x < -tolW || c.y < -tolH) {
+                    if (gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.components++;
+                        if (gLayoutOverflow.examples.size() < 6) {
+                            char buf[400];
+                            std::snprintf(buf, sizeof buf, "%s#%d %.0fx%.0f at %.0f,%.0f in %s#%d %.0fx%.0f: %s%.0f px%s",
+                                child->name().c_str(), ccid, c.w, c.h, c.x, c.y, op->name().c_str(), cid, innerW, innerH,
+                                bottom > tolH ? "below by " : right > tolW ? "past the right by " : "before the start by ",
+                                bottom > tolH ? bottom : right > tolW ? right : -std::min(c.x, c.y),
+                                paddedCollapsible ? " (the parent is a collapsible layout with its own padding, which it ignores for its children: move the padding to a box around it)" : "");
+                            gLayoutOverflow.examples.push_back(buf);
+                        }
+                    }
+                }
+            }
+        }
         // A LayoutComponentContent id (what componentWidth() in a child's modifier names)
         // reads the component's full size in the reference (ANM-02: a spacer of
         // @go * (componentWidth() - 22) inside a track padded by 22), not its inner one.
@@ -2704,6 +2825,13 @@ static std::string ellipsize(PaintContext* pc, const std::string& text, int from
     return head + kDots;
 }
 
+// What the last paint could not fit, for a renderer's report (rc2image's `text` section):
+// texts that lost lines to maxLines, texts drawn or cut past their box, and texts that end
+// in an ellipsis by design. Reset by the host before a frame.
+static TextOverflowCounts gTextOverflow;
+void resetTextOverflowCounts() { gTextOverflow = TextOverflowCounts{}; }
+TextOverflowCounts textOverflowCounts() { return gTextOverflow; }
+
 static void paintTextLines(PaintContext* pc, int tid, const std::string& text, float fsize,
                            float contentW, float contentH, float lineH, float fullW,
                            float ascent, int tAlign, int maxLines, int overflow,
@@ -2729,6 +2857,7 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
     // overflows, since a fallback font (CJK, emoji) can draw a little wider than it measured.
     const float textH = lineH + lineStep * (float)(lines.size() - 1);
     bool overflows = truncated || fullW > contentW + 0.5f || textH > contentH + 0.5f;
+    float widest = 0.0f;   // the widest line as painted, for the overflow count below
     const bool clip = overflow != 2 && overflows;
     if (clip) { pc->matrixSave(); pc->clipRect(0, 0, contentW, contentH); }
     for (size_t li = 0; li < lines.size(); li++) {
@@ -2750,6 +2879,7 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
             drawn = ellipsize(pc, text, line.start, to, fsize, contentW, overflow);
             lineW = pc->measureTextWidth(drawn, fsize) + lsPx * utf8Count(drawn);
         }
+        widest = std::max(widest, lineW);
         float x = 0;
         if (tAlign == 3) x = (contentW - lineW) / 2;                  // CENTER
         else if (tAlign == 2 || tAlign == 6) x = contentW - lineW;    // RIGHT / END
@@ -2766,6 +2896,15 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
             int ce = utf8ByteToUtf16Index(text, line.end);
             pc->drawTextRun(tid, cs, ce, cs, ce, x, y, false);
         }
+    }
+    // The count uses the lines as painted (fullW is the unwrapped width: a wrapped text is
+    // not cut just because it wrapped).
+    if (truncated || widest > contentW + 0.5f || textH > contentH + 0.5f) {
+        const char* kind = ellipsis ? "ellipsized" : truncated ? "truncated" : "clipped";
+        if (ellipsis) gTextOverflow.ellipsized++;
+        else if (truncated) gTextOverflow.truncated++;
+        else gTextOverflow.clipped++;
+        if (gTextOverflow.examples.size() < 6) gTextOverflow.examples.push_back({kind, text.substr(0, 48)});
     }
     if (clip) pc->matrixRestore();
 }
@@ -3461,6 +3600,7 @@ void LayoutRoot::apply(RemoteContext& context) {
         cache.states.clear();
         sSawStateLayout = false;
         sSawActiveAnim = false;
+        resetLayoutOverflowCounts();
 
         context.setMode(ContextMode::DATA);
         for (auto* op : rootDataOps) { context.incrementOpCount(); op->apply(context); }
@@ -3483,7 +3623,9 @@ void LayoutRoot::apply(RemoteContext& context) {
             context.setMode(ContextMode::PAINT);
 
             layoutComponent(layoutChild, context, measure);
+            gCountLayoutOverflow = true;    // the settled layout: what a host would show
             storeMeasuredDimensions(layoutChild, context, measure);
+            gCountLayoutOverflow = false;
         }
 
         // Layout-animation pass: blend measured bounds toward targets over time.

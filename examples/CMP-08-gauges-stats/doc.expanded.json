@@ -20,10 +20,8 @@
     "value": 4.2,
     "export": true
    },
-   "_n0": 0,
-   "_n100": 100,
-   "_n72": 72,
-   "_n93": 93,
+   "gauge1_frac": "@cpu / 100",
+   "gauge1_sweep": "clamp(0, 240, @gauge1_frac * 240)",
    "stattile1_size": "abs(@revenueDelta)",
    "stattile1_up": "step(@revenueDelta, 0)"
   },
@@ -62,763 +60,1068 @@
    }
   }
  },
- "root": [
-  {
-   "definePattern": {
-    "name": "Gauge__fill",
-    "parameters": [
-     "value",
-     "min",
-     "max",
-     "label",
-     "warnAt",
-     "alertAt"
-    ],
-    "children": [
-     {
-      "canvas": {
-       "modifiers": [
-        "fillMaxSize",
-        {
-         "semantics": {
-          "contentDescription": "@label"
-         }
-        }
-       ],
-       "commands": [
-        {
-         "translate": {
-          "dx": "(componentWidth() - 104) / 2",
-          "dy": "(componentHeight() - 104) / 2"
-         }
-        },
-        {
-         "scale": {
-          "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 104",
-          "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / 104",
-          "pivotX": 52,
-          "pivotY": 52
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.track"
-           },
-           {
-            "style": "stroke"
-           },
-           {
-            "strokeWidth": 9
-           },
-           {
-            "strokeCap": "round"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 9,
-          "top": 9,
-          "right": 95,
-          "bottom": 95,
-          "startAngle": 150,
-          "sweepAngle": 240
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.success"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 9,
-          "top": 9,
-          "right": 95,
-          "bottom": 95,
-          "startAngle": 150,
-          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.warning"
-           },
-           {
-            "alpha": "step((@value / @max), @warnAt)"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 9,
-          "top": 9,
-          "right": 95,
-          "bottom": 95,
-          "startAngle": 150,
-          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.error"
-           },
-           {
-            "alpha": "step((@value / @max), @alertAt)"
-           }
-          ]
-         }
-        },
-        {
-         "drawArc": {
-          "left": 9,
-          "top": 9,
-          "right": 95,
-          "bottom": 95,
-          "startAngle": 150,
-          "sweepAngle": "clamp(0, 240, (@value / @max) * 240)"
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.onSurface"
-           },
-           {
-            "style": "fill"
-           },
-           {
-            "alpha": 1
-           },
-           {
-            "textSize": 22.88
-           }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": {
-           "type": "textFromFloat",
-           "value": "@value",
-           "whole": 4,
-           "decimal": 0,
-           "flags": 5
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 12
+    }
+   ],
+   "children": [
+    {
+     "text": {
+      "value": "Gauge",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
           },
-          "x": 52,
-          "y": 52,
-          "panX": 0,
-          "panY": 0
-         }
-        },
-        {
-         "paint": {
-          "ops": [
-           {
-            "color": "@colors.muted"
-           },
-           {
-            "textSize": 10.4
+          {
+           "height": 104
+          },
+          {
+           "padding": {
+            "end": 6
            }
-          ]
-         }
-        },
-        {
-         "drawTextAnchored": {
-          "text": "@label",
-          "x": 52,
-          "y": 74.88,
-          "panX": 0,
-          "panY": 0
-         }
-        }
-       ]
-      }
-     }
-    ]
-   }
-  },
-  {
-   "column": {
-    "modifiers": [
-     "fillMaxSize",
-     {
-      "background": "@colors.background"
-     },
-     {
-      "padding": 16
-     },
-     {
-      "spacedBy": 12
-     }
-    ],
-    "children": [
-     {
-      "text": {
-       "value": "Gauge",
-       "fontSize": 20,
-       "color": "@colors.onSurface"
-      }
-     },
-     {
-      "row": {
-       "modifiers": [
-        "fillMaxWidth"
-       ],
-       "children": [
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           },
-           {
-            "height": 104
-           },
-           {
-            "padding": {
-             "end": 6
-            }
-           }
-          ],
-          "children": [
-           {
-            "Gauge__fill": {
-             "arguments": [
-              "@cpu",
-              "@_n0",
-              "@_n100",
-              "CPU %",
-              0.6,
-              0.85
-             ]
-            }
-           }
-          ]
-         }
-        },
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           },
-           {
-            "height": 104
-           },
-           {
-            "padding": [
-             3,
-             0
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "CPU %"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "gauge1_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @gauge1_s) / 2",
+               "dy": "(componentHeight() - @gauge1_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@gauge1_s / 104",
+               "sy": "@gauge1_s / 104"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 9
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 240
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.success"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": "@gauge1_sweep"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                },
+                {
+                 "alpha": "step(@gauge1_frac, 0.6)"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": "@gauge1_sweep"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                },
+                {
+                 "alpha": "step(@gauge1_frac, 0.85)"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": "@gauge1_sweep"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 22.88
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@cpu",
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 52,
+               "y": 52,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "textSize": 10.4
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "CPU %",
+               "x": 52,
+               "y": 74.88,
+               "panX": 0,
+               "panY": 0
+              }
+             }
             ]
            }
-          ],
-          "children": [
-           {
-            "Gauge__fill": {
-             "arguments": [
-              "@_n72",
-              "@_n0",
-              "@_n100",
-              "Memory %",
-              0.6,
-              0.85
-             ]
-            }
-           }
-          ]
-         }
-        },
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           },
-           {
-            "height": 104
-           },
-           {
-            "padding": {
-             "start": 6
-            }
-           }
-          ],
-          "children": [
-           {
-            "Gauge__fill": {
-             "arguments": [
-              "@_n93",
-              "@_n0",
-              "@_n100",
-              "Disk %",
-              0.6,
-              0.85
-             ]
-            }
-           }
-          ]
-         }
+          }
+         ]
         }
-       ]
-      }
-     },
-     {
-      "text": {
-       "value": "StatTile",
-       "fontSize": 20,
-       "color": "@colors.onSurface"
-      }
-     },
-     {
-      "row": {
-       "modifiers": [
-        "fillMaxWidth"
-       ],
-       "children": [
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           }
-          ],
-          "children": [
-           {
-            "column": {
-             "modifiers": [
-              "fillMaxWidth",
-              {
-               "clip": 14
-              },
-              {
-               "background": "@colors.surface"
-              },
-              {
-               "padding": 14
-              },
-              {
-               "spacedBy": 4
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "height": 104
+          },
+          {
+           "padding": [
+            3,
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Memory %"
               }
-             ],
-             "children": [
-              {
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "gauge2_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @gauge2_s) / 2",
+               "dy": "(componentHeight() - @gauge2_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@gauge2_s / 104",
+               "sy": "@gauge2_s / 104"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 9
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 240
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.success"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 172.8
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 172.8
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                },
+                {
+                 "alpha": 0
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 172.8
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 22.88
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
                "text": {
-                "value": "Revenue",
-                "maxLines": 1,
-                "overflow": "ellipsis",
-                "fontSize": 12,
-                "color": "@colors.muted"
-               }
-              },
-              {
-               "row": {
-                "verticalAlignment": "bottom",
-                "modifiers": [
-                 {
-                  "spacedBy": 4
-                 }
-                ],
-                "children": [
-                 {
-                  "text": {
-                   "value": {
-                    "type": "textFromFloat",
-                    "value": "@revenue",
-                    "whole": 6,
-                    "decimal": 0,
-                    "flags": 5
-                   },
-                   "fontSize": 28,
-                   "color": "@colors.onSurface"
-                  }
-                 },
-                 {
-                  "text": {
-                   "value": "k€",
-                   "fontSize": 15,
-                   "color": "@colors.muted",
-                   "modifiers": [
-                    {
-                     "padding": {
-                      "bottom": 4
-                     }
-                    }
-                   ]
-                  }
-                 }
-                ]
-               }
-              },
-              {
-               "canvas": {
-                "modifiers": [
-                 "fillMaxWidth",
-                 {
-                  "height": 18
-                 }
-                ],
-                "commands": [
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "color": "@colors.success"
-                    },
-                    {
-                     "style": "stroke"
-                    },
-                    {
-                     "strokeWidth": 2
-                    },
-                    {
-                     "strokeCap": "round"
-                    },
-                    {
-                     "alpha": "@stattile1_up"
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 1,
-                   "y1": 12,
-                   "x2": 6,
-                   "y2": 5
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 6,
-                   "y1": 5,
-                   "x2": 11,
-                   "y2": 12
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "style": "fill"
-                    },
-                    {
-                     "textSize": 13
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawTextAnchored": {
-                   "text": {
-                    "type": "textFromFloat",
-                    "value": "@stattile1_size",
-                    "whole": 4,
-                    "decimal": 1,
-                    "flags": 5
-                   },
-                   "x": 16,
-                   "y": 9,
-                   "panX": -1,
-                   "panY": 0
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "color": "@colors.error"
-                    },
-                    {
-                     "alpha": "1 - @stattile1_up"
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawTextAnchored": {
-                   "text": {
-                    "type": "textFromFloat",
-                    "value": "@stattile1_size",
-                    "whole": 4,
-                    "decimal": 1,
-                    "flags": 5
-                   },
-                   "x": 16,
-                   "y": 9,
-                   "panX": -1,
-                   "panY": 0
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "style": "stroke"
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 1,
-                   "y1": 5,
-                   "x2": 6,
-                   "y2": 12
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 6,
-                   "y1": 12,
-                   "x2": 11,
-                   "y2": 5
-                  }
-                 }
-                ]
-               }
+                "type": "textFromFloat",
+                "value": 72,
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 52,
+               "y": 52,
+               "panX": 0,
+               "panY": 0
               }
-             ]
-            }
-           }
-          ]
-         }
-        },
-        {
-         "box": {
-          "modifiers": [
-           {
-            "width": 12
-           }
-          ]
-         }
-        },
-        {
-         "box": {
-          "modifiers": [
-           {
-            "weight": 1
-           }
-          ],
-          "children": [
-           {
-            "column": {
-             "modifiers": [
-              "fillMaxWidth",
-              {
-               "clip": 14
-              },
-              {
-               "background": "@colors.surface"
-              },
-              {
-               "padding": 14
-              },
-              {
-               "spacedBy": 4
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "textSize": 10.4
+                }
+               ]
               }
-             ],
-             "children": [
-              {
-               "text": {
-                "value": "Churn",
-                "maxLines": 1,
-                "overflow": "ellipsis",
-                "fontSize": 12,
-                "color": "@colors.muted"
-               }
-              },
-              {
-               "row": {
-                "verticalAlignment": "bottom",
-                "modifiers": [
-                 {
-                  "spacedBy": 4
-                 }
-                ],
-                "children": [
-                 {
-                  "text": {
-                   "value": {
-                    "type": "textFromFloat",
-                    "value": 3.1,
-                    "whole": 6,
-                    "decimal": 1,
-                    "flags": 5
-                   },
-                   "fontSize": 28,
-                   "color": "@colors.onSurface"
-                  }
-                 },
-                 {
-                  "text": {
-                   "value": "%",
-                   "fontSize": 15,
-                   "color": "@colors.muted",
-                   "modifiers": [
-                    {
-                     "padding": {
-                      "bottom": 4
-                     }
-                    }
-                   ]
-                  }
-                 }
-                ]
-               }
-              },
-              {
-               "canvas": {
-                "modifiers": [
-                 "fillMaxWidth",
-                 {
-                  "height": 18
-                 }
-                ],
-                "commands": [
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "color": "@colors.error"
-                    },
-                    {
-                     "style": "stroke"
-                    },
-                    {
-                     "strokeWidth": 2
-                    },
-                    {
-                     "strokeCap": "round"
-                    },
-                    {
-                     "alpha": 0
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 1,
-                   "y1": 12,
-                   "x2": 6,
-                   "y2": 5
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 6,
-                   "y1": 5,
-                   "x2": 11,
-                   "y2": 12
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "style": "fill"
-                    },
-                    {
-                     "textSize": 13
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawTextAnchored": {
-                   "text": {
-                    "type": "textFromFloat",
-                    "value": 0.4,
-                    "whole": 4,
-                    "decimal": 1,
-                    "flags": 5
-                   },
-                   "x": 16,
-                   "y": 9,
-                   "panX": -1,
-                   "panY": 0
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "color": "@colors.success"
-                    },
-                    {
-                     "alpha": 1
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawTextAnchored": {
-                   "text": {
-                    "type": "textFromFloat",
-                    "value": 0.4,
-                    "whole": 4,
-                    "decimal": 1,
-                    "flags": 5
-                   },
-                   "x": 16,
-                   "y": 9,
-                   "panX": -1,
-                   "panY": 0
-                  }
-                 },
-                 {
-                  "paint": {
-                   "ops": [
-                    {
-                     "style": "stroke"
-                    }
-                   ]
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 1,
-                   "y1": 5,
-                   "x2": 6,
-                   "y2": 12
-                  }
-                 },
-                 {
-                  "drawLine": {
-                   "x1": 6,
-                   "y1": 12,
-                   "x2": 11,
-                   "y2": 5
-                  }
-                 }
-                ]
-               }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "Memory %",
+               "x": 52,
+               "y": 74.88,
+               "panX": 0,
+               "panY": 0
               }
-             ]
-            }
+             }
+            ]
            }
-          ]
-         }
+          }
+         ]
         }
-       ]
-      }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "height": 104
+          },
+          {
+           "padding": {
+            "start": 6
+           }
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Disk %"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "gauge3_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @gauge3_s) / 2",
+               "dy": "(componentHeight() - @gauge3_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@gauge3_s / 104",
+               "sy": "@gauge3_s / 104"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 9
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 240
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.success"
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 223.2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.warning"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 223.2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawArc": {
+               "left": 9,
+               "top": 9,
+               "right": 95,
+               "bottom": 95,
+               "startAngle": 150,
+               "sweepAngle": 223.2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                },
+                {
+                 "textSize": 22.88
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": 93,
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "x": 52,
+               "y": 52,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "textSize": 10.4
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": "Disk %",
+               "x": 52,
+               "y": 74.88,
+               "panX": 0,
+               "panY": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
      }
-    ]
-   }
+    },
+    {
+     "text": {
+      "value": "StatTile",
+      "fontSize": 20,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "clip": 14
+             },
+             {
+              "background": "@colors.surface"
+             },
+             {
+              "padding": 14
+             },
+             {
+              "spacedBy": 4
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "Revenue",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "fontSize": 12,
+               "color": "@colors.muted"
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "bottom",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "@revenue",
+                   "whole": 6,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "fontSize": 28,
+                  "color": "@colors.onSurface"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "k€",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "modifiers": [
+                   {
+                    "padding": {
+                     "bottom": 4
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 18
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "alpha": "@stattile1_up"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 1,
+                  "y1": 12,
+                  "x2": 6,
+                  "y2": 5
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 6,
+                  "y1": 5,
+                  "x2": 11,
+                  "y2": 12
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 13
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@stattile1_size",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "x": 16,
+                  "y": 9,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "alpha": "1 - @stattile1_up"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@stattile1_size",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "x": 16,
+                  "y": 9,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "stroke"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 1,
+                  "y1": 5,
+                  "x2": 6,
+                  "y2": 12
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 6,
+                  "y1": 12,
+                  "x2": 11,
+                  "y2": 5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 12
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "clip": 14
+             },
+             {
+              "background": "@colors.surface"
+             },
+             {
+              "padding": 14
+             },
+             {
+              "spacedBy": 4
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "Churn",
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "fontSize": 12,
+               "color": "@colors.muted"
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "bottom",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": 3.1,
+                   "whole": 6,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "fontSize": 28,
+                  "color": "@colors.onSurface"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "%",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "modifiers": [
+                   {
+                    "padding": {
+                     "bottom": 4
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 18
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "alpha": 0
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 1,
+                  "y1": 12,
+                  "x2": 6,
+                  "y2": 5
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 6,
+                  "y1": 5,
+                  "x2": 11,
+                  "y2": 12
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "textSize": 13
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": 0.4,
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "x": 16,
+                  "y": 9,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawTextAnchored": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": 0.4,
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "x": 16,
+                  "y": 9,
+                  "panX": -1,
+                  "panY": 0
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "stroke"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 1,
+                  "y1": 5,
+                  "x2": 6,
+                  "y2": 12
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 6,
+                  "y1": 12,
+                  "x2": 11,
+                  "y2": 5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
   }
- ]
+ }
 }

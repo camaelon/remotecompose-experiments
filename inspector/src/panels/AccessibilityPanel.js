@@ -28,6 +28,13 @@ function textOf(doc, id) {
     if (!doc || id === undefined || id === null || id <= 0) return null;
     try {
         const t = typeof doc.getText === 'function' ? doc.getText(id) : null;
+        if (t) return t;
+    } catch (e) { /* fall through */ }
+    // A computed text (textMerge, textFromFloat, textSubtext...) only has a value in the
+    // running context: a contentDescription of "@phaseName" showed as null without this.
+    try {
+        const ctx = window.currentPlayer?.getRemoteContext?.();
+        const t = ctx && typeof ctx.getText === 'function' ? ctx.getText(id) : null;
         return t || null;
     } catch (e) { return null; }
 }

@@ -162,6 +162,9 @@ async function createSession() {
     };
 
     S.setVariables(O.variables);
+    // Raw ids, as rc2image's --var-id: an override sticks (offsetToUtc pinned to 0 stays 0).
+    S.setSystemVariables = (sv) => { for (const [id, v] of Object.entries(sv ?? {})) ctx.overrideFloat(+id, +v); };
+    S.setSystemVariables(O.system_variables);
     RC.pinClock(player, clock0);
     player.resize(width, height);   // lays out (and paints once at wall-clock animation time)
     S.paint();                      // frame 0, at the pinned time
@@ -285,7 +288,7 @@ function accessibility() {
         nodes: a.nodes.map((n) => ({
             component: n.name, id: n.componentId, depth: n.depth, bounds: bounds(n.bounds),
             role: n.role, clickable: n.clickable || Boolean(n.semanticsClickable), enabled: n.enabled,
-            content_description: n.contentDescription, text: n.semanticsText, state: n.stateDescription,
+            content_description: n.contentDescription, text: n.semanticsText ?? n.ownText ?? null, state: n.stateDescription,
             has_semantics: n.hasSemantics,
         })),
         click_areas: (a.areas ?? []).map((x) => ({ id: x.areaId ?? x.id, content_description: x.contentDescription ?? null, bounds: bounds(x.bounds) })),
@@ -326,6 +329,9 @@ function layoutDiagnostics(comps) {
         const c = byKey.get(d.compKey);
         if (!c) return true;
         if (d.type === "empty_container" && LEAF.test(c.name)) return false;
+        // An empty Box is a spacer by convention (the format's own advice between weighted
+        // children); an empty Column/Row/Flow is still worth a word.
+        if (d.type === "empty_container" && /Box/.test(c.name) && c.childCount === 0 && c.drawOpCount === 0 && !c.text) return false;
         if (d.type === "zero_size" && c.childCount === 0 && c.drawOpCount === 0 && !c.text) return false;
         if (d.type === "zero_size" && inInactiveAlternative(c, byKey)) return false;
         return true;
@@ -502,7 +508,7 @@ function audit() {
     const vs = variableStats();
     if (vs.max_chain_depth >= 12) {
         add("info", "deep_expressions", `Expression chains up to ${vs.max_chain_depth} deep`,
-            "Long dependency chains are re-evaluated whenever their roots change; flattening them saves work per frame.", { max_chain_depth: vs.max_chain_depth });
+            "Long dependency chains are re-evaluated whenever their roots change. Merge steps only where the result stays under Android's 32-entry limit per expression (a chain split for that limit is right as it is); otherwise leave it.", { max_chain_depth: vs.max_chain_depth });
     }
 
     // Size.
@@ -527,10 +533,19 @@ function audit() {
     // accept it, so the document only fails on a device (EXAMPLES_FINDINGS J39, I19).
     try {
         const long = [];
+        let longest = null;   // the longest of all, so an author knows the headroom left
         for (const op of ops) {
             if (!(opcodeOf(op) === 81 || nameOf(op).includes("FloatExpression"))) continue;
             const bits = op.mBits || op.bits || op.srcExpression || op.mSrcExpression || op.mFloatExpression || op.mExp || op.exp;
             if (bits && bits.length > 32) long.push({ index: idxOf(op), entries: bits.length, expression: exprOf(op) });
+            if (bits && (!longest || bits.length > longest.entries)) {
+                const id = op.mId ?? op.id;
+                longest = { index: idxOf(op), entries: bits.length, ...(names.get(id) ?? O.names?.[id] ? { name: names.get(id) ?? O.names?.[id] } : {}) };
+            }
+        }
+        if (longest && longest.entries >= 20 && longest.entries <= 32) {
+            add("info", "expression_entries", `Longest expression: ${longest.entries} of the 32 entries Android allows`,
+                `Entries are operands and operators together${longest.name ? `; the longest is \`${longest.name}\`` : ""}. Past 32 the document fails to load on a device: split a growing formula into named variables.`, longest);
         }
         // Path expressions too (Android's PathExpression.read: "Path too long", J43): each of
         // the x and y expressions is limited the same way.
@@ -538,6 +553,7 @@ function audit() {
             if (!nameOf(op).includes("PathExpression")) continue;
             for (const [axis, e] of [["x", op.mExprX], ["y", op.mExprY]]) {
                 if (e && e.length > 32) long.push({ index: idxOf(op), entries: e.length, expression: `path ${axis}` });
+                if (e && (!longest || e.length > longest.entries)) longest = { index: idxOf(op), entries: e.length, name: `path expression (${axis})` };
             }
         }
         if (long.length) add("warning", "expression_too_long",
@@ -626,7 +642,7 @@ function variables() {
         const nv = named.get(n.varId);
         const sys = VP.getSystemVarName?.(n.varId) ?? null;
         return {
-            id: n.varId, name: nv?.name ?? sys ?? null, kind: n.type,
+            id: n.varId, name: nv?.name ?? sys ?? O.names?.[n.varId] ?? null, kind: n.type,
             ...(nv ? { host_type: nv.type, host_value: nv.value } : {}),
             formula: n.formula || (n.op ? exprOf(n.op) : null) || null, value: num(n.value ?? null),
             inputs: nodeIds(n.inputs), outputs: nodeIds(n.outputs),
@@ -857,7 +873,7 @@ const TASKS = {
                 main.drag(...a.drag, a.steps ?? 8);
                 log.push({ step: k, drag: a.drag });
             } else if (a.variables) {
-                main.setVariables(a.variables); main.paint();
+                main.setVariables(a.variables); main.setSystemVariables(O.system_variables); main.paint();
                 log.push({ step: k, variables: a.variables });
             } else {
                 throw new Error(`actions[${k}]: expected one of wait, target, tap, drag, variables`);
@@ -875,7 +891,7 @@ const TASKS = {
                 const nv = namedVars().find((v) => v.id === id);
                 const a = after.get(id), b = baseline.get(id);
                 const which = a.f !== b.f ? "f" : "i";
-                return { id, name: nv?.name ?? VP.getSystemVarName?.(id) ?? null, type: which === "f" ? "float" : "int",
+                return { id, name: nv?.name ?? VP.getSystemVarName?.(id) ?? O.names?.[id] ?? null, type: which === "f" ? "float" : "int",
                          formula: n?.formula || (n?.op ? exprOf(n.op) : null) || null,
                          without_input: b[which], with_input: a[which] };
             });

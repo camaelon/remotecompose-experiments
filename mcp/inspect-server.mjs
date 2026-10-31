@@ -10,7 +10,9 @@
 // stdio by default; `--http [PORT]` for Streamable HTTP (see lib/mcp-server.mjs).
 
 import { rmSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
+import { variableNames } from "./lib/json2rc.mjs";
 import { inspect } from "./lib/inspector.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -51,6 +53,11 @@ const VIEW_PROPS = {
         description: "Host variables to set before anything runs, {name: value} (float, int, colour \"#AARRGGBB\", string).",
         additionalProperties: { anyOf: [{ type: "number" }, { type: "string" }] },
     },
+    system_variables: {
+        type: "object",
+        description: "Floats overridden by raw variable id, as render takes them, e.g. {\"10\": 0} to pin offsetToUtc().",
+        additionalProperties: { type: "number" },
+    },
 };
 
 const BASE_PROPS = { ...DOCUMENT_PROPS, ...VIEW_PROPS };
@@ -72,10 +79,13 @@ function tool(name, title, description, task, extraProps = {}, { required = [], 
                 const bytes = new Uint8Array(readFileSync(doc.rcPath));
                 const options = {
                     width: a.width, height: a.height, density: a.density, theme: a.theme, variables: a.variables,
+                    system_variables: a.system_variables,
                     clock: (clockMs(a.clock) - PIN_EPOCH) / 1000,
                     ...(mapOptions ? mapOptions(a) : {}),
                     // The JSON as written, for the design audit (before library components expand).
                     ...(doc.source === "json" && (task === "audit" || task === "summary") ? { source_json: sourceJson(a) } : {}),
+                    // The JSON's variable names by id: the binary only names exported ones.
+                    ...(doc.source === "json" ? { names: variableNames(sourceJson(a), a.json_path !== undefined ? path.dirname(resolvePath(a.json_path, "json_path")) : resolvePath(".")) } : {}),
                 };
                 for (const k of ["width", "height", "density"]) {
                     if (options[k] !== undefined && !(typeof options[k] === "number" && options[k] > 0)) throw new Error(`${k} must be a number > 0`);

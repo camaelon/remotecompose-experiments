@@ -12,6 +12,7 @@ exports.decodeBase64 = decodeBase64;
 exports.parseSvgPath = parseSvgPath;
 exports.unwrap = unwrap;
 exports.convert = convert;
+exports.convertWithSymbols = convertWithSymbols;
 /**
  * JSON -> RemoteCompose, ported from `rcj/parser.py`.
  *
@@ -44,6 +45,8 @@ class DeferredVariables {
     /** Only variables already written — a deferred entry is invisible here, which is what
      *  lets a later declaration of the same name replace a pending one. */
     isMaterialised(name) { return this.materialised.has(name); }
+    /** Every variable written so far, name to its NaN bits (a symbol table for tools). */
+    entries() { return [...this.materialised]; }
     set(name, bits) { this.materialised.set(name, bits); }
     remove(name) { this.materialised.delete(name); this.deferred.delete(name); }
     has(name) {
@@ -718,6 +721,16 @@ class Parser {
         if (value && typeof value === "object")
             return this.expr.parseExpression(value);
         throw new NotImplementedComponent(`float field type ${typeof value}`);
+    }
+    /**
+     * The document's names and the ids they got: what a tool reading the .rc back (the
+     * inspector) cannot see, since only exported variables carry a name in the binary.
+     */
+    symbols() {
+        const variables = {};
+        for (const [name, bits] of this.variables.entries())
+            variables[name] = (bits & 0x3fffff);
+        return { variables };
     }
     parse(doc) {
         const header = doc.header ?? {};
@@ -3627,4 +3640,11 @@ function unwrap(doc) {
 function convert(json, options = {}) {
     const doc = typeof json === "string" ? JSON.parse(json) : json;
     return new Parser(options).parse(unwrap(doc));
+}
+/** convert, plus the symbol table (see Parser.symbols). */
+function convertWithSymbols(json, options = {}) {
+    const doc = typeof json === "string" ? JSON.parse(json) : json;
+    const parser = new Parser(options);
+    const bytes = parser.parse(unwrap(doc));
+    return { bytes, symbols: parser.symbols() };
 }

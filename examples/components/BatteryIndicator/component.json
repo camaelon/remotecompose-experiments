@@ -12,7 +12,7 @@
    "type": "float",
    "default": 40,
    "static": true,
-   "doc": "Icon width in dp; the icon is half as tall"
+   "doc": "Icon width in dp; the icon is half as tall (the design size: it shrinks to a smaller box)"
   },
   "showPercent": {
    "type": "bool",
@@ -81,6 +81,24 @@
        }
       ],
       "commands": [
+       {
+        "variable": {
+         "name": "k",
+         "value": "min(componentWidth() / @size, componentHeight() / (@size * 0.5))"
+        }
+       },
+       {
+        "translate": {
+         "dx": "(componentWidth() - @size * @k) / 2",
+         "dy": "(componentHeight() - @size * 0.5 * @k) / 2"
+        }
+       },
+       {
+        "scale": {
+         "sx": "@k",
+         "sy": "@k"
+        }
+       },
        {
         "paint": {
          "ops": [
@@ -227,6 +245,7 @@
   "There is no portable system battery level: batteryLevel() (system variable 38) is an rcj/json2rc extension that the Java parser rejects and Android's RemoteContext does not define. Export a host float (resources.variables {\"battery\": {\"value\": 76, \"export\": true}}) and pass \"@battery\"; the host updates it",
   "The fill colour is chosen with conditionalOperations around a paint change (success, then warning below warnAt, then error below lowAt): there are no colour expressions",
   "Low is shown by shape too: a ! in the empty part of the body, so it reads in mono (where every colour is white or black) and without colour vision",
-  "The percentage is a layout text after the icon, so the call is as wide as the icon plus the number: in a tight row, pass showPercent: false and show the level elsewhere"
+  "The percentage is a layout text after the icon, so the call is as wide as the icon plus the number: in a tight row, pass showPercent: false and show the level elsewhere",
+  "The icon is scaled to the box the layout gives its canvas (the smaller of width / size and height / (size / 2), centred), so a call clamped by a smaller parent shrinks instead of being cut off; the outline stays theme.stroke wide at the design size and scales with it"
  ]
 }

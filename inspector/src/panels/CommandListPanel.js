@@ -345,56 +345,63 @@ export function prettyPrintFloatExpression(bits) {
             }
         } else {
             const f = intBitsToFloat(b);
-            stack.push(Number.isInteger(f) ? f.toString() : f.toFixed(2));
+            stack.push(Number.isInteger(f) ? f.toString() : String(Number(f.toPrecision(7))));   // not toFixed(2): 0.0338 * x read as 0.03 * x
         }
     }
     return stack.pop() || '';
 }
 
 export function prettyPrintIntegerExpression(mask, exp) {
+    // As IntegerExpression.evaluate reads it: an entry the mask flags is an operator when it is
+    // OFFSET or more (opcode = value - OFFSET), else a variable id (an int or float variable, read
+    // as an int); an unflagged entry is a literal. Integer opcodes differ from the float ones.
     if (!exp || exp.length === 0) return '';
+    const OFFSET = 0x10000;
     const stack = [];
-    const OFFSET = 0x310000;
-
-    function isVar(val) {
-        return (val & 0x7f800000) === 0x7f800000 && (val & 0x7fffff) !== 0;
-    }
-
-    function isOp(val) {
-        const id = val & 0x7fffff;
-        return isVar(val) && id > OFFSET && id <= OFFSET + 79;
-    }
-
-    function getOp(val) {
-        return (val & 0x7fffff) - OFFSET;
-    }
-
+    const pop = () => stack.pop() ?? '0';
+    const bin = (sym) => { const b = pop(), a = pop(); stack.push(`(${a} ${sym} ${b})`); };
+    const fn2 = (name) => { const b = pop(), a = pop(); stack.push(`${name}(${a}, ${b})`); };
+    const fn1 = (name) => { const a = pop(); stack.push(`${name}(${a})`); };
     for (let i = 0; i < exp.length; i++) {
-        const val = exp[i];
-        if (isOp(val)) {
-            const op = getOp(val);
-            switch (op) {
-                case 1: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} + ${b})`); break; }
-                case 2: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} - ${b})`); break; }
-                case 3: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} * ${b})`); break; }
-                case 4: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} / ${b})`); break; }
-                case 5: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} % ${b})`); break; }
-                case 6: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`min(${a}, ${b})`); break; }
-                case 7: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`max(${a}, ${b})`); break; }
-                case 26: { const c = stack.pop() || '0', b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${c} > 0 ? ${b} : ${a})`); break; }
-                case 27: { const c = stack.pop() || '0', b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`clamp(${a}, ${b}, ${c})`); break; }
-                case 44: { const b = stack.pop() || '0', a = stack.pop() || '0'; stack.push(`(${a} > ${b})`); break; }
-                case 73: { const a = stack.pop() || '0'; stack.push(`-${a}`); break; }
-                default: stack.push(`op_${op}`); break;
+        const val = Number(exp[i]);
+        const flagged = ((1 << i) & mask) !== 0;
+        if (flagged && val >= OFFSET) {
+            switch (val - OFFSET) {
+                case 1: bin('+'); break;
+                case 2: bin('-'); break;
+                case 3: bin('*'); break;
+                case 4: bin('/'); break;
+                case 5: bin('%'); break;
+                case 6: bin('<<'); break;
+                case 7: bin('>>'); break;
+                case 8: bin('>>>'); break;
+                case 9: bin('|'); break;
+                case 10: bin('&'); break;
+                case 11: bin('^'); break;
+                case 12: fn2('copySign'); break;
+                case 13: fn2('min'); break;
+                case 14: fn2('max'); break;
+                case 15: { const a = pop(); stack.push(`-${a}`); break; }
+                case 16: fn1('abs'); break;
+                case 17: { const a = pop(); stack.push(`(${a} + 1)`); break; }
+                case 18: { const a = pop(); stack.push(`(${a} - 1)`); break; }
+                case 19: fn1('not'); break;
+                case 20: fn1('sign'); break;
+                case 21: { const c = pop(), b = pop(), a = pop(); stack.push(`clamp(${a}, ${b}, ${c})`); break; }
+                case 22: { const c = pop(), b = pop(), a = pop(); stack.push(`(${a} ? ${b} : ${c})`); break; }
+                case 23: { const c = pop(), b = pop(), a = pop(); stack.push(`(${a} * ${b} + ${c})`); break; }
+                case 24: stack.push('var1'); break;
+                case 25: stack.push('var2'); break;
+                case 26: stack.push('var3'); break;
+                default: stack.push(`op_${val - OFFSET}`); break;
             }
-        } else if (isVar(val)) {
-            const id = val & 0x7fffff;
-            stack.push(`var_${id}`);
+        } else if (flagged) {
+            stack.push(`var_${val}`);
         } else {
-            stack.push(val.toString());
+            stack.push(String(val));
         }
     }
-    return stack.pop() || '';
+    return stack.length === 1 ? stack[0] : stack.join(' ');
 }
 
 export function getEffectiveChildren(op) {
@@ -911,7 +918,9 @@ export function getVariableUsageInfo(doc, ops) {
         if (opCode === 144 || opCode === 82 || opName.includes('IntegerExpression')) {
             const mask = Number(op.mMask ?? op.mask ?? 0);
             const vals = op.mValues ?? op.values ?? op.srcExpression;
-            if (Array.isArray(vals)) {
+            // mValues is an Int32Array, not an Array: a visibility driven by an integer
+            // expression over a float variable (TextChoice's index) counted as never read.
+            if (vals && typeof vals.length === 'number') {
                 for (let i = 0; i < vals.length; i++) {
                     const vNum = typeof vals[i] === 'bigint' ? Number(vals[i]) : vals[i];
                     if (((1 << i) & mask) !== 0 && vNum < 0x10000) {
@@ -1145,7 +1154,7 @@ export function getFloatProp(op, ...names) {
 
 export function formatNumber(v) {
     if (typeof v !== 'number' || isNaN(v)) return 'NaN';
-    return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+    return Number.isInteger(v) ? v.toString() : String(Number(v.toPrecision(7)));
 }
 
 export const DIMENSION_MODIFIER_TYPES = {

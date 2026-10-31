@@ -80,6 +80,35 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
                 .map((v) => `${v.name} (${v.type}) = ${JSON.stringify(v.value)}`).join(", "));
     }
 
+    // Components the layout placed past their parent (rc2image's `layout` section).
+    const lo = report.layout;
+    if (lo?.overflowing > 0) {
+        add("warning", "component_overflow", `${lo.overflowing} component(s) extend past their parent's box and are drawn cut off` +
+            (lo.examples?.length ? `: ${lo.examples.slice(0, 4).join("; ")}` : "") +
+            ". Size drawings from their box (componentWidth()/componentHeight(), a fitBox with smaller children), or let the " +
+            "least important content collapse (collapsibleColumn) or scroll.");
+    }
+
+    if (lo?.zeroSize > 0) {
+        add("warning", "zero_size", `${lo.zeroSize} visible component(s) got no size from the layout, so they draw nothing` +
+            (lo.zeroSizeExamples?.length ? `: ${lo.zeroSizeExamples.slice(0, 4).join("; ")}` : "") +
+            ". A weight shares what the other children leave (nothing, if they fill the row), and a weight does not combine " +
+            "with widthIn/heightIn; a collapsible layout drops its children lowest priority first until the rest fit.");
+    }
+
+    // Text the renderer could not fit (rc2image's `text` section, counted while painting).
+    const tx = report.text;
+    if (tx && (tx.truncated || tx.clipped)) {
+        const parts = [tx.truncated && `${tx.truncated} text(s) lost lines to maxLines`,
+                       tx.clipped && `${tx.clipped} text(s) wider or taller than their box and cut at the edge`].filter(Boolean);
+        const ex = (tx.examples ?? []).filter((e) => e.kind !== "ellipsized").slice(0, 4).map((e) => `${JSON.stringify(e.text)} (${e.kind})`);
+        add("warning", "text_overflow", parts.join("; ") + (ex.length ? `: ${ex.join(", ")}` : "") +
+            ". Check the image for cut words; give the text more room (a wider box, a weight, fewer fixed sizes), " +
+            "fewer words, or maxLines with overflow \"ellipsis\".");
+    } else if (tx && tx.ellipsized) {
+        add("info", "text_ellipsized", `${tx.ellipsized} text(s) end in an ellipsis: they do not fit their box at this size.`);
+    }
+
     const r = report.render;
     if (r) {
         if (r.changedFraction === 0) {

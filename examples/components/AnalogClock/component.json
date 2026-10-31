@@ -7,13 +7,13 @@
    "type": "float",
    "default": 200,
    "static": true,
-   "doc": "Width and height in dp; every length scales with it (with fill, the design size the drawing is scaled from)"
+   "doc": "Width and height in dp: the design size the drawing is scaled from (with fill, or when the parent is smaller)"
   },
   "fill": {
    "type": "bool",
    "default": false,
    "static": true,
-   "doc": "Fill the space the caller gives it (fillMaxSize) and scale the drawing to fit, centred, instead of a fixed size; give it a parent with a size or a weight"
+   "doc": "Fill the space the caller gives it (fillMaxSize) instead of a fixed size; give it a parent with a size or a weight. The drawing is scaled to the box either way"
   },
   "showSeconds": {
    "type": "bool",
@@ -70,23 +70,22 @@
    ],
    "commands": [
     {
-     "$if": "fill",
-     "then": [
-      {
-       "translate": {
-        "dx": "(componentWidth() - @size) / 2",
-        "dy": "(componentHeight() - @size) / 2"
-       }
-      },
-      {
-       "scale": {
-        "sx": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
-        "sy": "(componentWidth() + componentHeight() - abs(componentWidth() - componentHeight())) / 2 / @size",
-        "pivotX": "@size / 2",
-        "pivotY": "@size / 2"
-       }
-      }
-     ]
+     "variable": {
+      "name": "s",
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "translate": {
+      "dx": "(componentWidth() - @s) / 2",
+      "dy": "(componentHeight() - @s) / 2"
+     }
+    },
+    {
+     "scale": {
+      "sx": "@s / @size",
+      "sy": "@s / @size"
+     }
     },
     {
      "paint": {
@@ -336,6 +335,6 @@
   "timeInMin() is minutes since midnight and timeInSec() seconds within the hour: % 720 for the hour hand, % 60 for the others",
   "A clock that shows seconds repaints every second; without them, every minute",
   "The twelve ticks are a loop that rotates the canvas 30° per pass (12 × 30° = 360°, back to the start), so the tick paint is set once and no save/restore is needed",
-  "A fixed `size` does not shrink: a 160 dp clock overflows a narrow widget. Where the space varies, pass fill: true and give the call a sized or weighted parent (weights ignore spacedBy: put the gap in a padding); the face is still drawn at `size` and one translate + scale fits it, so every coordinate stays a folded number. The scale is min(width, height) written as (w + h - abs(w - h)) / 2: min() over componentWidth()/componentHeight() comes out wrong inside a pattern template (C++ and TS players)"
+  "A fixed `size` is the box the call asks for: a 160 dp clock still overflows a narrower widget. Where the space varies, pass fill: true and give the call a sized or weighted parent (weights ignore spacedBy: put the gap in a padding). Either way the face is drawn at `size` and a canvas variable (min(componentWidth(), componentHeight())) with one translate + scale fits it to the box it got, centred, so a call clamped by a smaller parent shrinks instead of being cut off; every coordinate stays a folded number. The variable keeps the call out of pattern mode, where min() over componentWidth()/componentHeight() comes out wrong (C++ and TS players)"
  ]
 }

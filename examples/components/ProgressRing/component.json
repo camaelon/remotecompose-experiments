@@ -17,7 +17,7 @@
    "type": "float",
    "default": 64,
    "static": true,
-   "doc": "Diameter in dp"
+   "doc": "Diameter in dp (the design size; the ring shrinks to a smaller box)"
   },
   "thickness": {
    "type": "float",
@@ -46,7 +46,7 @@
   "A literal progress costs nothing at run time: \"@progress * 360\" folds to a number when the component expands. Wrapping it in clamp() would turn it back into an expression",
   "If you do clamp a live value, clamp takes (min, max, value): clamp(0, 1, @p). clamp(@p, 0, 1) is always 0",
   "The label is textFromFloat with flags 5 (no padding): the default flags pad the number with spaces, which pushes it off centre",
-  "`size` is fixed dp and does not shrink: in a row whose width varies, spread the rings with horizontalAlignment spaceEvenly (or weighted boxes) rather than a spacedBy gap, and pick sizes that fit the narrowest host",
+  "`size` is the box the call asks for: in a row whose width varies, spread the rings with horizontalAlignment spaceEvenly (or weighted boxes) rather than a spacedBy gap, and pick sizes that fit the narrowest host. The drawing is scaled to the box the layout actually gives the canvas (min of its width and height, centred), so a call clamped by a smaller parent shrinks instead of being cut off, with the stroke scaled in proportion",
   "A progress change animates: the drawing reads an animated local pa = {\"value\": \"@progress\", \"anim\": 0.3} (paint time). A literal progress folds to a number, so a static bar costs nothing extra; a value driven every frame just follows 0.3 s behind. Mono themes jump (the percentage label shows the true value at once)"
  ],
  "body": {
@@ -57,6 +57,24 @@
     }
    ],
    "commands": [
+    {
+     "variable": {
+      "name": "s",
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "translate": {
+      "dx": "(componentWidth() - @s) / 2",
+      "dy": "(componentHeight() - @s) / 2"
+     }
+    },
+    {
+     "scale": {
+      "sx": "@s / @size",
+      "sy": "@s / @size"
+     }
+    },
     {
      "paint": {
       "ops": [

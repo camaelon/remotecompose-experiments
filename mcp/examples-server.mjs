@@ -10,7 +10,7 @@ import path from "node:path";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import {
     EXAMPLES_DIR, buildKit, componentSummary, exampleDoc, findComponents, findExamples,
-    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly } from "./lib/catalog.mjs";
+    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly, examplesDefining } from "./lib/catalog.mjs";
 import { lintComponent, loadLibrary } from "./lib/components.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { definition as renderServer } from "./rc-render-server.mjs";
@@ -193,7 +193,14 @@ export const definition = {
             handler: async ({ name, definition: withDef, parts = [] }) => {
                 const lib = loadLibrary();
                 const key = [...lib.components.keys()].find((k) => k.toLowerCase() === String(name).toLowerCase());
-                if (!key) throw new Error(`no component ${name} (it has ${[...lib.components.keys()].sort().join(", ")})`);
+                if (!key) {
+                    const node = ["stateLayout", "fitBox", "collapsibleColumn", "collapsibleRow", "column", "row", "box", "canvas", "flow", "verticalScroll", "horizontalScroll"]
+                        .find((n) => n.toLowerCase() === String(name).toLowerCase());
+                    if (node) throw new Error(`${node} is a layout node of the format, not a library component: write it as {"${node}": {...}} (reference topic "format"; fitBox: LAY-09, stateLayout: LAY-15, collapsibleColumn: the "Adapt to the size" design rule).`);
+                    const owners = examplesDefining(String(name));
+                    if (owners.length) throw new Error(`${name} is not a library component: ${owners.join(" and ")} define it inside their own doc.json (a \`components\` block). Copy that definition from get ${owners[0]} (parts [\"json\"]), or use the library's ${/panel|card|tile/i.test(String(name)) ? "Card" : "components (find kind \"components\")"}.`);
+                    throw new Error(`no component ${name} (the library has ${[...lib.components.keys()].sort().join(", ")})`);
+                }
                 const s = componentSummary(key);
                 if (withDef) {
                     const { dir: _, ...def } = lib.components.get(key);
@@ -324,7 +331,7 @@ export const definition = {
             description:
                 "The capability vocabulary (ids, labels, synonyms, the JSON evidence for each) with the " +
                 "examples demonstrating each, plus the use cases, form factors and components.",
-            inputSchema: { type: "object", properties: { prefix: { type: "string" }, with_counts: { type: "boolean" } } },
+            inputSchema: { type: "object", properties: { prefix: { type: "string" }, query: { type: "string", description: "Words or a sentence: only the capabilities they resolve to, with how each word resolved." }, with_counts: { type: "boolean" } } },
             handler: async (a) => json(listCapabilities(a)),
         },
     ],

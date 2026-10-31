@@ -1,6 +1,7 @@
 #include "rccore/WireBuffer.h"
 #include "rccore/CoreDocument.h"
 #include "rccore/RemoteContext.h"
+#include "rccore/LayoutSystem.h"
 #include "rcskia/SkiaPaintContext.h"
 #include "rcskia/RcDocumentHost.h"
 
@@ -744,6 +745,7 @@ static int run(int argc, char* argv[]) {
                     release(e);
                 }
             }
+            rccore::resetTextOverflowCounts();
             doc.paint(context, theme);
         }
     } else if (sweep > 1 && animTimeSec >= 0.0f) {
@@ -758,10 +760,12 @@ static int run(int argc, char* argv[]) {
                 std::cerr << "click t=" << t << " (" << clicks[nextClick][1] << "," << clicks[nextClick][2] << ") " << (hit ? "hit" : "miss") << "\n";
                 nextClick++;
             }
+            rccore::resetTextOverflowCounts();
             doc.paint(context, theme);
         }
     } else {
         for (int i = 0; i < frames; i++) {
+            rccore::resetTextOverflowCounts();
             doc.paint(context, theme);
         }
     }
@@ -811,6 +815,18 @@ static int run(int argc, char* argv[]) {
         std::string bounds = maxX < 0 ? "null"
             : "[" + std::to_string(minX) + "," + std::to_string(minY) + "," +
               std::to_string(maxX + 1) + "," + std::to_string(maxY + 1) + "]";
+        auto lo = rccore::layoutOverflowCounts();
+        report.push_back({"layout", "{\"overflowing\":" + std::to_string(lo.components) + ",\"examples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < lo.examples.size(); k++) e += (k ? "," : "") + jsonStr(lo.examples[k]); return e; }() +
+            "],\"zeroSize\":" + std::to_string(lo.zeroSize) + ",\"zeroSizeExamples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < lo.zeroSizeExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.zeroSizeExamples[k]); return e; }() + "]}"});
+        auto tc = rccore::textOverflowCounts();
+        report.push_back({"text", "{\"truncated\":" + std::to_string(tc.truncated) +
+            ",\"clipped\":" + std::to_string(tc.clipped) +
+            ",\"ellipsized\":" + std::to_string(tc.ellipsized) + ",\"examples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < tc.examples.size(); k++)
+                e += (k ? "," : "") + std::string("{\"kind\":") + jsonStr(tc.examples[k].first) + ",\"text\":" + jsonStr(tc.examples[k].second) + "}";
+                return e; }() + "]}"});
         report.push_back({"render", "{\"width\":" + std::to_string(surfW) +
             ",\"height\":" + std::to_string(surfH) +
             ",\"background\":" + hexColor(bg) +

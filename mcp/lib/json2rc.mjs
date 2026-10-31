@@ -12,7 +12,7 @@ import { expandComponents, usesComponents } from "./components.mjs";
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CONVERTER_DIR = process.env.JSON2RC_DIR
     ?? path.join(HERE, "..", "..", "players", "typescript", "build-json2rc");
-const { convert } = createRequire(import.meta.url)(path.join(CONVERTER_DIR, "Parser.js"));
+const { convert, convertWithSymbols } = createRequire(import.meta.url)(path.join(CONVERTER_DIR, "Parser.js"));
 
 /**
  * The plain document a component-calling document compiles to (components.mjs
@@ -48,4 +48,20 @@ export function jsonToRc(source, baseDir) {
     } catch (e) {
         throw new Error(`json2rc failed: ${e?.name ?? "Error"}: ${e?.message ?? e}`);
     }
+}
+
+/**
+ * The names a JSON document gives its variables and the ids they get in the .rc, {id: name}:
+ * for tools that read the binary back, where only exported variables carry a name. Components
+ * are expanded first, as jsonToRc does. Null when the document does not convert.
+ */
+export function variableNames(source, baseDir) {
+    try {
+        let doc = typeof source === "string" ? JSON.parse(source) : source;
+        if (doc && typeof doc === "object" && usesComponents(doc)) doc = compileComponents(doc, baseDir).doc;
+        const { symbols } = convertWithSymbols(doc, {
+            readFile: (p) => new Uint8Array(readFileSync(resolvePath(path.resolve(baseDir, p), "bitmap file"))),
+        });
+        return Object.fromEntries(Object.entries(symbols.variables).map(([name, id]) => [id, name]));
+    } catch { return null; }
 }

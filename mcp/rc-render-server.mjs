@@ -263,7 +263,7 @@ export const definition = {
         "validates them. Without `clock` every time variable reads the wall clock, so pin it " +
         "for reproducible output. Touch coordinates are in document coordinates (the " +
         "width/height the document is laid out at), not output pixels. Each render carries " +
-        "sanity findings (blank image, missing fonts, …); read them before trusting a picture.",
+        "sanity findings (blank image, missing fonts, text cut off or truncated, a component drawn past its box, …); read them before trusting a picture.",
     tools: [{
         name: "render_rc",
         // Writes the output file (in the workspace, over HTTP); never deletes or edits anything
@@ -290,7 +290,7 @@ export const definition = {
             "name, system variables by id, the clock, and a scripted touch sequence. With " +
             "touch_events or duration the document is simulated frame by frame with the " +
             "clock advancing, and the captured last frame lands at `clock`. The result " +
-            "includes sanity findings: a blank or solid image, text with no fonts, a " +
+            "includes sanity findings: a blank or solid image, text with no fonts, text cut off or losing lines to maxLines, a component past its box, a " +
             "particle document rendered as one frame, taps that hit nothing." +
             (CAN_LINK ? " It also returns image_url, a public link to the PNG (24 h), for clients that cannot " +
                         "display MCP image content." : "") +

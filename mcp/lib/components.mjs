@@ -195,7 +195,11 @@ export function usesComponents(doc, library = loadLibrary()) {
     if (localDefinitions(doc) || doc?.componentMode !== undefined || doc?.componentTheme !== undefined) return true;
     let found = false;
     walk(doc, (node) => { if (callOf(node, library)) found = true; });
-    return found;
+    if (found) return true;
+    // No call, but the theme's colours, numbers or an icon: the expansion resolves those too
+    // (a plain-layout document may still write "@colors.primary"; without this it failed with
+    // "Color not found", so authors fell back to hex).
+    try { return /"@(colors|theme)\.|"\$icon"/.test(JSON.stringify(doc)); } catch { return false; }
 }
 
 /** The document's own definitions ({Name: def} under a top-level `components`), or null. */
@@ -713,7 +717,9 @@ function expandNode(node, state, stack) {
 }
 
 function collectThemeColors(s, state) {
-    for (const m of s.matchAll(/[@$]colors\.([A-Za-z_]\w*)/g)) state.colors.add(m[1]);
+    // A document's own colour may carry dots ("color.system_accent1_100", HST-06): the name
+    // runs to the closing quote, not to the first dot.
+    for (const m of s.matchAll(/[@$]colors\.([A-Za-z_]\w*(?:\.\w+)*)/g)) state.colors.add(m[1]);
 }
 
 /**

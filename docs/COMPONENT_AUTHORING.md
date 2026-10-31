@@ -355,8 +355,15 @@ How:
 1. **Params are what varies, normalised.** A fraction 0..1 for anything partial or cyclic
    (phase, level, progress), degrees for a direction, an enum for discrete kinds; `size` and
    `color` with theme defaults.
-2. **Draw in a unit box** (say 0..100) and scale to `size` once; every coordinate is an
-   expression of the params, so one definition draws every state.
+2. **Draw in a unit box** (say 0..100) and scale it once, from the box the canvas actually
+   got, not from the `size` param: start the canvas with
+   `{"variable": {"name": "s", "value": "min(componentWidth(), componentHeight())"}}`, a
+   translate of `(componentWidth() - @s) / 2` / `(componentHeight() - @s) / 2` and a scale of
+   `@s / 100`. `size` is what the call asks the layout for; Java clamps it to the parent's
+   space (an 88 dp moon in a 56 dp row is an 88x56 canvas, U40), and a drawing scaled from
+   `size` is then cut off while one scaled from `@s` shrinks, centred. At the design size the
+   transform is the identity. Every coordinate is an expression of the params, so one
+   definition draws every state (MoonPhase, Gauge and Icon are the models).
 3. **List the regimes before writing the geometry.** Where does the shape change kind as the
    param moves: which side is filled, whether a curve bulges in or out, the first or second
    half of a cycle, below or above a threshold? Write down what each regime must look like,

@@ -213,4 +213,29 @@ struct LayoutState {
     bool inflated = false;
 };
 
+// Text the last paint could not fit (see paintTextLines): a renderer resets the counts
+// before a frame and reports them after it.
+struct TextOverflowCounts {
+    int truncated = 0;    // lines lost to maxLines (no ellipsis)
+    int clipped = 0;      // wider or taller than the box, cut at its edge or drawn past it
+    int ellipsized = 0;   // ends in an ellipsis: overflow by design
+    // The first few, so a report can name them: {kind, the text's start}.
+    std::vector<std::pair<std::string, std::string>> examples;
+};
+void resetTextOverflowCounts();
+TextOverflowCounts textOverflowCounts();
+
+// Children the last layout placed past their parent's content box (a drawing taller than
+// the widget it sits in), distinct, with the first few named. Reset by the layout itself.
+struct LayoutOverflowCounts {
+    int components = 0;
+    std::vector<std::string> examples;   // "Canvas#-12 88x88 at 14,14 in 332x80: 22 px below"
+    // Visible children the settled layout gave no size (a weight next to a widthIn, a
+    // collapsible that dropped everything), except ones asked to be 0 (a size: 0 canvas).
+    int zeroSize = 0;
+    std::vector<std::string> zeroSizeExamples;   // "CanvasLayout#-12 0x88 in Row#-5 (weight)"
+};
+LayoutOverflowCounts layoutOverflowCounts();
+void resetLayoutOverflowCounts();
+
 } // namespace rccore

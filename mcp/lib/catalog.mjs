@@ -84,6 +84,23 @@ export function loadCatalog() {
  * Map free text (or a list of terms) to vocabulary ids, longest phrase first. Explicit ids
  * ("input.drag", "widget-4x2", "Button") are accepted as such.
  */
+// Words too generic to name a subject ("current", "today", "screen").
+// Also the adjectives and filler a model adds when it rewrites the user's request
+// ("beautiful polished responsive ... themed"): none of them is a thing to build.
+const GENERIC = new Set(["current", "number", "numbers", "drawn", "drawing", "shown", "showing", "display", "displaying",
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "dozen", "all", "every", "each",
+    "change", "changes", "changing", "amount", "amounts", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
+    "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
+    "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
+    "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
+    "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
+    "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status",
+    "widget", "hour", "hours", "minute", "next", "previous", "last", "how", "many", "much", "until", "till", "since", "ago", "day", "days", "week", "weeks", "over", "under", "above", "below", "style",
+    "plotted", "plot", "grid", "sample", "samples", "emoji", "emojis", "typography", "font", "background", "card", "cards",
+    "red", "orange", "yellow", "green", "blue", "cyan", "teal", "purple", "pink", "white", "black", "grey", "gray", "navy", "gold", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
+// Sizes and numbers ("420x540", "24") are no subject either.
+const generic = (w) => GENERIC.has(w) || /ly$/.test(w) || /^\d+(x\d+)?$/.test(w);
+
 export function resolveTerms(input) {
     const C = loadCatalog();
     const texts = Array.isArray(input) ? input : [input ?? ""];
@@ -112,7 +129,7 @@ export function resolveTerms(input) {
                 if (fam.length && w.length > 2) {
                     fam.forEach((id) => out.capabilities.add(id));
                     out.matched.push({ term: w, ids: fam.map((id) => `capability:${id}`) });
-                } else if (!STOP.has(w) && !/^\d+$/.test(w)) out.unmatched_terms.push(w);
+                } else if (w.length > 1 && !STOP.has(w) && !generic(w)) out.unmatched_terms.push(w);   // a word worth acting on ("tonight's" leaves an "s")
                 i++;
             }
         }
@@ -187,18 +204,42 @@ export function canvasOnly(e) {
 const CANVAS_NOTE = "A canvas-only feature demo: take the technique (the drawing, the expressions), not the " +
     "structure. Lay a screen out with column/row/text and components, and keep a canvas for the drawing itself.";
 
+const inlineCache = new Map();
+/** The component names an example defines in its own doc.json (`components` block). */
+export function inlineComponents(e) {
+    if (inlineCache.has(e.id)) return inlineCache.get(e.id);
+    let names = [];
+    try { const c = exampleDoc(e)?.components; if (c && typeof c === "object" && !Array.isArray(c)) names = Object.keys(c); } catch { /* no doc */ }
+    inlineCache.set(e.id, names);
+    return names;
+}
+/** A snippet is a pointer into the example, not the example: a long one is cut, with a note. */
+function capSnippet(json, limit = 1600) {
+    if (json === undefined || json === null) return json;
+    const s = typeof json === "string" ? json : JSON.stringify(json);
+    if (s.length <= limit) return json;
+    return { truncated: true, chars: s.length, start: s.slice(0, limit), note: "The whole snippet is in the example: get <id> with parts [\"json\"]." };
+}
+
 export function summarizeExample(e, { matched = [] } = {}) {
-    const snippets = (e.snippets ?? []).filter((s) => !matched.length || matched.includes(s.shows));
+    let snippets = (e.snippets ?? []).filter((s) => !matched.length || matched.includes(s.shows));
+    if (!snippets.length) snippets = e.snippets ?? [];   // nothing matched the capabilities: show them all
     return {
         ...(canvasOnly(e) ? { structure: "canvas", structure_note: CANVAS_NOTE } : {}),
         id: e.id, folder: e.folder, title: e.title, summary: e.summary, level: e.level, family: e.family,
         kind: e.kind ?? "example",
         capabilities: e.capabilities, use_cases: e.use_cases, form_factor: e.form_factor,
-        components: e.derived?.components ?? [],
+        // Library components the example calls; what its own doc.json defines (a Panel of its
+        // own) is listed apart: `get` finds only library ones.
+        components: (e.derived?.components ?? []).filter((c) => !inlineComponents(e).includes(c)),
+        ...(inlineComponents(e).length ? { inline_components: inlineComponents(e),
+            inline_note: "Defined inside this example's doc.json (its `components` block), not in the library: copy the definition from get <id> (parts json), or use the library's Card." } : {}),
         ...((e.components ?? []).some((c) => !(e.derived?.components ?? []).includes(c))
             ? { hand_built: (e.components ?? []).filter((c) => !(e.derived?.components ?? []).includes(c)) } : {}),
         teaches: e.teaches, pitfalls: e.pitfalls,
-        snippets: snippets.map((s) => ({ ...s, json: snippetJson(e, s.pointer) })),
+        // What its renders were checked against (dates, values): verify a derived document the same way.
+        ...(e.check?.describe ? { verified: String(e.check.describe).slice(0, 500) } : {}),
+        snippets: snippets.map((s) => ({ ...s, json: capSnippet(snippetJson(e, s.pointer)) })),
         size: { bytes: e.derived?.bytes, ops: e.derived?.op_count },
     };
 }
@@ -262,6 +303,14 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // Components first: a goal that names a component gets its call, not a hand-drawn copy.
     const comps = r.components.map((n) => componentSummary(n)).filter(Boolean);
     for (const c of comps) for (const cap of c.capabilities ?? []) needed.delete(cap);
+    // A word that names a component ("curve" -> LineChart) is covered by it: the capabilities
+    // the same word also resolves to (draw.path) need no example of their own, unless another
+    // word of the goal asks for them.
+    const capsOf = (m, has) => (m.ids ?? []).filter((x) => x.startsWith("capability:")).map((x) => x.slice(11))
+        .filter(() => (m.ids ?? []).some((x) => x.startsWith("component:")) === has);
+    const byComponent = new Set(r.matched.flatMap((m) => capsOf(m, true)));
+    const byOthers = new Set(r.matched.flatMap((m) => capsOf(m, false)));
+    for (const cap of byComponent) if (!byOthers.has(cap)) needed.delete(cap);
     const kit = [];
     const remaining = new Set(needed);
     const pool = [...C.examples];
@@ -292,20 +341,6 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     }
     // Examples about the goal's subject: its words in an example's title, keywords or prompt
     // ("sunrise" -> the sun arc example), which capabilities alone don't reach.
-    // Words too generic to name a subject ("current", "today", "screen").
-    // Also the adjectives and filler a model adds when it rewrites the user's request
-    // ("beautiful polished responsive ... themed"): none of them is a thing to build.
-    const GENERIC = new Set(["current", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
-        "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
-        "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
-        "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
-        "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
-        "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status",
-        "widget", "hour", "hours", "minute", "next", "previous", "last", "how", "many", "much", "until", "till", "since", "ago", "day", "days", "week", "weeks", "over", "under", "above", "below", "style",
-        "plotted", "plot", "grid", "sample", "samples", "emoji", "emojis", "typography", "font", "background", "card", "cards",
-        "red", "orange", "yellow", "green", "blue", "cyan", "teal", "purple", "pink", "white", "black", "grey", "gray", "navy", "gold", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
-    // Sizes and numbers ("420x540", "24") are no subject either.
-    const generic = (w) => GENERIC.has(w) || /ly$/.test(w) || /^\d+(x\d+)?$/.test(w);
     const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
     const textScore = (e) => {
         const t = ` ${normalizeWords(e.title ?? "").join(" ")} `, k = ` ${normalizeWords((e.keywords ?? []).join(" ")).join(" ")} `,
@@ -415,7 +450,9 @@ function suggestIcons(goal, r, skip) {
         for (const t of terms) {
             const words = normalizeWords(t);
             const hit = findIcons({ query: t, limit: 6 }).icons.map((i) => i.name)
-                .filter((n) => words.some((w) => n.split("_").some((p) => singular(p) === w || p.startsWith(w))))
+                // The icon is named after the word (moon, moon_stars), not merely containing it
+                // (shield_moon): a word inside a compound name names something else.
+                .filter((n) => words.some((w) => { const p = n.split("_")[0]; return singular(p) === w || p.startsWith(w) || singular(n) === w; }))
                 .slice(0, 3);
             if (hit.length) out.push({ for: t, icons: hit });
         }
@@ -480,7 +517,7 @@ function designRules(goal, r, needed) {
         { rule: "Show meaning with drawing, not characters", how: "A symbol (status, action, navigation, category) is an Icon ({\"Icon\": {\"name\": \"wifi\"}}; see icons, and find kind \"icons\"); a visual that depends on a value (a phase, a level, a progress) is a library component or one you define (see needs_component). Never text glyphs or emoji (◐ ★ ☀ ✓): they render inconsistently, can't be themed, sized or animated, and are usually approximations." },
         { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
         { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
-        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout (StateLayout on the size: LAY-15), or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are kept (LAY-13, LAY-14). Check with render variants (it includes a short size and reports overflow).` },
+        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout with a fitBox (its first child that fits is shown: list the full layout first, then a compact one, then a minimal one; LAY-09) — a StateLayout switches on a host value, not on the size (LAY-15) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height or heightIn min, and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
     ];
     if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
         rule: "Compute dates from the clock",
@@ -543,9 +580,15 @@ export function findComponents({ query = "", capabilities = [], limit = 10 } = {
     return { unmatched_terms: words, components: scored.slice(0, limit).map((x) => ({ ...x.s, why: x.why })) };
 }
 
-export function listCapabilities({ prefix = "", with_counts = true } = {}) {
+export function listCapabilities({ prefix = "", query = "", with_counts = true } = {}) {
     const C = loadCatalog();
-    const caps = Object.entries(C.vocab.capabilities).filter(([id]) => id.startsWith(prefix)).map(([id, c]) => {
+    // A query (words or a sentence) narrows the list to the capabilities its terms resolve to,
+    // and says how they resolved; a page of loosely matched vocabulary helps nobody.
+    const resolved = query ? resolveTerms(query) : null;
+    const arr = (x) => (Array.isArray(x) ? x : [...(x ?? [])]);
+    const wanted = resolved ? new Set(arr(resolved.capabilities)) : null;
+    const caps = Object.entries(C.vocab.capabilities)
+        .filter(([id]) => id.startsWith(prefix) && (!wanted || wanted.has(id))).map(([id, c]) => {
         const row = { id, label: c.label, synonyms: c.synonyms, evidence: c.evidence };
         if (with_counts) {
             row.examples = C.examples.filter((e) => exampleCaps(e).primary.includes(id)).map((e) => e.id);
@@ -553,6 +596,15 @@ export function listCapabilities({ prefix = "", with_counts = true } = {}) {
         }
         return row;
     });
+    if (resolved) {
+        return {
+            query, matched: resolved.matched, unmatched_terms: resolved.unmatched_terms,
+            capabilities: caps,
+            ...(arr(resolved.use_cases).length ? { use_cases: arr(resolved.use_cases) } : {}),
+            ...(arr(resolved.components).length ? { components: arr(resolved.components) } : {}),
+            ...(caps.length ? {} : { note: "No capability matches these words. Try find kind \"examples\" with the request as written, or kind \"terms\"." }),
+        };
+    }
     return {
         capabilities: caps,
         use_cases: Object.keys(C.vocab.use_cases), form_factors: Object.keys(C.vocab.form_factors),
@@ -600,4 +652,9 @@ export function findIcons({ query = "", category, limit = 12 } = {}) {
         })),
         usage: "Call {\"Icon\": {\"name\": ...}} (style outlined|rounded|sharp, filled, size, color, label); see get Icon.",
     };
+}
+
+/** The examples whose own doc.json defines a component of this name (a Panel of their own). */
+export function examplesDefining(name) {
+    return loadCatalog().examples.filter((e) => inlineComponents(e).includes(name)).map((e) => e.id);
 }
