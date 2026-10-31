@@ -246,7 +246,9 @@ export class Component extends PaintOperation implements Container {
             this.mAnimateMeasure.apply(context);
             this.markNeedsBoundsAnimation();
         }
-        this.mLayoutVisibility = m.getVisibility() & 15;
+        // Keep the override bits: a child a collapsible layout dropped (OVERRIDE_GONE) must start
+        // the next pass gone, or every layout animates it out again and repaints forever.
+        this.mLayoutVisibility = m.getVisibility();
         this.mFirstLayout = false;
     }
 
