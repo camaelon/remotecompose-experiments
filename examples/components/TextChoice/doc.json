@@ -1,0 +1,75 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 300,
+  "height": 196,
+  "profiles": 513,
+  "contentDescription": "TextChoice component: the moon phase name from a phase variable, today's weekday from the clock, and a Rising or Falling tide pill from a 0/1 variable"
+ },
+ "resources": {
+  "variables": {
+   "phase": { "value": 0.6, "export": true },
+   "falling": { "value": 0, "export": true }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": ["fillMaxSize", { "background": "@colors.background" }, { "padding": 16 }, { "spacedBy": 12 }],
+   "children": [
+    { "text": { "value": "TextChoice", "fontSize": 20, "color": "@colors.onSurface" } },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [{ "spacedBy": 6 }],
+      "children": [
+       { "text": { "value": "Moon:", "fontSize": 15, "color": "@colors.muted" } },
+       {
+        "TextChoice": {
+         "items": ["New moon", "Waxing crescent", "First quarter", "Waxing gibbous", "Full moon", "Waning gibbous", "Last quarter", "Waning crescent"],
+         "index": "round(@phase * 8) % 8",
+         "fontWeight": 600
+        }
+       },
+       { "text": { "value": "tonight", "fontSize": 15, "color": "@colors.muted" } }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [{ "spacedBy": 6 }],
+      "children": [
+       { "text": { "value": "Today is", "fontSize": 15, "color": "@colors.muted" } },
+       {
+        "TextChoice": {
+         "items": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+         "index": "weekDay() - 1",
+         "color": "@colors.primary"
+        }
+       },
+       { "text": { "value": "here", "fontSize": 15, "color": "@colors.muted" } }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [{ "spacedBy": 8 }],
+      "children": [
+       { "text": { "value": "Tide", "fontSize": 15, "color": "@colors.muted" } },
+       {
+        "box": {
+         "modifiers": [{ "clip": { "roundedRect": 12 } }, { "background": "@colors.primary" }, { "padding": [10, 4] }],
+         "children": [
+          { "TextChoice": { "items": ["Rising", "Falling"], "index": "@falling", "fontSize": 13, "color": "@colors.onPrimary" } }
+         ]
+        }
+       },
+       { "text": { "value": "at 14:05", "fontSize": 15, "color": "@colors.muted" } }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

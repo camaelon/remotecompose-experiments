@@ -441,9 +441,31 @@ function audit() {
     }
     let unusedDefs = [];
     try { unusedDefs = [...CL.getUnusedVariableDefIds(doc, ops)]; } catch {}
+    // Colour definitions are left out: a themed colour is two ColorConstants picked by a
+    // ColorExpression inside theme blocks, and paints reach them through packed paint fields
+    // the usage scan doesn't decode, so every theme colour looked unused (eval run 1: 27 of 27).
+    // The rest get their names, so the finding can be acted on.
+    try {
+        const colourIds = new Set(ops.filter((op) => /Color(Constant|Expression)/.test(nameOf(op)))
+            .map((op) => op.mId ?? op.id ?? op.mColorId).filter((x) => typeof x === "number"));
+        unusedDefs = unusedDefs.filter((id) => !colourIds.has(id));
+    } catch {}
+    const names = new Map();
+    try {
+        for (const op of ops) if (/NamedVariable/.test(nameOf(op)) && op.mVarName !== undefined) names.set(op.mVarId ?? op.varId, op.mVarName ?? op.varName);
+    } catch {}
     if (unusedDefs.length) {
+        const named = unusedDefs.map((id) => names.get(id)).filter(Boolean);
+        // What defines each one (op type, index), so an unnamed id can still be found.
+        const defs = new Map();
+        try {
+            ops.forEach((op, index) => {
+                for (const id of [op.mId, op.id, op.mTextId, op.mFloatId, op.mOutputId]) if (typeof id === "number" && unusedDefs.includes(id) && !defs.has(id)) defs.set(id, { op: nameOf(op), index });
+            });
+        } catch {}
         add("info", "unused_variables", `${unusedDefs.length} variable(s) are defined but never read`,
-            "Their definitions cost bytes and evaluation time for nothing.", { count: unusedDefs.length, variable_ids: unusedDefs.slice(0, 40) });
+            "Their definitions cost bytes and evaluation time for nothing." + (named.length ? ` Named ones: ${named.slice(0, 12).join(", ")}.` : ""),
+            { count: unusedDefs.length, variables: unusedDefs.slice(0, 40).map((id) => ({ id, ...(names.get(id) ? { name: names.get(id) } : {}), ...(defs.get(id) ?? {}) })) });
     }
 
     // Accessibility.

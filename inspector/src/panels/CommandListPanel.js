@@ -950,7 +950,7 @@ export function getVariableUsageInfo(doc, ops) {
                     if (usageInfo.definedVarIds.has(refId) && !refIds.includes(refId)) {
                         refIds.push(refId);
                     }
-                } else if (numVal !== opId && (key.endsWith('Id') || key.endsWith('ID') || key.includes('Var') || key.includes('Color') || key.includes('Text') || key.includes('Path') || key.includes('Length') || key.includes('Anim') || key.includes('Shader') || key.includes('Font'))) {
+                } else if (numVal !== opId && (key.endsWith('Id') || key.endsWith('ID') || /Id\d$/.test(key) || key.includes('Var') || key.includes('Color') || key.includes('Text') || key.includes('Path') || key.includes('Length') || key.includes('Anim') || key.includes('Shader') || key.includes('Font'))) {
                     if (usageInfo.definedVarIds.has(numVal) && !refIds.includes(numVal)) {
                         refIds.push(numVal);
                     }

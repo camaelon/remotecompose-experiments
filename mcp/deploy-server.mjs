@@ -15,9 +15,9 @@ import { createHash, randomBytes } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { usesComponents } from "./lib/components.mjs";
+import { loadLibrary, usesComponents } from "./lib/components.mjs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
-import { compileComponents } from "./lib/json2rc.mjs";
+import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { checkReport } from "./lib/rc2image.mjs";
 import { buildPage, formatBytes } from "./lib/web-page.mjs";
@@ -43,6 +43,24 @@ function jsonViews(a, name) {
         } catch { /* not JSON the expander reads: the text alone */ }
         return out;
     } catch { return []; }
+}
+
+/** The same JSON expanded for each mono look, as base64 .rc: the call sites unchanged, the
+ *  components' mono implementation picked. Null when the document calls no component, already
+ *  picks one look, or carries every look itself (componentTheme "all"). */
+function lookExpansions(a) {
+    if (a.json === undefined && a.json_path === undefined) return null;
+    try {
+        const file = a.json_path !== undefined ? resolvePath(a.json_path, "json_path") : null;
+        const doc = JSON.parse(file ? readFileSync(file, "utf8") : typeof a.json === "string" ? a.json : JSON.stringify(a.json));
+        if (!usesComponents(doc) || ![undefined, "auto", "light-dark"].includes(doc.componentTheme)) return null;
+        const dir = a.base_dir !== undefined ? resolvePath(a.base_dir, "base_dir") : file ? path.dirname(file) : resolvePath(".");
+        const out = {};
+        for (const look of ["mono", "mono-inverted"]) {
+            out[look] = Buffer.from(jsonToRc(compileComponents(structuredClone(doc), dir, { theme: look }).doc, dir)).toString("base64");
+        }
+        return out;
+    } catch { return null; }   // the main document still publishes; the looks are a bonus
 }
 
 const PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? "").replace(/\/+$/, "");
@@ -450,6 +468,7 @@ export const definition = {
                 const shared = publish && a.output_path === undefined;
                 const bundleFile = shared ? sharedBundle(bundleCode) : null;
                 const jsonForPage = shared ? json.map((j) => ({ label: j.label, file: j.file, title: j.title, url: j.file })) : json;
+                const looks = controls ? lookExpansions(a) : null;
                 const html = buildPage({
                     bundle: shared ? { src: `../_player/${bundleFile}` } : bundleCode,
                     rcBase64: rcBytes.toString("base64"),
@@ -468,11 +487,18 @@ export const definition = {
                         urlVariables: a.url_variables !== false,
                         ranges: a.variable_ranges ?? {},
                         ...(jsonForPage.length ? { json: jsonForPage } : {}),
+                        ...(looks ? { looks } : {}),
                     },
                 });
 
+                // The library's theme colours are named so a host can re-theme; they are not the
+                // document's own variables, so they are listed apart (and not offered as the URL example).
+                const themeNames = new Set(Object.keys(loadLibrary().theme?.colors ?? {}));
+                const own = Object.fromEntries(Object.entries(settable).filter(([n]) => !themeNames.has(n)));
+                const themed = Object.keys(settable).filter((n) => themeNames.has(n));
                 const result = { title, bytes: Buffer.byteLength(html), rc_bytes: rcBytes.length, controls, layout,
-                                 document: { width: docW, height: docH }, variables: settable };
+                                 document: { width: docW, height: docH }, variables: own,
+                                 ...(themed.length ? { theme_colors: themed } : {}) };
                 if (a.output_path !== undefined) {
                     const out = resolvePath(a.output_path, "output_path");
                     writeFileSync(out, html);
@@ -490,7 +516,7 @@ export const definition = {
                     }));
                     result.page_id = id;
                     result.url = pageUrl(id);
-                    const names = Object.keys(settable);
+                    const names = Object.keys(own);
                     if (names.length && a.url_variables !== false) {
                         result.url_example = `${result.url}?${encodeURIComponent(names[0])}=...`;
                     }

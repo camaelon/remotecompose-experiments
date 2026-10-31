@@ -711,7 +711,7 @@ export function buildExpressionGraphModel(doc) {
             } else if (opCode === 85 || opName === 'ColorExpression') {
                 if (varId !== null && varId !== undefined) {
                     const nodeId = `var_${varId}`;
-                    getOrCreateNode(nodeId, {
+                    const node = getOrCreateNode(nodeId, {
                         varId: varId,
                         label: `color_${varId}`,
                         type: 'int_expr',
@@ -719,6 +719,18 @@ export function buildExpressionGraphModel(doc) {
                         value: 'Color',
                         op: op
                     });
+                    // Its two input colours, when they are colour ids of the document (a themed
+                    // colour is two ColorConstants, light and dark, picked by a ColorExpression):
+                    // they are read, not unused.
+                    for (const cid of [op.mColor1, op.mColor2]) {
+                        if (typeof cid !== 'number' || cid <= 0 || cid > 0xFFFFF) continue;
+                        const inNodeId = `var_${cid}`;
+                        const inNode = nodeMap.get(inNodeId);
+                        if (!inNode) continue;
+                        if (!node.inputs.includes(inNodeId)) node.inputs.push(inNodeId);
+                        if (!inNode.outputs.includes(nodeId)) inNode.outputs.push(nodeId);
+                        edges.push({ from: inNodeId, to: nodeId });
+                    }
                 }
             }
         });

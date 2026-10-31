@@ -5,7 +5,9 @@
 //   GET <base>/play/<id>/       a playground for one example or component demo: the deploy
 //                               server's page (lib/web-page.mjs), built on demand; #t=light
 //                               or #t=dark opens it in that theme, #t=mono or
-//                               #t=mono-inverted goes to that variant's page. Its look control
+//                               #t=mono-inverted too when the document switches to mono at
+//                               run time (componentTheme "auto": theme.mono), else goes to
+//                               that variant's page. Its look control
 //                               switches Auto / Light / Dark / Mono / Mono inverted, and its
 //                               JSON buttons show doc.json and the expanded JSON
 //   GET <base>/play/<id>/<name>/  the same for a render with a document of its own
@@ -25,6 +27,8 @@ import path from "node:path";
 import { EXAMPLES_DIR, loadCatalog } from "./catalog.mjs";
 import { buildPage, escapeHtml as esc, formatBytes } from "./web-page.mjs";
 import { playerBundle } from "./web-player.mjs";
+import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
+import { compileComponents, jsonToRc } from "./json2rc.mjs";
 
 const WEB_SETTABLE = new Set(["float", "int", "color", "string"]);
 const HEADERS = {
@@ -137,8 +141,21 @@ async function playground(e, variant) {
     if (themed.size) vars = vars.map((v) => (themed.has(v.name) ? { ...v, type: "themed color", value: themed.get(v.name), themed: true } : v));
     // Most examples are drawn in pixels; "device" density would show them at half size on a
     // 2x screen. Only a document laid out in dp (header densityBehavior) follows the device.
-    let dp = false;
-    try { dp = !!JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")).header?.densityBehavior; } catch { /* keep 1 */ }
+    let dp = false, source = null;
+    try { source = JSON.parse(readFileSync(path.join(EXAMPLES_DIR, e.folder, "doc.json"), "utf8")); dp = !!source.header?.densityBehavior; } catch { /* keep 1 */ }
+    // componentTheme "auto": the document switches to mono itself (MONO_VAR and its named
+    // colours, with the palettes its own colours give), in place of a separate document.
+    const mono = !variant && vars.some((v) => v.name === MONO_VAR) ? { variable: MONO_VAR, palettes: monoPalettes(source ?? {}) } : undefined;
+    // The same JSON expanded for each mono look (the components' mono implementation, the
+    // call sites unchanged): the look control swaps it in place.
+    let looks = null;
+    if (!variant && !mono && source && usesComponents(source) && [undefined, "auto", "light-dark"].includes(source.componentTheme)) {
+        try {
+            const dir = path.join(EXAMPLES_DIR, e.folder);
+            looks = Object.fromEntries(["mono", "mono-inverted"].map((look) =>
+                [look, Buffer.from(jsonToRc(compileComponents(structuredClone(source), dir, { theme: look }).doc, dir)).toString("base64")]));
+        } catch { looks = null; }   // the page still works: the variants' own pages, if any
+    }
     const player = await playerScript();
     const html = buildPage({
         bundle: { src: `${variant ? "../../../" : "../../"}player/${player.name}` },
@@ -157,6 +174,8 @@ async function playground(e, variant) {
                 return { name: r.name, label, title, href: `${variant ? "../" : ""}${encodeURIComponent(r.name)}/` };
             }),
             ...(variant ? { variant, mainHref: "../" } : {}),
+            ...(mono ? { mono } : {}),
+            ...(looks ? { looks } : {}),
             json: jsonButtons(e, variant, variant ? "../../../" : "../../"),
             // meta.inputs.variables: {name: {type, meaning, default, min, max, step}}
             ranges: Object.fromEntries(Object.entries(e.inputs?.variables ?? {})

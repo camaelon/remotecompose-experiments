@@ -301,7 +301,7 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
         "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
         "based", "external", "source", "supplied", "labeled", "labelled", "using", "compact", "state", "dynamic", "possible", "host", "variable", "variables",
         "must", "not", "native", "render", "rendered", "html", "marked", "premium", "navy", "theme", "dark", "light", "four", "three", "two", "status",
-        "widget", "hour", "hours", "minute", "next", "previous", "last",
+        "widget", "hour", "hours", "minute", "next", "previous", "last", "how", "many", "much", "until", "till", "since", "ago", "day", "days", "week", "weeks", "over", "under", "above", "below", "style",
         "plotted", "plot", "grid", "sample", "samples", "emoji", "emojis", "typography", "font", "background", "card", "cards",
         "red", "orange", "yellow", "green", "blue", "cyan", "teal", "purple", "pink", "white", "black", "grey", "gray", "navy", "gold", "high", "low", "level", "vertical", "horizontal", "top", "bottom", "left", "right", "small", "large", "big", "label", "labels", "indicator", "chart", "showing", "show", "create"]);
     // Sizes and numbers ("420x540", "24") are no subject either.
@@ -358,8 +358,18 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
             kit.splice(i, 1);
         }
     }
-    const needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w)) }, C);
-    const icons = suggestIcons(goal, r);
+    // ...nor words a returned component stands for (its synonyms: "waxing" for MoonPhase).
+    for (const c of comps) for (const syn of c.synonyms ?? []) normalizeWords(syn).forEach((w) => covered.add(w));
+    // ...nor a word that only qualifies a style ("a moonrise-style label" asks for a label).
+    for (const m of String(goal).toLowerCase().matchAll(/([a-z]+)[- ](?:style|like|ish|esque|inspired|themed)\b/g)) covered.add(normalizeWords(m[1])[0]);
+    let needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w)) }, C);
+    const icons = suggestIcons(goal, r, new Set(normalizeWords(goal).filter((w) => generic(w))));
+    // A word an icon shows is not a component to write ("wifi" in a status bar).
+    if (needs && icons?.suggestions?.length) {
+        const shown = new Set(icons.suggestions.flatMap((x) => normalizeWords(x.for)));
+        needs.terms = needs.terms.filter((w) => !shown.has(w));
+        if (!needs.terms.length) needs = null;
+    }
     // Suggested icons are drawn with the Icon component: list it with its call and params.
     if (icons?.suggestions.length && !comps.some((c) => c.name === "Icon")) {
         const icon = componentSummary("Icon");
@@ -395,12 +405,18 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
  * Icons for the goal: Material Symbols matching its content words (the matched terms and the
  * unmatched ones), so a symbol on screen is an {"Icon": ...} call, not a glyph or a drawing.
  */
-function suggestIcons(goal, r) {
+function suggestIcons(goal, r, skip) {
     let out = [];
-    const terms = [...new Set([...r.unmatched_terms, ...r.matched.map((m) => m.term)])].filter((t) => t.length > 2);
+    // Content words only (not filler, not stopwords), and an icon whose NAME has the word: a
+    // tag-only match is noise ("how" -> how_to_reg, "many" -> groups).
+    const terms = [...new Set([...r.unmatched_terms, ...r.matched.map((m) => m.term)])]
+        .filter((t) => t.length > 2 && !STOP.has(t) && !(skip ?? new Set()).has(t));
     try {
         for (const t of terms) {
-            const hit = findIcons({ query: t, limit: 3 }).icons.map((i) => i.name);
+            const words = normalizeWords(t);
+            const hit = findIcons({ query: t, limit: 6 }).icons.map((i) => i.name)
+                .filter((n) => words.some((w) => n.split("_").some((p) => singular(p) === w || p.startsWith(w))))
+                .slice(0, 3);
             if (hit.length) out.push({ for: t, icons: hit });
         }
     } catch { return undefined; }   // no icon catalog on this install
@@ -464,7 +480,7 @@ function designRules(goal, r, needed) {
         { rule: "Show meaning with drawing, not characters", how: "A symbol (status, action, navigation, category) is an Icon ({\"Icon\": {\"name\": \"wifi\"}}; see icons, and find kind \"icons\"); a visual that depends on a value (a phase, a level, a progress) is a library component or one you define (see needs_component). Never text glyphs or emoji (◐ ★ ☀ ✓): they render inconsistently, can't be themed, sized or animated, and are usually approximations." },
         { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
         { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
-        { rule: "Adapt to the size, including smaller", how: "A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first (collapsibleColumn / collapsibleRow with collapsiblePriority: LAY-13, LAY-14) or switch to a compact layout (StateLayout on the size: LAY-15), or at minimum put the content in a verticalScroll. Check with render variants (it includes a short size and reports overflow)." },
+        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout (StateLayout on the size: LAY-15), or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are kept (LAY-13, LAY-14). Check with render variants (it includes a short size and reports overflow).` },
     ];
     if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
         rule: "Compute dates from the clock",
@@ -475,7 +491,7 @@ function designRules(goal, r, needed) {
         how: "\"right now\", \"current\", \"rising or falling\", \"next\", \"in 2 h\": the status, the next event, the current value " +
             "and a chart's now marker are expressions of the clock (timeInMin(), dayOfMonth()...) and the data, so they stay right " +
             "as the day goes on. Data that comes from outside (a forecast, a schedule) is exported host variables or arrays; the " +
-            "live parts are computed from it, never typed in. Render with variants to see another time of day.",
+            "live parts are computed from it, never typed in. A word that follows a value (a phase name, \"Rising\"/\"Falling\", a weekday) is a TextChoice ({\"TextChoice\": {\"items\": [...], \"index\": \"@i\"}}): a layout text can't take textSubtext/textLookup. Joined to other text in one line (\"Waning gibbous, 57% lit\"), compute the word in a canvas global block and textMerge it (TIM-11). Render with variants to see another time of day.",
     });
     if (QUANTITY_WORDS.test(g)) rules.push({
         rule: "Give quantities a visual",

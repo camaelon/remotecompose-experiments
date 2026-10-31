@@ -1,0 +1,430 @@
+{
+ "id": "TextChoice",
+ "name": "text-choice",
+ "version": 1,
+ "title": "Text choice",
+ "prompt": "Show a word picked at run time from a fixed list: the moon phase name from a phase variable, today's weekday name from the clock, and a Rising / Falling tide pill from a 0/1 variable, each laid out like a normal text in a row.",
+ "level": 1,
+ "use_cases": [
+  "widget",
+  "watch-face"
+ ],
+ "form_factor": "phone",
+ "capabilities": {
+  "primary": [
+   "layout.state"
+  ],
+  "secondary": [
+   "time.date",
+   "layout.decoration"
+  ]
+ },
+ "keywords": [
+  "text choice",
+  "text from list",
+  "pick text by index",
+  "switch text",
+  "status text",
+  "label from index",
+  "name of day",
+  "weekday name",
+  "phase name",
+  "moon phase name",
+  "rising falling",
+  "enum label",
+  "conditional text"
+ ],
+ "teaches": [
+  "{\"TextChoice\": {\"items\": [\"Rising\", \"Falling\"], \"index\": \"@falling\"}} shows one of the items, picked by a 0-based index that may be a variable or an expression",
+  "A layout text cannot take textSubtext or textLookup in Java, so the choice is one text per item, each with a visibility that is exactly 1 for its index and 0 (GONE) otherwise: only the shown item takes space",
+  "The visibility is an integer expression, 1 - min(1, abs(k - i)), over k = clamp(0, n - 1, round(index)), a float expression computed once per call; the player keeps a float's truncated int, which is why k is rounded first",
+  "Weekday names need weekDay() - 1 (weekDay() is 1 for Monday); a fraction of a cycle becomes an index with round(@phase * 8) % 8"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/row/children/1",
+   "shows": "layout.state",
+   "note": "eight moon phase names chosen by round(@phase * 8) % 8 (0.6 shows Waning gibbous)"
+  },
+  {
+   "pointer": "/root/column/children/2/row/children/1",
+   "shows": "time.date",
+   "note": "the weekday name from weekDay() - 1"
+  },
+  {
+   "pointer": "/root/column/children/3/row/children/1",
+   "shows": "layout.decoration",
+   "note": "Rising / Falling from a 0/1 variable inside a pill that sizes to the word shown"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "phase": {
+    "type": "float",
+    "meaning": "lunation fraction 0..1 (0 new, 0.5 full)",
+    "default": 0.6,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   },
+   "falling": {
+    "type": "float",
+    "meaning": "tide direction: 0 rising, 1 falling",
+    "default": 0,
+    "min": 0,
+    "max": 1,
+    "step": 1
+   }
+  },
+  "clock": "2026-10-29T10:00:00",
+  "touch": false
+ },
+ "check": {
+  "describe": "On Thursday 29 October 2026 with phase 0.6 and falling 0: \"Moon: Waning gibbous tonight\", \"Today is Thursday here\" (blue) and \"Tide [Rising] at 14:05\" with the pill sized to Rising. The switched render (phase 0.97, falling 1, Sunday 1 November 2026) reads \"New moon\" (round(7.76) % 8 wraps to 0), \"Sunday\" and a wider \"Falling\" pill; the full render (phase 0.5, Monday 2 November) reads \"Full moon\" and \"Monday\". In every row the next text follows the shown word directly, so the hidden items take no space. The rows size to their content: at 240 dp the moon row still fits and at 420 dp nothing moves.",
+  "render": {
+   "clock": "2026-10-29T10:00:00"
+  },
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono",
+    "componentTheme": "mono"
+   },
+   {
+    "name": "mono-inverted",
+    "componentTheme": "mono-inverted"
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 196
+   },
+   {
+    "name": "wide",
+    "width": 420,
+    "height": 196
+   },
+   {
+    "name": "switched",
+    "theme": "light",
+    "clock": "2026-11-01T10:00:00",
+    "variables": {
+     "phase": 0.97,
+     "falling": 1
+    }
+   },
+   {
+    "name": "full",
+    "clock": "2026-11-02T10:00:00",
+    "variables": {
+     "phase": 0.5
+    }
+   }
+  ]
+ },
+ "related": [
+  "LAY-12",
+  "TIM-13",
+  "STR-05"
+ ],
+ "derived": {
+  "components": [
+   "TextChoice"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "TextChoice": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 3416,
+  "header": {
+   "width": 300,
+   "height": 196
+  },
+  "op_count": 180,
+  "operations": {
+   "ANIMATED_FLOAT": 3,
+   "COLOR_CONSTANT": 9,
+   "COLOR_EXPRESSIONS": 8,
+   "CoreText": 24,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 24,
+   "HEADER": 1,
+   "IntegerExpression": 17,
+   "LAYOUT_BOX": 4,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 3,
+   "LayoutComponentContent": 32,
+   "LoopOperation": 8,
+   "MODIFIER_BACKGROUND": 2,
+   "MODIFIER_HEIGHT": 1,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_VISIBILITY": 17,
+   "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 7,
+   "RoundedClipRectModifierOperation": 1,
+   "THEME": 12
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "falling",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FFFFFFFF"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "phase",
+    "type": "float",
+    "value": 0.600000024
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: unused_variables"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono": {
+    "componentTheme": "mono",
+    "bytes": 3008,
+    "component_modes": {
+     "TextChoice": "expand"
+    },
+    "op_count": 148,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "falling",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "phase",
+      "type": "float",
+      "value": 0.600000024
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono.png",
+    "render_findings": []
+   },
+   "mono-inverted": {
+    "componentTheme": "mono-inverted",
+    "bytes": 3008,
+    "component_modes": {
+     "TextChoice": "expand"
+    },
+    "op_count": 148,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "falling",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "phase",
+      "type": "float",
+      "value": 0.600000024
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-inverted.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     196
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     420,
+     196
+    ],
+    "audit_findings": [
+     "info: unused_variables"
+    ]
+   },
+   "switched": {
+    "theme": "light",
+    "render": "render-switched.png",
+    "render_findings": []
+   },
+   "full": {
+    "render": "render-full.png",
+    "render_findings": []
+   }
+  },
+  "json_keys": [
+   "TextChoice",
+   "apiLevel",
+   "background",
+   "box",
+   "children",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "contentDescription",
+   "dark",
+   "export",
+   "falling",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "index",
+   "items",
+   "light",
+   "modifiers",
+   "muted",
+   "onPrimary",
+   "onSurface",
+   "padding",
+   "phase",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "spacedBy",
+   "text",
+   "textchoice1_k",
+   "textchoice2_k",
+   "textchoice3_k",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "visibility",
+   "width"
+  ],
+  "evidence": {
+   "layout.state": [
+    "visibility"
+   ],
+   "time.date": [
+    "weekDay"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ]
+  },
+  "built_at": "2026-10-31T04:05:24.539Z"
+ }
+}

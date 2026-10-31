@@ -299,7 +299,7 @@ export const definition = {
                 properties: {
                     json: { description: "The document (object or string).", anyOf: [{ type: "object" }, { type: "string" }] },
                     mode: { type: "string", enum: ["auto", "expand", "pattern"], description: "Overrides the document's componentMode." },
-                    theme: { type: "string", enum: ["auto", "light", "dark", "mono", "mono-inverted"], description: "Overrides the document's componentTheme: auto (default: each theme colour a themed light/dark colour), light or dark (that palette only, plain colours), mono (light on black, one grey, the components' mono variants, no animation: always-on displays), mono-inverted (the same dark on white: e-ink)." },
+                    theme: { type: "string", enum: ["auto", "all", "light", "dark", "mono", "mono-inverted"], description: "Overrides the document's componentTheme: auto (default: each theme colour a themed light/dark colour), light or dark (that palette only, plain colours), mono (light on black, one grey, the components' mono variants, no animation: always-on displays), mono-inverted (the same dark on white: e-ink), all (every look in one larger document, mono switched by the host's theme.mono float)." },
                 },
                 required: ["json"],
             },

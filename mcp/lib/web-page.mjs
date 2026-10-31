@@ -9,6 +9,8 @@
 //     theme and play/pause — to see how a document behaves, not only how it looks. Its
 //     state lives in the URL, so a link reproduces what is on screen.
 
+import { MONO_VAR, monoPalettes } from "./components.mjs";
+
 export const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -74,6 +76,18 @@ const COMMON_JS = `
  *                                      mono and mono-inverted), shown as extra segments of the
  *                                      look control next to Auto / Light / Dark; href is
  *                                      the page that plays it (relative)
+ *   mono: {variable, palettes}         playground only, optional: the document switches to mono at
+ *                                      run time (componentTheme "auto": an exported float the host
+ *                                      sets to 1, and the named colours overridden with a palette,
+ *                                      {mono: {name: "#AARRGGBB"}, "mono-inverted": {...}}); Mono
+ *                                      and Mono inverted then join the look control and act in
+ *                                      place. Defaults to the library's palettes when the document
+ *                                      declares the float (MONO_VAR); a variant of the same name
+ *                                      is then not offered
+ *   looks: {mono, "mono-inverted"}     playground only, optional: the same JSON expanded for that look
+ *                                      (base64 .rc each: the components' other implementation, the
+ *                                      call sites unchanged); Mono and Mono inverted join the look
+ *                                      control and swap the document in place. Wins over `mono`
  *   variant, mainHref                  this page plays that variant (its segment is pressed);
  *                                      mainHref is the page of the main document, which
  *                                      Auto / Light / Dark go back to
@@ -94,6 +108,9 @@ function bundleTag(bundle) {
 }
 
 export function buildPage({ bundle, rcBase64, config }) {
+    if (config.controls && config.mono === undefined && (config.info ?? []).some((v) => v.name === MONO_VAR)) {
+        config = { ...config, mono: { variable: MONO_VAR, palettes: monoPalettes({}) } };
+    }
     return config.controls ? playgroundPage(bundle, rcBase64, config) : barePage(bundle, rcBase64, config);
 }
 
@@ -616,10 +633,10 @@ ${VARIABLE_ELEMENT_JS}
   var S = {
     w: C.width, h: C.height, fill: false,
     density: C.density, theme: C.theme,
-    values: {}, defaults: {}, playing: true
+    values: {}, defaults: {}, docValues: {}, playing: true
   };
   (C.info || []).forEach(function (v) {
-    if (C.declared[v.name]) S.defaults[v.name] = String(v.value);
+    if (C.declared[v.name]) S.defaults[v.name] = S.docValues[v.name] = String(v.value);
   });
   (C.variables || []).forEach(function (v) { S.defaults[v.name] = String(v.value); });
   Object.keys(S.defaults).forEach(function (n) {
@@ -631,10 +648,17 @@ ${VARIABLE_ELEMENT_JS}
   else if (C.start === "auto") S.fill = null;   // decided once the stage can be measured
   if (hash.has("d")) S.density = hash.get("d") === "device" ? "device" : (+hash.get("d") > 0 ? +hash.get("d") : S.density);
   if (/^(auto|light|dark)$/.test(hash.get("t") || "")) S.theme = hash.get("t");
+  // Mono at run time (C.mono): the document's float set to 1 and its named colours overridden
+  // with a palette, after every load. Leaving it reloads the document (overrides cannot be undone).
+  var ALT = C.looks && !C.variant ? C.looks : null;   // the JSON expanded per look (wins over C.mono)
+  var MONO = ALT ? { variable: "", palettes: {} } : C.mono && !C.variant ? C.mono : null;
+  var MAIN = DATA;
+  S.mono = MONO && /^(mono|mono-inverted)$/.test(hash.get("t") || "") ? hash.get("t") : "";
   // The look control: Auto / Light / Dark switch the player theme of this document; a variant
   // (mono, mono-inverted) is a document of its own, on its own page. #t= names either, so a
   // link to a variant's look through the main page (or the reverse) goes to the right page.
-  var VARIANTS = C.variants || [];
+  var VARIANTS = (C.variants || []).filter(function (v) { return !(ALT && ALT[v.name]) && !(MONO && MONO.palettes && MONO.palettes[v.name]); });
+  if (ALT && S.mono && ALT[S.mono]) DATA = ALT[S.mono];
   function variantOf(name) { for (var i = 0; i < VARIANTS.length; i++) if (VARIANTS[i].name === name) return VARIANTS[i]; return null; }
   var wantT = hash.get("t") || "";
   if (!C.variant && variantOf(wantT)) { location.replace(variantOf(wantT).href + location.search + location.hash); return; }
@@ -655,7 +679,7 @@ ${VARIABLE_ELEMENT_JS}
     });
     var h = new URLSearchParams();
     if (S.fill) h.set("fill", "1"); else { h.set("w", S.w); h.set("h", S.h); }
-    h.set("d", S.density); h.set("t", C.variant || S.theme);
+    h.set("d", S.density); h.set("t", C.variant || S.mono || S.theme);
     var qs = q.toString();
     return location.pathname + (qs ? "?" + qs : "") + "#" + h.toString();
   }
@@ -685,7 +709,16 @@ ${VARIABLE_ELEMENT_JS}
   function applyVariables() {
     var ctx = handle && handle.player.getRemoteContext();
     if (!ctx) return;
-    Object.keys(S.values).forEach(function (n) { setVariable(ctx, n, C.declared[n], S.values[n]); });
+    // Only what differs from the document: a themed colour's reported value is one side of it
+    // (dark), and setting it would pin every look to that side.
+    Object.keys(S.values).forEach(function (n) {
+      if (S.values[n] !== S.docValues[n]) setVariable(ctx, n, C.declared[n], S.values[n]);
+    });
+    if (MONO && S.mono && !ALT) {
+      ctx.setNamedFloatOverride(MONO.variable, 1);
+      var pal = (MONO.palettes || {})[S.mono] || {};
+      Object.keys(pal).forEach(function (n) { setVariable(ctx, n, "color", pal[n]); });
+    }
   }
 
   function load() {
@@ -750,7 +783,13 @@ ${VARIABLE_ELEMENT_JS}
     ["auto", "Auto", "Follow the system's light or dark setting"],
     ["light", "Light", "The light theme (themed colours take their light value)"],
     ["dark", "Dark", "The dark theme (themed colours take their dark value)"]
-  ].concat(VARIANTS.map(function (v) { return [v.name, v.label || v.name, v.title || ("The " + v.name + " version of the document")]; }));
+  ].concat(ALT ? [
+    ["mono", "Mono", "Mono: light on black, for always-on displays and OLED. The same JSON, its components expanded for mono"],
+    ["mono-inverted", "Mono inverted", "Mono inverted: dark on white, for e-ink and other reflective displays. The same JSON, its components expanded for mono-inverted"]
+  ] : MONO ? [
+    ["mono", "Mono", "Mono: light on black, for always-on displays and OLED. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono palette"],
+    ["mono-inverted", "Mono inverted", "Mono inverted: dark on white, for e-ink and other reflective displays. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono-inverted palette"]
+  ] : []).concat(VARIANTS.map(function (v) { return [v.name, v.label || v.name, v.title || ("The " + v.name + " version of the document")]; }));
   var seg = $("modes");
   LOOKS.forEach(function (l) {
     var b = document.createElement("button");
@@ -768,7 +807,7 @@ ${VARIABLE_ELEMENT_JS}
     seg.appendChild(b);
   });
   function showLook() {
-    var cur = C.variant || S.theme;
+    var cur = C.variant || S.mono || S.theme;
     for (var i = 0; i < seg.children.length; i++) {
       var b = seg.children[i];
       b.setAttribute("aria-pressed", String(b.dataset.look === cur));
@@ -776,6 +815,17 @@ ${VARIABLE_ELEMENT_JS}
   }
   function setLook(look) {
     var isTheme = /^(auto|light|dark)$/.test(look);
+    var isMono = MONO && /^(mono|mono-inverted)$/.test(look);
+    if (isMono || (isTheme && S.mono)) {
+      // In place: mono takes the dark side of colours it has no palette value for, mono-inverted
+      // the light one; the document is reloaded so every override starts from its defaults.
+      S.mono = isMono ? look : "";
+      if (isTheme) S.theme = look;
+      if (ALT) DATA = isMono ? ALT[look] : MAIN;
+      handle.player.setTheme(isMono ? (look === "mono" ? "dark" : "light") : S.theme);
+      showLook(); syncUrl(); load();
+      return;
+    }
     if (isTheme && !C.variant) {
       S.theme = look; handle.player.setTheme(S.theme); showLook(); syncUrl();
       return;
@@ -946,6 +996,7 @@ ${VARIABLE_ELEMENT_JS}
     vars.appendChild(p);
   }
   (C.info || []).forEach(function (v) {
+    if (MONO && v.name === MONO.variable) return;   // the look control sets it
     var e = document.createElement("rc-variable");
     e.setAttribute("name", v.name);
     e.setAttribute("type", v.type);
@@ -965,7 +1016,7 @@ ${VARIABLE_ELEMENT_JS}
   resetAll.hidden = !Object.keys(editors).length;
   resetAll.onclick = function () {
     Object.keys(editors).forEach(function (n) { S.values[n] = S.defaults[n]; editors[n].value = S.defaults[n]; });
-    applyVariables(); relayout(); syncUrl();
+    load(); syncUrl();   // a reload: overrides cannot be undone, and applyVariables skips document values
   };
   // A changed variable can change the layout (a longer string, a size), not only the
   // paint: re-run the layout pass, which resize does, on the next frame.
@@ -1011,7 +1062,7 @@ ${VARIABLE_ELEMENT_JS}
   dens.value = String(S.density);
   try {
     handle = RC.createPlayer(host, {
-      theme: S.theme,
+      theme: S.mono ? (S.mono === "mono" ? "dark" : "light") : S.theme,
       onLoad: function () { try { applyVariables(); } catch (e) { fail(e); } }
     });
     handle.player.setDensity(density());

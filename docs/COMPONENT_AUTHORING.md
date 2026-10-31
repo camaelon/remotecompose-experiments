@@ -152,10 +152,17 @@ colour used, compared with a plain colour. A colour whose light and dark values 
 
 The format has no monochrome mode. The header profile `PROFILE_LOW_POWER` (0x8) is declared
 in RcProfiles, but nothing in the Java core, the creation API or the players reads it, so
-setting it changes nothing. Mono is therefore chosen when the document is built, and a host
-that wants both looks serves two documents. One document holding both looks, switched at run
-time by a host variable on `visibility`, works too, but it is about 75% bigger (see
-docs/EXAMPLES_FINDINGS.md).
+setting it changes nothing. Mono is therefore chosen when the document is expanded: a
+document's call sites are the same for every look, and expanding the same JSON with
+`"mono"` picks each component's mono implementation. The published playground and the catalog
+playground do exactly that: they carry the mono and mono-inverted expansions of the page's
+JSON and their Mono buttons swap the document in place. A host that wants both looks serves
+two documents, each the size of one look.
+
+`"componentTheme": "all"` puts every look in one document instead: the components' mono sides
+are kept, gated at run time by an exported float `theme.mono` (0 by default) that the host
+sets to 1 while it overrides the named colours with the mono palette (`monoPalettes`). It costs
+about 20–60% more than `"auto"`. Use it only when a host can't swap documents.
 
 A document re-themes as before, by defining a colour of the same name:
 - a plain value is used in both light and dark;

@@ -342,6 +342,7 @@ for (const { dir, kind, name } of dirs) {
     // slider uses it and an agent setting the variable knows what makes sense.
     for (const v of derived.host_variables ?? []) {
         if (!["float", "int", "integer"].includes(v.type)) continue;
+        if (v.name === "theme.mono") continue;   // the look switch of componentTheme "all", 0 or 1
         const spec = meta.inputs?.variables?.[v.name];
         const r = spec && typeof spec === "object" ? spec : {};
         if (typeof r.min !== "number" || typeof r.max !== "number") { warnings.push(`host variable ${v.name}: give it a range (inputs.variables.${v.name}.min/max)`); continue; }

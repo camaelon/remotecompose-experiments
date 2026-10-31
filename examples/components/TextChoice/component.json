@@ -1,0 +1,102 @@
+{
+ "component": "TextChoice",
+ "version": 1,
+ "summary": "One of several fixed texts, picked at run time by an index (a variable or an expression): a phase name, a weekday, a status word such as Rising / Falling, laid out like a plain text.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The texts to choose from, e.g. [\"Rising\", \"Falling\"]; fixed when the document is built (one text node each)"
+  },
+  "index": {
+   "type": "float",
+   "required": true,
+   "doc": "Which item shows, 0-based: a number, a \"@variable\" or an expression (\"weekDay() - 1\"). Rounded to the nearest whole number and clamped to the list, so exactly one item always shows"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 15,
+   "doc": "Text size in sp (15, the theme's text_md, by default)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "Text colour"
+  },
+  "fontWeight": {
+   "type": "float",
+   "doc": "Font weight, 100 to 900 (400 when omitted)"
+  },
+  "textAlign": {
+   "type": "string",
+   "doc": "start, center or end, within the text's own width (matters with fillMaxWidth or several lines)"
+  },
+  "maxLines": {
+   "type": "float",
+   "doc": "Lines kept at most (unlimited when omitted)"
+  },
+  "overflow": {
+   "type": "string",
+   "doc": "With maxLines: clip, ellipsis or visible"
+  }
+ },
+ "locals": {
+  "n": {
+   "$count": "items"
+  },
+  "last": "@n - 1",
+  "k": "clamp(0, @last, round(@index))"
+ },
+ "capabilities": [
+  "layout.state"
+ ],
+ "call": {
+  "TextChoice": {
+   "items": [
+    "Rising",
+    "Falling"
+   ],
+   "index": "@falling"
+  }
+ },
+ "body": {
+  "box": {
+   "children": [
+    {
+     "$each": "items",
+     "as": "item",
+     "index": "i",
+     "do": {
+      "text": {
+       "value": "@item",
+       "fontSize": "@fontSize",
+       "color": "@color",
+       "fontWeight": "@fontWeight",
+       "textAlign": "@textAlign",
+       "maxLines": "@maxLines",
+       "overflow": "@overflow",
+       "modifiers": [
+        {
+         "visibility": "1 - min(1, abs(@k - @i))"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Use it for a word or phrase from a fixed set chosen at run time (a phase name, a weekday, Rising / Falling, Open / Closed). For a number use textFromFloat; to join a fixed text and a live one use textMerge; for a text the host sends, a text variable",
+  "A layout `text` cannot take textSubtext, textTransform or textLookup itself (the Java parser accepts them only among canvas commands), so a name cut out of one string by index needs a canvas command first (see the long-list note); this component needs nothing but layout texts",
+  "index is 0-based: weekDay() is 1 (Monday) to 7, so pass \"weekDay() - 1\"; a fraction of a cycle (a moon phase 0..1) needs \"round(@phase * 8) % 8\" or similar, not the fraction itself",
+  "index is rounded to the nearest whole number and clamped to 0..n-1, so a stray value shows the first or last item, never nothing and never two",
+  "It is always expanded, never a definePattern template: a text inside a pattern shares its component id across inflations in shipped Java runtimes (U7). Each call costs about 90 B per item plus its string (Rising / Falling: 174 B; seven weekday names: 713 B)",
+  "A literal index works but is pointless (use a plain text); the index is meant to be a variable or an expression that changes",
+  "For a long list (more than about 8 items: 31 day numbers, 60 minutes, 12 months on a small budget), cut the name from one padded string instead: a 0-size canvas whose `global` section holds textSubtext (start \"(weekDay() - 1) * 9\", len 9, varName dayName9) and a textTransform trim (operation 3, varName dayName), then a layout text {\"value\": \"@dayName\"}. The global section runs before the layout, so the layout text can read the variable (STR-05 hoists data the same way); seven weekdays cost about 180 B that way, whatever the count. Every name must be padded to the same width",
+  "Each item is its own text node; all but one are GONE (visibility 0), so the box takes the size of the one shown and changes size when the choice changes. In a row, neighbours move; give it a fixed width if they shouldn't",
+  "The visibility of each item is an INTEGER expression (1 - min(1, abs(k - i)), exact 0 or 1) over the float index k: the player stores a float as its truncated int, so k is rounded first. A float expression that comes out 0.999 would hide every item",
+  "Accessibility reads the visible item only (hidden items are GONE), so no label is needed"
+ ]
+}

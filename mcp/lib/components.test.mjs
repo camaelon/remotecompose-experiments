@@ -2,7 +2,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { expandComponents, foldStatic, lintComponent, loadLibrary } from "./components.mjs";
+import { expandComponents, foldStatic, lintComponent, loadLibrary, monoPalettes, MONO_VAR, MONO_OFF } from "./components.mjs";
 import { jsonToRc } from "./json2rc.mjs";
 
 // A small library of its own, so the checks don't move with the real components.
@@ -356,7 +356,7 @@ test("auto: a theme colour with two values is a themed colour, one with a single
     const r = ex(themedDoc());
     assert.equal(r.theme, "auto");
     assert.deepEqual(r.doc.resources.colors, { accent: "#FF1565D8", onPrimary: "#FFFFFFFF", surface: { light: "#FFFFFFFF", dark: "#FF1C2433" } });
-    assert.ok(!flat(r.doc).includes("theme."));
+    assert.ok(!flat(r.doc).replaceAll("theme.mono", "").includes("theme."));
     // json2rc writes it (the Java parser's addThemedColor: THEME sections and a colour expression).
     const themedBytes = jsonToRc(r.doc, ".").length;
     assert.ok(themedBytes > jsonToRc(ex(themedDoc(), "dark").doc, ".").length);
@@ -379,9 +379,112 @@ test("mono: the mono palette, @theme.mono is 1 for $if and numbers, the mode's n
     assert.deepEqual(r.doc.resources.colors, { accent: "#FFFFFFFF", onPrimary: "#FF000000", surface: "#FF000000" });
     const mods = r.doc.root.box.modifiers;
     assert.deepEqual(mods, [{ background: "@colors.surface" }, { padding: 2 }]);
-    const auto = ex(themedDoc()).doc.root.box.modifiers;
-    assert.deepEqual(auto[1], { graphicsLayer: { alpha: "@tile1_on" } });
-    assert.equal(auto.length, 2);
+    // Decimated: no run-time switch.
+    assert.ok(!flat(r.doc).includes(MONO_VAR));
+    assert.equal(r.mono, undefined);
+});
+
+test("all: a theme.mono $if keeps both sides, gated at run time by the host's theme.mono float", () => {
+    const r = ex(themedDoc(), "all");
+    // The box differs in its modifiers: two copies, each with a visibility modifier.
+    const [off, on] = r.doc.root;   // the usual look first
+    assert.deepEqual(on.box.modifiers, [{ background: "@colors.surface" }, { padding: 2 }, { visibility: `@${MONO_VAR}` }]);
+    assert.deepEqual(off.box.modifiers, [{ background: "@colors.surface" }, { graphicsLayer: { alpha: "@tile1_on" } }, { visibility: `@${MONO_OFF}` }]);
+    assert.equal(r.doc.root.length, 2);
+    // The switch is declared first, exported, 0 by default; the "off" side reads 1 - it.
+    assert.deepEqual(Object.entries(r.doc.resources.variables).slice(0, 2),
+        [[MONO_VAR, { value: 0, export: true }], [MONO_OFF, `1 - @${MONO_VAR}`]]);
+    assert.equal(r.mono.variable, MONO_VAR);
+    assert.equal(r.mono.forks, 1);
+    // The colours the host sets by name for each mono look.
+    assert.equal(r.mono.palettes.mono.surface, "#FF000000");
+    assert.equal(r.mono.palettes["mono-inverted"].surface, "#FFFFFFFF");
+    assert.ok(jsonToRc(r.doc, ".").length > 0);
+    // A live text of one variable on the mono side is its own, not the usual side's.
+    const Clock = { params: {}, body: { $if: "theme.mono", then: { text: { value: { type: "textFromFloat", value: "@t", whole: 2, decimal: 0 } } },
+        else: { text: { value: { type: "textFromFloat", value: "@t", whole: 2, decimal: 0 }, fontSize: 20 } } } };
+    const c = expandComponents({ ...themedDoc(), resources: { variables: { t: 1 } }, root: { Clock: {} } }, { library: themed({ Clock }), mode: "expand", theme: "all" }).doc.root;
+    assert.deepEqual(c.map((n) => n.text.value.value), ["@t", "@t + 0"]);
+    // light and dark stay single-theme documents.
+    for (const mode of ["light", "dark"]) assert.ok(!flat(ex(themedDoc(), mode).doc).includes(MONO_VAR));
+});
+
+test("all: forks gate at the innermost canvas command or layout node, nested ones too", () => {
+    const Dial = { params: {}, locals: { r: { $if: "theme.mono", then: "@theme.stroke * 3", else: 4 } },
+        body: { column: { children: [
+            { text: { value: "t", color: "@colors.accent" } },
+            { $if: "theme.mono", then: { text: { value: "m", modifiers: [{ visibility: "@show" }] } } },
+            { canvas: { modifiers: [{ size: 20 }], commands: [
+                { paint: { ops: [{ color: "@colors.accent" }, { $if: "theme.mono", then: { style: "stroke" } }] } },
+                { save: { commands: [{ $if: "!theme.mono", then: { drawCircle: { cx: 5, cy: 5, radius: "@r" } } }] } },
+            ] } },
+        ] } } };
+    const doc = { header: { apiLevel: 7, width: 40, height: 40, profiles: 513 }, resources: { variables: { show: 1 } }, root: { Dial: {} } };
+    const r = expandComponents(doc, { library: themed({ Dial }), mode: "expand", theme: "all" });
+    const kids = r.doc.root.column.children;
+    // The column itself is not copied: its differences are in its children.
+    assert.equal(kids.length, 3);
+    assert.deepEqual(kids[1].text.modifiers, [{ visibility: `@show * @${MONO_VAR}` }]);
+    const [paintOff, paintOn, save] = kids[2].canvas.commands;   // the usual look first
+    assert.deepEqual(paintOn, { conditionalOperations: { condition: "gt", v1: `@${MONO_VAR}`, v2: 0,
+        commands: [{ paint: { ops: [{ color: "@colors.accent" }, { style: "stroke" }] } }] } });
+    assert.equal(paintOff.conditionalOperations.condition, "le");
+    assert.deepEqual(save.save.commands, [{ conditionalOperations: { condition: "le", v1: `@${MONO_VAR}`, v2: 0,
+        commands: [{ drawCircle: { cx: 5, cy: 5, radius: "@dial1_r" } }] } }]);
+    // A local: off + (on - off) * mono, one resources variable.
+    assert.equal(r.doc.resources.variables.dial1_r, `4 + 2 * @${MONO_VAR}`);
+    assert.equal(r.mono.forks, 3);
+    assert.ok(!r.doc.resources.variables[MONO_OFF]);   // no layout node reads the off side
+    assert.ok(jsonToRc(r.doc, ".").length > 0);
+});
+
+test("all: a canvas reads componentWidth() before its gates; a loop is gated whole, never inside", () => {
+    const Bar = { params: {}, body: { canvas: { modifiers: [{ size: 20 }], commands: [
+        { $if: "theme.mono", then: { drawRect: { left: 0, top: 0, right: "componentWidth()", bottom: 2 } }, else: { drawRect: { left: 0, top: 0, right: "componentWidth()", bottom: 4 } } },
+        { loop: { index: "i", from: 0, until: 3, commands: [{ $if: "theme.mono", then: { drawCircle: { cx: "i * 5", cy: 2, radius: 1 } } }] } },
+    ] } } };
+    const doc = { header: { apiLevel: 7, width: 20, height: 20, profiles: 513 }, root: { Bar: {} } };
+    const cmds = expandComponents(doc, { library: themed({ Bar }), mode: "expand", theme: "all" }).doc.root.canvas.commands;
+    // The converters write componentWidth()'s op at its first read: inside a skipped branch it
+    // would stay 0 for every later use. A translate of 0 reads it first.
+    assert.deepEqual(cmds[0], { translate: { dx: "componentWidth() * 0", dy: 0 } });
+    assert.deepEqual(cmds.slice(1, 3).map((c) => c.conditionalOperations.condition), ["le", "gt"]);
+    // A conditionalOperations inside a loop sees the previous iteration's index: the loop is gated.
+    assert.equal(cmds[4].conditionalOperations.commands[0].loop.commands[0].drawCircle.cx, "i * 5");
+    assert.equal(cmds[4].conditionalOperations.condition, "gt");
+    // "auto" in a theme.mono (componentTheme all) $if: one form for every look, no fork.
+    const Ring = { params: {}, body: { box: { modifiers: [{ $if: "theme.mono", then: { background: "@colors.surface" }, auto: [{ background: "@colors.accent" }] }] } } };
+    const r = expandComponents({ ...doc, root: { Ring: {} } }, { library: themed({ Ring }), mode: "expand", theme: "all" });
+    assert.deepEqual(r.doc.root.box.modifiers, [{ background: "@colors.accent" }]);
+    assert.equal(r.mono.forks, 0);
+    assert.deepEqual(expandComponents({ ...doc, root: { Ring: {} } }, { library: themed({ Ring }), mode: "expand", theme: "mono" }).doc.root.box.modifiers, [{ background: "@colors.surface" }]);
+    // light-dark: the old auto, themed colours and no switch.
+    const ld = expandComponents({ ...doc, root: { Ring: {} } }, { library: themed({ Ring }), mode: "expand", theme: "light-dark" });
+    assert.deepEqual(ld.doc.root.box.modifiers, []);
+    assert.ok(!flat(ld.doc).includes(MONO_VAR));
+});
+
+test("all: a fork in a pattern template is gated inside the template", () => {
+    const Pill = { params: { label: { type: "string", required: true } },
+        body: { box: { modifiers: [{ $if: "theme.mono", then: { padding: 2 } }, { background: "@colors.surface" }], children: [{ text: { value: "@label" } }] } } };
+    const doc = { header: { apiLevel: 7, width: 40, height: 40, profiles: 513 }, componentMode: "pattern", componentTraps: [],
+        root: { column: { children: [{ Pill: { label: "a" } }, { Pill: { label: "b" } }] } } };
+    const r = expandComponents(doc, { library: themed({ Pill }), traps: [], theme: "all" });
+    assert.equal(r.modes.Pill, "pattern");
+    const def = r.doc.root[0].definePattern;
+    assert.equal(def.children.length, 2);
+    assert.deepEqual(def.children.map((c) => c.box.modifiers.at(-1)), [{ visibility: `@${MONO_OFF}` }, { visibility: `@${MONO_VAR}` }]);
+    assert.ok(jsonToRc(r.doc, ".").length > 0);
+});
+
+test("monoPalettes: the theme's palettes with the document's own colours as each mode expands them", () => {
+    const colors = { accent: { light: "#FFE8590C", dark: "#FFFF8A3D", mono: "#FFDDDDDD" }, brand: { light: "#FF00AA00", dark: "#FF00FF00" } };
+    const p = monoPalettes({ resources: { colors } }, themed({}));
+    assert.equal(p.mono.accent, "#FFDDDDDD");
+    assert.equal(p.mono.surface, "#FF000000");
+    assert.equal(p.mono.brand, "#FF00FF00");             // not a theme colour: mono takes its dark side
+    assert.equal(p["mono-inverted"].accent, "#FF000000"); // no mono-inverted value: the palette's
+    assert.equal(p["mono-inverted"].brand, "#FF00AA00");
 });
 
 test("mono: a document's colour of a theme name takes the mono palette unless it gives a mono value", () => {

@@ -48,7 +48,11 @@
 //                       compile-time choice on `static` params (also `a != 'x'`, `a`, `!a`);
 //                       `a` on a slot, or on a param bound to a "@variable", tests whether it was
 //                       given; on a literal it tests the value ("" and 0 are false).
-//                       "theme.mono" / "!theme.mono" test a theme number: the mono variant
+//                       "theme.mono" / "!theme.mono" choose the mono variant: when the document
+//                       expands for one look (componentTheme light, dark, mono...) at once; in
+//                       "auto" both sides are kept and chosen at run time (below). An "auto": Z
+//                       key gives instead one form for every look, told apart by colour alone
+//                       (a ring in @colors.monoOutline, transparent but in mono): no copy
 // An optional param with no default, used as a whole value ("onClick": "@onClick"), drops
 // the key it sits in, and the object around it if that leaves it empty.
 //
@@ -81,10 +85,24 @@
 // The result's `report` gives each variant's mode and why; `modes` sums it per component.
 //
 // Light, dark and mono: "componentTheme" at the top of the document (removed; the `theme`
-// option overrides it) picks the palette the theme colours take (theme/default.json):
-//   "auto"     (default) each theme colour as the theme gives it, {light, dark}: a themed colour
-//              the player picks by the system theme (~100 B more than a plain one); one value
-//              for both stays plain
+// option overrides it) picks the looks the document carries (theme/default.json):
+//   "auto"     (default) light and dark: each theme colour a themed {light, dark} colour the
+//              player picks by the system theme, one implementation of each component. The
+//              call sites are the same for every look, so a host (or the playground) wanting
+//              mono expands the same JSON again with "mono" / "mono-inverted": the same
+//              document, the components' other implementation. "light-dark" is the same.
+//   "all"      every look in one document. Each theme colour as the theme gives it,
+//              {light, dark}: a themed colour the player picks by the system theme (~100 B more
+//              than a plain one; one value for both stays plain). And mono at run time: the
+//              document exports a float, theme.mono (MONO_VAR, 0), which the host sets to 1
+//              while it overrides the named colours with the mono or mono-inverted palette
+//              (monoPalettes; the result's `mono` gives both). Every {"$if": "theme.mono"}
+//              keeps both sides, gated by it at the innermost canvas command
+//              (conditionalOperations) or layout node (two copies with a visibility modifier,
+//              theme.mono and theme.mono_off; the mono copy's declared names prefixed); a
+//              computed local becomes off + (on - off) * theme.mono. Motion stays on (an
+//              animationSpec cannot be switched at run time). About +20-30% over light-dark
+//              for a component gallery: the price of the mono copies
 //   "light"    / "dark": that side only, as plain colours ("dark" is the library's old look)
 //   "mono"     always-on display and e-ink: the theme's modes.mono palette (black, white, one
 //              grey) and numbers (@theme.mono is 1, so {"$if": "theme.mono"} picks each
@@ -95,8 +113,9 @@
 //              text and strokes on white); the same mono variants, no motion
 // A document's own colour wins, in either form; it may add a `mono` value ({"light", "dark",
 // "mono"} or {"value", "mono"}) and a `mono-inverted` one, and in mono (mono-inverted) a
-// colour of a theme name without one takes that palette's value. The result's `theme` is the
-// mode used.
+// colour of a theme name without one takes that palette's value (in auto, the palette the
+// host is given). The result's `theme` is the mode used. "light", "dark", "light-dark", "mono"
+// and "mono-inverted" are the decimated forms: one look (or two), the smallest document.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -247,6 +266,8 @@ export function expandComponents(doc, { library = loadLibrary(), mode, theme, me
     library = withLocal(library, localDefinitions(src));
     delete src.components;
     const ctx = { library, traps: new Set(traps), docMode, theme: resolveTheme(library.theme, themeMode) };
+    // all: mono is a run-time choice too, made by the host through the MONO_VAR float.
+    ctx.theme.runtimeMono = themeMode === "all";
 
     // The survey: every call expanded, and each one's pattern form compiled on the side.
     const survey = compileDoc(src, ctx, new Set());
@@ -291,18 +312,208 @@ export function expandComponents(doc, { library = loadLibrary(), mode, theme, me
     const modes = {};
     for (const r of report) modes[r.component] = modes[r.component] && modes[r.component] !== r.mode ? "mixed" : r.mode;
     return { doc: out.doc, components: [...out.used].sort(), instances: out.instances, mode: docMode, theme: themeMode,
-        ...(out.motion ? { motion_removed: out.motion } : {}), report, modes };
+        ...(out.motion ? { motion_removed: out.motion } : {}),
+        ...(out.monoDeclared ? { mono: { variable: MONO_VAR, forks: out.forks, palettes: monoPalettes(src, library) } } : {}),
+        report, modes };
 }
 
 const MODES = ["auto", "expand", "pattern"];
-export const THEME_MODES = ["auto", "light", "dark", "mono", "mono-inverted"];
+export const THEME_MODES = ["auto", "all", "light-dark", "light", "dark", "mono", "mono-inverted"];
 /** Both monochrome modes: mono (light on black) and mono-inverted (dark on white). */
 export const isMonoMode = (mode) => mode === "mono" || mode === "mono-inverted";
+
+// ---- mono at run time (componentTheme "all") ------------------------------------------------
+//
+// The format has two colour themes only (light and dark, picked by the player), and its JSON
+// has no colour expression a float could drive (a themed colour is the only colour that
+// changes, and only with the system theme). So an "all" document carries mono as:
+//   - MONO_VAR, an exported float (0 by default) the host sets to 1 for mono or mono-inverted;
+//   - every {"$if": "theme.mono"} of the components kept with both branches, gated by it at
+//     run time: a canvas command by a pair of conditionalOperations (gt / le 0), a layout
+//     node by a pair of copies with a visibility modifier (MONO_VAR, MONO_OFF = 1 - it), at
+//     the innermost canvas command or layout node that holds the difference; a computed
+//     local becomes off + (on - off) * MONO_VAR;
+//   - the colours, by name: every theme colour (and every colour of the document) is a named
+//     colour in the .rc, so the host overrides them with the mono or mono-inverted palette
+//     (monoPalettes; the playground does it). mono and mono-inverted differ only there.
+// Motion stays on: an animationSpec cannot be switched off at run time.
+export const MONO_VAR = "theme.mono";
+export const MONO_OFF = "theme.mono_off";
+const FORK = "$mono";
+const isFork = (n) => n !== null && typeof n === "object" && !Array.isArray(n) && FORK in n;
+const MONO_COND = /^(!?)\s*@?theme\.mono$/;
+
+/** A {"$if": "theme.mono"} kept for run time: {"$mono": {on, off}} (a side absent when dropped). */
+function monoFork(cond, then, els, sub, list) {
+    const neg = MONO_COND.exec(String(cond).trim())[1] === "!";
+    const side = (b) => {
+        if (b === undefined) return undefined;
+        const v = sub(b);
+        if (list) { const a = (Array.isArray(v) ? v : [v]).filter((y) => y !== DROP); return a.length ? a : undefined; }
+        return v === DROP ? undefined : v;
+    };
+    const on = side(neg ? els : then), off = side(neg ? then : els);
+    const f = {};
+    if (on !== undefined) f.on = on;
+    if (off !== undefined) f.off = off;
+    return { [FORK]: f };
+}
+
+/** `n` with every fork resolved to one side (on: mono). A fork in a list splices its side. */
+function pickSide(n, on) {
+    if (Array.isArray(n)) {
+        const out = [];
+        for (const x of n) {
+            if (isFork(x)) {
+                const b = x[FORK][on ? "on" : "off"];
+                if (b === undefined) continue;
+                const v = pickSide(b, on);
+                if (Array.isArray(v)) out.push(...v); else if (v !== DROP) out.push(v);
+            } else {
+                const v = pickSide(x, on);
+                if (v !== DROP) out.push(v);
+            }
+        }
+        return out;
+    }
+    if (isFork(n)) { const b = n[FORK][on ? "on" : "off"]; return b === undefined ? DROP : pickSide(b, on); }
+    if (n && typeof n === "object") {
+        const out = {};
+        let had = 0;
+        for (const [k, v] of Object.entries(n)) { had++; const p = pickSide(v, on); if (p !== DROP) out[k] = p; }
+        return had && !Object.keys(out).length ? DROP : out;
+    }
+    return n;
+}
+
+function hasFork(n) {
+    if (Array.isArray(n)) return n.some(hasFork);
+    if (n && typeof n === "object") return isFork(n) || Object.values(n).some(hasFork);
+    return false;
+}
+
+/**
+ * The forks of an expanded document gated at run time, each at the innermost list that can
+ * gate it: a canvas `commands` list (conditionalOperations) or a layout list (`children`, a
+ * root array: a visibility modifier on each copy). stats counts the gates and whether
+ * MONO_OFF is read.
+ */
+function gateForks(n, key, stats, inLoop = false) {
+    if (Array.isArray(n)) {
+        // Not inside a loop's commands: a conditionalOperations there sees the loop index of
+        // the iteration before (TS and C++ players alike), so the whole loop is gated instead.
+        const kind = key === "commands" && !inLoop ? "canvas" : key === "children" || key === "root" ? "layout" : null;
+        const out = [];
+        const touched = new Set();
+        for (const x of n) {
+            const r = gateForks(x, null, stats);
+            if (!kind || !hasFork(r)) { out.push(r); continue; }
+            const gated = gateOne(r, kind, stats);
+            if (kind === "canvas") {
+                // The converters write componentWidth() / componentHeight()'s COMPONENT_VALUE op
+                // where the canvas first reads it: inside a conditionalOperations, a skipped
+                // branch would leave it unset for every later use (the TS player draws them at
+                // 0). Read first here, outside the gates, by a translate of 0 (a tree `variable`
+                // writes nothing until it is read).
+                const text = JSON.stringify(gated), earlier = JSON.stringify(out);
+                const need = ["componentWidth()", "componentHeight()"].map((fn) => text.includes(fn) && !touched.has(fn) && !earlier.includes(fn));
+                if (need[0] || need[1]) {
+                    out.push({ translate: { dx: need[0] ? "componentWidth() * 0" : 0, dy: need[1] ? "componentHeight() * 0" : 0 } });
+                    if (need[0]) touched.add("componentWidth()");
+                    if (need[1]) touched.add("componentHeight()");
+                }
+            }
+            out.push(...gated);
+        }
+        return out;
+    }
+    if (n && typeof n === "object") {
+        const out = {};
+        const loop = String(n.type ?? "").toLowerCase() === "loop";
+        for (const [k, v] of Object.entries(n)) out[k] = gateForks(v, k, stats, loop || key === "loop");
+        return out;
+    }
+    return n;
+}
+
+function gateOne(node, kind, stats) {
+    const list = (v) => (v === DROP ? [] : Array.isArray(v) ? v : [v]);
+    let on = list(pickSide(node, true)), off = list(pickSide(node, false));
+    // What both sides share at either end is written once, ungated.
+    const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+    let head = 0, tail = 0;
+    while (head < on.length && head < off.length && same(on[head], off[head])) head++;
+    while (tail < on.length - head && tail < off.length - head && same(on[on.length - 1 - tail], off[off.length - 1 - tail])) tail++;
+    const before = on.slice(0, head), after = on.slice(on.length - tail);
+    on = on.slice(head, on.length - tail);
+    off = off.slice(head, off.length - tail);
+    if (!on.length && !off.length) return before;
+    stats.forks++;
+    // The usual look first, and the mono side's live texts its own: the converters write a
+    // textFromFloat of one variable once and share it, where it is first used, and a player
+    // need not refresh it there while that branch is skipped or gone (the TS player does not).
+    on = on.map(ownLiveText);
+    if (kind === "canvas") {
+        const cond = (c, commands) => ({ conditionalOperations: { condition: c, v1: `@${MONO_VAR}`, v2: 0, commands } });
+        return [...before, ...(off.length ? [cond("le", off)] : []), ...(on.length ? [cond("gt", on)] : []), ...after];
+    }
+    if (off.length) stats.off = true;
+    // Both copies are in the tree at once (one gone): the names the mono copy declares (a
+    // canvas `variable`, a measure, a path id) get a prefix of their own, or the gone copy
+    // would overwrite the values the shown one draws with.
+    on = on.map((x) => scopeBodyNames(x, `mono${stats.forks}_`, new Set()));
+    return [...before, ...off.map((x) => withVisibility(x, `@${MONO_OFF}`)), ...on.map((x) => withVisibility(x, `@${MONO_VAR}`)), ...after];
+}
+
+/** `n` with each textFromFloat of a bare variable made an expression ("@v + 0"), so it is not
+ *  shared with the same text elsewhere. */
+function ownLiveText(n) {
+    if (Array.isArray(n)) return n.map(ownLiveText);
+    if (!n || typeof n !== "object") return n;
+    const out = {};
+    for (const [k, v] of Object.entries(n)) out[k] = ownLiveText(v);
+    const tff = String(n.type ?? "").toLowerCase() === "textfromfloat" ? out : null;
+    if (tff && typeof tff.value === "string" && /^[@$][A-Za-z_][\w.]*$/.test(tff.value)) tff.value = `${tff.value} + 0`;
+    return out;
+}
+
+/** A layout node shown only when `v` is 1: a visibility modifier added (multiplied into one it has). */
+function withVisibility(node, v) {
+    if (!node || typeof node !== "object" || Array.isArray(node)) throw new Error(`a {"$if": "theme.mono"} branch in a layout list must be a component, not ${JSON.stringify(node).slice(0, 40)}`);
+    const [type, props] = componentOf(node);
+    if (!type) throw new Error(`a {"$if": "theme.mono"} branch in a layout list must be a component, not ${JSON.stringify(node).slice(0, 40)}`);
+    const mods = [...(props.modifiers ?? [])];
+    const at = mods.findIndex((m) => m && typeof m === "object" && "visibility" in m);
+    if (at >= 0) mods[at] = { visibility: `${mods[at].visibility} * ${v}` };
+    else mods.push({ visibility: v });
+    const inner = { ...props, modifiers: mods };
+    return typeof node.type === "string" ? inner : { [Object.keys(node)[0]]: inner };
+}
+
+/**
+ * The colours a host sets by name for mono and mono-inverted on an "all" document:
+ * { mono: {name: "#AARRGGBB"}, "mono-inverted": {...} }. Each is the theme's palette, then the
+ * document's own colours as that mode expands them (its `mono` / `mono-inverted` value, the
+ * palette's for a theme name, else the light (mono-inverted) or dark (mono) side). Colours
+ * absent from the .rc are harmless: a host override of an unknown name does nothing.
+ */
+export function monoPalettes(doc, library = loadLibrary()) {
+    const out = {};
+    for (const mode of ["mono", "mono-inverted"]) {
+        const t = resolveTheme(library.theme, mode);
+        const own = doc?.resources?.colors ? colorEntries(docColors(doc.resources.colors, t)) : [];
+        const pal = { ...t.colors };
+        for (const [k, v] of own) if (typeof v === "string") pal[k] = v;
+        out[mode] = Object.fromEntries(Object.entries(pal).filter(([, v]) => typeof v === "string"));
+    }
+    return out;
+}
 
 /**
  * The theme a document expands with, for one componentTheme:
  *   auto   every colour as the theme gives it: {light, dark} (a themed colour, picked by the
- *          player from the system theme), or one value for both
+ *          player from the system theme), or one value for both; light-dark and all the
+ *          same (all also switches mono at run time, see MONO_VAR)
  *   light  / dark: that side of each colour, as a plain colour
  *   mono   the theme's modes.mono palette (plain colours) and numbers (@theme.mono is 1)
  *   mono-inverted  modes["mono-inverted"] (dark on white), its numbers (@theme.mono is 1 too)
@@ -417,17 +628,39 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
     const resourceNames = new Set(Array.isArray(docVars)
         ? docVars.map((v) => v?.name ?? Object.keys(v ?? {})[0])
         : Object.keys(docVars ?? {}));
+    if (theme.runtimeMono) resourceNames.add(MONO_VAR);
     // Every name the document refers to, so a pattern parameter never shadows one.
     const reserved = new Set(resourceNames);
     walk(out, (n) => { for (const v of Object.values(n)) if (typeof v === "string") for (const m of v.matchAll(/[@$]([A-Za-z_]\w*)/g)) reserved.add(m[1]); });
     const state = { library, theme, patterns: existing, counters: new Map(), used: new Set(), locals: {}, colors: new Set(), instances: 0, resourceNames,
         reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map(), paths: new Map() };
-    const expanded = expandNode(out, state, []);
+    let expanded = expandNode(out, state, []);
+    if (state.defs.size) {
+        // The templates go first in a root array, where the parser records them in its first
+        // pass, before any call.
+        const defs = [...state.defs.values()];
+        const root = expanded.root;
+        expanded.root = [...defs, ...(root === undefined ? [] : Array.isArray(root) ? root : [root])];
+    }
+    // auto: the mono branches kept by the expansion, gated by MONO_VAR (one root node is put
+    // in a root array, where it can be).
+    const stats = { forks: 0, off: false };
+    if (theme.runtimeMono) {
+        expanded = gateForks(expanded, null, stats);
+        if (expanded.root && !Array.isArray(expanded.root) && hasFork(expanded.root)) expanded.root = gateForks([expanded.root], "root", stats);
+        if (hasFork(expanded)) throw new Error(`a {"$if": "theme.mono"} sits where it cannot be switched at run time (outside a canvas's commands or a layout list); use componentTheme "light", "dark" or "mono"`);
+    }
     expanded.resources ??= {};
     const res = expanded.resources;
     const hoisted = Object.fromEntries([...state.hoisted].map(([v, n]) => [n, v]));
-    if (Object.keys(state.locals).length || Object.keys(hoisted).length) {
-        res.variables = { ...(res.variables ?? {}), ...hoisted, ...state.locals };
+    // The host's mono switch first, before anything reads it.
+    // Declared when it can change something: a fork, or a colour the mono palettes re-colour
+    // (a theme colour, or one of the document's with a mono value of its own).
+    const recolours = state.colors.size || colorEntries(res.colors).some(([n, v]) => n in (library.theme?.colors ?? {})
+        || (v && typeof v === "object" && ("mono" in v || "mono-inverted" in v)));
+    const mono = theme.runtimeMono && (stats.forks || recolours) ? { [MONO_VAR]: { value: 0, export: true }, ...(stats.off ? { [MONO_OFF]: `1 - @${MONO_VAR}` } : {}) } : {};
+    if (Object.keys(state.locals).length || Object.keys(hoisted).length || Object.keys(mono).length) {
+        res.variables = { ...mono, ...(res.variables ?? {}), ...hoisted, ...state.locals };
     }
     if (state.paths.size) res.paths = { ...Object.fromEntries(state.paths), ...(res.paths ?? {}) };
     if (res.colors) res.colors = docColors(res.colors, theme);
@@ -445,16 +678,9 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
             : { ...colors, ...(res.colors ?? {}) };
     }
     if (!Object.keys(res).length) delete expanded.resources;
-    if (state.defs.size) {
-        // The templates go first in a root array, where the parser records them in its first
-        // pass, before any call.
-        const defs = [...state.defs.values()];
-        const root = expanded.root;
-        expanded.root = [...defs, ...(root === undefined ? [] : Array.isArray(root) ? root : [root])];
-    }
     const motion = isMonoMode(theme.mode) ? stripMotion(expanded) : 0;
     return { doc: expanded, used: state.used, instances: state.instances, variants: state.variants,
-        fallbacks: [...state.fallbacks.values()], names: state.names, motion };
+        fallbacks: [...state.fallbacks.values()], names: state.names, motion, forks: stats.forks, monoDeclared: MONO_VAR in mono };
 }
 
 function expandNode(node, state, stack) {
@@ -596,7 +822,7 @@ function expandCall(name, def, given, slots, n, state, stack) {
             state.resourceNames.add(unique);
             continue;
         }
-        env.locals[k] = computedLocal(k, v, unique, env, state, name);
+        env.locals[k] = computedLocal(k, v, unique, env, state, name, animated);
     }
     const scoped = scopeBodyNames(structuredClone(def.body), `${name.toLowerCase()}${n}_`,
         new Set([...Object.keys(def.params ?? {}), ...Object.keys(def.locals ?? {})]));
@@ -649,6 +875,14 @@ function scopeBodyNames(body, prefix, keep) {
  */
 function declareInBody(nodes, decls, name) {
     const top = nodes[0];
+    if (isFork(top)) {
+        // A body that is a theme.mono choice: each side declares its own.
+        for (const side of ["on", "off"]) {
+            const b = top[FORK][side];
+            if (b !== undefined) declareInBody(Array.isArray(b) ? b : [b], structuredClone(decls), name);
+        }
+        return;
+    }
     const key = top && typeof top === "object" && !Array.isArray(top) ? Object.keys(top).find((k) => top[k] && typeof top[k] === "object") : undefined;
     const inner = key && (key === "type" ? top : top[key]);
     const kind = key === "type" ? String(top.type).toLowerCase() : key?.toLowerCase();
@@ -933,8 +1167,16 @@ function patternName(c, state) {
  *   - or, when it names something resources cannot see (a variable declared in the tree, a
  *     pattern parameter, componentWidth()), the parenthesised text at every use.
  */
-function computedLocal(k, v, unique, env, state, name) {
+function computedLocal(k, v, unique, env, state, name, decls) {
     const val = substitute(v, env, state, name);
+    if (isFork(val)) return monoLocal(k, val[FORK], unique, env, state, name, decls);
+    return placeLocal(k, val, unique, env, state, name);
+}
+
+/** Where a computed local's (substituted) value lives; see computedLocal. With `decls`, a value
+ *  resources cannot see is a tree `variable` declared in the body (pushed there) instead of
+ *  the text at every use. */
+function placeLocal(k, val, unique, env, state, name, decls) {
     if (val === DROP || val === undefined) throw new Error(`${name}: local '${k}' has no value`);
     if (typeof val === "number") return { literal: val };
     if (typeof val === "boolean") return { literal: val ? 1 : 0 };
@@ -944,10 +1186,32 @@ function computedLocal(k, v, unique, env, state, name) {
     if (env.inPattern) return { inline: val };
     const names = [...val.matchAll(/[@$]([A-Za-z_][\w.]*)/g)].map((m) => m[1]);
     const global = !/component(Width|Height)/i.test(val) && names.every((x) => state.resourceNames.has(x));
-    if (!global) return { inline: val };
+    if (!global) {
+        if (!decls) return { inline: val };
+        decls.push({ variable: { name: unique, value: val } });
+        return { ref: `@${unique}` };
+    }
     state.locals[unique] = val;
     state.resourceNames.add(unique);
     return { ref: `@${unique}` };
+}
+
+/**
+ * A {"$if": "theme.mono"} local in an auto document, chosen at run time: off + (on - off) *
+ * MONO_VAR. Each side is placed like a local of its own first (a literal, a reference, a
+ * resources variable, or with `decls` a tree variable), so the mix stays a short expression
+ * (a float expression holds at most 32 entries).
+ */
+function monoLocal(k, { on, off }, unique, env, state, name, decls) {
+    if (on === undefined || off === undefined) throw new Error(`${name}: local '${k}': a theme.mono $if needs both sides`);
+    if (JSON.stringify(on) === JSON.stringify(off)) return placeLocal(k, on, unique, env, state, name, decls);
+    if (typeof on === "number" && typeof off === "number") {
+        return placeLocal(k, `${off} + ${Math.round((on - off) * 1e6) / 1e6} * @${MONO_VAR}`, unique, env, state, name, decls);
+    }
+    const a = placeLocal(k, on, `${unique}_mono`, env, state, name, decls);
+    const b = placeLocal(k, off, `${unique}_color`, env, state, name, decls);
+    const t = (l) => localText(l, false);
+    return placeLocal(k, `${t(b)} + (${t(a)} - ${t(b)}) * @${MONO_VAR}`, unique, env, state, name, decls);
 }
 
 function localText(l, whole) {
@@ -991,6 +1255,17 @@ function substitute(node, env, state, name) {
                 continue;
             }
             if (x && typeof x === "object" && !Array.isArray(x) && "$if" in x) {
+                if (state.theme.runtimeMono && MONO_COND.test(String(x.$if).trim())) {
+                    if ("auto" in x) {
+                        // One form for both, told apart by colour alone (the host re-colours).
+                        const v = substitute(x.auto, env, state, name);
+                        if (Array.isArray(v)) out.push(...v.filter((y) => y !== DROP)); else if (v !== DROP) out.push(v);
+                        continue;
+                    }
+                    const f = monoFork(x.$if, x.then, x.else, (b) => substitute(b, env, state, name), true);
+                    if (Object.keys(f[FORK]).length) out.push(f);
+                    continue;
+                }
                 const branch = evalIf(x.$if, env.cond ?? env, name) ? x.then : x.else;
                 if (branch === undefined) continue;
                 const v = substitute(branch, env, state, name);
@@ -1005,6 +1280,11 @@ function substitute(node, env, state, name) {
     }
     if (node && typeof node === "object") {
         if ("$if" in node) {
+            if (state.theme.runtimeMono && MONO_COND.test(String(node.$if).trim())) {
+                if ("auto" in node) return substitute(node.auto, env, state, name);
+                const f = monoFork(node.$if, node.then, node.else, (b) => substitute(b, env, state, name), false);
+                return Object.keys(f[FORK]).length ? f : DROP;
+            }
             const branch = evalIf(node.$if, env.cond ?? env, name) ? node.then : node.else;
             return branch === undefined ? DROP : substitute(branch, env, state, name);
         }
@@ -1058,6 +1338,7 @@ function substituteString(s, env, state, name) {
         if (k in env.locals) return localText(env.locals[k], true);
     }
     let out = s.replace(/@theme\.([A-Za-z_]\w*)/g, (m, k) => {
+        if (k === "mono" && state.theme.runtimeMono) return m;   // the run-time switch
         const v = state.theme.numbers[k];
         if (v === undefined) throw new Error(`${name}: theme number '${k}' is not in the theme`);
         return String(v);

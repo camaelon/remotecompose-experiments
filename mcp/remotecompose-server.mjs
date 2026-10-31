@@ -107,6 +107,17 @@ Structure
   whole screen on one canvas: its texts are placed by hand and nothing relayouts when the size changes.
 - Modifiers are a list: ["fillMaxWidth", {"padding": 16}, {"spacedBy": 8}, {"background": "@colors.surface"},
   {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column)].
+- Smaller sizes: a widget is resized by its host. Drop content by priority with a collapsibleColumn inside a padded
+  box: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers":
+  ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [...]}}]}}, with
+  {"collapsiblePriority": {"orientation": "vertical", "priority": N}} on the optional children (lowest N dropped first;
+  none = kept). collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
+- Text picked by a runtime index (a phase name, a weekday, "Rising"/"Falling"): the TextChoice component
+  ({"TextChoice": {"items": ["New moon", ...], "index": "@phaseIndex"}}). A layout text cannot take textSubtext /
+  textTransform / textLookup (only canvas commands can); numbers go through textFromFloat, joins through textMerge.
+  A word joined to other text in one wrapping line ("Waning gibbous, 57% lit") is not a TextChoice: compute it as a
+  named text in a canvas "global" block (textSubtext over fixed-width names, then textTransform to trim; see
+  TIM-11), then use "@name" in a layout text's textMerge.
 - Trap: weighted children ignore spacedBy (the weights share the whole width, then the gaps overflow it). In a
   row or column with weights, put fixed spacer boxes ({"box": {"modifiers": [{"width": 8}]}}) between them.
 
@@ -120,7 +131,10 @@ Canvas (when you do draw)
 - Never SVG path strings: use pathExpression or the components (Java writes SVG strings as empty paths).
 
 Values
-- Colours: theme colours "@colors.onSurface" etc. (light, dark and mono follow); literal "#AARRGGBB" otherwise.
+- Colours: theme colours "@colors.onSurface" etc.; literal "#AARRGGBB" otherwise. Write each component call once:
+  the same JSON expands for every look. Light and dark follow the system theme; mono and mono-inverted
+  (always-on, e-ink) are the same JSON expanded with the components' mono implementation (render with
+  componentTheme "mono" to check it; the published playground's Mono buttons switch to it).
 - Expressions are strings: "componentWidth() / 2", "@progress * 360"; Android rejects one over 32 entries:
   split long formulas into named variables.
 - Anything that depends on the date or time (today, this month, "in 3 days") is computed from the clock
@@ -162,9 +176,10 @@ async function smallSizeNote(args) {
     } catch { /* no verdict */ }
     if (!over.length) return "";
     return `size warning: at ${over.join(" and ")} the content no longer fits (cut off or squeezed to nothing). A widget is resized by its host, ` +
-        "often smaller than designed: drop the least important content first (collapsibleColumn / collapsibleRow with " +
-        "collapsiblePriority: examples LAY-13, LAY-14), switch to a compact layout (StateLayout: LAY-15), or at minimum put " +
-        "the content in a verticalScroll.";
+        "often smaller than designed: drop the least important content first (a collapsibleColumn with collapsiblePriority " +
+        "on the optional children, inside a box that carries the padding, horizontalAlignment \"start\", lowest priority " +
+        "dropped first: examples LAY-13, LAY-14; reference topic \"format\" has the snippet), switch to a compact layout " +
+        "(StateLayout: LAY-15), or at minimum put the content in a verticalScroll.";
 }
 
 async function renderVariants(t, args) {
@@ -294,17 +309,19 @@ const tools = [
         },
     },
     (() => {
-        // render, plus componentTheme: the mono variants are chosen when the document is
-        // expanded (not a player theme), so they are set on the JSON before rendering it.
+        // render, plus componentTheme: the same JSON expanded for another look (the components'
+        // mono, light or dark implementation), set on the JSON before rendering it. By default
+        // ("auto") light and dark, by the system theme; "all" carries mono too, switched at run time.
         const t = tool(render, "render_rc");
         return {
             ...t, name: "render",
             description: t.description + " The result ends with the document's design warnings, if any (a UI hand-drawn on a canvas, " +
-                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome variant " +
-                "of a JSON document (always-on displays, e-ink) without editing it.",
+                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome look " +
+                "of a JSON document (always-on displays, e-ink) without editing it: the same component calls, expanded with the components' mono " +
+                "implementation. By default the document follows the system's light or dark theme.",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
                 variants: { type: "boolean", description: "Check every state in one call: light, dark and mono, narrow and wide, and (when the document reads the clock) another time of day, each image captioned. Use it before publishing." },
-                componentTheme: { type: "string", enum: ["auto", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the component theme to expand with." } } },
+                componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono / mono-inverted: the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
             handler: async ({ componentTheme, variants, ...args } = {}) => variants ? renderVariants(t, args) : withDesign(await (async () => {
                 // One of width/height: the other from the document's own aspect ratio.
                 if ((args.width === undefined) !== (args.height === undefined)) {

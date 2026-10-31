@@ -37,6 +37,12 @@
    "lN2": "@lN2a + 0.001828 * sin(10.184165 + 0.42553742 * @tN2) - 0.005836 * sin(6.231459 + 0.01720197 * @tN2) + 0.000593 * sin(4.483093 + 0.456055 * @tN2)",
    "tN3": "@tN2 - (@lN2 - @NN) * 29.530589",
    "toNew": "floor(@tN3 - @d0)",
+   "fullIn": "step(@toFull, 1.5)",
+   "fullTomorrow": "step(@toFull, 0.5) * step(1.5, @toFull)",
+   "fullToday": "step(0.5, @toFull)",
+   "newIn": "step(@toNew, 1.5)",
+   "newTomorrow": "step(@toNew, 0.5) * step(1.5, @toNew)",
+   "newToday": "step(0.5, @toNew)",
    "moonphase1_p": "@f - floor(@f)",
    "moonphase1_c": "cos(6.2831853 * @moonphase1_p)"
   },
@@ -44,6 +50,10 @@
    "background": {
     "light": "#FFF5F7FA",
     "dark": "#FF101828"
+   },
+   "highlight": {
+    "light": "#FFF6C343",
+    "dark": "#FFFFD180"
    },
    "muted": {
     "light": "#FF5A6475",
@@ -60,6 +70,10 @@
    "primary": {
     "light": "#FF1565D8",
     "dark": "#FF4DA3FF"
+   },
+   "shadow": {
+    "light": "#FF3D4655",
+    "dark": "#FF263042"
    },
    "surfaceHigh": {
     "light": "#FFE8ECF2",
@@ -80,20 +94,65 @@
     },
     {
      "padding": 16
-    },
-    {
-     "spacedBy": 16
     }
    ],
    "children": [
     {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": 0
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "New Moon       Waxing CrescentFirst Quarter  Waxing Gibbous Full Moon      Waning Gibbous Last Quarter   Waning Crescent",
+            "start": "@ni * 15",
+            "len": 15,
+            "varName": "pn15"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@pn15",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "phaseName"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+            "start": "(calendarMonth() - 1) * 9",
+            "len": 9,
+            "varName": "month9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@month9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "monthName"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
      "row": {
       "verticalAlignment": "center",
       "modifiers": [
-       "fillMaxWidth",
-       {
-        "spacedBy": 16
-       }
+       "fillMaxWidth"
       ],
       "children": [
        {
@@ -138,7 +197,7 @@
            "paint": {
             "ops": [
              {
-              "color": "@colors.surfaceHigh"
+              "color": "@colors.shadow"
              }
             ]
            }
@@ -154,7 +213,7 @@
            "paint": {
             "ops": [
              {
-              "color": "@colors.warning"
+              "color": "@colors.highlight"
              }
             ]
            }
@@ -181,7 +240,7 @@
            "paint": {
             "ops": [
              {
-              "color": "@colors.surfaceHigh"
+              "color": "@colors.shadow"
              }
             ]
            }
@@ -198,90 +257,44 @@
         }
        },
        {
-        "canvas": {
+        "column": {
          "modifiers": [
           {
            "weight": 1
           },
           {
-           "height": 120
+           "padding": {
+            "start": 16
+           }
           }
          ],
-         "commands": [
+         "children": [
           {
-           "textSubtext": {
-            "text": "New Moon       Waxing CrescentFirst Quarter  Waxing Gibbous Full Moon      Waning Gibbous Last Quarter   Waning Crescent",
-            "start": "@ni * 15",
-            "len": 15,
-            "varName": "pn15"
+           "text": {
+            "value": "TONIGHT",
+            "fontSize": 12,
+            "color": "@colors.muted",
+            "maxLines": 1
            }
           },
           {
-           "textTransform": {
-            "text": "@pn15",
-            "start": 0,
-            "len": -1,
-            "operation": 3,
-            "varName": "phaseName"
-           }
-          },
-          {
-           "paint": {
-            "ops": [
+           "text": {
+            "value": "@phaseName",
+            "fontSize": 20,
+            "color": "@colors.onSurface",
+            "maxLines": 2,
+            "modifiers": [
              {
-              "color": "@colors.muted"
-             },
-             {
-              "textSize": 12
+              "padding": {
+               "top": 2
+              }
              }
             ]
            }
           },
           {
-           "drawTextAnchored": {
-            "text": "TONIGHT",
-            "x": 0,
-            "y": 8,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.onSurface"
-             },
-             {
-              "textSize": 20
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "@phaseName",
-            "x": 0,
-            "y": 31,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.muted"
-             },
-             {
-              "textSize": 13
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": {
+           "text": {
+            "value": {
              "type": "textMerge",
              "id1": {
               "type": "textFromFloat",
@@ -292,15 +305,21 @@
              },
              "id2": "% illuminated"
             },
-            "x": 0,
-            "y": 55,
-            "panX": -1,
-            "panY": 0
+            "fontSize": 13,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "padding": {
+               "top": 10
+              }
+             }
+            ]
            }
           },
           {
-           "drawTextAnchored": {
-            "text": {
+           "text": {
+            "value": {
              "type": "textMerge",
              "id1": "Moon age ",
              "id2": {
@@ -315,162 +334,291 @@
               "id2": " days"
              }
             },
-            "x": 0,
-            "y": 74,
-            "panX": -1,
-            "panY": 0
+            "fontSize": 13,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "padding": {
+               "top": 2
+              }
+             }
+            ]
            }
           },
           {
-           "paint": {
-            "ops": [
+           "box": {
+            "modifiers": [
              {
-              "color": "@colors.primary"
+              "padding": {
+               "top": 10
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "Full moon in ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@toFull",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " days"
+                }
+               },
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@fullIn"
+                }
+               ]
+              }
              },
              {
-              "alpha": "step(@toFull, 1.5)"
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": {
-             "type": "textMerge",
-             "id1": "Full moon in ",
-             "id2": {
-              "type": "textMerge",
-              "id1": {
-               "type": "textFromFloat",
-               "value": "@toFull",
-               "whole": 2,
-               "decimal": 0,
-               "flags": 5
-              },
-              "id2": " days"
-             }
-            },
-            "x": 0,
-            "y": 96,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "alpha": "step(@toFull, 0.5) * step(1.5, @toFull)"
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "Full moon tomorrow",
-            "x": 0,
-            "y": 96,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "alpha": "step(0.5, @toFull)"
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "Full moon today",
-            "x": 0,
-            "y": 96,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "@colors.primary"
+              "text": {
+               "value": "Full moon tomorrow",
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@fullTomorrow"
+                }
+               ]
+              }
              },
              {
-              "alpha": "step(@toNew, 1.5)"
+              "text": {
+               "value": "Full moon today",
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@fullToday"
+                }
+               ]
+              }
              }
             ]
            }
           },
           {
-           "drawTextAnchored": {
-            "text": {
-             "type": "textMerge",
-             "id1": "New moon in ",
-             "id2": {
-              "type": "textMerge",
-              "id1": {
-               "type": "textFromFloat",
-               "value": "@toNew",
-               "whole": 2,
-               "decimal": 0,
-               "flags": 5
-              },
-              "id2": " days"
-             }
-            },
-            "x": 0,
-            "y": 114,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
+           "box": {
+            "modifiers": [
              {
-              "alpha": "step(@toNew, 0.5) * step(1.5, @toNew)"
+              "padding": {
+               "top": 2
+              }
              }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "New moon tomorrow",
-            "x": 0,
-            "y": 114,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
+            ],
+            "children": [
              {
-              "alpha": "step(0.5, @toNew)"
-             }
-            ]
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "New moon today",
-            "x": 0,
-            "y": 114,
-            "panX": -1,
-            "panY": 0
-           }
-          },
-          {
-           "paint": {
-            "ops": [
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "New moon in ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@toNew",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " days"
+                }
+               },
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@newIn"
+                }
+               ]
+              }
+             },
              {
-              "alpha": 1
+              "text": {
+               "value": "New moon tomorrow",
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@newTomorrow"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "New moon today",
+               "fontSize": 13,
+               "color": "@colors.primary",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "visibility": "@newToday"
+                }
+               ]
+              }
              }
             ]
            }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "value": {
+       "type": "textMerge",
+       "id1": "@monthName",
+       "id2": {
+        "type": "textMerge",
+        "id1": " ",
+        "id2": {
+         "type": "textFromFloat",
+         "value": "year()",
+         "whole": 4,
+         "decimal": 0,
+         "flags": 5
+        }
+       }
+      },
+      "fontSize": 18,
+      "color": "@colors.onSurface",
+      "maxLines": 1,
+      "modifiers": [
+       {
+        "padding": {
+         "top": 20
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 10,
+         "bottom": 2
+        }
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "M",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "T",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "W",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "T",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "F",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "S",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "S",
+         "fontSize": 12,
+         "color": "@colors.muted",
+         "maxLines": 1,
+         "textAlign": "center",
+         "modifiers": [
+          {
+           "weight": 1
           }
          ]
         }
@@ -520,7 +668,13 @@
        {
         "variable": {
          "name": "rh",
-         "value": "(componentHeight() - 52) / 6"
+         "value": "componentHeight() / 6"
+        }
+       },
+       {
+        "variable": {
+         "name": "side",
+         "value": "step(@cw, 1.6 * @rh)"
         }
        },
        {
@@ -533,96 +687,6 @@
         "variable": {
          "name": "ts",
          "value": "clamp(10, 15, 0.26 * @u)"
-        }
-       },
-       {
-        "textSubtext": {
-         "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
-         "start": "(@m - 1) * 9",
-         "len": 9,
-         "varName": "month9"
-        }
-       },
-       {
-        "textTransform": {
-         "text": "@month9",
-         "start": 0,
-         "len": -1,
-         "operation": 3,
-         "varName": "month"
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.onSurface"
-          },
-          {
-           "textSize": 18
-          }
-         ]
-        }
-       },
-       {
-        "drawTextAnchored": {
-         "text": {
-          "type": "textMerge",
-          "id1": "@month",
-          "id2": {
-           "type": "textMerge",
-           "id1": " ",
-           "id2": {
-            "type": "textFromFloat",
-            "value": "year()",
-            "whole": 4,
-            "decimal": 0,
-            "flags": 5
-           }
-          }
-         },
-         "x": 0,
-         "y": 12,
-         "panX": -1,
-         "panY": 0
-        }
-       },
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@colors.muted"
-          },
-          {
-           "textSize": 12
-          }
-         ]
-        }
-       },
-       {
-        "loop": {
-         "index": "wd",
-         "from": 0,
-         "until": 7,
-         "commands": [
-          {
-           "textSubtext": {
-            "text": "MTWTFSS",
-            "start": "wd",
-            "len": 1,
-            "varName": "initial"
-           }
-          },
-          {
-           "drawTextAnchored": {
-            "text": "@initial",
-            "x": "@cw * (wd + 0.5)",
-            "y": 40,
-            "panX": 0,
-            "panY": 0
-           }
-          }
-         ]
         }
        },
        {
@@ -723,14 +787,32 @@
              },
              {
               "variable": {
+               "name": "nx",
+               "value": "@x - @side * 0.2 * @cw"
+              }
+             },
+             {
+              "variable": {
+               "name": "mx",
+               "value": "@x + @side * 0.2 * @cw"
+              }
+             },
+             {
+              "variable": {
                "name": "y0",
-               "value": "52 + @rh * week"
+               "value": "@rh * week"
               }
              },
              {
               "variable": {
                "name": "cy",
-               "value": "@y0 + 0.52 * @rh"
+               "value": "@y0 + @rh * (0.52 - 0.02 * @side)"
+              }
+             },
+             {
+              "variable": {
+               "name": "ny",
+               "value": "@y0 + @rh * (0.17 + 0.33 * @side)"
               }
              },
              {
@@ -788,8 +870,8 @@
                 "decimal": 0,
                 "flags": 5
                },
-               "x": "@x",
-               "y": "@y0 + 0.17 * @rh",
+               "x": "@nx",
+               "y": "@ny",
                "panX": 0,
                "panY": 0
               }
@@ -815,8 +897,8 @@
                 "decimal": 0,
                 "flags": 5
                },
-               "x": "@x",
-               "y": "@y0 + 0.17 * @rh",
+               "x": "@nx",
+               "y": "@ny",
                "panX": 0,
                "panY": 0
               }
@@ -835,7 +917,7 @@
              },
              {
               "drawCircle": {
-               "cx": "@x",
+               "cx": "@mx",
                "cy": "@cy",
                "radius": "@r + min(1, @r)"
               }
@@ -851,7 +933,7 @@
              },
              {
               "drawCircle": {
-               "cx": "@x",
+               "cx": "@mx",
                "cy": "@cy",
                "radius": "@r"
               }
@@ -867,9 +949,9 @@
              },
              {
               "drawSector": {
-               "left": "@x - @r",
+               "left": "@mx - @r",
                "top": "@cy - @r",
-               "right": "@x + @r",
+               "right": "@mx + @r",
                "bottom": "@cy + @r",
                "startAngle": "-90 + 180 * step(@ph - floor(@ph), 0.5)",
                "sweepAngle": "180 * step(0.9999, @c)"
@@ -877,9 +959,9 @@
              },
              {
               "drawOval": {
-               "left": "@x - @r * max(0, -@c)",
+               "left": "@mx - @r * max(0, -@c)",
                "top": "@cy - @r",
-               "right": "@x + @r * max(0, -@c)",
+               "right": "@mx + @r * max(0, -@c)",
                "bottom": "@cy + @r"
               }
              },
@@ -894,9 +976,9 @@
              },
              {
               "drawOval": {
-               "left": "@x - @r * max(0, @c)",
+               "left": "@mx - @r * max(0, @c)",
                "top": "@cy - @r",
-               "right": "@x + @r * max(0, @c)",
+               "right": "@mx + @r * max(0, @c)",
                "bottom": "@cy + @r"
               }
              },
@@ -927,7 +1009,7 @@
                  "textSize": "@ts * 0.8"
                 },
                 {
-                 "alpha": "@ev"
+                 "alpha": "@ev * step(@rh, 44)"
                 }
                ]
               }
