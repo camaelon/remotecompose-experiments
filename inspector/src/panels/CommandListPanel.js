@@ -345,7 +345,7 @@ export function prettyPrintFloatExpression(bits) {
             }
         } else {
             const f = intBitsToFloat(b);
-            stack.push(Number.isInteger(f) ? f.toString() : f.toFixed(2));
+            stack.push(Number.isInteger(f) ? f.toString() : String(Number(f.toPrecision(7))));   // not toFixed(2): 0.0338 * x read as 0.03 * x
         }
     }
     return stack.pop() || '';
@@ -1141,7 +1141,7 @@ export function getFloatProp(op, ...names) {
 
 export function formatNumber(v) {
     if (typeof v !== 'number' || isNaN(v)) return 'NaN';
-    return Number.isInteger(v) ? v.toString() : v.toFixed(2);
+    return Number.isInteger(v) ? v.toString() : String(Number(v.toPrecision(7)));
 }
 
 export const DIMENSION_MODIFIER_TYPES = {

@@ -33,6 +33,8 @@ export class DeferredVariables {
     /** Only variables already written — a deferred entry is invisible here, which is what
      *  lets a later declaration of the same name replace a pending one. */
     isMaterialised(name: string): boolean { return this.materialised.has(name); }
+    /** Every variable written so far, name to its NaN bits (a symbol table for tools). */
+    entries(): [string, number][] { return [...this.materialised]; }
     set(name: string, bits: number): void { this.materialised.set(name, bits); }
     remove(name: string): void { this.materialised.delete(name); this.deferred.delete(name); }
 
@@ -676,6 +678,16 @@ export class Parser {
         }
         if (value && typeof value === "object") return this.expr.parseExpression(value);
         throw new NotImplementedComponent(`float field type ${typeof value}`);
+    }
+
+    /**
+     * The document's names and the ids they got: what a tool reading the .rc back (the
+     * inspector) cannot see, since only exported variables carry a name in the binary.
+     */
+    symbols(): { variables: Record<string, number> } {
+        const variables: Record<string, number> = {};
+        for (const [name, bits] of this.variables.entries()) variables[name] = (bits & 0x3fffff);
+        return { variables };
     }
 
     parse(doc: J): Uint8Array {
@@ -3374,4 +3386,12 @@ export interface ConvertOptions {
 export function convert(json: string | J, options: ConvertOptions = {}): Uint8Array {
     const doc = typeof json === "string" ? JSON.parse(json) : json;
     return new Parser(options).parse(unwrap(doc));
+}
+
+/** convert, plus the symbol table (see Parser.symbols). */
+export function convertWithSymbols(json: string | J, options: ConvertOptions = {}): { bytes: Uint8Array; symbols: { variables: Record<string, number> } } {
+    const doc = typeof json === "string" ? JSON.parse(json) : json;
+    const parser = new Parser(options);
+    const bytes = parser.parse(unwrap(doc));
+    return { bytes, symbols: parser.symbols() };
 }
