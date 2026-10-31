@@ -402,6 +402,32 @@ function layoutFindings(doc) {
         }
     }
     if (out.some((f) => f.code === "fixed_coordinates")) for (const f of out) if (f.code === "absolute_layout") f.severity = "warning";
+
+    // A screen of text alone: no icon, no drawing, no chart, no image. It reads as a form, and
+    // what it says (a status, a quantity, a time) is easier to see as a picture.
+    let texts = 0, visual = 0;
+    const scan = (n) => {
+        if (Array.isArray(n)) return n.forEach(scan);
+        if (!isObj(n)) return;
+        for (const [k, v] of Object.entries(n)) {
+            const lk = k.toLowerCase();
+            if (lk === "text" && isObj(v)) texts++;
+            if (lk === "canvas" || lk === "image" || /^(Icon|MoonPhase|WeatherIcon|BatteryIndicator|ProgressRing|ProgressBar|Gauge|LineChart|Sparkline|BarChart|DonutChart|AnalogClock|Avatar|Slider|Switch|Checkbox)$/.test(k)) visual++;
+            scan(v);
+        }
+        if (typeof n.type === "string" && /^(canvas|image)$/i.test(n.type)) visual++;
+    };
+    scan(doc.root);
+    if (visual === 0 && texts >= 8) {
+        out.push({
+            severity: "info", code: "text_only",
+            title: `A screen of ${texts} texts and nothing else`,
+            message: "No icon, drawing, chart or image: give it a visual focal point. Icons for statuses and kinds " +
+                "({\"Icon\": {\"name\": ...}}, find kind \"icons\"), a chart or ring for quantities and progress (LineChart, " +
+                "ProgressRing, Gauge, BarChart), a drawing for what has a shape (a component of your own).",
+            count: texts,
+        });
+    }
     return out;
 }
 
@@ -456,12 +482,20 @@ export function textAudit(strings, { readsClock: clock = true } = {}) {
  * The design warnings of a JSON document as a short text block for a tool result (convert,
  * render), or "" when there are none: a model that never calls audit still reads them.
  */
+// Advice worth showing with the warnings although it is info level (a text-only screen: fine for
+// a feature demo, a weak result for a generated UI).
+const SUGGEST = new Set(["text_only"]);
+
 export function designNotes(json) {
-    let findings;
-    try { findings = designAudit(json).filter((f) => f.severity === "warning"); } catch { return ""; }
-    if (!findings.length) return "";
-    return ["design warnings (fix these; audit gives details):",
-        ...findings.map((f) => `- [${f.code}] ${f.title}. ${f.message}`)].join("\n");
+    let all;
+    try { all = designAudit(json); } catch { return ""; }
+    const findings = all.filter((f) => f.severity === "warning");
+    const suggest = all.filter((f) => f.severity !== "warning" && SUGGEST.has(f.code));
+    if (!findings.length && !suggest.length) return "";
+    return [
+        ...(findings.length ? ["design warnings (fix these; audit gives details):", ...findings.map((f) => `- [${f.code}] ${f.title}. ${f.message}`)] : []),
+        ...(suggest.length ? ["suggestions:", ...suggest.map((f) => `- [${f.code}] ${f.title}. ${f.message}`)] : []),
+    ].join("\n");
 }
 
 // The design problems a document must not ship with: its structure is wrong, not just its style

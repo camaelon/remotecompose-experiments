@@ -132,6 +132,41 @@ Values
  * themes (and mono for always-on and e-ink), a narrow and a wide size, another time of day
  * for a document that reads the clock. A model checks what is cheap to check.
  */
+/**
+ * Does the document still fit when the host makes it smaller (a widget resized down)? The
+ * audit's layout overflow at 60% of the height and 75% of the width, as a note naming the
+ * fixes, or "" when it fits.
+ */
+async function smallSizeNote(args) {
+    const json = jsonOf(args);
+    const header = json?.header ?? {};
+    const W = args.width ?? header.width, H = args.height ?? header.height;
+    if (!W || !H) return "";
+    const src = json ? { json } : args.rc_path ? { rc_path: args.rc_path } : null;
+    if (!src) return "";
+    // What breaks at a smaller size and not at the design size: content past its box, or (a
+    // column that runs out of room squeezes its last children to nothing) zero-size components.
+    const broken = async (w, h) => {
+        const r = await tool(inspect, "audit").handler({ ...src, width: w, height: h });
+        const f = JSON.parse(r[0].text).findings ?? [];
+        const n = (code) => f.filter((x) => x.code === code).reduce((k, x) => k + (x.count ?? 1), 0);
+        return { overflow: n("layout_overflow"), zero: n("layout_zero_size") };
+    };
+    const over = [];
+    try {
+        const base = await broken(W, H);
+        for (const [w, h] of [[W, Math.round(H * 0.6)], [Math.round(W * 0.75), H]]) {
+            const b = await broken(w, h);
+            if (b.overflow > base.overflow || b.zero > base.zero) over.push(`${w}×${h}`);
+        }
+    } catch { /* no verdict */ }
+    if (!over.length) return "";
+    return `size warning: at ${over.join(" and ")} the content no longer fits (cut off or squeezed to nothing). A widget is resized by its host, ` +
+        "often smaller than designed: drop the least important content first (collapsibleColumn / collapsibleRow with " +
+        "collapsiblePriority: examples LAY-13, LAY-14), switch to a compact layout (StateLayout: LAY-15), or at minimum put " +
+        "the content in a verticalScroll.";
+}
+
 async function renderVariants(t, args) {
     const json = jsonOf(args);
     const header = json?.header ?? {};
@@ -149,6 +184,7 @@ async function renderVariants(t, args) {
         ...(json ? [["mono (always-on displays)", { ...base, json: { ...json, componentTheme: "mono" }, json_path: undefined }]] : []),
         [`narrow ${Math.round(W * 0.72)}×${H}`, { ...base, width: Math.round(W * 0.72) }],
         [`wide ${Math.round(W * 1.6)}×${Math.round(H * 0.75)}`, { ...base, width: Math.round(W * 1.6), height: Math.round(H * 0.75) }],
+        [`short ${W}×${Math.round(H * 0.6)} (a widget resized down)`, { ...base, height: Math.round(H * 0.6) }],
         ...(json && readsClock(json) ? [["seven hours later", { ...base, clock: clockShift() }]] : []),
     ];
     const content = [];
@@ -160,6 +196,8 @@ async function renderVariants(t, args) {
                 ...r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text)).map((c) => ({ type: "text", text: c.text })));
         } catch (e) { content.push({ type: "text", text: `── ${label}: ${String(e?.message ?? e).split("\n")[0]}` }); }
     }
+    const small = await smallSizeNote(args);
+    if (small) content.unshift({ type: "text", text: small });
     return withDesign(content, args, { first: true });
 }
 
@@ -324,7 +362,8 @@ const tools = [
                 args = { layout: "fill", ...args };
                 const out = await t.handler(args);
                 const src = args.json || args.json_path ? args : (args.rc_path ? { json_path: args.rc_path.replace(/\.rc$/i, ".json") } : args);
-                return withDesign(out, src, { first: true });
+                const small = await smallSizeNote(src);
+                return withDesign(small ? [{ type: "text", text: small }, ...out] : out, src, { first: true });
             } };
     })(),
     dispatcher({

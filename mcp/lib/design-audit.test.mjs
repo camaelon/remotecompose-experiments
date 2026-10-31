@@ -2,7 +2,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { designNotes, dateKind, designAudit, isGlyphText, readsClock, textAudit } from "./design-audit.mjs";
+import { designNotes, dateKind, designAudit, designAudit as designAuditAll, isGlyphText, readsClock, textAudit } from "./design-audit.mjs";
 
 const header = { apiLevel: 7, width: 360, height: 640, profiles: 513 };
 const codes = (fs) => fs.map((f) => `${f.severity}:${f.code}`).sort();
@@ -92,6 +92,9 @@ test("hardcoded_date: a month grid typed out as 31 literal day numbers", () => {
 });
 
 test("hardcoded_colors: info alone, a warning next to other hard-wiring; themes are fine", () => {
+    // These demo documents are rows of text: leave text_only (its own test) out of the comparison.
+    const codes = (fs) => fs.filter((f) => f.code !== "text_only").map((f) => `${f.severity}:${f.code}`).sort();
+    const designAudit = (d) => designAuditAll(d).filter((f) => f.code !== "text_only");
     const palette = ["#FF0B1020", "#FFE8EEF6", "#FF8899AA", "#FFF5E6B8", "#FFFFC107", "#FF4DA3FF", "#FF26A69A", "#FFEF5350"];
     const rows = palette.flatMap((c) => [{ box: { modifiers: [{ size: 12 }, { background: c }] } }, text("label", 12, c)]);
     assert.deepEqual(codes(designAudit({ header, root: { column: { children: rows } } })), ["info:hardcoded_colors"]);
@@ -145,4 +148,13 @@ test("text_in_canvas: labels hand-drawn in a drawing that sits in a layout", () 
     const f = designAudit(doc).find((x) => x.code === "text_in_canvas");
     assert.equal(f?.severity, "warning");
     assert.ok(!designAudit(doc).some((x) => x.code === "absolute_layout"));
+});
+
+test("text_only: a screen of texts gets a suggestion, one with an icon does not", () => {
+    const t = (v) => ({ text: { value: v } });
+    const plain = { header, root: { column: { children: Array.from({ length: 10 }, (_, i) => t(`row ${i}`)) } } };
+    assert.equal(designAuditAll(plain).find((f) => f.code === "text_only")?.severity, "info");
+    assert.match(designNotes(plain), /suggestions:[\s\S]*text_only/);
+    const withIcon = { header, root: { column: { children: [{ Icon: { name: "wifi" } }, ...plain.root.column.children] } } };
+    assert.ok(!designAuditAll(withIcon).some((f) => f.code === "text_only"));
 });
