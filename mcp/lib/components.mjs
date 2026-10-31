@@ -89,13 +89,13 @@
 //   "auto"     (default) light and dark: each theme colour a themed {light, dark} colour the
 //              player picks by the system theme, one implementation of each component. The
 //              call sites are the same for every look, so a host (or the playground) wanting
-//              mono expands the same JSON again with "mono" / "mono-inverted": the same
+//              mono expands the same JSON again with "mono-dark" / "mono-light": the same
 //              document, the components' other implementation. "light-dark" is the same.
 //   "all"      every look in one document. Each theme colour as the theme gives it,
 //              {light, dark}: a themed colour the player picks by the system theme (~100 B more
 //              than a plain one; one value for both stays plain). And mono at run time: the
 //              document exports a float, theme.mono (MONO_VAR, 0), which the host sets to 1
-//              while it overrides the named colours with the mono or mono-inverted palette
+//              while it overrides the named colours with the mono-dark or mono-light palette
 //              (monoPalettes; the result's `mono` gives both). Every {"$if": "theme.mono"}
 //              keeps both sides, gated by it at the innermost canvas command
 //              (conditionalOperations) or layout node (two copies with a visibility modifier,
@@ -104,18 +104,18 @@
 //              animationSpec cannot be switched at run time). About +20-30% over light-dark
 //              for a component gallery: the price of the mono copies
 //   "light"    / "dark": that side only, as plain colours ("dark" is the library's old look)
-//   "mono"     always-on display and e-ink: the theme's modes.mono palette (black, white, one
+//   "mono-dark" always-on display and OLED: the theme's modes.mono-dark palette (black, white, one
 //              grey) and numbers (@theme.mono is 1, so {"$if": "theme.mono"} picks each
 //              component's mono variant), and no motion: every `anim` of an animated value and
 //              every animationSpec modifier is removed (reported as `motion_removed`)
-//   "mono-inverted"  the same for a reflective display (e-ink, a memory LCD): the theme's
-//              modes.mono-inverted palette, the mono one with black and white swapped (dark
+//   "mono-light" the same for a reflective display (e-ink, a memory LCD): the theme's
+//              modes.mono-light palette, the mono-dark one with black and white swapped (dark
 //              text and strokes on white); the same mono variants, no motion
-// A document's own colour wins, in either form; it may add a `mono` value ({"light", "dark",
-// "mono"} or {"value", "mono"}) and a `mono-inverted` one, and in mono (mono-inverted) a
+// A document's own colour wins, in either form; it may add a `mono-dark` value ({"light", "dark",
+// "mono-dark"} or {"value", "mono-dark"}) and a `mono-light` one, and in mono-dark (mono-light) a
 // colour of a theme name without one takes that palette's value (in auto, the palette the
-// host is given). The result's `theme` is the mode used. "light", "dark", "light-dark", "mono"
-// and "mono-inverted" are the decimated forms: one look (or two), the smallest document.
+// host is given). The result's `theme` is the mode used. "light", "dark", "light-dark", "mono-dark"
+// and "mono-light" are the decimated forms (the old names "mono" and "mono-inverted" are accepted): one look (or two), the smallest document.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -199,7 +199,7 @@ export function usesComponents(doc, library = loadLibrary()) {
     // No call, but the theme's colours, numbers or an icon: the expansion resolves those too
     // (a plain-layout document may still write "@colors.primary"; without this it failed with
     // "Color not found", so authors fell back to hex).
-    try { return /"@(colors|theme)\.|"\$icon"/.test(JSON.stringify(doc)); } catch { return false; }
+    try { return /"@(colors|theme)\.|"\$icon"|"\$if":\s*"!?\s*theme\./.test(JSON.stringify(doc)); } catch { return false; }
 }
 
 /** The document's own definitions ({Name: def} under a top-level `components`), or null. */
@@ -263,7 +263,7 @@ export function expandComponents(doc, { library = loadLibrary(), mode, theme, me
     delete src.componentTraps;
     for (const t of traps) if (!(t in PATTERN_TRAPS)) throw new Error(`componentTraps: unknown trap '${t}' (${Object.keys(PATTERN_TRAPS).join(", ")})`);
     const docMode = mode ?? src.componentMode ?? "auto";
-    const themeMode = theme ?? src.componentTheme ?? "auto";
+    const themeMode = canonicalTheme(theme ?? src.componentTheme ?? "auto");
     delete src.componentMode;
     delete src.componentTheme;
     if (!MODES.includes(docMode)) throw new Error(`componentMode must be one of ${MODES.join(", ")}, not ${JSON.stringify(docMode)}`);
@@ -322,16 +322,19 @@ export function expandComponents(doc, { library = loadLibrary(), mode, theme, me
 }
 
 const MODES = ["auto", "expand", "pattern"];
-export const THEME_MODES = ["auto", "all", "light-dark", "light", "dark", "mono", "mono-inverted"];
-/** Both monochrome modes: mono (light on black) and mono-inverted (dark on white). */
-export const isMonoMode = (mode) => mode === "mono" || mode === "mono-inverted";
+export const THEME_MODES = ["auto", "all", "light-dark", "light", "dark", "mono-dark", "mono-light"];
+/** The looks' old names, still accepted: mono was mono-dark, mono-inverted mono-light. */
+export const THEME_ALIASES = { mono: "mono-dark", "mono-inverted": "mono-light" };
+export const canonicalTheme = (mode) => THEME_ALIASES[mode] ?? mode;
+/** Both monochrome modes: mono-dark (light on black) and mono-light (dark on white). */
+export const isMonoMode = (mode) => { const m = canonicalTheme(mode); return m === "mono-dark" || m === "mono-light"; };
 
 // ---- mono at run time (componentTheme "all") ------------------------------------------------
 //
 // The format has two colour themes only (light and dark, picked by the player), and its JSON
 // has no colour expression a float could drive (a themed colour is the only colour that
 // changes, and only with the system theme). So an "all" document carries mono as:
-//   - MONO_VAR, an exported float (0 by default) the host sets to 1 for mono or mono-inverted;
+//   - MONO_VAR, an exported float (0 by default) the host sets to 1 for mono-dark or mono-light;
 //   - every {"$if": "theme.mono"} of the components kept with both branches, gated by it at
 //     run time: a canvas command by a pair of conditionalOperations (gt / le 0), a layout
 //     node by a pair of copies with a visibility modifier (MONO_VAR, MONO_OFF = 1 - it), at
@@ -339,7 +342,7 @@ export const isMonoMode = (mode) => mode === "mono" || mode === "mono-inverted";
 //     local becomes off + (on - off) * MONO_VAR;
 //   - the colours, by name: every theme colour (and every colour of the document) is a named
 //     colour in the .rc, so the host overrides them with the mono or mono-inverted palette
-//     (monoPalettes; the playground does it). mono and mono-inverted differ only there.
+//     (monoPalettes; the playground does it). mono-dark and mono-light differ only there.
 // Motion stays on: an animationSpec cannot be switched off at run time.
 export const MONO_VAR = "theme.mono";
 export const MONO_OFF = "theme.mono_off";
@@ -351,7 +354,7 @@ const MONO_COND = /^(!?)\s*@?theme\.mono$/;
 function monoFork(cond, then, els, sub, list) {
     const neg = MONO_COND.exec(String(cond).trim())[1] === "!";
     const side = (b) => {
-        if (b === undefined) return undefined;
+        if (b === undefined || b === null) return undefined;
         const v = sub(b);
         if (list) { const a = (Array.isArray(v) ? v : [v]).filter((y) => y !== DROP); return a.length ? a : undefined; }
         return v === DROP ? undefined : v;
@@ -495,15 +498,15 @@ function withVisibility(node, v) {
 }
 
 /**
- * The colours a host sets by name for mono and mono-inverted on an "all" document:
- * { mono: {name: "#AARRGGBB"}, "mono-inverted": {...} }. Each is the theme's palette, then the
- * document's own colours as that mode expands them (its `mono` / `mono-inverted` value, the
- * palette's for a theme name, else the light (mono-inverted) or dark (mono) side). Colours
+ * The colours a host sets by name for mono-dark and mono-light on an "all" document:
+ * { "mono-dark": {name: "#AARRGGBB"}, "mono-light": {...} }. Each is the theme's palette, then the
+ * document's own colours as that mode expands them (its `mono-dark` / `mono-light` value, the
+ * palette's for a theme name, else the light (mono-light) or dark (mono-dark) side). Colours
  * absent from the .rc are harmless: a host override of an unknown name does nothing.
  */
 export function monoPalettes(doc, library = loadLibrary()) {
     const out = {};
-    for (const mode of ["mono", "mono-inverted"]) {
+    for (const mode of ["mono-dark", "mono-light"]) {
         const t = resolveTheme(library.theme, mode);
         const own = doc?.resources?.colors ? colorEntries(docColors(doc.resources.colors, t)) : [];
         const pal = { ...t.colors };
@@ -519,21 +522,22 @@ export function monoPalettes(doc, library = loadLibrary()) {
  *          player from the system theme), or one value for both; light-dark and all the
  *          same (all also switches mono at run time, see MONO_VAR)
  *   light  / dark: that side of each colour, as a plain colour
- *   mono   the theme's modes.mono palette (plain colours) and numbers (@theme.mono is 1)
- *   mono-inverted  modes["mono-inverted"] (dark on white), its numbers (@theme.mono is 1 too)
+ *   mono-dark  the theme's modes["mono-dark"] palette (plain colours) and numbers (@theme.mono is 1)
+ *   mono-light  modes["mono-light"] (dark on white), its numbers (@theme.mono is 1 too)
  * Returns { mode, colors: {name: "#..." | {light, dark}}, numbers }.
  */
 export function resolveTheme(theme = {}, mode = "auto") {
+    mode = canonicalTheme(mode);
     if (!THEME_MODES.includes(mode)) throw new Error(`componentTheme must be one of ${THEME_MODES.join(", ")}, not ${JSON.stringify(mode)}`);
-    const over = theme.modes?.[mode] ?? {};
+    const over = theme.modes?.[mode] ?? theme.modes?.[Object.keys(THEME_ALIASES).find((k) => THEME_ALIASES[k] === mode)] ?? {};
     const colors = {};
     for (const [k, v] of Object.entries(theme.colors ?? {})) {
         const themed = v && typeof v === "object";
         if (over.colors?.[k] !== undefined) colors[k] = over.colors[k];
         else if (!themed) colors[k] = v;
         else if (mode === "light" || mode === "dark") colors[k] = v[mode];
-        else if (mode === "mono") colors[k] = v.dark;
-        else if (mode === "mono-inverted") colors[k] = v.light;
+        else if (mode === "mono-dark") colors[k] = v.dark;
+        else if (mode === "mono-light") colors[k] = v.light;
         else colors[k] = v.light === v.dark ? v.light : { light: v.light, dark: v.dark };
     }
     return { mode, colors, numbers: { ...(theme.numbers ?? {}), ...(over.numbers ?? {}) } };
@@ -548,12 +552,12 @@ function colorEntries(colors) {
 
 /**
  * The document's own colours for this theme mode. A value may be one colour, {light, dark}
- * (themed), and either may carry a `mono` value: {"light": .., "dark": .., "mono": ..} or
- * {"value": .., "mono": ..}. In mono a colour of the theme's name takes its `mono` value, else
+ * (themed), and either may carry a `mono-dark` value: {"light": .., "dark": .., "mono-dark": ..} or
+ * {"value": .., "mono-dark": ..}. In mono-dark a colour of the theme's name takes its `mono-dark` value, else
  * the mono palette's (a brand colour does not survive a 1-bit display unless the document
- * says so); colours the theme does not name are kept. mono-inverted does the same with a
- * `mono-inverted` value and its own palette, and takes the light side of a themed colour.
- * light / dark take their side of a themed colour. The `mono` and `mono-inverted` keys never
+ * says so); colours the theme does not name are kept. mono-light does the same with a
+ * `mono-light` value and its own palette, and takes the light side of a themed colour.
+ * light / dark take their side of a themed colour. The `mono-dark` and `mono-light` keys (and the old `mono`, `mono-inverted`) never
  * reach the converter.
  */
 function docColors(colors, theme) {
@@ -561,14 +565,16 @@ function docColors(colors, theme) {
         const obj = v && typeof v === "object" && !Array.isArray(v);
         if (isMonoMode(theme.mode)) {
             if (obj && v[theme.mode] !== undefined) return v[theme.mode];
+            const old = Object.keys(THEME_ALIASES).find((k) => THEME_ALIASES[k] === theme.mode);   // a colour's old key
+            if (obj && v[old] !== undefined) return v[old];
             if (theme.colors[name] !== undefined) return theme.colors[name];
         }
         if (!obj) return v;
-        const { mono, "mono-inverted": monoInverted, ...rest } = v;
+        const { mono, "mono-inverted": monoInverted, "mono-dark": monoDark, "mono-light": monoLight, ...rest } = v;
         if ("light" in rest && "dark" in rest) {
             if (theme.mode === "light" || theme.mode === "dark") return rest[theme.mode];
-            if (theme.mode === "mono") return rest.dark;
-            if (theme.mode === "mono-inverted") return rest.light;
+            if (theme.mode === "mono-dark") return rest.dark;
+            if (theme.mode === "mono-light") return rest.light;
             return rest;
         }
         return "value" in rest && Object.keys(rest).length === 1 ? rest.value : rest;
@@ -638,7 +644,52 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
     walk(out, (n) => { for (const v of Object.values(n)) if (typeof v === "string") for (const m of v.matchAll(/[@$]([A-Za-z_]\w*)/g)) reserved.add(m[1]); });
     const state = { library, theme, patterns: existing, counters: new Map(), used: new Set(), locals: {}, colors: new Set(), instances: 0, resourceNames,
         reserved, traps, docMode, chosen: patterns, variants: new Map(), fallbacks: new Map(), defs: new Map(), names: new Map(), hoisted: new Map(), paths: new Map() };
+    // A {"$if": "theme.mono"} in the document's own tree (outside any component): the look being
+    // expanded picks its side, as it does in a body. ("all" keeps both sides only in components.)
+    const resolveDocIfs = (x) => {
+        if (Array.isArray(x)) {
+            const r = [];
+            for (const y of x) {
+                if (y && typeof y === "object" && !Array.isArray(y) && "$if" in y && MONO_COND.test(String(y.$if).trim())) {
+                    const neg = MONO_COND.exec(String(y.$if).trim())[1] === "!";
+                    const on = (theme.numbers?.mono ?? 0) > 0;
+                    const b = (on !== neg) ? y.then : y.else;
+                    if (b === undefined || b === null) continue;
+                    if (Array.isArray(b)) r.push(...b.map(resolveDocIfs)); else r.push(resolveDocIfs(b));
+                } else r.push(resolveDocIfs(y));
+            }
+            return r;
+        }
+        if (!x || typeof x !== "object") return x;
+        if ("$if" in x && MONO_COND.test(String(x.$if).trim())) {
+            const neg = MONO_COND.exec(String(x.$if).trim())[1] === "!";
+            const on = (theme.numbers?.mono ?? 0) > 0;
+            const b = (on !== neg) ? x.then : x.else;
+            return b === undefined ? null : resolveDocIfs(b);
+        }
+        for (const k of Object.keys(x)) {
+            // A component's own body keeps its $if for the expander (and the run-time switch).
+            if (k === "components") continue;
+            x[k] = resolveDocIfs(x[k]);
+        }
+        return x;
+    };
+    if (!theme.runtimeMono) { out.root = resolveDocIfs(out.root); if (out.global) out.global = resolveDocIfs(out.global); }
     let expanded = expandNode(out, state, []);
+    // A number in a visibility modifier is read as a variable ID (json2rc and the reference
+    // parser alike), so a constant local that lands there (a static param, a check_component
+    // demo with literal args) would show or hide by whatever variable has that id: it is
+    // declared as a variable and referenced instead.
+    walk(expanded, (n) => {
+        if (!Array.isArray(n.modifiers)) return;
+        for (const m of n.modifiers) {
+            if (!m || typeof m !== "object" || typeof m.visibility !== "number") continue;
+            const nm = `vis_${String(m.visibility).replace(/[^0-9a-zA-Z]/g, "_")}`;
+            state.locals[nm] = m.visibility;
+            state.resourceNames.add(nm);
+            m.visibility = `@${nm}`;
+        }
+    });
     if (state.defs.size) {
         // The templates go first in a root array, where the parser records them in its first
         // pass, before any call.
@@ -661,7 +712,7 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
     // Declared when it can change something: a fork, or a colour the mono palettes re-colour
     // (a theme colour, or one of the document's with a mono value of its own).
     const recolours = state.colors.size || colorEntries(res.colors).some(([n, v]) => n in (library.theme?.colors ?? {})
-        || (v && typeof v === "object" && ("mono" in v || "mono-inverted" in v)));
+        || (v && typeof v === "object" && ["mono", "mono-inverted", "mono-dark", "mono-light"].some((k) => k in v)));
     const mono = theme.runtimeMono && (stats.forks || recolours) ? { [MONO_VAR]: { value: 0, export: true }, ...(stats.off ? { [MONO_OFF]: `1 - @${MONO_VAR}` } : {}) } : {};
     if (Object.keys(state.locals).length || Object.keys(hoisted).length || Object.keys(mono).length) {
         res.variables = { ...mono, ...(res.variables ?? {}), ...hoisted, ...state.locals };
@@ -682,6 +733,26 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
             : { ...colors, ...(res.colors ?? {}) };
     }
     if (!Object.keys(res).length) delete expanded.resources;
+    // The document's own strings read theme numbers too ("@theme.radius_md" on a box outside
+    // any component): substituted like a body's, the run-time mono switch left alone.
+    const subNumbers = (n) => {
+        if (typeof n === "string") {
+            if (!/@theme\./.test(n)) return n;
+            const out = n.replace(/@theme\.([A-Za-z_]\w*)/g, (m, k) => {
+                // The run-time switch variables (theme.mono, theme.mono_off), or any theme.* name
+                // the document declares as a variable (an expanded "all" document read again).
+                if (k === "mono" || k === "mono_off" || expanded.resources?.variables?.[`theme.${k}`] !== undefined) return m;
+                const v = theme.numbers?.[k];
+                if (v === undefined) throw new Error(`theme number '${k}' is not in the theme (${Object.keys(theme.numbers ?? {}).join(", ")})`);
+                return String(v);
+            });
+            return /^-?\d+(\.\d+)?$/.test(out) ? Number(out) : out;
+        }
+        if (Array.isArray(n)) { for (let i = 0; i < n.length; i++) n[i] = subNumbers(n[i]); return n; }
+        if (n && typeof n === "object") { for (const k of Object.keys(n)) n[k] = subNumbers(n[k]); return n; }
+        return n;
+    };
+    subNumbers(expanded);
     const motion = isMonoMode(theme.mode) ? stripMotion(expanded) : 0;
     return { doc: expanded, used: state.used, instances: state.instances, variants: state.variants,
         fallbacks: [...state.fallbacks.values()], names: state.names, motion, forks: stats.forks, monoDeclared: MONO_VAR in mono };
@@ -730,7 +801,8 @@ function checkCall(name, def, args) {
     const slots = { ...slotArgs };
     if (children !== undefined && def.slots?.content && slots.content === undefined) slots.content = children;
     for (const k of Object.keys(given)) {
-        if (!def.params?.[k]) throw new Error(`${name}: unknown parameter '${k}' (has ${Object.keys(def.params ?? {}).join(", ") || "none"})`);
+        if (!def.params?.[k]) throw new Error(`${name}: unknown parameter '${k}' (has ${Object.keys(def.params ?? {}).join(", ") || "none"})` +
+            (k === "modifiers" ? "; a component call takes its params only — to pad, size, weight or hide it, wrap the call in a box that carries the modifiers" : ""));
     }
     for (const k of Object.keys(slots)) {
         if (!def.slots?.[k]) throw new Error(`${name}: unknown slot '${k}'`);
@@ -805,6 +877,18 @@ function expandCall(name, def, given, slots, n, state, stack) {
     env.slots = slots;
     env.slotNames = new Set(Object.keys(def.slots ?? {}));
     const animated = [];
+    // A computed local that reads what resources cannot see (a tree variable, componentWidth())
+    // is declared in the body when the body can hold a declaration (a canvas, a container):
+    // inlined into every use otherwise. Declared, it stays a float expression; inlined into an
+    // integer context (a visibility) its round()/clamp() would be refused.
+    const home = (() => {
+        const top = Array.isArray(def.body) ? def.body[0] : def.body;
+        if (!top || typeof top !== "object") return false;
+        const key = Object.keys(top).find((k) => top[k] && typeof top[k] === "object");
+        const kind = key === "type" ? String(top.type).toLowerCase() : key?.toLowerCase();
+        const inner = key === "type" ? top : top?.[key];
+        return (kind === "canvas" && Array.isArray(inner?.commands)) || ["box", "row", "column", "flow", "fitbox", "statelayout"].includes(kind ?? "");
+    })();
     for (const [k, v] of Object.entries(def.locals ?? {})) {
         const unique = `${name.toLowerCase()}${n}_${k}`;
         if (v && typeof v === "object" && typeof v.value === "string" && "anim" in v) {
@@ -818,7 +902,9 @@ function expandCall(name, def, given, slots, n, state, stack) {
             if (val === DROP || val === undefined) throw new Error(`${name}: local '${k}' has no value`);
             if (typeof val === "number") { env.locals[k] = { literal: val }; continue; }
             env.locals[k] = { ref: `@${unique}` };
-            animated.push({ variable: { name: unique, value: { value: String(val), anim: v.anim } } });
+            // A duration of exactly 1 s writes no animation in the reference parser (1 is its
+            // "default", packed as nothing): 0.999 eases the same and survives (U73).
+            animated.push({ variable: { name: unique, value: { value: String(val), anim: Number(v.anim) === 1 ? 0.999 : v.anim } } });
             continue;
         }
         if (typeof v === "number" || (v && typeof v === "object" && !("$if" in v) && !("$count" in v))) {
@@ -828,7 +914,7 @@ function expandCall(name, def, given, slots, n, state, stack) {
             state.resourceNames.add(unique);
             continue;
         }
-        env.locals[k] = computedLocal(k, v, unique, env, state, name, animated);
+        env.locals[k] = computedLocal(k, v, unique, env, state, name, home ? animated : undefined);
     }
     const scoped = scopeBodyNames(structuredClone(def.body), `${name.toLowerCase()}${n}_`,
         new Set([...Object.keys(def.params ?? {}), ...Object.keys(def.locals ?? {})]));
@@ -1176,7 +1262,9 @@ function patternName(c, state) {
 function computedLocal(k, v, unique, env, state, name, decls) {
     const val = substitute(v, env, state, name);
     if (isFork(val)) return monoLocal(k, val[FORK], unique, env, state, name, decls);
-    return placeLocal(k, val, unique, env, state, name);
+    // With decls: a local that reads a tree variable (resources cannot) is declared in the body
+    // rather than inlined into every use (an integer visibility expression cannot hold round()).
+    return placeLocal(k, val, unique, env, state, name, decls);
 }
 
 /** Where a computed local's (substituted) value lives; see computedLocal. With `decls`, a value
@@ -1273,7 +1361,7 @@ function substitute(node, env, state, name) {
                     continue;
                 }
                 const branch = evalIf(x.$if, env.cond ?? env, name) ? x.then : x.else;
-                if (branch === undefined) continue;
+                if (branch === undefined || branch === null) continue;   // "else": null is no branch
                 const v = substitute(branch, env, state, name);
                 if (Array.isArray(v)) out.push(...v.filter((y) => y !== DROP));
                 else if (v !== DROP) out.push(v);
@@ -1292,7 +1380,7 @@ function substitute(node, env, state, name) {
                 return Object.keys(f[FORK]).length ? f : DROP;
             }
             const branch = evalIf(node.$if, env.cond ?? env, name) ? node.then : node.else;
-            return branch === undefined ? DROP : substitute(branch, env, state, name);
+            return branch === undefined || branch === null ? DROP : substitute(branch, env, state, name);
         }
         if ("$icon" in node) {
             if (env.inPattern) throw new PatternUnfit("an icon ({\"$icon\": ...}) is chosen when the document is built, not per call");
@@ -1453,7 +1541,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
     if (!def || typeof def !== "object") return { errors: ["a definition is a JSON object"], warnings };
     if (!name || !/^[A-Z][A-Za-z0-9]*$/.test(name)) errors.push(`name '${name}' must be PascalCase (lower-case names are the format's own components)`);
     if (def.body === undefined) errors.push("no body");
-    if (!def.summary) warnings.push("no summary (find_components and get_component show it)");
+    if (!def.summary) warnings.push("no summary (find and get show it)");
     const params = def.params ?? {};
     for (const [k, p] of Object.entries(params)) {
         if (!p || typeof p !== "object") { errors.push(`param ${k}: a {type, ...} object`); continue; }
@@ -1476,9 +1564,13 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             if (typeof n.$name === "string") refs.add(n.$name);
             if (n.$icon && typeof n.$icon === "object") for (const v of Object.values(n.$icon)) if (typeof v === "string" && v.startsWith("@")) refs.add(v.slice(1));
             for (const k of ["as", "index", "count"]) if (n.$each !== undefined && typeof n[k] === "string") bound.add(n[k]);
+            // A canvas loop's index ({"loop": {"index": "i", ...}}) is a name the loop binds.
+            if (n.loop && typeof n.loop === "object" && typeof n.loop.index === "string") bound.add(n.loop.index);
+            if (typeof n.index === "string" && ("from" in n || "until" in n || "commands" in n)) bound.add(n.index);
             // Names the body gives itself: a text op's varName (textSubtext, textTransform,
             // textLookup), a tree variable, a measure.
-            if (typeof n.varName === "string") bound.add(n.varName);
+            // (A name per loop pass, "state_@i", is read as "@state_@i": its stem is the name.)
+            if (typeof n.varName === "string") { bound.add(n.varName); bound.add(n.varName.replace(/@[A-Za-z_]\w*/g, "")); }
             for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") bound.add(n[k].name);
             if (typeof n.$if === "string") {
                 const t = n.$if.replace(/'[^']*'|"[^"]*"/g, "");
@@ -1499,9 +1591,16 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
         if (r in params || locals.has(r) || bound.has(r)) continue;
         warnings.push(`@${r} is neither a param nor a local: it must be a variable every calling document declares; make it a \`variable\` param instead`);
     }
-    for (const k of ifNames) if (!(k in params) && !(def.slots ?? {})[k] && !["then", "else"].includes(k)) warnings.push(`$if reads '${k}', which is not a param or slot`);
+    // A name an $each binds (its `as` item, its index) or a local is known to $if too.
+    for (const k of ifNames) if (!(k in params) && !(def.slots ?? {})[k] && !locals.has(k) && !bound.has(k) && !["then", "else"].includes(k)) warnings.push(`$if reads '${k}', which is not a param, slot, local or $each name`);
     for (const k of Object.keys(params)) {
         if (!refs.has(k) && !ifNames.has(k)) warnings.push(`param ${k} is never used in the body`);
+    }
+    // A local nothing reads is dead weight in every call (and audit flags it as dead code later).
+    for (const k of Object.keys(def.locals ?? {})) {
+        const usedElsewhere = refs.has(k) || ifNames.has(k)
+            || Object.entries(def.locals ?? {}).some(([o, v]) => o !== k && new RegExp(`[@$]${k}\\b`).test(JSON.stringify(v)));
+        if (!usedElsewhere) warnings.push(`local ${k} is never used (not in the body, a $if or another local): remove it`);
     }
     for (const sl of slotsUsed) if (!(def.slots ?? {})[sl]) errors.push(`{"$slot": "${sl}"} is not declared in slots`);
     for (const sl of Object.keys(def.slots ?? {})) if (!slotsUsed.has(sl)) warnings.push(`slot ${sl} is declared but never placed with {"$slot": "${sl}"}`);
@@ -1509,6 +1608,6 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
     if (/clamp\(\s*@\w+\s*,\s*[-\d.]+\s*,\s*[-\d.]+\s*\)/.test(text)) warnings.push("clamp takes (min, max, value): the value goes last");
     if (/animationTime\(\)/.test(text) && !/continuousSec\(\)/.test(text)) warnings.push("animationTime() alone never schedules a repaint; use continuousSec() for motion");
     if (JSON.stringify(def.body ?? null).match(/"(drawPath|path)"\s*:\s*\{[^}]*"path"\s*:\s*"M/)) warnings.push("an SVG path string costs ~4 KB in Java (padded to 1024 floats); use drawLine/primitives or the op-list path form");
-    if (!def.call) warnings.push("no `call` example (get_component and check_component use it)");
+    if (!def.call) warnings.push("no `call` example (get and check_component use it)");
     return { errors, warnings };
 }

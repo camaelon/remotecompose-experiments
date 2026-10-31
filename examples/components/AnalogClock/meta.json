@@ -3,7 +3,7 @@
  "name": "analog-clock",
  "version": 2,
  "title": "Analog clock",
- "prompt": "A round analog clock face showing the current time with hour, minute and second hands.",
+ "prompt": "A round analog clock face showing the current time with hour, minute and second hands, and one with a date window at 3 o'clock.",
  "level": 1,
  "use_cases": [
   "watch-face",
@@ -18,11 +18,14 @@
   "watch face",
   "wall clock",
   "current time",
-  "second hand"
+  "second hand",
+  "date window",
+  "day of month"
  ],
  "teaches": [
   "{\"AnalogClock\": {\"size\": 160}} draws the face from the host clock; every length scales with size",
-  "showSeconds: false drops the red second hand and repaints once a minute instead of every second"
+  "showSeconds: false drops the red second hand and repaints once a minute instead of every second",
+  "showDate: true adds a date window at 3 o'clock reading dayOfMonth(); the window scales with the dial and is a ring in mono"
  ],
  "snippets": [
   {
@@ -39,6 +42,11 @@
    "pointer": "/root/column/children/1/row/children/0",
    "shows": "data.loop",
    "note": "the twelve ticks are one loop"
+  },
+  {
+   "pointer": "/root/column/children/1/row/children/2",
+   "shows": "time.clock",
+   "note": "showDate: the day of the month in a window at 3 o'clock"
   }
  ],
  "inputs": {
@@ -47,7 +55,7 @@
   "touch": false
  },
  "check": {
-  "describe": "At 22:10:05 both faces read 10:10; the large one has a red second hand at 5 s. Both calls use fill: true in weighted boxes (3:2), so the faces scale with the space: at 234 dp wide both shrink to fit, at 360×320 they grow to the taller row; on a wide host they stay centred in their boxes.",
+  "describe": "At 22:10:05 on 29 October all three faces read 10:10; the first has a red second hand at 5 s, the small middle one has no second hand, and the third has a date window at 3 o'clock reading 29. All calls use fill: true in weighted boxes (3:2:3), so the faces scale with the space: at 234 dp wide they shrink to fit, at 360×320 they grow to the taller row; on a wide host they stay centred in their boxes.",
   "render": {
    "clock": "2026-10-29T22:10:05"
   },
@@ -61,12 +69,12 @@
     "theme": "dark"
    },
    {
-    "name": "mono",
-    "componentTheme": "mono"
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
    },
    {
-    "name": "mono-inverted",
-    "componentTheme": "mono-inverted"
+    "name": "mono-light",
+    "componentTheme": "mono-light"
    },
    {
     "name": "narrow",
@@ -87,49 +95,52 @@
   "components": [
    "AnalogClock"
   ],
-  "component_instances": 2,
+  "component_instances": 3,
   "component_modes": {
    "AnalogClock": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 2331,
+  "bytes": 3362,
   "header": {
    "width": 360,
    "height": 210
   },
-  "op_count": 151,
+  "op_count": 214,
   "operations": {
-   "ACCESSIBILITY_SEMANTICS": 2,
-   "ANIMATED_FLOAT": 15,
-   "COLOR_CONSTANT": 10,
-   "COLOR_EXPRESSIONS": 10,
-   "COMPONENT_VALUE": 4,
-   "CanvasContent": 2,
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 23,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 3,
    "CoreText": 1,
    "DATA_TEXT": 3,
-   "DRAW_CIRCLE": 4,
-   "DRAW_LINE": 7,
+   "DRAW_CIRCLE": 6,
+   "DRAW_LINE": 11,
+   "DRAW_ROUND_RECT": 2,
+   "DRAW_TEXT_ANCHOR": 1,
    "HEADER": 1,
-   "LAYOUT_BOX": 2,
-   "LAYOUT_CANVAS": 2,
+   "LAYOUT_BOX": 3,
+   "LAYOUT_CANVAS": 3,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
-   "LayoutComponentContent": 7,
-   "LoopOperation": 12,
-   "MATRIX_RESTORE": 5,
-   "MATRIX_ROTATE": 7,
-   "MATRIX_SAVE": 5,
-   "MATRIX_SCALE": 2,
-   "MATRIX_TRANSLATE": 2,
+   "LayoutComponentContent": 9,
+   "LoopOperation": 15,
+   "MATRIX_RESTORE": 8,
+   "MATRIX_ROTATE": 11,
+   "MATRIX_SAVE": 8,
+   "MATRIX_SCALE": 3,
+   "MATRIX_TRANSLATE": 3,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 5,
-   "MODIFIER_PADDING": 2,
-   "MODIFIER_WIDTH": 6,
-   "NAMED_VARIABLE": 5,
-   "PAINT_VALUES": 11,
-   "THEME": 15
+   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_PADDING": 3,
+   "MODIFIER_WIDTH": 8,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 20,
+   "THEME": 18,
+   "TextFromFloat": 1
   },
   "host_variables": [
    {
@@ -151,6 +162,11 @@
     "name": "onSurface",
     "type": "color",
     "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
    },
    {
     "name": "surface",
@@ -184,13 +200,13 @@
     "render": "render-dark.png",
     "render_findings": []
    },
-   "mono": {
-    "componentTheme": "mono",
-    "bytes": 1788,
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2570,
     "component_modes": {
      "AnalogClock": "expand"
     },
-    "op_count": 111,
+    "op_count": 158,
     "host_variables": [
      {
       "name": "background",
@@ -225,16 +241,16 @@
     ],
     "java_identical": true,
     "repaint": "scheduled",
-    "render": "render-mono.png",
+    "render": "render-mono-dark.png",
     "render_findings": []
    },
-   "mono-inverted": {
-    "componentTheme": "mono-inverted",
-    "bytes": 1788,
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2570,
     "component_modes": {
      "AnalogClock": "expand"
     },
-    "op_count": 111,
+    "op_count": 158,
     "host_variables": [
      {
       "name": "background",
@@ -269,7 +285,7 @@
     ],
     "java_identical": true,
     "repaint": "scheduled",
-    "render": "render-mono-inverted.png",
+    "render": "render-mono-light.png",
     "render_findings": []
    },
    "narrow": {
@@ -296,6 +312,7 @@
    "angle",
    "apiLevel",
    "background",
+   "bottom",
    "box",
    "canvas",
    "children",
@@ -307,17 +324,22 @@
    "cx",
    "cy",
    "dark",
+   "decimal",
    "drawCircle",
    "drawLine",
+   "drawRoundRect",
+   "drawTextAnchored",
    "dx",
    "dy",
    "error",
    "fill",
+   "flags",
    "fontSize",
    "from",
    "header",
    "height",
    "index",
+   "left",
    "light",
    "loop",
    "modifiers",
@@ -325,19 +347,26 @@
    "name",
    "onSurface",
    "ops",
+   "outline",
    "padding",
    "paint",
+   "panX",
+   "panY",
    "pivotX",
    "pivotY",
    "profiles",
    "radius",
    "resources",
+   "right",
    "root",
    "rotate",
    "row",
+   "rx",
+   "ry",
    "save",
    "scale",
    "semantics",
+   "showDate",
    "showSeconds",
    "size",
    "spacedBy",
@@ -350,15 +379,21 @@
    "sx",
    "sy",
    "text",
+   "textSize",
+   "top",
    "translate",
+   "type",
    "until",
    "value",
    "variable",
    "verticalAlignment",
    "weight",
+   "whole",
    "width",
+   "x",
    "x1",
    "x2",
+   "y",
    "y1",
    "y2"
   ],
@@ -377,6 +412,6 @@
     "loop"
    ]
   },
-  "built_at": "2026-10-31T06:00:21.665Z"
+  "built_at": "2026-10-31T22:22:33.585Z"
  }
 }

@@ -27,13 +27,16 @@ export function normalizeWords(s) {
     return String(s).toLowerCase().replace(/[-_/]+/g, " ").replace(/[^a-z0-9.+ ]+/g, " ")
         .split(/\s+/).map((w) => w.replace(/^\.+|\.+$/g, "")).filter(Boolean).map(singular);
 }
+// Plurals the suffix rules get wrong ("buses" would become "buse").
+const IRREGULAR = { buses: "bus", gases: "gas", statuses: "status", bonuses: "bonus", viruses: "virus",
+    campuses: "campus", analyses: "analysis", axes: "axis", indices: "index", children: "child", people: "person", calories: "calorie", movies: "movie", cookies: "cookie", series: "series", species: "species" };
 function singular(w) {
     // Not plurals: this, status, bus, analysis, canvas, gps.
     if (w.length <= 3 || !w.endsWith("s") || /(ss|is|us|as|ps)$/.test(w) || w.includes(".")) return w;
     if (/(ch|sh|x|z|ss)es$/.test(w)) return w.slice(0, -2);   // switches, boxes
+    if (IRREGULAR[w]) return IRREGULAR[w];                    // buses (not "buse")
     if (/[^aeiou]ies$/.test(w)) return w.slice(0, -3) + "y";  // entries
     return w.slice(0, -1);
-    return w;
 }
 
 /** The catalog, vocabulary, component library and phrase index, reloaded when a file changes. */
@@ -87,9 +90,20 @@ export function loadCatalog() {
 // Words too generic to name a subject ("current", "today", "screen").
 // Also the adjectives and filler a model adds when it rewrites the user's request
 // ("beautiful polished responsive ... themed"): none of them is a thing to build.
+// Goals that need date arithmetic no example teaches: the kit points at the formulas in the
+// expressions reference (a run of prompt 8 built an ISO week from scratch, in 27 calls).
+// Goals that need typing: the format has no text input of its own.
+const TEXT_ENTRY = /\b(calculator|converter|amount|enter a number|text ?fields?|input fields?|login|log ?in|sign ?in|sign ?up|password|e-?mail field|search (box|bar|field)|type|typing|keyboard|form fields?|enter (a|the|your)|text box)\b/i;
+
+const CALENDAR_MATH = /\b(week number|iso week|calendar|days? (in|of) (the )?(month|year)|leap year|this week|next week|last week|days? (until|since|ago|from now|left)|end of (the )?(month|year)|through the (week|month|year)|how far through|(month|year) progress|month view|date (window|picker))\b/i;
+
 const GENERIC = new Set(["current", "number", "numbers", "drawn", "drawing", "shown", "showing", "display", "displaying",
     "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve", "dozen", "all", "every", "each",
-    "change", "changes", "changing", "amount", "amounts", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
+    "change", "changes", "changing", "amount", "amounts", "break", "breaks", "empty", "empties", "window", "hand", "hands", "face",
+    "highlight", "highlighted", "highlighting", "glance", "session", "sessions", "section", "sections", "choice", "choices",
+    "option", "options", "item", "items", "entry", "entries", "row", "rows", "line", "lines", "part", "parts",
+    "through", "far", "coloured", "colored", "colour", "color", "colours", "colors", "room", "rooms", "out", "summary", "quality",
+    "score", "scores", "slept", "count", "counts", "total", "totals", "title", "titles", "saved", "monochrome", "production", "care", "active", "inactive", "unread", "read", "across", "along", "within", "between", "around", "per", "versus", "vs", "against", "today", "time", "screen", "app", "page", "view", "data", "value", "values", "info", "information", "smart", "make", "can", "adjust",
     "beautiful", "polished", "responsive", "modern", "clean", "custom", "drawn", "smooth", "dynamic", "possible", "themed", "daily",
     "elegant", "sleek", "minimal", "pretty", "stylish", "professional", "fancy", "cool", "great", "visual", "visualization", "visualisation",
     "design", "designed", "interface", "layout", "style", "styled", "rich", "detailed", "simple", "basic", "accurate", "real", "live",
@@ -221,9 +235,20 @@ function capSnippet(json, limit = 1600) {
     return { truncated: true, chars: s.length, start: s.slice(0, limit), note: "The whole snippet is in the example: get <id> with parts [\"json\"]." };
 }
 
-export function summarizeExample(e, { matched = [] } = {}) {
+export function summarizeExample(e, { matched = [], compact = false } = {}) {
     let snippets = (e.snippets ?? []).filter((s) => !matched.length || matched.includes(s.shows));
     if (!snippets.length) snippets = e.snippets ?? [];   // nothing matched the capabilities: show them all
+    // In a kit (compact): the entry is a pointer, not the example. The matched snippets first,
+    // then the shortest, within a budget; pitfalls within one too; `get` has everything.
+    if (compact) {
+        const budget = 2400;
+        const ranked = [...snippets].sort((a, b) => (matched.includes(b.shows) - matched.includes(a.shows))
+            || JSON.stringify(snippetJson(e, a.pointer) ?? "").length - JSON.stringify(snippetJson(e, b.pointer) ?? "").length);
+        let used = 0; const kept = [];
+        for (const sn of ranked) { const n = JSON.stringify(snippetJson(e, sn.pointer) ?? "").length + JSON.stringify(sn).length; if (used + n > budget && kept.length) break; kept.push(sn); used += n; }
+        snippets = kept;
+    }
+    const pitfalls = compact ? (() => { let used = 0; return (e.pitfalls ?? []).filter((p) => (used += String(p).length) <= 1500); })() : e.pitfalls;
     return {
         ...(canvasOnly(e) ? { structure: "canvas", structure_note: CANVAS_NOTE } : {}),
         id: e.id, folder: e.folder, title: e.title, summary: e.summary, level: e.level, family: e.family,
@@ -236,7 +261,8 @@ export function summarizeExample(e, { matched = [] } = {}) {
             inline_note: "Defined inside this example's doc.json (its `components` block), not in the library: copy the definition from get <id> (parts json), or use the library's Card." } : {}),
         ...((e.components ?? []).some((c) => !(e.derived?.components ?? []).includes(c))
             ? { hand_built: (e.components ?? []).filter((c) => !(e.derived?.components ?? []).includes(c)) } : {}),
-        teaches: e.teaches, pitfalls: e.pitfalls,
+        teaches: e.teaches, pitfalls,
+        ...(compact && (e.snippets ?? []).length > snippets.length ? { more: `${(e.snippets ?? []).length - snippets.length} more snippet(s) and the full JSON: get ${e.id}` } : {}),
         // What its renders were checked against (dates, values): verify a derived document the same way.
         ...(e.check?.describe ? { verified: String(e.check.describe).slice(0, 500) } : {}),
         snippets: snippets.map((s) => ({ ...s, json: capSnippet(snippetJson(e, s.pointer)) })),
@@ -255,7 +281,18 @@ function snippetJson(e, pointer) {
         if (cur == null) return null;
         cur = cur[Array.isArray(cur) ? Number(part) : part];
     }
-    return cur ?? null;
+    return cur == null ? null : elideData(cur);
+}
+
+// A snippet teaches a technique, not its data: a long list of numbers (a forecast, a table)
+// is cut to its first values and a count (a kit pasted a 49-entry tide table to teach a row).
+function elideData(v) {
+    if (Array.isArray(v)) {
+        if (v.length > 8 && v.every((x) => typeof x === "number")) return [...v.slice(0, 4), `… ${v.length - 4} more values`];
+        return v.map(elideData);
+    }
+    if (v && typeof v === "object") return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, elideData(x)]));
+    return v;
 }
 
 /** Ranked examples for a query. */
@@ -296,6 +333,20 @@ function expandCapIds(ids, C) {
 }
 
 /** The smallest set of examples (greedy set cover) that together demonstrate the goal. */
+// How many examples mention each word (title, keywords, prompt), for the subject weighting.
+const dfCache = new WeakMap();
+function wordDocFreq(C) {
+    let m = dfCache.get(C);
+    if (m) return m;
+    m = new Map();
+    for (const e of C.examples) {
+        const words = new Set(normalizeWords([e.title, (e.keywords ?? []).join(" "), e.prompt].filter(Boolean).join(" ")));
+        for (const w of words) m.set(w, (m.get(w) ?? 0) + 1);
+    }
+    dfCache.set(C, m);
+    return m;
+}
+
 export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}) {
     const C = loadCatalog();
     const r = resolveTerms(goal);
@@ -341,18 +392,29 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     }
     // Examples about the goal's subject: its words in an example's title, keywords or prompt
     // ("sunrise" -> the sun arc example), which capabilities alone don't reach.
-    const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && !generic(w));
+    // Time nouns are generic for "what to draw" but name a subject for the examples: a week
+    // widget wants the calendar, not a text demo.
+    const TIME_NOUNS = new Set(["day", "days", "week", "weeks", "month", "months", "year", "years", "hour", "hours", "minute", "minutes",
+        "second", "seconds", "today", "tonight", "date", "dates", "time", "times", "season", "seasons", "calendar"]);
+    const goalWords = normalizeWords(goal).filter((w) => w.length > 2 && !STOP.has(w) && (!generic(w) || TIME_NOUNS.has(w)));
+    // A word that many examples mention ("day", "year", "time") says less about the subject
+    // than one few do ("curve", "moon"): each hit is weighted by the word's rarity.
+    const rarity = (w) => {
+        const n = C.examples.length, d = wordDocFreq(C).get(w) ?? 0;
+        return Math.min(1.5, Math.max(0.35, Math.log((n + 1) / (d + 1)) / Math.log(n + 1) * 1.5));
+    };
     const textScore = (e) => {
         const t = ` ${normalizeWords(e.title ?? "").join(" ")} `, k = ` ${normalizeWords((e.keywords ?? []).join(" ")).join(" ")} `,
               p = ` ${normalizeWords(e.prompt ?? "").join(" ")} `;
         const hits = goalWords.filter((w) => t.includes(` ${w}`) || k.includes(` ${w}`) || p.includes(` ${w}`));
-        const score = goalWords.reduce((n, w) => n + (t.includes(` ${w}`) ? 2 : 0) + (k.includes(` ${w}`) ? 1.5 : 0) + (p.includes(` ${w}`) ? 1 : 0), 0);
+        const score = goalWords.reduce((n, w) => n + rarity(w) * ((t.includes(` ${w}`) ? 2 : 0) + (k.includes(` ${w}`) ? 1.5 : 0) + (p.includes(` ${w}`) ? 1 : 0)), 0);
         return { hits, score };
     };
     // Not promoted: examples that knowingly show an anti-pattern (an expected design finding:
     // a fixed date, glyph stars); a canvas-only demo counts for less than a laid-out screen.
     const DESIGN_CODES = new Set(["hardcoded_date", "glyph_icon", "absolute_layout", "fixed_coordinates", "text_anchor"]);
-    const byText = C.examples.filter((e) => e.kind !== "gallery" && !(e.expect_findings ?? []).some((c) => DESIGN_CODES.has(c)))
+    // (Diagnostics, DX-*, are deliberately broken documents: never a subject example.)
+    const byText = C.examples.filter((e) => e.kind !== "gallery" && !/^DX-/.test(e.id) && !(e.expect_findings ?? []).some((c) => DESIGN_CODES.has(c)))
         .map((e) => { const t = textScore(e); return { e, ...t, score: t.score * (canvasOnly(e) ? 0.6 : 1) }; })
         // Two of the goal's words, or one in the title: a single shared word in passing ("target"
         // in a touch-target example for a thermostat's target) is not the subject.
@@ -360,7 +422,10 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
             || (goalWords.length <= 3 && goalWords.some((w) => ` ${normalizeWords(x.e.title ?? "").join(" ")} `.includes(` ${w} `)))
             || (goalWords.length <= 2 && x.hits.length >= 1)))
         .sort((a, b) => b.score - a.score);
-    for (const x of byText.slice(0, 2)) {
+    // The second subject example must be about the subject nearly as much as the first (a
+    // skyline that mentions the moon is not a second moon example).
+    const topScore = byText[0]?.score ?? 0;
+    for (const x of byText.slice(0, 2).filter((y, i) => i === 0 || y.score >= 0.5 * topScore)) {
         const have = kit.find((k) => k.e.id === x.e.id);
         if (have) { have.about = x.hits; have.value = x.score; continue; }   // a capability pick that is also the subject
         kit.unshift({ e: x.e, covers: [], value: x.score, about: x.hits });
@@ -375,13 +440,37 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // How to structure the screen: the best-matching example that is laid out with components
     // (not a canvas-only demo), else the reference app layout.
     // The layout model: among the reference screens, the one closest to the goal, else the first.
-    const models = LAYOUT_MODELS.map((id) => C.examples.find((e) => e.id === id)).filter(Boolean);
+    // (A canvas-only demo is no model of a screen's structure, whatever it is about.)
+    let models = LAYOUT_MODELS.map((id) => C.examples.find((e) => e.id === id)).filter((e) => e && !canvasOnly(e));
+    // A widget or tile is modelled on a widget, never on a phone screen (a seasons widget was
+    // sent to a 565-op day-length screen because its words matched).
+    // A watch face or tile is modelled on the round watch example.
+    if (/\b(watch ?face|always[- ]on|ambient)\b/i.test(String(goal)) && !/\btile\b/i.test(String(goal))) {
+        // (A face is a drawing on the round screen: the analog clock, canvas and all.)
+        const round = C.examples.filter((e) => e.form_factor === "watch-round");
+        if (round.length) models = round;
+    } else if (/\b(widget|tile|complication|glance)\b/i.test(String(goal))) {
+        const small = models.filter((e) => /widget|square|watch|tile/.test(String(e.form_factor)));
+        if (small.length) models = small;
+    }
     // Earlier references are the stronger models: a near tie goes to them.
-    const model = models.map((e, i) => ({ e, ...textScore(e), rank: (models.length - i) * 0.75 })).filter((x) => x.score >= 3)
-        .sort((a, b) => (b.score + b.rank) - (a.score + a.rank))[0]?.e ?? models[0];
+    // With no subject match, the kind of surface decides: a form or settings screen takes the
+    // form-rows model, another full screen the cards list, a widget or tile the sunrise widget.
+    const gl = String(goal).toLowerCase();
+    const fallback = /\b(settings?|form|login|sign[- ]?in|preferences|profile|account|mixer|sliders?|toggles?|switches|controls?|calculator|converter|picker)\b/.test(gl) ? "CMP-12"
+        : /\b(screen|app|page|dashboard|player|tracker|list|card)\b/.test(gl) ? "CMP-05"
+        // A small widget of a few values: the countdown (4x2, texts in a column); one with a
+        // drawing or a curve: the sunrise widget.
+        : /\b(widget|tile)\b/.test(gl) && !/\b(chart|curve|graph|plot|path|arc|ring|gauge|map|moon|sun|tide)\b/.test(gl) ? "TIM-08" : "TIM-12";
+    // A dashboard is modelled on the stats dashboard (tiles, a chart, a list), whatever its subject words match.
+    const dashboard = /\b(dashboards?|overview)\b/i.test(String(goal)) ? models.find((e) => e.id === "CMP-08") : null;
+    const model = dashboard ?? models.map((e, i) => ({ e, ...textScore(e), rank: (models.length - i) * 0.75 })).filter((x) => x.score >= 3)
+        .sort((a, b) => (b.score + b.rank) - (a.score + a.rank))[0]?.e ?? models.find((e) => e.id === fallback) ?? models[0];
     // Words an example is about, and proper nouns (capitalised mid-goal: "San Francisco"), are not
     // things the library lacks.
     const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
+    // ...and they are not unmatched either: the vocabulary has no entry, but an example does.
+    r.unmatched_terms = r.unmatched_terms.filter((w) => !covered.has(w));
     const proper = new Set(String(goal).split(/\s+/).slice(1).filter((w) => /^[A-Z][a-z]/.test(w)).flatMap((w) => normalizeWords(w)));
     // The layout model is an example too, ahead of the capability picks (models fetch what the
     // kit lists); max_examples still holds, the weakest capability picks go first.
@@ -396,9 +485,38 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // ...nor words a returned component stands for (its synonyms: "waxing" for MoonPhase).
     for (const c of comps) for (const syn of c.synonyms ?? []) normalizeWords(syn).forEach((w) => covered.add(w));
     // ...nor a word that only qualifies a style ("a moonrise-style label" asks for a label).
-    for (const m of String(goal).toLowerCase().matchAll(/([a-z]+)[- ](?:style|like|ish|esque|inspired|themed)\b/g)) covered.add(normalizeWords(m[1])[0]);
-    let needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w)) }, C);
-    const icons = suggestIcons(goal, r, new Set(normalizeWords(goal).filter((w) => generic(w))));
+    // (Unless the qualifier names a drawing: "a hypnogram-like chart" asks for a hypnogram.)
+    for (const m of String(goal).toLowerCase().matchAll(/([a-z]+)[- ](?:style|like|ish|esque|inspired|themed)\b/g)) {
+        const w = normalizeWords(m[1])[0];
+        if (w && !/(gram|graph|chart|meter|gauge|map|scope|plot|diagram)$/.test(w)) covered.add(w);
+    }
+    // An event, a state or a quantity (a season, a solstice, a delivery step, a streak) is
+    // computed or written, not drawn: not a component to write.
+    const NOT_DRAWN = new Set(["season", "seasons", "solstice", "equinox", "sunrise", "sunset", "holiday", "anniversary", "birthday",
+        "deadline", "delivery", "delivered", "shipped", "ordered", "dispatched", "tracker", "tracking", "streak", "streaks", "stage", "stages",
+        "status", "state", "eta", "forecast", "trend", "goal", "goals", "target", "targets", "record", "records", "average", "averages"]);
+    // And only a word that names something VISUAL is a component to write: a shape, a symbol,
+    // an instrument, a picture (a moon, a needle, a hypnogram); a label, a quantity or a data
+    // field (a coin, a pollutant, an email, a bill) is text or a component's parameter.
+    const VISUAL = new Set(["icon", "icons", "symbol", "symbols", "glyph", "logo", "logos", "picture", "pictures", "illustration", "drawing",
+        "diagram", "sketch", "shape", "shapes", "figure", "figures", "avatar", "badge", "badges", "gauge", "gauges", "dial", "dials", "needle",
+        "meter", "meters", "ring", "rings", "arc", "arcs", "wheel", "wheels", "compass", "thermometer", "barometer", "speedometer", "odometer",
+        "bottle", "glass", "cup", "mug", "battery", "signal", "wifi", "bluetooth", "cloud", "clouds", "sun", "moon", "star", "stars", "planet",
+        "earth", "globe", "map", "maps", "flag", "flags", "heart", "hearts", "arrow", "arrows", "pointer", "hand", "hands", "needle", "drop",
+        "drops", "raindrop", "snowflake", "flame", "fire", "leaf", "leaves", "tree", "trees", "flower", "plant", "wave", "waves", "curve",
+        "curves", "path", "paths", "pattern", "patterns", "grid", "ruler", "scale", "slider", "knob", "knobs", "switch", "toggle", "button",
+        "chart", "charts", "graph", "graphs", "plot", "plots", "sparkline", "histogram", "hypnogram", "timeline", "calendar", "clock",
+        "watch", "face", "hourglass", "timer", "stopwatch", "bar", "bars", "donut", "pie", "swatch", "swatches", "palette", "spectrum",
+        "gradient", "silhouette", "skyline", "car", "bus", "train", "plane", "airplane", "bike", "ship", "rocket", "house", "building",
+        "door", "window", "lock", "key", "bell", "envelope", "phone", "laptop", "camera", "lamp", "bulb", "candle", "medal", "trophy",
+        "crown", "shield", "target", "crosshair", "radar", "waveform", "equalizer", "vu"]);
+    const visual = (w) => VISUAL.has(w) || /(gram|graph|chart|meter|gauge|map|scope|icon)$/.test(w);
+    if (process.env.KIT_DEBUG) console.error(`[kit] byText top: ${byText.slice(0, 2).map((x) => `${x.e.id}[${x.hits.join(" ")}]`).join(" ")}`);
+    if (process.env.KIT_DEBUG) for (const w of r.unmatched_terms) console.error(`[kit] ${w}: covered=${covered.has(w)} proper=${proper.has(w)} generic=${generic(w)} not_drawn=${NOT_DRAWN.has(w)} visual=${visual(w)}`);
+    let needs = needsComponent({ ...r, unmatched_terms: r.unmatched_terms.filter((w) => !covered.has(w) && !proper.has(w) && !generic(w) && !NOT_DRAWN.has(w) && visual(w)) }, C);
+    // Not for generic words, nor for what a returned component already shows (an icon of a
+    // clock next to the AnalogClock component).
+    const icons = suggestIcons(goal, r, new Set([...normalizeWords(goal).filter((w) => generic(w)), ...covered]));
     // A word an icon shows is not a component to write ("wifi" in a status bar).
     if (needs && icons?.suggestions?.length) {
         const shown = new Set(icons.suggestions.flatMap((x) => normalizeWords(x.for)));
@@ -415,7 +533,7 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
                     components: r.components, matched: r.matched },
         unmatched_terms: r.unmatched_terms,
         components: comps,
-        examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers }), contributes: k.covers,
+        examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers, compact: true }), contributes: k.covers,
             ...(k.about ? { about: `the goal's subject: ${k.about.join(", ")}` } : {}),
             ...(k.layout ? { about: "the layout model: structure the screen like this" } : {}) })),
         ...(model ? { layout_model: {
@@ -423,14 +541,16 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
             why: "Structure the screen like this: layout components (column, row, text, library components) for the " +
                  "structure and every text, a canvas only for a drawing, values computed in the document. get it for the full JSON.",
         } } : {}),
-        not_covered: [...remaining],
+        not_covered: [...remaining, ...(CALENDAR_MATH.test(goal) ? ["calendar arithmetic: no example, but recipes in reference expressions (Calendar arithmetic): an app date as an EPOCH DAY with today's epoch day from year() and dayOfYear(), days until/since, dates N days away, week numbers, month names"] : []),
+            ...(TEXT_ENTRY.test(goal) ? ["text entry: the format has NO keyboard input — see the design rule \"Text entry is the app's\""] : [])],
         ...(needs ? { needs_component: needs } : {}),
         ...(icons ? { icons } : {}),
         design: designRules(goal, r, needed),
         next_steps: [
             needs ? `Write the component(s) in needs_component first and check_component each with a sweep until every rendered state is right.` : null,
+            CALENDAR_MATH.test(goal) ? "Week numbers, month lengths, leap years and dates N days away are formulas in `reference expressions` (Calendar arithmetic): compute them as named variables from dayOfYear()/weekDay()/dayOfMonth(), then check with render clocks at year and month boundaries." : null,
             "Assemble one document structured like layout_model (components for layout and text, canvases only for drawings): library and inline component calls, the examples' techniques, values computed in the document rather than pasted.",
-            "rc-render.validate and render_rc it, look at the image, and rc-inspect.audit it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
+            "convert it (check: true), render it and look at the image, and audit it (it flags glyph icons, repeated subtrees, hard-coded dates and colours).",
             "Components expand automatically in every tool.",
         ].filter(Boolean),
     };
@@ -440,12 +560,17 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
  * Icons for the goal: Material Symbols matching its content words (the matched terms and the
  * unmatched ones), so a symbol on screen is an {"Icon": ...} call, not a glyph or a drawing.
  */
+// Words about the document's qualities, not things on screen: an icon for them is noise (a
+// wheelchair for "accessible", a lamp for the "light" theme).
+const NOT_ICON_TERMS = /^(home screen|home screen widget|widget|widgets|compact|accessible|accessibility|mono|monochrome|theme|themes?d?|light|dark|open|opens|zero|cap|capped|large|small|count|counts|unread|summary|state)$/i;
 function suggestIcons(goal, r, skip) {
     let out = [];
     // Content words only (not filler, not stopwords), and an icon whose NAME has the word: a
     // tag-only match is noise ("how" -> how_to_reg, "many" -> groups).
+    // A term is skipped when every word of it is (a phrase "analog clock" next to AnalogClock).
+    const skipped = (t) => { const ws = normalizeWords(t); return ws.length > 0 && ws.every((w) => (skip ?? new Set()).has(w)); };
     const terms = [...new Set([...r.unmatched_terms, ...r.matched.map((m) => m.term)])]
-        .filter((t) => t.length > 2 && !STOP.has(t) && !(skip ?? new Set()).has(t));
+        .filter((t) => t.length > 2 && !STOP.has(t) && !skipped(t) && !NOT_ICON_TERMS.test(t));
     try {
         for (const t of terms) {
             const words = normalizeWords(t);
@@ -453,6 +578,10 @@ function suggestIcons(goal, r, skip) {
                 // The icon is named after the word (moon, moon_stars), not merely containing it
                 // (shield_moon): a word inside a compound name names something else.
                 .filter((n) => words.some((w) => { const p = n.split("_")[0]; return singular(p) === w || p.startsWith(w) || singular(n) === w; }))
+                .concat(findIcons({ query: t, limit: 6 }).icons.map((i) => i.name)
+                    // A name ending in the word (potted_plant) when none starts with it.
+                    .filter((n) => words.some((w) => { const ps = n.split("_"); return ps.length === 2 && singular(ps[1]) === w; })))
+                .filter((n, i, arr) => arr.indexOf(n) === i)
                 .slice(0, 3);
             if (hit.length) out.push({ for: t, icons: hit });
         }
@@ -465,7 +594,7 @@ function suggestIcons(goal, r, skip) {
 
 // Reference screens laid out with components, with a drawing in a canvas and values computed
 // from the clock: the default layout_model when no better-matching one exists.
-const LAYOUT_MODELS = ["TIM-12", "TIM-13", "TIM-11", "TIM-10", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
+const LAYOUT_MODELS = ["TIM-12", "TIM-13", "TIM-11", "TIM-08", "TIM-10", "TIM-14", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
 
 // Examples that teach drawing a shape from a value, for a component the library lacks.
 const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];
@@ -508,7 +637,7 @@ const NOW_WORDS = /\b(today|tonight|now|current|this (day|week|month|year)|next 
 // Words for a status that depends on the current time.
 const LIVE_WORDS = /\b(right now|now|current(?:ly)?|rising|falling|next|upcoming|remaining|left|until|countdown|live|in progress|status)\b/;
 // Words for a quantity worth a visual.
-const QUANTITY_WORDS = /\b(percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left|curves?|charts?|graphs?|tides?|over time|hourly|daily)\b/;
+const QUANTITY_WORDS = /\b(percentages?|latency|uptime|calories?|kcal|macros?|grams?|protein|carbs?|fat|steps?|distance|percent|progress|levels?|phases?|usage|scores?|ratings?|budgets?|battery|temperatures?|speed|counts?|stats?|trends?|history|remaining|left|curves?|charts?|graphs?|tides?|over time|hourly|daily)\b/;
 
 /** Design rules for this goal: when to use which capability, not only how. */
 function designRules(goal, r, needed) {
@@ -517,11 +646,34 @@ function designRules(goal, r, needed) {
         { rule: "Show meaning with drawing, not characters", how: "A symbol (status, action, navigation, category) is an Icon ({\"Icon\": {\"name\": \"wifi\"}}; see icons, and find kind \"icons\"); a visual that depends on a value (a phase, a level, a progress) is a library component or one you define (see needs_component). Never text glyphs or emoji (◐ ★ ☀ ✓): they render inconsistently, can't be themed, sized or animated, and are usually approximations." },
         { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
         { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
-        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout with a fitBox (its first child that fits is shown: list the full layout first, then a compact one, then a minimal one; LAY-09) — a StateLayout switches on a host value, not on the size (LAY-15) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height or heightIn min, and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
+        { rule: "Switch content by state", how: "A screen with phases (work / break, playing / paused, empty / loaded) switches what it shows from a variable, never by rebuilding: a word from an index is a TextChoice; two alternatives are two children with a visibility modifier each (\"@isBreak\" and \"1 - @isBreak\"; an integer 0/1), stacked in a box so the layout does not move; a whole layout per state is a stateLayout node ({\"stateLayout\": {\"indexId\": \"@phase\", \"children\": [...]}}, a format node, not a component: LAY-15); a state colour is two coloured copies switched by visibility (LAY-12), a host colour the app sets, or (json2rc) a computed colour in resources.colors — {\"hsv\": [h, s, v]} or {\"argb\": [a, r, g, b]} from variables. A hidden alternative takes no taps and no space." },
+        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout with a fitBox (its first child that fits is shown: list the full layout first, then a compact one, then a minimal one; LAY-09) — a stateLayout switches whole layouts by an index, which may come from the window (round or square vs wide: \"step(windowWidth(), windowHeight() * 1.3)\"; LAY-15) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height instead of a weight (a weight does not combine with heightIn), and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
     ];
     if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
         rule: "Compute dates from the clock",
         how: "\"this month\", \"today\", \"now\": the month name, its number of days, the weekday of the 1st, today's highlight and anything derived (a moon phase, a countdown) are expressions over the time variables, so the document stays right tomorrow and next month. Don't paste values computed offline, and don't state precise data (event times) you cannot compute or source.",
+    });
+    // The form is a watch (not a widget that shows a watch's battery).
+    if (/\b(watch ?(tile|face)|wear ?os|complication|always[- ]on|(for|on) (a|the|my) watch)\b/.test(g)) rules.push({
+        rule: "A watch is round and small",
+        how: "A watch tile or face is drawn on a round screen of 160-220 dp: keep the content inside the inscribed circle (a centred square of 0.7 × min(windowWidth(), windowHeight()), or ring-shaped content around it), size everything from the window (not fixed dp), keep one number big and the rest minimal, and give the always-on (mono) look as much care as the colour one. Render at 160×160, 192×192 and 220×220 and at a rectangular widget size; a stateLayout indexed by the aspect (\"step(windowWidth(), windowHeight() * 1.3)\") can switch between the round and the wide layout.",
+    });
+    // Controls: what a tap changes outside the document must reach the app.
+    if (/\b(switch(es)?|toggles?|buttons?|taps?|tappable|sliders?|scrub|controls?|lock|unlock|play|pause|settings?|form|check ?marks?|checkbox(es)?|check (it )?off|tick( off)?|to-?do|habit|stopwatch|laps?|start|stop|tracker|track|log|counter|count up|intake|add (a|one)|\+1)\b/.test(g)) rules.push({
+        rule: "Taps reach the app",
+        how: "A control that changes something outside the document (a light, a lock, playback) keeps its state in an exported variable AND sends the app a hostNamedAction on each tap ({\"onClick\": [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@on\", \"value\": \"1 - @on\"}, {\"type\": \"hostNamedAction\", \"name\": \"kitchenLight\"}]}; INT-08): an exported variable alone only lets the app read a value. Library Button/IconButton/ListItem take the same list in their onClick param; Switch, Checkbox, Chip, Rating, Stepper and Tabs run their own flip first and then the extra actions you pass in onClick (get the component for its params). Give each control its own action name (a shared name is registered only by the first control tapped). Declare the numbers the app sets in resources.variables with export: true, and check every tap with inspect interact (host_actions and changed_host_variables). Exactly one of a set selected (tip chips, a theme choice, tabs): one exported index variable (\"@tip\" = 0, 1, 2); each option's tap sets it with valueFloatChange to its own index and sends its own action; each option's selected look and state read \"step(0.5, abs(@tip - k))\"-style values declared in resources (1 when chosen).",
+    });
+    if (TEXT_ENTRY.test(g)) rules.push({
+        rule: "Text entry is the app's",
+        how: "A RemoteCompose document cannot take keyboard input. A field is a display the app fills: a box showing a host string (\"@email\", or its placeholder when empty — keep a host float with the length, an expression cannot read a string), with a tap that sends a hostNamedAction (\"editEmail\") so the app opens its own input and sends the typed text back as the host string. A password is masked by the app (send \"•••••••\"). Give each field a semantics label (\"Email, empty\" / its value). A submit button enabled by the content takes a runtime enabled (Button's enabled accepts a variable). A NUMBER the user sets (an amount, a count) can stay in the document: a Stepper (+/−, its value exported), preset Chips, or a slider for display — or the app's own numeric input via a tapped field.",
+    });
+    if (/\b(colou?r picker|hue|saturation|lightness|brightness of the colou?r|rgb|hsl|hsv|swatch|tint)\b/.test(g)) rules.push({
+        rule: "Compute the colour",
+        how: "A colour that follows values (a picker's preview, a tint) is a computed colour in resources.colors: {\"preview\": {\"hsv\": [\"@hue\", \"@sat\", \"@val\"]}} (h, s, v in 0..1; or {\"argb\": [a, r, g, b]}), used as \"@colors.preview\"; it re-evaluates when the variables change. HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V). Slider tracks can show the range as a gradient drawn on a canvas. In mono the preview has no colour: show the values as text too.",
+    });
+    rules.push({
+        rule: "Sample values show the design",
+        how: "The document's default values are what every preview, gallery and first render shows: pick values that show the design populated and typical — a bill already entered, two laps recorded, three of eight items done, a mid-range level — not the empty or zero state. Check the empty state too (render samples), but do not ship it as the default.",
     });
     if (LIVE_WORDS.test(g)) rules.push({
         rule: "Compute what depends on now",
@@ -530,13 +682,65 @@ function designRules(goal, r, needed) {
             "as the day goes on. Data that comes from outside (a forecast, a schedule) is exported host variables or arrays; the " +
             "live parts are computed from it, never typed in. A word that follows a value (a phase name, \"Rising\"/\"Falling\", a weekday) is a TextChoice ({\"TextChoice\": {\"items\": [...], \"index\": \"@i\"}}): a layout text can't take textSubtext/textLookup. Joined to other text in one line (\"Waning gibbous, 57% lit\"), compute the word in a canvas global block and textMerge it (TIM-11). Render with variants to see another time of day.",
     });
+    // A reading with a right range (moisture, humidity, temperature for a plant or a room): too
+    // low and too high are both bad, which the usual gauge zones (green to red as it rises) get wrong.
+    if (/\b(moisture|humidity|ideal|comfort|optimal|in range|too (dry|wet|low|high|cold|hot))\b/.test(g)) rules.push({
+        rule: "A right range, not a rising alarm",
+        how: "A reading that is wrong on both sides (soil moisture 40-70 %, humidity, a room temperature) is a Gauge with the band: {\"value\": \"@moisture\", \"bandLo\": \"@lo\", \"bandHi\": \"@hi\"} draws the band on the track, the value green inside and amber outside, and in mono a filled dot inside and a hollow one outside. Without bandLo/bandHi its zones go green → amber → red as the value rises (bone dry would read green). Add the word under it (\"Too dry\" / \"OK\" / \"Too wet\") by step() on both edges.",
+    });
+    // E-ink: black on white, still, refreshed rarely.
+    if (/\b(e-?ink|e-?paper|eink|epaper|black and white|reflective|kindle)\b/.test(g)) rules.push({
+        rule: "E-ink is mono-light",
+        how: "An e-ink screen is the mono-light look: set componentTheme \"mono-light\" (white paper, black text and strokes, one grey #616161, no motion) and check it there. Large type, no animation, no fills that ghost. Date values alone never repaint: to flip at midnight read timeInMin() (a minute check, pixels unchanged) or let the app redraw (reference: Repaint). Check the panel's exact sizes with render sizes ([[800, 480], [480, 800], [296, 128]]).",
+    });
+    // Scaled quantities (a recipe, a converter): amounts read as cooks write them.
+    if (/\b(recipe|ingredients?|servings?|portions?|scal(e|es|ing))\b/.test(g)) rules.push({
+        rule: "Amounts read like a cook writes them",
+        how: "A scaled amount = base × servings / baseServings, formatted by kind (a host number per ingredient: 0 count, 1 volume, 2 weight, 3 \"a pinch\"): volumes snap to eighths — whole = floor(a + 1/16), the fraction index round((a - whole) × 8) picks \"\" ⅛ ¼ ⅜ ½ ⅝ ¾ ⅞ with a TextChoice (⅓/⅔ from thirds when closer); grams round to 5 above 20; \"a pinch\" never scales; the unit is a host string per ingredient (singular/plural by step(a, 1)). Steps that can be checked off are Checkbox rows (the label wraps); a struck-through done step is two texts switched by visibility.",
+    });
+    // Pages of laid-out content (onboarding, a carousel): a page variable, buttons and a swipe.
+    if (/\b(onboarding|pager|pages?|carousel|walkthrough|tutorial|swipe|slides?)\b/.test(g)) rules.push({
+        rule: "Pages are a page variable",
+        how: "Laid-out pages are a float @page (resources.variables, exported so the app can read it) and one box per page shown by visibility on on0 = \"1 - min(1, abs(@page - 0))\" (declared variables, exactly 0/1), with a stateLayout or animated visibility for the fade. Next / Skip are onClick valueFloatExpressionChange on @page (plus a hostNamedAction to tell the app). A swipe on laid-out content: on the page's container {\"onTouchDown\": [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@pxStart\", \"value\": \"touchX()\"}]} and {\"onTouchUp\": [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@page\", \"value\": \"clamp(0, N - 1, @page + clamp(-1, 1, round((@pxStart - touchX()) / (0.5 * windowWidth()))))\"}]} — it changes on release; a touch-tracking (TouchExpression) variable cannot drive a layout's visibility. PagerDots shows the position; announce \"Page 2 of 3\". Check with inspect interact: {\"drag\": [300, 300, 60, 300]}.",
+    });
+    // A QR or barcode: no generator in the format; a placeholder is a drawn pattern.
+    if (/\b(qr|barcode|bar code|scan code)\b/.test(g)) rules.push({
+        rule: "A QR code is a drawing",
+        how: "The format has no QR generator: a placeholder is a canvas in a framed square — three finder squares (7×7 modules: outer ring, inner 3×3) in three corners and a fixed pseudo-random module grid (a loop over a 21×21 or 25×25 grid drawing a square where a hash like (i*7 + j*13 + i*j) % 5 < 2), black on white in EVERY look (scanners need it; keep it out of mono-dark's lit area budget only if it is not meant to be scanned). A real code is an image the app supplies (a bitmap resource it sets) or a path it sends.",
+    });
+    // Always-on (ambient) screens: almost black, few lit pixels, one repaint a minute.
+    if (/\b(always[- ]on|ambient|aod|low[- ]power|monochrome|mono)\b/.test(g)) rules.push({
+        rule: "Always-on is mono-dark",
+        how: "An always-on face or tile is the mono-dark look: build it with componentTheme \"mono-dark\" (black background, white ink, one grey, no motion) and check it there first. Light up few pixels (thin weights 200-300, outlines not fills, no large filled areas), show no seconds and read only timeInMin() / the date so it repaints once a minute (inspect runtime says so), and keep it still. DigitalClock and AnalogClock already drop their seconds in mono. A battery level is a host float the watch app exports (batteryLevel() does not exist on Android).",
+    });
+    // A level where LOW is the alarm (battery, fuel, charge, storage left): Gauge's default
+    // zones turn amber then red as the value RISES, so a full battery would read as an alert.
+    if (/\b(battery|batteries|fuel|charge|charging|range|remaining|left in)\b/.test(g) && /\b(arc|gauge|dial|ring|meter)\b/.test(g)) rules.push({
+        rule: "Low is the alarm",
+        how: "A battery, fuel or charge level is bad when LOW. A Gauge's zones go green → amber → red as the value rises, so give it the band instead: {\"value\": \"@battery\", \"bandLo\": 20, \"bandHi\": 100} (green above 20 %, amber below, a hollow dot in mono), or draw a ProgressRing in @colors.error under the threshold. Say the low state in words too (\"Low battery\").",
+    });
+    // Today's curve so far (production, usage, steps): drawn up to now, the rest of the day empty.
+    if (/\b(today'?s?|so far|production|consumption|usage)\b/.test(g) && /\b(curve|chart|graph|line|production)\b/.test(g)) rules.push({
+        rule: "Today's curve stops at now",
+        how: "A curve over today is drawn up to now with LineChart's upTo (the sample index of now, e.g. \"(timeInMin() - 300) / 30\" for 30-min samples from 05:00): the line and its area stop there, the axis still spans the day, the min/max dots consider the drawn part. Pass the whole day's array (future slots 0) with y_min/y_max set; never push future samples below the plot.",
+    });
+    // Turn-by-turn navigation: the arrows are Material icons, picked by the direction code.
+    if (/\b(navigation|turn[- ]by[- ]turn|next turn|directions?|route)\b/.test(g)) rules.push({
+        rule: "Turn arrows are icons",
+        how: "Draw the next turn with the Material icons turn_left, turn_right, turn_slight_left, turn_slight_right, turn_sharp_left, turn_sharp_right, straight, u_turn_left, u_turn_right, roundabout_left, roundabout_right, merge, fork_left, fork_right (find_icons \"turn\"), one Icon per direction code shown by visibility on eq(@turn - k), or a stateLayout over the code. The distance as \"800 m\" / \"1.2 km\" / \"Now\" by step() on the metres.",
+    });
+    // A quantity against a target (calories, a budget, a goal) is often past it.
+    if (/\b(target|goal|budget|limit|quota|vs\.?|against)\b/.test(g)) rules.push({
+        rule: "Show the overshoot",
+        how: "A value against a target goes past it (31 % over the calories, a category over its budget): a bar shows it with ProgressBar {\"progress\": \"@spent / max(@limit, 0.01)\", \"overshoot\": true} — the bar rescales, a tick marks the limit and the excess is an @colors.error segment (hatched in mono). ProgressRing clamps at a full ring: show the excess beside it as its own mark (a second lap or segment in @colors.error, thick vs thin in mono). Always add a computed \"N over\" text (step(@v, @target) switches \"N left\" / \"N over\") — then check it with render samples at 0, at the target and over it.",
+    });
     if (QUANTITY_WORDS.test(g)) rules.push({
         rule: "Give quantities a visual",
         how: "A value with a range or a meaning (percent, level, phase, trend) gets a drawing: ProgressBar, ProgressRing, Gauge, Sparkline, BarChart, LineChart (a value over time, or a curve computed from the clock: tide, temperature, sun), or your own component; the number as text is secondary.",
     });
     rules.push({
         rule: "Look before answering",
-        how: "Render the document (render_rc) and look at it; for every component you wrote, check_component with a sweep over its parameter range. Check the states a user will reach (other days, other values, light and dark), not only the first render.",
+        how: "Render the document and look at it; for every component you wrote, check_component with a sweep over its parameter range. Check the states a user will reach (other days, other values, light and dark), not only the first render.",
     });
     return rules;
 }
@@ -554,7 +758,8 @@ export function componentSummary(name) {
         gallery: gallery ? { id: gallery.id, title: gallery.title, folder: gallery.folder } : null,
         demo: C.demos.has(name)
             ? { folder: C.demos.get(name).folder, prompt: C.demos.get(name).prompt, bytes: C.demos.get(name).derived?.bytes,
-                java_identical: C.demos.get(name).derived?.java_identical }
+                java_identical: C.demos.get(name).derived?.java_identical,
+                how: `get {"id": "${name}", "parts": ["demo_json"]} returns the demo document calling it (every param in use); parts ["render"] its PNGs` }
             : null,
     };
 }
@@ -577,7 +782,11 @@ export function findComponents({ query = "", capabilities = [], limit = 10 } = {
         return { s, score, why };
     }).filter((x) => x.score > 0 || (!query && !capabilities.length))
       .sort((a, b) => b.score - a.score || a.s.name.localeCompare(b.s.name));
-    return { unmatched_terms: words, components: scored.slice(0, limit).map((x) => ({ ...x.s, why: x.why })) };
+    // A listing with no query is the whole library: names only, every one (a run asked for the
+    // list and got 10 of 35 with no word about the rest).
+    if (!query && !capabilities.length) return { unmatched_terms: [], total: scored.length, components: scored.map((x) => ({ name: x.s.name, summary: x.s.summary })) };
+    return { unmatched_terms: words, total: scored.length, components: scored.slice(0, limit).map((x) => ({ ...x.s, why: x.why })),
+        ...(scored.length > limit ? { more: `${scored.length - limit} more match: pass a larger limit, or no query for the whole library (names only)` } : {}) };
 }
 
 export function listCapabilities({ prefix = "", query = "", with_counts = true } = {}) {

@@ -1,0 +1,313 @@
+{
+ "component": "Legend",
+ "version": 1,
+ "summary": "A chart legend for a float array: one row per entry with a swatch in the series tone (the same colour sequence as DonutChart's slices, by index), the label in onSurface and its share of the sum as a percent (or the value) in muted at the end of the row; one or two columns, filling the width.",
+ "params": {
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays (export it to let the host replace the data): the series the legend describes, in the order of `labels`; an entry's percent is its value over the array's sum"
+  },
+  "labels": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One label per entry, in the order of the array, e.g. [\"Stocks\", \"Bonds\", \"Cash\"]; fixed when the document is built. An entry may be \"@name\" of a root-level string variable the host sets"
+  },
+  "format": {
+   "type": "enum",
+   "values": [
+    "percent",
+    "value",
+    "none"
+   ],
+   "default": "percent",
+   "static": true,
+   "doc": "What follows the label, at the end of the row in muted: percent (the entry's share of the sum, a whole number with %), value (the number itself, no decimals) or none"
+  },
+  "columns": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "1 or 2: two weighted columns, the entries alternating (0 2 4 on the left, 1 3 5 on the right)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Series colour: the first swatch solid and each later one lighter (alpha 1 down to 0.3), the tones DonutChart gives its slices, so pass the donut's colour. In mono the swatches alternate filled and outlined"
+  },
+  "size": {
+   "type": "float",
+   "default": 10,
+   "static": true,
+   "doc": "Swatch side in dp (a rounded square); a row is size + 10 tall"
+  },
+  "maxEntries": {
+   "type": "float",
+   "default": 6,
+   "static": true,
+   "doc": "Rows from this index on are hidden, as are rows past the array's length"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility description of the whole legend; omitted, it is \"Legend: N entries\" from the labels"
+  }
+ },
+ "locals": {
+  "n": "arrayLength(@values)",
+  "m": "min(arrayLength(@values), @maxEntries)",
+  "sum": "max(arraySum(@values), 0.001)",
+  "c": {
+   "$count": "labels"
+  },
+  "rowH": "@size + 10"
+ },
+ "capabilities": [
+  "data.array",
+  "data.expression",
+  "layout.weight",
+  "draw.shapes",
+  "a11y.labels"
+ ],
+ "call": {
+  "Legend": {
+   "values": "@shares",
+   "labels": [
+    "Stocks",
+    "Bonds",
+    "Cash",
+    "Other"
+   ]
+  }
+ },
+ "pitfalls": [
+  "values is the name of a float array (\"@shares\" declared in resources.floatArrays), not a JSON list; labels is a JSON list written into the document ($each): a host can change the numbers but not the labels, so give one label per value the host may send. Rows past the array's length, or past maxEntries, collapse to 0 dp: each row's height is rowH * min(1, max(0, m - i)) over the local m = min(arrayLength(values), maxEntries), a tree variable at the head of the body. A visibility modifier cannot do this: it is an integer expression, which has no arrayLength and never sees a tree variable (U57), and the expander keeps a local that reads a float array out of resources.variables; a height expression is read at measure, in Java too (java-layout.sh: the collapsed row is 0 dp and the next content moves up). Each row clips to its bounds, so a collapsed swatch draws nothing",
+  "The swatches are the tones DonutChart gives its slices: paint alpha 1 - 0.7 * i / n over the same colour, so a Legend next to a DonutChart on the same array and `color` matches it by index. Pass the donut's `color` (secondary, success) when it is not primary. In mono the swatches alternate filled and outlined, as the donut's slices alternate thick and thin",
+  "The percent is round(100 * arrayGet(values, i) / sum) through textFromFloat (whole 3, decimal 0, flags 5) merged with \"%\"; rounded shares can add up to 99 or 101. format value prints the number with no decimals",
+  "columns 2 puts every entry in both columns and collapses the other column's half (an $if cannot test an index's parity), so a two-column legend costs twice the rows of a one-column one; use it for four to six short entries",
+  "Each row fills the width (the label sits in a weighted box, one line with an ellipsis, so a long label shortens instead of pushing the number out): in a row put the legend in a weighted box, or it has no width"
+ ],
+ "body": {
+  "row": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "semantics": {
+      "contentDescription": {
+       "$if": "label",
+       "then": "@label",
+       "else": "Legend: @c entries"
+      }
+     }
+    }
+   ],
+   "children": [
+    {
+     "$each": "columns",
+     "index": "col",
+     "do": {
+      "column": {
+       "modifiers": [
+        {
+         "weight": 1
+        },
+        {
+         "$if": "col",
+         "then": {
+          "padding": {
+           "start": 12
+          }
+         }
+        }
+       ],
+       "children": [
+        {
+         "$each": "labels",
+         "as": "lbl",
+         "index": "i",
+         "do": {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            "fillMaxWidth",
+            {
+             "height": {
+              "$if": "columns == '2'",
+              "then": "@rowH * min(1, max(0, @m - @i)) * (1 - (@i + @col) % 2)",
+              "else": "@rowH * min(1, max(0, @m - @i))"
+             }
+            },
+            {
+             "clip": {
+              "type": "rect"
+             }
+            }
+           ],
+           "children": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": "@size"
+               }
+              ],
+              "commands": [
+               {
+                "$if": "theme.mono",
+                "then": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": 1.5
+                    },
+                    {
+                     "alpha": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0.75,
+                   "top": 0.75,
+                   "right": "@size - 0.75",
+                   "bottom": "@size - 0.75",
+                   "rx": "@size / 4",
+                   "ry": "@size / 4"
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "alpha": "1 - @i % 2"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": "@size",
+                   "bottom": "@size",
+                   "rx": "@size / 4",
+                   "ry": "@size / 4"
+                  }
+                 }
+                ],
+                "else": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@color"
+                    },
+                    {
+                     "style": "fill"
+                    },
+                    {
+                     "alpha": "1 - 0.7 * @i / @n"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRoundRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": "@size",
+                   "bottom": "@size",
+                   "rx": "@size / 4",
+                   "ry": "@size / 4"
+                  }
+                 }
+                ]
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "weight": 1
+               },
+               {
+                "padding": {
+                 "start": 8,
+                 "end": 8
+                }
+               }
+              ],
+              "children": [
+               {
+                "text": {
+                 "value": "@lbl",
+                 "maxLines": 1,
+                 "overflow": "ellipsis",
+                 "fontSize": "@theme.text_sm",
+                 "color": "@colors.onSurface"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "$if": "format == 'percent'",
+             "then": {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "round(100 * arrayGet(@values, @i) / @sum)",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": "%"
+               },
+               "fontSize": "@theme.text_sm",
+               "color": "@colors.muted"
+              }
+             }
+            },
+            {
+             "$if": "format == 'value'",
+             "then": {
+              "text": {
+               "value": {
+                "type": "textFromFloat",
+                "value": "arrayGet(@values, @i)",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "fontSize": "@theme.text_sm",
+               "color": "@colors.muted"
+              }
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,9 +1,9 @@
 {
  "id": "BatteryIndicator",
  "name": "battery-indicator",
- "version": 1,
+ "version": 2,
  "title": "Battery indicator",
- "prompt": "Show the phone's battery level as a battery icon with the percentage, green when charged, amber at half and red with a warning mark when low.",
+ "prompt": "Show the phone's battery level as a battery icon with the percentage, green when charged, amber at half and red with a warning mark when low, and a lightning bolt while it charges.",
  "level": 1,
  "use_cases": [
   "widget",
@@ -19,31 +19,45 @@
   "low battery",
   "battery percentage",
   "status bar",
-  "power"
+  "power",
+  "charging",
+  "battery charging",
+  "plugged in"
  ],
  "teaches": [
-  "{\"BatteryIndicator\": {\"level\": \"@battery\"}} draws a battery filled to an exported host float, with \"76%\" after it",
-  "The fill turns amber below warnAt (50) and red below lowAt (20) through conditionalOperations around a paint change, and low also draws a !, so mono shows it by shape",
+  "{\"BatteryIndicator\": {\"level\": \"@battery\", \"charging\": \"@charging\"}} draws a battery filled to an exported host float, with \"76%\" after it, and a bolt over the body while the host's charging flag is 1",
+  "The fill turns amber below warnAt (50) and red below lowAt (20) through conditionalOperations around a paint change, and low also draws a !, so mono shows it by shape; while charging the fill stays green and the ! is not drawn",
+  "The bolt is the library bolt icon (one shared path) drawn twice: a surface-coloured halo stroke, then an onSurface fill, so it reads over the green fill and the empty part; in mono the two swap (a black bolt, white-outlined over black)",
   "size scales the icon (it is half as tall as it is wide); showPercent: false leaves only the icon"
  ],
  "snippets": [
   {
    "pointer": "/resources/variables",
    "shows": "host.variables",
-   "note": "battery, set by the host"
+   "note": "battery and charging, set by the host"
   },
   {
    "pointer": "/root/column/children/1",
    "shows": "text.dynamic",
-   "note": "bound to the host level, with the percentage"
+   "note": "bound to the host level and charging flag, with the percentage"
   },
   {
    "pointer": "/root/column/children/2",
    "shows": "data.condition",
-   "note": "95, 40 and 10 % in a flow: green, amber, red with a !"
+   "note": "95, 40 and 18 % in a flow: green, amber, red with a !"
   },
   {
    "pointer": "/root/column/children/3",
+   "shows": "image.icon",
+   "note": "54 % and 5 % charging: a bolt over a green fill, no !"
+  },
+  {
+   "pointer": "/root/column/children/3/flow/children/1",
+   "shows": "draw.path",
+   "note": "5 % charging: the bolt path (halo stroke, then fill) over the body instead of the !"
+  },
+  {
+   "pointer": "/root/column/children/4",
    "shows": "draw.shapes",
    "note": "72 dp, icon only"
   }
@@ -56,13 +70,20 @@
     "default": 76,
     "min": 0,
     "max": 100
+   },
+   "charging": {
+    "type": "float",
+    "meaning": "1 while the battery charges, else 0",
+    "default": 0,
+    "min": 0,
+    "max": 1
    }
   },
   "clock": null,
   "touch": false
  },
  "check": {
-  "describe": "The host level (76) gives a green icon about three quarters full and \"76%\"; the flow shows 95 (green, nearly full), 40 (amber) and 10 (red, with a red ! in the empty part); the large icon follows the host level. With battery = 15 (the low render) the first and last icons turn red and show the !. The icons keep their size and the three sit in a flow: at 240 dp the 10% one wraps to a second line, at 420 dp everything stays at the start.",
+  "describe": "The host level (76, not charging) gives a green icon about three quarters full and \"76%\"; the first flow shows 95 (green, nearly full), 40 (amber) and 18 (red, with a red ! in the empty part); the second flow shows 54 and 5 charging: both green with a dark (light theme) or light (dark theme) bolt with a thin halo over the body, and no ! on the 5. The large icon follows the host level. With battery = 15 (the low render) the first and last icons turn red and show the !; with charging = 1 (the charging render) they keep the green fill and gain the bolt. In mono the bolt is a black silhouette on the white fill and a white outline over the black empty part (the reverse in mono-light). The icons keep their size and sit in flows: at 240 dp the 18% one wraps to a second line, at 420 dp everything stays at the start.",
   "render": {},
   "renders": [
    {
@@ -74,12 +95,12 @@
     "theme": "dark"
    },
    {
-    "name": "mono",
-    "componentTheme": "mono"
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
    },
    {
-    "name": "mono-inverted",
-    "componentTheme": "mono-inverted"
+    "name": "mono-light",
+    "componentTheme": "mono-light"
    },
    {
     "name": "low",
@@ -88,14 +109,27 @@
     }
    },
    {
+    "name": "charging",
+    "variables": {
+     "charging": 1
+    }
+   },
+   {
+    "name": "low-charging",
+    "variables": {
+     "battery": 15,
+     "charging": 1
+    }
+   },
+   {
     "name": "narrow",
     "width": 240,
-    "height": 210
+    "height": 240
    },
    {
     "name": "wide",
     "width": 420,
-    "height": 210
+    "height": 240
    }
   ]
  },
@@ -108,51 +142,55 @@
   "components": [
    "BatteryIndicator"
   ],
-  "component_instances": 5,
+  "component_instances": 7,
   "component_modes": {
    "BatteryIndicator": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 4115,
+  "bytes": 6507,
   "header": {
    "width": 300,
-   "height": 210
+   "height": 240
   },
-  "op_count": 242,
+  "op_count": 369,
   "operations": {
-   "ACCESSIBILITY_SEMANTICS": 5,
-   "ANIMATED_FLOAT": 19,
-   "COLOR_CONSTANT": 12,
-   "COLOR_EXPRESSIONS": 12,
-   "COMPONENT_VALUE": 10,
-   "CanvasContent": 5,
-   "ConditionalOperations": 10,
-   "CoreText": 5,
-   "DATA_FLOAT": 1,
-   "DATA_TEXT": 3,
-   "DRAW_CIRCLE": 5,
-   "DRAW_ROUND_RECT": 20,
+   "ACCESSIBILITY_SEMANTICS": 7,
+   "ANIMATED_FLOAT": 27,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 14,
+   "CanvasContent": 7,
+   "ConditionalOperations": 18,
+   "CoreText": 7,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 4,
+   "DRAW_CIRCLE": 7,
+   "DRAW_PATH": 8,
+   "DRAW_ROUND_RECT": 28,
    "HEADER": 1,
-   "LAYOUT_BOX": 3,
-   "LAYOUT_CANVAS": 5,
+   "LAYOUT_BOX": 5,
+   "LAYOUT_CANVAS": 7,
    "LAYOUT_COLUMN": 1,
-   "LAYOUT_FLOW": 1,
+   "LAYOUT_FLOW": 2,
    "LAYOUT_ROOT": 1,
-   "LAYOUT_ROW": 5,
-   "LayoutComponentContent": 20,
-   "LoopOperation": 12,
-   "MATRIX_SCALE": 5,
-   "MATRIX_TRANSLATE": 5,
+   "LAYOUT_ROW": 7,
+   "LayoutComponentContent": 29,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 4,
+   "MATRIX_SAVE": 4,
+   "MATRIX_SCALE": 11,
+   "MATRIX_TRANSLATE": 11,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 6,
-   "MODIFIER_PADDING": 4,
-   "MODIFIER_WIDTH": 7,
-   "NAMED_VARIABLE": 7,
-   "PAINT_VALUES": 25,
-   "THEME": 18,
-   "TextFromFloat": 4,
-   "TextMerge": 4
+   "MODIFIER_HEIGHT": 8,
+   "MODIFIER_PADDING": 6,
+   "MODIFIER_WIDTH": 10,
+   "NAMED_VARIABLE": 9,
+   "PAINT_VALUES": 43,
+   "PATH_DATA": 1,
+   "THEME": 21,
+   "TextFromFloat": 6,
+   "TextMerge": 10
   },
   "host_variables": [
    {
@@ -164,6 +202,11 @@
     "name": "battery",
     "type": "float",
     "value": 76
+   },
+   {
+    "name": "charging",
+    "type": "float",
+    "value": 0
    },
    {
     "name": "error",
@@ -184,6 +227,11 @@
     "name": "success",
     "type": "color",
     "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
    },
    {
     "name": "warning",
@@ -217,13 +265,13 @@
     "render": "render-dark.png",
     "render_findings": []
    },
-   "mono": {
-    "componentTheme": "mono",
-    "bytes": 3503,
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 5764,
     "component_modes": {
      "BatteryIndicator": "expand"
     },
-    "op_count": 194,
+    "op_count": 311,
     "host_variables": [
      {
       "name": "background",
@@ -234,6 +282,11 @@
       "name": "battery",
       "type": "float",
       "value": 76
+     },
+     {
+      "name": "charging",
+      "type": "float",
+      "value": 0
      },
      {
       "name": "error",
@@ -263,16 +316,16 @@
     ],
     "java_identical": true,
     "repaint": "idle",
-    "render": "render-mono.png",
+    "render": "render-mono-dark.png",
     "render_findings": []
    },
-   "mono-inverted": {
-    "componentTheme": "mono-inverted",
-    "bytes": 3503,
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 5764,
     "component_modes": {
      "BatteryIndicator": "expand"
     },
-    "op_count": 194,
+    "op_count": 311,
     "host_variables": [
      {
       "name": "background",
@@ -283,6 +336,11 @@
       "name": "battery",
       "type": "float",
       "value": 76
+     },
+     {
+      "name": "charging",
+      "type": "float",
+      "value": 0
      },
      {
       "name": "error",
@@ -312,11 +370,19 @@
     ],
     "java_identical": true,
     "repaint": "idle",
-    "render": "render-mono-inverted.png",
+    "render": "render-mono-light.png",
     "render_findings": []
    },
    "low": {
     "render": "render-low.png",
+    "render_findings": []
+   },
+   "charging": {
+    "render": "render-charging.png",
+    "render_findings": []
+   },
+   "low-charging": {
+    "render": "render-low-charging.png",
     "render_findings": []
    },
    "narrow": {
@@ -324,7 +390,7 @@
     "render_findings": [],
     "size": [
      240,
-     210
+     240
     ],
     "audit_findings": []
    },
@@ -333,7 +399,7 @@
     "render_findings": [],
     "size": [
      420,
-     210
+     240
     ],
     "audit_findings": []
    }
@@ -343,11 +409,14 @@
    "apiLevel",
    "background",
    "battery",
+   "batteryindicator1_lc",
    "batteryindicator1_lv",
-   "batteryindicator5_lv",
+   "batteryindicator7_lc",
+   "batteryindicator7_lv",
    "bottom",
    "box",
    "canvas",
+   "charging",
    "children",
    "color",
    "colors",
@@ -361,6 +430,7 @@
    "dark",
    "decimal",
    "drawCircle",
+   "drawPath",
    "drawRoundRect",
    "dx",
    "dy",
@@ -372,6 +442,7 @@
    "fontSize",
    "header",
    "height",
+   "icon_bolt_rounded_filled",
    "id1",
    "id2",
    "left",
@@ -384,6 +455,8 @@
    "ops",
    "padding",
    "paint",
+   "path",
+   "paths",
    "profiles",
    "radius",
    "resources",
@@ -392,14 +465,18 @@
    "row",
    "rx",
    "ry",
+   "save",
    "scale",
    "semantics",
    "showPercent",
    "size",
    "spacedBy",
+   "strokeCap",
+   "strokeJoin",
    "strokeWidth",
    "style",
    "success",
+   "surface",
    "sx",
    "sy",
    "text",
@@ -414,12 +491,24 @@
    "verticalAlignment",
    "warning",
    "whole",
-   "width"
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
   ],
   "evidence": {
    "draw.shapes": [
     "drawRoundRect",
     "drawCircle"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "image.icon": [
+    "icon_"
    ],
    "data.condition": [
     "conditionalOperations"
@@ -433,6 +522,6 @@
     "colors"
    ]
   },
-  "built_at": "2026-10-31T06:00:30.428Z"
+  "built_at": "2026-10-31T22:22:42.506Z"
  }
 }

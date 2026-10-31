@@ -239,11 +239,13 @@ export class Component extends PaintOperation implements Container {
             this.mY = m.getY();
             this.mWidth = m.getW();
             this.mHeight = m.getH();
+            this.updateComponentValues(context, this.mWidth, this.mHeight);
             if (this.mParent) {
                 this.clearNeedsBoundsAnimation();
             }
         } else {
             this.mAnimateMeasure.apply(context);
+            this.updateComponentValues(context, this.mWidth, this.mHeight);
             this.markNeedsBoundsAnimation();
         }
         // Keep the override bits: a child a collapsible layout dropped (OVERRIDE_GONE) must start
@@ -349,6 +351,7 @@ export class Component extends PaintOperation implements Container {
     // --- Touch/Input ---
 
     onClick(context: RemoteContext, doc: any, x: number, y: number): boolean {
+        if (!this.isVisible()) return false;   // a hidden component takes no tap (U45)
         // Iterate children in reverse z-order
         for (let i = this.mChildren.length - 1; i >= 0; i--) {
             const child = this.mChildren[i];
@@ -491,7 +494,32 @@ export class Component extends PaintOperation implements Container {
         return null;
     }
 
-    addComponentValue(_v: any): void { /* override */ }
+    // ComponentValue ops that read this component's size or position (componentWidth() in a
+    // modifier or an expression): refreshed at every layout, as the reference's
+    // Component.updateComponentValues does (U49: they stayed at their load-time value, 0).
+    // (LayoutComponent redeclares this field null and fills it from its content ops: a
+    // ComponentValue applying before that saw null and the reader threw — two width
+    // expressions in one document were enough.)
+    mComponentValues: any[] | null = [];
+    addComponentValue(v: any): void {
+        if (!v) return;
+        if (!this.mComponentValues) this.mComponentValues = [];
+        if (!this.mComponentValues.includes(v)) this.mComponentValues.push(v);
+    }
+    updateComponentValues(context: RemoteContext, width: number, height: number): void {
+        for (const v of this.mComponentValues ?? []) {
+            const type = typeof v.getType === 'function' ? v.getType() : v.mType;
+            const id = typeof v.getValueId === 'function' ? v.getValueId() : v.mValueId;
+            if (typeof id !== 'number') continue;
+            switch (type) {
+                case 0: context.loadFloat(id, width); break;           // WIDTH
+                case 1: context.loadFloat(id, height); break;          // HEIGHT
+                case 2: context.loadFloat(id, this.mX); break;         // POS_X
+                case 3: context.loadFloat(id, this.mY); break;         // POS_Y
+                default: break;                                        // root positions, content: at apply
+            }
+        }
+    }
     registerVariables(_context: RemoteContext): void { /* override */ }
     updateVariables(_context: RemoteContext): void { /* override */ }
 

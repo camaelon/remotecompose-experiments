@@ -5,6 +5,7 @@
 // each thing. Read-only. See docs/EXAMPLES_TAXONOMY.md, "The retrieval tool".
 // stdio by default; `--http [PORT]` for Streamable HTTP (see lib/mcp-server.mjs).
 
+import { designAudit } from "./lib/design-audit.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { isMain, serve } from "./lib/mcp-server.mjs";
@@ -179,14 +180,14 @@ export const definition = {
                 "A library component: its params (types, defaults, which are static variants), slots, " +
                 "a minimal call snippet, pitfalls, its gallery example, its demo document, and " +
                 "optionally its definition (how it is built), the demo's JSON and its renders: the " +
-                "default one, then light, dark, mono (componentTheme \"mono\": light on black, for " +
-                "always-on displays) and mono-inverted (dark on white, for e-ink), each after a text line naming it.",
+                "default one, then light, dark, mono-dark (componentTheme \"mono-dark\": light on black, for " +
+                "always-on displays) and mono-light (dark on white, for e-ink), each after a text line naming it.",
             inputSchema: {
                 type: "object",
                 properties: {
                     name: { type: "string" },
                     definition: { type: "boolean", description: "Include the whole definition: body and locals (default false)." },
-                    parts: { ...STR_LIST, description: "Also any of demo_json (the demo document calling it), render (its PNGs: default, light, dark, mono, mono-inverted)." },
+                    parts: { ...STR_LIST, description: "Also any of demo_json (the demo document calling it), render (its PNGs: default, light, dark, mono, mono-light)." },
                 },
                 required: ["name"],
             },
@@ -208,7 +209,7 @@ export const definition = {
                 }
                 const dir = path.join(EXAMPLES_DIR, "components", key);
                 if (parts.includes("demo_json") && existsSync(path.join(dir, "doc.json"))) s.demo_json = JSON.parse(readFileSync(path.join(dir, "doc.json"), "utf8"));
-                const modes = ["light", "dark", "mono", "mono-inverted"].filter((m) => existsSync(path.join(dir, `render-${m}.png`)));
+                const modes = ["light", "dark", "mono-dark", "mono-light"].filter((m) => existsSync(path.join(dir, `render-${m}.png`)));
                 if (modes.length) s.renders = ["default", ...modes];
                 const content = json(s);
                 if (parts.includes("render")) {
@@ -245,27 +246,32 @@ export const definition = {
                 "both compile modes: `modes.expand` (each call written in full) and `modes.pattern` " +
                 "(one definePattern template, each call a pattern call; with the reason when the call " +
                 "can't be one, e.g. U7 for a component with a text). `bytes` is what auto mode writes; " +
-                "`themes` gives the bytes per componentTheme (auto: themed light/dark colours, mono, mono-inverted). " +
+                "`themes` gives the bytes per componentTheme (auto: themed light/dark colours, mono, mono-light). " +
                 "The render comes four times, each after a text line naming it: light and dark " +
-                "theme, and the mono and mono-inverted expansions (check the component's {\"$if\": \"theme.mono\"} variant). " +
+                "theme, and the mono and mono-light expansions (check the component's {\"$if\": \"theme.mono\"} variant). " +
                 "For a component drawn from a value, pass `sweep` ({param, values}) to see every state in one " +
                 "captioned contact sheet; a single render at the default value hides most geometry bugs. " +
                 "Give `call` (the args of one call, default the definition's own `call`) or a whole " +
-                "`doc` that calls it. Variables the call references (\"@cpu\") are declared for the " +
+                "`doc` that calls it; the demo hosts the call in a column, or in a row when the component's root " +
+                "has a weight (`container` overrides). Variables the call references (\"@cpu\") are declared for the " +
                 "demo; set their values with `variables`. A definition that passes can be pasted into " +
                 "any document under a top-level `components` object, or added to the library as " +
                 "examples/components/<Name>/component.json.",
             inputSchema: {
                 type: "object",
                 properties: {
-                    definition: { description: "The component definition (component.json shape: summary, params, slots, locals, body, call).", anyOf: [{ type: "object" }, { type: "string" }] },
+                    definition: { description: "The component definition (component.json shape: summary, params, slots, locals, body, call). Omit it to check a LIBRARY component by `name` (a sweep over its param, a call with your variables).", anyOf: [{ type: "object" }, { type: "string" }] },
                     name: { type: "string", description: "Its PascalCase name (default definition.component)." },
-                    call: { type: "object", description: "Arguments of one call (default: from definition.call)." },
+                    call: { type: "object", description: "Arguments of one call, {param: value} (default: from definition.call); the wrapped form {\"Name\": {...}} that get returns is accepted too." },
                     doc: { description: "Instead of `call`: a whole document calling it.", anyOf: [{ type: "object" }, { type: "string" }] },
+                    expanded: { type: "boolean", description: "Include the expanded demo document (what the call becomes, every icon path included: ~10 KB). Default false." },
+                    container: { type: "string", enum: ["row", "column"], description: "What the demo hosts each call in. Default: a row when the component's root has a weight (a cell of a row), else a column. The result's `container` says which was used." },
                     variables: { type: "object", description: "Values for the variables the call references, e.g. {\"cpu\": 72}." },
+                    clock: { description: "Pin the clock the renders see (as render's clock): a clock component is checked at a known time.", anyOf: [{ type: "string" }, { type: "number" }] },
+                    system_variables: { type: "object", description: "Floats overridden by raw id for the renders, e.g. {\"10\": 0} to pin offsetToUtc().", additionalProperties: { type: "number" } },
                     width: { type: "number", description: "Demo width (default 360)." },
                     height: { type: "number", description: "Demo height (default 200)." },
-                    render: { type: "boolean", description: "Render the demo in light, dark and mono (default true)." },
+                    render: { type: "boolean", description: "Render the demo in light, dark, mono-dark and mono-light (default true)." },
                     sweep: {
                         type: "object",
                         description: "Also render a contact sheet: the component once per value of one param, captioned, in a grid. Use it for anything drawn from a value: cover both ends, the middle and both halves of a cycle (e.g. {\"param\": \"phase\", \"values\": [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875]}).",
@@ -273,7 +279,7 @@ export const definition = {
                             param: { type: "string" },
                             values: { type: "array", description: "Values to try (numbers, strings for an enum, colours)." },
                             columns: { type: "number", description: "Cells per row (default 4)." },
-                            themes: { type: "array", items: { type: "string" }, description: "Default [\"light\"]; any of light, dark, mono, mono-inverted." },
+                            themes: { type: "array", items: { type: "string" }, description: "The looks to sweep, one sheet each. Default [\"light\"]; any of light, dark, mono-dark, mono-light: pass all four to see a value-driven drawing in every look." },
                         },
                         required: ["param", "values"],
                     },
@@ -296,7 +302,7 @@ export const definition = {
                 "the Java parser convert). Theme colours it uses are added to resources.colors unless " +
                 "the document defines them, which is how a document re-themes the library; they are " +
                 "themed {light, dark} colours the player picks by the system theme. `theme` (or the " +
-                "document's `componentTheme`) picks light, dark, mono or mono-inverted instead. `mode` (or " +
+                "document's `componentTheme`) picks light, dark, mono or mono-light instead. `mode` (or " +
                 "the document's `componentMode`): expand (every call inlined), pattern (definePattern " +
                 "templates where the players render them like the expansion), auto (default: a template " +
                 "for a variant used twice or more when the converted document is smaller). `report` says " +
@@ -306,7 +312,7 @@ export const definition = {
                 properties: {
                     json: { description: "The document (object or string).", anyOf: [{ type: "object" }, { type: "string" }] },
                     mode: { type: "string", enum: ["auto", "expand", "pattern"], description: "Overrides the document's componentMode." },
-                    theme: { type: "string", enum: ["auto", "all", "light", "dark", "mono", "mono-inverted"], description: "Overrides the document's componentTheme: auto (default: each theme colour a themed light/dark colour), light or dark (that palette only, plain colours), mono (light on black, one grey, the components' mono variants, no animation: always-on displays), mono-inverted (the same dark on white: e-ink), all (every look in one larger document, mono switched by the host's theme.mono float)." },
+                    theme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "Overrides the document's componentTheme: auto (default: each theme colour a themed light/dark colour), light or dark (that palette only, plain colours), mono-dark (light on black, one grey, the components' mono variants, no animation: always-on displays), mono-light (the same dark on white: e-ink), all (every look in one larger document, mono switched by the host's theme.mono float)." },
                 },
                 required: ["json"],
             },
@@ -348,8 +354,11 @@ const renderRc = renderServer.tools.find((t) => t.name === "render_rc").handler;
  * value goes wrong (the other half of a cycle, the far end of a range) and a single render,
  * at the default value, looks fine.
  */
-function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, width) {
-    let cols = Math.max(1, Math.min(columns, values.length));
+function sweepDoc(name, body, args, { param, values, columns, cell = 0 }, width, container = "column", vars = {}, docRes = null) {
+    // A wide cell (a row cell with a weight, a full-width row) gets two per line, else four.
+    const rootMods = Array.isArray(rootNode(body)?.modifiers) ? rootNode(body).modifiers : [];
+    const wide = container === "row" || rootMods.includes("fillMaxWidth") || rootMods.includes("fillMaxSize");
+    let cols = Math.max(1, Math.min(columns ?? (wide ? 2 : 4), values.length));
     // The cells are as wide as the grid allows and as tall as the component asks: its `size`
     // (the call's, else the param default) or its `height`, else square.
     const dim = (k) => [args[k], body.params?.[k]?.default].find((v) => typeof v === "number");
@@ -358,13 +367,19 @@ function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, wi
     if (want) cols = Math.max(1, Math.min(cols, Math.floor((width - 24) / (want + 8))));
     const rows = Math.ceil(values.length / cols);
     const cellW = (width - 32 - 8 * (cols - 1)) / cols;
-    const cellH = Math.round(cell || Math.max(dim("size") ?? dim("height") ?? cellW, 24)) + 22;
+    // A chart's `height` is its plot: axis labels drawn under or beside it need room too.
+    const labelRoom = Object.keys(body.params ?? {}).some((k) => /labels?$/i.test(k)) && dim("size") === undefined ? 28 : 0;
+    const cellH = Math.round(cell || Math.max(dim("size") ?? (dim("height") !== undefined ? dim("height") + labelRoom : undefined) ?? cellW, 24)) + 22;
     const label = (v) => `${param} ${typeof v === "number" ? +v.toFixed(4) : String(v)}`;
     const cellOf = (v) => ({ column: { horizontalAlignment: "center",
         modifiers: [{ weight: 1 }, { spacedBy: 4 }],
         children: [
-            { box: { modifiers: ["fillMaxWidth", { height: cellH - 22 }], horizontalAlignment: "center", verticalAlignment: "center",
-                     children: [{ [name]: { ...structuredClone(args), [param]: v } }] } },
+            // A weighted (row) cell needs a row to get a width; anything else is centred in a box.
+            container === "row"
+                ? { row: { modifiers: ["fillMaxWidth", { height: cellH - 22 }], verticalAlignment: "center",
+                           children: [{ [name]: { ...structuredClone(args), [param]: v } }] } }
+                : { box: { modifiers: ["fillMaxWidth", { height: cellH - 22 }], horizontalAlignment: "center", verticalAlignment: "center",
+                           children: [{ [name]: { ...structuredClone(args), [param]: v } }] } },
             { text: { value: label(v), fontSize: 11, color: "@colors.muted" } }] } });
     const grid = [];
     for (let r = 0; r < rows; r++) {
@@ -377,38 +392,108 @@ function sweepDoc(name, body, args, { param, values, columns = 4, cell = 0 }, wi
     return {
         header: { apiLevel: 7, width, height: rows * cellH + (rows - 1) * 8 + 32, profiles: 513 },
         components: { [name]: body },
+        // The document variables the call reads (declared as the single demo declares them).
+        ...demoResources(vars, docRes),
         root: { column: { modifiers: ["fillMaxSize", { background: "@colors.background" }, { padding: 16 }, { spacedBy: 8 }], children: grid } },
     };
 }
 
-async function checkComponent({ definition: def, name, call, doc, variables = {}, width = 360, height = 200, render = true, sweep }) {
+// The demo's resources: a variable whose value is an array is a floatArray (a chart's data);
+// a `doc` passed with the check lends its resources (its arrays, colours, variables), so a sweep
+// draws with the same data the single demo does.
+function demoResources(vars, doc) {
+    const res = {};
+    const d = doc ? (typeof doc === "string" ? JSON.parse(doc) : doc) : null;
+    for (const [k, v] of Object.entries(d?.resources ?? {})) res[k] = structuredClone(v);
+    for (const [k, v] of Object.entries(vars)) {
+        if (Array.isArray(v)) { res.floatArrays = { ...(res.floatArrays ?? {}), [k]: { value: v, export: true } }; if (res.variables) delete res.variables[k]; }
+        else if (!(res.floatArrays && k in res.floatArrays)) res.variables = { ...(res.variables ?? {}), [k]: res.variables?.[k] ?? v };
+    }
+    for (const k of Object.keys(res)) if (res[k] && typeof res[k] === "object" && !Object.keys(res[k]).length) delete res[k];
+    return Object.keys(res).length ? { resources: res } : {};
+}
+
+// What the component's root asks of its parent: a `weight` wants a row, a `verticalWeight` a column.
+// The body's root node: through a {"$if": ...} switch (its `then` branch) and an array's first.
+function rootNode(body) {
+    let b = Array.isArray(body?.body) ? body.body[0] : body?.body;
+    for (let i = 0; i < 4 && b && typeof b === "object" && "$if" in b; i++) b = b.then ?? b.else;
+    return b && typeof b === "object" ? (b.type ? b : b[Object.keys(b)[0]]) : null;
+}
+function rootWants(body) {
+    const root = rootNode(body);
+    const mods = Array.isArray(root?.modifiers) ? root.modifiers : [];
+    if (mods.some((m) => m && typeof m === "object" && "weight" in m)) return "row";
+    if (mods.some((m) => m && typeof m === "object" && "verticalWeight" in m)) return "column";
+    return "column";
+}
+
+// The expansion is listed last: the numbers and findings are what is read first.
+function expandedLast(o, keep) { const { expanded, ...rest } = o; return expanded === undefined || !keep ? rest : { ...rest, expanded }; }
+
+async function checkComponent({ definition: def, name, call, doc, variables = {}, width = 360, height = 200, render = true, sweep, clock, system_variables, container, expanded = false }) {
+    // The clock and system variables reach every render below (a clock component is checked
+    // at a pinned time, a sunrise one with offsetToUtc pinned).
+    const pinned = { ...(clock !== undefined ? { clock } : {}), ...(system_variables ? { system_variables } : {}) };
     if (sweep) render = true;   // a sweep is a render: asking for one is asking to see it
     if (typeof def === "string") def = JSON.parse(def);
+    // No definition: a library component by name (its own definition, so a sweep or a call
+    // with host variables can be checked without pasting it).
+    if (def === undefined && typeof name === "string") {
+        const lib = loadLibrary();
+        const key = [...lib.components.keys()].find((k) => k.toLowerCase() === name.toLowerCase());
+        if (!key) throw new Error(`no component ${name} in the library (pass a definition for your own; the library has ${[...lib.components.keys()].sort().join(", ")})`);
+        const { dir: _d, ...libDef } = lib.components.get(key);
+        def = { component: key, ...libDef };
+        name = key;
+    }
     name ??= def?.component;
     const lint = lintComponent(def, name);
     const out = { name, errors: lint.errors, warnings: lint.warnings };
     if (lint.errors.length) return json({ ...out, ok: false });
     const { component: _, ...body } = def;
-    const args = call ?? def.call?.[name] ?? {};
+    if (!["row", "column"].includes(container)) container = rootWants(body);
+    out.container = container;   // what the demo hosts each call in (a weighted root gets a row)
+    // `call` is the arguments of one call; the wrapped form get shows ({"Name": {...}}) is
+    // accepted too, so what get returns can be pasted straight in.
+    if (call && typeof call === "object" && Object.keys(call).length === 1 && Object.keys(call)[0] === name) call = call[name];
+    const own = def.call && typeof def.call === "object" ? (name in def.call ? def.call[name] : def.call) : {};
+    const args = call ?? own ?? {};
     const refs = (v) => [...JSON.stringify(v).matchAll(/"@([A-Za-z_]\w*)"/g)].map((m) => m[1]);
+    // A "@name" the call reads is declared for the demo: a float in resources, or, for a
+    // string param, a root-level string variable (the only form a host string takes).
+    const isText = (k) => ["string", "text", "enum"].includes(String(def.params?.[k]?.type ?? ""));
+    const textRefs = new Set(Object.entries(args).filter(([k, v]) => typeof v === "string" && /^@[A-Za-z_]\w*$/.test(v) && isText(k)).map(([, v]) => v.slice(1)));
+    const textDecls = [...textRefs].map((v) => ({ variable: { name: v, vtype: "string", value: String(variables[v] ?? v.toUpperCase()), export: true } }));
     const make = (n) => {
         if (doc) {
             const d = typeof doc === "string" ? JSON.parse(doc) : structuredClone(doc);
             d.components = { ...(d.components ?? {}), [name]: body };
             return d;
         }
-        const vars = Object.fromEntries(refs(args).map((v) => [v, variables[v] ?? 0]));
+        const vars = Object.fromEntries(refs(args).filter((v) => !textRefs.has(v)).map((v) => [v, variables[v] ?? 0]));
+        const calls = Array.from({ length: n }, () => ({ [name]: structuredClone(args) }));
+        // A cell meant for a row (its root has a weight) is hosted in a row, else it has no width.
+        const host = container === "row" ? [{ row: { modifiers: ["fillMaxWidth", { spacedBy: 12 }], children: calls } }] : calls;
         return {
             header: { apiLevel: 7, width, height, profiles: 513 },
             components: { [name]: body },
-            ...(Object.keys(vars).length ? { resources: { variables: vars } } : {}),
-            root: { type: "column", modifiers: ["fillMaxSize", { background: "@colors.background" }, { padding: 16 }, { spacedBy: 12 }],
-                    children: Array.from({ length: n }, () => ({ [name]: structuredClone(args) })) },
+            ...demoResources(vars),
+            root: textDecls.length
+                ? [...textDecls, { column: { modifiers: ["fillMaxSize", { background: "@colors.background" }, { padding: 16 }, { spacedBy: 12 }], children: host } }]
+                : { type: "column", modifiers: ["fillMaxSize", { background: "@colors.background" }, { padding: 16 }, { spacedBy: 12 }], children: host },
         };
     };
     try {
         const one = make(1);
         out.expanded = compileComponents(one, ".", { mode: "expand" }).doc;
+        // The design lint over the expansion: a local that lands inline in a visibility (hides
+        // everything, silently) or a number there is what the component lint cannot see.
+        try {
+            const dw = designAudit(out.expanded).filter((f) => f.severity === "warning");
+            if (dw.length) out.design_warnings = dw.map((f) => `${f.code}: ${f.message}`);
+            if (dw.some((f) => /visibility/.test(f.code))) { out.ok = false; out.errors.push(`the expanded demo has a visibility that cannot work (${dw.find((f) => /visibility/.test(f.code)).code}): see design_warnings`); }
+        } catch {}
         const bytes = jsonToRc(one);
         out.bytes = bytes.length;
         if (!doc) out.bytes_per_extra_instance = jsonToRc(make(2)).length - bytes.length;
@@ -429,44 +514,59 @@ async function checkComponent({ definition: def, name, call, doc, variables = {}
             }
             out.modes[mode] = m;
         }
-        // The bytes per componentTheme (the mono expansion also checks the mono variant).
-        const mono = { ...one, componentTheme: "mono" };
-        const inverted = { ...one, componentTheme: "mono-inverted" };
-        out.themes = { auto: bytes.length, mono: jsonToRc(mono).length, "mono-inverted": jsonToRc(inverted).length };
+        // The bytes per componentTheme (the mono expansions also check the mono variant).
+        const mono = { ...one, componentTheme: "mono-dark" };
+        const inverted = { ...one, componentTheme: "mono-light" };
+        out.themes = { auto: bytes.length, "mono-dark": jsonToRc(mono).length, "mono-light": jsonToRc(inverted).length };
         if (render) {
             const images = [];
             out.render_findings = {};
-            for (const [label, args] of [["light", { json: one, theme: "light" }], ["dark", { json: one, theme: "dark" }], ["mono", { json: mono }], ["mono-inverted", { json: inverted }]]) {
-                const r = await renderRc({ ...args, public_link: false });
+            // The host behind the demo matches the look: a component that paints no background of
+            // its own (a chart, an icon) draws light ink in dark and mono-dark (white on black), invisible on white.
+            for (const [label, args] of [["light", { json: one, theme: "light", background: "FFFFFFFF" }], ["dark", { json: one, theme: "dark", background: "FF121212" }],
+                                         ["mono-dark", { json: mono, background: "FF000000" }], ["mono-light", { json: inverted, background: "FFFFFFFF" }]]) {
+                const r = await renderRc({ ...args, ...pinned, public_link: false });
                 const text = r.filter((c) => c.type === "text").map((c) => c.text).join("\n");
                 out.render_findings[label] = text.split("\n").filter((l) => /^(error|warning|info): |^findings: /.test(l));
+                // A render that shows nothing is not ok, whatever the lint said.
+                if (out.render_findings[label].some((l) => /^(error|warning): \[(blank|solid|nearly_blank|zero_size|render_failed|no_fonts)\]/.test(l))) out.ok = false;
                 images.push({ type: "text", text: label.startsWith("mono") ? `${label} (componentTheme "${label}")` : `${label} theme` }, ...r.filter((c) => c.type === "image"));
             }
             if (sweep) {
                 if (!sweep.param || !Array.isArray(sweep.values) || !sweep.values.length) throw new Error("sweep needs {param, values: [...]}");
                 if (!(sweep.param in (def.params ?? {}))) throw new Error(`sweep: '${sweep.param}' is not a param of ${name}`);
-                const sheet = sweepDoc(name, body, args, sweep, Math.max(width, 360));
+                const sweepVars = Object.fromEntries(refs(args).filter((v) => !textRefs.has(v)).map((v) => [v, variables[v] ?? 0]));
+                const sheet = sweepDoc(name, body, args, sweep, Math.max(width, 360), container, sweepVars, doc);
+                if (textDecls.length) sheet.root = [...textDecls, sheet.root];
                 // The other inline components the document defines (helpers this one calls).
                 const docComps = doc ? (typeof doc === "string" ? JSON.parse(doc) : doc).components : null;
                 if (docComps) sheet.components = { ...docComps, [name]: body };
                 out.sweep = { param: sweep.param, values: sweep.values, bytes: jsonToRc(sheet).length };
                 for (const theme of sweep.themes ?? ["light"]) {
                     const mono = theme.startsWith("mono");
-                    const r = await renderRc({ json: mono ? { ...sheet, componentTheme: theme } : sheet, ...(mono ? {} : { theme }), public_link: false });
+                    const r = await renderRc({ json: mono ? { ...sheet, componentTheme: theme } : sheet, ...(mono ? {} : { theme }), ...pinned, public_link: false });
+                    // Only what says a cell drew nothing: the sheet's own captions and grid can
+                    // overflow without the component being at fault.
+                    const found = r.filter((c) => c.type === "text").map((c) => c.text).join("\n").split("\n")
+                        .filter((l) => /^(error|warning): \[(blank|solid|nearly_blank|zero_size|fitbox_no_fit|render_failed|no_fonts|parse_)/.test(l));
+                    if (found.length) (out.sweep.findings ??= {})[theme] = found;
                     images.push({ type: "text", text: `sweep of ${sweep.param} (${theme}): one cell per value, captioned. Check EVERY cell against what it should look like.` },
                                 ...r.filter((c) => c.type === "image"));
                 }
             }
             out.ok = true;
-            return [...json(out), ...images];
+            return [...json(expandedLast(out, expanded)), ...images];
         }
     } catch (e) {
         out.ok = false;
         out.error = e.message;
-        return json(out);
+        // What was rendered before the failure is not the result: the findings would read
+        // as "none" for looks that never got their image.
+        delete out.render_findings;
+        return json(expandedLast(out, expanded));
     }
     out.ok = true;
-    return json(out);
+    return json(expandedLast(out, expanded));
 }
 
 if (isMain(import.meta.url)) serve(definition);

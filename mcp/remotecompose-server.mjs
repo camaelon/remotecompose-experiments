@@ -38,7 +38,7 @@ function withDesign(content, args, { first = false } = {}) {
     const json = jsonOf(args);
     const notes = json ? designNotes(json) : "";
     if (!notes) return content;
-    const block = { type: "text", text: "NOT DONE YET: this document has design problems to fix before it is shown or published.\n" + notes };
+    const block = { type: "text", text: "Design warnings to fix before this is shown or published (an image may still look right: they are about other players, sizes or states).\n" + notes };
     return first ? [block, ...content] : [...content, block];
 }
 
@@ -97,19 +97,58 @@ component authoring guide and full documentation for every tool. inspect answers
 about a document (layout, variables, accessibility, interactions, bytes, runtime).`;
 
 const EXPRESSIONS = `Expressions (a string anywhere a number goes: "componentWidth() / 2", "@progress * 360")
-- Operators: + - * / % and unary -, with parentheses. Numbers are floats; a comparison (a > b, a < b, a == b) is 1 or 0.
+- Operators: + - * / % and unary -, with parentheses. Numbers are floats. There are NO comparison operators (no > < == ):
+  a test is step(x, edge) (1 when x > edge) or ifElse(whenFalse, whenTrue, cond) — the CONDITION IS THE LAST ARGUMENT,
+  cond > 0 picks the second (TIM-13 uses it); "x >= 0" is step(x, -0.0001), "a == b" is 1 - min(1, abs(a - b)) for
+  integers, "x < edge" is 1 - step(x, edge).
 - Functions: sin cos tan asin acos atan atan2(y, x) (radians), sqrt abs pow(x, y) exp log (base 10) ln square hypot(x, y),
-  min max clamp(min, max, x) floor ceil round fract sign step(edge, x) smooth_step(a, b, x) lerp(a, b, t) mad(a, b, c) = a * b + c,
-  ifElse(cond, a, b) (cond non-zero picks a), ping_pong(x, len), rand(), arrayGet(array, i) arrayLength arrayMin arrayMax arraySum,
+  min max clamp(min, max, x) floor ceil round fract sign, step(x, edge) = 1 when x > edge else 0 (the VALUE first, the reverse
+  of GLSL's step(edge, x); so is smooth_step(x, edge0, edge1)), lerp(a, b, t) mad(a, b, c) = a * b + c,
+  ifElse(whenFalse, whenTrue, cond) (the condition LAST; cond > 0 picks whenTrue), ping_pong(x, len), rand(), arrayGet(array, i)
+  arrayLength arrayMin arrayMax arraySum,
   spline / arraySpline(array, t) splineLoop.
 - Variables: "@name" for a resources.variables entry, a named variable command, a component param or a local; a text
-  cannot be read as a number (textFromFloat goes the other way).
-- Clock and calendar (read live, so a document shows now, and pinned by render's clock): timeInSec() (0..86399 of the day),
-  timeInMin() (0..1439), timeInHr() (0..23.99), continuousSec() (seconds running, for motion), year(), calendarMonth() (1..12),
-  dayOfMonth() (1..31), dayOfYear() (1..366), weekDay() (1 = Sunday .. 7), epochSecond(), offsetToUtc() (seconds; pin it with
+  cannot be read as a number (textFromFloat goes the other way). resources.variables are written first and in order:
+  one may read an earlier one, never a "variable" command declared in the tree; a tree variable (a canvas "variable"
+  command, a "global" block) may read resources.
+- Clock and calendar (read live, so a document shows now, and pinned by render's clock): timeInHr() (0..23, the hour),
+  timeInMin() (0..1439, minutes of the day), timeInSec() (0..3599, seconds within the HOUR, not of the day), so seconds of
+  the day = timeInMin() * 60 + timeInSec() % 60; all whole numbers in the device's local time (offsetToUtc() for UTC);
+  continuousSec() (0..3599.999, seconds WITHIN THE HOUR with fractions, updated every frame: it wraps at the hour, so a
+  stopwatch or elapsed time uses timeInMin() * 60 + continuousSec() % 60, the fractional seconds of the day, and
+  handles midnight), year(), calendarMonth() (1..12),
+  dayOfMonth() (1..31), dayOfYear() (1..366), weekDay() (1 = Monday .. 7 = Sunday), epochSecond(), offsetToUtc() (seconds; pin it with
   system_variables {"10": 0} to check UTC days), animationTime(), deltaTime().
+- Calendar arithmetic (no example has it; derive it, as named variables, from the clock values above; verified
+  against every day of 1999-2040). Equality: "1 - min(1, abs(x))" is 1 when x = 0 (written eq(x) below).
+  leap = eq(y % 4) * (1 - eq(y % 100)) + eq(y % 400), with y = year().
+  daysInMonth = 30 + (m + floor(m / 8)) % 2 - eq(m - 2) * (2 - leap) with m = calendarMonth() (27 entries, as in
+  TIM-10; a sum of eq() per short month passes 32); daysInYear = 365 + leap.
+  A date N days away (|N| < 28): d = dayOfMonth() + N; past the end: "d - daysInMonth(calendarMonth()) * step(d,
+  daysInMonth(calendarMonth()))"; before the 1st: add daysInMonth of the previous month (month 0 is December of y - 1).
+  Monday of this week: dayOfMonth() - weekDay() + 1 (then the rule above when it is ≤ 0).
+  ISO week number: p(y) = (y + floor(y / 4) - floor(y / 100) + floor(y / 400)) % 7; weeks(y) = 52 + max(eq(p(y) - 4),
+  eq(p(y - 1) - 3)); wk = floor((dayOfYear() - weekDay() + 10) / 7); week = ifElse(ifElse(wk, 1, step(wk, weeks(y))),
+  weeks(y - 1), step(1, wk)) — the last days of December can be week 1, the first days of January week 52 or 53.
+  A computed date (a day-of-year d, from today + N or an event) as "21 December": month by counting the month
+  starts passed, in two variables to stay under 32 entries, with L = leap: c1 = step(d, 31) + step(d, 59 + L) +
+  step(d, 90 + L) + step(d, 120 + L) + step(d, 151 + L) + step(d, 181 + L); c2 = step(d, 212 + L) + step(d, 243 + L)
+  + step(d, 273 + L) + step(d, 304 + L) + step(d, 334 + L); month = 1 + c1 + c2; before = ifElse(floor(30.6 * month -
+  32.3) + L * step(month, 2), 31 * (month - 1), step(3, month)); day = d - before; the month name is a TextChoice over
+  "month - 1", the number a textFromFloat (flags 5) joined by textMerge. Weekday name: TextChoice over weekDay() - 1.
+  Check with render clocks ["2026-12-31", "2027-01-01", "2024-12-30", "2028-02-29"].
+  A date the app stores (last watered, a due date, a birthday): the app sends it as an EPOCH DAY, the local date's
+  days since 1970-01-01 (a float holds it exactly; 20757 is 2026-10-31). Today's epoch day, with y = year(): e1 =
+  365 * (y - 1970) + floor((y - 1969) / 4); today = e1 - floor((y - 1901) / 100) + floor((y - 1601) / 400) +
+  dayOfYear() - 1. Days since = today - @day ("today" / "1 day ago" / "N days ago" by step on it), days until = @day -
+  today; any distance, across years and leap days. Not epochSecond() (see below) and not a day-of-year (wrong
+  across New Year).
 - Component and host values: componentWidth() componentHeight() (the canvas's own box, inside a canvas's commands),
-  windowWidth() windowHeight() density() fontSize() apiLevel(), batteryLevel() powerState() networkSignal() memoryFree(),
+  windowWidth() windowHeight() density() fontSize() apiLevel(); batteryLevel() powerState() networkSignal() memoryFree()
+  are json2rc extensions the Java parser rejects and Android does not define: a battery level is a host float the app
+  exports and keeps up to date ({"battery": {"value": 76, "export": true}}, as BatteryIndicator takes it);
+  (epochSecond() converts here but the Android parser does not know it: build an instant from dayOfYear(), timeInMin(),
+  timeInSec() and offsetToUtc() instead, as TIM-08 does; a float keeps 24 bits, so subtract days and seconds separately),
   touchX() touchY() touchVelX() touchVelY() touchTime(), accelX/Y/Z() gyroX/Y/Z() magneticX/Y/Z() light().
 - Limits: Android rejects an expression over 32 entries (operands and operators together): split a long formula into
   named variables (resources.variables or canvas "variable" commands) and combine them; the audit reports the longest.
@@ -126,17 +165,134 @@ Structure
 - A canvas is for drawings (a chart, a dial, an arc), sized by its modifiers inside the layout. Do not draw a
   whole screen on one canvas: its texts are placed by hand and nothing relayouts when the size changes.
 - Modifiers are a list: ["fillMaxWidth", {"padding": 16}, {"spacedBy": 8}, {"background": "@colors.surface"},
-  {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column)].
+  {"clip": {"roundedRect": 16}}, {"weight": 1} (in a row), {"verticalWeight": 1} (in a column), {"visibility":
+  "@shown"}]. visibility takes a DECLARED variable that is exactly 1 (shown) or 0 (hidden): put the condition in
+  resources.variables ({"shown": "step(@days, 0.5)"}) and reference it. An expression written inline is an INTEGER
+  expression (+ - * / %, abs, min, max, clamp, whole numbers only): "step(@days, 0.5)" is not one, becomes a text id
+  and hides the component; a plain number is a variable id. 0 removes the component (GONE: no space, no taps);
+  2 (INVISIBLE) keeps its space AND still takes taps — hide a button with 0, never 2.
+  Any layout node takes it (text, box, row, canvas…); a library or inline component CALL takes its params only — to
+  hide or switch a call, wrap it in a box carrying the visibility. width/height take a "@variable" or an expression;
+  size takes numbers only ({"size": 40} or [w, h]) — write width and height for a computed size.
+- Arrays: "resources": {"floatArrays": {"week": [6200, 8400, 7100, 10300, 5600, 12100, 9000]}} (or {"week":
+  {"value": [...], "export": true}} for one the host sets); a chart component takes it as "@week"; in an expression
+  arrayGet(@week, 3), arrayMax(@week), arraySum(@week), arrayLength(@week) (EXP-08).
+- Repaint: a document that reads the running clock (continuousSec(), animationTime(), a time-driven expression) repaints
+  every frame for as long as it is shown — the format cannot drop the listener when the value stops changing (a stopped
+  stopwatch still repaints). Keep clock reads to what must move; a document that reads only minutes repaints once a
+  minute. Date values alone (dayOfMonth(), weekDay(), dayOfYear()...) schedule NO repaint: a date-only document turns
+  the page at the host's next redraw. To flip at midnight on its own it must read the time (timeInMin(): a check every
+  minute, the pixels unchanged until the day turns); a wake at midnight is the canvas command {"type": "wakeIn",
+  "seconds": "(1440 - timeInMin()) * 60 + 1"}, which reads timeInMin() too. No once-a-day wake exists: on e-ink, either
+  accept the minute check (a host refreshes the panel only when pixels change) or have the app redraw at midnight.
+- Computed colours (json2rc extension; the reference JSON parser has none): in resources.colors,
+  {"swatch": {"hsv": ["@hue", "@sat", "@val"], "alpha": 255}} with h, s, v in 0..1 (hue as a fraction of the turn), or
+  {"argb": [a, r, g, b]} in 0..1 — numbers, "@variables" or expressions; "@colors.swatch" then follows the values at
+  run time (a colour picker's preview). HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V) (0 when V = 0).
+  A library Slider writes its bound variable when the drag ENDS (onRelease), so a preview computed from it updates on
+  release, not during the drag. A literal text that starts with "#" is read as a colour, not a text (both parsers):
+  join "#" through a text that does not start with it ("Hex " + "#…", or a textMerge whose first part is " #").
+- A colour the app sets (a document colour in resources.colors, set by name like any host variable) wins in every
+  look, mono included: its "mono-dark"/"mono-light" values are only the starting value. For a mono look that ignores
+  the app's colour, draw that element through a component with {"$if": "theme.mono"} choosing @colors.onSurface.
+- Host numbers are floats (resources.variables {"code": {"value": 3, "export": true}}), codes and counts too: an
+  "integers" resource reads as 0 in every float expression (an index, a size, a TextChoice), so it never moves.
+- 12/24-hour: no system value gives the device's preference; the app sends it as a host float ("use24h": 0/1)
+  and the document picks the format from it (DigitalClock takes it).
+- Text input: there is none. A document shows text (literal, computed, or host strings the app sets) and reacts to
+  taps and drags; typing happens in the app. A form field is a host string displayed in a box whose tap sends the app
+  an action to open its own input (see the "Text entry is the app's" design rule).
+- Actions: a tap is a modifier {"onClick": {...}} or {"onClick": [{...}, {...}]} on any component. Set a variable:
+  {"type": "valueFloatChange", "target": "@playing", "value": 1}; compute one: {"type": "valueFloatExpressionChange",
+  "target": "@playing", "value": "1 - @playing"}; tell the app: {"type": "hostNamedAction", "name": "next"} or with a
+  literal payload {"type": "hostNamedAction", "name": "open", "value": "track-3"}, or a variable's CURRENT value with a
+  type: {"type": "hostNamedAction", "name": "setVolume", "value": "@level", "valueType": "float"} (int, string and
+  floatArray too; read when the action runs — a json2rc extension: the reference JSON parser writes only literals). A tap that must reach the app sends a
+  hostNamedAction; an exported variable alone only changes what the app can read. A dragged value: the format's
+  HostNamedAction can carry a float/int/string VARIABLE (read when it runs) and {"onTouchUp": [...]} fires at the end
+  of a drag: {"onTouchUp": [{"type": "hostNamedAction", "name": "setVolume", "value": "@level", "valueType": "float"}]}
+  sends the level when the finger lifts. Every host action needs the app to handle it: a demo without a host shows
+  nothing, but inspect interact lists host_actions with their values and the playground's panel logs each one. Several controls may send
+  the SAME action name (five stars sending "rate" with their value): json2rc declares a shared name once before the
+  tree. The reference Java parser does not (the second control would send a nameless action until the first is
+  tapped, U58), so for a document that must also convert with it, give each control its own name.
+- Scrolling: {"column": {"modifiers": ["fillMaxSize", {"verticalScroll": "@scroll"}], "children": [...]}} with
+  "scroll": 0 in resources.variables (the scroll position; horizontalScroll likewise). A phone screen longer than its
+  height scrolls; a widget never does (it drops or compacts content instead).
+  A library Button/IconButton takes the same list in its "onClick" param. Check taps with inspect interact.
+- Host strings (a name, a symbol, a label the app sets): not in resources — a root-level variable command before the
+  layout, "root": [{"variable": {"name": "sym", "vtype": "string", "value": "AAPL", "export": true}}, {"column": ...}],
+  then "@sym" wherever a text goes (HST-01). Numbers the app sets: resources.variables {"price": {"value": 189.84,
+  "export": true}}.
+- Widget sizes (Android home screen, dp): a cell is ~70 dp less margins, so design 4x2 at 320×160 (hosts give
+  250×110 up to 360×190), 4x1 at 320×80 (250×40 up), 2x2 at 160×160 (110×110 up); a watch tile 160–220 square;
+  render variants covers narrow, short, small, tiny and square. Check the smallest you support.
+- Charts from data: pathExpression draws a SMOOTH curve through its samples (a spline: a jump between neighbours
+  bows), so it suits a trend line, not steps or bars. A step chart (a hypnogram, a bar per slot) is a canvas loop
+  {"loop": {"index": "i", "from": 0, "until": "arrayLength(@stages)", "commands": [{"drawRect": {... "arrayGet(@stages,
+  i)" ...}}]}} — the loop index is a name the loop binds; or the library BarChart / LineChart for the common cases.
+- A "global" block declares shared values once, before everything: at the root, {"global": {"children": [{"variable":
+  {"name": "goal", "value": 10000}}, ...]}} (STR-10); in a canvas, {"global": {"commands": [{"textSubtext": {...}},
+  {"textTransform": {...}}]}} for named texts a layout text can then show (TIM-11) — the converter writes a global
+  block's declarations before the root so every component can read them.
 - Smaller sizes: a widget is resized by its host. Drop content by priority with a collapsibleColumn inside a padded
   box: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers":
   ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [...]}}]}}, with
   {"collapsiblePriority": {"orientation": "vertical", "priority": N}} on the optional children (lowest N dropped first;
   none = dropped last, only if it does not fit on its own). A weighted child is never dropped and shrinks first: give a
-  chart a fixed height (or heightIn min) so the optional texts are what goes. collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
+  chart a fixed height instead of a weight (a weight does not combine with heightIn), so the optional texts are what goes.
+- fitBox: {"fitBox": {"modifiers": ["fillMaxSize"], "children": [{"column": {"modifiers": ["fillMaxWidth", {"height":
+  132}], ...}}, {"row": {"modifiers": ["fillMaxWidth", {"height": 72}], ...}}, {"row": {"modifiers": ["fillMaxWidth"],
+  ...}}]}} (LAY-09 is the feature demo: fixed-size cards in three colours so the chosen one is obvious — a widget uses
+  fillMaxWidth alternatives and theme colours). The first child, in order, that fits is shown; the others are hidden. A child fits when its
+  MINIMUM size fits the box: an exact width or height, and what its content cannot shrink below (a row sums its
+  children's minimums: seven 32 dp discs need 224 dp; a text's minimum is its own width; fill and wrap count 0).
+  A TEXT's minimum is its whole one-line width even when it may wrap or ellipsize (a sentence or a long name inside an
+  alternative makes it "need" 300+ dp, and the two players disagree on a weighted text's minimum): when the
+  alternatives hold texts, switch layouts with a stateLayout on the window instead — {"stateLayout": {"indexId":
+  "@layout", ...}} with layout = "step(windowWidth(), 300) + step(windowHeight(), 140)" — which picks by size, not by
+  content. Each alternative is a full copy of its content (bytes add up): keep two or three, with inline components.
+  So a wrap child does not always fit: order the children largest first, and make the last one fit the smallest
+  size you support (size it from the box: "width": "@disc" with disc = "min(32, (windowWidth() - 40) / 7)"); when
+  nothing fits the fitBox shows nothing (inspect layout reports fitbox_no_fit). The chosen child is measured in the
+  box: fillMaxWidth fills it, an exact width is CENTRED at that width, an exact height stays, a wrap child wraps.
+  Use exact HEIGHTS as the thresholds (fillMaxWidth + height N on each alternative); a width threshold via widthIn
+  min does not work (below the minimum the child is laid out 0 wide). width/height accept a "@variable", but
+  componentWidth()/componentHeight() inside a component's OWN width/height modifier read that component's box
+  (self-referential: it collapses to 0). A width relative to the PARENT is {"fillMaxWidth": 0.5} or {"fillMaxWidth":
+  "@fraction"} (a fraction of the parent; same for fillMaxHeight), a weight in a row, or windowWidth() (the surface).
+  collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
 - Text picked by a runtime index (a phase name, a weekday, "Rising"/"Falling"): the TextChoice component
   ({"TextChoice": {"items": ["New moon", ...], "index": "@phaseIndex"}}). A layout text cannot take textSubtext /
-  textTransform / textLookup (only canvas commands can); numbers go through textFromFloat, joins through textMerge.
-  textTransform takes "operation": "uppercase" | "lowercase" | "capitalize" (the numbers 1, 2, 3 mean the same).
+  textTransform / textLookup (only canvas commands can); numbers go through textFromFloat, joins through textMerge:
+  {"text": {"value": {"type": "textMerge", "id1": "Week ", "id2": {"type": "textFromFloat", "value": "@week",
+  "whole": 2, "decimal": 0, "flags": 5}}}} (nest textMerge for more parts). whole/decimal are digit counts; flags
+  is the padding: whole part 0 spaces | 4 none | 12 zeros, plus decimals 0 spaces | 1 none | 3 zeros, plus 16 for
+  thousands grouping — so 5 = no padding ("7"), 13 = zero-padded whole ("07"), 7 = forced decimals ("7.50", money),
+  23 = grouped money ("1,234.50" with whole 7, decimal 2), 15 = "07.50".
+  "whole" is a maximum: a number with more digits loses the leading ones (whole 4 shows 12345 as "2345"), so size it
+  for the largest value the app can send — and with grouping (16) the separators count too (260,840 needs whole 7:
+  whole 6 shows "60,840").
+  Money: compute in whole cents and round there, then divide — "round(@bill * @pct)" in cents, shown as "@cents / 100"
+  with decimal 2: a float like 46.475 is stored as 46.47499… and prints "46.47" whatever the flags.
+  textTransform takes "operation" as a NUMBER: 1 lowercase, 2 UPPERCASE, 3 trim, 4 Capitalize Each Word, 5 Capitalize
+  first. Do not use the names: the format's JSON parser maps "uppercase" to 1 (lowercase), "lowercase" to 2 and
+  "capitalize" to 3 (trim) — json2rc writes the same bytes (U74).
+- Text keys: {"text": {"text" | "value": ..., "fontSize": 14, "fontWeight": 700 (a NUMBER 100-900: "bold" is an
+  error), "fontStyle": "italic", "fontFamily": "sans-serif" | "serif" | "monospace", "color": "@colors.onSurface",
+  "textAlign": "start|center|end", "maxLines": 1, "overflow": "ellipsis" | "clip", "letterSpacing": 0.05 (in em: 0.1 is wide, 1 is huge), "autoSize":
+  true (shrinks the font to fit its box; "minFontSize"/"maxFontSize" bound it, alone they do nothing), "strikethrough": true, "underline": true, "modifiers": [...]}}.
+  strikethrough/underline are fixed per text: a to-do "done" look is two texts of the item (one plain, one
+  strikethrough + muted) switched by visibility on the item's state.
+- Alignment is a key of the container, not of the child: box {"horizontalAlignment": "center", "verticalAlignment":
+  "center"} centres its children (so does fitBox); row {"verticalAlignment", "horizontalArrangement"}; column
+  {"horizontalAlignment", "verticalArrangement"}; values start | center | end (top | bottom for vertical, plus
+  spaceBetween | spaceAround | spaceEvenly for an arrangement). There is no contentAlignment.
+- Accessibility: the header's contentDescription describes the document; a node is labelled with the modifier
+  {"semantics": {"contentDescription": "Today", "clickable": true}} (contentDescription as a plain key on a text or
+  box is dropped); the description may be a text object ({"type": "textMerge", "id1": "Phone, ", "id2": {"type":
+  "textFromFloat", "value": "@level", ...}}) so a screen reader hears live values. Every layout text is already a
+  readable node; a drawing on a canvas is not.
   A word joined to other text in one wrapping line ("Waning gibbous, 57% lit") is not a TextChoice: compute it as a
   named text in a canvas "global" block (textSubtext over fixed-width names, then textTransform to trim; see
   TIM-11), then use "@name" in a layout text's textMerge.
@@ -147,6 +303,15 @@ Structure
   row or column with weights, put fixed spacer boxes ({"box": {"modifiers": [{"width": 8}]}}) between them.
 
 Canvas (when you do draw)
+- Commands, in "commands": paint {color, style "fill"|"stroke", strokeWidth, textSize, textAlign...} sets the paint for what
+  follows; drawRect / drawRoundRect {left, top, right, bottom, rx, ry} / drawCircle {cx, cy, radius} / drawOval / drawArc
+  and drawSector {left, top, right, bottom, startAngle, sweepAngle} / drawLine {x1, y1, x2, y2} / drawPath {path} (a
+  pathExpression or a "path" resource, not an SVG string) / drawTextAnchored {text, x, y, panX, panY} / drawTextOnPath;
+  save / restore, translate {dx, dy}, rotate {angle, cx, cy}, scale {sx, sy}, clipRect, clipPath; variable {name, value}
+  (a named float for the commands after it), loop {index, from, until, commands}, conditionalOperations, global
+  {commands} (text commands: textSubtext, textTransform, textLookup, textMeasure; textFromFloat and textMerge are not
+  commands but VALUE objects, usable wherever a text goes — a text's value, drawText's text, a contentDescription — and
+  identical objects convert to one shared op, so repeating one costs nothing). get DRW-* examples show each.
 - Derive coordinates from componentWidth() / componentHeight() (named "variable" commands, then reused), or
   scale a fixed design box to the size: literal coordinates only fit the header size.
 - The paint is sticky: set color/style/strokeWidth/textSize before each kind of draw.
@@ -157,9 +322,9 @@ Canvas (when you do draw)
 
 Values
 - Colours: theme colours "@colors.onSurface" etc.; literal "#AARRGGBB" otherwise. Write each component call once:
-  the same JSON expands for every look. Light and dark follow the system theme; mono and mono-inverted
+  the same JSON expands for every look. Light and dark follow the system theme; mono and mono-light
   (always-on, e-ink) are the same JSON expanded with the components' mono implementation (render with
-  componentTheme "mono" to check it; the published playground's Mono buttons switch to it).
+  componentTheme "mono-dark" or "mono-light" to check it; the published playground's Mono buttons switch to it).
 - Expressions are strings: "componentWidth() / 2", "@progress * 360"; Android rejects one over 32 entries:
   split long formulas into named variables.
 - Anything that depends on the date or time (today, this month, "in 3 days") is computed from the clock
@@ -173,7 +338,7 @@ Values
  */
 /**
  * Does the document still fit when the host makes it smaller (a widget resized down)? The
- * audit's layout overflow at 60% of the height and 75% of the width, as a note naming the
+ * audit's layout overflow at 60% of the height and 72% of the width (the variants' sizes), as a note naming the
  * fixes, or "" when it fits.
  */
 async function smallSizeNote(args) {
@@ -185,16 +350,19 @@ async function smallSizeNote(args) {
     if (!src) return "";
     // What breaks at a smaller size and not at the design size: content past its box, or (a
     // column that runs out of room squeezes its last children to nothing) zero-size components.
+    // Judged by the renderer the images come from (C++), not the TS inspector: the two measure
+    // text a fraction apart, and a fitBox at its threshold flipped in one only (a calorie card
+    // "no longer fit" at a size whose render showed the compact layout intact).
     const broken = async (w, h) => {
-        const r = await tool(inspect, "audit").handler({ ...src, width: w, height: h });
-        const f = JSON.parse(r[0].text).findings ?? [];
-        const n = (code) => f.filter((x) => x.code === code).reduce((k, x) => k + (x.count ?? 1), 0);
-        return { overflow: n("layout_overflow"), zero: n("layout_zero_size") };
+        const r = await tool(render, "render_rc").handler({ ...src, width: w, height: h, public_link: false, _probe: true });
+        const text = r.filter((c) => c.type === "text").map((c) => c.text).join("\n");
+        const n = (code) => (text.match(new RegExp(`\\[${code}\\] (\\d+)`)) ?? [0, 0])[1] * 1 || (text.includes(`[${code}]`) ? 1 : 0);
+        return { overflow: n("component_overflow") + n("text_overflow"), zero: n("zero_size") + n("fitbox_no_fit") };
     };
     const over = [];
     try {
         const base = await broken(W, H);
-        for (const [w, h] of [[W, Math.round(H * 0.6)], [Math.round(W * 0.75), H]]) {
+        for (const [w, h] of [[W, Math.round(H * 0.6)], [Math.round(W * 0.72), H]]) {   // the variants' short and narrow
             const b = await broken(w, h);
             if (b.overflow > base.overflow || b.zero > base.zero) over.push(`${w}×${h}`);
         }
@@ -207,7 +375,64 @@ async function smallSizeNote(args) {
         "with a fitBox (its first child that fits is shown, full layout first: LAY-09), or at minimum put the content in a verticalScroll.";
 }
 
-async function renderVariants(t, args) {
+/** One render per pinned clock, captioned; the findings of each follow its image. */
+/** The args with a component look folded into the JSON (what the single render does itself). */
+function withLook(args, componentTheme) {
+    if (!componentTheme || componentTheme === "auto") return args;
+    componentTheme = { mono: "mono-dark", "mono-inverted": "mono-light" }[componentTheme] ?? componentTheme;   // the old names
+    const json = jsonOf(args);
+    return json ? { ...args, json: { ...json, componentTheme }, json_path: undefined } : args;
+}
+
+/** One render per set of host variables, captioned with the values; eased values settled. */
+async function renderSamples(t, args, samples) {
+    const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
+    const content = [];
+    if (samples.length > 12) content.push({ type: "text", text: `── ${samples.length} samples asked, the first 12 rendered: call again with the rest.` });
+    let i = 0;
+    for (const vars of samples.slice(0, 12)) {
+        i++;
+        const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
+        // A sample may pin its own clock ("$clock": "2026-06-21T12:00"): a time-of-day scenario
+        // is its data AND its hour.
+        const { $clock, ...values } = vars ?? {};
+        const a = { ...args, variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}) };
+        if (stem) a.output_path = `${stem}-sample${i}.png`;
+        try {
+            const r = await t.handler(a);
+            const notes = r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning|info): /.test(l)).join("\n") }))
+                .filter((c) => c.text);
+            const file = a.output_path ? ` → ${a.output_path}` : "";
+            content.push({ type: "text", text: `── sample ${i}: ${label}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
+        } catch (e) { content.push({ type: "text", text: `── sample ${i} (${label}): ${String(e?.message ?? e).split("\n")[0]}` }); }
+    }
+    return withDesign(content, args, { first: true });
+}
+
+async function renderClocks(t, args, clocks) {
+    const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
+    const content = [];
+    // At most 12 renders in one call; say so rather than drop the rest quietly.
+    if (clocks.length > 12) content.push({ type: "text", text: `── ${clocks.length} clocks asked, the first 12 rendered: call again with the rest (${clocks.slice(12).map(String).join(", ")}).` });
+    for (const clock of clocks.slice(0, 12)) {
+        const a = { ...args, clock };
+        if (stem) a.output_path = `${stem}-${String(clock).replace(/[^0-9A-Za-z]+/g, "-")}.png`;
+        try {
+            const r = await t.handler(a);
+            // Only the findings: the png_path / Success lines repeat what the caption says.
+            const notes = r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning|info): /.test(l)).join("\n") }))
+                .filter((c) => c.text);
+            const file = a.output_path ? ` → ${a.output_path}` : "";
+            content.push({ type: "text", text: `── clock ${clock}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
+        } catch (e) { content.push({ type: "text", text: `── clock ${clock}: ${String(e?.message ?? e).split("\n")[0]}` }); }
+    }
+    return withDesign(content, args, { first: true });
+}
+
+const SIZE_MARK = Symbol("size");
+async function renderVariants(t, args, sizes = [], onlySizes = false, samples = null, clocks = null) {
     const json = jsonOf(args);
     const header = json?.header ?? {};
     const W = args.width ?? header.width ?? 360, H = args.height ?? header.height ?? 640;
@@ -219,32 +444,84 @@ async function renderVariants(t, args) {
         const c = args.clock ? new Date(args.clock) : new Date();
         const d = new Date(c.getTime() + hours * 3600_000);
         const p = (n) => String(n).padStart(2, "0");
-        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+        return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
     };
+    // A watch face or tile (its words say so) is checked round; a 2x2 widget is square too.
+    const isWatch = /\b(watch|wear|tile|face|wrist|round)\b/i.test(JSON.stringify(json?.header ?? {}) + " " + (args.title ?? "") + " " + (args.json_path ?? ""));
     const plan = [
         ["dark theme", { ...base, theme: "dark" }],
         ["light theme", { ...base, theme: "light" }],
-        ...(json ? [["mono (always-on displays)", { ...base, json: { ...json, componentTheme: "mono" }, json_path: undefined }],
-                    ["mono-inverted (e-ink)", { ...base, json: { ...json, componentTheme: "mono-inverted" }, json_path: undefined, theme: "light" }]] : []),
+        ...(json ? [["mono-dark (always-on displays)", { ...base, json: { ...json, componentTheme: "mono-dark" }, json_path: undefined, theme: "dark" }],
+                    ["mono-light (e-ink)", { ...base, json: { ...json, componentTheme: "mono-light" }, json_path: undefined, theme: "light" }]] : []),
         [`narrow ${Math.round(W * 0.72)}×${H}`, { ...base, width: Math.round(W * 0.72) }],
         [`wide ${Math.round(W * 1.6)}×${Math.round(H * 0.75)}`, { ...base, width: Math.round(W * 1.6), height: Math.round(H * 0.75) }],
         [`short ${W}×${Math.round(H * 0.6)} (a widget resized down)`, { ...base, height: Math.round(H * 0.6) }],
         [`small ${Math.round(W * 0.72)}×${Math.round(H * 0.6)} (narrow and short at once)`, { ...base, width: Math.round(W * 0.72), height: Math.round(H * 0.6) }],
+        // (A phone screen is never half a phone wide: tiny is for widgets.)
+        ...(H > W * 1.3 && H >= 400 ? [] : [[`tiny ${Math.round(W * 0.5)}×${Math.round(H * 0.6)} (half the width)`, { ...base, width: Math.round(W * 0.5), height: Math.round(H * 0.6) }]]),
+        // A square of the height: a 2x2 home-screen cell for a wide widget, a secondary screen for a big one.
+        // (A widget's 2x2 cell is 160×160, as the format reference says, whatever its own height.)
+        ...(W > H * 1.3 ? [H <= 260 ? ["widget 2x2 160×160", { ...base, width: 160, height: 160 }] : [`square ${H}×${H}`, { ...base, width: H, height: H }]] : []),
+        // The caller's own sizes (a car display's screens, a kiosk).
+        ...(Array.isArray(sizes) ? sizes : []).filter((s) => Array.isArray(s) && s[0] > 0 && s[1] > 0).slice(0, 10)
+            .map(([w, h]) => [`size-${Math.round(w)}x${Math.round(h)} (${Math.round(w)}×${Math.round(h)})`, { ...base, width: Math.round(w), height: Math.round(h), [SIZE_MARK]: true }]),
+        // A square watch-sized document is a watch face or tile: check it round, small and large.
+        ...(W === H && W <= 260 && isWatch ? [["round 160×160 (the smallest watch)", { ...base, width: 160, height: 160, round: true }],
+                                   ["round 192×192 (a small watch)", { ...base, width: 192, height: 192, round: true }],
+                                   ["round 227×227 (a large watch)", { ...base, width: 227, height: 227, round: true }]] : []),
+        // A widget-sized document (not a phone screen) is also checked at the home-screen cell
+        // sizes the format reference tells authors to design for.
+        ...(W <= 420 && H <= 260 && !(W === H && W <= 260 && isWatch) ? [["widget 4x2 320×160", { ...base, width: 320, height: 160 }], ["widget 4x1 320×80", { ...base, width: 320, height: 80 }]]
+            .filter(([, a]) => !(a.width === W && a.height === H)) : []),
+        // A phone screen is often asked to work as a widget too, and a tablet is the other end.
+        ...(H > W * 1.3 && H >= 400 ? [["as a 4x2 widget 320×160 (only if it must also work as a widget)", { ...base, width: 320, height: 160 }], [`tablet ${Math.round(W * 2.2)}×${Math.round(H * 1.4)}`, { ...base, width: Math.round(W * 2.2), height: Math.round(H * 1.4) }]] : []),
         ...(json && readsClock(json) ? [[timeOfDay(json) ? "seven hours later" : "45 days later", { ...base, clock: clockShift(timeOfDay(json) ? 7 : 45 * 24) }]] : []),
     ];
+    // sizes alone (no variants): just the caller's sizes.
+    if (onlySizes) plan.splice(0, plan.length, ...plan.filter(([, a]) => a[SIZE_MARK]));
+    for (const [, a] of plan) delete a[SIZE_MARK];
+    // Clocks with sizes: each clock at each size (the first 4 clocks).
+    if (Array.isArray(clocks) && clocks.length && onlySizes && !(Array.isArray(samples) && samples.length)) {
+        const more = [];
+        for (const [label, a] of plan) more.push(...(await renderClocks(t, { ...a, ...(typeof args.output_path === "string" ? { output_path: args.output_path.replace(/\.png$/i, "") + `-${label.split(" (")[0].replace(/[^a-z0-9]+/gi, "-")}.png` } : {}) }, clocks.slice(0, 4))).map((c) =>
+            c.type === "text" && c.text.startsWith("── clock") ? { ...c, text: c.text.replace("── clock", `── ${label.split(" (")[0]} · clock`) } : c));
+        return more;
+    }
+    // Samples with sizes: each sample at each size (a small grid; the first 4 samples).
+    if (Array.isArray(samples) && samples.length && onlySizes) {
+        const more = [];
+        for (const [label, a] of plan) more.push(...(await renderSamples(t, { ...a, ...(typeof args.output_path === "string" ? { output_path: args.output_path.replace(/\.png$/i, "") + `-${label.split(" (")[0].replace(/[^a-z0-9]+/gi, "-")}.png` } : {}) }, samples.slice(0, 4))).map((c) =>
+            c.type === "text" && c.text.startsWith("── sample") ? { ...c, text: c.text.replace("── sample", `── ${label.split(" (")[0]} · sample`) } : c));
+        return more;
+    }
     const content = [];
-    // output_path names the set: <stem>-<variant>.png beside it (dark, light, mono, narrow, ...).
+    const saidInfo = new Set();
+    // output_path names the set: <stem>-<variant>.png beside it (dark, light, mono-dark, narrow, ...).
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
     for (const [label, a] of plan) {
         const clean = Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined));
-        if (stem) clean.output_path = `${stem}-${label.split(/\s/)[0].replace(/[^a-z0-9-]/gi, "")}.png`;
+        // The file is named after the caption up to its note ("widget 4x2 320×160" → widget-4x2-320x160).
+        if (stem) clean.output_path = `${stem}-${label.split(" (")[0].replace(/ theme$/, "").replace(/×/g, "x").replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase()}.png`;
         try {
             const r = await t.handler(clean);
-            content.push({ type: "text", text: `── ${label}` }, ...r.filter((c) => c.type === "image"),
-                ...r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text)).map((c) => ({ type: "text", text: c.text })));
-        } catch (e) { content.push({ type: "text", text: `── ${label}: ${String(e?.message ?? e).split("\n")[0]}` }); }
+            // Only the findings: the png_path / Success lines repeat what the caption says.
+            // An info line (unpainted corners, a collapsed child) is said once, at its first variant.
+            const notes = r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || (/^info: /.test(l) && !saidInfo.has(l.slice(0, 40)) && saidInfo.add(l.slice(0, 40)))).join("\n") }))
+                .filter((c) => c.text);
+            const file = clean.output_path ? ` → ${clean.output_path}` : "";
+            content.push({ type: "text", text: `── ${label}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
+        } catch (e) {
+            const msg = String(e?.message ?? e);
+            // A document that does not convert fails every variant the same way: say it once.
+            if (/json2rc failed|does not parse|Unknown token|not valid JSON/i.test(msg)) {
+                return [{ type: "text", text: `The document does not convert, so no variant was rendered:\n${msg}` }];
+            }
+            content.push({ type: "text", text: `── ${label}: ${msg.split("\n")[0]}` });
+        }
     }
-    const small = await smallSizeNote(args);
+    // (Asked sizes only: the caller chose them, a smaller-size guess is beside the point.)
+    const small = onlySizes ? "" : await smallSizeNote(args);
     if (small) content.unshift({ type: "text", text: small });
     return withDesign(content, args, { first: true });
 }
@@ -314,7 +591,8 @@ const tools = [
             "on one canvas). " +
             "Convert a RemoteCompose JSON document to a binary .rc (component calls expand " +
             "automatically). check: true also parses and runs the document like a player and reports " +
-            "problems (and renders it unless render: false). expanded: true returns the plain JSON that " +
+            "problems; it also renders it unless render: false and reports the render's findings and pixel " +
+            "statistics, not the image (call render to see it). expanded: true returns the plain JSON that " +
             "component calls become instead of converting.",
         inputSchema: {
             type: "object",
@@ -349,13 +627,23 @@ const tools = [
         return {
             ...t, name: "render",
             description: t.description + " The result ends with the document's design warnings, if any (a UI hand-drawn on a canvas, " +
-                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-inverted\") renders the monochrome look " +
+                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-light\") renders the monochrome look " +
                 "of a JSON document (always-on displays, e-ink) without editing it: the same component calls, expanded with the components' mono " +
-                "implementation. By default the document follows the system's light or dark theme.",
+                "implementation. By default the document follows the system's light or dark theme, and a single render " +
+                "is DARK unless theme: \"light\". Before publishing, " +
+                "render with variants: true (every theme and size in one call) and, for a date-driven document, with " +
+                "clocks: [\"2026-12-31T23:59:59\", ...] (several pinned dates in one call); for a host-data document, " +
+                "samples: [{\"aqi\": 12}, {\"aqi\": 480}] (several sets of host variables in one call, each settled).",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                variants: { type: "boolean", description: "Check every state in one call: dark, light, mono and mono-inverted, narrow, wide, short and small (narrow and short), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-dark.png, -light, -mono, -mono-inverted, -narrow, -wide, -short, -small, and -seven.png or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
-                componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono", "mono-inverted"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono / mono-inverted: the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
-            handler: async ({ componentTheme, variants, ...args } = {}) => variants ? renderVariants(t, args) : withDesign(await (async () => {
+                samples: { type: "array", items: { type: "object A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call)." }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). With output_path, files are <stem>-sample1.png, -sample2…" },
+                clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "Several pinned clocks in one call (the same formats as clock; up to 12 per call), one captioned image each: check a date-driven document at its edges (\"2026-12-31T23:59:59\", \"2027-01-01T00:00:00\", a full-moon day) without a call per date. With output_path, files are <stem>-<clock>.png." },
+                sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Extra [width, height] sizes to render (up to 10): with variants, added to them; alone, only these sizes (with samples or clocks: each at each size) (the target device's own screens, e.g. [[800, 480], [600, 600]] for a car display), each captioned with its size." },
+                variants: { type: "boolean", description: "Check every state in one call: dark, light, mono-dark and mono-light, narrow, wide, short, small (narrow and short) and tiny (half the width), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-<variant>.png named after each caption (-dark, -light, -mono-dark, -mono-light, -narrow-259x640, -widget-4x2-320x160, -seven-hours-later, ...) or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
+                componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono-dark (light on black) / mono-light (dark on white): the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
+            handler: async ({ componentTheme, variants, clocks, samples, sizes, ...args } = {}) => variants || (Array.isArray(sizes) && sizes.length) ? renderVariants(t, withLook(args, componentTheme), sizes, !variants, samples, clocks)
+                // (A mono look asked for with samples or clocks applies to every image: the JSON is expanded for it once.)
+                : Array.isArray(samples) && samples.length ? renderSamples(t, withLook(args, componentTheme), samples)
+                : Array.isArray(clocks) && clocks.length ? renderClocks(t, withLook(args, componentTheme), clocks) : withDesign(await (async () => {
                 // One of width/height: the other from the document's own aspect ratio.
                 if ((args.width === undefined) !== (args.height === undefined)) {
                     const h = jsonOf(args)?.header;

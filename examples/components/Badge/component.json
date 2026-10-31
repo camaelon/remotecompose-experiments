@@ -1,33 +1,114 @@
 {
  "component": "Badge",
- "version": 2,
+ "version": 3,
  "summary": "A small rounded badge holding a short text or a live count.",
  "params": {
-  "text": { "type": "string", "doc": "Fixed text (\"New\", \"999+\"); give text or count" },
-  "count": { "type": "float", "doc": "A live number instead of text: a number or a \"@variable\", up to 4 digits" },
-  "color": { "type": "color", "default": "@colors.error", "doc": "Background; the text is onPrimary" }
+  "text": {
+   "type": "string",
+   "doc": "Fixed text (\"New\", \"999+\"); give text or count"
+  },
+  "count": {
+   "type": "float",
+   "doc": "A live number instead of text: a number or a \"@variable\", up to 4 digits"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.error",
+   "doc": "Background; the text is onPrimary"
+  },
+  "max": {
+   "type": "float",
+   "static": true,
+   "doc": "With count: the largest count shown; above it the badge reads maxText (\"99+\"). Omit for no cap."
+  },
+  "maxText": {
+   "type": "string",
+   "default": "99+",
+   "doc": "What a count above max reads (with max)"
+  }
  },
- "capabilities": ["layout.decoration", "text.dynamic"],
- "call": { "Badge": { "count": "@unread" } },
+ "capabilities": [
+  "layout.decoration",
+  "text.dynamic"
+ ],
+ "call": {
+  "Badge": {
+   "count": "@unread"
+  }
+ },
  "body": {
   "box": {
    "horizontalAlignment": "center",
    "verticalAlignment": "center",
    "modifiers": [
-    { "height": 20 },
-    { "clip": { "roundedRect": 10 } },
-    { "background": "@color" },
-    { "padding": { "start": 7, "end": 7 } }
+    {
+     "height": 20
+    },
+    {
+     "clip": {
+      "roundedRect": 10
+     }
+    },
+    {
+     "background": "@color"
+    },
+    {
+     "padding": {
+      "start": 7,
+      "end": 7
+     }
+    }
    ],
    "children": [
     {
-     "text": {
-      "fontSize": "@theme.text_sm",
-      "color": "@colors.onPrimary",
-      "value": {
-       "$if": "count",
-       "then": { "type": "textFromFloat", "value": "@count", "whole": 4, "decimal": 0, "flags": 5 },
-       "else": "@text"
+     "$if": "max",
+     "then": [
+      {
+       "text": {
+        "fontSize": "@theme.text_sm",
+        "color": "@colors.onPrimary",
+        "modifiers": [
+         {
+          "visibility": "@under"
+         }
+        ],
+        "value": {
+         "type": "textFromFloat",
+         "value": "@count",
+         "whole": 4,
+         "decimal": 0,
+         "flags": 5
+        }
+       }
+      },
+      {
+       "text": {
+        "fontSize": "@theme.text_sm",
+        "color": "@colors.onPrimary",
+        "modifiers": [
+         {
+          "visibility": "@over"
+         }
+        ],
+        "value": "@maxText"
+       }
+      }
+     ],
+     "else": {
+      "text": {
+       "fontSize": "@theme.text_sm",
+       "color": "@colors.onPrimary",
+       "value": {
+        "$if": "count",
+        "then": {
+         "type": "textFromFloat",
+         "value": "@count",
+         "whole": 4,
+         "decimal": 0,
+         "flags": 5
+        },
+        "else": "@text"
+       }
       }
      }
     }
@@ -36,6 +117,19 @@
  },
  "pitfalls": [
   "textFromFloat `whole` is the number of integer digits kept: whole 1 prints 12 as 2. Use enough digits with flags 5 (no padding before or after)",
-  "A badge over an icon is a box holding the icon and the Badge, aligned top-end; the badge is 20 dp tall and wraps its text"
- ]
+  "A badge over an icon is a box holding the icon and the Badge, aligned top-end; the badge is 20 dp tall and wraps its text",
+  "A count cap: {\"count\": \"@unread\", \"max\": 99} shows the number up to 99 and \"99+\" above (maxText), switched by visibility on the count; screen readers should still hear the real count from the item's own label."
+ ],
+ "locals": {
+  "over": {
+   "$if": "max",
+   "then": "step(@count, @max)",
+   "else": 0
+  },
+  "under": {
+   "$if": "max",
+   "then": "1 - step(@count, @max)",
+   "else": 1
+  }
+ }
 }

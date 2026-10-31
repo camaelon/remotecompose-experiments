@@ -45,6 +45,8 @@ export class ComponentValue extends Operation {
             return;
         }
         const lc = component as any;
+        // From now on the component refreshes this value at every layout (U49).
+        if (typeof lc.addComponentValue === 'function') lc.addComponentValue(this);
         switch (this.mType) {
             case ComponentValue.WIDTH:
                 context.loadFloat(this.mValueId, lc.getWidth ? lc.getWidth() : doc.getWidth());

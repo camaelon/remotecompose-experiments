@@ -1,7 +1,7 @@
 {
  "component": "LineChart",
  "version": 1,
- "summary": "A value-over-time chart that fills its width: a smooth line through a float array or along a function of x, with an optional area fill, baseline, \"now\" marker and highlighted points, and its axis labels as text components (a row under the chart, a column beside it).",
+ "summary": "A value-over-time chart that fills its width: a smooth line through a float array or along a function of x, with an optional area fill, baseline, \"now\" marker, highlighted points and a cut-off (upTo) that draws the curve only so far today, and its axis labels as text components (a row under the chart, a column beside it).",
  "params": {
   "values": {
    "type": "float",
@@ -37,6 +37,10 @@
    "type": "float",
    "doc": "x of the 'now' marker (a vertical line and a dot on the curve). For a chart over today, \"timeInMin()\": the device's current minute of the day, so the marker moves by itself. Never a variable frozen at a value. An x value (e.g. \"timeInMin()\" or a variable) to mark with a vertical line and a dot on the curve; clamped to x_min..x_max"
   },
+  "upTo": {
+   "type": "float",
+   "doc": "Draw the curve only up to this point, the rest of the x axis left empty (a production or usage curve for today, drawn so far): array mode, a sample index 0..n-1 (fractional values stop between two samples, on the spline), e.g. \"(timeInMin() - @x_min) / 45\" for 33 samples over a day, or a \"@variable\"; function mode, an x value. Clamped to the range. The line and the area stop at it; the axes, grid and labels still span x_min..x_max; with now, the now dot sits on the end of the curve (the vertical line stays at now); extremes dot only the drawn samples. Absent: the whole curve"
+  },
   "marks": {
    "type": "list",
    "doc": "x values to mark with a dot on the curve (numbers or \"@variables\", e.g. the times of high and low tide); fixed in number when the document is built"
@@ -45,7 +49,7 @@
    "type": "bool",
    "default": false,
    "static": true,
-   "doc": "Array mode: a dot on the highest and the lowest value"
+   "doc": "Array mode: a dot on the highest and the lowest value (the first of each when repeated; none when the series is flat)"
   },
   "area": {
    "type": "bool",
@@ -66,7 +70,7 @@
   },
   "xLabels": {
    "type": "list",
-   "doc": "Texts under the plot, evenly spaced from x_min (first) to x_max (last), each centred under its x: [\"00\", \"06\", \"12\", \"18\", \"24\"]. The plot is inset by half a label cell on each side to line up with them"
+   "doc": "Texts under the plot, evenly spaced from x_min (first) to x_max (last), each centred under its x: [\"00\", \"06\", \"12\", \"18\", \"24\"]. The plot is inset by half a label cell on each side to line up with them An entry may be a text object instead of a string ({\"type\": \"textFromFloat\", \"value\": \"(@startHour + 1) % 24\", \"whole\": 2, \"decimal\": 0, \"flags\": 13}) for labels computed from a variable or the clock."
   },
   "yLabels": {
    "type": "list",
@@ -171,6 +175,32 @@
     "then": "clamp(@x_min, @x_max, @now)",
     "else": 0
    }
+  },
+  "ut": {
+   "$if": "upTo",
+   "then": "clamp(0, @n - 1, @upTo)",
+   "else": {
+    "$if": "upTo != 'undefined'",
+    "then": "clamp(0, @n - 1, @upTo)",
+    "else": 0
+   }
+  },
+  "ux": {
+   "$if": "upTo",
+   "then": {
+    "$if": "fn",
+    "then": "clamp(@x_min, @x_max, @upTo)",
+    "else": "@x_min + @ut * @span / (@n - 1)"
+   },
+   "else": {
+    "$if": "upTo != 'undefined'",
+    "then": {
+     "$if": "fn",
+     "then": "clamp(@x_min, @x_max, @upTo)",
+     "else": "@x_min + @ut * @span / (@n - 1)"
+    },
+    "else": 0
+   }
   }
  },
  "capabilities": [
@@ -200,7 +230,8 @@
   "Function mode has no data to scale from: give y_min and y_max (default 0..1). Array mode scales to the array's own min..max unless you give them; a flat series sits on the top edge, and two charts only compare when they share y_min/y_max. Pass the same y_min/y_max the yLabels name: the labels are evenly spaced from y_max down to y_min and only the component's arithmetic, not the text, places the curve",
   "xLabels are evenly spaced from x_min to x_max, each centred in an equal cell under its x, so the plot is inset by half a cell on each side (a 5-label axis on a 300 dp plot loses 30 dp per side); pick labels that divide the range evenly (0, 6, 12, 18, 24 h over 0..1440 min). A label at a data position (\"High 05:12, 2.8 m\") belongs in the caller's layout, a row of text above or below the chart, not on the canvas",
   "now and marks put a dot on the curve itself: each is a two-point path at that x through the same function (a zero-length stroke with a round cap), so the dot follows the curve in either mode with nothing computed twice; now also draws a vertical line and is clamped to x_min..x_max; a mark outside x_min..x_max is not drawn (its dot is moved off the canvas). marks is a list fixed in length when the document is built, but each item may be an expression (\"@high + 372.6\"). A literal 0 for now, baseline, y_min or y_max counts as given",
-  "baseline draws a line at that value (0 °C, mean sea level, the horizon) and the area then fills between the curve and it, above and below; without it the area fills to the bottom of the plot. extremes (array mode) dots every value equal to the array's max or min",
+  "baseline draws a line at that value (0 °C, mean sea level, the horizon) and the area then fills between the curve and it, above and below; without it the area fills to the bottom of the plot. extremes (array mode) dots the first sample equal to the array's max and the first equal to its min, and none on a flat series",
+  "A curve of today so far (solar production, usage): pass the whole day as values, x_min..x_max the whole day, and upTo the sample index of now, e.g. \"(timeInMin() - @x_min) / 45\" for 33 samples 45 min apart (with now: \"timeInMin()\" for the marker). The line and area end at the interpolated point and the rest of the axis stays empty. Never fake it by pushing future samples below y_min or clipping the canvas: that leaves a vertical stroke at now and forces area off. Future samples may hold anything (0, a forecast); they are not drawn and do not count for extremes, but they still scale the plot when y_min/y_max are not given, so give y_min/y_max for a stable scale",
   "Mono drops the area wash (no alpha fills on AOD or e-ink) and draws the line in onSurface at 2 dp; the grid, baseline and now line stay the one grey",
   "The body declares named canvas variables and paths, so every call is expanded (about 1.1 KB for a function chart, 1.6 KB with both label rows), never a pattern: fine for the one or two charts a screen shows"
  ],
@@ -347,7 +378,15 @@
              }
             },
             "start": "@x_min",
-            "end": "@x_max",
+            "end": {
+             "$if": "upTo",
+             "then": "@ux",
+             "else": {
+              "$if": "upTo != 'undefined'",
+              "then": "@ux",
+              "else": "@x_max"
+             }
+            },
             "count": "@cnt",
             "flags": 4
            }
@@ -454,8 +493,52 @@
               }
              },
              {
-              "drawPath": {
-               "path": "under"
+              "$if": "upTo",
+              "then": {
+               "save": {
+                "commands": [
+                 {
+                  "clipRect": {
+                   "left": 0,
+                   "top": 0,
+                   "right": "@cx + @ux * @kx",
+                   "bottom": "componentHeight()"
+                  }
+                 },
+                 {
+                  "drawPath": {
+                   "path": "under"
+                  }
+                 }
+                ]
+               }
+              },
+              "else": {
+               "$if": "upTo != 'undefined'",
+               "then": {
+                "save": {
+                 "commands": [
+                  {
+                   "clipRect": {
+                    "left": 0,
+                    "top": 0,
+                    "right": "@cx + @ux * @kx",
+                    "bottom": "componentHeight()"
+                   }
+                  },
+                  {
+                   "drawPath": {
+                    "path": "under"
+                   }
+                  }
+                 ]
+                }
+               },
+               "else": {
+                "drawPath": {
+                 "path": "under"
+                }
+               }
               }
              }
             ]
@@ -635,6 +718,170 @@
              }
             },
             {
+             "$if": "upTo",
+             "then": [
+              {
+               "variable": {
+                "name": "hm",
+                "value": "arrayGet(@values, 0)",
+                "commit": true
+               }
+              },
+              {
+               "variable": {
+                "name": "lm",
+                "value": "arrayGet(@values, 0)",
+                "commit": true
+               }
+              },
+              {
+               "loop": {
+                "index": "i",
+                "from": 1,
+                "until": "@n",
+                "commands": [
+                 {
+                  "variable": {
+                   "name": "hm",
+                   "value": "ifElse(@hm, max(@hm, arrayGet(@values, i)), step(@ut + 0.0001, i))",
+                   "commit": true
+                  }
+                 },
+                 {
+                  "variable": {
+                   "name": "lm",
+                   "value": "ifElse(@lm, min(@lm, arrayGet(@values, i)), step(@ut + 0.0001, i))",
+                   "commit": true
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "variable": {
+                "name": "hx",
+                "value": "@hm - 0.0001"
+               }
+              },
+              {
+               "variable": {
+                "name": "lx",
+                "value": "@lm + 0.0001"
+               }
+              },
+              {
+               "variable": {
+                "name": "sx",
+                "value": "step(0.0001, @hm - @lm)",
+                "commit": true
+               }
+              },
+              {
+               "variable": {
+                "name": "sn",
+                "value": "step(0.0001, @hm - @lm)",
+                "commit": true
+               }
+              }
+             ],
+             "else": {
+              "$if": "upTo != 'undefined'",
+              "then": [
+               {
+                "variable": {
+                 "name": "hm",
+                 "value": "arrayGet(@values, 0)",
+                 "commit": true
+                }
+               },
+               {
+                "variable": {
+                 "name": "lm",
+                 "value": "arrayGet(@values, 0)",
+                 "commit": true
+                }
+               },
+               {
+                "loop": {
+                 "index": "i",
+                 "from": 1,
+                 "until": "@n",
+                 "commands": [
+                  {
+                   "variable": {
+                    "name": "hm",
+                    "value": "ifElse(@hm, max(@hm, arrayGet(@values, i)), step(@ut + 0.0001, i))",
+                    "commit": true
+                   }
+                  },
+                  {
+                   "variable": {
+                    "name": "lm",
+                    "value": "ifElse(@lm, min(@lm, arrayGet(@values, i)), step(@ut + 0.0001, i))",
+                    "commit": true
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "variable": {
+                 "name": "hx",
+                 "value": "@hm - 0.0001"
+                }
+               },
+               {
+                "variable": {
+                 "name": "lx",
+                 "value": "@lm + 0.0001"
+                }
+               },
+               {
+                "variable": {
+                 "name": "sx",
+                 "value": "step(0.0001, @hm - @lm)",
+                 "commit": true
+                }
+               },
+               {
+                "variable": {
+                 "name": "sn",
+                 "value": "step(0.0001, @hm - @lm)",
+                 "commit": true
+                }
+               }
+              ],
+              "else": [
+               {
+                "variable": {
+                 "name": "hx",
+                 "value": "arrayMax(@values) - 0.0001"
+                }
+               },
+               {
+                "variable": {
+                 "name": "lx",
+                 "value": "arrayMin(@values) + 0.0001"
+                }
+               },
+               {
+                "variable": {
+                 "name": "sx",
+                 "value": "step(0.0001, arrayMax(@values) - arrayMin(@values))",
+                 "commit": true
+                }
+               },
+               {
+                "variable": {
+                 "name": "sn",
+                 "value": "step(0.0001, arrayMax(@values) - arrayMin(@values))",
+                 "commit": true
+                }
+               }
+              ]
+             }
+            },
+            {
              "loop": {
               "index": "i",
               "from": 0,
@@ -648,7 +895,21 @@
                   "else": "@cx + i * @span / (@n - 1) * @kx"
                  },
                  "cy": "@cy - arrayGet(@values, i) * @ky",
-                 "radius": "4 * (step(arrayGet(@values, i), arrayMax(@values) - 0.0001) + step(arrayMin(@values) + 0.0001, arrayGet(@values, i)))"
+                 "radius": "4 * (step(arrayGet(@values, i), @hx) * (1 - @sx) + step(@lx, arrayGet(@values, i)) * (1 - @sn))"
+                }
+               },
+               {
+                "variable": {
+                 "name": "sx",
+                 "value": "max(@sx, step(arrayGet(@values, i), @hx))",
+                 "commit": true
+                }
+               },
+               {
+                "variable": {
+                 "name": "sn",
+                 "value": "max(@sn, step(@lx, arrayGet(@values, i)))",
+                 "commit": true
                 }
                }
               ]
@@ -726,8 +987,24 @@
                 "else": "@cy - arraySpline(@values, u / @span) * @ky"
                }
               },
-              "start": "@nx",
-              "end": "@nx",
+              "start": {
+               "$if": "upTo",
+               "then": "@ux",
+               "else": {
+                "$if": "upTo != 'undefined'",
+                "then": "@ux",
+                "else": "@nx"
+               }
+              },
+              "end": {
+               "$if": "upTo",
+               "then": "@ux",
+               "else": {
+                "$if": "upTo != 'undefined'",
+                "then": "@ux",
+                "else": "@nx"
+               }
+              },
               "count": 2,
               "flags": 4
              }
@@ -763,8 +1040,24 @@
                  "else": "@cy - arraySpline(@values, u / @span) * @ky"
                 }
                },
-               "start": "@nx",
-               "end": "@nx",
+               "start": {
+                "$if": "upTo",
+                "then": "@ux",
+                "else": {
+                 "$if": "upTo != 'undefined'",
+                 "then": "@ux",
+                 "else": "@nx"
+                }
+               },
+               "end": {
+                "$if": "upTo",
+                "then": "@ux",
+                "else": {
+                 "$if": "upTo != 'undefined'",
+                 "then": "@ux",
+                 "else": "@nx"
+                }
+               },
                "count": 2,
                "flags": 4
               }

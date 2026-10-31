@@ -20,7 +20,10 @@
     "light": "#FF5A6475",
     "dark": "#FF8A94A6"
    },
-   "onPrimary": "#FFFFFFFF",
+   "onPrimary": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0B1A2E"
+   },
    "onSurface": {
     "light": "#FF111827",
     "dark": "#FFE6EAF2"
@@ -258,29 +261,8 @@
         }
        },
        {
-        "canvas": {
-         "modifiers": [
-          {
-           "size": [
-            52,
-            32
-           ]
-          },
-          {
-           "semantics": {
-            "contentDescription": "Do not disturb",
-            "clickable": true
-           }
-          },
-          {
-           "onClick": {
-            "type": "valueFloatExpressionChange",
-            "target": "@dnd",
-            "value": "1 - @dnd"
-           }
-          }
-         ],
-         "commands": [
+        "box": {
+         "children": [
           {
            "variable": {
             "name": "switch1_p",
@@ -291,66 +273,137 @@
            }
           },
           {
-           "paint": {
-            "ops": [
+           "variable": {
+            "name": "switch1_x",
+            "value": "20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @dnd - 1))"
+           }
+          },
+          {
+           "canvas": {
+            "modifiers": [
              {
-              "color": "@colors.track"
+              "size": [
+               52,
+               32
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "global": {
+               "commands": [
+                {
+                 "textSubtext": {
+                  "text": "Off On ",
+                  "start": "@dnd * 4",
+                  "len": 3,
+                  "varName": "switch1_swState3"
+                 }
+                },
+                {
+                 "textTransform": {
+                  "text": "@switch1_swState3",
+                  "start": 0,
+                  "len": -1,
+                  "operation": 3,
+                  "varName": "switch1_swState"
+                 }
+                }
+               ]
+              }
              },
              {
-              "style": "fill"
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.track"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 0,
+               "top": 0,
+               "right": 52,
+               "bottom": 32,
+               "rx": 16,
+               "ry": 16
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "alpha": "@switch1_p"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 0,
+               "top": 0,
+               "right": 52,
+               "bottom": 32,
+               "rx": 16,
+               "ry": 16
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "#FFFFFFFF"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "16 + @switch1_x",
+               "cy": 16,
+               "radius": 12
+              }
              }
             ]
            }
           },
           {
-           "drawRoundRect": {
-            "left": 0,
-            "top": 0,
-            "right": 52,
-            "bottom": 32,
-            "rx": 16,
-            "ry": 16
-           }
-          },
-          {
-           "paint": {
-            "ops": [
+           "box": {
+            "modifiers": [
              {
-              "color": "@colors.primary"
+              "size": [
+               52,
+               32
+              ]
              },
              {
-              "alpha": "@switch1_p"
-             }
-            ]
-           }
-          },
-          {
-           "drawRoundRect": {
-            "left": 0,
-            "top": 0,
-            "right": 52,
-            "bottom": 32,
-            "rx": 16,
-            "ry": 16
-           }
-          },
-          {
-           "paint": {
-            "ops": [
-             {
-              "color": "#FFFFFFFF"
+              "semantics": {
+               "contentDescription": "Do not disturb",
+               "stateDescription": "@switch1_swState",
+               "clickable": true
+              }
              },
              {
-              "alpha": 1
+              "onClick": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@dnd",
+                "value": "1 - @dnd"
+               }
+              ]
              }
             ]
-           }
-          },
-          {
-           "drawCircle": {
-            "cx": "16 + (20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @dnd - 1)))",
-            "cy": 16,
-            "radius": 12
            }
           }
          ]

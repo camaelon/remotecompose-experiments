@@ -12,6 +12,13 @@ const CLICK_OPS = new Set(["CLICK_AREA", "MODIFIER_CLICK", "MODIFIER_MULTI_CLICK
 const STRUCTURAL_OPS = new Set(["HEADER", "LAYOUT_ROOT", "LayoutComponentContent", "CanvasContent",
                                 "COMPONENT_VALUE"]);
 
+// The library theme's colour names: colours a document gets from the theme, not from the app.
+let THEME_COLOR_NAMES = new Set();
+try {
+    const { loadLibrary } = await import("./components.mjs");
+    THEME_COLOR_NAMES = new Set(Object.keys(loadLibrary().theme?.colors ?? {}));
+} catch {}
+
 const count = (byName, set) => Object.entries(byName ?? {})
     .reduce((n, [name, c]) => n + (set.has(name) ? c : 0), 0);
 
@@ -21,7 +28,9 @@ export function documentFeatures(report) {
     return {
         text: count(byName, TEXT_OPS) > 0,
         frameDriven: count(byName, FRAME_DRIVEN_OPS) > 0,
-        touch: count(byName, TOUCH_OPS) > 0,
+        // A scroll modifier brings its own touch expression: a document that only scrolls is
+        // not interactive in the sense of having controls to drive.
+        touch: count(byName, TOUCH_OPS) > (byName.ScrollModifierOperation ?? 0),
         clickAreas: count(byName, CLICK_OPS),
         threeD: Object.keys(byName).some((n) => /3D/.test(n)),
     };
@@ -74,10 +83,18 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
             `The document is interactive (${[f.touch && "touch expressions", f.clickAreas && `${f.clickAreas} click target(s)`]
                 .filter(Boolean).join(", ")}); touch_events can drive it.`);
     }
-    if (report.namedVariables?.length) {
+    // Theme colours are the look's, not the app's data; the document's own colours (a calendar's
+    // colour) are the app's to set. An exported array is listed by its length.
+    const isColor = (v) => v.type === "color" || /color/i.test(String(v.type));
+    // (A component's own state, named <component><n>_<local> by the expander, is not the app's.)
+    const hostVars = (report.namedVariables ?? []).filter((v) => !/^theme\./.test(v.name) && !/^[a-z]+\d+_[A-Za-z_]\w*$/.test(v.name) && (!isColor(v) || !THEME_COLOR_NAMES.has(v.name)));
+    if (hostVars.length) {
+        const val = (v) => {
+            if (Array.isArray(v.value)) return `[${v.value.length} values]`;
+            const s = JSON.stringify(v.value); return s.length > 24 ? s.slice(0, 21) + "…" : s;
+        };
         add("info", "host_variables",
-            "Host-settable variables: " + report.namedVariables
-                .map((v) => `${v.name} (${v.type}) = ${JSON.stringify(v.value)}`).join(", "));
+            "Host-settable variables: " + hostVars.map((v) => `${v.name} (${v.type}) = ${val(v)}`).join(", "));
     }
 
     // Components the layout placed past their parent (rc2image's `layout` section).
@@ -85,15 +102,32 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
     if (lo?.overflowing > 0) {
         add("warning", "component_overflow", `${lo.overflowing} component(s) extend past their parent's box and are drawn cut off` +
             (lo.examples?.length ? `: ${lo.examples.slice(0, 4).join("; ")}` : "") +
-            ". Size drawings from their box (componentWidth()/componentHeight(), a fitBox with smaller children), or let the " +
+            ". If the parent is a row or column with spacedBy AND a weighted child, the gaps overflow by their sum (weights share " +
+            "the whole size first): use fixed spacer boxes between weighted children. Otherwise size drawings from their box " +
+            "(componentWidth()/componentHeight(), a fitBox with smaller children), or let the " +
             "least important content collapse (collapsibleColumn) or scroll.");
     }
 
-    if (lo?.zeroSize > 0) {
-        add("warning", "zero_size", `${lo.zeroSize} visible component(s) got no size from the layout, so they draw nothing` +
-            (lo.zeroSizeExamples?.length ? `: ${lo.zeroSizeExamples.slice(0, 4).join("; ")}` : "") +
+    // A fitBox none of whose children fit is its own finding: the fix is a smaller last child.
+    const fitBoxes = (lo?.zeroSizeExamples ?? []).filter((e) => /a fitBox no child fits/.test(e));
+    if (fitBoxes.length) {
+        add("warning", "fitbox_no_fit", `${fitBoxes.length} fitBox(es) show NOTHING: no child fits the box: ${fitBoxes.slice(0, 3).join("; ")}. ` +
+            "A child fits when its minimum (an exact size, a row's fixed children summed, a text's own width) fits. Make the last child " +
+            "fit the smallest size you support: size it from the box (a @variable over windowWidth(), fillMaxWidth, wrap text).");
+    }
+    if (lo?.zeroSize > fitBoxes.length) {
+        const rest = (lo.zeroSizeExamples ?? []).filter((e) => !/a fitBox no child fits/.test(e));
+        add("warning", "zero_size", `${lo.zeroSize - fitBoxes.length} visible component(s) got no size from the layout, so they draw nothing` +
+            (rest.length ? `: ${rest.slice(0, 4).join("; ")}` : "") +
             ". A weight shares what the other children leave (nothing, if they fill the row), and a weight does not combine " +
             "with widthIn/heightIn; a collapsible layout drops its children lowest priority first until the rest fit.");
+    }
+
+    // Children a collapsible layout dropped: by design, but the image lacks them.
+    if (lo?.collapsed > 0) {
+        add("info", "collapsed", `${lo.collapsed} child(ren) dropped by a collapsible layout at this size` +
+            (lo.collapsedExamples?.length ? `: ${lo.collapsedExamples.slice(0, 4).join("; ")}` : "") +
+            ". If one of them is the main content, give it no collapsiblePriority (kept) or a fitBox alternative that fits.");
     }
 
     // Text the renderer could not fit (rc2image's `text` section, counted while painting).
@@ -109,6 +143,13 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
         add("info", "text_ellipsized", `${tx.ellipsized} text(s) end in an ellipsis: they do not fit their box at this size.`);
     }
 
+    // A round screen hides everything outside its inscribed circle.
+    const rd = report.round;
+    if (rd && rd.inkOutside > 20) {
+        add("warning", "round_cut", `Content outside the round screen is cut off: ${rd.inkOutside} px of ink beyond the ${rd.diameter} px circle` +
+            (rd.outsideBounds ? ` (within [${rd.outsideBounds.join(", ")}])` : "") + ". Keep the content inside the inscribed circle: " +
+            "a centred square of 0.7 × min(windowWidth(), windowHeight()), or content laid out around the ring.");
+    }
     const r = report.render;
     if (r) {
         if (r.changedFraction === 0) {
@@ -129,6 +170,19 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
                 add("info", "small_content", `All content sits in a small region [${r.contentBounds.join(", ")}].`);
             }
         }
+        // A phone screen (portrait, tall) whose content stops well above the bottom: the
+        // rest is the bare surface (a habit tracker ended at 56% of the screen).
+        if (r.inkBounds && r.height >= 400 && r.height > r.width * 1.3) {
+            const bottom = r.inkBounds[3] / r.height;
+            if (bottom < 0.7) add("info", "unused_space", `The content ends at ${Math.round(bottom * 100)}% of the screen's height ` +
+                `(y ${r.inkBounds[3]} of ${r.height}): the bottom is empty. Let the main element grow (a weight on a chart or list), ` +
+                "space the sections (verticalArrangement \"spaceBetween\"), or add what the screen is for (history, details, actions).");
+        }
+        // Corners left unpainted behind a rounded card: the host's background shows there,
+        // white in this render (white triangles at the corners of a dark widget).
+        if (r.clearCorners >= 2) add("info", "unpainted_corners", `${r.clearCorners} corner(s) are not painted by the document ` +
+            `(${r.background} shows through): a rounded card with nothing behind it. Fine on a launcher that draws its own ` +
+            "background; otherwise put the background on the root (fillMaxSize + background) and the clip on the card inside it.");
     }
 
     for (const line of log.split("\n")) {

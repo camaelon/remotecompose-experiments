@@ -12,7 +12,7 @@
 import { rmSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
-import { variableNames } from "./lib/json2rc.mjs";
+import { componentPaths, variableNames } from "./lib/json2rc.mjs";
 import { inspect } from "./lib/inspector.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -85,7 +85,8 @@ function tool(name, title, description, task, extraProps = {}, { required = [], 
                     // The JSON as written, for the design audit (before library components expand).
                     ...(doc.source === "json" && (task === "audit" || task === "summary") ? { source_json: sourceJson(a) } : {}),
                     // The JSON's variable names by id: the binary only names exported ones.
-                    ...(doc.source === "json" ? { names: variableNames(sourceJson(a), a.json_path !== undefined ? path.dirname(resolvePath(a.json_path, "json_path")) : resolvePath(".")) } : {}),
+                    ...(doc.source === "json" ? { names: variableNames(sourceJson(a), a.json_path !== undefined ? path.dirname(resolvePath(a.json_path, "json_path")) : resolvePath(".")),
+                                                  paths: componentPaths(sourceJson(a), a.json_path !== undefined ? path.dirname(resolvePath(a.json_path, "json_path")) : resolvePath(".")) } : {}),
                 };
                 for (const k of ["width", "height", "density"]) {
                     if (options[k] !== undefined && !(typeof options[k] === "number" && options[k] > 0)) throw new Error(`${k} must be a number > 0`);

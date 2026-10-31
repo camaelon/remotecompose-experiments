@@ -1,7 +1,7 @@
 {
  "component": "Chip",
- "version": 3,
- "summary": "A pill-shaped filter chip: a tap toggles its 0/1 `selected` variable, and the selected face (filled with `color`) fades in over the plain one.",
+ "version": 5,
+ "summary": "A pill-shaped filter chip: a tap toggles its 0/1 `selected` variable (then runs any extra `onClick` actions), and the selected face (filled with `color`) fades in over the plain one. A screen reader hears the label and Selected or Not selected, which follows the value; the 32 dp pill sits in a 48 dp tall touch target.",
  "params": {
   "label": {
    "type": "string",
@@ -17,6 +17,10 @@
    "type": "color",
    "default": "@colors.primary",
    "doc": "The selected face; its label is onPrimary"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every tap after the toggle of `selected` (hostNamedAction, valueFloatChange, ...), e.g. [{\"type\": \"hostNamedAction\", \"name\": \"kitchenLight\"}]. Omitted: the tap only toggles `selected`"
   }
  },
  "capabilities": [
@@ -33,93 +37,47 @@
  "pitfalls": [
   "State colours without colour expressions: the two faces are stacked in one clipped box (same padding, same text, so the same size) and the top one's graphicsLayer alpha is the 0/1 state",
   "Chips wrap their label: put them in a row (or several rows) with spacedBy; a `flow` ignores spacedBy",
-  "The label is one line with an ellipsis (maxLines 1): in a slot narrower than the label it ends in … instead of wrapping and being clipped by the 32 dp pill",
-  "Selecting cross-fades: the selected face's graphicsLayer alpha is the animated value {\"value\": \"@selected\", \"anim\": 0.2} (paint time; mono strips the motion)"
+  "The label is one line with an ellipsis (maxLines 1): in a slot narrower than the label it ends in … instead of wrapping and being clipped by the pill",
+  "Selecting cross-fades: the selected face's graphicsLayer alpha is the animated value {\"value\": \"@selected\", \"anim\": 0.2} (paint time; mono strips the motion)",
+  "`onClick` actions run after the toggle: an app reading the exported `selected` on a hostNamedAction sees the new state",
+  "Touch target: 8 dp of padding above and below the 32 dp pill make the chip 48 dp tall, all of it clickable; leave no extra vertical space between rows of chips (the padding is the gap). The width is the pill's: a label under about 20 dp (\"On\", one or two letters) leaves the target under 48 dp wide (no widthIn: the players disagree on it)",
+  "Accessibility: the chip carries the label (contentDescription), the state (stateDescription, Selected or Not selected) and the click. The state is cut from \"Not selectedSelected    \" by textSubtext at 12 * selected and trimmed, in the global section of a 0-size canvas placed before the chip, so it follows a bound variable at run time. About 150 B per call, and the named text ops keep it from compiling to a pattern"
  ],
  "body": {
   "box": {
-   "modifiers": [
-    {
-     "clip": 16
-    },
-    {
-     "semantics": {
-      "contentDescription": "@label",
-      "clickable": true
-     }
-    },
-    {
-     "onClick": {
-      "type": "valueFloatExpressionChange",
-      "target": "@selected",
-      "value": "1 - @selected"
-     }
-    }
-   ],
    "children": [
     {
-     "box": {
-      "horizontalAlignment": "center",
-      "verticalAlignment": "center",
+     "canvas": {
       "modifiers": [
        {
-        "height": 32
-       },
-       {
-        "$if": "theme.mono",
-        "then": {
-         "background": "@colors.outline"
-        },
-        "auto": [
-         {
-          "background": "@colors.surfaceHigh"
-         },
-         {
-          "background": "@colors.monoOutline"
-         }
-        ]
-       },
-       {
-        "$if": "theme.mono",
-        "then": {
-         "padding": 1
-        },
-        "auto": {
-         "padding": 1
-        }
-       },
-       {
-        "$if": "theme.mono",
-        "then": {
-         "clip": 15
-        },
-        "auto": {
-         "clip": 15
-        }
-       },
-       {
-        "background": "@colors.surfaceHigh"
-       },
-       {
-        "padding": [
-         {
-          "$if": "theme.mono",
-          "then": 13,
-          "else": 14,
-          "auto": 13
-         },
+        "size": [
+         0,
          0
         ]
        }
       ],
-      "children": [
+      "commands": [
        {
-        "text": {
-         "value": "@label",
-         "maxLines": 1,
-         "overflow": "ellipsis",
-         "fontSize": 14,
-         "color": "@colors.onSurface"
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "Not selectedSelected    ",
+            "start": "@selected * 12",
+            "len": 12,
+            "varName": "chState12"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@chState12",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "chState"
+           }
+          }
+         ]
         }
        }
       ]
@@ -127,38 +85,143 @@
     },
     {
      "box": {
-      "horizontalAlignment": "center",
-      "verticalAlignment": "center",
       "modifiers": [
        {
-        "graphicsLayer": {
-         "alpha": {
-          "value": "@selected",
-          "anim": 0.2
-         }
+        "padding": [
+         0,
+         8
+        ]
+       },
+       {
+        "clip": 16
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "stateDescription": "@chState",
+         "clickable": true
         }
        },
        {
-        "height": 32
-       },
-       {
-        "background": "@color"
-       },
-       {
-        "padding": [
-         14,
-         0
+        "onClick": [
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@selected",
+          "value": "1 - @selected"
+         },
+         {
+          "$if": "onClick",
+          "then": "@onClick"
+         }
         ]
        }
       ],
       "children": [
        {
-        "text": {
-         "value": "@label",
-         "maxLines": 1,
-         "overflow": "ellipsis",
-         "fontSize": 14,
-         "color": "@colors.onPrimary"
+        "box": {
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "height": 32
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "background": "@colors.outline"
+           },
+           "auto": [
+            {
+             "background": "@colors.surfaceHigh"
+            },
+            {
+             "background": "@colors.monoOutline"
+            }
+           ]
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "padding": 1
+           },
+           "auto": {
+            "padding": 1
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "clip": 15
+           },
+           "auto": {
+            "clip": 15
+           }
+          },
+          {
+           "background": "@colors.surfaceHigh"
+          },
+          {
+           "padding": [
+            {
+             "$if": "theme.mono",
+             "then": 13,
+             "else": 14,
+             "auto": 13
+            },
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 14,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "graphicsLayer": {
+            "alpha": {
+             "value": "@selected",
+             "anim": 0.2
+            }
+           }
+          },
+          {
+           "height": 32
+          },
+          {
+           "background": "@color"
+          },
+          {
+           "padding": [
+            14,
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "@label",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 14,
+            "color": "@colors.onPrimary"
+           }
+          }
+         ]
         }
        }
       ]

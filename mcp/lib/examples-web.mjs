@@ -4,18 +4,18 @@
 //   GET <base>/components/      every library component, the same way
 //   GET <base>/play/<id>/       a playground for one example or component demo: the deploy
 //                               server's page (lib/web-page.mjs), built on demand; #t=light
-//                               or #t=dark opens it in that theme, #t=mono or
-//                               #t=mono-inverted too when the document switches to mono at
+//                               or #t=dark opens it in that theme, #t=mono-dark or
+//                               #t=mono-light too when the document switches to mono at
 //                               run time (componentTheme "auto": theme.mono), else goes to
 //                               that variant's page. Its look control
-//                               switches Auto / Light / Dark / Mono / Mono inverted, and its
+//                               switches Auto / Light / Dark / Mono / Mono light, and its
 //                               JSON buttons show doc.json and the expanded JSON
 //   GET <base>/play/<id>/<name>/  the same for a render with a document of its own
 //                               (meta.check.renders with a componentTheme: doc.<name>.rc)
 //   GET <base>/img/<id>.png     its render.png
-//   GET <base>/img/<id>/<name>.png  one of its other renders (render-<name>.png: light, dark, mono,
-//                               mono-inverted)
-//   GET <base>/json/<id>.json   its doc.json (and /json/<id>.expanded.json, /json/<id>.mono.expanded.json,
+//   GET <base>/img/<id>/<name>.png  one of its other renders (render-<name>.png: light, dark, mono-dark,
+//                               mono-light)
+//   GET <base>/json/<id>.json   its doc.json (and /json/<id>.expanded.json, /json/<id>.mono-dark.expanded.json,
 //                               /json/<Name>.component.json)
 // <base> is wherever the reverse proxy mounts the server (/examples/ on the VPS); every link is
 // relative, so the pages work under any prefix.
@@ -30,7 +30,7 @@ import { playerBundle } from "./web-player.mjs";
 import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
 import { compileComponents, jsonToRc } from "./json2rc.mjs";
 
-const WEB_SETTABLE = new Set(["float", "int", "color", "string"]);
+const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 const HEADERS = {
     "Cache-Control": "no-cache",
     "X-Content-Type-Options": "nosniff",
@@ -82,7 +82,7 @@ const playCache = new Map();   // id[/variant] -> {mtime, html}
 function renders(e) {
     const dir = path.join(EXAMPLES_DIR, e.folder);
     const listed = Object.keys(e.derived?.renders ?? {});
-    const names = listed.length ? listed : ["light", "dark", "mono", "mono-inverted"];
+    const names = listed.length ? listed : ["light", "dark", "mono-dark", "mono-light"];
     return names.filter((n) => existsSync(path.join(dir, `render-${n}.png`)))
         .map((name) => ({ name, own: existsSync(path.join(dir, `doc.${name}.rc`)), theme: e.derived?.renders?.[name]?.theme ?? (["light", "dark"].includes(name) ? name : undefined) }));
 }
@@ -104,10 +104,10 @@ function themedColors(e, variant) {
 }
 
 // The variants the playground's look control offers next to Auto / Light / Dark: the two
-// monochrome documents (componentTheme mono and mono-inverted), when the example has them.
+// monochrome documents (componentTheme mono and mono-light), when the example has them.
 const LOOK_VARIANTS = [
-    ["mono", "Mono", "Mono: light on black, for always-on displays and OLED (componentTheme \"mono\", its own document doc.mono.rc)"],
-    ["mono-inverted", "Mono inverted", "Mono inverted: dark on white, for e-ink and other reflective displays (componentTheme \"mono-inverted\", doc.mono-inverted.rc)"],
+    ["mono-dark", "Mono dark", "Mono dark: light on black, for always-on displays and OLED (componentTheme \"mono-dark\", its own document doc.mono-dark.rc)"],
+    ["mono-light", "Mono light", "Mono light: dark on white, for e-ink and other reflective displays (componentTheme \"mono-light\", doc.mono-light.rc)"],
 ];
 
 /** The playground's JSON buttons: the document, its expansion, and the variant's expansion. */
@@ -152,7 +152,7 @@ async function playground(e, variant) {
     if (!variant && !mono && source && usesComponents(source) && [undefined, "auto", "light-dark"].includes(source.componentTheme)) {
         try {
             const dir = path.join(EXAMPLES_DIR, e.folder);
-            looks = Object.fromEntries(["mono", "mono-inverted"].map((look) =>
+            looks = Object.fromEntries(["mono-dark", "mono-light"].map((look) =>
                 [look, Buffer.from(jsonToRc(compileComponents(structuredClone(source), dir, { theme: look }).doc, dir)).toString("base64")]));
         } catch { looks = null; }   // the page still works: the variants' own pages, if any
     }
@@ -273,7 +273,7 @@ function page({ title, sub, current, families, cards, modes = false }) {
 <p class="sub">${sub}</p>
 <div class="bar"><input id="q" type="search" placeholder="Filter by name, tag or keyword" aria-label="Filter">
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
-${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono">Mono (always-on, OLED)</option><option value="mono-inverted">Mono inverted (e-ink)</option></select>` : ""}</div>
+${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono">Mono (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 <main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
 <script>${SCRIPT}</script>
@@ -334,7 +334,7 @@ function componentsPage() {
     });
     return page({
         title: "RemoteCompose components", current: "components", families: [], cards, modes: true,
-        sub: `${names.length} reusable components, each in a light, dark and two monochrome versions: mono (light on black, for always-on displays) and mono inverted (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
+        sub: `${names.length} reusable components, each in a light, dark and two monochrome versions: mono dark (light on black, for always-on displays) and mono light (dark on white, for e-ink). Call one by name in any document ({"Gauge": {"value": "@cpu"}}); every tool expands it. Click one to open its demo in the playground.`,
     });
 }
 
@@ -357,6 +357,16 @@ export async function publicRoute(req, url, res) {
     if (p === "/" || p === "") return send(req, res, 200, "text/html; charset=utf-8", examplesPage());
     if (p === "/components") { res.writeHead(301, { Location: `components/${url.search}` }); res.end(); return true; }
     if (p === "/components/") return send(req, res, 200, "text/html; charset=utf-8", componentsPage());
+    // The looks' old names (mono, mono-inverted) in links made before the rename.
+    const renamed = p.replace(/^(\/play\/[^/]+\/)mono-inverted(\/|$)/, "$1mono-light$2").replace(/^(\/play\/[^/]+\/)mono(\/|$)/, "$1mono-dark$2")
+        .replace(/^(\/img\/[^/]+\/)mono-inverted\.png$/, "$1mono-light.png").replace(/^(\/img\/[^/]+\/)mono\.png$/, "$1mono-dark.png")
+        .replace(/^(\/json\/[^/.]+)\.mono-inverted\./, "$1.mono-light.").replace(/^(\/json\/[^/.]+)\.mono\./, "$1.mono-dark.");
+    if (renamed !== p) {
+        // Relative, so it holds under whatever prefix the site is mounted at.
+        const from = p.endsWith("/") ? p : path.posix.dirname(p) + "/";
+        const rel = path.posix.relative(from, renamed) + (renamed.endsWith("/") ? "/" : "");
+        res.writeHead(301, { Location: `${rel || "./"}${url.search}` }); res.end(); return true;
+    }
     let m = /^\/play\/([^/]+)(\/)?$/.exec(p);
     if (m) {
         const e = entry(decodeURIComponent(m[1]));
@@ -383,7 +393,7 @@ export async function publicRoute(req, url, res) {
     if (m) {
         const e = entry(decodeURIComponent(m[1]));
         const name = { ".expanded": "doc.expanded.json", ".component": "component.json" }[m[2]]
-            ?? (m[2] ? `doc${m[2]}.json` : "doc.json");   // .mono.expanded: doc.mono.expanded.json
+            ?? (m[2] ? `doc${m[2]}.json` : "doc.json");   // .mono-dark.expanded: doc.mono-dark.expanded.json
         const file = e && path.join(EXAMPLES_DIR, e.folder, name);
         if (!file || !existsSync(file)) return send(req, res, 404, "text/plain", "not found\n");
         return send(req, res, 200, "application/json; charset=utf-8", readFileSync(file));

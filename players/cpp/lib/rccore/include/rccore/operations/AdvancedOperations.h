@@ -1197,6 +1197,10 @@ public:
         context.overrideFloat(targetId, context.getFloat(exprId));
     }
     void runAction(RemoteContext& context, float, float) override {
+        // Evaluate the expression now, from its inputs as they are (CoreDocument.
+        // evaluateFloatExpression): the cached value lagged an earlier action of the same tap
+        // (lapAt set, then l1 = @lapAt read the previous lap: every lap one behind; U68).
+        if (Operation* fe = context.floatExpressionOp(exprId)) { fe->updateVariables(context); fe->apply(context); }
         context.overrideFloat(targetId, context.getFloat(exprId));
     }
     static void read(WireBuffer& buf, std::vector<std::unique_ptr<Operation>>& ops) {

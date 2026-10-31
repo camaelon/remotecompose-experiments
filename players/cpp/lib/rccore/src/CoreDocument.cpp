@@ -308,6 +308,54 @@ static void childOrigin(RemoteContext& context, const Operation* op,
     }
 }
 
+// The reference's Component.onTouchDown walk: the topmost child component under the point
+// handles it first (siblings below are skipped), then this component's own touch handlers —
+// an onTouchDown modifier runs its actions now, and a component with touch handlers or a touch
+// expression is remembered so its onTouchUp / onTouchCancel actions run when the touch ends.
+static bool touchDownRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
+                               float x, float y, float parentX, float parentY, std::vector<Operation*>& targets) {
+    bool anyHandled = false;
+    for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
+        const auto& op = *it;
+        int cid = op->getOpComponentId();
+        const RemoteContext::ComponentDim* dim = cid != -1 ? context.getComponentDimension(cid) : nullptr;
+        if (cid != -1 && !dim) continue;
+        if (dim && !dim->visible) continue;
+        float absX = dim ? parentX + dim->x : parentX, absY = dim ? parentY + dim->y : parentY;
+        if (dim && (x < absX || x > absX + dim->w || y < absY || y > absY + dim->h)) continue;
+        float ox = absX, oy = absY;
+        childOrigin(context, op.get(), dim, ox, oy);
+        bool childHandled = !op->mChildren.empty() && touchDownRecursive(context, op->mChildren, x, y, ox, oy, targets);
+        if (!dim) { if (childHandled) anyHandled = true; continue; }
+        bool own = false;
+        for (const auto& child : op->mChildren) {
+            const int oc = child->opcode();
+            if (oc == Operations::MODIFIER_TOUCH_DOWN) {
+                for (const auto& action : child->mChildren) action->runAction(context, x, y);
+                own = true;
+            } else if (oc == Operations::MODIFIER_TOUCH_UP || oc == Operations::MODIFIER_TOUCH_CANCEL
+                       || dynamic_cast<TouchExpressionOp*>(child.get())) {
+                own = true;
+            }
+        }
+        if (own) targets.push_back(op.get());
+        if (childHandled || own) { anyHandled = true; break; }   // the topmost handler wins
+    }
+    return anyHandled;
+}
+
+// Runs the touch-up (or cancel) actions of the components that took the touch-down.
+static void runTouchEnd(RemoteContext& context, std::vector<Operation*>& targets, int opcode, float x, float y) {
+    for (auto* comp : targets) {
+        for (const auto& child : comp->mChildren) {
+            if (child->opcode() != opcode) continue;
+            for (const auto& action : child->mChildren) action->runAction(context, x, y);
+            context.needsRepaint();
+        }
+    }
+    targets.clear();
+}
+
 static bool rippleRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
                             float x, float y, float parentX, float parentY);
 
@@ -348,6 +396,8 @@ void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
             touch->touchDown(context, x, y);
         }
     }
+    mTouchTargets.clear();
+    touchDownRecursive(context, mOperations, x, y, 0, 0, mTouchTargets);
     mScrollCaptures.clear();
     collectScrollTargets(context, mOperations, x, y, 0, 0, mScrollCaptures);
     for (auto* s : mScrollCaptures) {
@@ -419,6 +469,7 @@ void CoreDocument::touchUp(RemoteContext& context, float x, float y,
             touch->touchUp(context, x, y, dx, dy);
         }
     }
+    runTouchEnd(context, mTouchTargets, Operations::MODIFIER_TOUCH_UP, x, y);
     for (auto* s : mScrollCaptures) s->touching = false;
     mScrollCaptures.clear();
 }

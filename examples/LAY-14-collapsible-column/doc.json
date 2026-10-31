@@ -8,7 +8,14 @@
  },
  "resources": {
   "variables": {
-   "scroll": 0
+   "scroll": 0,
+   "temp": 22,
+   "high": 25,
+   "low": 14,
+   "hour": 15,
+   "t1": 24,
+   "t2": 21,
+   "t3": 17
   }
  },
  "root": {
@@ -16,7 +23,7 @@
    "modifiers": [
     "fillMaxSize",
     {
-     "background": "#FF0B1220"
+     "background": "@colors.background"
     },
     {
      "horizontalScroll": "@scroll"
@@ -42,7 +49,7 @@
         "text": {
          "value": "full height",
          "fontSize": 11,
-         "color": "#FF8A99AD",
+         "color": "@colors.muted",
          "modifiers": [
           {
            "height": 20
@@ -69,7 +76,7 @@
            "clip": 16
           },
           {
-           "background": "#FF17304F"
+           "background": "@colors.surface"
           },
           {
            "padding": [
@@ -102,7 +109,7 @@
                  "text": {
                   "value": "Paris",
                   "fontSize": 13,
-                  "color": "#FFCFE3FF"
+                  "color": "@colors.primary"
                  }
                 }
                ]
@@ -126,41 +133,9 @@
                "verticalAlignment": "center",
                "children": [
                 {
-                 "canvas": {
-                  "modifiers": [
-                   {
-                    "size": [
-                     40,
-                     40
-                    ]
-                   }
-                  ],
-                  "commands": [
-                   {
-                    "paint": {
-                     "color": "#40FFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 19
-                    }
-                   },
-                   {
-                    "paint": {
-                     "color": "#FFFFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 12
-                    }
-                   }
-                  ]
+                 "WeatherIcon": {
+                  "condition": "sun",
+                  "size": 40
                  }
                 }
                ]
@@ -179,9 +154,19 @@
                "children": [
                 {
                  "text": {
-                  "value": "22°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@temp",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 34,
-                  "color": "#FFFFFFFF",
+                  "color": "@colors.onSurface",
                   "fontWeight": 300
                  }
                 }
@@ -209,7 +194,7 @@
                  "text": {
                   "value": "Sunny",
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -234,9 +219,37 @@
                "children": [
                 {
                  "text": {
-                  "value": "H25° L14°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "H",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@high",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": "° L"
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@low",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "°"
+                   }
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 }
                ]
@@ -261,16 +274,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "15h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@hour",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "24°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -295,16 +328,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "18h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 3) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "21°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t2",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -329,16 +382,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "21h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 6) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "17°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t3",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -365,7 +438,7 @@
         "text": {
          "value": "208 dp",
          "fontSize": 11,
-         "color": "#FF8A99AD",
+         "color": "@colors.muted",
          "modifiers": [
           {
            "height": 20
@@ -394,7 +467,7 @@
            "clip": 16
           },
           {
-           "background": "#FF17304F"
+           "background": "@colors.surface"
           },
           {
            "padding": [
@@ -427,7 +500,7 @@
                  "text": {
                   "value": "Paris",
                   "fontSize": 13,
-                  "color": "#FFCFE3FF"
+                  "color": "@colors.primary"
                  }
                 }
                ]
@@ -451,41 +524,9 @@
                "verticalAlignment": "center",
                "children": [
                 {
-                 "canvas": {
-                  "modifiers": [
-                   {
-                    "size": [
-                     40,
-                     40
-                    ]
-                   }
-                  ],
-                  "commands": [
-                   {
-                    "paint": {
-                     "color": "#40FFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 19
-                    }
-                   },
-                   {
-                    "paint": {
-                     "color": "#FFFFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 12
-                    }
-                   }
-                  ]
+                 "WeatherIcon": {
+                  "condition": "sun",
+                  "size": 40
                  }
                 }
                ]
@@ -504,9 +545,19 @@
                "children": [
                 {
                  "text": {
-                  "value": "22°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@temp",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 34,
-                  "color": "#FFFFFFFF",
+                  "color": "@colors.onSurface",
                   "fontWeight": 300
                  }
                 }
@@ -534,7 +585,7 @@
                  "text": {
                   "value": "Sunny",
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -559,9 +610,37 @@
                "children": [
                 {
                  "text": {
-                  "value": "H25° L14°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "H",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@high",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": "° L"
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@low",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "°"
+                   }
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 }
                ]
@@ -586,16 +665,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "15h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@hour",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "24°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -620,16 +719,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "18h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 3) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "21°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t2",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -654,16 +773,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "21h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 6) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "17°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t3",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -690,7 +829,7 @@
         "text": {
          "value": "164 dp",
          "fontSize": 11,
-         "color": "#FF8A99AD",
+         "color": "@colors.muted",
          "modifiers": [
           {
            "height": 20
@@ -719,7 +858,7 @@
            "clip": 16
           },
           {
-           "background": "#FF17304F"
+           "background": "@colors.surface"
           },
           {
            "padding": [
@@ -752,7 +891,7 @@
                  "text": {
                   "value": "Paris",
                   "fontSize": 13,
-                  "color": "#FFCFE3FF"
+                  "color": "@colors.primary"
                  }
                 }
                ]
@@ -776,41 +915,9 @@
                "verticalAlignment": "center",
                "children": [
                 {
-                 "canvas": {
-                  "modifiers": [
-                   {
-                    "size": [
-                     40,
-                     40
-                    ]
-                   }
-                  ],
-                  "commands": [
-                   {
-                    "paint": {
-                     "color": "#40FFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 19
-                    }
-                   },
-                   {
-                    "paint": {
-                     "color": "#FFFFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 12
-                    }
-                   }
-                  ]
+                 "WeatherIcon": {
+                  "condition": "sun",
+                  "size": 40
                  }
                 }
                ]
@@ -829,9 +936,19 @@
                "children": [
                 {
                  "text": {
-                  "value": "22°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@temp",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 34,
-                  "color": "#FFFFFFFF",
+                  "color": "@colors.onSurface",
                   "fontWeight": 300
                  }
                 }
@@ -859,7 +976,7 @@
                  "text": {
                   "value": "Sunny",
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -884,9 +1001,37 @@
                "children": [
                 {
                  "text": {
-                  "value": "H25° L14°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "H",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@high",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": "° L"
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@low",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "°"
+                   }
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 }
                ]
@@ -911,16 +1056,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "15h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@hour",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "24°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -945,16 +1110,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "18h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 3) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "21°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t2",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -979,16 +1164,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "21h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 6) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "17°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t3",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -1015,7 +1220,7 @@
         "text": {
          "value": "100 dp",
          "fontSize": 11,
-         "color": "#FF8A99AD",
+         "color": "@colors.muted",
          "modifiers": [
           {
            "height": 20
@@ -1044,7 +1249,7 @@
            "clip": 16
           },
           {
-           "background": "#FF17304F"
+           "background": "@colors.surface"
           },
           {
            "padding": [
@@ -1077,7 +1282,7 @@
                  "text": {
                   "value": "Paris",
                   "fontSize": 13,
-                  "color": "#FFCFE3FF"
+                  "color": "@colors.primary"
                  }
                 }
                ]
@@ -1101,41 +1306,9 @@
                "verticalAlignment": "center",
                "children": [
                 {
-                 "canvas": {
-                  "modifiers": [
-                   {
-                    "size": [
-                     40,
-                     40
-                    ]
-                   }
-                  ],
-                  "commands": [
-                   {
-                    "paint": {
-                     "color": "#40FFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 19
-                    }
-                   },
-                   {
-                    "paint": {
-                     "color": "#FFFFC94D"
-                    }
-                   },
-                   {
-                    "drawCircle": {
-                     "cx": 20,
-                     "cy": 20,
-                     "radius": 12
-                    }
-                   }
-                  ]
+                 "WeatherIcon": {
+                  "condition": "sun",
+                  "size": 40
                  }
                 }
                ]
@@ -1154,9 +1327,19 @@
                "children": [
                 {
                  "text": {
-                  "value": "22°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@temp",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 34,
-                  "color": "#FFFFFFFF",
+                  "color": "@colors.onSurface",
                   "fontWeight": 300
                  }
                 }
@@ -1184,7 +1367,7 @@
                  "text": {
                   "value": "Sunny",
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -1209,9 +1392,37 @@
                "children": [
                 {
                  "text": {
-                  "value": "H25° L14°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "H",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@high",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": "° L"
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@low",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "°"
+                   }
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 }
                ]
@@ -1236,16 +1447,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "15h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@hour",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "24°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -1270,16 +1501,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "18h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 3) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "21°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t2",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]
@@ -1304,16 +1555,36 @@
                "children": [
                 {
                  "text": {
-                  "value": "21h",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "(@hour + 6) % 24",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "h"
+                  },
                   "fontSize": 11,
-                  "color": "#FF8A99AD"
+                  "color": "@colors.muted"
                  }
                 },
                 {
                  "text": {
-                  "value": "17°",
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@t3",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "°"
+                  },
                   "fontSize": 12,
-                  "color": "#FFE6EDF5"
+                  "color": "@colors.onSurface"
                  }
                 }
                ]

@@ -4,7 +4,7 @@
   "width": 360,
   "height": 210,
   "profiles": 513,
-  "contentDescription": "AnalogClock component: a clock face with a second hand and a smaller one without"
+  "contentDescription": "AnalogClock component: a clock face with a second hand, a smaller one without, and one with a date window"
  },
  "root": {
   "column": {
@@ -286,7 +286,7 @@
           "fillMaxHeight",
           {
            "padding": {
-            "start": 24
+            "start": 16
            }
           }
          ],
@@ -481,6 +481,327 @@
           }
          ]
         }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 3
+          },
+          "fillMaxHeight",
+          {
+           "padding": {
+            "start": 16
+           }
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "semantics": {
+               "contentDescription": "Clock"
+              }
+             }
+            ],
+            "commands": [
+             {
+              "variable": {
+               "name": "analogclock3_s",
+               "value": "min(componentWidth(), componentHeight())"
+              }
+             },
+             {
+              "translate": {
+               "dx": "(componentWidth() - @analogclock3_s) / 2",
+               "dy": "(componentHeight() - @analogclock3_s) / 2"
+              }
+             },
+             {
+              "scale": {
+               "sx": "@analogclock3_s / 160",
+               "sy": "@analogclock3_s / 160"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.surface"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 80,
+               "cy": 80,
+               "radius": 73.6
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 2.4
+                }
+               ]
+              }
+             },
+             {
+              "loop": {
+               "index": "i",
+               "from": 0,
+               "until": 12,
+               "step": 1,
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": 30,
+                  "pivotX": 80,
+                  "pivotY": 80
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 80,
+                  "y1": 11.2,
+                  "x2": 80,
+                  "y2": 19.2
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.surface"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 109.6,
+               "top": 71.2,
+               "right": 133.6,
+               "bottom": 88.8,
+               "rx": 3.2,
+               "ry": 3.2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.outline"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.6
+                }
+               ]
+              }
+             },
+             {
+              "drawRoundRect": {
+               "left": 109.6,
+               "top": 71.2,
+               "right": 133.6,
+               "bottom": 88.8,
+               "rx": 3.2,
+               "ry": 3.2
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.onSurface"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "textSize": 13.6
+                }
+               ]
+              }
+             },
+             {
+              "drawTextAnchored": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "dayOfMonth()",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 4
+               },
+               "x": 121.6,
+               "y": 80,
+               "panX": 0,
+               "panY": 0
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": "(timeInMin() % 720) * 0.5",
+                  "pivotX": 80,
+                  "pivotY": 80
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 5.6
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 80,
+                  "y1": 80,
+                  "x2": 80,
+                  "y2": 43.2
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": "(timeInMin() % 60) * 6 + (timeInSec() % 60) * 0.1",
+                  "pivotX": 80,
+                  "pivotY": 80
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 3.2
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 80,
+                  "y1": 80,
+                  "x2": 80,
+                  "y2": 24
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "save": {
+               "commands": [
+                {
+                 "rotate": {
+                  "angle": "(timeInSec() % 60) * 6",
+                  "pivotX": 80,
+                  "pivotY": 80
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.error"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 1.6
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 80,
+                  "y1": 80,
+                  "x2": 80,
+                  "y2": 17.6
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.error"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 80,
+               "cy": 80,
+               "radius": 4
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
        }
       ]
      }
@@ -505,6 +826,10 @@
    "onSurface": {
     "light": "#FF111827",
     "dark": "#FFE6EAF2"
+   },
+   "outline": {
+    "light": "#FF878F9E",
+    "dark": "#FF3A4556"
    },
    "surface": {
     "light": "#FFFFFFFF",

@@ -65,11 +65,15 @@ test("a local chosen by $if", () => {
     assert.equal(doc.resources.variables.tile1_size, "abs(@d)");
 });
 
-test("a local naming what resources cannot see is inlined at each use", () => {
-    // @tree is not a resources variable (declared in the tree, say), so the local can't be.
+test("a local naming what resources cannot see is declared in the body, or inlined when the body has no room", () => {
+    // @tree is not a resources variable (declared in the tree, say), so the local can't be: it
+    // becomes a `variable` command first in the canvas, read by name below it.
     const doc = expand({ root: { Meter: { value: "@tree" } } }, { Meter });
     assert.equal(doc.resources, undefined);
-    assert.equal(doc.root.canvas.commands[0].drawArc.sweepAngle, "clamp(0, 240, (@tree / 100) * 240)");
+    assert.deepEqual(doc.root.canvas.commands[0], { variable: { name: "meter1_frac", value: "@tree / 100" } });
+    assert.deepEqual(doc.root.canvas.commands[1], { variable: { name: "meter1_sweep", value: "clamp(0, 240, @meter1_frac * 240)" } });
+    assert.equal(doc.root.canvas.commands[2].drawArc.sweepAngle, "@meter1_sweep");
+    // A body that is a bare command has nowhere to declare it: inlined at each use.
     const W = { params: {}, locals: { w: "componentWidth() / 2" }, body: { drawRect: { right: "@w", left: "@w - 4" } } };
     const r = expand({ root: { W: {} } }, { W }).root;
     assert.deepEqual(r, { drawRect: { right: "componentWidth() / 2", left: "(componentWidth() / 2) - 4" } });
@@ -338,7 +342,7 @@ const themed = (components) => ({
         colors: { surface: { light: "#FFFFFFFF", dark: "#FF1C2433" }, onPrimary: "#FFFFFFFF", accent: { light: "#FF1565D8", dark: "#FF1565D8" } },
         numbers: { mono: 0, stroke: 2 },
         modes: { mono: { colors: { surface: "#FF000000", onPrimary: "#FF000000", accent: "#FFFFFFFF" }, numbers: { mono: 1 } },
-                 "mono-inverted": { colors: { surface: "#FFFFFFFF", onPrimary: "#FFFFFFFF", accent: "#FF000000" }, numbers: { mono: 1 } } },
+                 "mono-light": { colors: { surface: "#FFFFFFFF", onPrimary: "#FFFFFFFF", accent: "#FF000000" }, numbers: { mono: 1 } } },
     },
 });
 const Tile = {
@@ -397,8 +401,8 @@ test("all: a theme.mono $if keeps both sides, gated at run time by the host's th
     assert.equal(r.mono.variable, MONO_VAR);
     assert.equal(r.mono.forks, 1);
     // The colours the host sets by name for each mono look.
-    assert.equal(r.mono.palettes.mono.surface, "#FF000000");
-    assert.equal(r.mono.palettes["mono-inverted"].surface, "#FFFFFFFF");
+    assert.equal(r.mono.palettes["mono-dark"].surface, "#FF000000");
+    assert.equal(r.mono.palettes["mono-light"].surface, "#FFFFFFFF");
     assert.ok(jsonToRc(r.doc, ".").length > 0);
     // A live text of one variable on the mono side is its own, not the usual side's.
     const Clock = { params: {}, body: { $if: "theme.mono", then: { text: { value: { type: "textFromFloat", value: "@t", whole: 2, decimal: 0 } } },
@@ -480,11 +484,11 @@ test("all: a fork in a pattern template is gated inside the template", () => {
 test("monoPalettes: the theme's palettes with the document's own colours as each mode expands them", () => {
     const colors = { accent: { light: "#FFE8590C", dark: "#FFFF8A3D", mono: "#FFDDDDDD" }, brand: { light: "#FF00AA00", dark: "#FF00FF00" } };
     const p = monoPalettes({ resources: { colors } }, themed({}));
-    assert.equal(p.mono.accent, "#FFDDDDDD");
-    assert.equal(p.mono.surface, "#FF000000");
-    assert.equal(p.mono.brand, "#FF00FF00");             // not a theme colour: mono takes its dark side
-    assert.equal(p["mono-inverted"].accent, "#FF000000"); // no mono-inverted value: the palette's
-    assert.equal(p["mono-inverted"].brand, "#FF00AA00");
+    assert.equal(p["mono-dark"].accent, "#FFDDDDDD");
+    assert.equal(p["mono-dark"].surface, "#FF000000");
+    assert.equal(p["mono-dark"].brand, "#FF00FF00");             // not a theme colour: mono takes its dark side
+    assert.equal(p["mono-light"].accent, "#FF000000"); // no mono-light value: the palette's
+    assert.equal(p["mono-light"].brand, "#FF00AA00");
 });
 
 test("mono: a document's colour of a theme name takes the mono palette unless it gives a mono value", () => {
@@ -504,18 +508,18 @@ test("mono: a document's colour of a theme name takes the mono palette unless it
     assert.ok(arr.some((e) => "onPrimary" in e));
 });
 
-test("mono-inverted: its own palette, the same mono variants, a mono-inverted value, no motion", () => {
-    const r = ex(themedDoc({ componentTheme: "mono-inverted" }));
-    assert.equal(r.theme, "mono-inverted");
+test("mono-light: its own palette, the same mono variants, a mono-light value, no motion", () => {
+    const r = ex(themedDoc({ componentTheme: "mono-light" }));
+    assert.equal(r.theme, "mono-light");
     assert.deepEqual(r.doc.resources.colors, { accent: "#FF000000", onPrimary: "#FFFFFFFF", surface: "#FFFFFFFF" });
     assert.deepEqual(r.doc.root.box.modifiers, [{ background: "@colors.surface" }, { padding: 2 }]);
-    const colors = { accent: { light: "#FFE8590C", dark: "#FFFF8A3D", mono: "#FFDDDDDD", "mono-inverted": "#FF222222" },
+    const colors = { accent: { light: "#FFE8590C", dark: "#FFFF8A3D", mono: "#FFDDDDDD", "mono-light": "#FF222222" },
                      surface: { value: "#FFFFF8F0", mono: "#FF000000" }, brand: { light: "#FF00AA00", dark: "#FF00FF00" } };
-    const m = ex(themedDoc({ componentTheme: "mono-inverted", resources: { colors } })).doc.resources.colors;
+    const m = ex(themedDoc({ componentTheme: "mono-light", resources: { colors } })).doc.resources.colors;
     assert.equal(m.accent, "#FF222222");
-    assert.equal(m.surface, "#FFFFFFFF");    // a theme name without a mono-inverted value: the palette's
+    assert.equal(m.surface, "#FFFFFFFF");    // a theme name without a mono-light value: the palette's
     assert.equal(m.brand, "#FF00AA00");      // not a theme colour: its light side
-    assert.ok(!flat(ex(themedDoc({ resources: { colors } })).doc).includes("mono-inverted"));
+    assert.ok(!flat(ex(themedDoc({ resources: { colors } })).doc).includes("mono-light"));
 });
 
 test("mono: no motion — animated values lose their anim, animationSpec modifiers go", () => {
@@ -540,7 +544,9 @@ test("an animated local: a tree variable first in the body, read below it; mono 
     const auto = expandComponents(doc, { library: lib, mode: "expand" });
     const cmds = auto.doc.root.canvas.commands;
     assert.deepEqual(cmds[0], { variable: { name: "knob1_p", value: { value: "@k", anim: 0.25 } } });
-    assert.equal(cmds[1].drawCircle.cx, "20 * @knob1_p");
+    // x reads p, a tree variable: declared after it, read by the circle.
+    assert.deepEqual(cmds[1], { variable: { name: "knob1_x", value: "20 * @knob1_p" } });
+    assert.equal(cmds[2].drawCircle.cx, "@knob1_x");
     const mono = expandComponents({ ...doc, componentTheme: "mono" }, { library: lib, mode: "expand" });
     assert.equal(mono.doc.root.canvas.commands.length, 1);
     // ... so x names resource variables only, and becomes one there.
@@ -560,13 +566,13 @@ test("theme conditions: lint knows theme.mono, and an unknown theme name is an e
 
 test("the library: every theme colour has a light and a dark value (or one for both) and a mono one", () => {
     const { theme } = loadLibrary();
-    const mono = theme.modes?.mono?.colors ?? {};
+    const mono = theme.modes?.["mono-dark"]?.colors ?? {};
     for (const [k, v] of Object.entries(theme.colors)) {
         assert.ok(typeof v === "string" || (v.light && v.dark), `${k}: {light, dark} or one value`);
         assert.ok(mono[k], `${k}: a mono value`);
     }
     assert.equal(theme.numbers.mono, 0);
-    assert.equal(theme.modes.mono.numbers.mono, 1);
+    assert.equal(theme.modes["mono-dark"].numbers.mono, 1);
 });
 
 test("componentTraps in the document overrides the default traps", () => {

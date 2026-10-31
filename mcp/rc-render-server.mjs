@@ -6,9 +6,11 @@
 
 import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { analyze, documentFeatures, formatFindings } from "./lib/analysis.mjs";
 import { DOCUMENT_PROPS, prepareDocument } from "./lib/document.mjs";
+import { componentPaths, withComponentPaths } from "./lib/json2rc.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -19,6 +21,13 @@ import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/works
 // each render is also stored under MCP_ROOT/images and served WITHOUT auth at
 // <MCP_PUBLIC_URL>/images/<id>.png — 128 random bits per id, so only whoever has the link
 // can fetch it. Renders are throwaway: links expire after MCP_IMAGE_TTL_HOURS (default 24).
+/** The JSON as given (a string): json, or the file at json_path. */
+function sourceJson(a) {
+    if (a.json !== undefined) return typeof a.json === "string" ? a.json : JSON.stringify(a.json);
+    if (a.json_path !== undefined) return readFileSync(resolvePath(a.json_path, "json_path"), "utf8");
+    return null;
+}
+
 const PUBLIC_URL = (process.env.MCP_PUBLIC_URL ?? "").replace(/\/+$/, "");
 const HTTP_MODE = process.argv.includes("--http") || Boolean(process.env.MCP_HTTP_PORT);
 const CAN_LINK = HTTP_MODE && Boolean(PUBLIC_URL) && Boolean(workspaceRoot());
@@ -126,6 +135,8 @@ function buildArgs(a, rcPath, pngPath) {
         args.push("--events", spec);
     }
     if (a.duration !== undefined) args.push("--duration", num(a.duration, "duration"));
+    if (a.no_layout_anim) args.push("--no-layout-anim");
+    if (a.round) args.push("--round");
     if (a.fps !== undefined) args.push("--fps", num(a.fps, "fps"));
     return args;
 }
@@ -153,7 +164,8 @@ const RENDER_PROPS = {
     variables: {
         type: "object",
         description:
-            "Host variables the document exposes by name (NAMED_VARIABLE): {name: value}. The " +
+            "Host variables the document exposes by name (NAMED_VARIABLE): {name: value}. With variables " +
+            "the render is the state one second in (eased values settled); pass duration to choose the time. The " +
             "document's declared type decides the parsing: numbers for float/int/long, " +
             "\"#RRGGBB\"/\"#AARRGGBB\" for colours, text for strings, an array of numbers for " +
             "float arrays. `validate` lists what a document declares.",
@@ -194,6 +206,7 @@ const RENDER_PROPS = {
     },
     fps: { type: "integer", description: "Simulation frame rate. Default 60." },
     background: { type: "string", description: "Clear colour: \"transparent\" or AARRGGBB hex. Default white." },
+    round: { type: "boolean", description: "A round watch screen: the image is masked to the inscribed circle (outside painted grey) and content the circle cuts off is reported (round_cut)." },
 };
 
 /** Run rc2image with a --report, returning the parsed report alongside the outcome. */
@@ -311,15 +324,42 @@ export const definition = {
             },
         },
         handler: async (a) => {
+            // Host values set on the first frame leave every eased value (a ProgressRing's sweep,
+            // an animated local) mid-flight at time 0: a check of sample values renders the
+            // settled state, a second in, unless the caller asks for a time of its own.
+            // The settle runs FORWARD from the pinned clock (to just under a second after it), so
+            // a clock pinned on a whole minute is not crossed: a run ending at 10:30:00 started at
+            // 10:29:59 and the minute changed on its last frames, leaving a visibility's enter/exit
+            // half-played (a departure board showed "0 min" instead of "now"). The second shown is
+            // the pinned one.
+            if (a.variables && Object.keys(a.variables).length && a.duration === undefined && !a.touch_events?.length) {
+                // (Layout animations off: a visibility switched by the new values otherwise plays
+                // an enter/exit that this player does not finish within the run — U64.)
+                a = { ...a, duration: 0.999, no_layout_anim: true };
+                if (typeof a.clock === "number") a.clock = a.clock + 999;
+                else if (typeof a.clock === "string" && /T\d\d:\d\d(:\d\d)?$/.test(a.clock)) a.clock = a.clock + (/T\d\d:\d\d$/.test(a.clock) ? ":00" : "") + ".999";
+            }
             const doc = prepareDocument(a);
             if (doc.conversionError) throw new Error(doc.conversionError);
-            const pngPath = a.output_path !== undefined ? resolvePath(a.output_path, "output_path")
-                                                        : outputFile("render", ".png");
+            // _probe: an internal render whose image nobody asked for (a size check) goes to a
+            // temporary file, not into the caller's folder.
+            const pngPath = a._probe ? path.join(os.tmpdir(), `rc-probe-${randomBytes(6).toString("hex")}.png`)
+                : a.output_path !== undefined ? resolvePath(a.output_path, "output_path")
+                : outputFile("render", ".png");
+            // A folder in output_path that does not exist yet is made, not a blank "rc2image failed:".
+            try { mkdirSync(path.dirname(pngPath), { recursive: true }); } catch { /* reported by rc2image */ }
             try {
                 const { err, log, report } = await renderWithReport(a, doc.rcPath, pngPath);
                 const shown = cleanLog(log, doc, pngPath);
+                // A component in a finding is named by its id; with the JSON at hand, its path too.
+                const paths = doc.source === "json" ? componentPaths(sourceJson(a), a.json_path !== undefined ? path.dirname(resolvePath(a.json_path, "json_path")) : resolvePath(".")) : null;
+                // Infos about what the image shows (an ellipsis, a dropped child) are kept: a
+                // render said "findings: none" while its main row was cut and a label ended in
+                // "…". The informational facts about the document (host variables) stay out.
+                const SHOWN_INFO = new Set(["text_ellipsized", "collapsed", "fitbox_shows", "unused_space", "unpainted_corners"]);
                 const findings = analyze(report, { ...analysisOpts(a), log })
-                    .filter((x) => x.level !== "info");
+                    .filter((x) => x.level !== "info" || SHOWN_INFO.has(x.code))
+                    .map((x) => (paths ? { ...x, message: withComponentPaths(x.message, paths) } : x));
                 if (err) {
                     const why = findings.length ? formatFindings(findings) : shown || err.message;
                     throw new Error(`rc2image failed${err.killed ? " (timed out)" : ""}:\n${why}`);
@@ -328,7 +368,8 @@ export const definition = {
                 const text = [link && `image_url: ${link}\n(public link to this render, valid for ` +
                                       `${Math.round(IMAGE_TTL_MS / 3600_000)} h — show it as ![render](${link}) ` +
                                       "if the image above does not display)",
-                              `png_path: ${displayPath(pngPath)} (on the server)`, shown,
+                              `png_path: ${displayPath(pngPath)}${HTTP_MODE ? " (on the server)" : ""}`,
+                              (() => { try { return `rc_bytes: ${statSync(doc.rcPath).size}`; } catch { return null; } })(), shown,
                               findings.length ? "findings:\n" + formatFindings(findings) : "findings: none"]
                     .filter(Boolean).join("\n");
                 return [
@@ -364,7 +405,7 @@ export const definition = {
                 ...DOCUMENT_PROPS,
                 render: {
                     type: "boolean",
-                    description: "Also do a sanity render with the options below (default true). " +
+                    description: "Also do a sanity render with the options below (default true): its findings come back, not the picture; call render for the image. " +
                                  "false stops after parsing and the data pass.",
                 },
                 include_image: { type: "boolean", description: "Return the sanity render's PNG too (default false)." },

@@ -54,6 +54,11 @@ const COMMON_JS = `
     else if (type === "int") { var n = Number(value); if (isFinite(n)) ctx.setNamedIntegerOverride(name, Math.trunc(n)); }
     else if (type === "color") { var c = parseColor(value); if (c !== null) ctx.setNamedColorOverride(name, c); }
     else if (type === "string") ctx.setNamedStringOverride(name, String(value));
+    else if (type === "float_array" && ctx.setNamedFloatArrayOverride) {
+      // "1, 2, 3", "[1,2,3]" or "1 2 3": every number in the text, in order.
+      var xs = String(value).split(/[\s,;\[\]]+/).filter(function (t) { return t !== ""; }).map(Number);
+      if (xs.length && xs.every(isFinite)) ctx.setNamedFloatArrayOverride(name, xs);
+    }
   }
 `;
 
@@ -73,20 +78,20 @@ const COMMON_JS = `
  *   rcBytes, fileName                  the .rc's size and download name (playground only),
  *   variants: [{name, label, href}]    playground only, optional: other documents of the same
  *                                      example (a componentTheme expanded on its own, e.g.
- *                                      mono and mono-inverted), shown as extra segments of the
+ *                                      mono and mono-light), shown as extra segments of the
  *                                      look control next to Auto / Light / Dark; href is
  *                                      the page that plays it (relative)
- *   mono: {variable, palettes}         playground only, optional: the document switches to mono at
+ *   mono: {variable, palettes}         playground only, optional: the document switches to mono-dark / mono-light at
  *                                      run time (componentTheme "auto": an exported float the host
  *                                      sets to 1, and the named colours overridden with a palette,
- *                                      {mono: {name: "#AARRGGBB"}, "mono-inverted": {...}}); Mono
- *                                      and Mono inverted then join the look control and act in
+ *                                      {mono: {name: "#AARRGGBB"}, "mono-light": {...}}); Mono
+ *                                      and Mono light then join the look control and act in
  *                                      place. Defaults to the library's palettes when the document
  *                                      declares the float (MONO_VAR); a variant of the same name
  *                                      is then not offered
- *   looks: {mono, "mono-inverted"}     playground only, optional: the same JSON expanded for that look
+ *   looks: {mono, "mono-light"}     playground only, optional: the same JSON expanded for that look
  *                                      (base64 .rc each: the components' other implementation, the
- *                                      call sites unchanged); Mono and Mono inverted join the look
+ *                                      call sites unchanged); Mono and Mono light join the look
  *                                      control and swap the document in place. Wins over `mono`
  *   variant, mainHref                  this page plays that variant (its segment is pressed);
  *                                      mainHref is the page of the main document, which
@@ -287,6 +292,14 @@ const PLAYGROUND_CSS = `
   #panel h2:first-child { margin-top: 2px; }
   #panel h2 .btn { margin-left: auto; text-transform: none; letter-spacing: 0; font-size: 12px; padding: 2px 8px; color: var(--text); }
   #vars { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  #actions { list-style: none; margin: 0; padding: 0; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; max-height: 220px; overflow: auto; }
+  #actions li { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+  #actions li.none { font-family: inherit; color: var(--muted); border: 0; }
+  #actions .t { color: var(--muted); flex: none; }
+  #actions .n { font-weight: 600; flex: none; }
+  #actions .v { color: var(--muted); overflow-wrap: anywhere; }
+  #actions li.fresh { animation: fresh 1.2s ease-out; }
+  @keyframes fresh { from { background: color-mix(in srgb, #4da3ff 30%, transparent); } to { background: transparent; } }
   .empty { color: var(--muted); margin: 0; }
   dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; }
   dt { color: var(--muted); }
@@ -404,7 +417,7 @@ const VARIABLE_ELEMENT_JS = `
         return;
       }
       top.appendChild(this._reset);
-      var build = { float: this._number, int: this._number, color: this._color, string: this._string }[this._type];
+      var build = { float: this._number, int: this._number, color: this._color, string: this._string, float_array: this._string }[this._type];
       build.call(this, body);
       this.value = this.getAttribute("value");
     }
@@ -591,6 +604,8 @@ function playgroundPage(bundle, rcBase64, config) {
 <aside id="panel">
   <h2>Host variables <button id="reset-all" class="btn" hidden>Reset all</button></h2>
   <div id="vars"></div>
+  <h2>Host actions <button id="actions-clear" class="btn" hidden>Clear</button></h2>
+  <ol id="actions"><li class="none">None yet: actions the document sends the app (a tap on a hostNamedAction) show here, newest first, with their value.</li></ol>
   <h2>Document</h2>
   <dl id="info"></dl>
 </aside>
@@ -653,9 +668,10 @@ ${VARIABLE_ELEMENT_JS}
   var ALT = C.looks && !C.variant ? C.looks : null;   // the JSON expanded per look (wins over C.mono)
   var MONO = ALT ? { variable: "", palettes: {} } : C.mono && !C.variant ? C.mono : null;
   var MAIN = DATA;
-  S.mono = MONO && /^(mono|mono-inverted)$/.test(hash.get("t") || "") ? hash.get("t") : "";
+  var T0 = ({ mono: "mono-dark", "mono-inverted": "mono-light" })[hash.get("t")] || hash.get("t") || "";   // the looks' old names
+  S.mono = MONO && /^(mono-dark|mono-light)$/.test(T0) ? T0 : "";
   // The look control: Auto / Light / Dark switch the player theme of this document; a variant
-  // (mono, mono-inverted) is a document of its own, on its own page. #t= names either, so a
+  // (mono-dark, mono-light) is a document of its own, on its own page. #t= names either, so a
   // link to a variant's look through the main page (or the reverse) goes to the right page.
   var VARIANTS = (C.variants || []).filter(function (v) { return !(ALT && ALT[v.name]) && !(MONO && MONO.palettes && MONO.palettes[v.name]); });
   if (ALT && S.mono && ALT[S.mono]) DATA = ALT[S.mono];
@@ -784,22 +800,22 @@ ${VARIABLE_ELEMENT_JS}
     ["light", "Light", "The light theme (themed colours take their light value)"],
     ["dark", "Dark", "The dark theme (themed colours take their dark value)"]
   ].concat(ALT ? [
-    ["mono", "Mono", "Mono: light on black, for always-on displays and OLED. The same JSON, its components expanded for mono"],
-    ["mono-inverted", "Mono inverted", "Mono inverted: dark on white, for e-ink and other reflective displays. The same JSON, its components expanded for mono-inverted"]
+    ["mono-dark", "Mono dark", "Mono dark: light on black, for always-on displays and OLED. The same JSON, its components expanded for mono-dark"],
+    ["mono-light", "Mono light", "Mono light: dark on white, for e-ink and other reflective displays. The same JSON, its components expanded for mono-light"]
   ] : MONO ? [
-    ["mono", "Mono", "Mono: light on black, for always-on displays and OLED. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono palette"],
-    ["mono-inverted", "Mono inverted", "Mono inverted: dark on white, for e-ink and other reflective displays. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono-inverted palette"]
+    ["mono-dark", "Mono dark", "Mono dark: light on black, for always-on displays and OLED. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono-dark palette"],
+    ["mono-light", "Mono light", "Mono light: dark on white, for e-ink and other reflective displays. The same document: " + MONO.variable + " set to 1 and its colours overridden with the mono-light palette"]
   ] : []).concat(VARIANTS.map(function (v) { return [v.name, v.label || v.name, v.title || ("The " + v.name + " version of the document")]; }));
   var seg = $("modes");
   LOOKS.forEach(function (l) {
     var b = document.createElement("button");
     b.type = "button"; b.dataset.look = l[0]; b.title = l[2];
-    if (l[0] === "mono" || l[0] === "mono-inverted") {
+    if (l[0] === "mono-dark" || l[0] === "mono-light") {
       var dot = document.createElement("span");
       dot.className = "dot";
-      dot.style.background = l[0] === "mono" ? "#000" : "#fff";
-      dot.style.borderColor = l[0] === "mono" ? "#fff" : "#000";
-      dot.style.boxShadow = "0 0 0 1px " + (l[0] === "mono" ? "#000" : "#fff");
+      dot.style.background = l[0] === "mono-dark" ? "#000" : "#fff";
+      dot.style.borderColor = l[0] === "mono-dark" ? "#fff" : "#000";
+      dot.style.boxShadow = "0 0 0 1px " + (l[0] === "mono-dark" ? "#000" : "#fff");
       b.appendChild(dot);
     }
     b.appendChild(document.createTextNode(l[1]));
@@ -815,14 +831,14 @@ ${VARIABLE_ELEMENT_JS}
   }
   function setLook(look) {
     var isTheme = /^(auto|light|dark)$/.test(look);
-    var isMono = MONO && /^(mono|mono-inverted)$/.test(look);
+    var isMono = MONO && /^(mono-dark|mono-light)$/.test(look);
     if (isMono || (isTheme && S.mono)) {
-      // In place: mono takes the dark side of colours it has no palette value for, mono-inverted
+      // In place: mono-dark takes the dark side of colours it has no palette value for, mono-light
       // the light one; the document is reloaded so every override starts from its defaults.
       S.mono = isMono ? look : "";
       if (isTheme) S.theme = look;
       if (ALT) DATA = isMono ? ALT[look] : MAIN;
-      handle.player.setTheme(isMono ? (look === "mono" ? "dark" : "light") : S.theme);
+      handle.player.setTheme(isMono ? (look === "mono-dark" ? "dark" : "light") : S.theme);
       showLook(); syncUrl(); load();
       return;
     }
@@ -1052,6 +1068,34 @@ ${VARIABLE_ELEMENT_JS}
     });
   }
 
+  // ── Host actions: what the document sends the app, newest first ──
+  var actList = $("actions"), actClear = $("actions-clear"), actCount = 0, watchedDoc = null;
+  function fmtValue(v) {
+    if (v === undefined || v === null || v === "") return "";
+    if (typeof v === "number") return String(Math.round(v * 1000) / 1000);
+    if (Array.isArray(v) || (v && typeof v.length === "number" && typeof v !== "string")) return "[" + Array.prototype.slice.call(v, 0, 8).map(fmtValue).join(", ") + (v.length > 8 ? ", …" : "") + "]";
+    return JSON.stringify(String(v));
+  }
+  function logAction(name, value) {
+    if (!actCount) actList.innerHTML = "";
+    actCount++; actClear.hidden = false;
+    var li = document.createElement("li"); li.className = "fresh";
+    var t = document.createElement("span"); t.className = "t"; t.textContent = new Date().toTimeString().slice(0, 8);
+    var n = document.createElement("span"); n.className = "n"; n.textContent = name;
+    var v = document.createElement("span"); v.className = "v"; v.textContent = fmtValue(value);
+    li.appendChild(t); li.appendChild(n); if (v.textContent) li.appendChild(v);
+    actList.insertBefore(li, actList.firstChild);
+    while (actList.children.length > 50) actList.removeChild(actList.lastChild);
+  }
+  function watchActions() {
+    var doc = handle && handle.player.getDocument && handle.player.getDocument();
+    if (!doc || doc === watchedDoc) return;
+    watchedDoc = doc;
+    if (doc.addActionCallback) doc.addActionCallback({ onAction: function (name, value) { logAction(name, value); } });
+    if (doc.addIdActionListener) doc.addIdActionListener({ onAction: function (id, metadata) { logAction("action #" + id, metadata || ""); } });
+  }
+  actClear.onclick = function () { actCount = 0; actClear.hidden = true; actList.innerHTML = '<li class="none">None yet.</li>'; };
+
   // ── Start ──
   if (S.fill === null) {
     // No size asked for: the document's own size when it fits the stage, else fill it.
@@ -1062,8 +1106,8 @@ ${VARIABLE_ELEMENT_JS}
   dens.value = String(S.density);
   try {
     handle = RC.createPlayer(host, {
-      theme: S.mono ? (S.mono === "mono" ? "dark" : "light") : S.theme,
-      onLoad: function () { try { applyVariables(); } catch (e) { fail(e); } }
+      theme: S.mono ? (S.mono === "mono-dark" ? "dark" : "light") : S.theme,
+      onLoad: function () { try { applyVariables(); } catch (e) { fail(e); } try { watchActions(); } catch (e) {} }
     });
     handle.player.setDensity(density());
     fit();   // before loading: the load lays the document out at the canvas size

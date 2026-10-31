@@ -1,0 +1,310 @@
+{
+ "component": "Rating",
+ "version": 2,
+ "summary": "A row of stars showing a rating out of max (5 by default): lit stars in the accent colour, a half star for a .5, the rest outlined; tapping the i-th star sets the value to i (then sends `onRate` and runs any `onClick` actions). Each star is announced \"N stars\" and the row its label and current rating",
+ "params": {
+  "value": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The rating, 0..max, in half steps or finer (3.5 shows three stars and a half). Bind a document variable (\"@rating\") to preset it and read it back after a tap; a number gives the call its own variable starting there"
+  },
+  "max": {
+   "type": "float",
+   "default": 5,
+   "static": true,
+   "doc": "Number of stars (a literal: the stars are generated when the document is built)"
+  },
+  "size": {
+   "type": "float",
+   "default": 24,
+   "static": true,
+   "doc": "Star size in dp (16 for an inline score, 32 to 40 for a review form). Tappable stars under 48 dp get transparent padding to a 48 dp touch target each (the star keeps its size; the gap between stars grows to the padding)"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.highlight",
+   "doc": "Lit stars and the half star (amber by default); in mono they are onSurface"
+  },
+  "emptyColor": {
+   "type": "color",
+   "default": "@colors.outline",
+   "doc": "The outline of an empty star; in mono it is outline"
+  },
+  "interactive": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "Tapping star i sets value to i (whole stars). false shows a rating without changing it (a review's score)"
+  },
+  "label": {
+   "type": "string",
+   "default": "Rating",
+   "doc": "Accessibility label of the row; the row also announces the bound value at run time as its state (\"Rating, 3 of 5 stars\", \"Not rated\" at 0), and each tappable star reads \"N stars\""
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every star tap after the value is set and after onRate. To tell the host the new rating with one action from every star: [{\"type\": \"hostNamedAction\", \"name\": \"rate\", \"value\": \"@rating\", \"valueType\": \"float\"}] with value bound to \"@rating\" (the action reads the variable when it runs, so it carries the star just tapped; json2rc declares a name used by several actions once). Omitted: a tap only sets `value`; ignored when interactive is false"
+  },
+  "onRate": {
+   "type": "string",
+   "doc": "Host action name sent on every star tap with the NEW rating: {\"onRate\": \"rate\"} adds {\"type\": \"hostNamedAction\", \"name\": \"rate\", \"value\": \"@<value's variable>\", \"valueType\": \"float\"} after the value is set (a json2rc extension: not byte-identical with the reference JSON parser). Ignored when interactive is false"
+  }
+ },
+ "capabilities": [
+  "input.toggle",
+  "image.icon",
+  "draw.path",
+  "a11y.labels"
+ ],
+ "call": {
+  "Rating": {
+   "value": "@rating",
+   "label": "Your rating"
+  }
+ },
+ "body": {
+  "box": {
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": ".5",
+            "start": 0,
+            "len": "2 * step(fract(@value), 0.25)",
+            "varName": "rtHalf"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": {
+             "type": "textMerge",
+             "id1": "Not rated",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": "@rtHalf"
+              },
+              "id2": " of @max stars"
+             }
+            },
+            "start": "9 * step(@value, 0)",
+            "len": "9 - 10 * step(@value, 0)",
+            "varName": "rtState"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "spacedBy": {
+         "$if": "interactive",
+         "then": "max(0, @size / 12 - max(0, 48 - @size))",
+         "else": "@size / 12"
+        }
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "stateDescription": "@rtState"
+        }
+       }
+      ],
+      "children": [
+       {
+        "$each": "max",
+        "index": "i",
+        "do": {
+         "canvas": {
+          "modifiers": [
+           {
+            "$if": "interactive",
+            "then": [
+             {
+              "padding": "max(0, (48 - @size) / 2)"
+             },
+             {
+              "size": "@size"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "$if": "i",
+                "then": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@i + 1",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " stars"
+                },
+                "else": "1 star"
+               },
+               "clickable": true
+              }
+             },
+             {
+              "onClick": [
+               {
+                "type": "valueFloatChange",
+                "target": "@value",
+                "value": "@i + 1"
+               },
+               {
+                "$if": "onRate",
+                "then": {
+                 "type": "hostNamedAction",
+                 "name": "@onRate",
+                 "value": "@value",
+                 "valueType": "float"
+                }
+               },
+               {
+                "$if": "onClick",
+                "then": "@onClick"
+               }
+              ]
+             }
+            ],
+            "else": [
+             {
+              "size": "@size"
+             }
+            ]
+           }
+          ],
+          "commands": [
+           {
+            "save": [
+             {
+              "scale": {
+               "sx": "componentWidth() / 960",
+               "sy": "componentHeight() / 960"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.outline",
+                  "else": "@emptyColor"
+                 }
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": {
+                "$icon": {
+                 "name": "star"
+                }
+               }
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": {
+                  "$if": "theme.mono",
+                  "then": "@colors.onSurface",
+                  "else": "@color"
+                 }
+                },
+                {
+                 "alpha": "step(@value - @i, 0.25) - step(@value - @i, 0.75)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": {
+                "$icon": {
+                 "name": "star_half"
+                }
+               }
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "step(@value - @i, 0.75)"
+                }
+               ]
+              }
+             },
+             {
+              "drawPath": {
+               "path": {
+                "$icon": {
+                 "name": "star",
+                 "filled": true
+                }
+               }
+              }
+             }
+            ]
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Each star is one canvas holding three Material Symbols paths (star outlined, star_half, star filled) in the empty colour and the accent, switched with paint alpha step(value - i, 0.25) and step(value - i, 0.75): below .25 over the star's index it is empty, from .25 a half, from .75 full. The three paths are stored once per document however many ratings it holds",
+  "The stars are generated when the document is built ($each over max), so max must be a literal; the value is a variable and may change at run time",
+  "A tap sets whole stars only (the i-th star sets i); a half star comes from the value a host writes (3.5). Tapping the lit count again does not clear it: give a reset of your own when 0 must be reachable by touch",
+  "The tap writes a literal with valueFloatChange, not valueFloatExpressionChange: both the Java parser and json2rc read a literal number in the latter's value as a float id (Java writes id 0, json2rc the float's low bits), so a literal there sets nothing",
+  "Mono draws lit stars in onSurface and empty ones in the outline grey whatever colours the call passes, so the state stays readable on a 1-bit display",
+  "Accessibility: each tappable star is labelled \"1 star\", \"2 stars\"... (a textMerge of a literal textFromFloat and \" stars\"; the first a plain text); the row carries the label (contentDescription) and the rating as its state (stateDescription): \"3 of 5 stars\", \"4.5 of 5 stars\", \"Not rated\" at 0. The state is cut by textSubtext from \"Not rated\" + whole part + \".5\" (when fract(value) > .25) + \" of max stars\", in the global section of a 0-size canvas in a box before the row (the parsers bind the name in document order), so it follows a bound variable at run time. About 300 B for a first call (later calls share the texts) plus about 45 B per tappable star; the named text ops keep it from compiling to a pattern",
+  "The spoken half follows fract(value) > .25 while the drawn star rounds at .25/.75 too, but a 4.8 is spoken \"4.5\" while five stars are lit: hosts should write whole or half values",
+  "Tappable stars under 48 dp sit in a 48 dp touch target each (padding (48 - size) / 2 inside the clickable canvas) with no gap between targets, so a 24 dp row is 240 dp wide; read-only stars keep size and the size / 12 gap",
+  "onRate and onClick actions run after the star's valueFloatChange: a hostNamedAction carrying \"@rating\" (valueType float) sends the star just tapped. Write ONE action name for all stars (onRate, or one onClick hostNamedAction): json2rc declares the shared name once; the reference JSON parser does not support value-carrying actions"
+ ]
+}

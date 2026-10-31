@@ -210,6 +210,11 @@ struct LayoutState {
     };
     std::vector<PaintMod> paintMods;
 
+    // A text's natural (unwrapped) size from its last measure: its intrinsic size, whatever
+    // its width modifier says (a fillMaxWidth text is as wide as its words, not its parent).
+    float lastTextW = 0, lastTextH = 0;
+    float autoFontSize = -1;   // CoreText autosize: the size measure chose (paint uses it)
+
     bool inflated = false;
 };
 
@@ -234,6 +239,9 @@ struct LayoutOverflowCounts {
     // collapsible that dropped everything), except ones asked to be 0 (a size: 0 canvas).
     int zeroSize = 0;
     std::vector<std::string> zeroSizeExamples;   // "CanvasLayout#-12 0x88 in Row#-5 (weight)"
+    // Children a collapsible layout dropped for want of room (by priority, lowest first).
+    int collapsed = 0;
+    std::vector<std::string> collapsedExamples;  // "RowLayout#-9 in CollapsibleColumn#-5 (priority 2)"
 };
 LayoutOverflowCounts layoutOverflowCounts();
 void resetLayoutOverflowCounts();

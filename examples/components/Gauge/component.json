@@ -1,7 +1,7 @@
 {
  "component": "Gauge",
  "version": 3,
- "summary": "A 240° dial gauge: a value arc from min to max, green, then amber past warnAt and red past alertAt, with the value and a label in the centre.",
+ "summary": "A 240° dial gauge: a value arc from min to max, green, then amber past warnAt and red past alertAt, with the value and a label in the centre. Or, with bandLo and bandHi, an ideal band (soil moisture 40-70 %) marked on the track: the value is green inside it and amber below or above it.",
  "params": {
   "value": {
    "type": "float",
@@ -32,6 +32,14 @@
    "type": "float",
    "default": 0.85,
    "doc": "Fraction where red starts"
+  },
+  "bandLo": {
+   "type": "float",
+   "doc": "Bottom of the ideal band, in value units (min..max), a number or a \"@variable\". With bandHi, the track shows the band and the value is green inside it, amber outside; warnAt and alertAt are then unused. Default: no band"
+  },
+  "bandHi": {
+   "type": "float",
+   "doc": "Top of the ideal band, in value units, a number or a \"@variable\"; giving it is what turns the band on (needs bandLo too). The ends are inclusive: a value equal to bandLo or bandHi is in the band"
   },
   "size": {
    "type": "float",
@@ -64,7 +72,30 @@
    "then": "(@value - @min) / (@max - @min)",
    "else": "@value / @max"
   },
-  "sweep": "clamp(0, 240, @frac * 240)"
+  "sweep": "clamp(0, 240, @frac * 240)",
+  "bandA": {
+   "$if": "bandHi",
+   "then": {
+    "$if": "min",
+    "then": "150 + clamp(0, 240, (@bandLo - @min) / (@max - @min) * 240)",
+    "else": "150 + clamp(0, 240, @bandLo / @max * 240)"
+   },
+   "else": 0
+  },
+  "bandB": {
+   "$if": "bandHi",
+   "then": {
+    "$if": "min",
+    "then": "150 + clamp(0, 240, (@bandHi - @min) / (@max - @min) * 240)",
+    "else": "150 + clamp(0, 240, @bandHi / @max * 240)"
+   },
+   "else": 0
+  },
+  "inBand": {
+   "$if": "bandHi",
+   "then": "(1 - step(@bandLo, @value)) * (1 - step(@value, @bandHi))",
+   "else": 0
+  }
  },
  "capabilities": [
   "draw.arc",
@@ -81,7 +112,8 @@
   "Zone colours without colour expressions: three arcs of the same sweep are drawn on top of each other, green always, amber with paint alpha step(f, warnAt), red with alpha step(f, alertAt); the topmost visible one wins. The text paint then resets alpha to 1",
   "step(x, edge) is x > edge, and clamp takes (min, max, value)",
   "The fraction and the sweep are locals: each is one float expression shared by the three arcs and both alphas (a literal value folds them to numbers, so nothing is computed at run time)",
-  "A fixed `size` is the box the call asks for: a 160 dp gauge still overflows a narrower widget. Where the space varies, pass fill: true and give the call a sized or weighted parent (weights ignore spacedBy: put the gap in a padding). Either way the face is drawn at `size` and a canvas variable (min(componentWidth(), componentHeight())) with one translate + scale fits it to the box it got, centred, so a call clamped by a smaller parent shrinks instead of being cut off; every coordinate stays a folded number. The variable keeps the call out of pattern mode, where min() over componentWidth()/componentHeight() comes out wrong (C++ and TS players)"
+  "A fixed `size` is the box the call asks for: a 160 dp gauge still overflows a narrower widget. Where the space varies, pass fill: true and give the call a sized or weighted parent (weights ignore spacedBy: put the gap in a padding). Either way the face is drawn at `size` and a canvas variable (min(componentWidth(), componentHeight())) with one translate + scale fits it to the box it got, centred, so a call clamped by a smaller parent shrinks instead of being cut off; every coordinate stays a folded number. The variable keeps the call out of pattern mode, where min() over componentWidth()/componentHeight() comes out wrong (C++ and TS players)",
+  "An ideal band (bandLo..bandHi) replaces the zones: the track gets a wider translucent success segment with a tick at each end, and the value arc is amber with a success copy on top at paint alpha inBand = (1 - step(bandLo, value)) * (1 - step(value, bandHi)), ends inclusive. In mono the band is a thicker grey track section between two ticks, and a dot rides the end of the value arc: filled inside the band, hollow (background-filled ring) outside. The band is on when bandHi is given: pass both, and don't write a literal bandHi of 0 (it reads as absent; use a variable or a tiny offset)"
  ],
  "body": {
   "canvas": {
@@ -151,100 +183,470 @@
      }
     },
     {
-     "$if": "theme.mono",
+     "$if": "bandHi",
      "then": [
       {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.onSurface"
-         },
-         {
-          "strokeWidth": "@theme.stroke"
-         },
-         {
-          "strokeCap": "butt"
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "strokeWidth": "@thickness * 0.75"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "rotate": {
-           "angle": "150 + @warnAt * 240",
-           "pivotX": "@size / 2",
-           "pivotY": "@size / 2"
-          }
-         },
-         {
-          "drawLine": {
-           "x1": "@size - @thickness * 1.5 - 3",
-           "y1": "@size / 2",
-           "x2": "@size - @thickness / 2 + 3",
-           "y2": "@size / 2"
-          }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": "@bandA",
+          "sweepAngle": "@bandB - @bandA"
          }
-        ]
-       }
-      },
-      {
-       "save": {
-        "commands": [
-         {
-          "rotate": {
-           "angle": "150 + @alertAt * 240",
-           "pivotX": "@size / 2",
-           "pivotY": "@size / 2"
-          }
-         },
-         {
-          "drawLine": {
-           "x1": "@size - @thickness * 1.5 - 3",
-           "y1": "@size / 2",
-           "x2": "@size - @thickness / 2 + 3",
-           "y2": "@size / 2"
-          }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": "@theme.stroke"
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.success"
-         },
-         {
-          "strokeWidth": "@thickness / 2"
-         },
-         {
-          "strokeCap": "round"
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "@bandA",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
          }
-        ]
-       }
-      },
-      {
-       "drawArc": {
-        "left": "@thickness",
-        "top": "@thickness",
-        "right": "@size - @thickness",
-        "bottom": "@size - @thickness",
-        "startAngle": 150,
-        "sweepAngle": "@sweep"
-       }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "@bandB",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "strokeWidth": "@thickness / 2"
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "150 + @sweep",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.background"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@size - @thickness",
+             "cy": "@size / 2",
+             "radius": "@thickness * 0.6"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "@theme.stroke"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@size - @thickness",
+             "cy": "@size / 2",
+             "radius": "@thickness * 0.6"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "@inBand"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@size - @thickness",
+             "cy": "@size / 2",
+             "radius": "@thickness * 0.6"
+            }
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "alpha": 0.3
+           },
+           {
+            "strokeWidth": "@thickness + 6"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": "@bandA",
+          "sweepAngle": "@bandB - @bandA"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.warning"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "strokeWidth": "@thickness"
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "alpha": "@inBand"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "strokeWidth": "@theme.stroke"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "@bandA",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "@bandB",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
+         }
+        }
+       ]
       }
      ],
      "else": [
       {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.success"
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": "@theme.stroke"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
          }
-        ]
-       }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "150 + @warnAt * 240",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "150 + @alertAt * 240",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size - @thickness * 1.5 - 3",
+             "y1": "@size / 2",
+             "x2": "@size - @thickness / 2 + 3",
+             "y2": "@size / 2"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "strokeWidth": "@thickness / 2"
+           },
+           {
+            "strokeCap": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.warning"
+           },
+           {
+            "alpha": "step(@frac, @warnAt)"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": 150,
+          "sweepAngle": "@sweep"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.error"
+           },
+           {
+            "alpha": "step(@frac, @alertAt)"
+           }
+          ]
+         }
+        }
+       ]
       },
       {
        "drawArc": {
@@ -254,53 +656,9 @@
         "bottom": "@size - @thickness",
         "startAngle": 150,
         "sweepAngle": "@sweep"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.warning"
-         },
-         {
-          "alpha": "step(@frac, @warnAt)"
-         }
-        ]
-       }
-      },
-      {
-       "drawArc": {
-        "left": "@thickness",
-        "top": "@thickness",
-        "right": "@size - @thickness",
-        "bottom": "@size - @thickness",
-        "startAngle": 150,
-        "sweepAngle": "@sweep"
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.error"
-         },
-         {
-          "alpha": "step(@frac, @alertAt)"
-         }
-        ]
        }
       }
      ]
-    },
-    {
-     "drawArc": {
-      "left": "@thickness",
-      "top": "@thickness",
-      "right": "@size - @thickness",
-      "bottom": "@size - @thickness",
-      "startAngle": 150,
-      "sweepAngle": "@sweep"
-     }
     },
     {
      "paint": {

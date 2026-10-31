@@ -194,15 +194,19 @@ export class Writer {
      *  row/column writes it instead of 0 (RecordingModifier.spacedBy -> getSpacedBy). */
     spacedByBits: number | null = null;
 
+    /** Told of every component id handed out, so a parser can map ids to its source paths. */
+    onComponentId: ((id: number) => void) | null = null;
     allocComponentId(): number {
         if (this.componentIdOverride !== null) {
             const id = this.componentIdOverride;
             this.componentIdOverride = null;
             this.lastComponentId = id;
+            if (this.onComponentId) this.onComponentId(id);
             return id;
         }
         this.componentId -= 1;
         this.lastComponentId = this.componentId;
+        if (this.onComponentId) this.onComponentId(this.componentId);
         return this.componentId;
     }
 
@@ -1117,6 +1121,20 @@ export class Writer {
             this.buffer.writeInt(c);
         }
         return this.addThemedColorIds(lightId, darkId);
+    }
+
+    /** A COLOR_EXPRESSION with its four raw params (ColorExpression.apply): HSV_MODE (4) with
+     *  the alpha in the top half of param1 and hue/sat/value float bits, or ARGB_MODE (5) /
+     *  IDARGB_MODE (6). A fresh colour id; the players evaluate it and re-evaluate on change. */
+    addColorExpression(p1: number, p2: number, p3: number, p4: number): number {
+        const retId = this.allocDataId();
+        this.buffer.start(OP.COLOR_EXPRESSION);
+        this.buffer.writeInt(retId);
+        this.buffer.writeInt(p1 | 0);
+        this.buffer.writeInt(p2 | 0);
+        this.buffer.writeInt(p3 | 0);
+        this.buffer.writeInt(p4 | 0);
+        return retId;
     }
 
     /** RemoteComposeWriter.addThemedColor(lightId, darkId): a fresh colour id, set under

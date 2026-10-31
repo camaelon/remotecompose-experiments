@@ -1,0 +1,697 @@
+{
+ "id": "TIM-14",
+ "name": "stopwatch",
+ "version": 1,
+ "title": "Stopwatch with a work-period ring",
+ "summary": "A stopwatch the user controls with buttons, entirely inside the document: one Button toggles Start / Pause / Resume and an outlined Reset clears it. The state is three host-settable variables (running, startAt, accumulated) changed by click actions; the elapsed time MM:SS.t is computed from them and the clock (timeInMin() * 60 + continuousSec() % 60), and a ProgressRing empties over a target duration (1500 s, a 25-minute Pomodoro work period, by default). The button's label follows the state through a text variable cut from one padded string in a global textSubtext, and a fitBox swaps the layout for smaller hosts: ring with the time inside, time and buttons, one row, the time alone.",
+ "prompt": "Make a stopwatch with start, pause and reset buttons, showing minutes, seconds and tenths, and a ring that empties over a 25-minute work period",
+ "level": 3,
+ "family": "TIM",
+ "capabilities": {
+  "primary": [
+   "time.timer",
+   "input.toggle",
+   "host.variables"
+  ],
+  "secondary": [
+   "time.clock",
+   "input.tap",
+   "text.dynamic",
+   "expr.format",
+   "layout.responsive",
+   "draw.arc",
+   "image.icon",
+   "a11y.labels",
+   "layout.weight",
+   "data.tokens"
+  ]
+ },
+ "use_cases": [
+  "control",
+  "widget",
+  "card"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "stopwatch",
+  "timer",
+  "pomodoro",
+  "start",
+  "pause",
+  "resume",
+  "reset",
+  "elapsed",
+  "elapsed time",
+  "lap",
+  "running",
+  "countdown ring",
+  "work period",
+  "break",
+  "focus timer",
+  "start stop",
+  "chronometer",
+  "minutes seconds tenths",
+  "tenths of a second",
+  "time tracking",
+  "session timer",
+  "ring that empties",
+  "remaining ring",
+  "toggle button label"
+ ],
+ "teaches": [
+  "Keep a timer's state in three host-settable variables instead of a clock reset: running (0 or 1), startAt (the clock value when the current run started) and accumulated (seconds of the runs before it). elapsed = accumulated + running * (now - startAt): paused it is accumulated, running it grows with the clock, and the host can read or set all three (a server-side session, a restore after a restart)",
+  "Read the clock as seconds of the day with fractions: now = timeInMin() * 60 + continuousSec() % 60. continuousSec() alone is seconds within the hour (minute * 60 + second + millis) and wraps at 3600; (now - startAt + 86400) % 86400 survives midnight for runs under a day",
+  "Toggle with one Button and three valueFloatExpressionChange actions, in this order: accumulated = @elapsed (folds the run in; paused, elapsed is already accumulated), startAt = now (a fresh start; harmless when pausing), running = 1 - @running. Reset is three valueFloatChange to 0: a literal belongs in valueFloatChange, valueFloatExpressionChange refuses one",
+  "Give the toggle a live label without three buttons: state = running * 2 + (1 - running) * step(accumulated, 0) picks 0 Start, 1 Resume, 2 Pause; a zero-size canvas's global block cuts a 6-character slot from \"Start Resume Pause \" with textSubtext (start @state * 6) and trims it with textTransform 3 into @stateLabel, which the Button takes as its label (and so as its accessibility label). One button in a fixed-width box keeps Reset still while the label changes",
+  "Format MM:SS.t from seconds: textMerge of textFromFloat(floor(@elapsed / 60), whole 2, flags 13) + \":\" + textFromFloat(@elapsed % 60, whole 2, flags 13), and the tenths as (@elapsed * 10) % 10 with whole 1 and flags 5, in a smaller muted text aligned to the bottom of the row",
+  "Empty a ProgressRing over a target: progress = max(0, 1 - @elapsed / @target), with the time text overlaid in the ring's box (showLabel false). target is exported (1500 s), so the host makes the same document a 5-minute break or a 50-minute block, and the header shows it as @target / 60 min",
+  "Survive smaller hosts with a fitBox of fixed-height, fillMaxWidth alternatives, largest first: the ring layout (268 dp), the time over the buttons (132 dp), one row of time and buttons (40 dp), the time alone. Header, TimeText and Controls are inline components, so each alternative is a short composition, not a copy"
+ ],
+ "snippets": [
+  {
+   "pointer": "/resources/variables/elapsed",
+   "shows": "time.timer",
+   "note": "elapsed = accumulated + running * (now - startAt), wrapped at midnight"
+  },
+  {
+   "pointer": "/resources/variables/now",
+   "shows": "time.clock",
+   "note": "seconds of the day with fractions; continuousSec() alone wraps every hour"
+  },
+  {
+   "pointer": "/resources/variables/running",
+   "shows": "host.variables",
+   "note": "the state the buttons change and the host may set: running, startAt, accumulated, target"
+  },
+  {
+   "pointer": "/components/Controls/body/row/children/0/box/children/0/Button/onClick",
+   "shows": "input.toggle",
+   "note": "one tap: fold the run into accumulated, capture startAt, flip running"
+  },
+  {
+   "pointer": "/components/Controls/body/row/children/1/Button/onClick",
+   "shows": "input.tap",
+   "note": "Reset: literals go in valueFloatChange"
+  },
+  {
+   "pointer": "/root/box/children/0/canvas/commands/0",
+   "shows": "text.dynamic",
+   "note": "the button's label: a 6-character slot of \"Start Resume Pause \" cut by @state, trimmed into @stateLabel"
+  },
+  {
+   "pointer": "/components/TimeText/body",
+   "shows": "expr.format",
+   "note": "MM:SS with zero padding (flags 13), the tenths smaller and muted"
+  },
+  {
+   "pointer": "/root/box/children/1/fitBox/children/0/column/children/1",
+   "shows": "draw.arc",
+   "note": "ProgressRing emptying from 1 to 0 as elapsed approaches target, the time text inside"
+  },
+  {
+   "pointer": "/root/box/children/1/fitBox",
+   "shows": "layout.responsive",
+   "note": "four layouts of the same content, fixed heights, the first that fits wins"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "running": {
+    "type": "float",
+    "meaning": "1 while the stopwatch runs, 0 when paused or reset",
+    "default": 0,
+    "min": 0,
+    "max": 1,
+    "step": 1
+   },
+   "startAt": {
+    "type": "float",
+    "meaning": "the clock (seconds of the day, timeInMin() * 60 + continuousSec() % 60) when the current run started; only read while running",
+    "default": 0,
+    "min": 0,
+    "max": 86400
+   },
+   "accumulated": {
+    "type": "float",
+    "meaning": "seconds elapsed in the runs before the current one; the whole elapsed time while paused",
+    "default": 0,
+    "min": 0,
+    "max": 5999
+   },
+   "target": {
+    "type": "float",
+    "meaning": "the work period in seconds the ring empties over (1500 = 25 minutes); the header shows it in minutes",
+    "default": 1500,
+    "min": 60,
+    "max": 5940,
+    "step": 60
+   }
+  },
+  "clock": "2026-10-31T10:20:00",
+  "touch": true
+ },
+ "check": {
+  "describe": "Canonical (fresh): 00:00.0 inside a full ring, the filled button says Start, an outlined Reset next to it, \"25 min\" top right. interact: tap Start (154,264) then wait 1.5 s: running 1, startAt = the pinned clock in seconds of the day (37200), elapsed about 2.0 and the ring 0.9987; the label reads Pause. Tapping again pauses: running back to 0, accumulated keeps the run (Start, 1.5 s, Pause, 1 s, Resume, 1 s, Pause ends at accumulated 2.57), the label reads Resume and the time stops. Reset (243,265) returns every variable to 0 and the ring to full. running render: the Start tap at 0.2 s then 65 s simulated: 01:04.8, Pause, the ring open by 4%. paused render: 00:02.7 with Resume. over (accumulated 1234.5, paused): 20:34.5 with the ring at 18%. light and mono recolour it (mono: thin grey track, white arc, outlined buttons). narrow (240 x 180) drops the ring: header, 12:34.3 at 40 sp, the two buttons. short (360 x 140) is one row: the time left, the buttons right. Repaint: 3 expressions listen to continuousSec() (now and the two startAt captures), so a player repaints every frame paused or running; the inspector's runtime says settled while paused because nothing changes on screen.",
+  "render": {
+   "clock": "2026-10-31T10:20:00"
+  },
+  "renders": [
+   {
+    "name": "running",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 138,
+      "y": 264
+     }
+    ],
+    "duration": 65
+   },
+   {
+    "name": "paused",
+    "touch_events": [
+     {
+      "t": 0.2,
+      "type": "tap",
+      "x": 138,
+      "y": 264
+     },
+     {
+      "t": 3,
+      "type": "tap",
+      "x": 138,
+      "y": 264
+     }
+    ],
+    "duration": 5
+   },
+   {
+    "name": "over",
+    "variables": {
+     "accumulated": 1234.5
+    },
+    "duration": 0.5
+   },
+   {
+    "name": "light",
+    "theme": "light",
+    "variables": {
+     "accumulated": 754.3
+    },
+    "duration": 0.5
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark",
+    "variables": {
+     "accumulated": 754.3
+    }
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 180,
+    "variables": {
+     "accumulated": 754.3
+    }
+   },
+   {
+    "name": "short",
+    "width": 360,
+    "height": 140,
+    "variables": {
+     "accumulated": 754.3
+    }
+   }
+  ],
+  "interact": [
+   {
+    "tap": [
+     154,
+     264
+    ]
+   },
+   {
+    "wait": 1.5
+   }
+  ],
+  "expect": {
+   "changed_variables": "running 1, startAt 37200, elapsed about 2"
+  }
+ },
+ "pitfalls": [
+  "continuousSec() is seconds WITHIN THE HOUR (minute * 60 + second + millis), not since boot or since the epoch: elapsed = continuousSec() - startAt goes negative at the next full hour. Build seconds of the day, timeInMin() * 60 + continuousSec() % 60, and wrap with (+ 86400) % 86400; a single run longer than a day needs a day count too",
+  "Any expression that reads continuousSec() registers a listener, and the player's repaint schedule (getOpsToUpdate) repaints every frame while one exists, whether the value matters or not: this document repaints every frame while PAUSED too (the inspector's runtime says settled, because nothing on screen changes). The format has no way to drop the listener when running is 0; a pure clock display with timeInSec() would be idle but cannot show tenths. Accept it for a stopwatch the user is looking at; don't leave one in a widget that is meant to idle",
+  "Order the toggle's actions: accumulated = @elapsed must run before startAt and running change, because elapsed reads both; and write it as \"@elapsed + 0\" or the full formula. A literal (1, 0) is refused by valueFloatExpressionChange: use valueFloatChange, as Reset does",
+  "Don't make Start / Resume / Pause three buttons stacked in a box and switched by visibility: the TypeScript player gives a tap to the last child whose (stale) bounds contain it, GONE or not, and a row's intrinsic width still counts the hidden ones, so a fitBox rejects the layout (EXAMPLES_FINDINGS U45). One Button with a text-variable label avoids both; a layout text cannot take textSubtext itself (U32), so the slot is cut in a zero-size canvas's global block",
+  "ProgressRing's progress is animated (0.3 s): a single-frame render at a host-set accumulated still shows the ring full; check.renders that set variables pass duration 0.5 so the arc settles. Mono has no animation and shows the value at once",
+  "step(x, edge) is x > edge: step(@accumulated, 0) is 1 after any pause, so the label says Resume; a run paused within the first frame (accumulated 0) still says Start, which is right",
+  "Pinned clocks: interact and render take clock \"YYYY-MM-DDTHH:MM:SS\" (local); startAt then equals that time in seconds of the day (10:20:00 = 37200), which is what check.describe quotes",
+  "Weights ignore spacedBy (U3): the header row puts its gap as padding on the weighted title, not spacedBy, or the \"25 min\" text is pushed past the edge"
+ ],
+ "related": [
+  "TIM-08",
+  "TIM-01",
+  "INT-02",
+  "ANM-09",
+  "TIM-11",
+  "LAY-09",
+  "Button",
+  "ProgressRing"
+ ],
+ "components": [
+  "Button",
+  "ProgressRing",
+  "Icon",
+  "TimeText",
+  "Header",
+  "Controls"
+ ],
+ "derived": {
+  "components": [
+   "Button",
+   "Controls",
+   "Header",
+   "Icon",
+   "ProgressRing",
+   "TimeText"
+  ],
+  "component_instances": 18,
+  "component_modes": {
+   "Header": "expand",
+   "Icon": "expand",
+   "ProgressRing": "expand",
+   "TimeText": "expand",
+   "Controls": "expand",
+   "Button": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 6838,
+  "header": {
+   "width": 360,
+   "height": 300
+  },
+  "op_count": 384,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 6,
+   "ANIMATED_FLOAT": 39,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 6,
+   "CanvasContent": 4,
+   "CoreText": 18,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 6,
+   "DRAW_ARC": 1,
+   "DRAW_CIRCLE": 1,
+   "DRAW_PATH": 2,
+   "FitBoxLayout": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 15,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 10,
+   "LayoutComponentContent": 50,
+   "LoopOperation": 12,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_SAVE": 2,
+   "MATRIX_SCALE": 3,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 10,
+   "MODIFIER_CLICK": 6,
+   "MODIFIER_HEIGHT": 18,
+   "MODIFIER_PADDING": 22,
+   "MODIFIER_RIPPLE": 6,
+   "MODIFIER_WIDTH": 17,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 4,
+   "PATH_DATA": 1,
+   "RoundedClipRectModifierOperation": 9,
+   "THEME": 18,
+   "TextFromFloat": 14,
+   "TextMerge": 14,
+   "TextSubtext": 1,
+   "TextTransform": 1,
+   "ValueFloatExpressionChangeActionOperation": 18
+  },
+  "host_variables": [
+   {
+    "name": "accumulated",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "running",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "startAt",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "target",
+    "type": "float",
+    "value": 1500
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_fitbox_shows",
+   "info: repaint_continuous"
+  ],
+  "repaint": "continuous",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "running": {
+    "render": "render-running.png",
+    "render_findings": []
+   },
+   "paused": {
+    "render": "render-paused.png",
+    "render_findings": []
+   },
+   "over": {
+    "render": "render-over.png",
+    "render_findings": []
+   },
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 6529,
+    "component_modes": {
+     "Header": "expand",
+     "Icon": "expand",
+     "ProgressRing": "expand",
+     "TimeText": "expand",
+     "Controls": "expand",
+     "Button": "expand"
+    },
+    "op_count": 353,
+    "host_variables": [
+     {
+      "name": "accumulated",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "running",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "startAt",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "target",
+      "type": "float",
+      "value": 1500
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "continuous",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     180
+    ],
+    "audit_findings": [
+     "info: layout_fitbox_shows",
+     "info: repaint_continuous"
+    ]
+   },
+   "short": {
+    "render": "render-short.png",
+    "render_findings": [],
+    "size": [
+     360,
+     140
+    ],
+    "audit_findings": [
+     "info: layout_touch_target",
+     "info: layout_fitbox_shows",
+     "info: repaint_continuous"
+    ]
+   }
+  },
+  "json_keys": [
+   "Button",
+   "Controls",
+   "Header",
+   "Icon",
+   "ProgressRing",
+   "TimeText",
+   "accumulated",
+   "anim",
+   "apiLevel",
+   "background",
+   "body",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "components",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "default",
+   "doc",
+   "drawArc",
+   "drawCircle",
+   "drawPath",
+   "dx",
+   "dy",
+   "elapsed",
+   "enabled",
+   "export",
+   "fitBox",
+   "flags",
+   "fontSize",
+   "fontWeight",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "icon_timer_outlined",
+   "id1",
+   "id2",
+   "label",
+   "left",
+   "len",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "now",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "params",
+   "path",
+   "paths",
+   "primary",
+   "profiles",
+   "progress",
+   "radius",
+   "resources",
+   "right",
+   "ringLeft",
+   "root",
+   "row",
+   "running",
+   "save",
+   "scale",
+   "semantics",
+   "showLabel",
+   "size",
+   "small",
+   "spacedBy",
+   "start",
+   "startAngle",
+   "startAt",
+   "state",
+   "static",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "textSubtext",
+   "textTransform",
+   "thickness",
+   "top",
+   "track",
+   "translate",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "time.timer": [
+    "continuousSec",
+    "valueFloatExpressionChange"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "time.clock": [
+    "timeInMin",
+    "continuousSec"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.format": [
+    "textFromFloat"
+   ],
+   "layout.responsive": [
+    "fitBox"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "image.icon": [
+    "icon_"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.weight": [
+    "weight",
+    "verticalWeight"
+   ],
+   "data.tokens": [
+    "resources",
+    "variables",
+    "colors"
+   ]
+  },
+  "built_at": "2026-10-31T22:22:15.269Z"
+ }
+}

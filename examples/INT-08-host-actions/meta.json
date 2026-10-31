@@ -1,0 +1,387 @@
+{
+ "id": "INT-08",
+ "name": "host-actions",
+ "version": 1,
+ "title": "Media controls that reach the app",
+ "summary": "Previous / play-pause / next IconButtons and a seek Button: every tap sends the app a named action (hostNamedAction), the seek one with a payload, and the play-pause tap also flips an exported playing variable that swaps the icon.",
+ "prompt": "Make media controls: previous, play/pause and next buttons; each tap must reach the app, and play/pause must toggle its icon.",
+ "level": 2,
+ "family": "INT",
+ "capabilities": {
+  "primary": [
+   "input.host",
+   "input.tap"
+  ],
+  "secondary": [
+   "input.toggle",
+   "layout.state",
+   "a11y.labels",
+   "layout.decoration",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "media-player",
+  "control"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "host action",
+  "named action",
+  "send to the app",
+  "notify the app",
+  "tap reaches the app",
+  "media controls",
+  "play pause",
+  "previous next",
+  "music player",
+  "seek",
+  "payload",
+  "exported variable"
+ ],
+ "components": [
+  "IconButton",
+  "Button"
+ ],
+ "teaches": [
+  "Send the app a tap by name with {\"onClick\": {\"type\": \"hostNamedAction\", \"name\": \"next\"}}; the app receives \"next\" and nothing in the document changes",
+  "Attach a payload with \"value\": a fixed string ({\"type\": \"hostNamedAction\", \"name\": \"seek\", \"value\": \"90\"}); a \"@variable\" there is sent as the literal text, not its value",
+  "Do both from one tap with a list: [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@playing\", \"value\": \"1 - @playing\"}, {\"type\": \"hostNamedAction\", \"name\": \"playPause\"}], so the app is told and can also read the exported playing",
+  "Library IconButton and Button take the same action or list in their onClick param and label the target from label; swap the play and pause icons with two canvases whose visibility is \"@playing\" and \"1 - @playing\""
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/0/column/children/1/row/children/2/IconButton/onClick",
+   "shows": "input.host",
+   "note": "a tap the app receives by name: hostNamedAction \"next\""
+  },
+  {
+   "pointer": "/root/0/column/children/2/Button/onClick",
+   "shows": "input.host",
+   "note": "a named action with a payload: \"seek\" with the fixed string value \"90\""
+  },
+  {
+   "pointer": "/root/0/column/children/1/row/children/1/IconButton/onClick",
+   "shows": "input.tap",
+   "note": "one tap, two actions: flip the exported playing (1 - @playing) and tell the app \"playPause\""
+  },
+  {
+   "pointer": "/resources/variables/playing",
+   "shows": "input.toggle",
+   "note": "playing: an exported float the app can read, 0 or 1"
+  },
+  {
+   "pointer": "/root/0/column/children/1/row/children/1/IconButton/slots/icon/0",
+   "shows": "layout.state",
+   "note": "the icon slot: a box stacking the play canvas (visibility \"1 - @playing\") and the pause canvas (visibility \"@playing\")"
+  },
+  {
+   "pointer": "/root/0/column/children/3",
+   "shows": "layout.state",
+   "note": "the status line: two texts in a box, Paused shown by visibility \"1 - @playing\", Playing by \"@playing\""
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "playing": {
+    "type": "float",
+    "meaning": "1 while playing, 0 while paused; the app can set it to reflect its own state",
+    "default": 0,
+    "min": 0,
+    "max": 1,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Starts paused (play triangle on the filled button, status \"Paused\"); a tap on the middle button shows the pause bars and \"Playing\", and sends the app playPause. Previous, next and the seek button change nothing on screen: their actions go to the app. Resized, the centred row keeps its three 40 dp buttons and the seek button under it.",
+  "render": {
+   "touch_events": [
+    {
+     "t": 0.1,
+     "type": "tap",
+     "x": 180,
+     "y": 78
+    }
+   ],
+   "duration": 0.5
+  },
+  "interact": [
+   {
+    "target": 1
+   }
+  ],
+  "expect": {
+   "changed_variables": "playing goes from 0 to 1; the play canvas goes (visibility 0) and the pause canvas shows (visibility 1)",
+   "host_actions": "playPause is sent on the middle button; previous, next and seek (value \"90\") on the others"
+  },
+  "renders": [
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 117,
+      "y": 78
+     }
+    ],
+    "duration": 0.5
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 200,
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 270,
+      "y": 78
+     }
+    ],
+    "duration": 0.5
+   }
+  ]
+ },
+ "related": [
+  "INT-01",
+  "INT-02",
+  "ANM-09"
+ ],
+ "pitfalls": [
+  "An exported variable alone only changes what the app can read; the app is told about a tap only by a hostNamedAction, so a tap that must reach the app carries one (alone or in the onClick list)",
+  "hostNamedAction value is a fixed string: \"@playing\" would arrive as the text \"@playing\"; to send live state, export the variable and have the app read it when the action arrives",
+  "hostNamedAction has no visible effect in a renderer: the inspector's interactions task lists it under the target (HostNamedAction with its name and value text ids); do not expect a variable to change",
+  "visibility reads an integer: a float that is exactly 0 or 1 (\"@playing\") and the integer expression \"1 - @playing\" both work; a fraction (0.999) would hide the component",
+  "Keep the play and pause canvases the same size in one box so the button does not change size when the icon swaps"
+ ],
+ "derived": {
+  "components": [
+   "Button",
+   "IconButton"
+  ],
+  "component_instances": 4,
+  "component_modes": {
+   "IconButton": "expand",
+   "Button": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 2542,
+  "header": {
+   "width": 360,
+   "height": 200
+  },
+  "op_count": 172,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 1,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "CanvasContent": 4,
+   "CoreText": 4,
+   "DATA_FLOAT": 1,
+   "DATA_TEXT": 12,
+   "DRAW_PATH": 3,
+   "DRAW_RECT": 4,
+   "HEADER": 1,
+   "HostNamedAction": 4,
+   "IntegerExpression": 2,
+   "LAYOUT_BOX": 7,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 17,
+   "LoopOperation": 10,
+   "MODIFIER_BACKGROUND": 4,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 10,
+   "MODIFIER_PADDING": 7,
+   "MODIFIER_RIPPLE": 1,
+   "MODIFIER_VISIBILITY": 4,
+   "MODIFIER_WIDTH": 8,
+   "NAMED_VARIABLE": 6,
+   "PAINT_VALUES": 4,
+   "PATH_DATA": 2,
+   "RoundedClipRectModifierOperation": 5,
+   "THEME": 15,
+   "ValueFloatExpressionChangeActionOperation": 1
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "playing",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: never_executed"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 4,
+   "click": 4,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     234,
+     200
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     540,
+     200
+    ],
+    "audit_findings": [
+     "info: never_executed"
+    ]
+   }
+  },
+  "json_keys": [
+   "Button",
+   "IconButton",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "dark",
+   "drawPath",
+   "drawRect",
+   "enabled",
+   "export",
+   "fontSize",
+   "fontWeight",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "icon",
+   "label",
+   "left",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "path",
+   "paths",
+   "playing",
+   "primary",
+   "profiles",
+   "resources",
+   "right",
+   "root",
+   "row",
+   "semantics",
+   "size",
+   "slots",
+   "spacedBy",
+   "style",
+   "target",
+   "text",
+   "top",
+   "triLeft",
+   "triRight",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "verticalArrangement",
+   "visibility",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "input.host": [
+    "hostNamedAction"
+   ],
+   "input.tap": [
+    "onClick"
+   ],
+   "input.toggle": [
+    "valueFloatExpressionChange",
+    "onClick"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-10-31T22:21:32.793Z"
+ }
+}

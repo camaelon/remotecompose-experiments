@@ -1,12 +1,17 @@
 {
  "component": "BatteryIndicator",
- "version": 1,
- "summary": "A horizontal battery icon filled to a level (0..100) and coloured by it (green, amber below warnAt, red with a ! below lowAt), with an optional percentage.",
+ "version": 2,
+ "summary": "A horizontal battery icon filled to a level (0..100) and coloured by it (green, amber below warnAt, red with a ! below lowAt), with an optional percentage; while charging a lightning bolt sits over the body and the fill stays green.",
  "params": {
   "level": {
    "type": "float",
    "required": true,
    "doc": "Charge in percent, 0..100 (clamped): a number, or a host variable such as \"@battery\" (exported in resources.variables). The format has no system battery value the Java parser accepts, so the host sets it"
+  },
+  "charging": {
+   "type": "float",
+   "default": 0,
+   "doc": "1 while charging: a bolt is drawn over the body and the low/warn colouring is not applied. A number, or a host variable such as \"@charging\" (0 or 1). A call that leaves it out costs nothing extra"
   },
   "size": {
    "type": "float",
@@ -29,24 +34,31 @@
   "warnAt": {
    "type": "float",
    "default": 50,
-   "doc": "Below this the fill is @colors.warning"
+   "doc": "Below this the fill is @colors.warning (not while charging)"
   },
   "lowAt": {
    "type": "float",
    "default": 20,
-   "doc": "Below this the fill is @colors.error and a ! is drawn in the empty part"
+   "doc": "Below this the fill is @colors.error and a ! is drawn in the empty part (not while charging)"
   },
   "label": {
    "type": "string",
    "default": "Battery",
-   "doc": "Accessibility label of the icon"
+   "doc": "Accessibility label of the icon; \", charging\" is appended when the call passes charging"
   }
  },
  "locals": {
-  "lv": "clamp(0, 100, @level)"
+  "lv": "clamp(0, 100, @level)",
+  "lc": {
+   "$if": "charging",
+   "then": "@lv + 100 * @charging",
+   "else": "@lv"
+  }
  },
  "capabilities": [
   "draw.shapes",
+  "draw.path",
+  "image.icon",
   "data.condition",
   "text.dynamic",
   "host.variables"
@@ -76,7 +88,15 @@
        },
        {
         "semantics": {
-         "contentDescription": "@label"
+         "contentDescription": {
+          "$if": "charging",
+          "then": {
+           "type": "textMerge",
+           "id1": "@label",
+           "id2": ", charging"
+          },
+          "else": "@label"
+         }
         }
        }
       ],
@@ -155,7 +175,7 @@
        {
         "conditionalOperations": {
          "condition": "lt",
-         "v1": "@lv",
+         "v1": "@lc",
          "v2": "@warnAt",
          "commands": [
           {
@@ -173,7 +193,7 @@
        {
         "conditionalOperations": {
          "condition": "lt",
-         "v1": "@lv",
+         "v1": "@lc",
          "v2": "@lowAt",
          "commands": [
           {
@@ -214,6 +234,101 @@
          "rx": "@size * 0.1 - 3",
          "ry": "@size * 0.1 - 3"
         }
+       },
+       {
+        "$if": "charging",
+        "then": [
+         {
+          "conditionalOperations": {
+           "condition": "gt",
+           "v1": "@charging",
+           "v2": 0.5,
+           "commands": [
+            {
+             "save": {
+              "commands": [
+               {
+                "translate": {
+                 "dx": "@size * 0.226",
+                 "dy": "@size * 0.0333"
+                }
+               },
+               {
+                "scale": {
+                 "sx": "@size * 0.00045",
+                 "sy": "@size * 0.00045"
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": {
+                    "$if": "theme.mono",
+                    "then": "@colors.onSurface",
+                    "else": "@colors.surface"
+                   }
+                  },
+                  {
+                   "style": "stroke"
+                  },
+                  {
+                   "strokeWidth": 90
+                  },
+                  {
+                   "strokeJoin": "round"
+                  },
+                  {
+                   "strokeCap": "round"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": {
+                  "$icon": {
+                   "name": "bolt",
+                   "style": "rounded",
+                   "filled": true
+                  }
+                 }
+                }
+               },
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": {
+                    "$if": "theme.mono",
+                    "then": "@colors.background",
+                    "else": "@colors.onSurface"
+                   }
+                  },
+                  {
+                   "style": "fill"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": {
+                  "$icon": {
+                   "name": "bolt",
+                   "style": "rounded",
+                   "filled": true
+                  }
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
        }
       ]
      }
@@ -243,8 +358,10 @@
  },
  "pitfalls": [
   "There is no portable system battery level: batteryLevel() (system variable 38) is an rcj/json2rc extension that the Java parser rejects and Android's RemoteContext does not define. Export a host float (resources.variables {\"battery\": {\"value\": 76, \"export\": true}}) and pass \"@battery\"; the host updates it",
-  "The fill colour is chosen with conditionalOperations around a paint change (success, then warning below warnAt, then error below lowAt): there are no colour expressions",
+  "The fill colour is chosen with conditionalOperations around a paint change (success, then warning below warnAt, then error below lowAt): there are no colour expressions. The comparisons read lc = lv + 100 * charging, so a charging battery is never below a threshold and keeps the green fill (and no !)",
   "Low is shown by shape too: a ! in the empty part of the body, so it reads in mono (where every colour is white or black) and without colour vision",
+  "charging is a run-time value: the bolt sits in conditionalOperations (charging > 0.5), so a host variable can switch it. It is the library bolt icon (Material Symbols, rounded filled, one op-list path of about 0.5 KB shared by every call) scaled to 0.36 × size and centred on the body: a 90-unit stroke of the same path in the surface colour first (a 1.6 dp halo at size 40, so the bolt reads over the fill and the empty part), then the fill in onSurface. In mono the two swap (halo onSurface, bolt background): a black bolt on the white fill, a white outline over the black empty part",
+  "The accessibility label is a textMerge of label and \", charging\" whenever the call passes charging; it cannot follow a host variable that is 0 at run time (a text id cannot be switched by a float), so bind charging only on an indicator that can charge, or pass a label that says it",
   "The percentage is a layout text after the icon, so the call is as wide as the icon plus the number: in a tight row, pass showPercent: false and show the level elsewhere",
   "The icon is scaled to the box the layout gives its canvas (the smaller of width / size and height / (size / 2), centred), so a call clamped by a smaller parent shrinks instead of being cut off; the outline stays theme.stroke wide at the design size and scales with it"
  ]

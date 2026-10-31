@@ -380,6 +380,10 @@ public:
     // Register that 'op' depends on variable 'variableId'.
     // When that variable changes, op will be marked dirty.
     void listensTo(int variableId, Operation* op);
+    // FloatExpression ops by the id they write, so an action can evaluate one on the spot
+    // (CoreDocument.evaluateFloatExpression in the reference reads the inputs as they are now).
+    void registerFloatExpression(int id, Operation* op) { mFloatExpressionOps[id] = op; }
+    Operation* floatExpressionOp(int id) const { auto it = mFloatExpressionOps.find(id); return it == mFloatExpressionOps.end() ? nullptr : it->second; }
 
     // Check whether any operation listens to a given variable ID.
     bool hasListeners(int variableId) const {
@@ -470,6 +474,7 @@ private:
     // Variable → list of operations listening to it
     std::unordered_map<int, std::vector<Operation*>> mVarListeners;
     std::unordered_set<int> mPaintOnlyVars;
+    std::unordered_map<int, Operation*> mFloatExpressionOps;
     bool mClassified = false;                 // classifyPaintOnlyVars has run for these listeners
 
     // Operations registered as touch listeners (e.g. TouchExpressionOp)

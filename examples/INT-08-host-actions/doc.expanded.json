@@ -1,0 +1,483 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "Media controls: previous, play or pause, next and a seek button, each tap sent to the app"
+ },
+ "resources": {
+  "paths": {
+   "triRight": [
+    {
+     "type": "moveTo",
+     "x": 6,
+     "y": 4
+    },
+    {
+     "type": "lineTo",
+     "x": 20,
+     "y": 12
+    },
+    {
+     "type": "lineTo",
+     "x": 6,
+     "y": 20
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "triLeft": [
+    {
+     "type": "moveTo",
+     "x": 18,
+     "y": 4
+    },
+    {
+     "type": "lineTo",
+     "x": 4,
+     "y": 12
+    },
+    {
+     "type": "lineTo",
+     "x": 18,
+     "y": 20
+    },
+    {
+     "type": "close"
+    }
+   ]
+  },
+  "variables": {
+   "playing": {
+    "value": 0,
+    "export": true
+   }
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onPrimary": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0B1A2E"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   }
+  }
+ },
+ "root": [
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 10
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalArrangement": "center",
+    "children": [
+     {
+      "text": {
+       "value": "Blue in Green",
+       "fontSize": 17,
+       "fontWeight": 700,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "spacedBy": 16
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "padding": 4
+           },
+           {
+            "size": 40
+           },
+           {
+            "clip": 20
+           },
+           {
+            "semantics": {
+             "contentDescription": "Previous track",
+             "enabled": true,
+             "clickable": true
+            }
+           },
+           {
+            "onClick": {
+             "type": "hostNamedAction",
+             "name": "previous"
+            }
+           }
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": [
+                24,
+                24
+               ]
+              }
+             ],
+             "commands": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onSurface"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRect": {
+                "left": 4,
+                "top": 4,
+                "right": 7,
+                "bottom": 20
+               }
+              },
+              {
+               "drawPath": {
+                "path": "triLeft"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "padding": 4
+           },
+           {
+            "size": 40
+           },
+           {
+            "clip": 20
+           },
+           {
+            "background": "@colors.primary"
+           },
+           {
+            "semantics": {
+             "contentDescription": "Play or pause",
+             "enabled": true,
+             "clickable": true
+            }
+           },
+           {
+            "onClick": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@playing",
+              "value": "1 - @playing"
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "playPause"
+             }
+            ]
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "children": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": [
+                   24,
+                   24
+                  ]
+                 },
+                 {
+                  "visibility": "1 - @playing"
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onPrimary"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawPath": {
+                   "path": "triRight"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": [
+                   24,
+                   24
+                  ]
+                 },
+                 {
+                  "visibility": "@playing"
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onPrimary"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawRect": {
+                   "left": 5,
+                   "top": 4,
+                   "right": 10,
+                   "bottom": 20
+                  }
+                 },
+                 {
+                  "drawRect": {
+                   "left": 14,
+                   "top": 4,
+                   "right": 19,
+                   "bottom": 20
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "padding": 4
+           },
+           {
+            "size": 40
+           },
+           {
+            "clip": 20
+           },
+           {
+            "semantics": {
+             "contentDescription": "Next track",
+             "enabled": true,
+             "clickable": true
+            }
+           },
+           {
+            "onClick": {
+             "type": "hostNamedAction",
+             "name": "next"
+            }
+           }
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": [
+                24,
+                24
+               ]
+              }
+             ],
+             "commands": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onSurface"
+                 }
+                ]
+               }
+              },
+              {
+               "drawPath": {
+                "path": "triRight"
+               }
+              },
+              {
+               "drawRect": {
+                "left": 17,
+                "top": 4,
+                "right": 20,
+                "bottom": 20
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "padding": [
+          0,
+          4
+         ]
+        },
+        {
+         "height": 40
+        },
+        {
+         "clip": 14
+        },
+        {
+         "background": "@colors.primary"
+        },
+        {
+         "padding": 1.5
+        },
+        "ripple",
+        {
+         "semantics": {
+          "contentDescription": "Skip to 1:30",
+          "enabled": true,
+          "clickable": true
+         }
+        },
+        {
+         "onClick": {
+          "type": "hostNamedAction",
+          "name": "seek",
+          "value": "90"
+         }
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxHeight",
+           {
+            "clip": 12.5
+           },
+           {
+            "background": "@colors.background"
+           },
+           {
+            "padding": [
+             14.5,
+             0
+            ]
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Skip to 1:30",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 15,
+             "color": "@colors.primary"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "children": [
+        {
+         "text": {
+          "value": "Paused (playing = 0)",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "visibility": "1 - @playing"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "Playing (playing = 1)",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "visibility": "@playing"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

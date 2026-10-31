@@ -67,6 +67,12 @@
          "verticalAlignment": "center",
          "modifiers": [
           {
+           "padding": [
+            0,
+            4
+           ]
+          },
+          {
            "height": 40
           },
           {
@@ -106,6 +112,12 @@
        {
         "box": {
          "modifiers": [
+          {
+           "padding": [
+            0,
+            4
+           ]
+          },
           {
            "height": 40
           },
@@ -168,6 +180,12 @@
          "horizontalAlignment": "center",
          "verticalAlignment": "center",
          "modifiers": [
+          {
+           "padding": [
+            0,
+            4
+           ]
+          },
           {
            "height": 40
           },
@@ -277,29 +295,8 @@
            }
           },
           {
-           "canvas": {
-            "modifiers": [
-             {
-              "size": [
-               52,
-               32
-              ]
-             },
-             {
-              "semantics": {
-               "contentDescription": "Wi-Fi",
-               "clickable": true
-              }
-             },
-             {
-              "onClick": {
-               "type": "valueFloatExpressionChange",
-               "target": "@wifi",
-               "value": "1 - @wifi"
-              }
-             }
-            ],
-            "commands": [
+           "box": {
+            "children": [
              {
               "variable": {
                "name": "switch1_p",
@@ -310,66 +307,137 @@
               }
              },
              {
-              "paint": {
-               "ops": [
+              "variable": {
+               "name": "switch1_x",
+               "value": "20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @wifi - 1))"
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
                 {
-                 "color": "@colors.track"
+                 "size": [
+                  52,
+                  32
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "global": {
+                  "commands": [
+                   {
+                    "textSubtext": {
+                     "text": "Off On ",
+                     "start": "@wifi * 4",
+                     "len": 3,
+                     "varName": "switch1_swState3"
+                    }
+                   },
+                   {
+                    "textTransform": {
+                     "text": "@switch1_swState3",
+                     "start": 0,
+                     "len": -1,
+                     "operation": 3,
+                     "varName": "switch1_swState"
+                    }
+                   }
+                  ]
+                 }
                 },
                 {
-                 "style": "fill"
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.track"
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 52,
+                  "bottom": 32,
+                  "rx": 16,
+                  "ry": 16
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.primary"
+                   },
+                   {
+                    "alpha": "@switch1_p"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 52,
+                  "bottom": 32,
+                  "rx": 16,
+                  "ry": 16
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "#FFFFFFFF"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "16 + @switch1_x",
+                  "cy": 16,
+                  "radius": 12
+                 }
                 }
                ]
               }
              },
              {
-              "drawRoundRect": {
-               "left": 0,
-               "top": 0,
-               "right": 52,
-               "bottom": 32,
-               "rx": 16,
-               "ry": 16
-              }
-             },
-             {
-              "paint": {
-               "ops": [
+              "box": {
+               "modifiers": [
                 {
-                 "color": "@colors.primary"
+                 "size": [
+                  52,
+                  32
+                 ]
                 },
                 {
-                 "alpha": "@switch1_p"
-                }
-               ]
-              }
-             },
-             {
-              "drawRoundRect": {
-               "left": 0,
-               "top": 0,
-               "right": 52,
-               "bottom": 32,
-               "rx": 16,
-               "ry": 16
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#FFFFFFFF"
+                 "semantics": {
+                  "contentDescription": "Wi-Fi",
+                  "stateDescription": "@switch1_swState",
+                  "clickable": true
+                 }
                 },
                 {
-                 "alpha": 1
+                 "onClick": [
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@wifi",
+                   "value": "1 - @wifi"
+                  }
+                 ]
                 }
                ]
-              }
-             },
-             {
-              "drawCircle": {
-               "cx": "16 + (20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @wifi - 1)))",
-               "cy": 16,
-               "radius": 12
               }
              }
             ]
@@ -392,29 +460,7 @@
         }
        },
        {
-        "row": {
-         "verticalAlignment": "center",
-         "modifiers": [
-          {
-           "height": 40
-          },
-          {
-           "spacedBy": 12
-          },
-          {
-           "semantics": {
-            "contentDescription": "Send receipts",
-            "clickable": true
-           }
-          },
-          {
-           "onClick": {
-            "type": "valueFloatExpressionChange",
-            "target": "@checkbox1_checked",
-            "value": "1 - @checkbox1_checked"
-           }
-          }
-         ],
+        "box": {
          "children": [
           {
            "variable": {
@@ -429,108 +475,184 @@
            "canvas": {
             "modifiers": [
              {
-              "width": 22
-             },
-             {
-              "height": 22
+              "size": [
+               0,
+               0
+              ]
              }
             ],
             "commands": [
              {
-              "paint": {
-               "ops": [
+              "global": {
+               "commands": [
                 {
-                 "color": "@colors.outline"
+                 "textSubtext": {
+                  "text": "Not checkedChecked    ",
+                  "start": "@checkbox1_checked * 11",
+                  "len": 11,
+                  "varName": "checkbox1_cbState11"
+                 }
                 },
                 {
-                 "style": "stroke"
-                },
-                {
-                 "strokeWidth": 2
+                 "textTransform": {
+                  "text": "@checkbox1_cbState11",
+                  "start": 0,
+                  "len": -1,
+                  "operation": 3,
+                  "varName": "checkbox1_cbState"
+                 }
                 }
                ]
-              }
-             },
-             {
-              "drawRoundRect": {
-               "left": 1,
-               "top": 1,
-               "right": 21,
-               "bottom": 21,
-               "rx": 5,
-               "ry": 5
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "@colors.primary"
-                },
-                {
-                 "style": "fill"
-                },
-                {
-                 "alpha": "@checkbox1_p"
-                }
-               ]
-              }
-             },
-             {
-              "drawRoundRect": {
-               "left": 0,
-               "top": 0,
-               "right": 22,
-               "bottom": 22,
-               "rx": 6,
-               "ry": 6
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#FFFFFFFF"
-                },
-                {
-                 "style": "stroke"
-                },
-                {
-                 "strokeWidth": 2.5
-                },
-                {
-                 "strokeCap": "round"
-                },
-                {
-                 "alpha": "@checkbox1_p"
-                }
-               ]
-              }
-             },
-             {
-              "drawLine": {
-               "x1": 5.5,
-               "y1": 11.5,
-               "x2": 9.5,
-               "y2": 15.5
-              }
-             },
-             {
-              "drawLine": {
-               "x1": 9.5,
-               "y1": 15.5,
-               "x2": 16.5,
-               "y2": 7
               }
              }
             ]
            }
           },
           {
-           "text": {
-            "value": "Send receipts",
-            "fontSize": 15,
-            "color": "@colors.onSurface"
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "heightIn": [
+               40,
+               400
+              ]
+             },
+             {
+              "spacedBy": 12
+             },
+             {
+              "semantics": {
+               "contentDescription": "Send receipts",
+               "stateDescription": "@checkbox1_cbState",
+               "clickable": true
+              }
+             },
+             {
+              "onClick": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@checkbox1_checked",
+                "value": "1 - @checkbox1_checked"
+               }
+              ]
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 22
+                },
+                {
+                 "height": 22
+                }
+               ],
+               "commands": [
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.outline"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 21,
+                  "bottom": 21,
+                  "rx": 5,
+                  "ry": 5
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.primary"
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": "@checkbox1_p"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 22,
+                  "bottom": 22,
+                  "rx": 6,
+                  "ry": 6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onPrimary"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2.5
+                   },
+                   {
+                    "strokeCap": "round"
+                   },
+                   {
+                    "alpha": "@checkbox1_p"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 5.5,
+                  "y1": 11.5,
+                  "x2": 9.5,
+                  "y2": 15.5
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": 9.5,
+                  "y1": 15.5,
+                  "x2": 16.5,
+                  "y2": 7
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Send receipts",
+               "fontSize": 15,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             }
+            ]
            }
           }
          ]

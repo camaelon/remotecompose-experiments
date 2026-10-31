@@ -71,7 +71,8 @@ export class LayoutComponent extends Component {
 
     // ComponentValue bindings (Java ComponentData pattern)
     // Collected during inflate; updated during measure to expose dimensions as float variables
-    private mComponentValues: ComponentValue[] | null = null;
+    // (The base Component's list, typed: public there because a ComponentValue registers itself.)
+    override mComponentValues: ComponentValue[] | null = null;
 
     // Scroll measurement state
     private mScrollModifier: ScrollModifier | null = null;
@@ -732,6 +733,9 @@ export class LayoutComponent extends Component {
     }
 
     onClick(context: RemoteContext, doc: any, x: number, y: number): boolean {
+        // A hidden component takes no tap (two buttons stacked and switched by visibility:
+        // the gone one used to catch the tap, U45).
+        if (!this.isVisible()) return false;
         // Java Component.onClick: a tap outside this component reaches none of its
         // children (a scrolled-away child is not hit through the header above it), and
         // children are hit in content coordinates, i.e. shifted back by the scroll offset
@@ -866,11 +870,18 @@ export class LayoutComponent extends Component {
             } else if (phase === 'down' && mod instanceof TouchDownModifier) {
                 mod.onTouchDown(context);
                 handled = true;
+            } else if (phase === 'down' && (mod instanceof TouchUpModifier || mod instanceof TouchCancelModifier)) {
+                // The finger may leave this component before it lifts (a swipe): remember it,
+                // so its touch-up / cancel actions run wherever the touch ends (as C++, U70).
+                doc.modifierTouchTarget?.(this);
+                handled = true;
             } else if (phase === 'up' && mod instanceof TouchUpModifier) {
                 mod.onTouchUp(context);
+                doc.touchModifierRan?.(this);
                 handled = true;
             } else if (phase === 'cancel' && mod instanceof TouchCancelModifier) {
                 mod.onTouchCancel(context);
+                doc.touchModifierRan?.(this);
                 handled = true;
             }
         }
@@ -896,6 +907,14 @@ export class LayoutComponent extends Component {
         }
 
         return componentHandled || handled;
+    }
+
+    /** This component's own touch-up / touch-cancel modifier actions (a swipe's release). */
+    runOwnTouchModifiers(context: RemoteContext, phase: 'up' | 'cancel'): void {
+        for (const mod of this.mComponentModifiers) {
+            if (phase === 'up' && mod instanceof TouchUpModifier) mod.onTouchUp(context);
+            else if (phase === 'cancel' && mod instanceof TouchCancelModifier) mod.onTouchCancel(context);
+        }
     }
 
     /** One touch phase on a single expression. Only `down` is bounds-checked, as upstream. */

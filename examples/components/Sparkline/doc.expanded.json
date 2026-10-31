@@ -119,6 +119,24 @@
          ],
          "commands": [
           {
+           "variable": {
+            "name": "sparkline1_last",
+            "value": "arrayLength(@visits) - 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_lo",
+            "value": "arrayMin(@visits)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_span",
+            "value": "max(arrayMax(@visits) - @sparkline1_lo, 0.001)"
+           }
+          },
+          {
            "translate": {
             "dx": 4,
             "dy": "componentHeight() - 4"
@@ -146,14 +164,14 @@
            "loop": {
             "index": "i",
             "from": 0,
-            "until": "arrayLength(@visits) - 1",
+            "until": "@sparkline1_last",
             "commands": [
              {
               "drawLine": {
-               "x1": "i * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
-               "y1": "((arrayMin(@visits)) - arrayGet(@visits, i)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
-               "x2": "(i + 1) * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
-               "y2": "((arrayMin(@visits)) - arrayGet(@visits, i + 1)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))"
+               "x1": "i * (componentWidth() - 8) / @sparkline1_last",
+               "y1": "(@sparkline1_lo - arrayGet(@visits, i)) * (componentHeight() - 8) / @sparkline1_span",
+               "x2": "(i + 1) * (componentWidth() - 8) / @sparkline1_last",
+               "y2": "(@sparkline1_lo - arrayGet(@visits, i + 1)) * (componentHeight() - 8) / @sparkline1_span"
               }
              }
             ]
@@ -171,7 +189,7 @@
           {
            "drawCircle": {
             "cx": "componentWidth() - 8",
-            "cy": "((arrayMin(@visits)) - arrayGet(@visits, (arrayLength(@visits) - 1))) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
+            "cy": "(@sparkline1_lo - arrayGet(@visits, @sparkline1_last)) * (componentHeight() - 8) / @sparkline1_span",
             "radius": 3
            }
           }
@@ -207,6 +225,24 @@
          ],
          "commands": [
           {
+           "variable": {
+            "name": "sparkline2_last",
+            "value": "arrayLength(@temp) - 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline2_lo",
+            "value": "arrayMin(@temp)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline2_span",
+            "value": "max(arrayMax(@temp) - @sparkline2_lo, 0.001)"
+           }
+          },
+          {
            "translate": {
             "dx": 4,
             "dy": "componentHeight() - 4"
@@ -234,14 +270,14 @@
            "loop": {
             "index": "i",
             "from": 0,
-            "until": "arrayLength(@temp) - 1",
+            "until": "@sparkline2_last",
             "commands": [
              {
               "drawLine": {
-               "x1": "i * (componentWidth() - 8) / (arrayLength(@temp) - 1)",
-               "y1": "((arrayMin(@temp)) - arrayGet(@temp, i)) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))",
-               "x2": "(i + 1) * (componentWidth() - 8) / (arrayLength(@temp) - 1)",
-               "y2": "((arrayMin(@temp)) - arrayGet(@temp, i + 1)) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))"
+               "x1": "i * (componentWidth() - 8) / @sparkline2_last",
+               "y1": "(@sparkline2_lo - arrayGet(@temp, i)) * (componentHeight() - 8) / @sparkline2_span",
+               "x2": "(i + 1) * (componentWidth() - 8) / @sparkline2_last",
+               "y2": "(@sparkline2_lo - arrayGet(@temp, i + 1)) * (componentHeight() - 8) / @sparkline2_span"
               }
              }
             ]
@@ -259,7 +295,7 @@
           {
            "drawCircle": {
             "cx": "componentWidth() - 8",
-            "cy": "((arrayMin(@temp)) - arrayGet(@temp, (arrayLength(@temp) - 1))) * (componentHeight() - 8) / (max(arrayMax(@temp) - (arrayMin(@temp)), 0.001))",
+            "cy": "(@sparkline2_lo - arrayGet(@temp, @sparkline2_last)) * (componentHeight() - 8) / @sparkline2_span",
             "radius": 3
            }
           }

@@ -193,18 +193,18 @@ conversion; `expand_components` takes it as `theme`):
   component demos grew by 30% on average, from 55.8 KB to 72.3 KB in total.
 - `"light"` / `"dark"`: that palette only, as plain colours. `"dark"` writes exactly what the
   library wrote before themed colours.
-- `"mono"`: light on black, for always-on displays and OLED. It uses black, white and one
+- `"mono-dark"` (formerly `"mono"`): light on black, for always-on displays and OLED. It uses black, white and one
   grey, and each component draws its `{"$if": "theme.mono"}` variant: state is shown by shape,
   large surfaces are outlined, and strokes are thin. Animations are removed, and the clocks
   drop their seconds. There is no mono mode in the format: `PROFILE_LOW_POWER` is declared but
   nothing reads it.
-- `"mono-inverted"`: the same variants dark on white, for e-ink and other reflective
-  displays: the theme's `modes.mono-inverted` palette (white, black, grey `#616161`), so a
+- `"mono-light"` (formerly `"mono-inverted"`): the same variants dark on white, for e-ink and other reflective
+  displays: the theme's `modes["mono-light"]` palette (white, black, grey `#616161`), so a
   watch's always-on button (white outline and text on black) is the e-ink button (black on
   white) without a change to any component.
 
 A document re-themes by defining a theme colour itself, with a plain value or `{light, dark}`,
-optionally with a `mono` and a `mono-inverted` value. `docs/COMPONENT_AUTHORING.md` has the
+optionally with a `mono-dark` and a `mono-light` value. `docs/COMPONENT_AUTHORING.md` has the
 mono rules.
 
 A document can also **define its own components** under a top-level `components` object
@@ -214,14 +214,14 @@ the same way and win over a library component of the same name. `docs/COMPONENT_
 `rc-examples.check_component` lints a definition, expands a call, converts it, renders it and
 reports the bytes and the bytes each extra instance costs in both modes (`modes.expand`,
 `modes.pattern`, with the reason when a call can't be a template), and the bytes per theme
-(`themes`). It renders the call four times: light, dark, mono and mono-inverted.
+(`themes`). It renders the call four times: light, dark, mono-dark and mono-light.
 
 Each library component folder also holds a demo, built like an example: `doc.json` (a
 document calling it), `meta.json`, and the built `doc.expanded.json`, `doc.rc` and `render.png`
 (`node examples/tools/build.mjs <Name> --java`, or `components` for all of them). Its
-`meta.check.renders` adds `render-light.png`, `render-dark.png`, `render-mono.png` and
-`render-mono-inverted.png`. Each mono render converts its own expansion
-(`doc.mono.expanded.json`, `doc.mono.rc`; `doc.mono-inverted.*`), with its own Java byte check. Any example can list renders this way: an entry is render_rc arguments, plus
+`meta.check.renders` adds `render-light.png`, `render-dark.png`, `render-mono-dark.png` and
+`render-mono-light.png`. Each mono render converts its own expansion
+(`doc.mono-dark.expanded.json`, `doc.mono-dark.rc`; `doc.mono-light.*`), with its own Java byte check. Any example can list renders this way: an entry is render_rc arguments, plus
 `componentTheme` for a document of its own. `get_component` returns the demo and all of its
 renders.
 
@@ -235,12 +235,12 @@ Over HTTP, rc-examples also serves public pages (no token; the catalog is public
 `<base>/` is every example as a grid of renders, `<base>/components/` every component, and
 clicking one opens `<base>/play/<id>/`, the deploy server's playground for that document
 (`lib/examples-web.mjs`; also `<base>/img/<id>.png` and `<base>/json/<id>.json`). A card with
-other renders shows them as a light / dark / mono / mono-inverted strip, and a menu switches
+other renders shows them as a light / dark / mono-dark / mono-light strip, and a menu switches
 every card. The strip opens the playground in that theme (`#t=light`), or at
-`<base>/play/<id>/mono/` (`mono-inverted/`) for a mono document (`<base>/img/<id>/mono.png`,
-`<base>/json/<id>.mono.expanded.json`). In these playgrounds the look control has two more
-segments, **Mono** and **Mono inverted**, which go to the variant's page (only when the
-example has it; `#t=mono` on the main page goes there too), and the **JSON** buttons show
+`<base>/play/<id>/mono-dark/` (`mono-light/`) for a mono document (`<base>/img/<id>/mono-dark.png`,
+`<base>/json/<id>.mono-dark.expanded.json`). In these playgrounds the look control has two more
+segments, **Mono** and **Mono light**, which go to the variant's page (only when the
+example has it; `#t=mono-dark` on the main page goes there too), and the **JSON** buttons show
 `doc.json`, the **Expanded JSON** (`doc.expanded.json`, when the document calls components)
 and, on a variant's page, its expansion. On the VPS `<base>` is `https://DOMAIN/examples`.
 
@@ -445,7 +445,7 @@ not just how it looks:
   download makes no request and also works for a page opened from disk.
 - **Look.** A segmented control next to the title: **Auto** (the system's setting),
   **Light** and **Dark** switch the player theme of the document (themed colours, THEME
-  sections). The examples' playgrounds add **Mono** / **Mono inverted**, which are documents
+  sections). The examples' playgrounds add **Mono** / **Mono light**, which are documents
   of their own (see rc-examples above); a `package_web` page has only the theme segments.
 - **JSON.** A page published from `json` / `json_path` has a **JSON** button (and **Expanded
   JSON** when the document calls library components) opening a viewer: pretty-printed,

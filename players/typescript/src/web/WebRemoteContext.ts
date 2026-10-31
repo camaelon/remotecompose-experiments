@@ -145,6 +145,17 @@ export class WebRemoteContext extends RemoteContext {
         if (v) this.mRemoteComposeState.clearDataOverride(v.id);
     }
 
+    /** A float array the document exports by name (DataListFloat), replaced by the host. */
+    setNamedFloatArrayOverride(name: string, values: ArrayLike<number>): void {
+        const v = this.namedVariables.get(name);
+        if (v) this.mRemoteComposeState.overrideFloatArray(v.id, values);
+    }
+
+    clearNamedFloatArrayOverride(name: string): void {
+        const v = this.namedVariables.get(name);
+        if (v) this.mRemoteComposeState.clearFloatArrayOverride(v.id);
+    }
+
     // --- Collections & DataMaps ---
 
     addCollection(id: number, collection: any): void {

@@ -1,0 +1,796 @@
+{
+ "component": "Steps",
+ "version": 1,
+ "summary": "Progress steps (an order's Ordered / Shipped / Out for delivery / Delivered, a wizard's pages): a dot per step joined by connectors, done steps a filled primary disc with a check mark, the current one a primary disc with a halo, the rest outlined in muted; the connector is primary up to the current step. Labels under the dots (horizontal, filling the width) or beside them (vertical).",
+ "params": {
+  "steps": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The step labels in order, e.g. [\"Ordered\", \"Shipped\", \"Out for delivery\", \"Delivered\"]; fixed when the document is built (one dot and label each)"
+  },
+  "current": {
+   "type": "float",
+   "default": 0,
+   "doc": "0-based index of the current step: a number, a \"@variable\" the app sets or an expression. Steps before it are done, after it to do; rounded and clamped to the list. Pass the last index for an all-done run"
+  },
+  "orientation": {
+   "type": "enum",
+   "values": [
+    "horizontal",
+    "vertical"
+   ],
+   "default": "horizontal",
+   "static": true,
+   "doc": "horizontal: the dots spread evenly across the parent's width with the labels under them; vertical: a column of dots with the labels beside them, wrapping its content"
+  },
+  "size": {
+   "type": "float",
+   "default": 24,
+   "static": true,
+   "doc": "Dot diameter in dp (the halo adds 4 dp around it; the canvas is size + 8 tall or wide). 16 to 20 for a compact tracker"
+  },
+  "showLabels": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false draws the dots and connectors only (the labels are elsewhere, or the dots are a compact status)"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility description of the whole indicator; omitted, it is \"Step N of M\" from `current` (N follows a variable)"
+  }
+ },
+ "locals": {
+  "n": {
+   "$count": "steps"
+  },
+  "k": "clamp(0, @n - 1, round(@current))",
+  "r": "@size / 2",
+  "pitch": "@size + 8",
+  "rowH": "@size + 16"
+ },
+ "capabilities": [
+  "draw.shapes",
+  "layout.state",
+  "a11y.labels",
+  "data.measure"
+ ],
+ "call": {
+  "Steps": {
+   "steps": [
+    "Ordered",
+    "Shipped",
+    "Out for delivery",
+    "Delivered"
+   ],
+   "current": "@stage"
+  }
+ },
+ "body": {
+  "$if": "orientation == 'vertical'",
+  "then": {
+   "row": {
+    "modifiers": [
+     {
+      "spacedBy": 12
+     },
+     {
+      "semantics": {
+       "contentDescription": {
+        "$if": "label",
+        "then": "@label",
+        "else": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "Step ",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@k + 1",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 4
+          }
+         },
+         "id2": " of @n"
+        }
+       }
+      }
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "width": "@pitch"
+        },
+        {
+         "height": "@n * @rowH"
+        }
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": {
+             "$if": "theme.mono",
+             "then": 1.5,
+             "else": 2
+            }
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "save": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "@pitch",
+            "bottom": "(@n - 0.5) * @rowH"
+           }
+          },
+          {
+           "$each": "steps",
+           "index": "i",
+           "do": {
+            "drawLine": {
+             "x1": "@r + 4",
+             "y1": "(@i + 0.5) * @rowH + @r",
+             "x2": "@r + 4",
+             "y2": "(@i + 1.5) * @rowH - @r"
+            }
+           }
+          }
+         ]
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@r + 4",
+          "y1": "@rowH / 2",
+          "x2": "@r + 4",
+          "y2": "(@k + 0.5) * @rowH"
+         }
+        },
+        {
+         "$each": "steps",
+         "index": "i",
+         "do": {
+          "save": [
+           {
+            "translate": {
+             "dx": "@r + 4",
+             "dy": "(@i + 0.5) * @rowH"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 2
+              },
+              {
+               "alpha": "step(@i - @k, 0.5)"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 0,
+             "cy": 0,
+             "radius": "@r - 1"
+            }
+           },
+           {
+            "$if": "theme.mono",
+            "then": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "alpha": "1 - min(1, abs(@k - @i))"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 0,
+               "radius": "@r - 1"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 0,
+               "radius": "@r - 5"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "step(@k - @i, 0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 0,
+               "radius": "@r"
+              }
+             }
+            ],
+            "else": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "fill"
+                },
+                {
+                 "alpha": "(1 - min(1, abs(@k - @i))) * 0.25"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 0,
+               "radius": "@r + 4"
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "alpha": "step(@k - @i, -0.5)"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 0,
+               "cy": 0,
+               "radius": "@r"
+              }
+             }
+            ]
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onPrimary"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "@r / 5"
+              },
+              {
+               "strokeCap": "round"
+              },
+              {
+               "alpha": "step(@k - @i, 0.5)"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "-0.42 * @r",
+             "y1": "0.05 * @r",
+             "x2": "-0.12 * @r",
+             "y2": "0.36 * @r"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "-0.12 * @r",
+             "y1": "0.36 * @r",
+             "x2": "0.46 * @r",
+             "y2": "-0.3 * @r"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "$if": "showLabels",
+      "then": {
+       "column": {
+        "children": [
+         {
+          "$each": "steps",
+          "as": "lbl",
+          "index": "i",
+          "do": {
+           "box": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "height": "@rowH"
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "@lbl",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.muted",
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "visibility": "min(1, abs(@k - @i))"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "@lbl",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.onSurface",
+               "fontWeight": 600,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@k - @i))"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      }
+     }
+    ]
+   }
+  },
+  "else": {
+   "column": {
+    "modifiers": [
+     "fillMaxWidth",
+     {
+      "spacedBy": 6
+     },
+     {
+      "semantics": {
+       "contentDescription": {
+        "$if": "label",
+        "then": "@label",
+        "else": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "Step ",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@k + 1",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 4
+          }
+         },
+         "id2": " of @n"
+        }
+       }
+      }
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@pitch"
+        }
+       ],
+       "commands": [
+        {
+         "variable": {
+          "name": "p",
+          "value": "componentWidth() / @n"
+         }
+        },
+        {
+         "variable": {
+          "name": "s",
+          "value": "min(1, @p / @size)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.track"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": {
+             "$if": "theme.mono",
+             "then": 1.5,
+             "else": 2
+            }
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "save": [
+          {
+           "clipRect": {
+            "left": 0,
+            "top": 0,
+            "right": "(@n - 0.5) * @p",
+            "bottom": "@pitch"
+           }
+          },
+          {
+           "translate": {
+            "dx": "@p / 2",
+            "dy": "@r + 4"
+           }
+          },
+          {
+           "$each": "steps",
+           "do": [
+            {
+             "drawLine": {
+              "x1": "@r * @s",
+              "y1": 0,
+              "x2": "@p - @r * @s",
+              "y2": 0
+             }
+            },
+            {
+             "translate": {
+              "dx": "@p",
+              "dy": 0
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@p / 2",
+          "y1": "@r + 4",
+          "x2": "(@k + 0.5) * @p",
+          "y2": "@r + 4"
+         }
+        },
+        {
+         "translate": {
+          "dx": "@p / 2",
+          "dy": "@r + 4"
+         }
+        },
+        {
+         "$each": "steps",
+         "index": "i",
+         "do": [
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "@s",
+              "sy": "@s"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 2
+               },
+               {
+                "alpha": "step(@i - @k, 0.5)"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 0,
+              "cy": 0,
+              "radius": "@r - 1"
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.primary"
+                 },
+                 {
+                  "alpha": "1 - min(1, abs(@k - @i))"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 0,
+                "cy": 0,
+                "radius": "@r - 1"
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 0,
+                "cy": 0,
+                "radius": "@r - 5"
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "alpha": "step(@k - @i, 0.5)"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 0,
+                "cy": 0,
+                "radius": "@r"
+               }
+              }
+             ],
+             "else": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.primary"
+                 },
+                 {
+                  "style": "fill"
+                 },
+                 {
+                  "alpha": "(1 - min(1, abs(@k - @i))) * 0.25"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 0,
+                "cy": 0,
+                "radius": "@r + 4"
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "alpha": "step(@k - @i, -0.5)"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 0,
+                "cy": 0,
+                "radius": "@r"
+               }
+              }
+             ]
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onPrimary"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": "@r / 5"
+               },
+               {
+                "strokeCap": "round"
+               },
+               {
+                "alpha": "step(@k - @i, 0.5)"
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": "-0.42 * @r",
+              "y1": "0.05 * @r",
+              "x2": "-0.12 * @r",
+              "y2": "0.36 * @r"
+             }
+            },
+            {
+             "drawLine": {
+              "x1": "-0.12 * @r",
+              "y1": "0.36 * @r",
+              "x2": "0.46 * @r",
+              "y2": "-0.3 * @r"
+             }
+            }
+           ]
+          },
+          {
+           "translate": {
+            "dx": "@p",
+            "dy": 0
+           }
+          }
+         ]
+        }
+       ]
+      }
+     },
+     {
+      "$if": "showLabels",
+      "then": {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "$each": "steps",
+          "as": "lbl",
+          "index": "i",
+          "do": {
+           "box": {
+            "horizontalAlignment": "center",
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "@lbl",
+               "fontSize": "@theme.text_sm",
+               "color": "@colors.muted",
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "visibility": "min(1, abs(@k - @i))"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "@lbl",
+               "fontSize": "@theme.text_sm",
+               "color": "@colors.onSurface",
+               "fontWeight": 600,
+               "textAlign": "center",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@k - @i))"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "steps is static: the dots and labels are generated when the document is built ($each), and their number is the local n ({\"$count\": \"steps\"}); current is the run-time part, a float the app sets (\"@stage\")",
+  "Each step's look is three drawings switched by paint alpha over k = clamp(0, n - 1, round(current)): to do step(i - k, 0.5), done step(k - i, 0.5), current 1 - min(1, abs(k - i)). step(x, edge) is x > edge (strict), so the edges sit at ±0.5. A literal current folds every alpha to 0 or 1",
+  "The connector is one grey segment per gap (between dot edges, clipped at the last dot's centre) under one primary line from the first dot to the current one, which the filled dots cover: the to-do dots are hollow, so the track is drawn in segments rather than erased",
+  "Horizontal fills the parent's width: the canvas reads p = componentWidth() / n and s = min(1, p / size) into two variables, then draws each segment and each dot in a frame translated by p per step (a translate of @p, not a per-dot expression), so a narrow box shrinks the dots instead of overlapping them. In a row put it in a weighted box, or it has no width. Labels sit in weighted boxes of the same pitch and wrap when long",
+  "Vertical has a fixed geometry: a size + 8 wide canvas, rows of size + 16, labels in boxes of that height beside each dot; it wraps its content (no fillMaxWidth)",
+  "Each label is two text nodes, muted and onSurface bold, swapped by visibility (integer expressions over k, exact 0 or 1, as TextChoice): about 180 B per step with its string stored once. showLabels false drops them",
+  "Mono shows state by shape: done a filled disc with a check in onPrimary, current a ring with a smaller disc inside (no alpha wash), to do an outline; the track is 1.5 dp grey. The layout is the same in every look, so one call site serves light, dark, mono and mono-light",
+  "The accessibility description is \"Step N of M\" (textMerge over textFromFloat(k + 1)), not the step's name: the Java reference parser cannot name a data list (U4), so a textLookup of the label by index would not convert there; pass `label` when the description should carry more"
+ ]
+}

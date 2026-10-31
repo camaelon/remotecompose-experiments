@@ -141,13 +141,14 @@ function findImmediateRequesters(doc, animationTime) {
  * (it determines the delay), subsumed (it would schedule a repaint but something sooner
  * wins) or inactive.
  */
-export function analyzeRepaintSchedule(doc, player) {
+// nowMs: the document's clock (a pinned clock in a headless check), else the wall clock.
+export function analyzeRepaintSchedule(doc, player, nowMs = Date.now()) {
     const empty = { available: false, delayMs: -1, verdict: 'idle', causes: [], requesters: [] };
     if (!doc || typeof doc.needsRepaint !== 'function') return empty;
 
     const state = getState(doc);
     const delayMs = doc.needsRepaint();
-    const now = Date.now();
+    const now = nowMs;
     const animationTime = player && player.remoteContext && typeof player.remoteContext.getAnimationTime === 'function'
         ? player.remoteContext.getAnimationTime() : NaN;
 
@@ -156,6 +157,16 @@ export function analyzeRepaintSchedule(doc, player) {
     const root = doc.mRootLayoutComponent;
     const layoutRepaint = !!(root && typeof root.needsRepaint === 'function' && root.needsRepaint());
     const boundsAnimation = !!(root && typeof root.needsBoundsAnimation === 'function' && root.needsBoundsAnimation());
+    // The components whose bounds are animating right now: what a flag alone never says.
+    const animating = [];
+    (function walk(c, depth) {
+        if (!c || depth > 64) return;
+        if (c.mAnimateMeasure || (typeof c.needsBoundsAnimation === 'function' && c.needsBoundsAnimation() && !(c.mChildrenComponents || []).some((k) => typeof k.needsBoundsAnimation === 'function' && k.needsBoundsAnimation()))) {
+            animating.push({ component: c.constructor && c.constructor.name, id: c.mComponentId,
+                animating: !!c.mAnimateMeasure, visibility: c.mVisibility, layoutVisibility: c.mLayoutVisibility });
+        }
+        for (const ch of (c.mChildrenComponents || [])) walk(ch, depth + 1);
+    })(root, 0);
 
     const contSec = listenersOn(state, ID_CONTINUOUS_SEC);
     const timeSec = listenersOn(state, ID_TIME_IN_SEC);
@@ -190,7 +201,8 @@ export function analyzeRepaintSchedule(doc, player) {
 
     push('layout', layoutRepaint || boundsAnimation,
         boundsAnimation ? 'Layout bounds animation in progress' : 'Layout requested a repaint',
-        'every frame', []);
+        'every frame', animating,
+        boundsAnimation ? 'The components below are mid-animation between two layouts: a size, position or visibility of theirs differs from one layout pass to the next (a value that changes every frame, or a layout that hides and shows a child on alternate passes).' : undefined);
 
     push('continuousSec', contSec.length > 0,
         `${contSec.length} operation${contSec.length === 1 ? ' listens' : 's listen'} to $CONTINUOUS_SEC`,
@@ -199,12 +211,12 @@ export function analyzeRepaintSchedule(doc, player) {
 
     push('timeInSec', timeSec.length > 0,
         `${timeSec.length} operation${timeSec.length === 1 ? ' listens' : 's listen'} to $TIME_IN_SEC`,
-        `in ${2 + 1000 - (now % 1000)} ms — the next second boundary, so at most 1002 ms apart`,
+        `in ${Math.round(2 + 1000 - (now % 1000))} ms — the next second boundary, so at most 1002 ms apart`,
         timeSec.map(op => describeOp(op, 'reads timeInSec()')));
 
     push('timeInMin', timeMin.length > 0,
         `${timeMin.length} operation${timeMin.length === 1 ? ' listens' : 's listen'} to $TIME_IN_MIN`,
-        `in ${2 + 60000 - (now % 60000)} ms — the next minute boundary, so at most 60002 ms apart`,
+        `in ${Math.round(2 + 60000 - (now % 60000))} ms — the next minute boundary, so at most 60002 ms apart`,
         timeMin.map(op => describeOp(op, 'reads timeInMin()')));
 
     push('wakeIn', hasWake, 'An operation scheduled an explicit wake',

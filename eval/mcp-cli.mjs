@@ -23,7 +23,7 @@ if (cmd === "list") {
             const props = t.inputSchema?.properties ?? {};
             const req = new Set(t.inputSchema?.required ?? []);
             const params = Object.keys(props).map((k) => (req.has(k) ? k + "*" : k)).join(", ");
-            console.log(`  ${t.name}(${params})\n      ${String(t.description ?? "").split(/(?<=\.)\s/)[0].slice(0, 200)}`);
+            console.log(`  ${t.name}(${params})\n      ${String(t.description ?? "").replace(/\n/g, "\n      ")}`);
         }
         console.log("");
     }
@@ -33,12 +33,18 @@ if (cmd === "list") {
 } else if (cmd === "call") {
     const t = (await load(server)).tools.find((x) => x.name === tool);
     const args = raw ? JSON.parse(raw.startsWith("@") ? readFileSync(raw.slice(1), "utf8") : raw) : {};
-    const res = await t.handler(args);
+    // A tool error is what an MCP client shows: the message, not a stack trace.
+    let res;
+    try { res = await t.handler(args); } catch (e) { console.log(`Error: ${e?.message ?? e}`); process.exit(1); }
     mkdirSync("out", { recursive: true });
     let n = 0;
     const stamp = Date.now();
-    for (const c of Array.isArray(res) ? res : res.content ?? [res]) {
-        if (c.type === "image") { const f = `out/${tool}-${stamp}-${n++}.png`; writeFileSync(f, Buffer.from(c.data, "base64")); console.log(`[image saved: ${f}]`); }
+    const items = Array.isArray(res) ? res : res.content ?? [res];
+    // An image the server already wrote where the caller asked (png_path / "→ file") is not
+    // saved a second time under a generated name.
+    const named = items.some((c) => c.type === "text" && /png_path: |→ \S+\.png/.test(c.text));
+    for (const c of items) {
+        if (c.type === "image") { if (named) continue; const f = `out/${tool}-${stamp}-${n++}.png`; writeFileSync(f, Buffer.from(c.data, "base64")); console.log(`[image saved: ${f}]`); }
         else if (c.type === "text") console.log(c.text);
         else console.log(JSON.stringify(c));
     }

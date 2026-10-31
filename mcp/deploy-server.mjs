@@ -56,7 +56,7 @@ function lookExpansions(a) {
         if (!usesComponents(doc) || ![undefined, "auto", "light-dark"].includes(doc.componentTheme)) return null;
         const dir = a.base_dir !== undefined ? resolvePath(a.base_dir, "base_dir") : file ? path.dirname(file) : resolvePath(".");
         const out = {};
-        for (const look of ["mono", "mono-inverted"]) {
+        for (const look of ["mono-dark", "mono-light"]) {
             out[look] = Buffer.from(jsonToRc(compileComponents(structuredClone(doc), dir, { theme: look }).doc, dir)).toString("base64");
         }
         return out;
@@ -73,7 +73,7 @@ const PAGE_INDEX = process.env.MCP_PAGE_INDEX !== "0";
 const pageUrl = (id) => `${PUBLIC_URL}/pages/${id}/`;
 
 // The engine stores these types; the web player can override all but long and arrays.
-const WEB_SETTABLE = new Set(["float", "int", "color", "string"]);
+const WEB_SETTABLE = new Set(["float", "int", "color", "string", "float_array"]);
 
 function coerceVariable(name, type, value) {
     if (type === "float" || type === "int") {
@@ -86,6 +86,11 @@ function coerceVariable(name, type, value) {
             throw new Error(`variables.${name}: colour variable needs "#RRGGBB" or "#AARRGGBB", got ${JSON.stringify(value)}`);
         }
         return String(value).trim();
+    }
+    if (type === "float_array") {
+        const xs = Array.isArray(value) ? value.map(Number) : String(value).split(/[\s,;[\]]+/).filter(Boolean).map(Number);
+        if (!xs.length || !xs.every(Number.isFinite)) throw new Error(`variables.${name}: float array needs numbers, got ${JSON.stringify(value)}`);
+        return xs.join(", ");
     }
     return String(value);
 }

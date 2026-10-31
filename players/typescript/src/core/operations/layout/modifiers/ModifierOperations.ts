@@ -45,11 +45,16 @@ export class WidthModifier extends Operation implements VariableSupport {
     /** True when a fill fraction was supplied. A bare fill encodes NaN, which
      *  getValue() reports as 0 — so the raw bits are the only way to tell
      *  "fill half" from "fill completely". */
-    hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
+    // A variable ("@fraction") is a NaN-boxed id, not the bare-fill NaN: it is a fraction too (U62).
+    hasFraction(): boolean { return !isNaNBits(this.mValueBits) || isVariableBits(this.mValueBits); }
     // Java DimensionModifierOperation.registerListening / updateVariables: EXACT scales by
     // density only under DENSITY_BEHAVIOR_DP, EXACT_DP always; both re-resolve from the
     // authored value (a literal or a variable) each time.
     registerListening(context: RemoteContext): void {
+        // A fill fraction given as a variable listens too (the reference resolves any NaN-boxed value).
+        if (this.mType !== WidthModifier.EXACT && this.mType !== WidthModifier.EXACT_DP && isVariableBits(this.mValueBits)) {
+            context.listensTo(idFromBits(this.mValueBits), this);
+        }
         if (this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) {
             if (isNaNBits(this.mValueBits)) context.listensTo(idFromBits(this.mValueBits), this);
             if (this.mType === WidthModifier.EXACT_DP
@@ -59,6 +64,9 @@ export class WidthModifier extends Operation implements VariableSupport {
         }
     }
     updateVariables(context: RemoteContext): void {
+        if (this.mType !== WidthModifier.EXACT && this.mType !== WidthModifier.EXACT_DP && isVariableBits(this.mValueBits)) {
+            this.mOutValue = context.getFloat(idFromBits(this.mValueBits));
+        }
         if (this.mType === WidthModifier.EXACT || this.mType === WidthModifier.EXACT_DP) {
             const pre = this.mOutValue;
             this.mOutValue = isNaNBits(this.mValueBits)
@@ -105,7 +113,8 @@ export class HeightModifier extends Operation implements VariableSupport {
     /** True when a fill fraction was supplied. A bare fill encodes NaN, which
      *  getValue() reports as 0 — so the raw bits are the only way to tell
      *  "fill half" from "fill completely". */
-    hasFraction(): boolean { return !isNaNBits(this.mValueBits); }
+    // A variable ("@fraction") is a NaN-boxed id, not the bare-fill NaN: it is a fraction too (U62).
+    hasFraction(): boolean { return !isNaNBits(this.mValueBits) || isVariableBits(this.mValueBits); }
     // Java DimensionModifierOperation.registerListening / updateVariables: EXACT scales by
     // density only under DENSITY_BEHAVIOR_DP, EXACT_DP always; both re-resolve from the
     // authored value (a literal or a variable) each time.

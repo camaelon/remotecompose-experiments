@@ -1,7 +1,7 @@
 {
  "component": "Tabs",
- "version": 2,
- "summary": "A 48 dp tab bar of equal-width tabs from a static list of labels: a tap sets `selected` to the tab's index; the underline slides to the tapped tab while the labels cross-fade to `color`.",
+ "version": 4,
+ "summary": "A 48 dp row of equal-width tabs from a static list of labels: a tap sets `selected` to the tab's index (then runs any extra `onClick` actions). style underline (default) slides an underline under the selected tab; style segmented is a pill-shaped track whose filled pill slides to the selected option (a segmented control: Day / Week / Month). A screen reader hears each tab's label and Selected or Not selected, which follows the index at run time.",
  "params": {
   "labels": {
    "type": "list",
@@ -9,15 +9,29 @@
    "static": true,
    "doc": "The tab labels, e.g. [\"Day\", \"Week\", \"Month\"]; each is also its tab's accessibility label"
   },
+  "style": {
+   "type": "enum",
+   "values": [
+    "underline",
+    "segmented"
+   ],
+   "default": "underline",
+   "static": true,
+   "doc": "underline: labels over a 2 dp underline that slides to the selected tab (a tab bar over panels). segmented: a pill-shaped @colors.surfaceHigh track, the selected option a filled `color` pill with an onPrimary label, the others onSurface (a segmented control, a view switcher). Mono: a filled white pill with black text on a black track ringed in grey"
+  },
   "selected": {
    "type": "variable",
    "initial": 0,
-   "doc": "The selected index (0-based). Bind a document variable so panels can follow it; the bar animates the change itself (the underline slides, the labels cross-fade)"
+   "doc": "The selected index (0-based). Bind a document variable so panels can follow it; the bar animates the change itself (the underline or the pill slides, the labels cross-fade)"
   },
   "color": {
    "type": "color",
    "default": "@colors.primary",
-   "doc": "Selected label and underline; unselected labels are muted"
+   "doc": "underline: the selected label and the underline, unselected labels muted. segmented: the selected pill (its label is onPrimary)"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every tab tap after `selected` is set, so they see the NEW index. To tell the app which tab: one action carrying the index, [{\"type\": \"hostNamedAction\", \"name\": \"viewSelected\", \"value\": \"@sel\", \"valueType\": \"float\"}] with \"selected\": \"@sel\" (json2rc declares a name used by several tabs once, so every tab sends it). Omitted: a tap only sets `selected`"
   }
  },
  "locals": {
@@ -32,7 +46,8 @@
  "capabilities": [
   "input.tap",
   "layout.weight",
-  "a11y.labels"
+  "a11y.labels",
+  "a11y.state"
  ],
  "call": {
   "Tabs": {
@@ -47,10 +62,12 @@
  "pitfalls": [
   "labels is static: the tabs are generated when the document is built ($each), and their number is the local n ({\"$count\": \"labels\"}); the selection is the runtime part",
   "The motion is an animated local s = {\"value\": \"@selected\", \"anim\": 0.25}: it eases to the new index at paint time, and everything visible reads s, not @selected (the tap still sets @selected at once, so panels can switch immediately)",
-  "Each tab's highlight is a second, coloured copy of its label over the muted one, with graphicsLayer alpha 1 - min(1, abs(s - i)): 1 on the selected tab, 0 elsewhere, a cross-fade while s moves",
-  "The underline is one 2 dp canvas under the row: a rect from s * componentWidth() / n to (s + 1) * componentWidth() / n, so it slides between tabs",
-  "Mono themes have no motion: s is @selected, the underline and the highlight jump",
-  "Show the matching panel with the same alpha expression on stacked panels (or visibility); the tab bar does not switch content by itself"
+  "Each tab's highlight is a second, coloured copy of its label over the plain one, with graphicsLayer alpha 1 - min(1, abs(s - i)): 1 on the selected tab, 0 elsewhere, a cross-fade while s moves",
+  "underline: one 2 dp canvas under the row, a rect from s * componentWidth() / n to (s + 1) * componentWidth() / n, so it slides between tabs. segmented: one canvas behind the row draws the pill the same way (a round rect inset 4 dp), so it slides too",
+  "Mono themes have no motion: s is @selected, the underline, the pill and the highlight jump",
+  "Show the matching panel with the same alpha expression on stacked panels (or visibility); the tab bar does not switch content by itself",
+  "`onClick` actions are appended to every tab's click list, after the valueFloatChange: a hostNamedAction carrying \"@sel\" (valueType float) sends the tapped index, and tapping the selected tab again sends it too. valueType is a json2rc extension: the Java JSON parser does not write the value",
+  "Accessibility: each tab carries its label (contentDescription), the state (stateDescription, Selected or Not selected) and the click; the whole 48 dp height of each tab is the touch target. The state is cut from \"Not selectedSelected    \" by textSubtext at 12 * (1 - min(1, abs(@selected - i))) and trimmed (as in Chip), in the global section of a 0-size canvas at the head of the bar, so it follows a bound variable at run time. About 120 B per tab, and the named text ops keep the call from compiling to a pattern"
  ],
  "body": {
   "box": {
@@ -59,9 +76,108 @@
     "fillMaxWidth",
     {
      "height": 48
+    },
+    {
+     "$if": "style == 'segmented'",
+     "then": [
+      {
+       "clip": 24
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "background": "@colors.outline"
+        },
+        {
+         "padding": 1
+        },
+        {
+         "clip": 23
+        }
+       ]
+      },
+      {
+       "background": "@colors.surfaceHigh"
+      }
+     ]
     }
    ],
    "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "$each": "labels",
+           "index": "i",
+           "do": [
+            {
+             "textSubtext": {
+              "text": "Not selectedSelected    ",
+              "start": "(1 - min(1, abs(@selected - @i))) * 12",
+              "len": 12,
+              "varName": "tbState12_@i"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@tbState12_@i",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "tbState_@i"
+             }
+            }
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "style == 'segmented'",
+     "then": {
+      "canvas": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@color"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "@s * componentWidth() / @n + 4",
+          "top": 4,
+          "right": "(@s + 1) * componentWidth() / @n - 4",
+          "bottom": "componentHeight() - 4",
+          "rx": "componentHeight() / 2 - 4",
+          "ry": "componentHeight() / 2 - 4"
+         }
+        }
+       ]
+      }
+     }
+    },
     {
      "row": {
       "modifiers": [
@@ -75,7 +191,11 @@
         "do": {
          "box": {
           "horizontalAlignment": "center",
-          "verticalAlignment": "bottom",
+          "verticalAlignment": {
+           "$if": "style == 'segmented'",
+           "then": "center",
+           "else": "bottom"
+          },
           "modifiers": [
            {
             "weight": 1
@@ -84,15 +204,22 @@
            {
             "semantics": {
              "contentDescription": "@label",
+             "stateDescription": "@tbState_@i",
              "clickable": true
             }
            },
            {
-            "onClick": {
-             "type": "valueFloatChange",
-             "target": "@selected",
-             "value": "@i"
-            }
+            "onClick": [
+             {
+              "type": "valueFloatChange",
+              "target": "@selected",
+              "value": "@i"
+             },
+             {
+              "$if": "onClick",
+              "then": "@onClick"
+             }
+            ]
            }
           ],
           "children": [
@@ -100,11 +227,18 @@
             "text": {
              "value": "@label",
              "fontSize": "@theme.text_md",
-             "color": "@colors.muted",
+             "color": {
+              "$if": "style == 'segmented'",
+              "then": "@colors.onSurface",
+              "else": "@colors.muted"
+             },
              "modifiers": [
               {
-               "padding": {
-                "bottom": 16
+               "$if": "style == 'segmented'",
+               "else": {
+                "padding": {
+                 "bottom": 16
+                }
                }
               }
              ]
@@ -114,7 +248,11 @@
             "text": {
              "value": "@label",
              "fontSize": "@theme.text_md",
-             "color": "@color",
+             "color": {
+              "$if": "style == 'segmented'",
+              "then": "@colors.onPrimary",
+              "else": "@color"
+             },
              "modifiers": [
               {
                "graphicsLayer": {
@@ -122,8 +260,11 @@
                }
               },
               {
-               "padding": {
-                "bottom": 16
+               "$if": "style == 'segmented'",
+               "else": {
+                "padding": {
+                 "bottom": 16
+                }
                }
               }
              ]
@@ -137,32 +278,35 @@
      }
     },
     {
-     "canvas": {
-      "modifiers": [
-       "fillMaxWidth",
-       {
-        "height": 2
-       }
-      ],
-      "commands": [
-       {
-        "paint": {
-         "ops": [
-          {
-           "color": "@color"
-          }
-         ]
+     "$if": "style == 'segmented'",
+     "else": {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": 2
         }
-       },
-       {
-        "drawRect": {
-         "left": "@s * componentWidth() / @n",
-         "top": 0,
-         "right": "(@s + 1) * componentWidth() / @n",
-         "bottom": 2
+       ],
+       "commands": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@color"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@s * componentWidth() / @n",
+          "top": 0,
+          "right": "(@s + 1) * componentWidth() / @n",
+          "bottom": 2
+         }
         }
-       }
-      ]
+       ]
+      }
      }
     }
    ]

@@ -26,15 +26,16 @@ function opCodeOf(op) {
 
 function textOf(doc, id) {
     if (!doc || id === undefined || id === null || id <= 0) return null;
-    try {
-        const t = typeof doc.getText === 'function' ? doc.getText(id) : null;
-        if (t) return t;
-    } catch (e) { /* fall through */ }
-    // A computed text (textMerge, textFromFloat, textSubtext...) only has a value in the
-    // running context: a contentDescription of "@phaseName" showed as null without this.
+    // The running context first: a computed text (textMerge, textFromFloat, textSubtext...)
+    // only has its current value there — the document keeps what was stored at load (a
+    // textFromFloat of a host-set AQI read "55" for 480), or nothing ("@phaseName" was null).
     try {
         const ctx = window.currentPlayer?.getRemoteContext?.();
         const t = ctx && typeof ctx.getText === 'function' ? ctx.getText(id) : null;
+        if (t) return t;
+    } catch (e) { /* fall through */ }
+    try {
+        const t = typeof doc.getText === 'function' ? doc.getText(id) : null;
         return t || null;
     } catch (e) { return null; }
 }

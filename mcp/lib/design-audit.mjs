@@ -125,7 +125,10 @@ const DATE_FIX =
     "dayOfMonth() and weekDay(). Pin the clock (rc-inspect / rc-render `clock`) to check another date.";
 
 function dateFindings(items, readsClock) {
-    const hits = items.map((s) => ({ ...s, kind: dateKind(s.value) })).filter((h) => h.kind);
+    // A date that is the starting value of a host variable (resources, a tree `variable`) is the
+    // app's data, sample until the app sets it: not a date fixed on screen.
+    const hostValue = (s) => (s.path ?? [])[0] === "resources" || (s.path ?? []).includes("variable");
+    const hits = items.map((s) => ({ ...s, kind: dateKind(s.value) })).filter((h) => h.kind && !hostValue(h));
     // A month grid typed out: the day numbers 1..28 or more as separate literal texts.
     const days = new Set(items.filter((s) => /^\s*(?:[1-9]|[12]\d|3[01])\s*$/.test(s.value) && s.key !== "id" && s.key !== "name").map((s) => Number(s.value)));
     let grid = true;
@@ -322,6 +325,228 @@ const LAYOUT_FIX =
     "components measure their text, wrap it, follow the font scale and the screen size, and expose the text " +
     "to screen readers; text drawn on a canvas does none of that.";
 
+// Keys json2rc and the reference parser ignore without a word, each a guess at a real feature:
+// the document converts, the effect never appears (a number sat top-left in its disc).
+const WRONG_KEYS = {
+    contentAlignment: "use the container's own keys: box/fitBox {\"horizontalAlignment\", \"verticalAlignment\"}, row {\"verticalAlignment\", \"horizontalArrangement\"}, column {\"horizontalAlignment\", \"verticalArrangement\"}",
+    alignment: "use horizontalAlignment / verticalAlignment (box, fitBox) or verticalAlignment (row) / horizontalAlignment (column)",
+    contentDescription: "on a node it is dropped: label it with the modifier {\"semantics\": {\"contentDescription\": \"...\"}} (the header's contentDescription describes the document)",
+    gravity: "use horizontalAlignment / verticalAlignment",
+    align: "use textAlign on a text (start | center | end), or the container's alignment keys",
+};
+const NODE_KINDS = /^(box|row|column|text|fitbox|canvas|flow|collapsiblecolumn|collapsiblerow|statelayout|image|verticalscroll|horizontalscroll)$/i;
+function wrongKeyFindings(doc) {
+    const hits = new Map();   // key -> count
+    const visit = (x, inNode) => {
+        if (Array.isArray(x)) { for (const y of x) visit(y, inNode); return; }
+        if (!isObj(x)) return;
+        // A node is {"box": {...}}, {"type": "box", ...} or the root.
+        const self = inNode || (typeof x.type === "string" && NODE_KINDS.test(x.type));
+        for (const [k, v] of Object.entries(x)) {
+            const nodeBody = (NODE_KINDS.test(k) || k === "root") && isObj(v);
+            // A component call ({"StatusMark": {...}}) takes the component's own params: not a node.
+            const call = /^[A-Z]/.test(k) && isObj(v);
+            if (self && k in WRONG_KEYS && !(k === "contentDescription" && x === doc.header)) hits.set(k, (hits.get(k) ?? 0) + 1);
+            visit(v, !call && (nodeBody || (k === "children") || (self && !["modifiers", "resources", "components", "params", "locals"].includes(k))));
+        }
+    };
+    visit(doc, false);
+    return [...hits].map(([k, n]) => ({
+        severity: "warning", code: "ignored_key",
+        title: `"${k}" is not a RemoteCompose key (${n} use(s)): it converts but does nothing`,
+        message: `"${k}": ${WRONG_KEYS[k]}.`,
+        count: n,
+    }));
+}
+
+// A number declared as a root-level `variable` command is read fine by the tree, but a
+// component's local computed from it (a TextChoice's clamped index) is a deferred tree
+// variable that the integer expressions reading it never see: the reference parser makes a
+// fresh integer 0 there (U57). Numbers belong in resources.variables; the root form is for strings.
+function rootVariableFindings(doc) {
+    const root = Array.isArray(doc.root) ? doc.root : [];
+    const nums = root.filter((n) => isObj(n) && isObj(n.variable) && typeof n.variable.name === "string"
+        && !/string|text/i.test(String(n.variable.vtype ?? "")) && typeof n.variable.value !== "string").map((n) => n.variable.name);
+    if (!nums.length) return [];
+    // Only a root number passed to a component call is at risk (the tree itself reads it fine).
+    const fed = new Set();
+    const visit = (x) => {
+        if (Array.isArray(x)) { for (const y of x) visit(y); return; }
+        if (!isObj(x)) return;
+        const keys = Object.keys(x);
+        if (keys.length === 1 && /^[A-Z]/.test(keys[0]) && isObj(x[keys[0]])) {
+            const argText = JSON.stringify(x[keys[0]]);
+            for (const n of nums) if (new RegExp(`@${n}\\b`).test(argText)) fed.add(`${n} → ${keys[0]}`);
+        }
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root);
+    if (!fed.size) return [];
+    return [{
+        severity: "warning", code: "root_number_variable",
+        title: `${fed.size} root variable number(s) passed to a component (${[...fed].slice(0, 4).join(", ")})`,
+        message: "Declare numbers the app sets in resources.variables ({\"playing\": {\"value\": 0, \"export\": true}}) when a component " +
+            "reads them; a root-level {\"variable\": ...} is for strings. A component local computed from a root variable (a TextChoice " +
+            "index, a Gauge value) is a deferred tree variable that integer expressions cannot see, and the component sticks at 0 (U57).",
+        count: fed.size,
+    }];
+}
+
+// A hostNamedAction name used by two click lists is written as one text, inside the FIRST
+// list; the player registers it when that click runs, so the second control sends a nameless
+// action until the first is tapped (json2rc and the reference parser cache texts alike: U58).
+function sharedActionNameFindings(doc) {
+    const seen = new Map();   // name -> branch -> click lists
+    let list = 0;
+    // (The document tree only: a component definition's body and its `call` example are not
+    // controls on the screen — a login form's checkbox counted its own example call.)
+    // A stateLayout shows one child at a time: the same name in two of its children is one
+    // control at a time, not two, so each child is its own branch.
+    const visitRoot = () => visit(doc.root, "");
+    const visit = (x, branch) => {
+        if (Array.isArray(x)) { for (const y of x) visit(y, branch); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (k === "onClick" || k === "multiClick") {
+                list++;
+                const acts = Array.isArray(v) ? v : [v];
+                // (A name that is a component's param — "@action", "$name" — differs per call.)
+                for (const a of acts) if (isObj(a) && /^host(named)?action$/i.test(String(a.type ?? "")) && typeof a.name === "string" && !/^[@$]/.test(a.name)) {
+                    const byBranch = seen.get(a.name) ?? new Map();
+                    byBranch.set(branch, (byBranch.get(branch) ?? new Set()).add(list));
+                    seen.set(a.name, byBranch);
+                }
+            }
+            if (/^statelayout$/i.test(k) && isObj(v) && Array.isArray(v.children)) {
+                v.children.forEach((c, i) => visit(c, `${branch}/${list}:${i}`));
+                for (const [k2, v2] of Object.entries(v)) if (k2 !== "children") visit(v2, branch);
+                continue;
+            }
+            visit(v, branch);
+        }
+    };
+    visitRoot();
+    // Shared: two lists in one branch, or in a branch and one that contains it.
+    for (const [name, byBranch] of seen) {
+        const merged = new Map();
+        for (const [b, lists] of byBranch) for (const [b2, l2] of byBranch) if (b2 === b || b.startsWith(b2 + "/")) for (const l of l2) (merged.get(b) ?? merged.set(b, new Set()).get(b)).add(l);
+        seen.set(name, new Set([...merged.values()].reduce((best, s) => (s.size > best.size ? s : best), new Set())));
+    }
+    const shared = [...seen].filter(([, lists]) => lists.size > 1).map(([n]) => n);
+    if (!shared.length) return [];
+    return [{
+        severity: "info", code: "shared_action_name",
+        title: `${shared.length} hostNamedAction name(s) used by several controls (${shared.slice(0, 4).join(", ")})`,
+        message: "json2rc declares a shared name once before the tree, so every control sends it (with a valueType value, e.g. one " +
+            "\"rate\" action from five stars). The reference JSON parser writes it inside the first control's list only, where the " +
+            "others send a nameless action until that one is tapped: give each control its own name if the document must also convert there.",
+        count: shared.length,
+    }];
+}
+
+// Two host strings with the same initial value are ONE text in the document (the parsers
+// cache texts by value; json2rc and the reference alike): the names share an id, so the app
+// setting one sets both (two departure slots both starting "42").
+function sharedStringFindings(doc) {
+    const byValue = new Map();
+    const visit = (x) => {
+        if (Array.isArray(x)) { for (const y of x) visit(y); return; }
+        if (!isObj(x)) return;
+        const v = x.variable;
+        if (isObj(v) && typeof v.name === "string" && /string|text/i.test(String(v.vtype ?? "")) && typeof v.value === "string") {
+            byValue.set(v.value, [...(byValue.get(v.value) ?? []), v.name]);
+        }
+        for (const y of Object.values(x)) visit(y);
+    };
+    visit(doc.root);
+    const shared = [...byValue].filter(([, names]) => names.length > 1);
+    if (!shared.length) return [];
+    return [{
+        severity: "warning", code: "shared_string_value",
+        title: `${shared.length} group(s) of host strings with the same initial value (${shared.slice(0, 3).map(([v, n]) => `${n.join("/")} = ${JSON.stringify(v)}`).join("; ")})`,
+        message: "Texts are stored once per value, so these names point at one text: the app setting one changes all of them. " +
+            "Only the INITIAL values must differ: once the app sets each one by name they are separate texts, and real data may repeat " +
+            "(two ingredients in \"cups\"). So give each a distinct starting value — the sample data, or \"unit 1\", \"unit 2\" — and let the app send the real ones.",
+        count: shared.length,
+    }];
+}
+
+// A visibility modifier takes a variable ("@shown") or an expression of one: a number is read
+// as a variable ID by json2rc and the reference parser, so {"visibility": 1} shows or hides by
+// whatever variable has id 1 (a prompt-8 cell vanished in check_component this way).
+function visibilityFindings(doc) {
+    let n = 0, inline = 0;
+    const seen = new Set(), exprs = new Set();
+    const visit = (x) => {
+        if (Array.isArray(x)) { for (const y of x) visit(y); return; }
+        if (!isObj(x)) return;
+        if (Array.isArray(x.modifiers)) for (const m of x.modifiers) {
+            if (!isObj(m)) continue;
+            if (typeof m.visibility === "number") { n++; seen.add(m.visibility); }
+            // An expression written in the modifier is parsed as an INTEGER expression: plain
+            // arithmetic on variables works, a function call (step, min, abs) does not reliably,
+            // and the component vanishes (a seasons widget lost its day count to
+            // {"visibility": "step(@days, 0.5)"}).
+            else if (typeof m.visibility === "string" && (/\b(?!abs\b|min\b|max\b|clamp\b)[A-Za-z_]\w*\s*\(/.test(m.visibility) || /\d\.\d/.test(m.visibility))) { inline++; exprs.add(m.visibility); }
+        }
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc);
+    // A variable declared INSIDE the layout tree (a `variable` command below the root level —
+    // what a component's computed local becomes) is a deferred tree variable: an integer
+    // expression (a visibility) reading it gets a fresh 0 and the component hides (U57).
+    // Only a read that comes BEFORE the declaration, in document order, sees the fresh 0: a
+    // variable written earlier in the tree (a 0-size canvas first) is there when it is read.
+    const treeVars = new Map();   // name -> order of its declaration
+    let order = 0;
+    const collect = (x, depth) => {
+        if (Array.isArray(x)) { for (const y of x) collect(y, depth); return; }
+        if (!isObj(x)) return;
+        order++;
+        if (depth > 1 && isObj(x.variable) && typeof x.variable.name === "string" && !treeVars.has(x.variable.name)) treeVars.set(x.variable.name, order);
+        for (const [k, v] of Object.entries(x)) if (k !== "resources" && k !== "components") collect(v, depth + (k === "root" ? 0 : 1));
+    };
+    collect(doc.root, 0);
+    const treeHits = new Map();
+    order = 0;
+    const scanVis = (x, depth) => {
+        if (Array.isArray(x)) { for (const y of x) scanVis(y, depth); return; }
+        if (!isObj(x)) return;
+        order++;
+        const here = order;
+        if (Array.isArray(x.modifiers)) for (const m of x.modifiers) if (isObj(m) && typeof m.visibility === "string") {
+            for (const r of m.visibility.matchAll(/@([A-Za-z_][\w.]*)/g)) if (treeVars.has(r[1]) && treeVars.get(r[1]) > here) treeHits.set(r[1], (treeHits.get(r[1]) ?? 0) + 1);
+        }
+        for (const [k, v] of Object.entries(x)) if (k !== "resources" && k !== "components") scanVis(v, depth + (k === "root" ? 0 : 1));
+    };
+    scanVis(doc.root, 0);
+    const out = [];
+    if (treeHits.size) out.push({
+        severity: "warning", code: "tree_variable_visibility",
+        title: `${treeHits.size} visibility expression(s) read a variable declared inside the layout (${[...treeHits.keys()].slice(0, 3).join(", ")})`,
+        message: "A variable command inside the tree is written where it stands and a visibility is an integer expression that only sees variables " +
+            "already written; these visibilities come BEFORE their variable, so (in the reference parser and on Android) they get a fresh 0 and the component hides. Declare the value in resources.variables (a component local " +
+            "computed from params and resources only stays there), or switch the content by a resources variable.",
+        count: treeHits.size,
+    });
+    if (n) out.push({
+        severity: "warning", code: "literal_visibility",
+        title: `${n} visibility modifier(s) with a number (${[...seen].join(", ")}) instead of a variable`,
+        message: "A number in \"visibility\" is a variable ID, not shown/hidden: the component follows whatever variable has that id. " +
+            "Declare a variable (resources.variables {\"shown\": 1}) and write {\"visibility\": \"@shown\"}.",
+        count: n,
+    });
+    if (inline) out.push({
+        severity: "warning", code: "inline_visibility",
+        title: `${inline} visibility modifier(s) calling a function inline (${[...exprs].slice(0, 2).map((e) => JSON.stringify(e)).join(", ")})`,
+        message: "An expression inside \"visibility\" is an INTEGER expression (+ - * / %, abs, min, max, clamp, whole numbers): anything " +
+            "else (step, ifElse, floor, a decimal) is not one, the string becomes a text id and the component is hidden. Compute the " +
+            "condition as a float variable (resources.variables {\"shown\": \"step(@days, 0.5)\"}, exactly 0 or 1) and write {\"visibility\": \"@shown\"}.",
+        count: inline,
+    });
+    return out;
+}
+
 function layoutFindings(doc) {
     const out = [];
     const { canvases, layout } = scanLayout(doc);
@@ -406,11 +631,24 @@ function layoutFindings(doc) {
     // A screen of text alone: no icon, no drawing, no chart, no image. It reads as a form, and
     // what it says (a status, a quantity, a time) is easier to see as a picture.
     let texts = 0, visual = 0;
+    // The document's own components that draw (a canvas or image in their body): a call to one
+    // is a visual (a calorie ring and macro bars written as inline components were missed).
+    // (A body that calls a library visual — an Icon, a ProgressBar — counts too: a status
+    // icon and bars written as an inline row component were missed.)
+    const VISUAL_CALL = /"(canvas|image|Icon|MoonPhase|WeatherIcon|BatteryIndicator|ProgressRing|ProgressBar|Gauge|LineChart|Sparkline|BarChart|DonutChart|AnalogClock|Steps|Legend|Rating|Avatar)"\s*:/;
+    const drawing = new Set(Object.entries(isObj(doc.components) ? doc.components : {})
+        .filter(([, d]) => VISUAL_CALL.test(JSON.stringify(d?.body ?? d ?? {})) || /"type"\s*:\s*"(canvas|image)"/i.test(JSON.stringify(d?.body ?? {})))
+        .map(([name]) => name));
+    // A component calling another drawing component draws too (two passes cover the usual nesting).
+    for (let pass = 0; pass < 2; pass++) for (const [name, d] of Object.entries(isObj(doc.components) ? doc.components : {})) {
+        if (!drawing.has(name) && [...drawing].some((n) => JSON.stringify(d?.body ?? {}).includes(`"${n}"`))) drawing.add(name);
+    }
     const scan = (n) => {
         if (Array.isArray(n)) return n.forEach(scan);
         if (!isObj(n)) return;
         for (const [k, v] of Object.entries(n)) {
             const lk = k.toLowerCase();
+            if (drawing.has(k)) visual++;
             if (lk === "text" && isObj(v)) texts++;
             if (lk === "canvas" || lk === "image" || /^(Icon|MoonPhase|WeatherIcon|BatteryIndicator|ProgressRing|ProgressBar|Gauge|LineChart|Sparkline|BarChart|DonutChart|AnalogClock|Avatar|Slider|Switch|Checkbox)$/.test(k)) visual++;
             scan(v);
@@ -450,6 +688,143 @@ export function readsClock(doc) {
 }
 
 /** Design findings for a RemoteCompose JSON document (object or JSON text), before expansion. */
+// {"value": ..., "anim": 1}: the reference parser packs a 1 s duration as "the default", which
+// it writes as no animation at all, so the value jumps (json2rc matches it byte for byte).
+function animOneFindings(doc) {
+    let n = 0;
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if ("value" in x && "anim" in x && Number(x.anim) === 1) n++;
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); visit(doc.resources); visit(doc.components);
+    return n ? [{
+        severity: "warning", code: "anim_one_second",
+        title: `${n} animated value(s) with "anim": 1 do not animate`,
+        message: "A duration of exactly 1 second is written as no animation by the format's JSON parser (1 is its default and packs to nothing), so the value jumps. Use 0.99 or 1.01 (or any other duration).",
+        count: n,
+    }] : [];
+}
+
+// A text field that is exactly "@name" where nothing declares `name`: the converter keeps it as
+// the literal text "@name" (a screen reader announced "@powerDesc").
+function undeclaredRefFindings(doc) {
+    const declared = new Set();
+    const collect = (x) => {
+        if (Array.isArray(x)) { x.forEach(collect); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (["name", "varName", "localItem", "index", "as"].includes(k) && typeof v === "string") declared.add(v);
+            // A pattern's parameters ({"definePattern": {"parameters": ["who"]}}) are names too.
+            if (k === "parameters" && Array.isArray(v)) for (const p of v) if (typeof p === "string") declared.add(p);
+            collect(v);
+        }
+    };
+    for (const sec of Object.values(doc.resources ?? {})) {
+        if (isObj(sec)) for (const k of Object.keys(sec)) declared.add(k);
+        else if (Array.isArray(sec)) for (const e of sec) if (isObj(e)) { if (typeof e.name === "string") declared.add(e.name); else for (const k of Object.keys(e)) declared.add(k); }
+    }
+    collect(doc.root); collect(doc.global);
+    const bad = new Map();
+    const FIELDS = new Set(["contentDescription", "stateDescription", "text", "value", "label", "hint"]);
+    const visit = (x, inCall) => {
+        if (Array.isArray(x)) { x.forEach((y) => visit(y, inCall)); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            // A component call's arguments are its params; the expander resolves those.
+            if (/^[A-Z]/.test(k) && isObj(v)) { visit(v, true); continue; }
+            if (!inCall && FIELDS.has(k) && typeof v === "string") {
+                const m = /^@([A-Za-z_][\w]*)$/.exec(v);
+                if (m && !declared.has(m[1])) bad.set(m[1], (bad.get(m[1]) ?? 0) + 1);
+            }
+            visit(v, inCall && !(NODE_KINDS.test(k)));
+        }
+    };
+    visit(doc.root, false);
+    if (!bad.size) return [];
+    const names = [...bad.keys()];
+    return [{
+        severity: "warning", code: "undeclared_reference",
+        title: `${names.length} "@name" reference(s) to nothing declared: ${names.slice(0, 6).map((n) => "@" + n).join(", ")}`,
+        message: "A text or description that names no declared variable is kept as the literal text (a screen reader reads \"@" + names[0] + "\"). Declare it (resources.variables, a tree variable, a textMerge varName) or fix the name.",
+        count: names.length,
+    }];
+}
+
+// A padding object reads only start/top/end/bottom: "left", "right", "horizontal" or
+// "vertical" are dropped without a word (a run's 4 dp left padding never appeared).
+function paddingKeyFindings(doc) {
+    const bad = new Set();
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (isObj(x.padding) && !("$if" in x.padding)) for (const k of Object.keys(x.padding)) if (!["start", "top", "end", "bottom"].includes(k)) bad.add(k);
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return bad.size ? [{
+        severity: "warning", code: "padding_key",
+        title: `padding {${[...bad].join(", ")}} is ignored`,
+        message: "A padding object takes only start, top, end and bottom. Write {\"padding\": {\"start\": 4}} or a list: [all], [horizontal, vertical] or [start, top, end, bottom].",
+        count: bad.size,
+    }] : [];
+}
+
+// An `integers` resource read in a float expression (an index, a size, a TextChoice): float
+// expressions read an integer variable as 0, so the choice never moves (a weather name stayed
+// "Sunny" next to a rain icon).
+function integerInFloatFindings(doc) {
+    const ints = Object.keys(isObj(doc.resources?.integers) ? doc.resources.integers : {});
+    if (!ints.length) return [];
+    const used = new Set();
+    const re = new RegExp(`@(${ints.map((n) => n.replace(/[^\w]/g, "")).join("|")})\\b`, "g");
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (typeof x === "string") { for (const m of x.matchAll(re)) used.add(m[1]); return; }
+        if (!isObj(x)) return;
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return used.size ? [{
+        severity: "warning", code: "integer_in_expression",
+        title: `${used.size} integer variable(s) read where a number is expected: ${[...used].map((n) => "@" + n).join(", ")}`,
+        message: "A float expression (an index, a size, a position, a component's number param) reads an `integers` resource as 0, so it never changes. Declare the host value as a float in resources.variables ({\"code\": {\"value\": 3, \"export\": true}}); integers are only for integer-typed ops.",
+        count: used.size,
+    }] : [];
+}
+
+// A layout text with no colour draws black in every look: invisible on a dark or mono-dark
+// background (a run's plant widget lost its labels there while render said nothing).
+function uncoloredTextFindings(doc) {
+    let n = 0; const examples = [];
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            // (A {"type": "textFromFloat", ...} under "text" is a text expression, not a node.)
+            if (k === "text" && isObj(v) && !("type" in v) && ("text" in v || "value" in v) && !("color" in v)) {
+                n++;
+                const t = v.text ?? v.value;
+                if (examples.length < 4) examples.push(typeof t === "string" ? JSON.stringify(t.slice(0, 30)) : "(computed)");
+            }
+            visit(v);
+        }
+    };
+    visit(doc.root);
+    // Only a component's body draws texts (its params and slots are declarations).
+    for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    if (!n) return [];
+    const themed = JSON.stringify(doc).includes("@colors.");
+    return [{
+        severity: themed ? "warning" : "info", code: "uncolored_text",
+        title: `${n} text(s) have no "color": they draw black in every look`,
+        message: `Black text is invisible on a dark or mono-dark background (${examples.join(", ")}). ` +
+            "Give each text a theme colour: \"color\": \"@colors.onSurface\" (or @colors.muted for secondary text).",
+        count: n,
+    }];
+}
+
 export function designAudit(json) {
     const doc = typeof json === "string" ? JSON.parse(json) : json;
     if (!isObj(doc)) return [];
@@ -460,6 +835,16 @@ export function designAudit(json) {
         ...dateFindings(strings, readsClock(doc)),
         ...colorFindings(doc),
         ...layoutFindings(doc),
+        ...visibilityFindings(doc),
+        ...wrongKeyFindings(doc),
+        ...rootVariableFindings(doc),
+        ...sharedActionNameFindings(doc),
+        ...sharedStringFindings(doc),
+        ...uncoloredTextFindings(doc),
+        ...animOneFindings(doc),
+        ...undeclaredRefFindings(doc),
+        ...paddingKeyFindings(doc),
+        ...integerInFloatFindings(doc),
     ];
     // Literal colours are advice for a feature demo; in a document that is also hard-wired
     // otherwise (glyphs, copies, a fixed date), they are part of the same problem.

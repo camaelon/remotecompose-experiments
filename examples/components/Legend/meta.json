@@ -1,0 +1,518 @@
+{
+ "id": "Legend",
+ "name": "legend",
+ "version": 1,
+ "title": "Legend",
+ "prompt": "Show a portfolio donut chart with a legend beside it naming each slice and its percent, and a two-column legend of traffic sources with their values.",
+ "level": 2,
+ "use_cases": [
+  "chart",
+  "dashboard",
+  "finance"
+ ],
+ "form_factor": "widget-4x2",
+ "components": [
+  "Legend",
+  "DonutChart"
+ ],
+ "keywords": [
+  "legend",
+  "chart legend",
+  "key",
+  "series labels",
+  "swatches",
+  "colour key",
+  "breakdown",
+  "share of each",
+  "percent per slice"
+ ],
+ "teaches": [
+  "Call {\"Legend\": {\"values\": \"@shares\", \"labels\": [\"Stocks\", \"Bonds\", \"Cash\", \"Other\"]}} with the name of a float array (export it and the host can replace the numbers) and one label per entry",
+  "Next to a DonutChart on the same array and colour, the swatches match the slices by index (the same tones: solid, then lighter); pass the donut's `color` when it is not primary",
+  "`format` prints each entry's share of the sum as a percent (default), the value itself, or nothing; `columns`: 2 lays the entries out in two weighted columns, alternating",
+  "Rows past the array's length collapse to 0 dp (a height expression over arrayLength), so a host that sends fewer values gets a shorter legend; labels are fixed when the document is built"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/row/children/1/box/children/0",
+   "shows": "data.array",
+   "note": "the legend of the exported array shares, beside the DonutChart of the same array"
+  },
+  {
+   "pointer": "/root/column/children/1/row/children/1/box/children/0",
+   "shows": "data.expression",
+   "note": "each percent is round(100 * arrayGet(values, i) / sum) through textFromFloat merged with %"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "layout.weight",
+   "note": "two weighted columns, the entries alternating; format value, the secondary colour and an accessibility label"
+  },
+  {
+   "pointer": "/root/column/children/1/row/children/1/box/children/0",
+   "shows": "draw.shapes",
+   "note": "each swatch is a rounded square whose paint alpha falls with its index, as the donut's slices do"
+  },
+  {
+   "pointer": "/root/column/children/3",
+   "shows": "a11y.labels",
+   "note": "the whole legend carries one contentDescription: the `label` given here, or \"Legend: N entries\" by default"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "shares": {
+    "type": "float_array",
+    "meaning": "portfolio shares by asset, values >= 0, up to four (one per label)",
+    "default": [
+     40,
+     30,
+     20,
+     10
+    ]
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Top: a blue donut of four slices (solid to pale clockwise) with 100 in the centre and, beside it, four rows: a swatch in the slice's tone, Stocks 40%, Bonds 30%, Cash 20%, Other 10%, the percents right-aligned in muted. Below: two columns of violet swatches, Direct 58 and Search 27 on the left, Social 15, Email 8 and Referral 4 (Direct, Social, Referral left; Search, Email right). With shares [50, 30, 20] the fourth row collapses and the donut shows three slices. In mono the swatches alternate filled and outlined. At 234 dp the labels keep one line.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "narrow",
+    "width": 234,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 540,
+    "height": 240
+   },
+   {
+    "name": "short",
+    "variables": {
+     "shares": [
+      50,
+      30,
+      20
+     ]
+    }
+   }
+  ]
+ },
+ "related": [
+  "DonutChart",
+  "BarChart",
+  "LineChart",
+  "KeyValueRow",
+  "CMP-09"
+ ],
+ "derived": {
+  "components": [
+   "DonutChart",
+   "Legend"
+  ],
+  "component_instances": 3,
+  "component_modes": {
+   "DonutChart": "expand",
+   "Legend": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 8333,
+  "header": {
+   "width": 360,
+   "height": 240
+  },
+  "op_count": 489,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 58,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 15,
+   "ClipRectModifierOperation": 14,
+   "CoreText": 29,
+   "DATA_TEXT": 15,
+   "DRAW_ARC": 1,
+   "DRAW_ROUND_RECT": 14,
+   "DRAW_TEXT_ANCHOR": 2,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "LAYOUT_BOX": 17,
+   "LAYOUT_CANVAS": 15,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 17,
+   "LayoutComponentContent": 81,
+   "LoopOperation": 11,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 32,
+   "MODIFIER_PADDING": 18,
+   "MODIFIER_WIDTH": 52,
+   "NAMED_VARIABLE": 7,
+   "PAINT_VALUES": 18,
+   "THEME": 15,
+   "TextFromFloat": 15,
+   "TextMerge": 4
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "shares",
+    "type": "float_array",
+    "value": [
+     40,
+     30,
+     20,
+     10
+    ]
+   },
+   {
+    "name": "sources",
+    "type": "float_array",
+    "value": [
+     58,
+     27,
+     15,
+     8,
+     4
+    ]
+   }
+  ],
+  "render_findings": [
+   "warning: text_overflow"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 1,
+   "info": 0
+  },
+  "audit_findings": [
+   "warning: layout_zero_size"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 8333,
+    "component_modes": {
+     "DonutChart": "expand",
+     "Legend": "expand"
+    },
+    "op_count": 471,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "shares",
+      "type": "float_array",
+      "value": [
+       40,
+       30,
+       20,
+       10
+      ]
+     },
+     {
+      "name": "sources",
+      "type": "float_array",
+      "value": [
+       58,
+       27,
+       15,
+       8,
+       4
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 8333,
+    "component_modes": {
+     "DonutChart": "expand",
+     "Legend": "expand"
+    },
+    "op_count": 471,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "shares",
+      "type": "float_array",
+      "value": [
+       40,
+       30,
+       20,
+       10
+      ]
+     },
+     {
+      "name": "sources",
+      "type": "float_array",
+      "value": [
+       58,
+       27,
+       15,
+       8,
+       4
+      ]
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ]
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ],
+    "size": [
+     234,
+     240
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ],
+    "size": [
+     540,
+     240
+    ],
+    "audit_findings": [
+     "warning: layout_zero_size"
+    ]
+   },
+   "short": {
+    "render": "render-short.png",
+    "render_findings": [
+     "warning: text_overflow"
+    ]
+   }
+  },
+  "json_keys": [
+   "DonutChart",
+   "Legend",
+   "alpha",
+   "angle",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "columns",
+   "commands",
+   "contentDescription",
+   "dark",
+   "decimal",
+   "drawArc",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "export",
+   "fill",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "format",
+   "from",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "index",
+   "label",
+   "labels",
+   "left",
+   "light",
+   "loop",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "rx",
+   "ry",
+   "save",
+   "scale",
+   "secondary",
+   "semantics",
+   "shares",
+   "size",
+   "sources",
+   "start",
+   "startAngle",
+   "strokeWidth",
+   "style",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "text",
+   "textSize",
+   "top",
+   "translate",
+   "type",
+   "until",
+   "value",
+   "values",
+   "variable",
+   "verticalAlignment",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "data.expression": [
+    "<arithmetic>"
+   ],
+   "layout.weight": [
+    "weight"
+   ],
+   "draw.shapes": [
+    "drawRoundRect"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-10-31T22:23:05.847Z"
+ }
+}

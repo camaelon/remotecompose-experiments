@@ -88,7 +88,7 @@
  "pitfalls": [
   "Pin the clock as epoch milliseconds: a \"YYYY-MM-DDTHH:MM\" clock is local time, so the instant, and a countdown to a UTC moment, shift with the renderer's time zone",
   "epochSecond() converts with json2rc but the Java parser does not know it; build absolute time from dayOfYear(), timeInMin(), timeInSec() and offsetToUtc() instead",
-  "A float has 24 bits of mantissa: seconds-since-Jan-1 (~3e7) lose whole seconds, so subtract the target's day and second-of-day separately; the formula only works within one calendar year",
+  "A float has 24 bits of mantissa: seconds-since-Jan-1 (~3e7) lose whole seconds, so subtract the target's day and second-of-day separately; the formula counts within one calendar year: for a target in the next year (New Year's Day) add the days left in this year, with the leap rule, to the days into the next",
   "Hours are floor(@remaining / 3600) with no % 24: past 99 hours whole 2 drops the leading digit, so add a days field (or whole 3) for a longer countdown"
  ],
  "related": [
@@ -96,15 +96,21 @@
   "TXT-08"
  ],
  "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 744,
+  "bytes": 1273,
   "header": {
    "width": 360,
    "height": 180
   },
-  "op_count": 33,
+  "op_count": 73,
   "operations": {
    "ANIMATED_FLOAT": 4,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
    "CoreText": 7,
    "DATA_TEXT": 3,
    "HEADER": 1,
@@ -112,12 +118,36 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 1,
    "LayoutComponentContent": 9,
+   "LoopOperation": 8,
    "MODIFIER_BACKGROUND": 1,
    "MODIFIER_HEIGHT": 1,
    "MODIFIER_WIDTH": 1,
+   "NAMED_VARIABLE": 4,
+   "THEME": 12,
    "TextFromFloat": 3
   },
-  "host_variables": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   }
+  ],
   "render_findings": [],
   "audit": {
    "error": 0,
@@ -164,7 +194,9 @@
    "background",
    "children",
    "color",
+   "colors",
    "contentDescription",
+   "dark",
    "decimal",
    "flags",
    "fontSize",
@@ -172,11 +204,15 @@
    "header",
    "height",
    "horizontalAlignment",
+   "light",
    "modifiers",
+   "muted",
+   "onSurface",
    "profiles",
    "remaining",
    "resources",
    "root",
+   "secondary",
    "text",
    "type",
    "value",
@@ -207,7 +243,8 @@
    ],
    "data.tokens": [
     "resources",
-    "variables"
+    "variables",
+    "colors"
    ],
    "layout.stack": [
     "column",
@@ -218,6 +255,6 @@
     "verticalArrangement"
    ]
   },
-  "built_at": "2026-10-31T05:59:56.731Z"
+  "built_at": "2026-10-31T22:22:05.370Z"
  }
 }

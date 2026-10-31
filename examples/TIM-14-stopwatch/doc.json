@@ -1,0 +1,144 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 300,
+  "profiles": 513,
+  "contentDescription": "A stopwatch with Start, Pause and Reset buttons, and a ring that empties over a 25-minute work period"
+ },
+ "resources": {
+  "variables": {
+   "running": {"value": 0, "export": true},
+   "startAt": {"value": 0, "export": true},
+   "accumulated": {"value": 0, "export": true},
+   "target": {"value": 1500, "export": true},
+   "now": "timeInMin() * 60 + continuousSec() % 60",
+   "elapsed": "@accumulated + @running * ((@now - @startAt + 86400) % 86400)",
+   "ringLeft": "max(0, 1 - @elapsed / @target)",
+   "state": "@running * 2 + (1 - @running) * step(@accumulated, 0)"
+  }
+ },
+ "components": {
+  "TimeText": {
+   "params": {
+    "size": {"type": "float", "default": 36, "static": true, "doc": "Font size of the minutes and seconds"},
+    "small": {"type": "float", "default": 20, "static": true, "doc": "Font size of the tenths"}
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "bottom",
+     "children": [
+      {"text": {
+       "value": {"type": "textMerge",
+        "id1": {"type": "textFromFloat", "value": "floor(@elapsed / 60)", "whole": 2, "decimal": 0, "flags": 13},
+        "id2": {"type": "textMerge", "id1": ":",
+         "id2": {"type": "textFromFloat", "value": "@elapsed % 60", "whole": 2, "decimal": 0, "flags": 13}}},
+       "fontSize": "@size", "fontWeight": 600, "color": "@colors.onSurface"}},
+      {"text": {
+       "value": {"type": "textMerge", "id1": ".",
+        "id2": {"type": "textFromFloat", "value": "(@elapsed * 10) % 10", "whole": 1, "decimal": 0, "flags": 5}},
+       "fontSize": "@small", "color": "@colors.muted", "modifiers": [{"padding": {"bottom": 3}}]}}
+     ]
+    }
+   }
+  },
+  "Header": {
+   "params": {},
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": ["fillMaxWidth"],
+     "children": [
+      {"Icon": {"name": "timer", "color": "@colors.primary"}},
+      {"text": {"value": "Stopwatch", "fontSize": 20, "color": "@colors.onSurface", "maxLines": 1, "overflow": "ellipsis", "modifiers": [{"weight": 1}, {"padding": [8, 0]}]}},
+      {"text": {
+       "value": {"type": "textMerge",
+        "id1": {"type": "textFromFloat", "value": "@target / 60", "whole": 3, "decimal": 0, "flags": 5},
+        "id2": " min"},
+       "fontSize": 12, "color": "@colors.muted"}}
+     ]
+    }
+   }
+  },
+  "Controls": {
+   "params": {},
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [{"spacedBy": 12}],
+     "children": [
+      {"box": {"horizontalAlignment": "center", "modifiers": [{"width": 112}], "children": [
+       {"Button": {"label": "@stateLabel", "onClick": [
+        {"type": "valueFloatExpressionChange", "target": "@accumulated", "value": "@elapsed + 0"},
+        {"type": "valueFloatExpressionChange", "target": "@startAt", "value": "timeInMin() * 60 + continuousSec() % 60"},
+        {"type": "valueFloatExpressionChange", "target": "@running", "value": "1 - @running"}
+       ]}}
+      ]}},
+      {"Button": {"label": "Reset", "style": "outlined", "onClick": [
+       {"type": "valueFloatChange", "target": "@running", "value": 0},
+       {"type": "valueFloatChange", "target": "@accumulated", "value": 0},
+       {"type": "valueFloatChange", "target": "@startAt", "value": 0}
+      ]}}
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "modifiers": ["fillMaxSize", {"background": "@colors.background"}, {"padding": 16}],
+   "children": [
+    {"canvas": {
+     "modifiers": [{"size": 0}],
+     "commands": [
+      {"global": {"commands": [
+       {"textSubtext": {"text": "Start Resume Pause ", "start": "@state * 6", "len": 6, "varName": "stateLabel6"}},
+       {"textTransform": {"text": "@stateLabel6", "start": 0, "len": -1, "operation": 3, "varName": "stateLabel"}}
+      ]}}
+     ]
+    }},
+    {"fitBox": {
+     "children": [
+      {"column": {
+       "horizontalAlignment": "center",
+       "modifiers": ["fillMaxWidth", {"height": 268}],
+       "children": [
+        {"Header": {}},
+        {"box": {
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "modifiers": ["fillMaxWidth", {"verticalWeight": 1}],
+         "children": [
+          {"ProgressRing": {"progress": "@ringLeft", "size": 176, "thickness": 8, "showLabel": false}},
+          {"TimeText": {}}
+         ]
+        }},
+        {"Controls": {}}
+       ]
+      }},
+      {"column": {
+       "horizontalAlignment": "center",
+       "modifiers": ["fillMaxWidth", {"height": 132}, {"spacedBy": 8}],
+       "children": [
+        {"Header": {}},
+        {"TimeText": {"size": 40, "small": 22}},
+        {"Controls": {}}
+       ]
+      }},
+      {"row": {
+       "verticalAlignment": "center",
+       "modifiers": ["fillMaxWidth", {"height": 40}],
+       "children": [
+        {"box": {"modifiers": [{"weight": 1}], "children": [{"TimeText": {"size": 28, "small": 16}}]}},
+        {"Controls": {}}
+       ]
+      }},
+      {"TimeText": {"size": 24, "small": 14}}
+     ]
+    }}
+   ]
+  }
+ }
+}

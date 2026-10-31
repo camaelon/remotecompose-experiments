@@ -1,7 +1,7 @@
 {
  "component": "ProgressBar",
- "version": 2,
- "summary": "A horizontal progress bar filling its width: a rounded track with a fill of progress × width (progress 0..1, a number or a variable).",
+ "version": 3,
+ "summary": "A horizontal progress bar filling its width: a rounded track with a fill of progress × width (progress 0..1, a number or a variable). With overshoot, a value past 1 rescales the bar: the fill stops at a limit tick and the excess is its own segment.",
  "params": {
   "progress": {
    "type": "float",
@@ -18,6 +18,17 @@
    "default": 8,
    "static": true,
    "doc": "Bar thickness in dp; the ends are fully rounded"
+  },
+  "overshoot": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Show a value past the limit (progress > 1, e.g. spent / limit): the bar is scaled to the larger of value and limit, a tick marks the limit and the excess is a segment in overColor (hatched with oblique lines in mono). Off: the fill is clamped at the full width."
+  },
+  "overColor": {
+   "type": "color",
+   "default": "@colors.error",
+   "doc": "The excess segment's colour (overshoot only)"
   }
  },
  "capabilities": [
@@ -103,6 +114,132 @@
      ]
     },
     {
+     "$if": "overshoot",
+     "then": [
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@overColor"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           },
+           {
+            "alpha": "clamp(0, 1, (@pa - 1) * 1000)"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "componentWidth() / max(1, @pa) + 1.5",
+          "top": 0.75,
+          "right": "componentWidth() - 0.75",
+          "bottom": "@height - 0.75",
+          "rx": "@height / 2 - 0.75",
+          "ry": "@height / 2 - 0.75"
+         }
+        },
+        {
+         "save": {
+          "commands": [
+           {
+            "clipRect": {
+             "left": "componentWidth() / max(1, @pa) + 1.5",
+             "top": 0,
+             "right": "componentWidth()",
+             "bottom": "@height"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "strokeWidth": 1.25
+              }
+             ]
+            }
+           },
+           {
+            "loop": {
+             "index": "k",
+             "from": 0,
+             "until": "(componentWidth() - componentWidth() / max(1, @pa)) / 3.5 + @height / 3.5 + 1",
+             "commands": [
+              {
+               "drawLine": {
+                "x1": "componentWidth() / max(1, @pa) + 1.5 + k * 3.5 - @height",
+                "y1": "@height",
+                "x2": "componentWidth() / max(1, @pa) + 1.5 + k * 3.5",
+                "y2": 0
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@overColor"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "clamp(0, 1, (@pa - 1) * 1000)"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": "componentWidth() / max(1, @pa) - @height / 2",
+          "top": 0,
+          "right": "componentWidth()",
+          "bottom": "@height",
+          "rx": "@height / 2",
+          "ry": "@height / 2"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
      "paint": {
       "ops": [
        {
@@ -112,14 +249,67 @@
      }
     },
     {
-     "drawRoundRect": {
-      "left": 0,
-      "top": 0,
-      "right": "max(@height, componentWidth() * clamp(0, 1, @pa))",
-      "bottom": "@height",
-      "rx": "@height / 2",
-      "ry": "@height / 2"
+     "$if": "overshoot",
+     "then": {
+      "drawRoundRect": {
+       "left": 0,
+       "top": 0,
+       "right": "max(@height, componentWidth() * clamp(0, 1, @pa) / max(1, @pa))",
+       "bottom": "@height",
+       "rx": "@height / 2",
+       "ry": "@height / 2"
+      }
+     },
+     "else": {
+      "drawRoundRect": {
+       "left": 0,
+       "top": 0,
+       "right": "max(@height, componentWidth() * clamp(0, 1, @pa))",
+       "bottom": "@height",
+       "rx": "@height / 2",
+       "ry": "@height / 2"
+      }
      }
+    },
+    {
+     "$if": "overshoot",
+     "then": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "$if": "theme.mono",
+          "then": {
+           "color": "@colors.background"
+          },
+          "else": {
+           "color": "@colors.onSurface"
+          }
+         },
+         {
+          "alpha": "clamp(0, 1, (@pa - 1) * 1000)"
+         }
+        ]
+       }
+      },
+      {
+       "drawRect": {
+        "left": "componentWidth() / max(1, @pa) - 1",
+        "top": 0,
+        "right": "componentWidth() / max(1, @pa) + 1",
+        "bottom": "@height"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      }
+     ]
     }
    ]
   }
@@ -128,7 +318,8 @@
   "clamp takes (min, max, value): clamp(0, 1, @pa). clamp(@progress, 0, 1) is always 0 (the RPN is min max value CLAMP)",
   "It fills its parent's width (componentWidth()): in a row put it in a weighted box, or it has no width",
   "The fill is at least a round dot (max(height, width × progress)), so 0 % is not empty",
-  "A progress change animates: the drawing reads an animated local pa = {\"value\": \"@progress\", \"anim\": 0.3} (paint time). A literal progress folds to a number, so a static bar costs nothing extra; a value driven every frame just follows 0.3 s behind. Mono themes jump"
+  "A progress change animates: the drawing reads an animated local pa = {\"value\": \"@progress\", \"anim\": 0.3} (paint time). A literal progress folds to a number, so a static bar costs nothing extra; a value driven every frame just follows 0.3 s behind. Mono themes jump",
+  "overshoot: a value past the limit is drawn, not clamped: the bar's full width is max(value, limit), the fill ends at the limit tick and the excess is an overColor segment (hatched with oblique lines in mono). Pass progress unclamped (@spent / @limit); a 0 limit gives an infinite ratio, guard it (@spent / max(@limit, 0.01)). Pair it with a text that says the amount over, for screen readers and mono."
  ],
  "locals": {
   "pa": {

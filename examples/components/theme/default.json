@@ -1,5 +1,5 @@
 {
- "doc": "Design tokens every library component reads. Each colour has a light and a dark value; the expansion writes it as a themed colour ({light, dark} in resources.colors), which the player picks by the system theme. A document overrides a colour by defining it in resources.colors (same name), with one value for both modes or its own {light, dark}; colours stay named in the .rc, so a host can re-theme at run time too. Numbers are substituted when components expand. `modes` holds the mono palettes: mono (light on black, for always-on displays) and mono-inverted (dark on white, for e-ink and other reflective displays). By default (componentTheme \"auto\") one document serves every look: light and dark by the system theme, mono and mono-inverted when the host sets the exported float theme.mono to 1 and overrides the named colours with that palette (components keep both variants, gated by theme.mono at run time). componentTheme \"light\", \"dark\", \"light-dark\", \"mono\" or \"mono-inverted\" expands one look only, smaller. monoOutline is transparent in light and dark and the outline in mono: a ring a mono surface draws instead of its fill, with the same structure in every look; monoBackground, transparent too, is the background in mono: the hole of a ring (Avatar)",
+ "doc": "Design tokens every library component reads. Each colour has a light and a dark value; the expansion writes it as a themed colour ({light, dark} in resources.colors), which the player picks by the system theme. A document overrides a colour by defining it in resources.colors (same name), with one value for both modes or its own {light, dark}; colours stay named in the .rc, so a host can re-theme at run time too. Numbers are substituted when components expand. `modes` holds the mono palettes: mono-dark (light on black, for always-on displays) and mono-light (dark on white, for e-ink and other reflective displays). By default (componentTheme \"auto\") one document serves every look: light and dark by the system theme, mono-dark and mono-light when the host sets the exported float theme.mono to 1 and overrides the named colours with that palette (components keep both variants, gated by theme.mono at run time). componentTheme \"light\", \"dark\", \"light-dark\", \"mono-dark\" or \"mono-light\" expands one look only, smaller. monoOutline is transparent in light and dark and the outline in mono-dark and mono-light: a ring a mono surface draws instead of its fill, with the same structure in every look; monoBackground, transparent too, is the background in mono: the hole of a ring (Avatar)",
  "colors": {
   "background": { "light": "#FFF5F7FA", "dark": "#FF101828" },
   "surface": { "light": "#FFFFFFFF", "dark": "#FF1C2433" },
@@ -9,7 +9,7 @@
   "outline": { "light": "#FF878F9E", "dark": "#FF3A4556" },
   "track": { "light": "#FFB0B8C4", "dark": "#FF2A3342" },
   "primary": { "light": "#FF1565D8", "dark": "#FF4DA3FF" },
-  "onPrimary": "#FFFFFFFF",
+  "onPrimary": {"light": "#FFFFFFFF", "dark": "#FF0B1A2E"},
   "secondary": { "light": "#FF6B3FD9", "dark": "#FF7C4DFF" },
   "success": { "light": "#FF2E7D32", "dark": "#FF66BB6A" },
   "warning": { "light": "#FFA15C00", "dark": "#FFFFB74D" },
@@ -43,8 +43,8 @@
  "modes": {
   "light": { "doc": "Only the light values, as plain colours: no themed-colour ops, for a document that is always light." },
   "dark": { "doc": "Only the dark values, as plain colours (the library's look before themed colours)." },
-  "mono": {
-   "doc": "Black, white and one grey, light on black: for always-on displays and OLED (mostly black, thin strokes, few lit pixels), with no animation and no continuous repaint. mono-inverted is the same look dark on white, for e-ink. @theme.mono is 1: components draw their mono variant, with state shown by shape (outlined or filled, a tick, the thumb's side) instead of colour.",
+  "mono-dark": {
+   "doc": "Black, white and one grey, light on black: for always-on displays and OLED (mostly black, thin strokes, few lit pixels), with no animation and no continuous repaint. mono-light is the same look dark on white, for e-ink. @theme.mono is 1: components draw their mono variant, with state shown by shape (outlined or filled, a tick, the thumb's side) instead of colour.",
    "colors": {
     "background": "#FF000000",
     "surface": "#FF000000",
@@ -68,8 +68,8 @@
    },
    "numbers": { "mono": 1 }
   },
-  "mono-inverted": {
-   "doc": "The mono palette inverted, for reflective displays (e-ink, memory LCD) and print: white paper, black text and strokes, and one grey (#616161, 6.2:1 on white, for muted text, outlines, tracks and disabled). The same mono variants (@theme.mono is 1) and no motion. Mono's 'few lit pixels' becomes 'little ink': the same outlined surfaces, now black rings on white.",
+  "mono-light": {
+   "doc": "The mono-dark palette inverted, for reflective displays (e-ink, memory LCD) and print: white paper, black text and strokes, and one grey (#616161, 6.2:1 on white, for muted text, outlines, tracks and disabled). The same mono variants (@theme.mono is 1) and no motion. Mono-dark's 'few lit pixels' becomes 'little ink': the same outlined surfaces, now black rings on white.",
    "colors": {
     "background": "#FFFFFFFF",
     "surface": "#FFFFFFFF",

@@ -2,9 +2,9 @@
  "header": {
   "apiLevel": 7,
   "width": 300,
-  "height": 210,
+  "height": 240,
   "profiles": 513,
-  "contentDescription": "BatteryIndicator component: the host battery level, then 95, 40 and 10 percent, and a large icon without the percentage"
+  "contentDescription": "BatteryIndicator component: the host battery level and charging state, then 95, 40 and 18 percent, 54 and 5 percent charging, and a large icon without the percentage"
  },
  "resources": {
   "variables": {
@@ -12,8 +12,135 @@
     "value": 76,
     "export": true
    },
+   "charging": {
+    "value": 0,
+    "export": true
+   },
    "batteryindicator1_lv": "clamp(0, 100, @battery)",
-   "batteryindicator5_lv": "clamp(0, 100, @battery)"
+   "batteryindicator1_lc": "@batteryindicator1_lv + 100 * @charging",
+   "batteryindicator7_lv": "clamp(0, 100, @battery)",
+   "batteryindicator7_lc": "@batteryindicator7_lv + 100 * @charging"
+  },
+  "paths": {
+   "icon_bolt_rounded_filled": [
+    {
+     "type": "moveTo",
+     "x": 360,
+     "y": 600
+    },
+    {
+     "type": "lineTo",
+     "x": 236,
+     "y": 600
+    },
+    {
+     "type": "quadTo",
+     "x1": 212,
+     "y1": 600,
+     "x2": 200.5,
+     "y2": 578.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 189,
+     "y1": 557,
+     "x2": 203,
+     "y2": 537
+    },
+    {
+     "type": "lineTo",
+     "x": 502,
+     "y": 107
+    },
+    {
+     "type": "quadTo",
+     "x1": 512,
+     "y1": 93,
+     "x2": 528,
+     "y2": 87.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 544,
+     "y1": 82,
+     "x2": 561,
+     "y2": 88
+    },
+    {
+     "type": "quadTo",
+     "x1": 578,
+     "y1": 94,
+     "x2": 586,
+     "y2": 109
+    },
+    {
+     "type": "quadTo",
+     "x1": 594,
+     "y1": 124,
+     "x2": 592,
+     "y2": 141
+    },
+    {
+     "type": "lineTo",
+     "x": 560,
+     "y": 400
+    },
+    {
+     "type": "lineTo",
+     "x": 715,
+     "y": 400
+    },
+    {
+     "type": "quadTo",
+     "x1": 741,
+     "y1": 400,
+     "x2": 751.5,
+     "y2": 423
+    },
+    {
+     "type": "quadTo",
+     "x1": 762,
+     "y1": 446,
+     "x2": 745,
+     "y2": 466
+    },
+    {
+     "type": "lineTo",
+     "x": 416,
+     "y": 860
+    },
+    {
+     "type": "quadTo",
+     "x1": 405,
+     "y1": 873,
+     "x2": 389,
+     "y2": 877
+    },
+    {
+     "type": "quadTo",
+     "x1": 373,
+     "y1": 881,
+     "x2": 358,
+     "y2": 874
+    },
+    {
+     "type": "quadTo",
+     "x1": 343,
+     "y1": 867,
+     "x2": 334.5,
+     "y2": 852.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 326,
+     "y1": 838,
+     "x2": 328,
+     "y2": 821
+    },
+    {
+     "type": "close"
+    }
+   ]
   },
   "colors": {
    "background": {
@@ -35,6 +162,10 @@
    "success": {
     "light": "#FF2E7D32",
     "dark": "#FF66BB6A"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
    },
    "warning": {
     "light": "#FFA15C00",
@@ -84,7 +215,11 @@
           },
           {
            "semantics": {
-            "contentDescription": "Battery"
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Battery",
+             "id2": ", charging"
+            }
            }
           }
          ],
@@ -163,7 +298,7 @@
           {
            "conditionalOperations": {
             "condition": "lt",
-            "v1": "@batteryindicator1_lv",
+            "v1": "@batteryindicator1_lc",
             "v2": 50,
             "commands": [
              {
@@ -181,7 +316,7 @@
           {
            "conditionalOperations": {
             "condition": "lt",
-            "v1": "@batteryindicator1_lv",
+            "v1": "@batteryindicator1_lc",
             "v2": 20,
             "commands": [
              {
@@ -221,6 +356,76 @@
             "bottom": 16,
             "rx": 1,
             "ry": 1
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@charging",
+            "v2": 0.5,
+            "commands": [
+             {
+              "save": {
+               "commands": [
+                {
+                 "translate": {
+                  "dx": 9.04,
+                  "dy": 1.332
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": 0.018,
+                  "sy": 0.018
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.surface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 90
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "$paths.icon_bolt_rounded_filled"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "$paths.icon_bolt_rounded_filled"
+                 }
+                }
+               ]
+              }
+             }
+            ]
            }
           }
          ]
@@ -754,7 +959,7 @@
                 {
                  "conditionalOperations": {
                   "condition": "lt",
-                  "v1": 10,
+                  "v1": 18,
                   "v2": 50,
                   "commands": [
                    {
@@ -772,7 +977,7 @@
                 {
                  "conditionalOperations": {
                   "condition": "lt",
-                  "v1": 10,
+                  "v1": 18,
                   "v2": 20,
                   "commands": [
                    {
@@ -808,7 +1013,7 @@
                  "drawRoundRect": {
                   "left": 4,
                   "top": 4,
-                  "right": 6.72,
+                  "right": 8.896,
                   "bottom": 16,
                   "rx": 1,
                   "ry": 1
@@ -823,7 +1028,556 @@
                 "type": "textMerge",
                 "id1": {
                  "type": "textFromFloat",
-                 "value": 10,
+                 "value": 18,
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 4
+                },
+                "id2": "%"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "flow": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "padding": {
+            "end": 12,
+            "bottom": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 40
+                },
+                {
+                 "height": 20
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Battery",
+                   "id2": ", charging"
+                  }
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "batteryindicator5_k",
+                  "value": "min(componentWidth() / 40, componentHeight() / (40 * 0.5))"
+                 }
+                },
+                {
+                 "translate": {
+                  "dx": "(componentWidth() - 40 * @batteryindicator5_k) / 2",
+                  "dy": "(componentHeight() - 40 * 0.5 * @batteryindicator5_k) / 2"
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": "@batteryindicator5_k",
+                  "sy": "@batteryindicator5_k"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 34.2,
+                  "bottom": 19,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 36.2,
+                  "top": 6.4,
+                  "right": 40,
+                  "bottom": 13.6,
+                  "rx": 1.6,
+                  "ry": 1.6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 154,
+                  "v2": 50,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 154,
+                  "v2": 20,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 16.35,
+                     "top": 4.8,
+                     "right": 18.85,
+                     "bottom": 11.6,
+                     "rx": 1.25,
+                     "ry": 1.25
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 17.6,
+                     "cy": 14.4,
+                     "radius": 1.4
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 4,
+                  "top": 4,
+                  "right": 18.688,
+                  "bottom": 16,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "gt",
+                  "v1": 1,
+                  "v2": 0.5,
+                  "commands": [
+                   {
+                    "save": {
+                     "commands": [
+                      {
+                       "translate": {
+                        "dx": 9.04,
+                        "dy": 1.332
+                       }
+                      },
+                      {
+                       "scale": {
+                        "sx": 0.018,
+                        "sy": 0.018
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.surface"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 90
+                         },
+                         {
+                          "strokeJoin": "round"
+                         },
+                         {
+                          "strokeCap": "round"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_bolt_rounded_filled"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "style": "fill"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_bolt_rounded_filled"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": 54,
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 4
+                },
+                "id2": "%"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "padding": {
+            "end": 12,
+            "bottom": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                {
+                 "width": 40
+                },
+                {
+                 "height": 20
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Battery",
+                   "id2": ", charging"
+                  }
+                 }
+                }
+               ],
+               "commands": [
+                {
+                 "variable": {
+                  "name": "batteryindicator6_k",
+                  "value": "min(componentWidth() / 40, componentHeight() / (40 * 0.5))"
+                 }
+                },
+                {
+                 "translate": {
+                  "dx": "(componentWidth() - 40 * @batteryindicator6_k) / 2",
+                  "dy": "(componentHeight() - 40 * 0.5 * @batteryindicator6_k) / 2"
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": "@batteryindicator6_k",
+                  "sy": "@batteryindicator6_k"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 2
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 1,
+                  "top": 1,
+                  "right": 34.2,
+                  "bottom": 19,
+                  "rx": 4,
+                  "ry": 4
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 36.2,
+                  "top": 6.4,
+                  "right": 40,
+                  "bottom": 13.6,
+                  "rx": 1.6,
+                  "ry": 1.6
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.success"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 105,
+                  "v2": 50,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.warning"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "lt",
+                  "v1": 105,
+                  "v2": 20,
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.error"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRoundRect": {
+                     "left": 16.35,
+                     "top": 4.8,
+                     "right": 18.85,
+                     "bottom": 11.6,
+                     "rx": 1.25,
+                     "ry": 1.25
+                    }
+                   },
+                   {
+                    "drawCircle": {
+                     "cx": 17.6,
+                     "cy": 14.4,
+                     "radius": 1.4
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 4,
+                  "top": 4,
+                  "right": 5.36,
+                  "bottom": 16,
+                  "rx": 1,
+                  "ry": 1
+                 }
+                },
+                {
+                 "conditionalOperations": {
+                  "condition": "gt",
+                  "v1": 1,
+                  "v2": 0.5,
+                  "commands": [
+                   {
+                    "save": {
+                     "commands": [
+                      {
+                       "translate": {
+                        "dx": 9.04,
+                        "dy": 1.332
+                       }
+                      },
+                      {
+                       "scale": {
+                        "sx": 0.018,
+                        "sy": 0.018
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.surface"
+                         },
+                         {
+                          "style": "stroke"
+                         },
+                         {
+                          "strokeWidth": 90
+                         },
+                         {
+                          "strokeJoin": "round"
+                         },
+                         {
+                          "strokeCap": "round"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_bolt_rounded_filled"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onSurface"
+                         },
+                         {
+                          "style": "fill"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.icon_bolt_rounded_filled"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": 5,
                  "whole": 3,
                  "decimal": 0,
                  "flags": 4
@@ -863,27 +1617,31 @@
           },
           {
            "semantics": {
-            "contentDescription": "Battery"
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Battery",
+             "id2": ", charging"
+            }
            }
           }
          ],
          "commands": [
           {
            "variable": {
-            "name": "batteryindicator5_k",
+            "name": "batteryindicator7_k",
             "value": "min(componentWidth() / 72, componentHeight() / (72 * 0.5))"
            }
           },
           {
            "translate": {
-            "dx": "(componentWidth() - 72 * @batteryindicator5_k) / 2",
-            "dy": "(componentHeight() - 72 * 0.5 * @batteryindicator5_k) / 2"
+            "dx": "(componentWidth() - 72 * @batteryindicator7_k) / 2",
+            "dy": "(componentHeight() - 72 * 0.5 * @batteryindicator7_k) / 2"
            }
           },
           {
            "scale": {
-            "sx": "@batteryindicator5_k",
-            "sy": "@batteryindicator5_k"
+            "sx": "@batteryindicator7_k",
+            "sy": "@batteryindicator7_k"
            }
           },
           {
@@ -942,7 +1700,7 @@
           {
            "conditionalOperations": {
             "condition": "lt",
-            "v1": "@batteryindicator5_lv",
+            "v1": "@batteryindicator7_lc",
             "v2": 50,
             "commands": [
              {
@@ -960,7 +1718,7 @@
           {
            "conditionalOperations": {
             "condition": "lt",
-            "v1": "@batteryindicator5_lv",
+            "v1": "@batteryindicator7_lc",
             "v2": 20,
             "commands": [
              {
@@ -996,10 +1754,80 @@
            "drawRoundRect": {
             "left": 4,
             "top": 4,
-            "right": "4 + (72 * 0.88 - 8) * @batteryindicator5_lv / 100",
+            "right": "4 + (72 * 0.88 - 8) * @batteryindicator7_lv / 100",
             "bottom": 32,
             "rx": 4.2,
             "ry": 4.2
+           }
+          },
+          {
+           "conditionalOperations": {
+            "condition": "gt",
+            "v1": "@charging",
+            "v2": 0.5,
+            "commands": [
+             {
+              "save": {
+               "commands": [
+                {
+                 "translate": {
+                  "dx": 16.272,
+                  "dy": 2.3976
+                 }
+                },
+                {
+                 "scale": {
+                  "sx": 0.0324,
+                  "sy": 0.0324
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.surface"
+                   },
+                   {
+                    "style": "stroke"
+                   },
+                   {
+                    "strokeWidth": 90
+                   },
+                   {
+                    "strokeJoin": "round"
+                   },
+                   {
+                    "strokeCap": "round"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "$paths.icon_bolt_rounded_filled"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "$paths.icon_bolt_rounded_filled"
+                 }
+                }
+               ]
+              }
+             }
+            ]
            }
           }
          ]

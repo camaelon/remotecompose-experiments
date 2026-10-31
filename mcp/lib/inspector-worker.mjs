@@ -113,18 +113,29 @@ async function createSession() {
             if (v.type === "float") ctx.setNamedFloatOverride(name, Number(value));
             else if (v.type === "int") ctx.setNamedIntegerOverride(name, Math.trunc(Number(value)));
             else if (v.type === "string") ctx.setNamedStringOverride(name, String(value));
-            else if (v.type === "color") {
+            else if (v.type === "float_array") {
+                const xs = Array.isArray(value) ? value.map(Number) : String(value).split(/[\s,;[\]]+/).filter(Boolean).map(Number);
+                if (!xs.length || !xs.every(Number.isFinite)) throw new Error(`variables.${name}: a float array needs numbers`);
+                ctx.setNamedFloatArrayOverride(name, xs);
+            } else if (v.type === "color") {
                 const m = /^#?([0-9a-f]{6}|[0-9a-f]{8})$/i.exec(String(value).trim());
                 if (!m) throw new Error(`variables.${name}: colour needs #RRGGBB or #AARRGGBB`);
                 ctx.setNamedColorOverride(name, (m[1].length === 6 ? 0xff000000 + parseInt(m[1], 16) : parseInt(m[1], 16)) | 0);
             } else throw new Error(`variables.${name}: ${v.type} variables cannot be set`);
         }
+        // Run the data pass again, as a host that sets its values before the first frame (and
+        // rc2image's --var) does: after load only the shown panes repaint, so an op shared by a
+        // hidden stateLayout pane (json2rc writes identical text objects once) kept its
+        // load-time value — an AQI read "55" for 480 (EXAMPLES_FINDINGS U63).
+        if (Object.keys(vars ?? {}).length) { try { doc.applyDataOperations(ctx); } catch {} }
     };
     player.startTime = 0;
+    S.flags = [];   // per frame: did an operation ask for an immediate repaint during it?
     S.paint = () => {
         const t = S.frame / fps;
         RC.pinClock(player, clock0 + t);
         player.renderFrame(t * 1000);
+        try { S.flags.push(!!player.paintContext?.doesNeedsRepaint?.()); } catch { S.flags.push(null); }
         S.frame++;
     };
     S.frames = (n) => { for (let i = 0; i < n; i++) S.paint(); };
@@ -166,6 +177,9 @@ async function createSession() {
     S.setSystemVariables = (sv) => { for (const [id, v] of Object.entries(sv ?? {})) ctx.overrideFloat(+id, +v); };
     S.setSystemVariables(O.system_variables);
     RC.pinClock(player, clock0);
+    // Texts computed from the clock or a system value (a countdown, a UTC offset) were made at
+    // load, before these pins: run the data pass again so they read the pinned values.
+    try { doc.applyDataOperations(ctx); } catch {}
     player.resize(width, height);   // lays out (and paints once at wall-clock animation time)
     S.paint();                      // frame 0, at the pinned time
     return S;
@@ -258,18 +272,64 @@ function layoutComponents() {
 }
 
 function repaint() {
-    const a = RP.analyzeRepaintSchedule(doc, player);
+    // The document's own clock (pinned: RC.pinClock's epoch is 2026-01-01 00:00 local), so the
+    // "next minute boundary" agrees with the delay the document asked for.
+    const a = RP.analyzeRepaintSchedule(doc, player, new Date(2026, 0, 1).getTime() + (clock0 + (main?.frame ?? 0) / fps) * 1000);
     return {
         verdict: a.verdict, delay_ms: a.delayMs, requested: a.requested,
         causes: (a.causes ?? []).map((c) => ({
             kind: c.kind, label: c.label, value: c.value, winning: Boolean(c.winning), subsumed: Boolean(c.subsumed),
-            detail: c.detail, ops: (c.ops ?? []).slice(0, 10).map((o) => opRef(o.op ?? o)).filter(Boolean),
+            detail: c.detail, ops: (c.ops ?? []).slice(0, 10).map((o) => (o && o.component ? o : opRef(o.op ?? o))).filter(Boolean),
         })),
     };
 }
 
+// Components hidden right now (GONE, or inside a GONE ancestor: a fitBox's rejected
+// alternatives, a visibility-switched one): they take no tap and are no target.
+function hiddenComponentIds() {
+    const hidden = new Set();
+    try {
+        const comps = layoutComponents();
+        const byKey = new Map(comps.map((c) => [c.key, c]));
+        const goneSelf = (c) => {
+            const op = c.op;
+            const v = op?.mVisibility;
+            if (typeof v === "number") { if (v === 0) return true; if ((v >> 4) > 0 && (v & 16) === 16) return true; }
+            return typeof op?.isVisible === "function" ? !op.isVisible() : false;
+        };
+        const memo = new Map();
+        const gone = (c) => {
+            if (memo.has(c.key)) return memo.get(c.key);
+            const p = c.parentKey ? byKey.get(c.parentKey) : null;
+            const g = goneSelf(c) || (p ? gone(p) : false);
+            memo.set(c.key, g);
+            return g;
+        };
+        for (const c of comps) if (gone(c) && typeof c.cid === "number") hidden.add(c.cid);
+    } catch {}
+    return hidden;
+}
+
+// A target's box is its laid-out component's box (what the layout task reports and what a tap
+// hits): the interaction analysis's own bounds drifted by the parents' padding (a button in a
+// padded flow reported 16 px to the right, so interact tapped beside it).
+function withLayoutBounds(targets) {
+    let byId = null;
+    try { byId = new Map(layoutComponents().filter((c) => typeof c.cid === "number").map((c) => [c.cid, c])); } catch { return targets; }
+    for (const t of targets) {
+        const c = typeof t.componentId === "number" ? byId.get(t.componentId) : null;
+        if (!c || !t.bounds) continue;
+        const b = { ...t.bounds, x: c.globalX, y: c.globalY, w: c.width, h: c.height };
+        b.cx = b.x + b.w / 2; b.cy = b.y + b.h / 2;
+        if ("left" in t.bounds) { b.left = b.x; b.top = b.y; b.right = b.x + b.w; b.bottom = b.y + b.h; }
+        t.bounds = b;
+    }
+    return targets;
+}
+
 function interactionTargets() {
-    return IA.collectInteractionTargets(doc).map((t, i) => ({
+    const hidden = hiddenComponentIds();
+    return withLayoutBounds(IA.collectInteractionTargets(doc).filter((t) => !(typeof t.componentId === "number" && hidden.has(t.componentId)))).map((t, i) => ({
         target: i, kind: t.kind,
         ...(t.componentName ? { component: t.componentName, component_id: t.componentId } : {}),
         ...(t.areaId !== undefined ? { area_id: t.areaId, content_description: t.contentDescription ?? null } : {}),
@@ -283,12 +343,30 @@ function interactionTargets() {
 
 function accessibility() {
     const a = ACC.buildAccessibilityTree(doc);
+    // A screen reader never reaches a hidden component (a stateLayout's other panes, a
+    // fitBox's rejected alternatives): they hold stale values (an AQI pane said 55 for 480).
+    const hidden = hiddenComponentIds();
+    const shown = a.nodes.filter((n) => !(typeof n.componentId === "number" && hidden.has(n.componentId)));
+    // The tree's own bounds add a parent's padding again (as interactions did, U67): take each
+    // component's box from the layout.
+    try {
+        const byId = new Map(layoutComponents().filter((c) => typeof c.cid === "number").map((c) => [c.cid, c]));
+        for (const n of shown) {
+            const c = typeof n.componentId === "number" ? byId.get(n.componentId) : null;
+            if (c && n.bounds) n.bounds = { ...n.bounds, x: c.globalX, y: c.globalY, w: c.width, h: c.height,
+                ...("left" in n.bounds ? { left: c.globalX, top: c.globalY, right: c.globalX + c.width, bottom: c.globalY + c.height } : {}) };
+        }
+    } catch {}
     return {
         has_semantics: a.hasSemantics, document_description: a.documentDescription || header().content_description,
-        nodes: a.nodes.map((n) => ({
+        ...(shown.length < a.nodes.length ? { hidden_nodes_skipped: a.nodes.length - shown.length } : {}),
+        nodes: shown.map((n) => ({
             component: n.name, id: n.componentId, depth: n.depth, bounds: bounds(n.bounds),
-            role: n.role, clickable: n.clickable || Boolean(n.semanticsClickable), enabled: n.enabled,
-            content_description: n.contentDescription, text: n.semanticsText ?? n.ownText ?? null, state: n.stateDescription,
+            role: n.role === 255 ? null : n.role, clickable: n.clickable || Boolean(n.semanticsClickable), enabled: n.enabled,
+            content_description: n.contentDescription,
+            // A canvas's own texts are drawings (labels, a loop's name), not what a screen
+            // reader announces: only its semantics speak for it.
+            text: n.semanticsText ?? (/Canvas/.test(n.name ?? "") ? null : n.ownText) ?? null, state: n.stateDescription,
             has_semantics: n.hasSemantics,
         })),
         click_areas: (a.areas ?? []).map((x) => ({ id: x.areaId ?? x.id, content_description: x.contentDescription ?? null, bounds: bounds(x.bounds) })),
@@ -325,9 +403,12 @@ const LEAF = /Text|Image|Bitmap|Canvas|Spacer|Video|Shader|Custom/;
 // leaf components have no children by design. Deep nesting is advice, not a warning.
 function layoutDiagnostics(comps) {
     const byKey = new Map(comps.map((c) => [c.key, c]));
+    // A hidden component (a fitBox's rejected alternative, a gone one) has no size to speak of.
+    const hidden = hiddenComponentIds();
     return LI.runLayoutDiagnostics(comps).filter((d) => {
         const c = byKey.get(d.compKey);
         if (!c) return true;
+        if (typeof c.cid === "number" && hidden.has(c.cid)) return false;
         if (d.type === "empty_container" && LEAF.test(c.name)) return false;
         // An empty Box is a spacer by convention (the format's own advice between weighted
         // children); an empty Column/Row/Flow is still worth a word.
@@ -335,7 +416,43 @@ function layoutDiagnostics(comps) {
         if (d.type === "zero_size" && c.childCount === 0 && c.drawOpCount === 0 && !c.text) return false;
         if (d.type === "zero_size" && inInactiveAlternative(c, byKey)) return false;
         return true;
-    }).map((d) => (d.type === "deep_nesting" ? { ...d, severity: "info" } : d));
+    }).map((d) => (d.type === "deep_nesting" ? { ...d, severity: "info" } : d))
+        .concat(fitBoxDiagnostics(comps, byKey, hidden));
+}
+
+// A fitBox shows its first child whose minimum size fits the box, or nothing: say which, with
+// each child's minimum against the box, so a blank widget is explained (a run built one whose
+// seven 32 dp discs could not fit a 206 dp box and read the stale sizes as a layout).
+function fitBoxDiagnostics(comps, byKey, hidden) {
+    const out = [];
+    const kids = new Map();
+    for (const c of comps) { const k = kids.get(c.parentKey) ?? []; k.push(c); kids.set(c.parentKey, k); }
+    const isHidden = (c) => typeof c.cid === "number" && hidden.has(c.cid);
+    const minSize = (c) => { try { return [round(c.op.minIntrinsicWidth()), round(c.op.minIntrinsicHeight())]; } catch { return null; } };
+    for (const c of comps) {
+        // (A fitBox nothing fits in is GONE itself; only one inside a hidden ancestor is skipped.)
+        const parent = c.parentKey ? byKey.get(c.parentKey) : null;
+        if (!/FitBox/.test(c.name) || (parent && isHidden(parent))) continue;
+        const ch = kids.get(c.key) ?? [];
+        if (!ch.length) continue;
+        const pad = c.padding ?? {};
+        const boxW = round(c.width - (pad.left ?? 0) - (pad.right ?? 0)), boxH = round(c.height - (pad.top ?? 0) - (pad.bottom ?? 0));
+        const shown = ch.findIndex((k) => !isHidden(k));
+        const need = ch.map((k, i) => { const m = minSize(k); return `${i + 1}: ${k.name}#${k.cid ?? k.id}${m ? ` needs ${m[0]}×${m[1]}` : ""}`; }).join(", ");
+        // Hidden by an ancestor (a stateLayout's other state, a visibility) rather than by its
+        // own children: a child that would fit, or a box never laid out, says so.
+        const mins = ch.map(minSize);
+        if (shown < 0 && (boxW <= 0.5 || boxH <= 0.5 || mins.some((m) => m && m[0] <= boxW + 0.5 && m[1] <= boxH + 0.5))) continue;
+        if (shown < 0) {
+            const title = `fitBox #${c.cid ?? c.id} shows NOTHING: no child fits its ${boxW}×${boxH} box (children ${need})`;
+            out.push({ severity: "error", type: "fitbox_no_fit", compKey: c.key, compName: c.name, title,
+                message: `${title}. Make the last child fit the smallest size: size it from the box (a @variable over windowWidth(), fillMaxWidth, wrap text).` });
+        } else {
+            const title = `fitBox #${c.cid ?? c.id} (${boxW}×${boxH}) shows child ${shown + 1} of ${ch.length} (${need})`;
+            out.push({ severity: "info", type: "fitbox_shows", compKey: c.key, compName: c.name, title, message: title });
+        }
+    }
+    return out;
 }
 
 // Component.Visibility: GONE 0, VISIBLE 1, INVISIBLE 2, or an override in the high bits
@@ -456,6 +573,22 @@ function audit() {
             .map((op) => op.mId ?? op.id ?? op.mColorId).filter((x) => typeof x === "number"));
         unusedDefs = unusedDefs.filter((id) => !colourIds.has(id));
     } catch {}
+    // Paint fields read variables too (an alpha, a stroke width, a colour id), packed in the
+    // paint bundle the usage scan does not decode: walk each bundle's ids, changing nothing.
+    try {
+        const readByPaint = new Set();
+        const view = new DataView(new ArrayBuffer(4));
+        const remap = {
+            resolveId: (id) => { readByPaint.add(id); return id; },
+            resolveNanIdBits: (bits) => {
+                view.setInt32(0, bits);
+                if (Number.isNaN(view.getFloat32(0))) readByPaint.add(bits & 0x3FFFFF);
+                return bits;
+            },
+        };
+        for (const op of ops) if (op?.mPaintBundle?.resolveIds) op.mPaintBundle.resolveIds(remap);
+        unusedDefs = unusedDefs.filter((id) => !readByPaint.has(id));
+    } catch {}
     const names = new Map();
     try {
         for (const op of ops) if (/NamedVariable/.test(nameOf(op)) && op.mVarName !== undefined) names.set(op.mVarId ?? op.varId, op.mVarName ?? op.varName);
@@ -497,8 +630,15 @@ function audit() {
     }
 
     // Repaint.
+    // Judged after a second of frames, from the flag per frame: a layout animation that ends
+    // is not "every frame" (the first frame alone said so for every fitBox document).
+    frames(60);
     const rp = repaint();
-    if (rp.verdict === "continuous") {
+    const flags = main.flags ?? [];
+    const tail = flags.slice(-10);
+    const everyFrameCause = rp.causes.some((c) => c.winning && /every frame/i.test(String(c.value ?? "")));
+    const everyFrame = rp.verdict === "continuous" && (everyFrameCause || !(tail.length === 10 && tail.every((f) => f === false)));
+    if (everyFrame) {
         const w = rp.causes.find((c) => c.winning);
         add("info", "repaint_continuous", "Repaints every frame",
             `${w ? w.label + ". " : ""}Fine for an animation; for a document that should be static it costs battery.`, { cause: w ?? null });
@@ -573,6 +713,18 @@ function audit() {
 
     const order = { error: 0, warning: 1, info: 2 };
     findings.sort((a, b) => (order[a.severity] ?? 3) - (order[b.severity] ?? 3));
+    // A component named by its id gets its JSON path too (O.paths, from json2rc's symbols).
+    if (O.paths) {
+        const withPath = (x) => {
+            if (!x || typeof x !== "object") return x;
+            const id = typeof x.id === "number" ? x.id : typeof x.component_id === "number" ? x.component_id : null;
+            return id !== null && O.paths[id] && !x.path ? { ...x, path: O.paths[id] } : x;
+        };
+        for (const f of findings) {
+            if (Array.isArray(f.examples)) f.examples = f.examples.map(withPath);
+            if (typeof f.message === "string") f.message = f.message.replace(/#(-\d+)\b(?! \()/g, (m, id) => (O.paths[id] ? `${m} (${O.paths[id]})` : m));
+        }
+    }
     const counts = { error: 0, warning: 0, info: 0 };
     for (const f of findings) counts[f.severity] = (counts[f.severity] ?? 0) + 1;
     return { counts, findings };
@@ -625,7 +777,9 @@ function runCoverage(n) {
     const c = PF.computeCoverage(doc);
     return {
         frames: prof.frames, total: c.total, executed: c.executed.length,
-        never: c.never.map((e) => ({ index: e.idx, op: e.name, params: params(e.op, 4) })),
+        // Actions (what a tap or touch runs: value changes, host actions) run on input only:
+        // not reaching them in a run without input is expected, not dead code.
+        never: c.never.filter((e) => !/Action|ValueFloat|ValueInteger|ValueString|ValueChange/i.test(String(e.name))).map((e) => ({ index: e.idx, op: e.name, params: params(e.op, 4) })),
     };
 }
 
@@ -694,20 +848,26 @@ function layoutTree(maxDepth) {
         kids.set(c.parentKey, k);
     }
     let count = 0;
+    // A hidden component (GONE: a fitBox's rejected alternative, a visibility-switched one) is
+    // reported as such, with its subtree folded: its bounds are stale measures, not a layout.
+    const hidden = hiddenComponentIds();
+    const countAll = (c) => (kids.get(c.key) ?? []).reduce((n, k) => n + 1 + countAll(k), 0);
     const node = (c) => {
         count++;
         const mods = (() => { try { return CW.modifiersOf(c.op).map(nameOf); } catch { return []; } })();
+        const isHidden = typeof c.cid === "number" && hidden.has(c.cid);
         const n = {
             component: c.name, id: c.cid ?? c.id, depth: c.depth,
             bounds: { x: round(c.globalX), y: round(c.globalY), w: round(c.width), h: round(c.height) },
             ...(c.padding && (c.padding.top || c.padding.right || c.padding.bottom || c.padding.left) ? { padding: c.padding } : {}),
             ...(mods.length ? { modifiers: mods } : {}),
             ...(c.text !== undefined ? { text: c.text } : {}),
-            ...(c.op?.mVisibility !== undefined && c.op.mVisibility !== 1 ? { visibility: c.op.mVisibility } : {}),
+            ...(isHidden ? { hidden: true } : {}),
         };
         const ch = kids.get(c.key) ?? [];
         if (ch.length) {
-            if (maxDepth !== undefined && c.depth >= maxDepth) n.children_hidden = ch.length;
+            if (isHidden) n.children_not_laid_out = countAll(c);
+            else if (maxDepth !== undefined && c.depth >= maxDepth) n.children_hidden = ch.length;
             else n.children = ch.map(node);
         }
         return n;
@@ -722,8 +882,8 @@ function outline(nodes, indent = "") {
         const b = n.bounds;
         lines.push(`${indent}${n.component}#${n.id} [${b.x},${b.y} ${b.w}×${b.h}]` +
             (n.text ? ` "${String(n.text).slice(0, 40)}"` : "") + (n.modifiers ? ` · ${n.modifiers.join(", ")}` : "") +
-            (n.visibility !== undefined ? ` · visibility ${n.visibility}` : "") +
-            (n.children_hidden ? ` · +${n.children_hidden} hidden` : ""));
+            (n.hidden ? ` · HIDDEN (not drawn${n.children_not_laid_out ? `; ${n.children_not_laid_out} children not laid out` : ""})` : "") +
+            (n.children_hidden ? ` · +${n.children_hidden} deeper` : ""));
         if (n.children) lines.push(...outline(n.children, indent + "  "));
     }
     return lines;
@@ -745,7 +905,9 @@ const TASKS = {
             byte_categories: bc.categories,
             components: { total: tm.totalComponents, max_depth: tm.maxDepth },
             variables: variableStats(),
-            host_variables: namedVars(),
+            // Colours are the theme's (the host may re-colour them), listed apart from the data.
+            host_variables: namedVars().filter((v) => v.type !== "color"),
+            theme_colors: namedVars().filter((v) => v.type === "color").map((v) => v.name),
             interactions: { total: targets.length, click: targets.filter((t) => t.kind === "click").length, area: targets.filter((t) => t.kind === "area").length, touch: targets.filter((t) => t.kind === "touch").length },
             accessibility: { has_semantics: acc.has_semantics, labeled_nodes: acc.nodes.filter((n) => n.content_description || n.text).length },
             theme,
@@ -804,6 +966,17 @@ const TASKS = {
         };
     },
     layout() {
+        // Half a second of frames first: a size that depends on another component's
+        // (componentWidth() in a modifier) is right from the frame after that component's
+        // layout, and the layout animation to it has ended, as on a host.
+        frames(30);
+        let win = null;
+        // What the document sees as the host's surface: windowWidth()/windowHeight().
+        try { win = { surface: [main.ctx.mWidth, main.ctx.mHeight], windowWidth: main.ctx.getFloat(5), windowHeight: main.ctx.getFloat(6) }; } catch {}
+        const base = TASKS.layoutBase();
+        return win ? { ...base, window: win } : base;
+    },
+    layoutBase() {
         const t = layoutTree(O.max_depth);
         const comps = layoutComponents();
         const byKey = new Map(comps.map((c) => [c.key, c]));
@@ -837,9 +1010,14 @@ const TASKS = {
             })),
         };
     },
-    accessibility,
-    interactions() { return { layout_size: [width, height], targets: interactionTargets() }; },
+    // A frame or two first: a text computed from a host variable set by `variables` holds its
+    // load-time value until the data pass runs (a screen-reader report said 55 for an AQI of 480).
+    accessibility() { frames(2); return accessibility(); },
+    interactions() { return { layout_size: [width, height], hidden_components: hiddenComponentIds().size, targets: interactionTargets() }; },
     async interact() {
+        // Host actions the taps send (hostNamedAction): the app would receive these.
+        const hostActions = [];
+        try { doc.addActionCallback?.({ onAction: (name, value) => hostActions.push({ name, value: value ?? null }) }); } catch {}
         // Two sessions on the same timeline: the actions run in one, and a baseline gets the
         // same waits but no input. What differs between them was caused by the input, not
         // by time passing (animations, clocks).
@@ -857,14 +1035,21 @@ const TASKS = {
                 continue;
             }
             const before = main.frame;
+            const KNOWN = ["target", "tap", "drag", "wait", "variables"];
+            if (!a || typeof a !== "object" || !Object.keys(a).some((k) => KNOWN.includes(k))) {
+                throw new Error(`actions[${k}]: ${JSON.stringify(a)} is not an action: use {"target": N}, {"tap": [x, y]}, {"drag": [x0, y0, x1, y1]}, {"wait": seconds} or {"variables": {...}}`);
+            }
             if (a.target !== undefined) {
-                const t = IA.collectInteractionTargets(doc)[a.target];
-                if (!t) throw new Error(`actions[${k}]: no target ${a.target} (inspect_interactions lists them)`);
+                // The same numbering as the interactions task: hidden components are no target.
+                const hiddenNow = hiddenComponentIds();
+                const visibleTargets = withLayoutBounds(IA.collectInteractionTargets(doc).filter((x) => !(typeof x.componentId === "number" && hiddenNow.has(x.componentId))));
+                const t = visibleTargets[a.target];
+                if (!t) throw new Error(`actions[${k}]: no target ${a.target} (the interactions task lists ${visibleTargets.length}, numbered from 0)`);
                 let handled;
                 if (t.kind === "area") { handled = doc.performClick?.(ctx, t.areaId, "") === true; main.paint(); }
                 else if (t.bounds) handled = main.tap(t.bounds.cx, t.bounds.cy) === true;
                 else throw new Error(`actions[${k}]: target ${a.target} is a ${t.kind} target; drag across it instead`);
-                log.push({ step: k, target: a.target, kind: t.kind, component: t.componentName ?? null,
+                log.push({ step: k, target: a.target, kind: t.kind, component: t.componentName ?? null, label: t.contentDescription ?? null,
                            at: t.bounds ? [round(t.bounds.cx), round(t.bounds.cy)] : null, handled: Boolean(handled) });
             } else if (a.tap) {
                 log.push({ step: k, tap: a.tap, handled: Boolean(main.tap(a.tap[0], a.tap[1])) });
@@ -916,19 +1101,41 @@ const TASKS = {
 
         const result = {
             layout_size: [width, height], steps: log, seconds: round((main.frame - 1) / fps, 3),
-            effect: changed.length || hostChanged.length || layoutChanges.structure_changed || layoutChanges.changed
+            effect: changed.length || hostChanged.length || hostActions.length || layoutChanges.structure_changed || layoutChanges.changed
                 ? "the input changed the document" : "no difference from the same timeline without input",
             changed_host_variables: hostChanged,
+            host_actions: hostActions,
             changed_variables: changed.slice(0, O.limit ?? 40), changed_variables_total: changed.length,
             layout_changes: layoutChanges,
-            repaint: repaint().verdict,
+            // At the end of the steps: an animation still easing repaints until it settles, which
+            // is not the document's idle state (inspect runtime judges that over many frames).
+            repaint: ((v) => v === "continuous" ? "continuous at the last step (an animation may still be easing; inspect runtime gives the settled verdict)" : v)(repaint().verdict),
         };
         if (O.include_layout) result.outline = outline(layoutTree(O.max_depth).tree).join("\n");
         return result;
     },
     runtime() {
-        const rp = repaint();
+        // The frames first: the verdict reads the state after them, and the per-frame samples
+        // tell a burst (an animation that ended) from a repaint every frame.
         const prof = runProfile(O.frames ?? 60);
+        const rp = repaint();
+        const flags = main.flags ?? [];
+        if (flags.length >= 20) {
+            const tail = flags.slice(-10), burst = flags.filter(Boolean).length;
+            rp.immediate_frames = { total: flags.length, flagged: burst, last10: tail.filter(Boolean).length };
+            // A listener on CONTINUOUS_SEC (or any cause the reference repaints for every
+            // frame) is continuous whatever the flags say: the flags only tell a layout
+            // animation that ended from one that goes on.
+            const everyFrameCause = (rp.causes ?? []).some((c) => c.winning && /every frame/i.test(String(c.value ?? "")));
+            if (rp.verdict === "continuous" && !everyFrameCause && tail.every((f) => f === false)) {
+                rp.verdict = "settled";
+                rp.requested = `an immediate repaint on ${burst} of ${flags.length} frames (an animation or a layout change), none in the last 10: not every frame`;
+            }
+        }
+        // Components a cause names get their JSON paths (O.paths, from json2rc's symbols).
+        if (O.paths && rp?.causes) for (const c of rp.causes) if (Array.isArray(c.ops)) {
+            c.ops = c.ops.map((o) => (o && typeof o.id === "number" && O.paths[o.id] ? { ...o, path: O.paths[o.id] } : o));
+        }
         const c = PF.computeCoverage(doc);
         return {
             repaint: rp, profile: prof,

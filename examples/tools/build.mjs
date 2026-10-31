@@ -27,9 +27,9 @@
 //
 // meta.check.render gives the canonical render (render.png). meta.check.renders adds more
 // (an entry with its own width/height is also a resize check: audited at that size),
-// each written to render-<name>.png: [{"name": "light", "theme": "light"}, {"name": "mono",
-// "componentTheme": "mono"}, ...]. An entry's keys are render_rc arguments over
-// check.render's; `componentTheme` (auto, light, dark, mono) expands the document's components
+// each written to render-<name>.png: [{"name": "light", "theme": "light"}, {"name": "mono-dark",
+// "componentTheme": "mono-dark"}, ...]. An entry's keys are render_rc arguments over
+// check.render's; `componentTheme` (auto, light, dark, mono-dark, mono-light) expands the document's components
 // in that mode instead, into a document of its own (doc.<name>.expanded.json, doc.<name>.rc),
 // which is converted, checked against the Java parser and rendered like the main one.
 

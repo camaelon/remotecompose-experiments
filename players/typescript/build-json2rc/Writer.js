@@ -211,6 +211,8 @@ class Writer {
         /** Set by the `spacedBy` modifier (raw float bits: it may be an expression): the next
          *  row/column writes it instead of 0 (RecordingModifier.spacedBy -> getSpacedBy). */
         this.spacedByBits = null;
+        /** Told of every component id handed out, so a parser can map ids to its source paths. */
+        this.onComponentId = null;
         /** The interning caches as each open pattern definition found them (RemoteComposeState's
          *  data scopes). The component-value cache is the writer's own, as in the reference. */
         this.dataScopes = [];
@@ -230,10 +232,14 @@ class Writer {
             const id = this.componentIdOverride;
             this.componentIdOverride = null;
             this.lastComponentId = id;
+            if (this.onComponentId)
+                this.onComponentId(id);
             return id;
         }
         this.componentId -= 1;
         this.lastComponentId = this.componentId;
+        if (this.onComponentId)
+            this.onComponentId(this.componentId);
         return this.componentId;
     }
     allocDataId() {
@@ -1097,6 +1103,19 @@ class Writer {
             this.buffer.writeInt(c);
         }
         return this.addThemedColorIds(lightId, darkId);
+    }
+    /** A COLOR_EXPRESSION with its four raw params (ColorExpression.apply): HSV_MODE (4) with
+     *  the alpha in the top half of param1 and hue/sat/value float bits, or ARGB_MODE (5) /
+     *  IDARGB_MODE (6). A fresh colour id; the players evaluate it and re-evaluate on change. */
+    addColorExpression(p1, p2, p3, p4) {
+        const retId = this.allocDataId();
+        this.buffer.start(exports.OP.COLOR_EXPRESSION);
+        this.buffer.writeInt(retId);
+        this.buffer.writeInt(p1 | 0);
+        this.buffer.writeInt(p2 | 0);
+        this.buffer.writeInt(p3 | 0);
+        this.buffer.writeInt(p4 | 0);
+        return retId;
     }
     /** RemoteComposeWriter.addThemedColor(lightId, darkId): a fresh colour id, set under
      *  THEME(DARK) and under THEME(LIGHT) by a COLOR_EXPRESSION (mode 3: id to id) with tween

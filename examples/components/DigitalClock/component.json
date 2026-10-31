@@ -1,7 +1,7 @@
 {
  "component": "DigitalClock",
- "version": 2,
- "summary": "HH:MM or HH:MM:SS from the host clock, in 24-hour or 12-hour format, with zero-padded fields.",
+ "version": 3,
+ "summary": "HH:MM or HH:MM:SS from the host clock, in 24-hour or 12-hour format (with AM/PM), fixed or chosen at run time by a host variable, with zero-padded fields.",
  "params": {
   "format": {
    "type": "enum",
@@ -11,13 +11,23 @@
    ],
    "default": "24h",
    "static": true,
-   "doc": "24h: 00..23 zero-padded; 12h: 1..12 without a pad (no AM/PM marker)"
+   "doc": "24h: 00..23 zero-padded; 12h: 1..12 without a pad, followed by a smaller AM or PM (showAmPm). Fixed when the document is built; to follow the device's 12/24-hour setting, pass use24h"
+  },
+  "use24h": {
+   "type": "float",
+   "doc": "The format chosen at run time: a \"@variable\" the app sets from the device's 12/24-hour preference (1 = 24-hour, 0 = 12-hour with AM/PM), e.g. \"@use24h\". When given it overrides format: both hour fields (and the AM/PM marker) are written and the variable shows one. For a fixed format use format instead"
   },
   "showSeconds": {
    "type": "bool",
    "default": false,
    "static": true,
    "doc": "Append :SS (repaints every second instead of every minute)"
+  },
+  "showAmPm": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "In 12-hour format (format 12h, or use24h = 0), show AM or PM after the time, at 0.4 x fontSize: 12 AM at 00:xx, 12 PM at 12:xx. false hides it"
   },
   "fontSize": {
    "type": "float",
@@ -34,6 +44,26 @@
    "type": "color",
    "default": "@colors.primary",
    "doc": "The colons"
+  }
+ },
+ "locals": {
+  "pm": {
+   "$if": "showAmPm",
+   "then": {
+    "$if": "use24h",
+    "then": "floor(timeInHr() / 12)",
+    "else": {
+     "$if": "format == '12h'",
+     "then": "floor(timeInHr() / 12)",
+     "else": 0
+    }
+   },
+   "else": 0
+  },
+  "f24": {
+   "$if": "use24h",
+   "then": "max(0, min(1, @use24h))",
+   "else": 0
   }
  },
  "capabilities": [
@@ -57,33 +87,76 @@
    ],
    "children": [
     {
-     "$if": "format == '24h'",
-     "then": {
-      "text": {
-       "value": {
-        "type": "textFromFloat",
-        "value": "floor(timeInHr())",
-        "whole": 2,
-        "decimal": 0,
-        "flags": 12
-       },
-       "fontSize": "@fontSize",
-       "fontWeight": 300,
-       "color": "@color"
+     "$if": "use24h",
+     "then": [
+      {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "floor(timeInHr())",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@color",
+        "modifiers": [
+         {
+          "visibility": "@f24 * 1"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "(floor(timeInHr()) + 11) % 12 + 1",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 4
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@color",
+        "modifiers": [
+         {
+          "visibility": "1 - @f24"
+         }
+        ]
+       }
       }
-     },
+     ],
      "else": {
-      "text": {
-       "value": {
-        "type": "textFromFloat",
-        "value": "(floor(timeInHr()) + 11) % 12 + 1",
-        "whole": 2,
-        "decimal": 0,
-        "flags": 4
-       },
-       "fontSize": "@fontSize",
-       "fontWeight": 300,
-       "color": "@color"
+      "$if": "format == '24h'",
+      "then": {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "floor(timeInHr())",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 12
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@color"
+       }
+      },
+      "else": {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "(floor(timeInHr()) + 11) % 12 + 1",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 4
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 300,
+        "color": "@color"
+       }
       }
      }
     },
@@ -142,13 +215,108 @@
        }
       }
      }
+    },
+    {
+     "$if": "showAmPm",
+     "then": {
+      "$if": "use24h",
+      "then": [
+       {
+        "text": {
+         "value": "AM",
+         "fontSize": "@fontSize * 0.4",
+         "color": "@color",
+         "modifiers": [
+          {
+           "padding": [
+            "@fontSize * 0.12",
+            0,
+            0,
+            0
+           ]
+          },
+          {
+           "visibility": "(1 - @pm) * (1 - @f24)"
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "PM",
+         "fontSize": "@fontSize * 0.4",
+         "color": "@color",
+         "modifiers": [
+          {
+           "padding": [
+            "@fontSize * 0.12",
+            0,
+            0,
+            0
+           ]
+          },
+          {
+           "visibility": "@pm * (1 - @f24)"
+          }
+         ]
+        }
+       }
+      ],
+      "else": {
+       "$if": "format == '12h'",
+       "then": [
+        {
+         "text": {
+          "value": "AM",
+          "fontSize": "@fontSize * 0.4",
+          "color": "@color",
+          "modifiers": [
+           {
+            "padding": [
+             "@fontSize * 0.12",
+             0,
+             0,
+             0
+            ]
+           },
+           {
+            "visibility": "1 - @pm"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "PM",
+          "fontSize": "@fontSize * 0.4",
+          "color": "@color",
+          "modifiers": [
+           {
+            "padding": [
+             "@fontSize * 0.12",
+             0,
+             0,
+             0
+            ]
+           },
+           {
+            "visibility": "@pm * 1"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
     }
    ]
   }
  },
  "pitfalls": [
   "flags 12 (PAD_PRE_ZERO) makes 9 print as 09; flags 4 (PAD_PRE_NONE) drops the pad, for a 12-hour hour",
-  "12-hour hour: (floor(timeInHr()) + 11) % 12 + 1 gives 1..12",
-  "Each field is its own text in a row, so a proportional font makes the clock's width change as digits change; give the row a fixed width if it must not move"
+  "12-hour hour: (floor(timeInHr()) + 11) % 12 + 1 gives 1..12 (12 at 00:xx and 12:xx); PM is floor(timeInHr() / 12) = 1, so 00:05 is 12:05 AM, 11:59 AM, 12:00 PM and 23:59 11:59 PM",
+  "The device's 12/24-hour preference is not visible to a document: the app must send it, as the variable passed to use24h. Both hour texts are then in the document, one GONE, and the AM/PM marker is hidden in 24-hour mode",
+  "Each field is its own text in a row, so a proportional font makes the clock's width change as digits change; give the row a fixed width if it must not move",
+  "AM and PM are two texts, one GONE (an integer visibility from floor(timeInHr() / 12)); the marker is centred on the digits' row, not on their baseline"
  ]
 }

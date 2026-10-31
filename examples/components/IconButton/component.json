@@ -1,7 +1,7 @@
 {
  "component": "IconButton",
- "version": 1,
- "summary": "A round 40 dp button holding only an icon: standard (icon alone), filled or outlined. Labelled for accessibility from its label; enabled: false dims it and drops the click.",
+ "version": 3,
+ "summary": "A round button holding only an icon (40 dp, or `size`): standard (icon alone), filled or outlined, in a touch target of at least 48 dp. Labelled for accessibility from its label; enabled (true/false, or a 0/1 variable or expression read at run time) dims it and drops the click.",
  "params": {
   "label": {
    "type": "string",
@@ -19,6 +19,12 @@
    "static": true,
    "doc": "standard: the icon alone (toolbars); filled: a solid circle (the main action); outlined: a 1.5 dp ring"
   },
+  "size": {
+   "type": "float",
+   "default": 40,
+   "static": true,
+   "doc": "Diameter of the round face in dp (32 to 56 is usual); the icon is scaled by size / 40, so draw it at 24 dp as for the default. Below 48 the face gets transparent padding up to a 48 dp touch target"
+  },
   "color": {
    "type": "color",
    "default": "@colors.primary",
@@ -33,7 +39,7 @@
    "type": "bool",
    "default": true,
    "static": true,
-   "doc": "false: the icon is dimmed, the click dropped, and it is announced as disabled"
+   "doc": "true/false: fixed when expanded (false: the icon is dimmed, the click dropped, announced as disabled). Or a runtime value, \"@canSend\" or an expression, exactly 0 or 1: the button follows it while it plays"
   },
   "onClick": {
    "type": "action",
@@ -113,42 +119,33 @@
   }
  },
  "body": {
-  "$if": "style == 'standard'",
+  "$if": "!enabled",
   "then": {
-   "box": {
-    "horizontalAlignment": "center",
-    "verticalAlignment": "center",
-    "modifiers": [
-     {
-      "size": [
-       "@theme.control_height",
-       "@theme.control_height"
-      ]
-     },
-     {
-      "clip": 20
-     },
-     {
-      "semantics": {
-       "contentDescription": "@label",
-       "enabled": "@enabled",
-       "clickable": "@enabled"
-      }
-     },
-     {
-      "$if": "enabled",
-      "then": {
-       "onClick": "@onClick"
-      }
-     }
-    ],
-    "children": [
-     {
-      "$if": "enabled",
-      "then": {
-       "$slot": "icon"
+   "$if": "style == 'standard'",
+   "then": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "padding": "max(0, (48 - @size) / 2)"
       },
-      "else": {
+      {
+       "size": "@size"
+      },
+      {
+       "clip": "@size / 2"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "enabled": false,
+        "clickable": false
+       }
+      }
+     ],
+     "children": [
+      {
        "box": {
         "modifiers": [
          {
@@ -159,80 +156,82 @@
         ],
         "children": [
          {
-          "$slot": "icon"
+          "$if": "size != '40'",
+          "then": {
+           "box": {
+            "modifiers": [
+             {
+              "graphicsLayer": {
+               "scaleX": "@size / 40",
+               "scaleY": "@size / 40"
+              }
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             }
+            ]
+           }
+          },
+          "else": {
+           "$slot": "icon"
+          }
          }
         ]
        }
       }
-     }
-    ]
-   }
-  },
-  "else": {
-   "$if": "style == 'outlined'",
-   "then": {
-    "box": {
-     "modifiers": [
-      {
-       "size": [
-        "@theme.control_height",
-        "@theme.control_height"
-       ]
-      },
-      {
-       "clip": 20
-      },
-      {
-       "$if": "enabled",
-       "then": {
-        "background": "@color"
+     ]
+    }
+   },
+   "else": {
+    "$if": "style == 'outlined'",
+    "then": {
+     "box": {
+      "modifiers": [
+       {
+        "padding": "max(0, (48 - @size) / 2)"
        },
-       "else": {
+       {
+        "size": "@size"
+       },
+       {
+        "clip": "@size / 2"
+       },
+       {
         "background": "@colors.disabled"
+       },
+       {
+        "padding": {
+         "$if": "theme.mono",
+         "then": 1,
+         "else": 1.5
+        }
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "enabled": false,
+         "clickable": false
+        }
        }
-      },
-      {
-       "padding": {
-        "$if": "theme.mono",
-        "then": 1,
-        "else": 1.5
-       }
-      },
-      {
-       "semantics": {
-        "contentDescription": "@label",
-        "enabled": "@enabled",
-        "clickable": "@enabled"
-       }
-      },
-      {
-       "$if": "enabled",
-       "then": {
-        "onClick": "@onClick"
-       }
-      }
-     ],
-     "children": [
-      {
-       "box": {
-        "horizontalAlignment": "center",
-        "verticalAlignment": "center",
-        "modifiers": [
-         "fillMaxSize",
-         {
-          "clip": 19
-         },
-         {
-          "background": "@surface"
-         }
-        ],
-        "children": [
-         {
-          "$if": "enabled",
-          "then": {
-           "$slot": "icon"
+      ],
+      "children": [
+       {
+        "box": {
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "clip": "@size / 2 - 1"
           },
-          "else": {
+          {
+           "background": "@surface"
+          }
+         ],
+         "children": [
+          {
            "box": {
             "modifiers": [
              {
@@ -243,72 +242,32 @@
             ],
             "children": [
              {
-              "$slot": "icon"
+              "$if": "size != '40'",
+              "then": {
+               "box": {
+                "modifiers": [
+                 {
+                  "graphicsLayer": {
+                   "scaleX": "@size / 40",
+                   "scaleY": "@size / 40"
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "$slot": "icon"
+                 }
+                ]
+               }
+              },
+              "else": {
+               "$slot": "icon"
+              }
              }
             ]
            }
           }
-         }
-        ]
-       }
-      }
-     ]
-    }
-   },
-   "else": {
-    "$if": "enabled",
-    "then": {
-     "box": {
-      "horizontalAlignment": "center",
-      "verticalAlignment": "center",
-      "modifiers": [
-       {
-        "size": [
-         "@theme.control_height",
-         "@theme.control_height"
-        ]
-       },
-       {
-        "clip": 20
-       },
-       {
-        "background": "@color"
-       },
-       {
-        "semantics": {
-         "contentDescription": "@label",
-         "enabled": "@enabled",
-         "clickable": "@enabled"
-        }
-       },
-       {
-        "$if": "enabled",
-        "then": {
-         "onClick": "@onClick"
-        }
-       }
-      ],
-      "children": [
-       {
-        "$if": "enabled",
-        "then": {
-         "$slot": "icon"
-        },
-        "else": {
-         "box": {
-          "modifiers": [
-           {
-            "graphicsLayer": {
-             "alpha": 0.38
-            }
-           }
-          ],
-          "children": [
-           {
-            "$slot": "icon"
-           }
-          ]
-         }
+         ]
         }
        }
       ]
@@ -320,22 +279,16 @@
       "box": {
        "modifiers": [
         {
-         "size": [
-          "@theme.control_height",
-          "@theme.control_height"
-         ]
+         "padding": "max(0, (48 - @size) / 2)"
         },
         {
-         "clip": 20
+         "size": "@size"
         },
         {
-         "$if": "enabled",
-         "then": {
-          "background": "@color"
-         },
-         "else": {
-          "background": "@colors.disabled"
-         }
+         "clip": "@size / 2"
+        },
+        {
+         "background": "@colors.disabled"
         },
         {
          "padding": {
@@ -347,14 +300,8 @@
         {
          "semantics": {
           "contentDescription": "@label",
-          "enabled": "@enabled",
-          "clickable": "@enabled"
-         }
-        },
-        {
-         "$if": "enabled",
-         "then": {
-          "onClick": "@onClick"
+          "enabled": false,
+          "clickable": false
          }
         }
        ],
@@ -366,7 +313,7 @@
           "modifiers": [
            "fillMaxSize",
            {
-            "clip": 19
+            "clip": "@size / 2 - 1"
            },
            {
             "background": "@surface"
@@ -374,25 +321,39 @@
           ],
           "children": [
            {
-            "$if": "enabled",
-            "then": {
-             "$slot": "icon"
-            },
-            "else": {
-             "box": {
-              "modifiers": [
-               {
-                "graphicsLayer": {
-                 "alpha": 0.38
-                }
+            "box": {
+             "modifiers": [
+              {
+               "graphicsLayer": {
+                "alpha": 0.38
                }
-              ],
-              "children": [
-               {
+              }
+             ],
+             "children": [
+              {
+               "$if": "size != '40'",
+               "then": {
+                "box": {
+                 "modifiers": [
+                  {
+                   "graphicsLayer": {
+                    "scaleX": "@size / 40",
+                    "scaleY": "@size / 40"
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "$slot": "icon"
+                  }
+                 ]
+                }
+               },
+               "else": {
                 "$slot": "icon"
                }
-              ]
-             }
+              }
+             ]
             }
            }
           ]
@@ -407,13 +368,13 @@
        "verticalAlignment": "center",
        "modifiers": [
         {
-         "size": [
-          "@theme.control_height",
-          "@theme.control_height"
-         ]
+         "padding": "max(0, (48 - @size) / 2)"
         },
         {
-         "clip": 20
+         "size": "@size"
+        },
+        {
+         "clip": "@size / 2"
         },
         {
          "background": "@colors.disabled"
@@ -421,29 +382,227 @@
         {
          "semantics": {
           "contentDescription": "@label",
-          "enabled": "@enabled",
-          "clickable": "@enabled"
-         }
-        },
-        {
-         "$if": "enabled",
-         "then": {
-          "onClick": "@onClick"
+          "enabled": false,
+          "clickable": false
          }
         }
        ],
        "children": [
         {
-         "$if": "enabled",
+         "box": {
+          "modifiers": [
+           {
+            "graphicsLayer": {
+             "alpha": 0.38
+            }
+           }
+          ],
+          "children": [
+           {
+            "$if": "size != '40'",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "graphicsLayer": {
+                 "scaleX": "@size / 40",
+                 "scaleY": "@size / 40"
+                }
+               }
+              ],
+              "children": [
+               {
+                "$slot": "icon"
+               }
+              ]
+             }
+            },
+            "else": {
+             "$slot": "icon"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   }
+  },
+  "else": {
+   "$if": "enabled == 'true'",
+   "then": {
+    "$if": "style == 'standard'",
+    "then": {
+     "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "padding": "max(0, (48 - @size) / 2)"
+       },
+       {
+        "size": "@size"
+       },
+       {
+        "clip": "@size / 2"
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "enabled": true,
+         "clickable": true
+        }
+       },
+       {
+        "onClick": "@onClick"
+       }
+      ],
+      "children": [
+       {
+        "$if": "size != '40'",
+        "then": {
+         "box": {
+          "modifiers": [
+           {
+            "graphicsLayer": {
+             "scaleX": "@size / 40",
+             "scaleY": "@size / 40"
+            }
+           }
+          ],
+          "children": [
+           {
+            "$slot": "icon"
+           }
+          ]
+         }
+        },
+        "else": {
+         "$slot": "icon"
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "$if": "style == 'outlined'",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "padding": "max(0, (48 - @size) / 2)"
+        },
+        {
+         "size": "@size"
+        },
+        {
+         "clip": "@size / 2"
+        },
+        {
+         "background": "@color"
+        },
+        {
+         "padding": {
+          "$if": "theme.mono",
+          "then": 1,
+          "else": 1.5
+         }
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "enabled": true,
+          "clickable": true
+         }
+        },
+        {
+         "onClick": "@onClick"
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "clip": "@size / 2 - 1"
+           },
+           {
+            "background": "@surface"
+           }
+          ],
+          "children": [
+           {
+            "$if": "size != '40'",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "graphicsLayer": {
+                 "scaleX": "@size / 40",
+                 "scaleY": "@size / 40"
+                }
+               }
+              ],
+              "children": [
+               {
+                "$slot": "icon"
+               }
+              ]
+             }
+            },
+            "else": {
+             "$slot": "icon"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     "else": {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "padding": "max(0, (48 - @size) / 2)"
+        },
+        {
+         "size": "@size"
+        },
+        {
+         "clip": "@size / 2"
+        },
+        {
+         "background": "@color"
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "enabled": true,
+          "clickable": true
+         }
+        },
+        {
+         "onClick": "@onClick"
+        }
+       ],
+       "children": [
+        {
+         "$if": "size != '40'",
          "then": {
-          "$slot": "icon"
-         },
-         "else": {
           "box": {
            "modifiers": [
             {
              "graphicsLayer": {
-              "alpha": 0.38
+              "scaleX": "@size / 40",
+              "scaleY": "@size / 40"
              }
             }
            ],
@@ -453,10 +612,734 @@
             }
            ]
           }
+         },
+         "else": {
+          "$slot": "icon"
          }
         }
        ]
       }
+     }
+    }
+   },
+   "else": {
+    "$if": "enabled == '1'",
+    "then": {
+     "$if": "style == 'standard'",
+     "then": {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "padding": "max(0, (48 - @size) / 2)"
+        },
+        {
+         "size": "@size"
+        },
+        {
+         "clip": "@size / 2"
+        },
+        {
+         "semantics": {
+          "contentDescription": "@label",
+          "enabled": true,
+          "clickable": true
+         }
+        },
+        {
+         "onClick": "@onClick"
+        }
+       ],
+       "children": [
+        {
+         "$if": "size != '40'",
+         "then": {
+          "box": {
+           "modifiers": [
+            {
+             "graphicsLayer": {
+              "scaleX": "@size / 40",
+              "scaleY": "@size / 40"
+             }
+            }
+           ],
+           "children": [
+            {
+             "$slot": "icon"
+            }
+           ]
+          }
+         },
+         "else": {
+          "$slot": "icon"
+         }
+        }
+       ]
+      }
+     },
+     "else": {
+      "$if": "style == 'outlined'",
+      "then": {
+       "box": {
+        "modifiers": [
+         {
+          "padding": "max(0, (48 - @size) / 2)"
+         },
+         {
+          "size": "@size"
+         },
+         {
+          "clip": "@size / 2"
+         },
+         {
+          "background": "@color"
+         },
+         {
+          "padding": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": 1.5
+          }
+         },
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "enabled": true,
+           "clickable": true
+          }
+         },
+         {
+          "onClick": "@onClick"
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            "fillMaxSize",
+            {
+             "clip": "@size / 2 - 1"
+            },
+            {
+             "background": "@surface"
+            }
+           ],
+           "children": [
+            {
+             "$if": "size != '40'",
+             "then": {
+              "box": {
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "scaleX": "@size / 40",
+                  "scaleY": "@size / 40"
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "$slot": "icon"
+                }
+               ]
+              }
+             },
+             "else": {
+              "$slot": "icon"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      "else": {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "padding": "max(0, (48 - @size) / 2)"
+         },
+         {
+          "size": "@size"
+         },
+         {
+          "clip": "@size / 2"
+         },
+         {
+          "background": "@color"
+         },
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "enabled": true,
+           "clickable": true
+          }
+         },
+         {
+          "onClick": "@onClick"
+         }
+        ],
+        "children": [
+         {
+          "$if": "size != '40'",
+          "then": {
+           "box": {
+            "modifiers": [
+             {
+              "graphicsLayer": {
+               "scaleX": "@size / 40",
+               "scaleY": "@size / 40"
+              }
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             }
+            ]
+           }
+          },
+          "else": {
+           "$slot": "icon"
+          }
+         }
+        ]
+       }
+      }
+     }
+    },
+    "else": {
+     "box": {
+      "modifiers": [],
+      "children": [
+       {
+        "$if": "style == 'standard'",
+        "then": {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "@enOff"
+           },
+           {
+            "padding": "max(0, (48 - @size) / 2)"
+           },
+           {
+            "size": "@size"
+           },
+           {
+            "clip": "@size / 2"
+           },
+           {
+            "semantics": {
+             "contentDescription": "@label",
+             "enabled": false,
+             "clickable": false
+            }
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "graphicsLayer": {
+                "alpha": 0.38
+               }
+              }
+             ],
+             "children": [
+              {
+               "$if": "size != '40'",
+               "then": {
+                "box": {
+                 "modifiers": [
+                  {
+                   "graphicsLayer": {
+                    "scaleX": "@size / 40",
+                    "scaleY": "@size / 40"
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "$slot": "icon"
+                  }
+                 ]
+                }
+               },
+               "else": {
+                "$slot": "icon"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        "else": {
+         "$if": "style == 'outlined'",
+         "then": {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@enOff"
+            },
+            {
+             "padding": "max(0, (48 - @size) / 2)"
+            },
+            {
+             "size": "@size"
+            },
+            {
+             "clip": "@size / 2"
+            },
+            {
+             "background": "@colors.disabled"
+            },
+            {
+             "padding": {
+              "$if": "theme.mono",
+              "then": 1,
+              "else": 1.5
+             }
+            },
+            {
+             "semantics": {
+              "contentDescription": "@label",
+              "enabled": false,
+              "clickable": false
+             }
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "horizontalAlignment": "center",
+              "verticalAlignment": "center",
+              "modifiers": [
+               "fillMaxSize",
+               {
+                "clip": "@size / 2 - 1"
+               },
+               {
+                "background": "@surface"
+               }
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "graphicsLayer": {
+                    "alpha": 0.38
+                   }
+                  }
+                 ],
+                 "children": [
+                  {
+                   "$if": "size != '40'",
+                   "then": {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "graphicsLayer": {
+                        "scaleX": "@size / 40",
+                        "scaleY": "@size / 40"
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "$slot": "icon"
+                      }
+                     ]
+                    }
+                   },
+                   "else": {
+                    "$slot": "icon"
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         "else": {
+          "$if": "theme.mono",
+          "then": {
+           "box": {
+            "modifiers": [
+             {
+              "visibility": "@enOff"
+             },
+             {
+              "padding": "max(0, (48 - @size) / 2)"
+             },
+             {
+              "size": "@size"
+             },
+             {
+              "clip": "@size / 2"
+             },
+             {
+              "background": "@colors.disabled"
+             },
+             {
+              "padding": {
+               "$if": "theme.mono",
+               "then": 1,
+               "else": 1.5
+              }
+             },
+             {
+              "semantics": {
+               "contentDescription": "@label",
+               "enabled": false,
+               "clickable": false
+              }
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "horizontalAlignment": "center",
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "clip": "@size / 2 - 1"
+                },
+                {
+                 "background": "@surface"
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "graphicsLayer": {
+                     "alpha": 0.38
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$if": "size != '40'",
+                    "then": {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "graphicsLayer": {
+                         "scaleX": "@size / 40",
+                         "scaleY": "@size / 40"
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$slot": "icon"
+                       }
+                      ]
+                     }
+                    },
+                    "else": {
+                     "$slot": "icon"
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          "else": {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@enOff"
+             },
+             {
+              "padding": "max(0, (48 - @size) / 2)"
+             },
+             {
+              "size": "@size"
+             },
+             {
+              "clip": "@size / 2"
+             },
+             {
+              "background": "@colors.disabled"
+             },
+             {
+              "semantics": {
+               "contentDescription": "@label",
+               "enabled": false,
+               "clickable": false
+              }
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "alpha": 0.38
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "$if": "size != '40'",
+                 "then": {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "graphicsLayer": {
+                      "scaleX": "@size / 40",
+                      "scaleY": "@size / 40"
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$slot": "icon"
+                    }
+                   ]
+                  }
+                 },
+                 "else": {
+                  "$slot": "icon"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         }
+        }
+       },
+       {
+        "$if": "style == 'standard'",
+        "then": {
+         "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "visibility": "@enOn"
+           },
+           {
+            "padding": "max(0, (48 - @size) / 2)"
+           },
+           {
+            "size": "@size"
+           },
+           {
+            "clip": "@size / 2"
+           },
+           {
+            "semantics": {
+             "contentDescription": "@label",
+             "enabled": true,
+             "clickable": true
+            }
+           },
+           {
+            "onClick": "@onClick"
+           }
+          ],
+          "children": [
+           {
+            "$if": "size != '40'",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "graphicsLayer": {
+                 "scaleX": "@size / 40",
+                 "scaleY": "@size / 40"
+                }
+               }
+              ],
+              "children": [
+               {
+                "$slot": "icon"
+               }
+              ]
+             }
+            },
+            "else": {
+             "$slot": "icon"
+            }
+           }
+          ]
+         }
+        },
+        "else": {
+         "$if": "style == 'outlined'",
+         "then": {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@enOn"
+            },
+            {
+             "padding": "max(0, (48 - @size) / 2)"
+            },
+            {
+             "size": "@size"
+            },
+            {
+             "clip": "@size / 2"
+            },
+            {
+             "background": "@color"
+            },
+            {
+             "padding": {
+              "$if": "theme.mono",
+              "then": 1,
+              "else": 1.5
+             }
+            },
+            {
+             "semantics": {
+              "contentDescription": "@label",
+              "enabled": true,
+              "clickable": true
+             }
+            },
+            {
+             "onClick": "@onClick"
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "horizontalAlignment": "center",
+              "verticalAlignment": "center",
+              "modifiers": [
+               "fillMaxSize",
+               {
+                "clip": "@size / 2 - 1"
+               },
+               {
+                "background": "@surface"
+               }
+              ],
+              "children": [
+               {
+                "$if": "size != '40'",
+                "then": {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "graphicsLayer": {
+                     "scaleX": "@size / 40",
+                     "scaleY": "@size / 40"
+                    }
+                   }
+                  ],
+                  "children": [
+                   {
+                    "$slot": "icon"
+                   }
+                  ]
+                 }
+                },
+                "else": {
+                 "$slot": "icon"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         "else": {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "visibility": "@enOn"
+            },
+            {
+             "padding": "max(0, (48 - @size) / 2)"
+            },
+            {
+             "size": "@size"
+            },
+            {
+             "clip": "@size / 2"
+            },
+            {
+             "background": "@color"
+            },
+            {
+             "semantics": {
+              "contentDescription": "@label",
+              "enabled": true,
+              "clickable": true
+             }
+            },
+            {
+             "onClick": "@onClick"
+            }
+           ],
+           "children": [
+            {
+             "$if": "size != '40'",
+             "then": {
+              "box": {
+               "modifiers": [
+                {
+                 "graphicsLayer": {
+                  "scaleX": "@size / 40",
+                  "scaleY": "@size / 40"
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "$slot": "icon"
+                }
+               ]
+              }
+             },
+             "else": {
+              "$slot": "icon"
+             }
+            }
+           ]
+          }
+         }
+        }
+       }
+      ]
      }
     }
    }
@@ -464,9 +1347,15 @@
  },
  "pitfalls": [
   "The icon is the caller's: draw it in a colour that reads on the face (onPrimary on a filled button, which is black in mono and white otherwise; onSurface or the button colour on the others)",
-  "40 dp round face; the touch target is the face itself, so leave a little space between neighbours (a row with spacedBy 4 or more)",
+  "The face is `size` dp (40) round and the touch target at least 48 dp: below 48 the face sits in transparent padding of (48 - size) / 2 (4 dp at 40) that is part of the click, so neighbours can sit with no spacedBy and still show a gap of 8 dp",
   "The outlined ring is two stacked backgrounds, not a border (border can't take a theme colour): set surface to whatever the button sits on, or the inside shows the background colour",
   "In mono a disabled filled button becomes a grey ring (a grey disc would hide its grey icon); every other face keeps its shape",
-  "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face"
- ]
+  "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face",
+  "A runtime enabled (\"@var\" or an expression, exactly 0 or 1, reading resources variables only) writes the button twice, a disabled face and an enabled one switched by visibility; only the enabled face has the onClick, so at 0 a tap does nothing. The icon slot is written in both faces, so it roughly doubles the call: a literal true/false is cheaper when the state is fixed",
+  "`size` scales the icon slot with a graphicsLayer (size / 40, about the centre, at paint time): draw the icon at 24 dp as for a 40 dp button. Its layout size stays 24 dp, so a size under 24 is not a good idea. At 48 or more the button writes a padding of 0"
+ ],
+ "locals": {
+  "enOn": "@enabled",
+  "enOff": "1 - @enOn"
+ }
 }

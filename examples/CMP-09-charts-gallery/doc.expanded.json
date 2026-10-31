@@ -105,6 +105,24 @@
          ],
          "commands": [
           {
+           "variable": {
+            "name": "sparkline1_last",
+            "value": "arrayLength(@visits) - 1"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_lo",
+            "value": "arrayMin(@visits)"
+           }
+          },
+          {
+           "variable": {
+            "name": "sparkline1_span",
+            "value": "max(arrayMax(@visits) - @sparkline1_lo, 0.001)"
+           }
+          },
+          {
            "translate": {
             "dx": 4,
             "dy": "componentHeight() - 4"
@@ -132,14 +150,14 @@
            "loop": {
             "index": "i",
             "from": 0,
-            "until": "arrayLength(@visits) - 1",
+            "until": "@sparkline1_last",
             "commands": [
              {
               "drawLine": {
-               "x1": "i * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
-               "y1": "((arrayMin(@visits)) - arrayGet(@visits, i)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
-               "x2": "(i + 1) * (componentWidth() - 8) / (arrayLength(@visits) - 1)",
-               "y2": "((arrayMin(@visits)) - arrayGet(@visits, i + 1)) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))"
+               "x1": "i * (componentWidth() - 8) / @sparkline1_last",
+               "y1": "(@sparkline1_lo - arrayGet(@visits, i)) * (componentHeight() - 8) / @sparkline1_span",
+               "x2": "(i + 1) * (componentWidth() - 8) / @sparkline1_last",
+               "y2": "(@sparkline1_lo - arrayGet(@visits, i + 1)) * (componentHeight() - 8) / @sparkline1_span"
               }
              }
             ]
@@ -157,7 +175,7 @@
           {
            "drawCircle": {
             "cx": "componentWidth() - 8",
-            "cy": "((arrayMin(@visits)) - arrayGet(@visits, (arrayLength(@visits) - 1))) * (componentHeight() - 8) / (max(arrayMax(@visits) - (arrayMin(@visits)), 0.001))",
+            "cy": "(@sparkline1_lo - arrayGet(@visits, @sparkline1_last)) * (componentHeight() - 8) / @sparkline1_span",
             "radius": 3
            }
           }
@@ -207,6 +225,18 @@
          ],
          "commands": [
           {
+           "variable": {
+            "name": "barchart1_n",
+            "value": "arrayLength(@visits)"
+           }
+          },
+          {
+           "variable": {
+            "name": "barchart1_max",
+            "value": "max(arrayMax(@visits), 0.001)"
+           }
+          },
+          {
            "translate": {
             "dx": 0,
             "dy": "componentHeight() - 18"
@@ -236,13 +266,13 @@
               "loop": {
                "index": "i",
                "from": 0,
-               "until": "arrayLength(@visits)",
+               "until": "@barchart1_n",
                "commands": [
                 {
                  "drawRoundRect": {
-                  "left": "(i + 0.15) * componentWidth() / (arrayLength(@visits))",
-                  "top": "-arrayGet(@visits, i) * (componentHeight() - 18 - 4) / (max(arrayMax(@visits), 0.001))",
-                  "right": "(i + 0.85) * componentWidth() / (arrayLength(@visits))",
+                  "left": "(i + 0.15) * componentWidth() / @barchart1_n",
+                  "top": "-arrayGet(@visits, i) * (componentHeight() - 18 - 4) / @barchart1_max",
+                  "right": "(i + 0.85) * componentWidth() / @barchart1_n",
                   "bottom": 4,
                   "rx": 4,
                   "ry": 4
@@ -295,7 +325,7 @@
           {
            "drawTextAnchored": {
             "text": "W1",
-            "x": "(0 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(0 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -304,7 +334,7 @@
           {
            "drawTextAnchored": {
             "text": "W2",
-            "x": "(1 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(1 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -313,7 +343,7 @@
           {
            "drawTextAnchored": {
             "text": "W3",
-            "x": "(2 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(2 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -322,7 +352,7 @@
           {
            "drawTextAnchored": {
             "text": "W4",
-            "x": "(3 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(3 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -331,7 +361,7 @@
           {
            "drawTextAnchored": {
             "text": "W5",
-            "x": "(4 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(4 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -340,7 +370,7 @@
           {
            "drawTextAnchored": {
             "text": "W6",
-            "x": "(5 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(5 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -349,7 +379,7 @@
           {
            "drawTextAnchored": {
             "text": "W7",
-            "x": "(6 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(6 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -358,7 +388,7 @@
           {
            "drawTextAnchored": {
             "text": "W8",
-            "x": "(7 + 0.5) * componentWidth() / (arrayLength(@visits))",
+            "x": "(7 + 0.5) * componentWidth() / @barchart1_n",
             "y": 11,
             "panX": 0,
             "panY": 0
@@ -411,6 +441,18 @@
          "commands": [
           {
            "variable": {
+            "name": "donutchart1_n",
+            "value": "arrayLength(@visits)"
+           }
+          },
+          {
+           "variable": {
+            "name": "donutchart1_sum",
+            "value": "max(arraySum(@visits), 0.001)"
+           }
+          },
+          {
+           "variable": {
             "name": "donutchart1_s",
             "value": "min(componentWidth(), componentHeight())"
            }
@@ -449,13 +491,13 @@
               "loop": {
                "index": "i",
                "from": 0,
-               "until": "arrayLength(@visits)",
+               "until": "@donutchart1_n",
                "commands": [
                 {
                  "paint": {
                   "ops": [
                    {
-                    "alpha": "1 - 0.7 * i / (arrayLength(@visits))"
+                    "alpha": "1 - 0.7 * i / @donutchart1_n"
                    }
                   ]
                  }
@@ -467,12 +509,12 @@
                   "right": 111,
                   "bottom": 111,
                   "startAngle": -89.438235,
-                  "sweepAngle": "max(360 * arrayGet(@visits, i) / (max(arraySum(@visits), 0.001)) - 1.123529, 0)"
+                  "sweepAngle": "max(360 * arrayGet(@visits, i) / @donutchart1_sum - 1.123529, 0)"
                  }
                 },
                 {
                  "rotate": {
-                  "angle": "360 * arrayGet(@visits, i) / (max(arraySum(@visits), 0.001))",
+                  "angle": "360 * arrayGet(@visits, i) / @donutchart1_sum",
                   "pivotX": 60,
                   "pivotY": 60
                  }

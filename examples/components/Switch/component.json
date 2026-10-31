@@ -1,7 +1,7 @@
 {
  "component": "Switch",
- "version": 2,
- "summary": "An on/off switch: a tap flips its variable (0 or 1); the thumb springs across (a little overshoot) while the track colour fades in.",
+ "version": 3,
+ "summary": "An on/off switch: a tap flips its variable (0 or 1), then runs any extra `onClick` actions; the thumb springs across (a little overshoot) while the track colour fades in. A screen reader hears the label and the state, On or Off, which follows the value: no extra On/Off text is needed.",
  "params": {
   "checked": {
    "type": "variable",
@@ -17,6 +17,10 @@
    "type": "color",
    "default": "@colors.primary",
    "doc": "Track colour when on"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every tap after the flip of `checked` (hostNamedAction, valueFloatChange, ...), e.g. [{\"type\": \"hostNamedAction\", \"name\": \"kitchenLight\"}] so the app learns which light was toggled. Omitted: the tap only flips `checked`"
   }
  },
  "capabilities": [
@@ -31,189 +35,237 @@
   }
  },
  "body": {
-  "canvas": {
-   "modifiers": [
+  "box": {
+   "children": [
     {
-     "size": [
-      52,
-      32
-     ]
-    },
-    {
-     "semantics": {
-      "contentDescription": "@label",
-      "clickable": true
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         52,
+         32
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "Off On ",
+            "start": "@checked * 4",
+            "len": 3,
+            "varName": "swState3"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@swState3",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "swState"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "theme.mono",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.outline"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": "@theme.stroke"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 1,
+           "top": 1,
+           "right": 51,
+           "bottom": 31,
+           "rx": 15,
+           "ry": 15
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "alpha": "@p"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 1,
+           "top": 1,
+           "right": 51,
+           "bottom": 31,
+           "rx": 15,
+           "ry": 15
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.outline"
+            },
+            {
+             "alpha": "1 - @p"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "16 + @x",
+           "cy": 16,
+           "radius": 8
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@p"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "16 + @x",
+           "cy": 16,
+           "radius": 10
+          }
+         }
+        ],
+        "else": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.track"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 0,
+           "top": 0,
+           "right": 52,
+           "bottom": 32,
+           "rx": 16,
+           "ry": 16
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            },
+            {
+             "alpha": "@p"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": 0,
+           "top": 0,
+           "right": 52,
+           "bottom": 32,
+           "rx": 16,
+           "ry": 16
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "#FFFFFFFF"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "16 + @x",
+           "cy": 16,
+           "radius": 12
+          }
+         }
+        ]
+       }
+      ]
      }
     },
     {
-     "onClick": {
-      "type": "valueFloatExpressionChange",
-      "target": "@checked",
-      "value": "1 - @checked"
+     "box": {
+      "modifiers": [
+       {
+        "size": [
+         52,
+         32
+        ]
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label",
+         "stateDescription": "@swState",
+         "clickable": true
+        }
+       },
+       {
+        "onClick": [
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@checked",
+          "value": "1 - @checked"
+         },
+         {
+          "$if": "onClick",
+          "then": "@onClick"
+         }
+        ]
+       }
+      ]
      }
-    }
-   ],
-   "commands": [
-    {
-     "$if": "theme.mono",
-     "then": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.outline"
-         },
-         {
-          "style": "stroke"
-         },
-         {
-          "strokeWidth": "@theme.stroke"
-         },
-         {
-          "alpha": 1
-         }
-        ]
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": 1,
-        "top": 1,
-        "right": 51,
-        "bottom": 31,
-        "rx": 15,
-        "ry": 15
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@color"
-         },
-         {
-          "alpha": "@p"
-         }
-        ]
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": 1,
-        "top": 1,
-        "right": 51,
-        "bottom": 31,
-        "rx": 15,
-        "ry": 15
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.outline"
-         },
-         {
-          "alpha": "1 - @p"
-         }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "16 + @x",
-        "cy": 16,
-        "radius": 8
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@color"
-         },
-         {
-          "style": "fill"
-         },
-         {
-          "alpha": "@p"
-         }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "16 + @x",
-        "cy": 16,
-        "radius": 10
-       }
-      }
-     ],
-     "else": [
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@colors.track"
-         },
-         {
-          "style": "fill"
-         }
-        ]
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": 0,
-        "top": 0,
-        "right": 52,
-        "bottom": 32,
-        "rx": 16,
-        "ry": 16
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "@color"
-         },
-         {
-          "alpha": "@p"
-         }
-        ]
-       }
-      },
-      {
-       "drawRoundRect": {
-        "left": 0,
-        "top": 0,
-        "right": 52,
-        "bottom": 32,
-        "rx": 16,
-        "ry": 16
-       }
-      },
-      {
-       "paint": {
-        "ops": [
-         {
-          "color": "#FFFFFFFF"
-         },
-         {
-          "alpha": 1
-         }
-        ]
-       }
-      },
-      {
-       "drawCircle": {
-        "cx": "16 + @x",
-        "cy": 16,
-        "radius": 12
-       }
-      }
-     ]
     }
    ]
   }
@@ -222,7 +274,9 @@
   "The motion is paint time: an animated local p = {\"value\": \"@checked\", \"anim\": 0.3} eases from 0 to 1 when the state flips (Java re-evaluates an animated expression every frame while it runs), and the thumb x is 16 + 20 * (p + 0.5 * sin(pi * p) * (2 * @checked - 1)): the sine term pushes it about 10% past the end and back, the spring feel. No layout runs while it moves",
   "The track colour follows the state without colour expressions: the `color` track is drawn over the grey one with paint alpha p",
   "Mono themes have no motion: p is @checked itself, so the thumb and the track snap (the sine term is 0 at both ends)",
-  "It draws no text: put the visible label next to it (a KeyValueRow key, a ListItem title) and pass the same words as `label`"
+  "It draws no text: put the visible label next to it (a KeyValueRow key, a ListItem title) and pass the same words as `label`",
+  "A switch that drives something outside the document (a light, a lock) needs more than its exported variable: pass the app's hostNamedAction in `onClick` (it runs after the flip, so the exported value is already the new state when the app reads it)",
+  "Accessibility: one node, the transparent box laid over the drawing, carries the label (contentDescription), the state (stateDescription) and the click. The state text is cut from \"Off On \" by textSubtext at 4 * checked and trimmed (textTransform 3) in the canvas's global section, so it follows the value at run time; the box comes after the canvas because the parsers bind the name in document order. The JSON semantics has no role key (role is always unset), so no 'switch' role. About 125 B per call, and the named text ops keep the switch from compiling to a pattern (mono galleries grow more)"
  ],
  "locals": {
   "p": {

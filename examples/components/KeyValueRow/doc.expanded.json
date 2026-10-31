@@ -212,29 +212,8 @@
            }
           },
           {
-           "canvas": {
-            "modifiers": [
-             {
-              "size": [
-               52,
-               32
-              ]
-             },
-             {
-              "semantics": {
-               "contentDescription": "Cloud backup",
-               "clickable": true
-              }
-             },
-             {
-              "onClick": {
-               "type": "valueFloatExpressionChange",
-               "target": "@backup",
-               "value": "1 - @backup"
-              }
-             }
-            ],
-            "commands": [
+           "box": {
+            "children": [
              {
               "variable": {
                "name": "switch1_p",
@@ -245,66 +224,137 @@
               }
              },
              {
-              "paint": {
-               "ops": [
+              "variable": {
+               "name": "switch1_x",
+               "value": "20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @backup - 1))"
+              }
+             },
+             {
+              "canvas": {
+               "modifiers": [
                 {
-                 "color": "@colors.track"
+                 "size": [
+                  52,
+                  32
+                 ]
+                }
+               ],
+               "commands": [
+                {
+                 "global": {
+                  "commands": [
+                   {
+                    "textSubtext": {
+                     "text": "Off On ",
+                     "start": "@backup * 4",
+                     "len": 3,
+                     "varName": "switch1_swState3"
+                    }
+                   },
+                   {
+                    "textTransform": {
+                     "text": "@switch1_swState3",
+                     "start": 0,
+                     "len": -1,
+                     "operation": 3,
+                     "varName": "switch1_swState"
+                    }
+                   }
+                  ]
+                 }
                 },
                 {
-                 "style": "fill"
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.track"
+                   },
+                   {
+                    "style": "fill"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 52,
+                  "bottom": 32,
+                  "rx": 16,
+                  "ry": 16
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.primary"
+                   },
+                   {
+                    "alpha": "@switch1_p"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawRoundRect": {
+                  "left": 0,
+                  "top": 0,
+                  "right": 52,
+                  "bottom": 32,
+                  "rx": 16,
+                  "ry": 16
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "#FFFFFFFF"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "drawCircle": {
+                  "cx": "16 + @switch1_x",
+                  "cy": 16,
+                  "radius": 12
+                 }
                 }
                ]
               }
              },
              {
-              "drawRoundRect": {
-               "left": 0,
-               "top": 0,
-               "right": 52,
-               "bottom": 32,
-               "rx": 16,
-               "ry": 16
-              }
-             },
-             {
-              "paint": {
-               "ops": [
+              "box": {
+               "modifiers": [
                 {
-                 "color": "@colors.primary"
+                 "size": [
+                  52,
+                  32
+                 ]
                 },
                 {
-                 "alpha": "@switch1_p"
-                }
-               ]
-              }
-             },
-             {
-              "drawRoundRect": {
-               "left": 0,
-               "top": 0,
-               "right": 52,
-               "bottom": 32,
-               "rx": 16,
-               "ry": 16
-              }
-             },
-             {
-              "paint": {
-               "ops": [
-                {
-                 "color": "#FFFFFFFF"
+                 "semantics": {
+                  "contentDescription": "Cloud backup",
+                  "stateDescription": "@switch1_swState",
+                  "clickable": true
+                 }
                 },
                 {
-                 "alpha": 1
+                 "onClick": [
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@backup",
+                   "value": "1 - @backup"
+                  }
+                 ]
                 }
                ]
-              }
-             },
-             {
-              "drawCircle": {
-               "cx": "16 + (20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @backup - 1)))",
-               "cy": 16,
-               "radius": 12
               }
              }
             ]

@@ -189,6 +189,30 @@
          ],
          "children": [
           {
+           "variable": {
+            "name": "linechart1_n",
+            "value": "arrayLength(@temps)"
+           }
+          },
+          {
+           "variable": {
+            "name": "linechart1_cnt",
+            "value": "@linechart1_n * 6 - 5"
+           }
+          },
+          {
+           "variable": {
+            "name": "linechart1_s",
+            "value": "23 / (@linechart1_cnt - 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "linechart1_half",
+            "value": "23 / 2 + @linechart1_s / 2"
+           }
+          },
+          {
            "row": {
             "modifiers": [
              "fillMaxWidth",
@@ -305,7 +329,7 @@
                   "expressionY": "@linechart1_cy - arraySpline(@temps, u / 23) * @linechart1_ky",
                   "start": 0,
                   "end": 23,
-                  "count": "(arrayLength(@temps)) * 6 - 5",
+                  "count": "@linechart1_cnt",
                   "flags": 4
                  }
                 },
@@ -344,7 +368,7 @@
                 {
                  "variable": {
                   "name": "linechart1_st",
-                  "value": "23 / (((arrayLength(@temps)) * 6 - 5) - 1)"
+                  "value": "@linechart1_s"
                  }
                 },
                 {
@@ -360,7 +384,7 @@
                   "expressionY": "ifElse(@linechart1_cy - arraySpline(@temps, u / 23) * @linechart1_ky, @linechart1_by, step(abs(u - 11.5), @linechart1_hw))",
                   "start": "0 - @linechart1_st",
                   "end": "23 + @linechart1_st",
-                  "count": "((arrayLength(@temps)) * 6 - 5) + 2",
+                  "count": "@linechart1_cnt + 2",
                   "flags": 4
                  }
                 },
@@ -423,16 +447,56 @@
                  }
                 },
                 {
+                 "variable": {
+                  "name": "linechart1_hx",
+                  "value": "arrayMax(@temps) - 0.0001"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_lx",
+                  "value": "arrayMin(@temps) + 0.0001"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_sx",
+                  "value": "step(0.0001, arrayMax(@temps) - arrayMin(@temps))",
+                  "commit": true
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "linechart1_sn",
+                  "value": "step(0.0001, arrayMax(@temps) - arrayMin(@temps))",
+                  "commit": true
+                 }
+                },
+                {
                  "loop": {
                   "index": "i",
                   "from": 0,
-                  "until": "arrayLength(@temps)",
+                  "until": "@linechart1_n",
                   "commands": [
                    {
                     "drawCircle": {
-                     "cx": "@linechart1_cx + i * 23 / ((arrayLength(@temps)) - 1) * @linechart1_kx",
+                     "cx": "@linechart1_cx + i * 23 / (@linechart1_n - 1) * @linechart1_kx",
                      "cy": "@linechart1_cy - arrayGet(@temps, i) * @linechart1_ky",
-                     "radius": "4 * (step(arrayGet(@temps, i), arrayMax(@temps) - 0.0001) + step(arrayMin(@temps) + 0.0001, arrayGet(@temps, i)))"
+                     "radius": "4 * (step(arrayGet(@temps, i), @linechart1_hx) * (1 - @linechart1_sx) + step(@linechart1_lx, arrayGet(@temps, i)) * (1 - @linechart1_sn))"
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart1_sx",
+                     "value": "max(@linechart1_sx, step(arrayGet(@temps, i), @linechart1_hx))",
+                     "commit": true
+                    }
+                   },
+                   {
+                    "variable": {
+                     "name": "linechart1_sn",
+                     "value": "max(@linechart1_sn, step(@linechart1_lx, arrayGet(@temps, i)))",
+                     "commit": true
                     }
                    }
                   ]

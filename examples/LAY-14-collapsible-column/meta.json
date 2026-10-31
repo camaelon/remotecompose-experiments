@@ -7,6 +7,9 @@
  "prompt": "A tall, narrow weather widget (city, sun icon, temperature, condition, high/low, three hourly forecast rows) that sheds content as it gets shorter: the forecast rows go first from the bottom, then the condition, then high/low, then the icon; city and temperature always stay. Show it at 256, 208, 164 and 100 dp.",
  "level": 3,
  "family": "LAY",
+ "components": [
+  "WeatherIcon"
+ ],
  "capabilities": {
   "primary": [
    "layout.responsive"
@@ -19,6 +22,8 @@
    "layout.decoration",
    "draw.shapes",
    "text.basic",
+   "text.dynamic",
+   "host.variables",
    "layout.scroll"
   ]
  },
@@ -70,7 +75,43 @@
   }
  ],
  "inputs": {
-  "variables": {},
+  "variables": {
+   "temp": {
+    "type": "float",
+    "meaning": "current temperature, degrees",
+    "default": 22
+   },
+   "high": {
+    "type": "float",
+    "meaning": "today's high, degrees",
+    "default": 25
+   },
+   "low": {
+    "type": "float",
+    "meaning": "today's low, degrees",
+    "default": 14
+   },
+   "hour": {
+    "type": "float",
+    "meaning": "hour of the first forecast row (0-23); the next rows are +3 h and +6 h",
+    "default": 15
+   },
+   "t1": {
+    "type": "float",
+    "meaning": "forecast temperature at hour, degrees",
+    "default": 24
+   },
+   "t2": {
+    "type": "float",
+    "meaning": "forecast temperature at hour + 3, degrees",
+    "default": 21
+   },
+   "t3": {
+    "type": "float",
+    "meaning": "forecast temperature at hour + 6, degrees",
+    "default": 17
+   }
+  },
   "clock": null,
   "touch": false
  },
@@ -104,21 +145,35 @@
   "LAY-01"
  ],
  "derived": {
+  "components": [
+   "WeatherIcon"
+  ],
+  "component_instances": 4,
+  "component_modes": {
+   "WeatherIcon": "expand"
+  },
+  "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 4995,
+  "bytes": 7852,
   "header": {
    "width": 360,
    "height": 300
   },
-  "op_count": 367,
+  "op_count": 550,
   "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 28,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 8,
    "CanvasContent": 4,
    "ClipRectModifierOperation": 1,
    "CollapsibleColumnLayout": 4,
    "CoreText": 44,
-   "DATA_FLOAT": 1,
-   "DATA_TEXT": 14,
+   "DATA_FLOAT": 8,
+   "DATA_TEXT": 11,
    "DRAW_CIRCLE": 8,
+   "DRAW_LINE": 4,
    "HEADER": 1,
    "LAYOUT_BOX": 24,
    "LAYOUT_CANVAS": 4,
@@ -126,26 +181,66 @@
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 13,
    "LayoutComponentContent": 93,
+   "LoopOperation": 16,
+   "MATRIX_ROTATE": 4,
+   "MATRIX_SCALE": 4,
+   "MATRIX_TRANSLATE": 4,
    "MODIFIER_BACKGROUND": 5,
    "MODIFIER_COLLAPSIBLE_PRIORITY": 24,
    "MODIFIER_HEIGHT": 50,
    "MODIFIER_PADDING": 9,
    "MODIFIER_WIDTH": 49,
+   "NAMED_VARIABLE": 6,
    "PAINT_VALUES": 8,
    "RoundedClipRectModifierOperation": 4,
    "ScrollModifierOperation": 1,
+   "THEME": 18,
+   "TextFromFloat": 15,
+   "TextMerge": 44,
    "TouchExpression": 1
   },
-  "host_variables": [],
-  "render_findings": [],
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [
+   "info: collapsed"
+  ],
   "audit": {
    "error": 0,
-   "warning": 0,
-   "info": 2
+   "warning": 1,
+   "info": 0
   },
   "audit_findings": [
-   "info: repeated_subtree",
-   "info: hardcoded_colors"
+   "warning: repeated_subtree"
   ],
   "repaint": "idle",
   "interaction_targets": {
@@ -158,7 +253,9 @@
   "renders": {
    "short": {
     "render": "render-short.png",
-    "render_findings": [],
+    "render_findings": [
+     "info: collapsed"
+    ],
     "size": [
      360,
      200
@@ -167,7 +264,9 @@
    },
    "tall": {
     "render": "render-tall.png",
-    "render_findings": [],
+    "render_findings": [
+     "info: collapsed"
+    ],
     "size": [
      360,
      400
@@ -176,7 +275,9 @@
    },
    "narrow": {
     "render": "render-narrow.png",
-    "render_findings": [],
+    "render_findings": [
+     "info: collapsed"
+    ],
     "size": [
      240,
      300
@@ -185,6 +286,8 @@
    }
   },
   "json_keys": [
+   "WeatherIcon",
+   "angle",
    "apiLevel",
    "background",
    "box",
@@ -194,36 +297,84 @@
    "collapsibleColumn",
    "collapsiblePriority",
    "color",
+   "colors",
    "column",
    "commands",
+   "condition",
    "contentDescription",
    "cx",
    "cy",
+   "dark",
+   "decimal",
    "drawCircle",
+   "drawLine",
+   "dx",
+   "dy",
+   "flags",
    "fontSize",
    "fontWeight",
+   "from",
    "header",
    "height",
+   "high",
    "horizontalAlignment",
    "horizontalScroll",
+   "hour",
+   "id1",
+   "id2",
+   "index",
+   "light",
+   "loop",
+   "low",
    "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
    "orientation",
    "padding",
    "paint",
+   "pivotX",
+   "pivotY",
+   "primary",
    "priority",
    "profiles",
    "radius",
    "resources",
    "root",
+   "rotate",
    "row",
+   "scale",
    "scroll",
+   "semantics",
    "size",
    "spacedBy",
+   "step",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "surface",
+   "sx",
+   "sy",
+   "t1",
+   "t2",
+   "t3",
+   "temp",
    "text",
+   "translate",
+   "type",
+   "until",
    "value",
+   "variable",
    "variables",
    "verticalAlignment",
-   "width"
+   "warning",
+   "whole",
+   "width",
+   "x1",
+   "x2",
+   "y1",
+   "y2"
   ],
   "evidence": {
    "layout.responsive": [
@@ -257,15 +408,23 @@
     "clip"
    ],
    "draw.shapes": [
-    "drawCircle"
+    "drawCircle",
+    "drawLine"
    ],
    "text.basic": [
     "text"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "host.variables": [
+    "colors"
    ],
    "layout.scroll": [
     "horizontalScroll"
    ]
   },
-  "built_at": "2026-10-31T05:59:37.923Z"
+  "built_at": "2026-10-31T22:21:46.352Z"
  }
 }

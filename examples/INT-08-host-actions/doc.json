@@ -1,0 +1,340 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "Media controls: previous, play or pause, next and a seek button, each tap sent to the app"
+ },
+ "resources": {
+  "paths": {
+   "triRight": [
+    {
+     "type": "moveTo",
+     "x": 6,
+     "y": 4
+    },
+    {
+     "type": "lineTo",
+     "x": 20,
+     "y": 12
+    },
+    {
+     "type": "lineTo",
+     "x": 6,
+     "y": 20
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "triLeft": [
+    {
+     "type": "moveTo",
+     "x": 18,
+     "y": 4
+    },
+    {
+     "type": "lineTo",
+     "x": 4,
+     "y": 12
+    },
+    {
+     "type": "lineTo",
+     "x": 18,
+     "y": 20
+    },
+    {
+     "type": "close"
+    }
+   ]
+  },
+  "variables": {
+   "playing": {
+    "value": 0,
+    "export": true
+   }
+  }
+ },
+ "root": [
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     },
+     {
+      "spacedBy": 10
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalArrangement": "center",
+    "children": [
+     {
+      "text": {
+       "value": "Blue in Green",
+       "fontSize": 17,
+       "fontWeight": 700,
+       "color": "@colors.onSurface"
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "spacedBy": 16
+        }
+       ],
+       "children": [
+        {
+         "IconButton": {
+          "label": "Previous track",
+          "onClick": {
+           "type": "hostNamedAction",
+           "name": "previous"
+          },
+          "slots": {
+           "icon": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": [
+                 24,
+                 24
+                ]
+               }
+              ],
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawRect": {
+                 "left": 4,
+                 "top": 4,
+                 "right": 7,
+                 "bottom": 20
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "triLeft"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "IconButton": {
+          "label": "Play or pause",
+          "style": "filled",
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@playing",
+            "value": "1 - @playing"
+           },
+           {
+            "type": "hostNamedAction",
+            "name": "playPause"
+           }
+          ],
+          "slots": {
+           "icon": [
+            {
+             "box": {
+              "children": [
+               {
+                "canvas": {
+                 "modifiers": [
+                  {
+                   "size": [
+                    24,
+                    24
+                   ]
+                  },
+                  {
+                   "visibility": "1 - @playing"
+                  }
+                 ],
+                 "commands": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.onPrimary"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawPath": {
+                    "path": "triRight"
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "canvas": {
+                 "modifiers": [
+                  {
+                   "size": [
+                    24,
+                    24
+                   ]
+                  },
+                  {
+                   "visibility": "@playing"
+                  }
+                 ],
+                 "commands": [
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.onPrimary"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawRect": {
+                    "left": 5,
+                    "top": 4,
+                    "right": 10,
+                    "bottom": 20
+                   }
+                  },
+                  {
+                   "drawRect": {
+                    "left": 14,
+                    "top": 4,
+                    "right": 19,
+                    "bottom": 20
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "IconButton": {
+          "label": "Next track",
+          "onClick": {
+           "type": "hostNamedAction",
+           "name": "next"
+          },
+          "slots": {
+           "icon": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": [
+                 24,
+                 24
+                ]
+               }
+              ],
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.onSurface"
+                  }
+                 ]
+                }
+               },
+               {
+                "drawPath": {
+                 "path": "triRight"
+                }
+               },
+               {
+                "drawRect": {
+                 "left": 17,
+                 "top": 4,
+                 "right": 20,
+                 "bottom": 20
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     },
+     {
+      "Button": {
+       "label": "Skip to 1:30",
+       "style": "outlined",
+       "onClick": {
+        "type": "hostNamedAction",
+        "name": "seek",
+        "value": "90"
+       }
+      }
+     },
+     {
+      "box": {
+       "children": [
+        {
+         "text": {
+          "value": "Paused (playing = 0)",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "visibility": "1 - @playing"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "Playing (playing = 1)",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "visibility": "@playing"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

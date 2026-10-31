@@ -10,10 +10,10 @@ it by name from any document:
 Before conversion the call is replaced by plain JSON: either the body itself (*expanded*), or
 a `definePattern` template plus a call of it (*pattern* mode, below). The players and the
 Java parser only ever see that plain JSON. Every MCP tool compiles components itself: json2rc,
-render_rc, validate, audit and package_web all accept documents that call them.
+convert, render, audit and publish all accept documents that call them.
 
 The library's 20 components (`examples/components/`) are worked examples of everything below.
-Read a similar one first, with `get_component {"name": "Stepper", "definition": true}`.
+Read a similar one first, with `get {"id": "Stepper", "definition": true}`.
 
 ## Where a component can live
 
@@ -64,7 +64,7 @@ people would use ("toggle" for Switch, "kpi" for StatTile), so searches find it.
 | `slots` | `{name: {optional?, doc}}`: places where the caller passes JSON nodes. A slot called `content` also takes the call's `children` |
 | `locals` | values private to each call: state, or an expression computed once (below) |
 | `body` | the JSON the call expands to: one node, or an array of nodes (only where a list of children is expected) |
-| `call` | a minimal call, used by get_component and check_component |
+| `call` | a minimal call, used by get and check_component |
 | `pitfalls` | traps for the people calling it |
 
 Parameter types:
@@ -138,12 +138,13 @@ Every component comes in four looks, from one definition:
 
 | Mode | How it is chosen | What it writes |
 |---|---|---|
-| light and dark | default (`"componentTheme": "auto"`) | each theme colour as a themed colour, `{"light": .., "dark": ..}` in `resources.colors`. The player picks the side from the system theme while it plays (`rc2image --theme`, render_rc `theme`, the playground's Light / Dark segments) |
+| light and dark | default (`"componentTheme": "auto"`) | each theme colour as a themed colour, `{"light": .., "dark": ..}` in `resources.colors`. The player picks the side from the system theme while it plays (`rc2image --theme`, render `theme`, the playground's Light / Dark segments) |
 | light only, dark only | `"componentTheme": "light"` or `"dark"` | plain colours from that side, with no theme ops. `"dark"` writes the library's look from before themed colours, byte for byte |
-| mono | `"componentTheme": "mono"` | light on black, for always-on displays and OLED: the theme's `modes.mono` palette (black, white and one grey `#9E9E9E`), `@theme.mono` = 1, and no animation |
-| mono inverted | `"componentTheme": "mono-inverted"` | dark on white, for e-ink and other reflective displays: `modes.mono-inverted` (white, black and one grey `#616161`), the same mono variants (`@theme.mono` = 1), no animation |
+| mono dark | `"componentTheme": "mono-dark"` | light on black, for always-on displays and OLED: the theme's `modes["mono-dark"]` palette (black, white and one grey `#9E9E9E`), `@theme.mono` = 1, and no animation |
+| mono light | `"componentTheme": "mono-light"` | dark on white, for e-ink and other reflective displays: `modes.mono-light` (white, black and one grey `#616161`), the same mono variants (`@theme.mono` = 1), no animation |
 
-`componentTheme` is a top-level key of the document, next to `componentMode`. The expansion
+`componentTheme` is a top-level key of the document, next to `componentMode`. The old names
+`"mono"` (now `"mono-dark"`) and `"mono-inverted"` (now `"mono-light"`) are still accepted. The expansion
 removes it, and `expand_components` takes it as `theme`. Light and dark are native to the
 format. The Java parser writes `{light, dark}` with `addThemedColor`: two colour constants,
 then a colour that a `THEME` section sets to one of them. That costs about 100 B per theme
@@ -154,32 +155,32 @@ The format has no monochrome mode. The header profile `PROFILE_LOW_POWER` (0x8) 
 in RcProfiles, but nothing in the Java core, the creation API or the players reads it, so
 setting it changes nothing. Mono is therefore chosen when the document is expanded: a
 document's call sites are the same for every look, and expanding the same JSON with
-`"mono"` picks each component's mono implementation. The published playground and the catalog
-playground do exactly that: they carry the mono and mono-inverted expansions of the page's
+`"mono-dark"` or `"mono-light"` picks each component's mono implementation. The published playground and the catalog
+playground do exactly that: they carry the mono-dark and mono-light expansions of the page's
 JSON and their Mono buttons swap the document in place. A host that wants both looks serves
 two documents, each the size of one look.
 
 `"componentTheme": "all"` puts every look in one document instead: the components' mono sides
 are kept, gated at run time by an exported float `theme.mono` (0 by default) that the host
-sets to 1 while it overrides the named colours with the mono palette (`monoPalettes`). It costs
+sets to 1 while it overrides the named colours with the mono-dark or mono-light palette (`monoPalettes`). It costs
 about 20–60% more than `"auto"`. Use it only when a host can't swap documents.
 
 A document re-themes as before, by defining a colour of the same name:
 - a plain value is used in both light and dark;
 - `{"light": .., "dark": ..}` is a themed colour of its own;
-- either form can also carry a `mono` value: `{"light": .., "dark": .., "mono": ..}` or
-  `{"value": .., "mono": ..}`. In mono, a colour that has a theme name and no `mono` value
-  takes the mono palette's value, because brand colours don't survive on a 1-bit display.
+- either form can also carry a `mono-dark` value: `{"light": .., "dark": .., "mono-dark": ..}` or
+  `{"value": .., "mono-dark": ..}`. In mono dark, a colour that has a theme name and no `mono-dark` value
+  takes the mono-dark palette's value, because brand colours don't survive on a 1-bit display.
   Colours the theme doesn't name are kept (a themed one takes its dark side).
-- the same with a `mono-inverted` value for mono inverted (a themed colour the theme doesn't
+- the same with a `mono-light` value for mono light (a themed colour the theme doesn't
   name takes its light side there).
 
 ### Writing the mono variant
 
 Mono is for always-on displays (AOD) and OLED, light on black. A watch's always-on button has
 a white outline and white text on black; the same widget on e-ink is the reverse, black on
-white. That is mono inverted, and it needs nothing from a component: it is the same variant
-with the palette swapped (`modes.mono-inverted`: background and surface white, onSurface and
+white. That is mono light, and it needs nothing from a component: it is the same variant
+with the palette swapped (`modes["mono-light"]`: background and surface white, onSurface and
 primary black, onPrimary white, the grey darker so muted text stays readable on white, 6.2:1).
 Write the variant against the theme colours, never a literal black or white, and both work.
 On e-ink the AOD rule "few lit pixels" reads "little ink": the outlined surfaces become
@@ -214,8 +215,8 @@ stroke width. Keep the params the same in both modes. The rules:
 The light palette was chosen for contrast on its own background: onSurface is 16:1, muted
 5.6:1, outline 3:1 (so a checkbox's edge is visible), track 2:1 (a white thumb on it is
 visible), and white text on primary, success and error is 5:1 or more. Build a new component's
-demo with `"renders"` in `meta.check` (light, dark, mono and mono-inverted, as the library
-does: `{"name": "mono-inverted", "componentTheme": "mono-inverted"}`) and look at all four.
+demo with `"renders"` in `meta.check` (light, dark, mono-dark and mono-light, as the library
+does: `{"name": "mono-light", "componentTheme": "mono-light"}`) and look at all four.
 
 ## How a component reaches the wire: expand vs pattern
 
@@ -278,7 +279,9 @@ frame in Java (androidx remote-core), C++ and TypeScript:
   runs. Use it anywhere a float is drawn: paint `alpha`, draw coordinates, `graphicsLayer`
   `alpha` / `translationX` / `scaleX`. Nothing is re-measured. To read one eased value in
   several places, make it an animated local (`locals`, above) and derive the rest from it.
-- **Only the standard cubic easing.** JSON gives `anim` a duration, nothing else. A spring or
+- **Only the standard cubic easing.** JSON gives `anim` a duration, nothing else. A duration of
+  exactly 1 writes no animation (the reference parser's default packs to nothing): the expander
+  writes 0.999 for a component local; in a document, write 0.99 or 1.01. A spring or
   overshoot is an expression over the eased progress: Switch's thumb is
   `16 + 20 * (p + 0.5 * sin(3.14159 * p) * (2 * @checked - 1))`, about 10% past the end and
   back. The sine term flips with the target, so a tap mid-travel jumps a little.
@@ -329,7 +332,7 @@ Traps the library hit (the linter catches the first four):
 - An SVG path string in `drawPath` costs about 4 KB in Java, because it is padded to 1024
   floats. Use primitives, `drawLine`, or the op-list path form.
 - `animationTime()` alone never schedules a repaint; use `continuousSec()` for motion.
-- Weights ignore `spacedBy`: in a weighted row, use spacer boxes between the children.
+- Weights ignore `spacedBy`, in a row and in a column alike: with weighted children, use fixed spacer boxes between them.
 - `border` rounds only with `"shape": 2`; a `cornerRadius` alone draws a square border.
 - There are no colour expressions. To show a state colour, overlay two copies and fade one
   with paint alpha, or with `graphicsLayer {alpha: expr}` (see Switch, Chip, Tabs).
@@ -382,7 +385,7 @@ WeatherIcon (a family of pictograms from one enum).
 
 ## Workflow
 
-1. `find_components` to check it doesn't exist yet. Then `get_component` with
+1. `find {"kind": "components", ...}` to check it doesn't exist yet. Then `get` with
    `definition: true` on the closest one, to copy its structure.
 2. Write the definition.
 3. Run `check_component {"definition": ..., "variables": {...}}`. It lints, expands the call,

@@ -83,6 +83,9 @@ export class CoreDocument implements ExpansionDocument {
     mRemoteComposeState = new RemoteComposeState();
     mVersion: Version | null = null;
     mWidth = 256;
+    // The header sizes the document once; after that the host's surface (context.mWidth /
+    // mHeight at every paint) is the size, and windowWidth()/windowHeight() follow it.
+    mHeaderSized = false;
     mHeight = 256;
     mAuthorWidth: number | null = null;
     mAuthorHeight: number | null = null;
@@ -484,6 +487,11 @@ export class CoreDocument implements ExpansionDocument {
         const expression = this.mFloatExpressions.get(expressionId);
         if (expression && typeof expression.evaluate === 'function') {
             context.overrideFloat(targetId, expression.evaluate(context));
+        } else {
+            // The value is a plain variable's id (a bare "continuousSec()" or "@x" in the
+            // action): its current value, as the reference reads it (U46).
+            const v = context.getFloat(expressionId);
+            if (typeof v === 'number' && !Number.isNaN(v)) context.overrideFloat(targetId, v);
         }
     }
 
@@ -702,6 +710,14 @@ export class CoreDocument implements ExpansionDocument {
         if (pc) pc.save();
 
         // Content scaling: if SIZING_SCALE, apply translate + scale before painting
+        // windowWidth()/windowHeight() are the host's surface, as the reference host sets them,
+        // whatever the content scaling (the document's own size stays mWidth). The state is
+        // the context's: the document's own field is not always wired.
+        {
+            const st = (context as any).mRemoteComposeState ?? this.mRemoteComposeState;
+            st?.setWindowWidth?.(context.mWidth);
+            st?.setWindowHeight?.(context.mHeight);
+        }
         if (this.mContentSizing === RootContentBehavior.SIZING_SCALE) {
             const scaleOutput = [1, 1];
             this.computeScale(context.mWidth, context.mHeight, scaleOutput);
@@ -819,12 +835,36 @@ export class CoreDocument implements ExpansionDocument {
         this.mAppliedTouchOperations.add(component);
     }
 
+    /** Components with touch-up / cancel modifiers that took a touch down (U70 in C++). */
+    private mModifierTouchTargets = new Set<any>();
+    private mModifierRan = new Set<any>();
+    modifierTouchTarget(component: any): void {
+        this.mModifierTouchTargets.add(component);
+    }
+    touchModifierRan(component: any): void {
+        this.mModifierRan.add(component);
+    }
+    private runModifierTouchTargets(context: RemoteContext, phase: 'up' | 'cancel'): boolean {
+        let handled = false;
+        for (const c of this.mModifierTouchTargets) {
+            // One already reached through the normal walk ran its modifiers there.
+            if (this.mModifierRan.has(c)) continue;
+            c.runOwnTouchModifiers?.(context, phase);
+            handled = true;
+        }
+        this.mModifierTouchTargets.clear();
+        this.mModifierRan.clear();
+        return handled;
+    }
+
     hasTouchListener(): boolean {
         if (this.mTouchListeners.size > 0) return true;
         return this.mRootLayoutComponent?.getHasTouchListeners() ?? false;
     }
 
     touchDown(context: RemoteContext, x: number, y: number): boolean {
+        this.mModifierTouchTargets.clear();
+        this.mModifierRan.clear();
         context.loadFloat(RemoteContext.ID_TOUCH_POS_X, x);
         context.loadFloat(RemoteContext.ID_TOUCH_POS_Y, y);
         for (const listener of this.mTouchListeners) {
@@ -868,6 +908,7 @@ export class CoreDocument implements ExpansionDocument {
                     handled = true;
                 }
             }
+            if (this.runModifierTouchTargets(context, 'up')) handled = true;
             this.mAppliedTouchOperations.clear();
         }
         this.mNeedsRepaintFlag = 1;
@@ -882,6 +923,7 @@ export class CoreDocument implements ExpansionDocument {
                     handled = true;
                 }
             }
+            if (this.runModifierTouchTargets(context, 'cancel')) handled = true;
             this.mAppliedTouchOperations.clear();
             this.mNeedsRepaintFlag = 1;
             return handled;

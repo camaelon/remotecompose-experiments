@@ -20,13 +20,16 @@
   "calendar date",
   "iso date",
   "date format",
-  "dd/mm/yyyy"
+  "dd/mm/yyyy",
+  "accessible date",
+  "spoken date"
  ],
  "teaches": [
   "{\"DateLabel\": {}} shows \"Thu 29 Oct\" from the host clock; format picks medium (29 Oct 2026), long (Thursday, 29 October 2026), iso, dmy or mdy",
   "Weekday and month names are cut from one constant string with textSubtext at (weekDay() - 1) × width, which the Java parser converts (textLookup over a data list does not, U4); full names are padded to 9 characters and trimmed",
   "The parts are joined with textMerge into one string and drawn with drawTextAnchored, so align start, center or end places the whole date in the width the label fills",
-  "A date wider than its label is measured with textMeasure and drawn under one scale of min(1, componentWidth() / width), so it shrinks instead of being cut off"
+  "A date wider than its label is measured with textMeasure and drawn under one scale of min(1, componentWidth() / width), so it shrinks instead of being cut off",
+  "A screen reader hears the full date (\"Thursday 29 October\" for the short label): an empty box over the canvas carries a contentDescription of a text variable built in the canvas, after it, since \"@name\" resolves only once the name is defined"
  ],
  "snippets": [
   {
@@ -56,7 +59,7 @@
   "touch": false
  },
  "check": {
-  "describe": "On Thursday 29 October 2026 the labels read \"Thursday, 29 October 2026\", \"Thu 29 Oct\" (centred), \"29 Oct 2026\", \"2026-10-29\" (blue), \"29/10/2026\" and \"10/29/2026\" (end-aligned). On Sunday 3 January 2027 (the january render) the names change to \"Sunday, 3 January 2027\" and \"Sun 3 Jan\". Each label fills the column's width: at 200 dp the 18 dp long date is wider than the column and is scaled down to fit on its line; at 420 dp the centred and end-aligned ones follow the width.",
+  "describe": "On Thursday 29 October 2026 the labels read \"Thursday, 29 October 2026\", \"Thu 29 Oct\" (centred), \"29 Oct 2026\", \"2026-10-29\" (blue), \"29/10/2026\" and \"10/29/2026\" (end-aligned). On Sunday 3 January 2027 (the january render) the names change to \"Sunday, 3 January 2027\" and \"Sun 3 Jan\". Each label fills the column's width: at 200 dp the 18 dp long date is wider than the column and is scaled down to fit on its line; at 420 dp the centred and end-aligned ones follow the width. A screen reader announces each date in words with full names: \"Thursday, 29 October 2026\", \"Thursday 29 October\", \"29 October 2026\" (medium, iso, dmy) and \"October 29, 2026\" (mdy).",
   "render": {
    "clock": "2026-10-29T22:10:05"
   },
@@ -70,12 +73,12 @@
     "theme": "dark"
    },
    {
-    "name": "mono",
-    "componentTheme": "mono"
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
    },
    {
-    "name": "mono-inverted",
-    "componentTheme": "mono-inverted"
+    "name": "mono-light",
+    "componentTheme": "mono-light"
    },
    {
     "name": "narrow",
@@ -109,41 +112,42 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 3056,
+  "bytes": 3957,
   "header": {
    "width": 300,
    "height": 260
   },
-  "op_count": 182,
+  "op_count": 250,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 6,
-   "ANIMATED_FLOAT": 19,
+   "ANIMATED_FLOAT": 22,
    "COLOR_CONSTANT": 8,
    "COLOR_EXPRESSIONS": 8,
    "COMPONENT_VALUE": 6,
    "CanvasContent": 6,
    "CoreText": 1,
-   "DATA_TEXT": 10,
+   "DATA_TEXT": 7,
    "DRAW_TEXT_ANCHOR": 6,
    "HEADER": 1,
+   "LAYOUT_BOX": 12,
    "LAYOUT_CANVAS": 6,
    "LAYOUT_COLUMN": 1,
    "LAYOUT_ROOT": 1,
-   "LayoutComponentContent": 8,
+   "LayoutComponentContent": 14,
    "LoopOperation": 8,
    "MATRIX_SCALE": 6,
    "MODIFIER_BACKGROUND": 1,
-   "MODIFIER_HEIGHT": 7,
+   "MODIFIER_HEIGHT": 13,
    "MODIFIER_PADDING": 1,
-   "MODIFIER_WIDTH": 7,
+   "MODIFIER_WIDTH": 19,
    "NAMED_VARIABLE": 4,
    "PAINT_VALUES": 6,
    "THEME": 12,
    "TextFromFloat": 4,
    "TextMeasure": 6,
-   "TextMerge": 26,
-   "TextSubtext": 5,
-   "TextTransform": 2
+   "TextMerge": 46,
+   "TextSubtext": 11,
+   "TextTransform": 8
   },
   "host_variables": [
    {
@@ -193,13 +197,13 @@
     "render": "render-dark.png",
     "render_findings": []
    },
-   "mono": {
-    "componentTheme": "mono",
-    "bytes": 2648,
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 3549,
     "component_modes": {
      "DateLabel": "expand"
     },
-    "op_count": 150,
+    "op_count": 218,
     "host_variables": [
      {
       "name": "background",
@@ -224,16 +228,16 @@
     ],
     "java_identical": true,
     "repaint": "idle",
-    "render": "render-mono.png",
+    "render": "render-mono-dark.png",
     "render_findings": []
    },
-   "mono-inverted": {
-    "componentTheme": "mono-inverted",
-    "bytes": 2648,
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 3549,
     "component_modes": {
      "DateLabel": "expand"
     },
-    "op_count": 150,
+    "op_count": 218,
     "host_variables": [
      {
       "name": "background",
@@ -258,7 +262,7 @@
     ],
     "java_identical": true,
     "repaint": "idle",
-    "render": "render-mono-inverted.png",
+    "render": "render-mono-light.png",
     "render_findings": []
    },
    "narrow": {
@@ -289,6 +293,7 @@
    "align",
    "apiLevel",
    "background",
+   "box",
    "canvas",
    "children",
    "color",
@@ -368,6 +373,6 @@
     "drawTextAnchored"
    ]
   },
-  "built_at": "2026-10-31T06:00:39.109Z"
+  "built_at": "2026-10-31T22:22:51.379Z"
  }
 }

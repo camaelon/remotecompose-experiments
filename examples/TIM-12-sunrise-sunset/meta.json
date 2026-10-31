@@ -68,7 +68,17 @@
   "day graph",
   "current time marker",
   "now marker",
-  "time tiles"
+  "time tiles",
+  "day length over the year",
+  "length of the day",
+  "daylight hours",
+  "sun curve",
+  "curve",
+  "solstice",
+  "equinox",
+  "seasons",
+  "solar elevation",
+  "daylight chart"
  ],
  "teaches": [
   "Layout for structure and text, a canvas only for the drawing: a column of rows holds the place, the date, the altitude line, the axis labels and six time tiles as text components (they measure, wrap, follow the font scale and reach screen readers); the one canvas is the sun path, given the panel's remaining height by verticalWeight and drawn from componentWidth() and componentHeight()",
@@ -210,8 +220,8 @@
     "theme": "light"
    },
    {
-    "name": "mono",
-    "componentTheme": "mono"
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
    },
    {
     "name": "narrow",
@@ -226,6 +236,7 @@
   ]
  },
  "pitfalls": [
+  "offsetToUtc() is the DEVICE's zone: a widget for a place elsewhere (Lisbon from a phone in California) must compute that place's offset itself (its standard offset plus its daylight-saving rule, e.g. the EU rule: last Sunday of March to last Sunday of October), or its times shift with the viewer's zone",
   "Don't draw the whole UI on one full-screen canvas with every text placed at fixed coordinates: it doesn't relayout on another screen, ignores the font scale, and screen readers get nothing. Text and structure are layout components (column, row, text, Icon, small inline components); the canvas is only the drawing, sized by the layout",
   "Don't type the date or the times in (\"Thursday, Oct 30\", \"Sunrise 7:33 AM\"): the document is wrong tomorrow. Read the date from the clock (DateLabel, dayOfYear(), year()) and compute the times from the location",
   "Local time vs UTC: the solar formulas give UTC; offsetToUtc() (seconds, local minus UTC: -25200 in PDT) converts to local minutes (+ offsetToUtc() / 60) and shifts the day count (- offsetToUtc() / 86400). For renders, pin system variable 10, or the result depends on the build machine's zone",
@@ -267,12 +278,12 @@
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 16028,
+  "bytes": 16084,
   "header": {
    "width": 360,
    "height": 640
   },
-  "op_count": 565,
+  "op_count": 570,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 2,
    "ANIMATED_FLOAT": 86,
@@ -282,26 +293,26 @@
    "CanvasContent": 10,
    "CoreText": 20,
    "DATA_FLOAT": 2,
-   "DATA_TEXT": 24,
+   "DATA_TEXT": 23,
    "DRAW_CIRCLE": 2,
    "DRAW_LINE": 5,
    "DRAW_PATH": 11,
    "DRAW_TEXT_ANCHOR": 1,
    "HEADER": 1,
-   "LAYOUT_BOX": 21,
+   "LAYOUT_BOX": 23,
    "LAYOUT_CANVAS": 10,
    "LAYOUT_COLUMN": 9,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 13,
-   "LayoutComponentContent": 58,
+   "LayoutComponentContent": 59,
    "LoopOperation": 15,
    "MATRIX_RESTORE": 8,
    "MATRIX_SAVE": 8,
    "MATRIX_SCALE": 9,
    "MODIFIER_BACKGROUND": 8,
-   "MODIFIER_HEIGHT": 18,
+   "MODIFIER_HEIGHT": 19,
    "MODIFIER_PADDING": 8,
-   "MODIFIER_WIDTH": 48,
+   "MODIFIER_WIDTH": 50,
    "NAMED_VARIABLE": 10,
    "PAINT_VALUES": 18,
    "PATH_DATA": 7,
@@ -373,8 +384,8 @@
    "info": 2
   },
   "audit_findings": [
-   "info: layout_empty_container",
-   "info: deep_expressions"
+   "info: deep_expressions",
+   "info: expression_entries"
   ],
   "repaint": "scheduled",
   "interaction_targets": {
@@ -402,16 +413,16 @@
     "render": "render-light.png",
     "render_findings": []
    },
-   "mono": {
-    "componentTheme": "mono",
-    "bytes": 15811,
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 15867,
     "component_modes": {
      "Panel": "expand",
      "Icon": "expand",
      "DateLabel": "expand",
      "TimeTile": "expand"
     },
-    "op_count": 530,
+    "op_count": 535,
     "host_variables": [
      {
       "name": "background",
@@ -466,7 +477,7 @@
     ],
     "java_identical": true,
     "repaint": "scheduled",
-    "render": "render-mono.png",
+    "render": "render-mono-dark.png",
     "render_findings": []
    },
    "narrow": {
@@ -477,8 +488,8 @@
      600
     ],
     "audit_findings": [
-     "info: layout_empty_container",
-     "info: deep_expressions"
+     "info: deep_expressions",
+     "info: expression_entries"
     ]
    },
    "wide": {
@@ -489,8 +500,8 @@
      520
     ],
     "audit_findings": [
-     "info: layout_empty_container",
-     "info: deep_expressions"
+     "info: deep_expressions",
+     "info: expression_entries"
     ]
    }
   },
@@ -733,6 +744,6 @@
     "colors"
    ]
   },
-  "built_at": "2026-10-31T06:00:01.769Z"
+  "built_at": "2026-10-31T22:22:10.820Z"
  }
 }
