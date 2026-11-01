@@ -978,3 +978,18 @@ Classifier on 36 fresh prompts written without sight of it (docs/structures/fres
 
 Structure list in the build_kit description (fresh prompts, one run each; output tokens with / without): stock 11.0K / 12.5K, morning 26.4K / 21.3K, meditation 26.9K / 11.4K (the run with the list built four layouts, 14.6 KB against 3.6 KB), parcel 9.5K / 8.7K. A repeat of the "without" condition, where the list was present but unseen, gave 11.6K, 22.6K, 12.6K and 10.1K, so noise is about 10%. Every run with the list still made a first build_kit call without structure and repeated it. Offline, a model's main pick was right on 54 of 63 shuffled eval prompts (86%), and on all 36 fresh prompts, though those are listed in structure order and written from the same definitions.
 
+Baseline (eval/baseline.md, commit b1cf728e; output tokens and minutes, two runs each):
+
+| prompt | run 1 | run 2 | spread |
+| :-- | --: | --: | --: |
+| notifications | 8.3K, 1.7 | 6.8K, 1.4 | 20% |
+| solar | 15.4K, 2.9 | 17.0K, 3.4 | 10% |
+| music player | 20.5K, 4.0 | 15.2K, 3.1 | 30% |
+| calorie tracker | 17.1K, 3.1 | 11.5K, 2.2 | 39% |
+| tip calculator | 16.3K, 3.2 | 15.7K, 3.3 | 4% |
+| recipe | 13.2K, 2.5 | 17.7K, 3.4 | 29% |
+| binary search | 28.0K, 5.3 | 22.3K, 4.2 | 22% |
+| watch tile | 16.7K, 3.1 | 15.8K, 2.9 | 5% |
+
+Mean 16.1K, spread between repeats 20% on average. A change on one prompt in one run tells little below about 40%; judge across the set.
+

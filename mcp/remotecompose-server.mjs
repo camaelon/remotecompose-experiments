@@ -738,13 +738,18 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
             // (Logic does not depend on the look: checked once.)
             if (expect && c.look === usable[0]) lines.push(...await checkExpect(src, c.w, c.h, a.variables, $clock, points, wait, expect, drag));
             const images = r.filter((x) => x.type === "image");
-            return { label, hash: images[0] ? imageHash(images[0].data) : undefined, head: `── ${label}${a.output_path ? ` → ${a.output_path}` : ""}`, images, lines };
+            return { label, drag: Boolean(drag), base: `${c.w}×${c.h} ${c.look}`, hash: images[0] ? imageHash(images[0].data) : undefined, head: `── ${label}${a.output_path ? ` → ${a.output_path}` : ""}`, images, lines };
         } catch (e) { return { label, head: `── ${label}: ${errorLine(e)}`, images: [], lines: [], failed: true }; }
     });
     // A document that does not convert fails every case the same way: say it once.
     const failed = parts.map((x) => /^── [^:]*: (json2rc failed.*|components: .*)$/s.exec(x.head)?.[1]);
     if (failed.length && failed.every((f) => f && f === failed[0])) return [{ type: "text", text: `The document does not convert, so nothing was rendered:\n${failed[0]}` }];
     const covered = samples?.length && usable.length > 1 && !everyLook ? [`Samples ran in the first look (${usable[0]}); the other looks show the document's own data. every_look: true runs them in all.`] : [];
+    // A drag that changed nothing in the picture missed, or the thing it reached does not respond.
+    for (const x of parts) {
+        const base = parts.find((y) => y.label === x.base);
+        if (x.drag && x.hash && base?.hash === x.hash) x.lines.push("warning: [drag_missed] the drag changed nothing in the picture: check its position at this size (tap targets are listed below; a slider needs its y).");
+    }
     // Only the pictures that differ from what the caller has seen; findings are always listed.
     const src = args.json_path ?? args.rc_path;
     const planFile = src ? resolveIn(planPathOf(src)) : null;
@@ -827,10 +832,11 @@ async function inspectionNotes(kept, sizes, faultLines = []) {
         const [first] = sizes;
         const targetsBySize = [];
         for (const [width, height] of sizes.filter(([w]) => w)) {
-            const { targets, nodes } = await targetsAt(src, width, height);
+            const { targets, nodes } = await targetsAt(src, width, height, undefined, loadPlan(resolveIn(planPathOf(kept)))?.clock);
             targetsBySize.push({ size: [width, height], targets, nodes });
         }
-        const at = first?.[0] ? { width: first[0], height: first[1] } : {};
+        const planClock = loadPlan(resolveIn(planPathOf(kept)))?.clock;
+        const at = { ...(first?.[0] ? { width: first[0], height: first[1] } : {}), ...(planClock !== undefined ? { clock: planClock } : {}) };
         const nodes = targetsBySize[0]?.nodes ?? (await inspectJson("inspect_accessibility", { ...src, ...at })).nodes;
         const engines = [];
         for (const [width, height] of sizes.filter(([w]) => w)) {
@@ -958,7 +964,13 @@ const tools = [
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "The look to build: auto (default) light and dark by the system theme; all: light, dark AND mono in ONE file, mono switched at run time by the host, which sets the theme.mono float AND the mono colours (larger); mono-dark or mono-light: that look only (a json_path then writes <name>-<look>.rc beside it, not over <name>.rc). Same as theme." },
             },
         },
-        handler: async ({ from_example, set, check, expanded, render: doRender, json_path, edits, componentTheme, looks, sizes, samples, clocks, every_look, recheck, show_all, ...args } = {}) => {
+        handler: async (a = {}) => {
+            let undoEdits = null;
+            // (An edit that does not convert is not kept: the document stays as it last worked.)
+            try { return await tools.find((t) => t.name === "convert").run(a, (fn) => { undoEdits = fn; }); }
+            catch (e) { undoEdits?.(); throw e; }
+        },
+        run: async ({ from_example, set, check, expanded, render: doRender, json_path, edits, componentTheme, looks, sizes, samples, clocks, every_look, recheck, show_all, ...args } = {}, keepUndo = () => {}) => {
             // One name for a JSON file everywhere: json2rc calls it input_path, the others json_path.
             let file = json_path ?? args.input_path;
             // Start from a catalog example without writing it out: only the differences are sent.
@@ -978,8 +990,9 @@ const tools = [
             if (edits?.length) {
                 if (!file) throw new Error("convert: edits change a stored document: give its json_path (a convert of inline JSON keeps it beside the .rc, x.json)");
                 const p = resolveIn(file);
-                const changed = applyEdits(readFileSync(p, "utf8"), edits);
-                writeFileSync(p, changed);
+                const before = readFileSync(p, "utf8");
+                writeFileSync(p, applyEdits(before, edits));
+                keepUndo(() => writeFileSync(p, before));
             }
             if (expanded) {
                 const json = args.json ?? (file ? JSON.parse(readFileSync(resolveIn(file), "utf8")) : undefined);
@@ -1010,6 +1023,12 @@ const tools = [
             }
             // Convert and check in one call: the edit-render-audit round is most of a document's calls.
             const saved = kept ? loadPlan(resolveIn(planPathOf(kept))) : null;
+            // (New sizes, samples or clocks sent with edits are a new check, in the saved looks: they were
+            // ignored once, and the old check ran again without a word.)
+            if (!looks?.length && saved?.looks && (sizes?.length || samples?.length || clocks?.length)) {
+                looks = saved.looks;
+                sizes = sizes ?? saved.sizes; samples = samples ?? saved.samples; every_look = every_look ?? saved.every_look;
+            }
             const verify = kept && (looks?.length || recheck === true || (edits?.length && recheck !== false && saved?.looks));
             if (recheck === true && !looks?.length && !saved?.looks) throw new Error("convert: no saved check to repeat: give looks (and sizes, samples) once");
             if (verify) {
@@ -1030,7 +1049,9 @@ const tools = [
                 if (faultLines.length) inspected.push({ type: "text", text: faultLines.join("\n") });
                 // Finished? Then the deliverable is ready too, with no further call.
                 const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
-                const clean = /, 0 warning\(s\)/.test(summary) && !findings.size && !faultLines.length;
+                // (dead_code is often inside a library component, out of the author's reach: it costs a few bytes
+                // and shows nothing, so it is reported without holding up the verdict.)
+                const clean = /, 0 warning\(s\)/.test(summary) && ![...findings.keys()].some((c) => c !== "dead_code") && !faultLines.length;
                 const finish = clean ? await finishNote(kept) : [];
                 // (The design warnings are already in json2rc's result.)
                 return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];
