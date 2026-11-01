@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { loadLibrary, loadIconCatalog } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
 import { loadMaps } from "./maps.mjs";
+import { classifyStructure, structureMenu, HIDE_TEMPLATES } from "./structures.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -388,7 +389,9 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
     const r = resolveTerms(goal);
     const needed = new Set([...r.capabilities, ...expandCapIds(capabilities, C)]);
     // Components first: a goal that names a component gets its call, not a hand-drawn copy.
-    const comps = r.components.map((n) => componentSummary(n)).filter(Boolean);
+    // A structure with a template: the template first, whatever the words matched.
+    const template = !HIDE_TEMPLATES ? classifyStructure(goal)?.structure.template : null;
+    const comps = [...new Set([...(template ? [template] : []), ...r.components])].filter((n) => !(HIDE_TEMPLATES && ["RowList", "AdaptiveSplit"].includes(n))).map((n) => componentSummary(n)).filter(Boolean);
     for (const c of comps) for (const cap of c.capabilities ?? []) needed.delete(cap);
     // A word that names a component ("curve" -> LineChart) is covered by it: the capabilities
     // the same word also resolves to (draw.path) need no example of their own, unless another
@@ -501,7 +504,14 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
         : /\b(widget|tile)\b/.test(gl) && !/\b(chart|curve|graph|plot|path|arc|ring|gauge|map|moon|sun|tide)\b/.test(gl) ? "TIM-08" : "TIM-12";
     // A dashboard is modelled on the stats dashboard (tiles, a chart, a list), whatever its subject words match.
     const dashboard = /\b(dashboards?|overview)\b/i.test(String(goal)) ? models.find((e) => e.id === "CMP-08") : null;
-    const model = dashboard ?? models.map((e, i) => ({ e, ...textScore(e), rank: (models.length - i) * 0.75 })).filter((x) => x.score >= 3)
+    // What the request is shaped like decides the start: among that structure's examples, the
+    // closest in subject, else its best. Only a request with no recognisable shape uses the words.
+    const shape = classifyStructure(goal);
+    const shapeExamples = (shape?.structure.examples ?? []).filter((id) => !(HIDE_TEMPLATES && id === "CMP-18")).map((id) => C.examples.find((e) => e.id === id)).filter(Boolean);
+    // (With a template its example is the start: it shows how the template is called.)
+    const shapeModel = (!HIDE_TEMPLATES && shape?.structure.template ? shapeExamples[0] : null)
+        ?? shapeExamples.map((e, i) => ({ e, score: textScore(e).score >= 3 ? textScore(e).score : 0, i })).sort((a, b) => b.score - a.score || a.i - b.i)[0]?.e;
+    const model = shapeModel ?? dashboard ?? models.map((e, i) => ({ e, ...textScore(e), rank: (models.length - i) * 0.75 })).filter((x) => x.score >= 3)
         .sort((a, b) => (b.score + b.rank) - (a.score + a.rank))[0]?.e ?? models.find((e) => e.id === fallback) ?? models[0];
     // Words an example is about, and proper nouns (capitalised mid-goal: "San Francisco"), are not
     // things the library lacks.
@@ -572,15 +582,22 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
         resolved: { capabilities: [...needed], use_cases: r.use_cases, form_factors: r.form_factors,
                     components: r.components, matched: r.matched },
         unmatched_terms: r.unmatched_terms,
-        components: comps,
+        // (Search words and gallery pointers help nobody who has the component already.)
+        components: comps.map(({ synonyms, gallery, ...c }) => ({ ...c, ...(c.demo ? { demo: { how: c.demo.how } } : {}) })),
         examples: kit.map((k) => ({ ...summarizeExample(k.e, { matched: k.covers, compact: true }), contributes: k.covers,
             ...(k.about ? { about: `the goal's subject: ${k.about.join(", ")}` } : {}),
             ...(k.layout ? { about: "the layout model: structure the screen like this" } : {}) })),
         ...(model ? { layout_model: {
             id: model.id, title: model.title, folder: model.folder,
+            // The whole document, so a first draft needs no further call (a long one: get it).
+            ...((() => { try { const d = JSON.stringify(exampleDoc(model)); return d.length <= 16000 ? { document: d } : {}; } catch { return {}; } })()),
             why: "Structure the screen like this: layout components (column, row, text, library components) for the " +
                  "structure and every text, a canvas only for a drawing, values computed in the document. get it for the full JSON.",
         } } : {}),
+        ...(shape ? { structure: { id: shape.structure.id, is: shape.structure.is, adapts: shape.structure.adapts,
+            ...(template ? { template, use: `${template} (see its entry in components) is a short call with the adaptive layout built in, for rows you can tap. It shows only the rows that fit at 48 dp, so when every row must stay visible at small sizes, or rows are not tappable, a column of your own may suit better.` } : {}),
+            note: "A guess from the words of the request. If another entry of structures fits better, start from that one's example instead." } } : {}),
+        structures: structureMenu((id) => C.examples.some((e) => e.id === id)),
         // Looks are not a feature to find an example of: theme colours give them all.
         not_covered: [...[...remaining].filter((c) => c !== "theme.mode"), ...(CALENDAR_MATH.test(goal) ? ["calendar arithmetic: no example, but recipes in reference expressions (Calendar arithmetic): an app date as an EPOCH DAY with today's epoch day from year() and dayOfYear(), days until/since, dates N days away, week numbers, month names"] : []),
             ...(TEXT_ENTRY.test(goal) ? ["text entry: the format has NO keyboard input — see the design rule \"Text entry is the app's\""] : [])],
@@ -694,7 +711,9 @@ function designRules(goal, r, needed) {
         { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
         { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
         { rule: "Switch content by state", how: "A state a stateLayout, an expression or a TextChoice reads is a float variable: all three can read a float, and the last two read an integer variable as 0. A screen with phases (work / break, playing / paused, empty / loaded) switches what it shows from a variable, never by rebuilding: a word from an index is a TextChoice; two alternatives are two children with a visibility modifier each (\"@isBreak\" and \"1 - @isBreak\"; an integer 0/1), stacked in a box so the layout does not move; a whole layout per state is a stateLayout node ({\"stateLayout\": {\"indexId\": \"@phase\", \"children\": [...]}}, a format node, not a component: LAY-15); a state colour is two coloured copies switched by visibility (LAY-12), a host colour the app sets, or (json2rc) a computed colour in resources.colors — {\"hsv\": [h, s, v]} or {\"argb\": [a, r, g, b]} from variables. A hidden alternative takes no taps and no space." },
-        { rule: "Check it all in one call", how: "convert the document once with its whole check: {\"json\": ..., \"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"name\": \"A very long name\"}, {\"$tap\": [40, 60], \"$size\": [320, 160]}]}. It returns the contact sheets, findings and audit warnings: every look at every size, every data case and tap in the first look. Then send only each change, convert {\"json_path\": ..., \"edits\": [{\"old\": ..., \"new\": ...}]}: the same check comes back with just the pictures that changed. Rewriting the whole document each time is the slowest part of building one. Finish with render {\"json_path\": ..., \"again\": true, \"show_all\": true} for the final sheet." },
+        { rule: "Adapt rather than retype", how: "When an example is close, do not write it out: convert {\"from_example\": \"CMP-15\", \"set\": {\"stop\": \"Central\"}, \"edits\": [{\"old\": ..., \"new\": ...}], \"looks\": [...], \"sizes\": [...], \"samples\": [...]} copies it on the server and changes only what you send; old is matched in the document as shown here, ignoring whitespace between tokens." },
+        { rule: "Check it all in one call", how: "convert the document once with its whole check: {\"json\": ..., \"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"name\": \"A very long name\"}, {\"$tap\": \"Save\", \"$wait\": 1, \"$expect\": {\"saved\": 1}}]}. It returns the contact sheets, findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict: no separate audit or inspect calls. Every look runs at every size, every data case and tap in the first look. Then send only each change, convert {\"json_path\": ..., \"edits\": [{\"old\": ..., \"new\": ...}]}: the same check comes back with just the pictures that changed. Rewriting the whole document each time is the slowest part of building one. When nothing is wrong it says READY and writes the full contact sheet: stop there." },
+        { rule: "Syntax you will need", how: "A text the app sets: {\"variable\": {\"name\": \"stop\", \"vtype\": \"string\", \"value\": \"Central\", \"export\": true}} first in root, read as \"@stop\". A number the app sets: resources.variables {\"n\": {\"value\": 3, \"export\": true}}. step(x, edge) is 1 when x > edge, 0 at equality, so x >= 3 for whole numbers is step(x, 2.5). Visibility takes a declared variable holding exactly 0 or 1: {\"visibility\": \"@shown\"} with shown = \"step(@n, 0.5)\". A word picked by an index: {\"TextChoice\": {\"items\": [\"Clear\", \"Rain\"], \"index\": \"@i\"}}, inside a box for modifiers. Joining text: {\"type\": \"textMerge\", \"id1\": \"Line \", \"id2\": \"@line\"}. Modifiers apply in order: clip, background, then padding." },
         { rule: "Light, dark and mono come from the theme", how: "With @colors.* every look exists already: no theme switch to write and no colour overrides to test with. Check them with render looks. To ship them: convert with componentTheme \"all\" makes ONE file (to show mono the host sets the theme.mono float AND the mono colours as named colours, so a separate file is simpler); mono-dark or mono-light makes a file for that look." },
         { rule: "Adapt to the size, including smaller", how: `In a row or column with a weighted child, separate the children with spacer boxes, not spacedBy (the gaps overflow). A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout. Alternatives that hold TEXT switch with a stateLayout on the window, by size and never by content ({\"stateLayout\": {\"indexId\": \"@layout\", ...}} with layout = \"step(windowWidth(), 300) + step(windowHeight(), 140)\"; LAY-15), or one layout whose row count and sizes are computed from windowWidth() and windowHeight() (CMP-15): a fitBox measures a text's whole one-line width, so a long name from the app can blank every alternative; a fitBox suits fixed-size alternatives without long text (its first child that fits is shown; LAY-09) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height instead of a weight (a weight does not combine with heightIn), and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
     ];

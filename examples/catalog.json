@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-11-01T17:10:34.349Z",
+ "built_at": "2026-11-01T19:09:02.777Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -990,8 +990,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 1
+     "warning": 0,
+     "info": 2
     },
     "evidence": {
      "anim.value": [
@@ -10461,6 +10461,2305 @@
      "vpad",
      "vtype",
      "warning",
+     "weight",
+     "whole",
+     "width",
+     "widthIn",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "id": "CMP-16",
+   "name": "step-explainer",
+   "version": 1,
+   "title": "Step explainer: how a heat pump works",
+   "summary": "A step-by-step explainer frame: a title, a big drawing driven by the step, step dots, a caption, and back, play and next buttons. The drawing sits beside the caption when wide and above it otherwise, the caption shortens when short, and the frame is a local component whose visual slot takes any drawing. It fits every size from 160x160 to 360x480.",
+   "prompt": "Explain how a heat pump works in 4 steps, with a simple drawing for each step, step dots, a caption, and back, play and next buttons. The drawing goes beside the caption when wide, the caption shortens when short. It must fit 320x160, 160x160, 360x480, 240x240 and 480x200.",
+   "level": 3,
+   "family": "CMP",
+   "components": [
+    "IconButton",
+    "PagerDots",
+    "Icon",
+    "StepFrame",
+    "Station"
+   ],
+   "capabilities": {
+    "primary": [
+     "layout.stack",
+     "input.tap",
+     "anim.value"
+    ],
+    "secondary": [
+     "expr.system",
+     "a11y.labels",
+     "text.dynamic",
+     "draw.arc",
+     "draw.transform",
+     "draw.path",
+     "time.animation",
+     "host.variables"
+    ]
+   },
+   "use_cases": [
+    "onboarding"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "step by step",
+    "step-by-step",
+    "steps",
+    "explainer",
+    "how it works",
+    "how does it work",
+    "explain",
+    "walkthrough",
+    "tutorial",
+    "guide",
+    "onboarding",
+    "intro",
+    "slideshow",
+    "slides",
+    "stepper screen",
+    "step dots",
+    "page dots",
+    "caption",
+    "back and next",
+    "previous and next",
+    "play pause",
+    "autoplay",
+    "play through steps",
+    "animated explanation",
+    "diagram",
+    "drawing changes with the step",
+    "adaptive",
+    "beside when wide",
+    "any size",
+    "heat pump",
+    "cycle",
+    "loop diagram"
+   ],
+   "teaches": [
+    "The whole step-explainer frame as a local component to copy: replace the titles, texts, shorts and the visual slot, and the buttons, dots and sizes keep working",
+    "One tree for every shape: a visual box and a caption column in one box, with sizes and spacer lengths from windowWidth() and windowHeight(), so the drawing moves beside the caption when wide with no second copy",
+    "Three captions per size: the full text, a short one, and only the step title at the smallest size, each an exact visibility on the step. Keep every string to its limit (params say which)",
+    "A drawing with a regime for tiny sizes: below 70 dp the loop gives way to the current part's icon, which still reads",
+    "Play without a clock listener: an eased value of a half-second tick drives repaints only while playing, and it is read in the dots' expression. Mono has no play button and no motion",
+    "Publish the step from the component with {\"$name\"}: the local's own name is prefixed per call, so a slot could not read it otherwise"
+   ],
+   "snippets": [
+    {
+     "pointer": "/components/StepFrame",
+     "shows": "layout.stack",
+     "note": "the frame to copy: title, visual slot, dots, three captions and the controls"
+    },
+    {
+     "pointer": "/resources/variables/wide",
+     "shows": "expr.system",
+     "note": "beside or above: all sizes in resources.variables derive from this and windowWidth/Height"
+    },
+    {
+     "pointer": "/root/StepFrame/slots/visual/0",
+     "shows": "draw.arc",
+     "note": "the drawing, in a 100-unit box scaled from the box it got; it reads @stepEased and @stepNow"
+    },
+    {
+     "pointer": "/components/StepFrame/body/column/children/2/column/children/1/box/children/1/column/children/1/row/children/1/column/children/3/row",
+     "shows": "input.tap",
+     "note": "back, play and next: labelled icon buttons at least 48 dp, disabled at the ends; the play actions restart from step 1 on the last step"
+    },
+    {
+     "pointer": "/components/StepFrame/locals/cur",
+     "shows": "anim.value",
+     "note": "the step on screen: the host's step, or the timed one while playing"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "stage": {
+      "min": 0,
+      "max": 3,
+      "meaning": "the step, 0-based; the buttons write it and the host may set it"
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "How a heat pump works, a loop of four discs with icons (air, compress, home, valve), the current one filled, the fluid's temperature in the middle, four dots, the step title, its caption, back, play and next. 360x480: drawing above, full caption. 480x200: drawing beside, title and full caption. 320x160: beside, short caption, no title. 240x240: above, short caption, no title. 160x160: one big icon for the step, its title and the buttons. Back is dim on step 1, next on step 4. Mono: no play button.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "widget",
+      "width": 320,
+      "height": 160
+     },
+     {
+      "name": "small",
+      "width": 160,
+      "height": 160
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     },
+     {
+      "name": "next",
+      "width": 320,
+      "height": 160,
+      "theme": "light",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 288,
+        "y": 128
+       }
+      ],
+      "duration": 1
+     },
+     {
+      "name": "last",
+      "theme": "light",
+      "variables": {
+       "stage": 3
+      }
+     }
+    ]
+   },
+   "related": [
+    "Walkthrough",
+    "PagerDots",
+    "IconButton",
+    "INT-06",
+    "CMP-06",
+    "CMP-15"
+   ],
+   "pitfalls": [
+    "Walkthrough is the same frame without the adaptation: use it for a phone-size column, this for sizes under about 400 dp tall. Its buttons need more than 160 dp across and its caption and controls more than 160 dp down, and it has no place beside the drawing",
+    "Do not name a variable step: it hides the step() function. Here it is stage",
+    "A local of a component is prefixed per call and written in resources, where a slot's tree variable is not known yet: pass the eased step into a drawing through a canvas variable (g0 to g3 here) or a bound {\"$name\"} variable",
+    "ifElse is (when false, when true, condition): ifElse(14, 15, step(@H, 300)) is 15 when tall",
+    "IconButton filled with a runtime enabled keeps the onPrimary icon on its disabled face, which vanishes in mono: next is two buttons switched by visibility, filled and enabled, outlined and disabled",
+    "Weights with no room left warn as zero size at 160 dp: the spacers between the buttons are exact widths, which may be 0",
+    "A column with an exact height and a verticalWeight child took all the height there was in the C++ and TS players: size its children exactly"
+   ],
+   "folder": "CMP-16-step-explainer",
+   "derived": {
+    "bytes": 16744,
+    "op_count": 719,
+    "header": {
+     "width": 360,
+     "height": 480
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "stage",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       5,
+       70,
+       35,
+       -5
+      ]
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Icon",
+     "IconButton",
+     "PagerDots",
+     "Station",
+     "StepFrame"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 14593,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "stage",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "temps",
+        "type": "float_array",
+        "value": [
+         5,
+         70,
+         35,
+         -5
+        ]
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 14593,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "stage",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "temps",
+        "type": "float_array",
+        "value": [
+         5,
+         70,
+         35,
+         -5
+        ]
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "widget": {
+      "render": "render-widget.png"
+     },
+     "small": {
+      "render": "render-small.png"
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "next": {
+      "render": "render-next.png",
+      "theme": "light"
+     },
+     "last": {
+      "render": "render-last.png",
+      "theme": "light"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 2,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ],
+     "input.tap": [
+      "onClick",
+      "valueFloatChange"
+     ],
+     "anim.value": [
+      "anim"
+     ],
+     "expr.system": [
+      "fontSize()",
+      "windowWidth",
+      "windowHeight",
+      "componentWidth",
+      "componentHeight"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "draw.arc": [
+      "drawArc"
+     ],
+     "draw.transform": [
+      "save",
+      "rotate",
+      "scale",
+      "translate"
+     ],
+     "draw.path": [
+      "drawPath"
+     ],
+     "time.animation": [
+      "animationTime()",
+      "animationTime"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "$count",
+     "$each",
+     "$icon",
+     "$if",
+     "$name",
+     "$slot",
+     "H",
+     "Icon",
+     "IconButton",
+     "PagerDots",
+     "Station",
+     "StepFrame",
+     "W",
+     "alpha",
+     "angle",
+     "anim",
+     "apiLevel",
+     "as",
+     "at",
+     "background",
+     "body",
+     "bottom",
+     "box",
+     "call",
+     "canvas",
+     "capFs",
+     "capH",
+     "ch",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "components",
+     "contentDescription",
+     "count",
+     "cur",
+     "current",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "default",
+     "disabled",
+     "do",
+     "doc",
+     "drawArc",
+     "drawCircle",
+     "drawLine",
+     "drawPath",
+     "drawTextAnchored",
+     "drive",
+     "dx",
+     "dy",
+     "eased",
+     "else",
+     "enabled",
+     "export",
+     "filled",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "g",
+     "global",
+     "graphicsLayer",
+     "hasCap",
+     "hasTitle",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "icon",
+     "icon_air_outlined",
+     "icon_arrow_back_outlined",
+     "icon_arrow_forward_outlined",
+     "icon_compress_outlined",
+     "icon_heat_pump_outlined",
+     "icon_home_outlined",
+     "icon_pause_outlined_filled",
+     "icon_play_arrow_outlined_filled",
+     "icon_valve_outlined",
+     "iconbutton1_enOff",
+     "iconbutton1_enOn",
+     "id1",
+     "id2",
+     "ih",
+     "index",
+     "interval",
+     "iw",
+     "label",
+     "last",
+     "left",
+     "len",
+     "light",
+     "locals",
+     "long",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "n",
+     "name",
+     "onClick",
+     "onPrimary",
+     "onSurface",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "pad",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "params",
+     "path",
+     "paths",
+     "pivotX",
+     "pivotY",
+     "playing",
+     "pos",
+     "primary",
+     "profiles",
+     "radius",
+     "required",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "run",
+     "s0",
+     "save",
+     "scale",
+     "semantics",
+     "short",
+     "shorts",
+     "shown",
+     "size",
+     "slots",
+     "stage",
+     "start",
+     "startAngle",
+     "static",
+     "stepframe1_cur",
+     "stepframe1_playing",
+     "stepframe1_run",
+     "stepframe1_s0",
+     "stepframe1_t0",
+     "stepframe1_tick",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "summary",
+     "sweepAngle",
+     "sx",
+     "sy",
+     "t0",
+     "target",
+     "temps",
+     "text",
+     "textSize",
+     "textSubtext",
+     "textTransform",
+     "texts",
+     "then",
+     "tick",
+     "tiny",
+     "title",
+     "titleH",
+     "titles",
+     "top",
+     "translate",
+     "tw",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "vh",
+     "visibility",
+     "visual",
+     "vw",
+     "warning",
+     "whole",
+     "wide",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "id": "CMP-17",
+   "name": "hero-chart-widget",
+   "version": 1,
+   "title": "Hero and chart widget: home energy",
+   "summary": "A big value with its change and caption, and a chart filling the rest, at widget size: the hero stacks over the chart when tall, sits beside it when wide, and the stats, axis and header drop when short. The total and peak come from the exported hourly array, so the host sends one list. It fits 160x160, 320x160, 240x240, 480x200 and 360x480.",
+   "prompt": "Build a home energy widget: one big number for the last 24 hours with its change from the day before, a chart of each hour filling the rest, and peak, cost and solar stats when there is room. Stacked when tall, hero beside the chart when wide, secondary parts dropped when short. It must fit 320x160, 160x160, 360x480, 240x240 and 480x200.",
+   "level": 2,
+   "family": "CMP",
+   "components": [
+    "BigNumber",
+    "LineChart",
+    "LabelValue",
+    "Icon"
+   ],
+   "capabilities": {
+    "primary": [
+     "layout.stack",
+     "host.variables",
+     "data.array"
+    ],
+    "secondary": [
+     "expr.array",
+     "expr.system",
+     "a11y.labels",
+     "text.dynamic"
+    ]
+   },
+   "use_cases": [
+    "widget",
+    "chart",
+    "dashboard"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "hero",
+    "hero number",
+    "big number",
+    "big value",
+    "one big number",
+    "number and chart",
+    "value and chart",
+    "kpi widget",
+    "stat widget",
+    "metric widget",
+    "chart widget",
+    "small chart",
+    "chart at widget size",
+    "sparkline widget",
+    "line chart",
+    "delta",
+    "change from yesterday",
+    "percent change",
+    "trend",
+    "stats row",
+    "key figures",
+    "today",
+    "last 24 hours",
+    "dashboard tile",
+    "glance",
+    "adaptive widget",
+    "beside when wide",
+    "stacked when tall",
+    "drops when short",
+    "any size",
+    "home energy",
+    "energy use",
+    "electricity",
+    "kwh",
+    "smart home"
+   ],
+   "teaches": [
+    "A hero plus chart that survives the small sizes: every length is an expression of windowWidth() and windowHeight(), and the same tree stacks or goes side by side through spacer lengths",
+    "Priority when short: first the stats, then the header, then the axis labels. The chart always stays and takes what is left",
+    "One list from the host: the total and the peak are arraySum and arrayMax of the exported array, so they can never disagree with the chart",
+    "The axis is a row of texts under the chart, not xLabels, so it can be dropped by visibility at run time; xLabels are fixed when the document is built",
+    "BigNumber's own description says the value and change to a screen reader. Do not pass label unless you repeat them",
+    "Swap the chart: BarChart with fill true takes the same array, and any canvas fits the same box"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/2",
+     "shows": "layout.stack",
+     "note": "the whole widget: header, then hero, chart and stats placed by spacer lengths in one box"
+    },
+    {
+     "pointer": "/resources/variables/wide",
+     "shows": "expr.system",
+     "note": "stacked or side by side; hasStats, hasHead and hasAxis next to it drop the parts"
+    },
+    {
+     "pointer": "/resources/floatArrays/hours",
+     "shows": "data.array",
+     "note": "the host's data: the chart, the total and the peak all read it"
+    },
+    {
+     "pointer": "/root/0",
+     "shows": "host.variables",
+     "note": "an exported host string, with a starting value distinct from the other"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "hours": {
+      "type": "float_array",
+      "meaning": "kWh used in each hour, oldest first; any length. The hero is its sum, Peak its maximum"
+     },
+     "delta": {
+      "min": -100,
+      "max": 100,
+      "meaning": "change in percent from the day before; below 0 is green with a down arrow"
+     },
+     "cost": {
+      "type": "string",
+      "meaning": "the cost, already formatted with its currency",
+      "default": "€4.10"
+     },
+     "solar": {
+      "type": "string",
+      "meaning": "the solar share, already formatted",
+      "default": "32 %"
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Used in the last 24 h, 18.0 kWh, a green down arrow with -8%, and a blue line of hourly use. 360x480: header, big hero, chart, axis, three stats. 240x240: header, hero, chart, axis, no stats. 480x200: header, hero with stats beside the chart with its axis. 320x160: hero beside chart, no header or stats. 160x160: hero over chart, no axis. With delta 12 the change is red and up.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "small",
+      "width": 160,
+      "height": 160
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     },
+     {
+      "name": "tall",
+      "width": 360,
+      "height": 480
+     },
+     {
+      "name": "rise",
+      "width": 360,
+      "height": 480,
+      "theme": "light",
+      "variables": {
+       "delta": 12,
+       "cost": "€1,204.50",
+       "solar": "100 %"
+      }
+     }
+    ]
+   },
+   "related": [
+    "BigNumber",
+    "LineChart",
+    "LabelValue",
+    "BarChart",
+    "TIM-13",
+    "CMP-15"
+   ],
+   "pitfalls": [
+    "The hero's caption is literal text in BigNumber; to let the host name the period, draw your own caption",
+    "A column with an exact height and a verticalWeight child took all the height there was in the C++ and TS players, which put the chart's axis under the stats: size the plot exactly",
+    "ifElse is (when false, when true, condition): ifElse(26, 32, step(@H, 300)) is 32 when tall",
+    "Every host string needs its own starting value: equal strings share one text id, and setting one sets both (shared_string_value)",
+    "Passing y_min 0 keeps the chart honest; LineChart's default scales to the array's minimum, which exaggerates small changes"
+   ],
+   "folder": "CMP-17-hero-chart-widget",
+   "derived": {
+    "bytes": 7697,
+    "op_count": 423,
+    "header": {
+     "width": 320,
+     "height": 160
+    },
+    "host_variables": [
+     {
+      "name": "cost",
+      "type": "string",
+      "value": "€4.10"
+     },
+     {
+      "name": "delta",
+      "type": "float",
+      "value": -8
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "hours",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0.25,
+       0.219999999,
+       0.200000003,
+       0.200000003,
+       0.25,
+       0.5,
+       1.10000002,
+       1.29999995,
+       0.800000012,
+       0.600000024,
+       0.550000012,
+       0.75,
+       0.600000024,
+       0.5,
+       0.550000012,
+       0.800000012,
+       1.29999995,
+       1.89999998,
+       1.70000005,
+       1.39999998,
+       1.10000002,
+       0.699999988,
+       0.449999988
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "solar",
+      "type": "string",
+      "value": "32 %"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     }
+    ],
+    "components": [
+     "BigNumber",
+     "Icon",
+     "LabelValue",
+     "LineChart"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 6776,
+      "host_variables": [
+       {
+        "name": "cost",
+        "type": "string",
+        "value": "€4.10"
+       },
+       {
+        "name": "delta",
+        "type": "float",
+        "value": -8
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "hours",
+        "type": "float_array",
+        "value": [
+         0.300000012,
+         0.25,
+         0.219999999,
+         0.200000003,
+         0.200000003,
+         0.25,
+         0.5,
+         1.10000002,
+         1.29999995,
+         0.800000012,
+         0.600000024,
+         0.550000012,
+         0.75,
+         0.600000024,
+         0.5,
+         0.550000012,
+         0.800000012,
+         1.29999995,
+         1.89999998,
+         1.70000005,
+         1.39999998,
+         1.10000002,
+         0.699999988,
+         0.449999988
+        ]
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "solar",
+        "type": "string",
+        "value": "32 %"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 6776,
+      "host_variables": [
+       {
+        "name": "cost",
+        "type": "string",
+        "value": "€4.10"
+       },
+       {
+        "name": "delta",
+        "type": "float",
+        "value": -8
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "hours",
+        "type": "float_array",
+        "value": [
+         0.300000012,
+         0.25,
+         0.219999999,
+         0.200000003,
+         0.200000003,
+         0.25,
+         0.5,
+         1.10000002,
+         1.29999995,
+         0.800000012,
+         0.600000024,
+         0.550000012,
+         0.75,
+         0.600000024,
+         0.5,
+         0.550000012,
+         0.800000012,
+         1.29999995,
+         1.89999998,
+         1.70000005,
+         1.39999998,
+         1.10000002,
+         0.699999988,
+         0.449999988
+        ]
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "solar",
+        "type": "string",
+        "value": "32 %"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "small": {
+      "render": "render-small.png"
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "tall": {
+      "render": "render-tall.png"
+     },
+     "rise": {
+      "render": "render-rise.png",
+      "theme": "light"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "data.array": [
+      "floatArrays"
+     ],
+     "expr.array": [
+      "arraySum(",
+      "arrayMax(",
+      "arrayLength("
+     ],
+     "expr.system": [
+      "fontSize()",
+      "windowWidth",
+      "windowHeight",
+      "componentWidth",
+      "componentHeight"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ]
+    },
+    "json_keys": [
+     "BigNumber",
+     "H",
+     "Icon",
+     "LabelValue",
+     "LineChart",
+     "W",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bignumber1_dn",
+     "bignumber1_fl",
+     "bignumber1_h",
+     "bignumber1_mag",
+     "bignumber1_up",
+     "bignumber1_yc",
+     "box",
+     "cH",
+     "cTop",
+     "canvas",
+     "caption",
+     "ch",
+     "change",
+     "changeDecimals",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cw",
+     "dark",
+     "decimal",
+     "decimals",
+     "delta",
+     "drawLine",
+     "drawPath",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "end",
+     "error",
+     "export",
+     "expressionX",
+     "expressionY",
+     "fill",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "fs",
+     "gap",
+     "hasAxis",
+     "hasHead",
+     "hasStats",
+     "headH",
+     "header",
+     "height",
+     "heroH",
+     "heroTop",
+     "horizontalAlignment",
+     "hours",
+     "hw",
+     "icon_bolt_outlined",
+     "id",
+     "id1",
+     "id2",
+     "ih",
+     "invert",
+     "iw",
+     "label",
+     "len",
+     "light",
+     "maxLines",
+     "mode",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "overflow",
+     "pad",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "path",
+     "pathExpression",
+     "paths",
+     "peak",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "resources",
+     "root",
+     "row",
+     "sTop",
+     "save",
+     "scale",
+     "semantics",
+     "size",
+     "start",
+     "statsH",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "success",
+     "suffix",
+     "surface",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "textSubtext",
+     "top",
+     "translate",
+     "type",
+     "used",
+     "value",
+     "values",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalWeight",
+     "visibility",
+     "vtype",
+     "weight",
+     "whole",
+     "wide",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2",
+     "y_min"
+    ]
+   }
+  },
+  {
+   "id": "CMP-18",
+   "name": "row-list",
+   "version": 1,
+   "title": "Row list",
+   "summary": "A list screen the app fills: a heading and up to six uniform rows from host strings and numbers, each with an icon, a title, a subtitle, a value and details to tap open. One small RowList call adapts it to any size: rows while tall, subtitles and heading gone when short, columns when wide, an empty state.",
+   "prompt": "Build a list of today's orders the app fills: a customer, the items and the total on each row, tap a row for its details, and an empty state when there are none. It must fit a widget and a phone.",
+   "level": 2,
+   "family": "CMP",
+   "components": [
+    "RowList",
+    "AdaptiveSplit",
+    "Icon"
+   ],
+   "capabilities": {
+    "primary": [
+     "layout.flow",
+     "host.variables",
+     "input.tap"
+    ],
+    "secondary": [
+     "a11y.labels",
+     "a11y.state",
+     "text.dynamic",
+     "expr.system"
+    ]
+   },
+   "use_cases": [
+    "list",
+    "widget",
+    "dashboard"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "list",
+    "list of rows",
+    "rows",
+    "row list",
+    "data rows",
+    "list from the app",
+    "rows from the app",
+    "host list",
+    "orders",
+    "order list",
+    "inbox",
+    "contacts",
+    "people list",
+    "status list",
+    "server status",
+    "stock list",
+    "world clock list",
+    "departures list",
+    "notification list",
+    "leaderboard rows",
+    "tap a row",
+    "expand a row",
+    "details on tap",
+    "empty state",
+    "nothing to show",
+    "adapts to any size",
+    "widget list",
+    "phone list",
+    "grid when wide",
+    "tiles when wide",
+    "settings rows"
+   ],
+   "teaches": [
+    "A whole list screen in one RowList call: the adaptive decisions are the component's, so the document holds only the data",
+    "Host rows: exported strings and numbers in the row fields, count: \"@n\" for how many show, the written rows are the capacity",
+    "Numbers in a row are text objects: a textMerge of \"$\" and a textFromFloat goes directly in the value field",
+    "A tappable row reads as one item: its label is built live from title, subtitle and value"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/18",
+     "shows": "layout.flow",
+     "note": "the whole screen: one RowList call with its six rows"
+    },
+    {
+     "pointer": "/root/0",
+     "shows": "host.variables",
+     "note": "a host string; give each a distinct initial value"
+    },
+    {
+     "pointer": "/resources/variables/n",
+     "shows": "host.variables",
+     "note": "how many rows the app has now: 0 shows the empty state"
+    },
+    {
+     "pointer": "/root/18",
+     "shows": "input.tap",
+     "note": "a row with a sixth field, its details, opens on a tap"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "n": {
+      "min": 0,
+      "max": 6,
+      "meaning": "how many rows the app has now; 0 shows the empty state"
+     },
+     "t1": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 1's total"
+     },
+     "openRow": {
+      "min": 0,
+      "max": 6,
+      "meaning": "which row is open, from 1; 0 none"
+     },
+     "who1": {
+      "type": "string",
+      "meaning": "order 1's customer (who2.. for the others)",
+      "default": "Ada Lovelace"
+     },
+     "what1": {
+      "type": "string",
+      "meaning": "order 1's items",
+      "default": "2 items"
+     },
+     "note1": {
+      "type": "string",
+      "meaning": "order 1's details",
+      "default": "Paid by card, ships Monday"
+     },
+     "t2": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 2's total"
+     },
+     "t3": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 3's total"
+     },
+     "t4": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 4's total"
+     },
+     "t5": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 5's total"
+     },
+     "t6": {
+      "min": 0,
+      "max": 9999,
+      "meaning": "order 6's total"
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "360x480: Today's orders, a muted summary, four divided rows: package icon, customer, items, a total; a chevron at the end. 480x200: two columns. 320x160 and 160x160: no heading when it would cost a row, no subtitles; 160 hides the chevrons. n 0: heading and 'No orders yet'. n 6 at 240x240: 3 of 6 in the header. A tap opens the row's note under it; nothing touches.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "small",
+      "width": 160,
+      "height": 160
+     },
+     {
+      "name": "widget",
+      "width": 320,
+      "height": 160
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     },
+     {
+      "name": "empty",
+      "theme": "light",
+      "variables": {
+       "n": 0
+      }
+     },
+     {
+      "name": "one",
+      "theme": "light",
+      "variables": {
+       "n": 1
+      }
+     },
+     {
+      "name": "many",
+      "theme": "light",
+      "variables": {
+       "n": 6
+      }
+     },
+     {
+      "name": "open",
+      "theme": "light",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 180,
+        "y": 100
+       }
+      ],
+      "duration": 1
+     }
+    ]
+   },
+   "related": [
+    "RowList",
+    "AdaptiveSplit",
+    "CMP-15",
+    "CMP-05"
+   ],
+   "pitfalls": [
+    "Fill slots from the first: count shows the first n rows",
+    "Give every host string a distinct initial value: equal strings share one text id",
+    "Numbers go as textFromFloat text objects, so the row stays live; do not format them into the strings"
+   ],
+   "folder": "CMP-18-row-list",
+   "derived": {
+    "bytes": 15630,
+    "op_count": 840,
+    "header": {
+     "width": 360,
+     "height": 480
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "n",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "note1",
+      "type": "string",
+      "value": "Paid by card, ships Monday"
+     },
+     {
+      "name": "note2",
+      "type": "string",
+      "value": "Waiting for payment"
+     },
+     {
+      "name": "note3",
+      "type": "string",
+      "value": "Paid, in the warehouse, large parcel"
+     },
+     {
+      "name": "note4",
+      "type": "string",
+      "value": "Paid, pick up in store"
+     },
+     {
+      "name": "note5",
+      "type": "string",
+      "value": "Note 5"
+     },
+     {
+      "name": "note6",
+      "type": "string",
+      "value": "Note 6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "openRow",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "t1",
+      "type": "float",
+      "value": 48.5
+     },
+     {
+      "name": "t2",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "t3",
+      "type": "float",
+      "value": 129
+     },
+     {
+      "name": "t4",
+      "type": "float",
+      "value": 7.25
+     },
+     {
+      "name": "t5",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "t6",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "what1",
+      "type": "string",
+      "value": "2 items"
+     },
+     {
+      "name": "what2",
+      "type": "string",
+      "value": "Coffee beans"
+     },
+     {
+      "name": "what3",
+      "type": "string",
+      "value": "Standing desk"
+     },
+     {
+      "name": "what4",
+      "type": "string",
+      "value": "Oat milk"
+     },
+     {
+      "name": "what5",
+      "type": "string",
+      "value": "Item 5"
+     },
+     {
+      "name": "what6",
+      "type": "string",
+      "value": "Item 6"
+     },
+     {
+      "name": "who1",
+      "type": "string",
+      "value": "Ada Lovelace"
+     },
+     {
+      "name": "who2",
+      "type": "string",
+      "value": "Grace Hopper"
+     },
+     {
+      "name": "who3",
+      "type": "string",
+      "value": "Katherine Johnson"
+     },
+     {
+      "name": "who4",
+      "type": "string",
+      "value": "Hedy Lamarr"
+     },
+     {
+      "name": "who5",
+      "type": "string",
+      "value": "Slot 5"
+     },
+     {
+      "name": "who6",
+      "type": "string",
+      "value": "Slot 6"
+     }
+    ],
+    "components": [
+     "AdaptiveSplit",
+     "Icon",
+     "RowList"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 15096,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "n",
+        "type": "float",
+        "value": 4
+       },
+       {
+        "name": "note1",
+        "type": "string",
+        "value": "Paid by card, ships Monday"
+       },
+       {
+        "name": "note2",
+        "type": "string",
+        "value": "Waiting for payment"
+       },
+       {
+        "name": "note3",
+        "type": "string",
+        "value": "Paid, in the warehouse, large parcel"
+       },
+       {
+        "name": "note4",
+        "type": "string",
+        "value": "Paid, pick up in store"
+       },
+       {
+        "name": "note5",
+        "type": "string",
+        "value": "Note 5"
+       },
+       {
+        "name": "note6",
+        "type": "string",
+        "value": "Note 6"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "openRow",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "t1",
+        "type": "float",
+        "value": 48.5
+       },
+       {
+        "name": "t2",
+        "type": "float",
+        "value": 12
+       },
+       {
+        "name": "t3",
+        "type": "float",
+        "value": 129
+       },
+       {
+        "name": "t4",
+        "type": "float",
+        "value": 7.25
+       },
+       {
+        "name": "t5",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "t6",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "what1",
+        "type": "string",
+        "value": "2 items"
+       },
+       {
+        "name": "what2",
+        "type": "string",
+        "value": "Coffee beans"
+       },
+       {
+        "name": "what3",
+        "type": "string",
+        "value": "Standing desk"
+       },
+       {
+        "name": "what4",
+        "type": "string",
+        "value": "Oat milk"
+       },
+       {
+        "name": "what5",
+        "type": "string",
+        "value": "Item 5"
+       },
+       {
+        "name": "what6",
+        "type": "string",
+        "value": "Item 6"
+       },
+       {
+        "name": "who1",
+        "type": "string",
+        "value": "Ada Lovelace"
+       },
+       {
+        "name": "who2",
+        "type": "string",
+        "value": "Grace Hopper"
+       },
+       {
+        "name": "who3",
+        "type": "string",
+        "value": "Katherine Johnson"
+       },
+       {
+        "name": "who4",
+        "type": "string",
+        "value": "Hedy Lamarr"
+       },
+       {
+        "name": "who5",
+        "type": "string",
+        "value": "Slot 5"
+       },
+       {
+        "name": "who6",
+        "type": "string",
+        "value": "Slot 6"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 15096,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "n",
+        "type": "float",
+        "value": 4
+       },
+       {
+        "name": "note1",
+        "type": "string",
+        "value": "Paid by card, ships Monday"
+       },
+       {
+        "name": "note2",
+        "type": "string",
+        "value": "Waiting for payment"
+       },
+       {
+        "name": "note3",
+        "type": "string",
+        "value": "Paid, in the warehouse, large parcel"
+       },
+       {
+        "name": "note4",
+        "type": "string",
+        "value": "Paid, pick up in store"
+       },
+       {
+        "name": "note5",
+        "type": "string",
+        "value": "Note 5"
+       },
+       {
+        "name": "note6",
+        "type": "string",
+        "value": "Note 6"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "openRow",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "t1",
+        "type": "float",
+        "value": 48.5
+       },
+       {
+        "name": "t2",
+        "type": "float",
+        "value": 12
+       },
+       {
+        "name": "t3",
+        "type": "float",
+        "value": 129
+       },
+       {
+        "name": "t4",
+        "type": "float",
+        "value": 7.25
+       },
+       {
+        "name": "t5",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "t6",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "what1",
+        "type": "string",
+        "value": "2 items"
+       },
+       {
+        "name": "what2",
+        "type": "string",
+        "value": "Coffee beans"
+       },
+       {
+        "name": "what3",
+        "type": "string",
+        "value": "Standing desk"
+       },
+       {
+        "name": "what4",
+        "type": "string",
+        "value": "Oat milk"
+       },
+       {
+        "name": "what5",
+        "type": "string",
+        "value": "Item 5"
+       },
+       {
+        "name": "what6",
+        "type": "string",
+        "value": "Item 6"
+       },
+       {
+        "name": "who1",
+        "type": "string",
+        "value": "Ada Lovelace"
+       },
+       {
+        "name": "who2",
+        "type": "string",
+        "value": "Grace Hopper"
+       },
+       {
+        "name": "who3",
+        "type": "string",
+        "value": "Katherine Johnson"
+       },
+       {
+        "name": "who4",
+        "type": "string",
+        "value": "Hedy Lamarr"
+       },
+       {
+        "name": "who5",
+        "type": "string",
+        "value": "Slot 5"
+       },
+       {
+        "name": "who6",
+        "type": "string",
+        "value": "Slot 6"
+       }
+      ]
+     },
+     "small": {
+      "render": "render-small.png"
+     },
+     "widget": {
+      "render": "render-widget.png"
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "empty": {
+      "render": "render-empty.png",
+      "theme": "light"
+     },
+     "one": {
+      "render": "render-one.png",
+      "theme": "light"
+     },
+     "many": {
+      "render": "render-many.png",
+      "theme": "light"
+     },
+     "open": {
+      "render": "render-open.png",
+      "theme": "light"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 4,
+     "click": 4,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 3
+    },
+    "evidence": {
+     "layout.flow": [
+      "flow"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "input.tap": [
+      "onClick"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "a11y.state": [
+      "stateDescription"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "expr.system": [
+      "fontSize()",
+      "windowWidth",
+      "windowHeight",
+      "componentWidth",
+      "componentHeight"
+     ]
+    },
+    "json_keys": [
+     "Icon",
+     "RowList",
+     "adaptivesplit1_s",
+     "adaptivesplit1_sw",
+     "adaptivesplit1_v1",
+     "anim",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "clickable",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "dark",
+     "decimal",
+     "drawLine",
+     "drawPath",
+     "emptyText",
+     "end",
+     "export",
+     "flags",
+     "flow",
+     "fontSize",
+     "fontWeight",
+     "global",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "horizontalArrangement",
+     "icon_package_2_outlined",
+     "id1",
+     "id2",
+     "len",
+     "light",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "n",
+     "name",
+     "onClick",
+     "onSurface",
+     "open",
+     "openRow",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "padding",
+     "paint",
+     "path",
+     "paths",
+     "primary",
+     "profiles",
+     "resources",
+     "root",
+     "row",
+     "rowlist1_body",
+     "rowlist1_cellW",
+     "rowlist1_cm",
+     "rowlist1_cols",
+     "rowlist1_first",
+     "rowlist1_fit",
+     "rowlist1_h0",
+     "rowlist1_headOn",
+     "rowlist1_ih",
+     "rowlist1_isEmpty",
+     "rowlist1_iw",
+     "rowlist1_lines0",
+     "rowlist1_n",
+     "rowlist1_openH",
+     "rowlist1_rowH",
+     "rowlist1_rw",
+     "rowlist1_shown",
+     "rowlist1_side",
+     "rowlist1_subOn",
+     "rowlist1_sumOn",
+     "rowlist1_sw",
+     "rows",
+     "save",
+     "scale",
+     "semantics",
+     "size",
+     "slots",
+     "start",
+     "stateDescription",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "summary",
+     "sx",
+     "sy",
+     "t1",
+     "t2",
+     "t3",
+     "t4",
+     "t5",
+     "t6",
+     "target",
+     "text",
+     "textAlign",
+     "textSubtext",
+     "textTransform",
+     "title",
+     "top",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "vis_1",
+     "visibility",
+     "vtype",
      "weight",
      "whole",
      "width",
@@ -25844,8 +28143,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 2
+     "warning": 0,
+     "info": 3
     },
     "evidence": {
      "map.region": [
@@ -32993,8 +35292,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 2
+     "warning": 0,
+     "info": 3
     },
     "evidence": {
      "time.date": [
@@ -38201,6 +40500,273 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "AdaptiveSplit",
+   "name": "adaptive-split",
+   "version": 1,
+   "title": "AdaptiveSplit",
+   "prompt": "Lay out two parts side by side when the window is wide and stacked when it is narrow, and drop one when it is short, without copying them into a state layout.",
+   "level": 2,
+   "use_cases": [
+    "widget",
+    "card"
+   ],
+   "form_factor": "widget-4x2",
+   "components": [
+    "AdaptiveSplit"
+   ],
+   "keywords": [
+    "adaptive split",
+    "two panes",
+    "side by side or stacked",
+    "responsive split",
+    "stack when narrow",
+    "hero beside chart",
+    "drop when short",
+    "reflow",
+    "master detail"
+   ],
+   "teaches": [
+    "Call it with slots.first and slots.second: one flow with exact cell sizes, so each part is written once instead of once per layout in a stateLayout",
+    "Give dropFirst or dropSecond a 0/1 expression of the window for what goes first when short"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "layout.flow",
+     "note": "the two slots and when the second goes"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "At 480x200 a primary square with 72 on the left half and the sentence on the right. At 360x480 and 240x240 the 72 band on top, 80 dp, and the sentence under it. At 320x100 only the 72.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "tall",
+      "width": 360,
+      "height": 480
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "short",
+      "width": 320,
+      "height": 100
+     }
+    ]
+   },
+   "related": [
+    "RowList"
+   ],
+   "summary": "Two parts that sit side by side when the window is wide and stack when it is not, and that drop by priority when it is short: one flow, so each part is written once and not copied per layout. Decided by window size and never by content.",
+   "capabilities": {
+    "primary": [
+     "layout.flow"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "Each slot gets a box of exact width and height, so what is inside must fill or be smaller; give firstHeight for a part that needs a fixed height when stacked",
+    "A slot cannot read the split's values: the format has no way for a component to hand a computed value to its slot content. When content must follow the layout (a row count, a hidden caption), compute the same 0/1 flag in your document or a local, pass it as side, and read it in the slot",
+    "width and height default to the whole window. Inside padding, pass the window minus the padding: flow wraps as soon as the two widths exceed the real space",
+    "Weights do not reach through the flow: a part that grows must take the exact box (fillMaxSize)"
+   ],
+   "folder": "components/AdaptiveSplit",
+   "derived": {
+    "bytes": 1506,
+    "op_count": 85,
+    "header": {
+     "width": 480,
+     "height": 200
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     }
+    ],
+    "components": [
+     "AdaptiveSplit"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 1098,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 1098,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "tall": {
+      "render": "render-tall.png"
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "short": {
+      "render": "render-short.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "layout.flow": [
+      "flow"
+     ]
+    },
+    "json_keys": [
+     "AdaptiveSplit",
+     "adaptivesplit1_s",
+     "adaptivesplit1_sw",
+     "adaptivesplit1_v2",
+     "apiLevel",
+     "background",
+     "box",
+     "children",
+     "clip",
+     "color",
+     "colors",
+     "contentDescription",
+     "dark",
+     "dropSecond",
+     "first",
+     "firstHeight",
+     "flow",
+     "fontSize",
+     "fontWeight",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "horizontalArrangement",
+     "light",
+     "modifiers",
+     "onPrimary",
+     "onSurface",
+     "padding",
+     "primary",
+     "profiles",
+     "resources",
+     "root",
+     "roundedRect",
+     "second",
+     "slots",
+     "text",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "vis_1",
+     "visibility",
+     "width"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "AnalogClock",
    "name": "analog-clock",
    "version": 2,
@@ -38455,8 +41021,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 0
+     "warning": 0,
+     "info": 1
     },
     "evidence": {
      "time.clock": [
@@ -44313,8 +46879,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 0
+     "warning": 0,
+     "info": 1
     },
     "evidence": {
      "draw.arc": [
@@ -46743,8 +49309,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 1,
-     "info": 1
+     "warning": 0,
+     "info": 2
     },
     "evidence": {
      "draw.plot": [
@@ -50082,6 +52648,514 @@
      "width",
      "x",
      "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "RowList",
+   "name": "row-list",
+   "version": 1,
+   "title": "RowList",
+   "prompt": "Make a titled list of rows from data that adapts to any window, with rows that can show a value, a switch or a slider.",
+   "level": 2,
+   "use_cases": [
+    "list",
+    "widget",
+    "dashboard",
+    "control"
+   ],
+   "form_factor": "phone",
+   "components": [
+    "RowList",
+    "AdaptiveSplit",
+    "Slider",
+    "Switch"
+   ],
+   "keywords": [
+    "row list",
+    "list",
+    "list of rows",
+    "data rows",
+    "rows from data",
+    "rows from the app",
+    "host rows",
+    "uniform rows",
+    "table rows",
+    "list screen",
+    "list widget",
+    "adaptive list",
+    "responsive list",
+    "status list",
+    "settings list",
+    "control rows",
+    "rows with switches",
+    "rows with sliders",
+    "tile grid",
+    "grid when wide",
+    "empty state",
+    "template",
+    "screen template"
+   ],
+   "teaches": [
+    "Give rows as arrays by position: [title, subtitle, value, lead, trail, details, onClick, detailsNode, label]. A few hundred bytes replace a hand-written adaptive list",
+    "It decides by itself: how many rows fit at 48 dp, columns when wide, subtitles and the header gone when short",
+    "A trailing control sits in trail; trailWidth gives a Slider its share of the row"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "layout.flow",
+     "note": "a three-row list: the whole call"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "input.tap",
+     "note": "control rows, card surface, inside a screen"
+    },
+    {
+     "pointer": "/resources/variables/vol",
+     "shows": "host.variables",
+     "note": "a control's value is a document variable"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "wifi": {
+      "min": 0,
+      "max": 1,
+      "meaning": "Wi-Fi switch"
+     },
+     "vol": {
+      "min": 0,
+      "max": 100,
+      "meaning": "volume slider"
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Cities: three divided rows, each a name, an offset and a time. Settings: a card row with a slider and one with a switch. No text touches other text at any size.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     }
+    ]
+   },
+   "related": [
+    "CMP-18",
+    "AdaptiveSplit",
+    "ExpandableRow",
+    "ListItem"
+   ],
+   "summary": "A titled list of uniform rows from data: each row a title, an optional subtitle, a value, a leading mark, a trailing control and optional details to tap open. It adapts by itself to any window: rows while tall, subtitles and the header gone when short, as many rows as fit at 48 dp, two or three columns when wide, an empty state when the app sends no rows.",
+   "capabilities": {
+    "primary": [
+     "layout.flow",
+     "input.tap",
+     "host.variables"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "rows is positional, because a list item's fields cannot be named in a body ($each has no @r.title): [title, subtitle, value, lead, trail, details, onClick, detailsNode, label]. Stop at the last field used; null skips one",
+    "Rows from the app: put \"@name1\" in the fields, declare the strings as exported root variables (with distinct initial values, or they share one text id) and give count: \"@n\". rows is the capacity: the app can show fewer rows, never more than were written, and each written row costs about 300 B to 1 KB in the document (expand mode, because of text)",
+    "A row is tappable only if it has details or onClick, that is 6 fields or more. Its label is built live from its title, subtitle and value (textMerge, so host text is read as it is now); a 9th field replaces it. Say a status that only an icon shows with that field. Rows without a tap are read text by text and a trailing Switch or Slider is its own target with its own label: give it one",
+    "To make a whole row flip a switch, give the row onClick and show the state with a lead or a trailing drawing without its own tap: a Switch inside a tappable row is two targets",
+    "All decisions read the window (or width and height when you pass them) and the row count, never the content: long text ellipsizes and never changes the layout. Below 180 dp of cell width the chevron goes, and the lead too when the row also has a value or a wide trailing control, so the title stays readable. If the lead is a status, say it in the title or label as well",
+    "A list cut to fit says \"3 of 8\" in the header. Where the header is dropped to fit one more row (a short window), nothing says rows are missing. Set maxRows, or keep the window at 200 dp or more, when that matters",
+    "Details have a fixed height (detailsHeight, 40 dp: two lines of text): a taller detailsNode is cut off unless you raise it. In a short window the rows slide so the open one stays on screen",
+    "A value is at most 42 % of the row and ellipsizes; the title takes the rest. A long value is a sign it belongs in the subtitle",
+    "embedded: true for a list inside a screen. Pass width and height of the box it gets: the layout cannot read its parent's size in a visibility, so the window is the default",
+    "surface card in mono is a 1 dp ring. The row is laid out by a flow with exact cell widths: a surface or padding of your own around it needs width passed"
+   ],
+   "folder": "components/RowList",
+   "derived": {
+    "bytes": 8930,
+    "op_count": 484,
+    "header": {
+     "width": 360,
+     "height": 480
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     },
+     {
+      "name": "vol",
+      "type": "float",
+      "value": 60
+     },
+     {
+      "name": "wifi",
+      "type": "float",
+      "value": 1
+     }
+    ],
+    "components": [
+     "AdaptiveSplit",
+     "RowList",
+     "Slider",
+     "Switch"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 8393,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "vol",
+        "type": "float",
+        "value": 60
+       },
+       {
+        "name": "wifi",
+        "type": "float",
+        "value": 1
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 8393,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "vol",
+        "type": "float",
+        "value": 60
+       },
+       {
+        "name": "wifi",
+        "type": "float",
+        "value": 1
+       }
+      ]
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 1,
+     "area": 0,
+     "touch": 1
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 4
+    },
+    "evidence": {
+     "layout.flow": [
+      "flow"
+     ],
+     "input.tap": [
+      "onClick"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ]
+    },
+    "json_keys": [
+     "RowList",
+     "Slider",
+     "Switch",
+     "adaptivesplit1_fh",
+     "adaptivesplit1_s",
+     "adaptivesplit1_sw",
+     "adaptivesplit2_fh",
+     "adaptivesplit2_s",
+     "adaptivesplit2_sw",
+     "alpha",
+     "anim",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "checked",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "componentValue",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "defaultValue",
+     "drawCircle",
+     "drawLine",
+     "drawRoundRect",
+     "embedded",
+     "export",
+     "expression",
+     "flags",
+     "flow",
+     "fontSize",
+     "fontWeight",
+     "global",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "horizontalArrangement",
+     "id",
+     "id1",
+     "id2",
+     "label",
+     "left",
+     "len",
+     "light",
+     "max",
+     "maxLines",
+     "min",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onSurface",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "padding",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "roundedRect",
+     "row",
+     "rowlist1_body",
+     "rowlist1_cellW",
+     "rowlist1_cm",
+     "rowlist1_cols",
+     "rowlist1_first",
+     "rowlist1_fit",
+     "rowlist1_h0",
+     "rowlist1_headOn",
+     "rowlist1_ih",
+     "rowlist1_iw",
+     "rowlist1_lines0",
+     "rowlist1_open",
+     "rowlist1_openH",
+     "rowlist1_rowH",
+     "rowlist1_rw",
+     "rowlist1_shown",
+     "rowlist1_subOn",
+     "rowlist1_sw",
+     "rowlist2_body",
+     "rowlist2_cellW",
+     "rowlist2_cm",
+     "rowlist2_cols",
+     "rowlist2_first",
+     "rowlist2_fit",
+     "rowlist2_h0",
+     "rowlist2_headOn",
+     "rowlist2_ih",
+     "rowlist2_iw",
+     "rowlist2_lines0",
+     "rowlist2_open",
+     "rowlist2_openH",
+     "rowlist2_rowH",
+     "rowlist2_rw",
+     "rowlist2_shown",
+     "rowlist2_subOn",
+     "rowlist2_sw",
+     "rows",
+     "rx",
+     "ry",
+     "semantics",
+     "size",
+     "slider1_x0",
+     "start",
+     "stateDescription",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "surface",
+     "target",
+     "text",
+     "textAlign",
+     "textSubtext",
+     "textTransform",
+     "title",
+     "top",
+     "touchExpression",
+     "touchMode",
+     "track",
+     "trailWidth",
+     "type",
+     "value",
+     "valueType",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "vis_0",
+     "vis_1",
+     "visibility",
+     "vol",
+     "weight",
+     "whole",
+     "width",
+     "widthIn",
+     "wifi",
+     "x1",
+     "x2",
+     "y1",
+     "y2"
     ]
    }
   },

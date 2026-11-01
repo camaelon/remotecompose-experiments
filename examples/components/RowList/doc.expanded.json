@@ -1,0 +1,1379 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 480,
+  "profiles": 513,
+  "contentDescription": "World clocks in a divided list and sound settings in card rows with controls"
+ },
+ "resources": {
+  "variables": {
+   "wifi": {
+    "value": 1,
+    "export": true
+   },
+   "vol": {
+    "value": 60,
+    "export": true
+   },
+   "rowlist1_open": 0,
+   "rowlist1_h0": "(windowHeight() * 0.5 - 8) - 2 * 0",
+   "rowlist1_iw": "(windowWidth() - 24) - 2 * 0",
+   "rowlist1_sw": "floor(@rowlist1_iw * 0.34)",
+   "rowlist1_rw": "@rowlist1_iw - 0 * (@rowlist1_sw + 12)",
+   "rowlist1_cm": "clamp(1, 3, floor((@rowlist1_rw + 16) / 220))",
+   "rowlist1_cols": "max(1, min(@rowlist1_cm, 3))",
+   "rowlist1_headOn": "max(step((windowHeight() * 0.5 - 8), 199.5), step(floor((@rowlist1_h0 - 32) / 48) * @rowlist1_cols + 0.5, min(3, floor(@rowlist1_h0 / 48) * @rowlist1_cols)))",
+   "rowlist1_body": "@rowlist1_h0 - @rowlist1_headOn * 32",
+   "rowlist1_lines0": "@rowlist1_body - 0 * (1 - 0) * 0",
+   "rowlist1_openH": "step(@rowlist1_open, 0.5) * 40",
+   "rowlist1_fit": "max(1, floor((@rowlist1_lines0 - @rowlist1_openH) / (48 + 0)))",
+   "rowlist1_shown": "min(3, @rowlist1_fit * @rowlist1_cols)",
+   "rowlist1_rowH": "clamp(48 + 0, 72 + 0, (@rowlist1_lines0 - @rowlist1_openH) / max(1, ceil(@rowlist1_shown / @rowlist1_cols)))",
+   "rowlist1_ih": "@rowlist1_rowH - 0",
+   "rowlist1_cellW": "floor(@rowlist1_rw / @rowlist1_cols)",
+   "rowlist1_subOn": "step(@rowlist1_ih, 52 - 0.5)",
+   "rowlist1_first": "max(0, @rowlist1_open - @rowlist1_shown)",
+   "adaptivesplit1_s": "step(@rowlist1_iw, 480 - 0.5) * (1 - 1) * (1 - 0)",
+   "adaptivesplit1_fh": "@rowlist1_body / 2",
+   "adaptivesplit1_sw": "floor(@rowlist1_iw * 0.34 - 12 / 2)",
+   "rowlist2_open": 0,
+   "rowlist2_h0": "(windowHeight() * 0.5 - 8) - 2 * 0",
+   "rowlist2_iw": "(windowWidth() - 24) - 2 * 0",
+   "rowlist2_sw": "floor(@rowlist2_iw * 0.34)",
+   "rowlist2_rw": "@rowlist2_iw - 0 * (@rowlist2_sw + 12)",
+   "rowlist2_cm": "clamp(1, 3, floor((@rowlist2_rw + 8) / 220))",
+   "rowlist2_cols": "max(1, min(@rowlist2_cm, 2))",
+   "rowlist2_headOn": "max(step((windowHeight() * 0.5 - 8), 199.5), step(floor((@rowlist2_h0 - 32) / 48) * @rowlist2_cols + 0.5, min(2, floor(@rowlist2_h0 / 48) * @rowlist2_cols)))",
+   "rowlist2_body": "@rowlist2_h0 - @rowlist2_headOn * 32",
+   "rowlist2_lines0": "@rowlist2_body - 0 * (1 - 0) * 0",
+   "rowlist2_openH": "step(@rowlist2_open, 0.5) * 40",
+   "rowlist2_fit": "max(1, floor((@rowlist2_lines0 - @rowlist2_openH) / (48 + 6)))",
+   "rowlist2_shown": "min(2, @rowlist2_fit * @rowlist2_cols)",
+   "rowlist2_rowH": "clamp(48 + 6, 72 + 6, (@rowlist2_lines0 - @rowlist2_openH) / max(1, ceil(@rowlist2_shown / @rowlist2_cols)))",
+   "rowlist2_ih": "@rowlist2_rowH - 6",
+   "rowlist2_cellW": "floor(@rowlist2_rw / @rowlist2_cols)",
+   "rowlist2_subOn": "step(@rowlist2_ih, 52 - 0.5)",
+   "rowlist2_first": "max(0, @rowlist2_open - @rowlist2_shown)",
+   "adaptivesplit2_s": "step(@rowlist2_iw, 480 - 0.5) * (1 - 1) * (1 - 0)",
+   "adaptivesplit2_fh": "@rowlist2_body / 2",
+   "adaptivesplit2_sw": "floor(@rowlist2_iw * 0.34 - 12 / 2)",
+   "slider1_x0": 0,
+   "vis_0": 0,
+   "vis_1": 1
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "outline": {
+    "light": "#FF878F9E",
+    "dark": "#FF3A4556"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   },
+   "track": {
+    "light": "#FFB0B8C4",
+    "dark": "#FF2A3342"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": [
+      12,
+      8
+     ]
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "visibility": "@rowlist1_headOn"
+          },
+          "fillMaxWidth",
+          {
+           "height": 32
+          },
+          {
+           "padding": [
+            8,
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Cities",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 20,
+            "fontWeight": 700,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "visibility": "clamp(0, 1, 3 - @rowlist1_shown)"
+             },
+             {
+              "padding": {
+               "start": 8
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@rowlist1_shown",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " of ",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": 3,
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 }
+                }
+               },
+               "maxLines": 1,
+               "fontSize": 12,
+               "color": "@colors.muted"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_0"
+          },
+          "fillMaxWidth",
+          {
+           "height": "@rowlist1_body"
+          }
+         ],
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": "Nothing to show",
+            "textAlign": "center",
+            "fontSize": 15,
+            "color": "@colors.muted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_1"
+          },
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "flow": {
+            "horizontalArrangement": "spaceBetween",
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@vis_0"
+                },
+                {
+                 "width": "ifElse(@rowlist1_iw, @adaptivesplit1_sw, @adaptivesplit1_s)"
+                },
+                {
+                 "height": "ifElse(ifElse(@adaptivesplit1_fh, @rowlist1_body, 0), @rowlist1_body, @adaptivesplit1_s)"
+                }
+               ],
+               "children": []
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@vis_1"
+                },
+                {
+                 "width": "ifElse(@rowlist1_iw, @rowlist1_iw - @adaptivesplit1_sw - 12, @adaptivesplit1_s)"
+                },
+                {
+                 "height": "ifElse(@rowlist1_body - @adaptivesplit1_fh * (1 - 1), @rowlist1_body, @adaptivesplit1_s)"
+                }
+               ],
+               "children": [
+                {
+                 "flow": {
+                  "modifiers": [
+                   "fillMaxWidth"
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, 0 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 0)"
+                      },
+                      {
+                       "width": "@rowlist1_cellW"
+                      },
+                      {
+                       "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@rowlist1_open - 0 - 1)))"
+                      },
+                      {
+                       "padding": [
+                        8,
+                        0
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "children": [
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "clamp(0, 1, 0 + 1 - @rowlist1_first - @rowlist1_cols)"
+                            },
+                            "fillMaxWidth",
+                            {
+                             "height": 1
+                            },
+                            {
+                             "background": "@colors.outline"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "row": {
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "height": "@rowlist1_ih"
+                            },
+                            {
+                             "padding": [
+                              0,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "London",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 500,
+                                 "color": "@colors.onSurface"
+                                }
+                               },
+                               {
+                                "text": {
+                                 "value": "+7 h",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 12,
+                                 "color": "@colors.muted",
+                                 "modifiers": [
+                                  {
+                                   "visibility": "@rowlist1_subOn"
+                                  },
+                                  {
+                                   "padding": {
+                                    "top": 2
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "widthIn": [
+                                 0,
+                                 "@rowlist1_cellW * 0.42"
+                                ]
+                               },
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "10:30",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface"
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, 1 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 1)"
+                      },
+                      {
+                       "width": "@rowlist1_cellW"
+                      },
+                      {
+                       "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@rowlist1_open - 1 - 1)))"
+                      },
+                      {
+                       "padding": [
+                        8,
+                        0
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "children": [
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "clamp(0, 1, 1 + 1 - @rowlist1_first - @rowlist1_cols)"
+                            },
+                            "fillMaxWidth",
+                            {
+                             "height": 1
+                            },
+                            {
+                             "background": "@colors.outline"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "row": {
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "height": "@rowlist1_ih"
+                            },
+                            {
+                             "padding": [
+                              0,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "New York",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 500,
+                                 "color": "@colors.onSurface"
+                                }
+                               },
+                               {
+                                "text": {
+                                 "value": "+3 h",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 12,
+                                 "color": "@colors.muted",
+                                 "modifiers": [
+                                  {
+                                   "visibility": "@rowlist1_subOn"
+                                  },
+                                  {
+                                   "padding": {
+                                    "top": 2
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "widthIn": [
+                                 0,
+                                 "@rowlist1_cellW * 0.42"
+                                ]
+                               },
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "06:30",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface"
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, 2 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 2)"
+                      },
+                      {
+                       "width": "@rowlist1_cellW"
+                      },
+                      {
+                       "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@rowlist1_open - 2 - 1)))"
+                      },
+                      {
+                       "padding": [
+                        8,
+                        0
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "children": [
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "clamp(0, 1, 2 + 1 - @rowlist1_first - @rowlist1_cols)"
+                            },
+                            "fillMaxWidth",
+                            {
+                             "height": 1
+                            },
+                            {
+                             "background": "@colors.outline"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "row": {
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "height": "@rowlist1_ih"
+                            },
+                            {
+                             "padding": [
+                              0,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "Tokyo",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 500,
+                                 "color": "@colors.onSurface"
+                                }
+                               },
+                               {
+                                "text": {
+                                 "value": "+16 h",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 12,
+                                 "color": "@colors.muted",
+                                 "modifiers": [
+                                  {
+                                   "visibility": "@rowlist1_subOn"
+                                  },
+                                  {
+                                   "padding": {
+                                    "top": 2
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "widthIn": [
+                                 0,
+                                 "@rowlist1_cellW * 0.42"
+                                ]
+                               },
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "19:30",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 600,
+                                 "color": "@colors.onSurface"
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "visibility": "@rowlist2_headOn"
+          },
+          "fillMaxWidth",
+          {
+           "height": 32
+          },
+          {
+           "padding": [
+            4,
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Settings",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 20,
+            "fontWeight": 700,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "visibility": "clamp(0, 1, 2 - @rowlist2_shown)"
+             },
+             {
+              "padding": {
+               "start": 8
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@rowlist2_shown",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " of ",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": 2,
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 }
+                }
+               },
+               "maxLines": 1,
+               "fontSize": 12,
+               "color": "@colors.muted"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_0"
+          },
+          "fillMaxWidth",
+          {
+           "height": "@rowlist2_body"
+          }
+         ],
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": "Nothing to show",
+            "textAlign": "center",
+            "fontSize": 15,
+            "color": "@colors.muted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_1"
+          },
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "flow": {
+            "horizontalArrangement": "spaceBetween",
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@vis_0"
+                },
+                {
+                 "width": "ifElse(@rowlist2_iw, @adaptivesplit2_sw, @adaptivesplit2_s)"
+                },
+                {
+                 "height": "ifElse(ifElse(@adaptivesplit2_fh, @rowlist2_body, 0), @rowlist2_body, @adaptivesplit2_s)"
+                }
+               ],
+               "children": []
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@vis_1"
+                },
+                {
+                 "width": "ifElse(@rowlist2_iw, @rowlist2_iw - @adaptivesplit2_sw - 12, @adaptivesplit2_s)"
+                },
+                {
+                 "height": "ifElse(@rowlist2_body - @adaptivesplit2_fh * (1 - 1), @rowlist2_body, @adaptivesplit2_s)"
+                }
+               ],
+               "children": [
+                {
+                 "flow": {
+                  "modifiers": [
+                   "fillMaxWidth"
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, 0 + 1 - @rowlist2_first) * clamp(0, 1, @rowlist2_first + @rowlist2_shown - 0)"
+                      },
+                      {
+                       "width": "@rowlist2_cellW"
+                      },
+                      {
+                       "height": "@rowlist2_rowH + 40 * (1 - min(1, abs(@rowlist2_open - 0 - 1)))"
+                      },
+                      {
+                       "padding": [
+                        4,
+                        3
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "modifiers": [
+                         "fillMaxSize",
+                         {
+                          "clip": {
+                           "roundedRect": 14
+                          }
+                         },
+                         {
+                          "background": "@colors.surface"
+                         }
+                        ],
+                        "children": [
+                         {
+                          "row": {
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "height": "@rowlist2_ih"
+                            },
+                            {
+                             "padding": [
+                              12,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "Volume",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 500,
+                                 "color": "@colors.onSurface"
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "width": "@rowlist2_cellW * 0.5"
+                               },
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "box": {
+                                 "modifiers": [
+                                  "fillMaxWidth",
+                                  {
+                                   "height": 40
+                                  }
+                                 ],
+                                 "children": [
+                                  {
+                                   "variable": {
+                                    "name": "slider1_tx",
+                                    "value": "12 + (componentWidth() - 24) * @vol / 100"
+                                   }
+                                  },
+                                  {
+                                   "canvas": {
+                                    "modifiers": [
+                                     "fillMaxWidth",
+                                     {
+                                      "height": 40
+                                     }
+                                    ],
+                                    "commands": [
+                                     {
+                                      "componentValue": {
+                                       "id": "@slider1_x0",
+                                       "valueType": 4
+                                      }
+                                     },
+                                     {
+                                      "touchExpression": {
+                                       "name": "vol",
+                                       "defaultValue": "@vol",
+                                       "min": 0,
+                                       "max": 100,
+                                       "expression": [
+                                        "(touchX() - @slider1_x0 - 12) / (componentWidth() - 24) * 100"
+                                       ],
+                                       "touchMode": 6
+                                      }
+                                     },
+                                     {
+                                      "paint": {
+                                       "ops": [
+                                        {
+                                         "color": "@colors.track"
+                                        },
+                                        {
+                                         "style": "stroke"
+                                        },
+                                        {
+                                         "strokeWidth": 4
+                                        },
+                                        {
+                                         "strokeCap": "round"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 12,
+                                       "y1": 20,
+                                       "x2": "componentWidth() - 12",
+                                       "y2": 20
+                                      }
+                                     },
+                                     {
+                                      "paint": {
+                                       "ops": [
+                                        {
+                                         "color": "@colors.primary"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 12,
+                                       "y1": 20,
+                                       "x2": "@slider1_tx",
+                                       "y2": 20
+                                      }
+                                     },
+                                     {
+                                      "paint": {
+                                       "ops": [
+                                        {
+                                         "style": "fill"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "drawCircle": {
+                                       "cx": "@slider1_tx",
+                                       "cy": 20,
+                                       "radius": 10
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "box": {
+                                    "modifiers": [
+                                     "fillMaxWidth",
+                                     {
+                                      "height": 40
+                                     },
+                                     {
+                                      "semantics": {
+                                       "contentDescription": "Volume",
+                                       "stateDescription": {
+                                        "type": "textFromFloat",
+                                        "value": "@vol",
+                                        "whole": 4,
+                                        "decimal": 0,
+                                        "flags": 5
+                                       }
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, 1 + 1 - @rowlist2_first) * clamp(0, 1, @rowlist2_first + @rowlist2_shown - 1)"
+                      },
+                      {
+                       "width": "@rowlist2_cellW"
+                      },
+                      {
+                       "height": "@rowlist2_rowH + 40 * (1 - min(1, abs(@rowlist2_open - 1 - 1)))"
+                      },
+                      {
+                       "padding": [
+                        4,
+                        3
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "modifiers": [
+                         "fillMaxSize",
+                         {
+                          "clip": {
+                           "roundedRect": 14
+                          }
+                         },
+                         {
+                          "background": "@colors.surface"
+                         }
+                        ],
+                        "children": [
+                         {
+                          "row": {
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "height": "@rowlist2_ih"
+                            },
+                            {
+                             "padding": [
+                              12,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "column": {
+                              "modifiers": [
+                               {
+                                "weight": 1
+                               }
+                              ],
+                              "children": [
+                               {
+                                "text": {
+                                 "value": "Wi-Fi",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 15,
+                                 "fontWeight": 500,
+                                 "color": "@colors.onSurface"
+                                }
+                               },
+                               {
+                                "text": {
+                                 "value": "Home",
+                                 "maxLines": 1,
+                                 "overflow": "ellipsis",
+                                 "fontSize": 12,
+                                 "color": "@colors.muted",
+                                 "modifiers": [
+                                  {
+                                   "visibility": "@rowlist2_subOn"
+                                  },
+                                  {
+                                   "padding": {
+                                    "top": 2
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "box": {
+                              "modifiers": [
+                               {
+                                "width": "@rowlist2_cellW * 0.5"
+                               },
+                               {
+                                "padding": {
+                                 "start": 8
+                                }
+                               }
+                              ],
+                              "children": [
+                               {
+                                "box": {
+                                 "modifiers": [
+                                  "fillMaxWidth"
+                                 ],
+                                 "horizontalAlignment": "end",
+                                 "children": [
+                                  {
+                                   "box": {
+                                    "children": [
+                                     {
+                                      "variable": {
+                                       "name": "switch1_p",
+                                       "value": {
+                                        "value": "@wifi",
+                                        "anim": 0.3
+                                       }
+                                      }
+                                     },
+                                     {
+                                      "variable": {
+                                       "name": "switch1_x",
+                                       "value": "20 * (@switch1_p + 0.5 * sin(3.14159 * @switch1_p) * (2 * @wifi - 1))"
+                                      }
+                                     },
+                                     {
+                                      "canvas": {
+                                       "modifiers": [
+                                        {
+                                         "size": [
+                                          52,
+                                          32
+                                         ]
+                                        }
+                                       ],
+                                       "commands": [
+                                        {
+                                         "global": {
+                                          "commands": [
+                                           {
+                                            "textSubtext": {
+                                             "text": "Off On ",
+                                             "start": "@wifi * 4",
+                                             "len": 3,
+                                             "varName": "switch1_swState3"
+                                            }
+                                           },
+                                           {
+                                            "textTransform": {
+                                             "text": "@switch1_swState3",
+                                             "start": 0,
+                                             "len": -1,
+                                             "operation": 3,
+                                             "varName": "switch1_swState"
+                                            }
+                                           }
+                                          ]
+                                         }
+                                        },
+                                        {
+                                         "paint": {
+                                          "ops": [
+                                           {
+                                            "color": "@colors.track"
+                                           },
+                                           {
+                                            "style": "fill"
+                                           }
+                                          ]
+                                         }
+                                        },
+                                        {
+                                         "drawRoundRect": {
+                                          "left": 0,
+                                          "top": 0,
+                                          "right": 52,
+                                          "bottom": 32,
+                                          "rx": 16,
+                                          "ry": 16
+                                         }
+                                        },
+                                        {
+                                         "paint": {
+                                          "ops": [
+                                           {
+                                            "color": "@colors.primary"
+                                           },
+                                           {
+                                            "alpha": "@switch1_p"
+                                           }
+                                          ]
+                                         }
+                                        },
+                                        {
+                                         "drawRoundRect": {
+                                          "left": 0,
+                                          "top": 0,
+                                          "right": 52,
+                                          "bottom": 32,
+                                          "rx": 16,
+                                          "ry": 16
+                                         }
+                                        },
+                                        {
+                                         "paint": {
+                                          "ops": [
+                                           {
+                                            "color": "#FFFFFFFF"
+                                           },
+                                           {
+                                            "alpha": 1
+                                           }
+                                          ]
+                                         }
+                                        },
+                                        {
+                                         "drawCircle": {
+                                          "cx": "16 + @switch1_x",
+                                          "cy": 16,
+                                          "radius": 12
+                                         }
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "box": {
+                                       "modifiers": [
+                                        {
+                                         "size": [
+                                          52,
+                                          32
+                                         ]
+                                        },
+                                        {
+                                         "semantics": {
+                                          "contentDescription": "Wi-Fi",
+                                          "stateDescription": "@switch1_swState",
+                                          "clickable": true
+                                         }
+                                        },
+                                        {
+                                         "onClick": [
+                                          {
+                                           "type": "valueFloatExpressionChange",
+                                           "target": "@wifi",
+                                           "value": "1 - @wifi"
+                                          }
+                                         ]
+                                        }
+                                       ]
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

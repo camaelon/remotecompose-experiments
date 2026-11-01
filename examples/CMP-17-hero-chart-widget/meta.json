@@ -1,0 +1,782 @@
+{
+ "id": "CMP-17",
+ "name": "hero-chart-widget",
+ "version": 1,
+ "title": "Hero and chart widget: home energy",
+ "summary": "A big value with its change and caption, and a chart filling the rest, at widget size: the hero stacks over the chart when tall, sits beside it when wide, and the stats, axis and header drop when short. The total and peak come from the exported hourly array, so the host sends one list. It fits 160x160, 320x160, 240x240, 480x200 and 360x480.",
+ "prompt": "Build a home energy widget: one big number for the last 24 hours with its change from the day before, a chart of each hour filling the rest, and peak, cost and solar stats when there is room. Stacked when tall, hero beside the chart when wide, secondary parts dropped when short. It must fit 320x160, 160x160, 360x480, 240x240 and 480x200.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "BigNumber",
+  "LineChart",
+  "LabelValue",
+  "Icon"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables",
+   "data.array"
+  ],
+  "secondary": [
+   "expr.array",
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic"
+  ]
+ },
+ "use_cases": [
+  "widget",
+  "chart",
+  "dashboard"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "hero",
+  "hero number",
+  "big number",
+  "big value",
+  "one big number",
+  "number and chart",
+  "value and chart",
+  "kpi widget",
+  "stat widget",
+  "metric widget",
+  "chart widget",
+  "small chart",
+  "chart at widget size",
+  "sparkline widget",
+  "line chart",
+  "delta",
+  "change from yesterday",
+  "percent change",
+  "trend",
+  "stats row",
+  "key figures",
+  "today",
+  "last 24 hours",
+  "dashboard tile",
+  "glance",
+  "adaptive widget",
+  "beside when wide",
+  "stacked when tall",
+  "drops when short",
+  "any size",
+  "home energy",
+  "energy use",
+  "electricity",
+  "kwh",
+  "smart home"
+ ],
+ "teaches": [
+  "A hero plus chart that survives the small sizes: every length is an expression of windowWidth() and windowHeight(), and the same tree stacks or goes side by side through spacer lengths",
+  "Priority when short: first the stats, then the header, then the axis labels. The chart always stays and takes what is left",
+  "One list from the host: the total and the peak are arraySum and arrayMax of the exported array, so they can never disagree with the chart",
+  "The axis is a row of texts under the chart, not xLabels, so it can be dropped by visibility at run time; xLabels are fixed when the document is built",
+  "BigNumber's own description says the value and change to a screen reader. Do not pass label unless you repeat them",
+  "Swap the chart: BarChart with fill true takes the same array, and any canvas fits the same box"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/2",
+   "shows": "layout.stack",
+   "note": "the whole widget: header, then hero, chart and stats placed by spacer lengths in one box"
+  },
+  {
+   "pointer": "/resources/variables/wide",
+   "shows": "expr.system",
+   "note": "stacked or side by side; hasStats, hasHead and hasAxis next to it drop the parts"
+  },
+  {
+   "pointer": "/resources/floatArrays/hours",
+   "shows": "data.array",
+   "note": "the host's data: the chart, the total and the peak all read it"
+  },
+  {
+   "pointer": "/root/0",
+   "shows": "host.variables",
+   "note": "an exported host string, with a starting value distinct from the other"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "hours": {
+    "type": "float_array",
+    "meaning": "kWh used in each hour, oldest first; any length. The hero is its sum, Peak its maximum"
+   },
+   "delta": {
+    "min": -100,
+    "max": 100,
+    "meaning": "change in percent from the day before; below 0 is green with a down arrow"
+   },
+   "cost": {
+    "type": "string",
+    "meaning": "the cost, already formatted with its currency",
+    "default": "€4.10"
+   },
+   "solar": {
+    "type": "string",
+    "meaning": "the solar share, already formatted",
+    "default": "32 %"
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Used in the last 24 h, 18.0 kWh, a green down arrow with -8%, and a blue line of hourly use. 360x480: header, big hero, chart, axis, three stats. 240x240: header, hero, chart, axis, no stats. 480x200: header, hero with stats beside the chart with its axis. 320x160: hero beside chart, no header or stats. 160x160: hero over chart, no axis. With delta 12 the change is red and up.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "small",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "square",
+    "width": 240,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 200
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 480
+   },
+   {
+    "name": "rise",
+    "width": 360,
+    "height": 480,
+    "theme": "light",
+    "variables": {
+     "delta": 12,
+     "cost": "€1,204.50",
+     "solar": "100 %"
+    }
+   }
+  ]
+ },
+ "related": [
+  "BigNumber",
+  "LineChart",
+  "LabelValue",
+  "BarChart",
+  "TIM-13",
+  "CMP-15"
+ ],
+ "pitfalls": [
+  "The hero's caption is literal text in BigNumber; to let the host name the period, draw your own caption",
+  "A column with an exact height and a verticalWeight child took all the height there was in the C++ and TS players, which put the chart's axis under the stats: size the plot exactly",
+  "ifElse is (when false, when true, condition): ifElse(26, 32, step(@H, 300)) is 32 when tall",
+  "Every host string needs its own starting value: equal strings share one text id, and setting one sets both (shared_string_value)",
+  "Passing y_min 0 keeps the chart honest; LineChart's default scales to the array's minimum, which exaggerates small changes"
+ ],
+ "derived": {
+  "components": [
+   "BigNumber",
+   "Icon",
+   "LabelValue",
+   "LineChart"
+  ],
+  "component_instances": 6,
+  "component_modes": {
+   "Icon": "expand",
+   "BigNumber": "expand",
+   "LineChart": "expand",
+   "LabelValue": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 7697,
+  "header": {
+   "width": 320,
+   "height": 160
+  },
+  "op_count": 423,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 5,
+   "ANIMATED_FLOAT": 78,
+   "COLOR_CONSTANT": 12,
+   "COLOR_EXPRESSIONS": 12,
+   "COMPONENT_VALUE": 8,
+   "CanvasContent": 6,
+   "CoreText": 4,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 23,
+   "DRAW_LINE": 9,
+   "DRAW_PATH": 3,
+   "DRAW_TEXT_ANCHOR": 11,
+   "DataListFloat": 1,
+   "HEADER": 1,
+   "LAYOUT_BOX": 15,
+   "LAYOUT_CANVAS": 6,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 5,
+   "LayoutComponentContent": 28,
+   "LoopOperation": 12,
+   "MATRIX_RESTORE": 10,
+   "MATRIX_SAVE": 10,
+   "MATRIX_SCALE": 9,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 18,
+   "MODIFIER_PADDING": 2,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 30,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 24,
+   "PATH_DATA": 1,
+   "PathExpression": 2,
+   "THEME": 18,
+   "TextFromFloat": 3,
+   "TextMeasure": 9,
+   "TextMerge": 22,
+   "TextSubtext": 1
+  },
+  "host_variables": [
+   {
+    "name": "cost",
+    "type": "string",
+    "value": "€4.10"
+   },
+   {
+    "name": "delta",
+    "type": "float",
+    "value": -8
+   },
+   {
+    "name": "error",
+    "type": "color",
+    "value": "#FFEF5350"
+   },
+   {
+    "name": "hours",
+    "type": "float_array",
+    "value": [
+     0.300000012,
+     0.25,
+     0.219999999,
+     0.200000003,
+     0.200000003,
+     0.25,
+     0.5,
+     1.10000002,
+     1.29999995,
+     0.800000012,
+     0.600000024,
+     0.550000012,
+     0.75,
+     0.600000024,
+     0.5,
+     0.550000012,
+     0.800000012,
+     1.29999995,
+     1.89999998,
+     1.70000005,
+     1.39999998,
+     1.10000002,
+     0.699999988,
+     0.449999988
+    ]
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "solar",
+    "type": "string",
+    "value": "32 %"
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 6776,
+    "component_modes": {
+     "Icon": "expand",
+     "BigNumber": "expand",
+     "LineChart": "expand",
+     "LabelValue": "expand"
+    },
+    "op_count": 366,
+    "host_variables": [
+     {
+      "name": "cost",
+      "type": "string",
+      "value": "€4.10"
+     },
+     {
+      "name": "delta",
+      "type": "float",
+      "value": -8
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "hours",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0.25,
+       0.219999999,
+       0.200000003,
+       0.200000003,
+       0.25,
+       0.5,
+       1.10000002,
+       1.29999995,
+       0.800000012,
+       0.600000024,
+       0.550000012,
+       0.75,
+       0.600000024,
+       0.5,
+       0.550000012,
+       0.800000012,
+       1.29999995,
+       1.89999998,
+       1.70000005,
+       1.39999998,
+       1.10000002,
+       0.699999988,
+       0.449999988
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "solar",
+      "type": "string",
+      "value": "32 %"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 6776,
+    "component_modes": {
+     "Icon": "expand",
+     "BigNumber": "expand",
+     "LineChart": "expand",
+     "LabelValue": "expand"
+    },
+    "op_count": 366,
+    "host_variables": [
+     {
+      "name": "cost",
+      "type": "string",
+      "value": "€4.10"
+     },
+     {
+      "name": "delta",
+      "type": "float",
+      "value": -8
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "hours",
+      "type": "float_array",
+      "value": [
+       0.300000012,
+       0.25,
+       0.219999999,
+       0.200000003,
+       0.200000003,
+       0.25,
+       0.5,
+       1.10000002,
+       1.29999995,
+       0.800000012,
+       0.600000024,
+       0.550000012,
+       0.75,
+       0.600000024,
+       0.5,
+       0.550000012,
+       0.800000012,
+       1.29999995,
+       1.89999998,
+       1.70000005,
+       1.39999998,
+       1.10000002,
+       0.699999988,
+       0.449999988
+      ]
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "solar",
+      "type": "string",
+      "value": "32 %"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [],
+    "size": [
+     240,
+     240
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     480,
+     200
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [],
+    "size": [
+     360,
+     480
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "rise": {
+    "theme": "light",
+    "render": "render-rise.png",
+    "render_findings": [],
+    "size": [
+     360,
+     480
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   }
+  },
+  "json_keys": [
+   "BigNumber",
+   "H",
+   "Icon",
+   "LabelValue",
+   "LineChart",
+   "W",
+   "alpha",
+   "apiLevel",
+   "background",
+   "bignumber1_dn",
+   "bignumber1_fl",
+   "bignumber1_h",
+   "bignumber1_mag",
+   "bignumber1_up",
+   "bignumber1_yc",
+   "box",
+   "cH",
+   "cTop",
+   "canvas",
+   "caption",
+   "ch",
+   "change",
+   "changeDecimals",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "count",
+   "cw",
+   "dark",
+   "decimal",
+   "decimals",
+   "delta",
+   "drawLine",
+   "drawPath",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "end",
+   "error",
+   "export",
+   "expressionX",
+   "expressionY",
+   "fill",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "fs",
+   "gap",
+   "hasAxis",
+   "hasHead",
+   "hasStats",
+   "headH",
+   "header",
+   "height",
+   "heroH",
+   "heroTop",
+   "horizontalAlignment",
+   "hours",
+   "hw",
+   "icon_bolt_outlined",
+   "id",
+   "id1",
+   "id2",
+   "ih",
+   "invert",
+   "iw",
+   "label",
+   "len",
+   "light",
+   "maxLines",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "onSurface",
+   "ops",
+   "overflow",
+   "pad",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "path",
+   "pathExpression",
+   "paths",
+   "peak",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "row",
+   "sTop",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "start",
+   "statsH",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "suffix",
+   "surface",
+   "sx",
+   "sy",
+   "text",
+   "textMeasure",
+   "textSize",
+   "textSubtext",
+   "top",
+   "translate",
+   "type",
+   "used",
+   "value",
+   "values",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "visibility",
+   "vtype",
+   "weight",
+   "whole",
+   "wide",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2",
+   "y_min"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "data.array": [
+    "floatArrays"
+   ],
+   "expr.array": [
+    "arraySum(",
+    "arrayMax(",
+    "arrayLength("
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ]
+  },
+  "built_at": "2026-11-01T19:05:26.418Z"
+ }
+}

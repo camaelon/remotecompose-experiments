@@ -1,0 +1,833 @@
+{
+ "id": "CMP-16",
+ "name": "step-explainer",
+ "version": 1,
+ "title": "Step explainer: how a heat pump works",
+ "summary": "A step-by-step explainer frame: a title, a big drawing driven by the step, step dots, a caption, and back, play and next buttons. The drawing sits beside the caption when wide and above it otherwise, the caption shortens when short, and the frame is a local component whose visual slot takes any drawing. It fits every size from 160x160 to 360x480.",
+ "prompt": "Explain how a heat pump works in 4 steps, with a simple drawing for each step, step dots, a caption, and back, play and next buttons. The drawing goes beside the caption when wide, the caption shortens when short. It must fit 320x160, 160x160, 360x480, 240x240 and 480x200.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "IconButton",
+  "PagerDots",
+  "Icon",
+  "StepFrame",
+  "Station"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "input.tap",
+   "anim.value"
+  ],
+  "secondary": [
+   "expr.system",
+   "a11y.labels",
+   "text.dynamic",
+   "draw.arc",
+   "draw.transform",
+   "draw.path",
+   "time.animation",
+   "host.variables"
+  ]
+ },
+ "use_cases": [
+  "onboarding"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "step by step",
+  "step-by-step",
+  "steps",
+  "explainer",
+  "how it works",
+  "how does it work",
+  "explain",
+  "walkthrough",
+  "tutorial",
+  "guide",
+  "onboarding",
+  "intro",
+  "slideshow",
+  "slides",
+  "stepper screen",
+  "step dots",
+  "page dots",
+  "caption",
+  "back and next",
+  "previous and next",
+  "play pause",
+  "autoplay",
+  "play through steps",
+  "animated explanation",
+  "diagram",
+  "drawing changes with the step",
+  "adaptive",
+  "beside when wide",
+  "any size",
+  "heat pump",
+  "cycle",
+  "loop diagram"
+ ],
+ "teaches": [
+  "The whole step-explainer frame as a local component to copy: replace the titles, texts, shorts and the visual slot, and the buttons, dots and sizes keep working",
+  "One tree for every shape: a visual box and a caption column in one box, with sizes and spacer lengths from windowWidth() and windowHeight(), so the drawing moves beside the caption when wide with no second copy",
+  "Three captions per size: the full text, a short one, and only the step title at the smallest size, each an exact visibility on the step. Keep every string to its limit (params say which)",
+  "A drawing with a regime for tiny sizes: below 70 dp the loop gives way to the current part's icon, which still reads",
+  "Play without a clock listener: an eased value of a half-second tick drives repaints only while playing, and it is read in the dots' expression. Mono has no play button and no motion",
+  "Publish the step from the component with {\"$name\"}: the local's own name is prefixed per call, so a slot could not read it otherwise"
+ ],
+ "snippets": [
+  {
+   "pointer": "/components/StepFrame",
+   "shows": "layout.stack",
+   "note": "the frame to copy: title, visual slot, dots, three captions and the controls"
+  },
+  {
+   "pointer": "/resources/variables/wide",
+   "shows": "expr.system",
+   "note": "beside or above: all sizes in resources.variables derive from this and windowWidth/Height"
+  },
+  {
+   "pointer": "/root/StepFrame/slots/visual/0",
+   "shows": "draw.arc",
+   "note": "the drawing, in a 100-unit box scaled from the box it got; it reads @stepEased and @stepNow"
+  },
+  {
+   "pointer": "/components/StepFrame/body/column/children/2/column/children/1/box/children/1/column/children/1/row/children/1/column/children/3/row",
+   "shows": "input.tap",
+   "note": "back, play and next: labelled icon buttons at least 48 dp, disabled at the ends; the play actions restart from step 1 on the last step"
+  },
+  {
+   "pointer": "/components/StepFrame/locals/cur",
+   "shows": "anim.value",
+   "note": "the step on screen: the host's step, or the timed one while playing"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "stage": {
+    "min": 0,
+    "max": 3,
+    "meaning": "the step, 0-based; the buttons write it and the host may set it"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "How a heat pump works, a loop of four discs with icons (air, compress, home, valve), the current one filled, the fluid's temperature in the middle, four dots, the step title, its caption, back, play and next. 360x480: drawing above, full caption. 480x200: drawing beside, title and full caption. 320x160: beside, short caption, no title. 240x240: above, short caption, no title. 160x160: one big icon for the step, its title and the buttons. Back is dim on step 1, next on step 4. Mono: no play button.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "widget",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "small",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "square",
+    "width": 240,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 200
+   },
+   {
+    "name": "next",
+    "width": 320,
+    "height": 160,
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 288,
+      "y": 128
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "last",
+    "theme": "light",
+    "variables": {
+     "stage": 3
+    }
+   }
+  ]
+ },
+ "related": [
+  "Walkthrough",
+  "PagerDots",
+  "IconButton",
+  "INT-06",
+  "CMP-06",
+  "CMP-15"
+ ],
+ "pitfalls": [
+  "Walkthrough is the same frame without the adaptation: use it for a phone-size column, this for sizes under about 400 dp tall. Its buttons need more than 160 dp across and its caption and controls more than 160 dp down, and it has no place beside the drawing",
+  "Do not name a variable step: it hides the step() function. Here it is stage",
+  "A local of a component is prefixed per call and written in resources, where a slot's tree variable is not known yet: pass the eased step into a drawing through a canvas variable (g0 to g3 here) or a bound {\"$name\"} variable",
+  "ifElse is (when false, when true, condition): ifElse(14, 15, step(@H, 300)) is 15 when tall",
+  "IconButton filled with a runtime enabled keeps the onPrimary icon on its disabled face, which vanishes in mono: next is two buttons switched by visibility, filled and enabled, outlined and disabled",
+  "Weights with no room left warn as zero size at 160 dp: the spacers between the buttons are exact widths, which may be 0",
+  "A column with an exact height and a verticalWeight child took all the height there was in the C++ and TS players: size its children exactly"
+ ],
+ "derived": {
+  "components": [
+   "Icon",
+   "IconButton",
+   "PagerDots",
+   "Station",
+   "StepFrame"
+  ],
+  "component_instances": 21,
+  "component_modes": {
+   "IconButton": "expand",
+   "StepFrame": "expand",
+   "Icon": "expand",
+   "Station": "expand",
+   "PagerDots": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 16744,
+  "header": {
+   "width": 360,
+   "height": 480
+  },
+  "op_count": 719,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 11,
+   "ANIMATED_FLOAT": 88,
+   "COLOR_CONSTANT": 16,
+   "COLOR_EXPRESSIONS": 16,
+   "COMPONENT_VALUE": 24,
+   "CanvasContent": 14,
+   "CoreText": 13,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 25,
+   "DRAW_ARC": 2,
+   "DRAW_CIRCLE": 17,
+   "DRAW_LINE": 8,
+   "DRAW_PATH": 19,
+   "DRAW_TEXT_ANCHOR": 2,
+   "DataListFloat": 1,
+   "GraphicsLayerModifier": 2,
+   "HEADER": 1,
+   "IntegerExpression": 20,
+   "LAYOUT_BOX": 31,
+   "LAYOUT_CANVAS": 14,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 3,
+   "LayoutComponentContent": 61,
+   "LoopOperation": 16,
+   "MATRIX_RESTORE": 19,
+   "MATRIX_ROTATE": 4,
+   "MATRIX_SAVE": 19,
+   "MATRIX_SCALE": 16,
+   "MATRIX_TRANSLATE": 5,
+   "MODIFIER_BACKGROUND": 9,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 34,
+   "MODIFIER_PADDING": 9,
+   "MODIFIER_VISIBILITY": 26,
+   "MODIFIER_WIDTH": 47,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 38,
+   "PATH_DATA": 9,
+   "RoundedClipRectModifierOperation": 9,
+   "THEME": 24,
+   "TextFromFloat": 5,
+   "TextMerge": 9,
+   "TextSubtext": 1,
+   "TextTransform": 1,
+   "ValueFloatExpressionChangeActionOperation": 9
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "disabled",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "stage",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "temps",
+    "type": "float_array",
+    "value": [
+     5,
+     70,
+     35,
+     -5
+    ]
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 14593,
+    "component_modes": {
+     "PagerDots": "expand",
+     "IconButton": "expand",
+     "StepFrame": "expand",
+     "Icon": "expand",
+     "Station": "expand"
+    },
+    "op_count": 576,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "stage",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       5,
+       70,
+       35,
+       -5
+      ]
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 14593,
+    "component_modes": {
+     "PagerDots": "expand",
+     "IconButton": "expand",
+     "StepFrame": "expand",
+     "Icon": "expand",
+     "Station": "expand"
+    },
+    "op_count": 576,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "stage",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "temps",
+      "type": "float_array",
+      "value": [
+       5,
+       70,
+       35,
+       -5
+      ]
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "widget": {
+    "render": "render-widget.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     240,
+     240
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     480,
+     200
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "next": {
+    "theme": "light",
+    "render": "render-next.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting"
+    ]
+   },
+   "last": {
+    "theme": "light",
+    "render": "render-last.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   }
+  },
+  "json_keys": [
+   "$count",
+   "$each",
+   "$icon",
+   "$if",
+   "$name",
+   "$slot",
+   "H",
+   "Icon",
+   "IconButton",
+   "PagerDots",
+   "Station",
+   "StepFrame",
+   "W",
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "as",
+   "at",
+   "background",
+   "body",
+   "bottom",
+   "box",
+   "call",
+   "canvas",
+   "capFs",
+   "capH",
+   "ch",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "components",
+   "contentDescription",
+   "count",
+   "cur",
+   "current",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "default",
+   "disabled",
+   "do",
+   "doc",
+   "drawArc",
+   "drawCircle",
+   "drawLine",
+   "drawPath",
+   "drawTextAnchored",
+   "drive",
+   "dx",
+   "dy",
+   "eased",
+   "else",
+   "enabled",
+   "export",
+   "filled",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "g",
+   "global",
+   "graphicsLayer",
+   "hasCap",
+   "hasTitle",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "icon",
+   "icon_air_outlined",
+   "icon_arrow_back_outlined",
+   "icon_arrow_forward_outlined",
+   "icon_compress_outlined",
+   "icon_heat_pump_outlined",
+   "icon_home_outlined",
+   "icon_pause_outlined_filled",
+   "icon_play_arrow_outlined_filled",
+   "icon_valve_outlined",
+   "iconbutton1_enOff",
+   "iconbutton1_enOn",
+   "id1",
+   "id2",
+   "ih",
+   "index",
+   "interval",
+   "iw",
+   "label",
+   "last",
+   "left",
+   "len",
+   "light",
+   "locals",
+   "long",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "n",
+   "name",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "ops",
+   "outline",
+   "overflow",
+   "pad",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "params",
+   "path",
+   "paths",
+   "pivotX",
+   "pivotY",
+   "playing",
+   "pos",
+   "primary",
+   "profiles",
+   "radius",
+   "required",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "run",
+   "s0",
+   "save",
+   "scale",
+   "semantics",
+   "short",
+   "shorts",
+   "shown",
+   "size",
+   "slots",
+   "stage",
+   "start",
+   "startAngle",
+   "static",
+   "stepframe1_cur",
+   "stepframe1_playing",
+   "stepframe1_run",
+   "stepframe1_s0",
+   "stepframe1_t0",
+   "stepframe1_tick",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "summary",
+   "sweepAngle",
+   "sx",
+   "sy",
+   "t0",
+   "target",
+   "temps",
+   "text",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "texts",
+   "then",
+   "tick",
+   "tiny",
+   "title",
+   "titleH",
+   "titles",
+   "top",
+   "translate",
+   "tw",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "vh",
+   "visibility",
+   "visual",
+   "vw",
+   "warning",
+   "whole",
+   "wide",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "draw.arc": [
+    "drawArc"
+   ],
+   "draw.transform": [
+    "save",
+    "rotate",
+    "scale",
+    "translate"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "time.animation": [
+    "animationTime()",
+    "animationTime"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ]
+  },
+  "built_at": "2026-11-01T19:05:22.679Z"
+ }
+}

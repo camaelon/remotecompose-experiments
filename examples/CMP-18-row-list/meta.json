@@ -1,0 +1,1107 @@
+{
+ "id": "CMP-18",
+ "name": "row-list",
+ "version": 1,
+ "title": "Row list",
+ "summary": "A list screen the app fills: a heading and up to six uniform rows from host strings and numbers, each with an icon, a title, a subtitle, a value and details to tap open. One small RowList call adapts it to any size: rows while tall, subtitles and heading gone when short, columns when wide, an empty state.",
+ "prompt": "Build a list of today's orders the app fills: a customer, the items and the total on each row, tap a row for its details, and an empty state when there are none. It must fit a widget and a phone.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "RowList",
+  "AdaptiveSplit",
+  "Icon"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.flow",
+   "host.variables",
+   "input.tap"
+  ],
+  "secondary": [
+   "a11y.labels",
+   "a11y.state",
+   "text.dynamic",
+   "expr.system"
+  ]
+ },
+ "use_cases": [
+  "list",
+  "widget",
+  "dashboard"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "list",
+  "list of rows",
+  "rows",
+  "row list",
+  "data rows",
+  "list from the app",
+  "rows from the app",
+  "host list",
+  "orders",
+  "order list",
+  "inbox",
+  "contacts",
+  "people list",
+  "status list",
+  "server status",
+  "stock list",
+  "world clock list",
+  "departures list",
+  "notification list",
+  "leaderboard rows",
+  "tap a row",
+  "expand a row",
+  "details on tap",
+  "empty state",
+  "nothing to show",
+  "adapts to any size",
+  "widget list",
+  "phone list",
+  "grid when wide",
+  "tiles when wide",
+  "settings rows"
+ ],
+ "teaches": [
+  "A whole list screen in one RowList call: the adaptive decisions are the component's, so the document holds only the data",
+  "Host rows: exported strings and numbers in the row fields, count: \"@n\" for how many show, the written rows are the capacity",
+  "Numbers in a row are text objects: a textMerge of \"$\" and a textFromFloat goes directly in the value field",
+  "A tappable row reads as one item: its label is built live from title, subtitle and value"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/18",
+   "shows": "layout.flow",
+   "note": "the whole screen: one RowList call with its six rows"
+  },
+  {
+   "pointer": "/root/0",
+   "shows": "host.variables",
+   "note": "a host string; give each a distinct initial value"
+  },
+  {
+   "pointer": "/resources/variables/n",
+   "shows": "host.variables",
+   "note": "how many rows the app has now: 0 shows the empty state"
+  },
+  {
+   "pointer": "/root/18",
+   "shows": "input.tap",
+   "note": "a row with a sixth field, its details, opens on a tap"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "n": {
+    "min": 0,
+    "max": 6,
+    "meaning": "how many rows the app has now; 0 shows the empty state"
+   },
+   "t1": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 1's total"
+   },
+   "openRow": {
+    "min": 0,
+    "max": 6,
+    "meaning": "which row is open, from 1; 0 none"
+   },
+   "who1": {
+    "type": "string",
+    "meaning": "order 1's customer (who2.. for the others)",
+    "default": "Ada Lovelace"
+   },
+   "what1": {
+    "type": "string",
+    "meaning": "order 1's items",
+    "default": "2 items"
+   },
+   "note1": {
+    "type": "string",
+    "meaning": "order 1's details",
+    "default": "Paid by card, ships Monday"
+   },
+   "t2": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 2's total"
+   },
+   "t3": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 3's total"
+   },
+   "t4": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 4's total"
+   },
+   "t5": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 5's total"
+   },
+   "t6": {
+    "min": 0,
+    "max": 9999,
+    "meaning": "order 6's total"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "360x480: Today's orders, a muted summary, four divided rows: package icon, customer, items, a total; a chevron at the end. 480x200: two columns. 320x160 and 160x160: no heading when it would cost a row, no subtitles; 160 hides the chevrons. n 0: heading and 'No orders yet'. n 6 at 240x240: 3 of 6 in the header. A tap opens the row's note under it; nothing touches.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "small",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "widget",
+    "width": 320,
+    "height": 160
+   },
+   {
+    "name": "square",
+    "width": 240,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 200
+   },
+   {
+    "name": "empty",
+    "theme": "light",
+    "variables": {
+     "n": 0
+    }
+   },
+   {
+    "name": "one",
+    "theme": "light",
+    "variables": {
+     "n": 1
+    }
+   },
+   {
+    "name": "many",
+    "theme": "light",
+    "variables": {
+     "n": 6
+    }
+   },
+   {
+    "name": "open",
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 180,
+      "y": 100
+     }
+    ],
+    "duration": 1
+   }
+  ]
+ },
+ "related": [
+  "RowList",
+  "AdaptiveSplit",
+  "CMP-15",
+  "CMP-05"
+ ],
+ "pitfalls": [
+  "Fill slots from the first: count shows the first n rows",
+  "Give every host string a distinct initial value: equal strings share one text id",
+  "Numbers go as textFromFloat text objects, so the row stays live; do not format them into the strings"
+ ],
+ "derived": {
+  "components": [
+   "AdaptiveSplit",
+   "Icon",
+   "RowList"
+  ],
+  "component_instances": 8,
+  "component_modes": {
+   "AdaptiveSplit": "expand",
+   "RowList": "expand",
+   "Icon": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 15630,
+  "header": {
+   "width": 360,
+   "height": 480
+  },
+  "op_count": 840,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 12,
+   "ANIMATED_FLOAT": 94,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "COMPONENT_VALUE": 12,
+   "CanvasContent": 18,
+   "CoreText": 28,
+   "DATA_FLOAT": 9,
+   "DATA_TEXT": 25,
+   "DRAW_LINE": 12,
+   "DRAW_PATH": 6,
+   "HEADER": 1,
+   "IntegerExpression": 32,
+   "LAYOUT_BOX": 36,
+   "LAYOUT_CANVAS": 18,
+   "LAYOUT_COLUMN": 19,
+   "LAYOUT_FLOW": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 7,
+   "LayoutComponentContent": 104,
+   "LoopOperation": 10,
+   "MATRIX_RESTORE": 6,
+   "MATRIX_SAVE": 6,
+   "MATRIX_SCALE": 6,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 6,
+   "MODIFIER_HEIGHT": 54,
+   "MODIFIER_PADDING": 52,
+   "MODIFIER_VISIBILITY": 42,
+   "MODIFIER_WIDTH": 64,
+   "MODIFIER_WIDTH_IN": 6,
+   "NAMED_VARIABLE": 31,
+   "PAINT_VALUES": 12,
+   "PATH_DATA": 1,
+   "THEME": 15,
+   "TextFromFloat": 9,
+   "TextMerge": 39,
+   "TextSubtext": 6,
+   "TextTransform": 6,
+   "ValueFloatExpressionChangeActionOperation": 6
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "n",
+    "type": "float",
+    "value": 4
+   },
+   {
+    "name": "note1",
+    "type": "string",
+    "value": "Paid by card, ships Monday"
+   },
+   {
+    "name": "note2",
+    "type": "string",
+    "value": "Waiting for payment"
+   },
+   {
+    "name": "note3",
+    "type": "string",
+    "value": "Paid, in the warehouse, large parcel"
+   },
+   {
+    "name": "note4",
+    "type": "string",
+    "value": "Paid, pick up in store"
+   },
+   {
+    "name": "note5",
+    "type": "string",
+    "value": "Note 5"
+   },
+   {
+    "name": "note6",
+    "type": "string",
+    "value": "Note 6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "openRow",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "t1",
+    "type": "float",
+    "value": 48.5
+   },
+   {
+    "name": "t2",
+    "type": "float",
+    "value": 12
+   },
+   {
+    "name": "t3",
+    "type": "float",
+    "value": 129
+   },
+   {
+    "name": "t4",
+    "type": "float",
+    "value": 7.25
+   },
+   {
+    "name": "t5",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "t6",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "what1",
+    "type": "string",
+    "value": "2 items"
+   },
+   {
+    "name": "what2",
+    "type": "string",
+    "value": "Coffee beans"
+   },
+   {
+    "name": "what3",
+    "type": "string",
+    "value": "Standing desk"
+   },
+   {
+    "name": "what4",
+    "type": "string",
+    "value": "Oat milk"
+   },
+   {
+    "name": "what5",
+    "type": "string",
+    "value": "Item 5"
+   },
+   {
+    "name": "what6",
+    "type": "string",
+    "value": "Item 6"
+   },
+   {
+    "name": "who1",
+    "type": "string",
+    "value": "Ada Lovelace"
+   },
+   {
+    "name": "who2",
+    "type": "string",
+    "value": "Grace Hopper"
+   },
+   {
+    "name": "who3",
+    "type": "string",
+    "value": "Katherine Johnson"
+   },
+   {
+    "name": "who4",
+    "type": "string",
+    "value": "Hedy Lamarr"
+   },
+   {
+    "name": "who5",
+    "type": "string",
+    "value": "Slot 5"
+   },
+   {
+    "name": "who6",
+    "type": "string",
+    "value": "Slot 6"
+   }
+  ],
+  "render_findings": [
+   "info: hidden_rows",
+   "info: unused_space"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 3
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting",
+   "info: deep_expressions",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 4,
+   "click": 4,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 15096,
+    "component_modes": {
+     "AdaptiveSplit": "expand",
+     "RowList": "expand",
+     "Icon": "expand"
+    },
+    "motion_removed": 6,
+    "op_count": 800,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "n",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "note1",
+      "type": "string",
+      "value": "Paid by card, ships Monday"
+     },
+     {
+      "name": "note2",
+      "type": "string",
+      "value": "Waiting for payment"
+     },
+     {
+      "name": "note3",
+      "type": "string",
+      "value": "Paid, in the warehouse, large parcel"
+     },
+     {
+      "name": "note4",
+      "type": "string",
+      "value": "Paid, pick up in store"
+     },
+     {
+      "name": "note5",
+      "type": "string",
+      "value": "Note 5"
+     },
+     {
+      "name": "note6",
+      "type": "string",
+      "value": "Note 6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "openRow",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "t1",
+      "type": "float",
+      "value": 48.5
+     },
+     {
+      "name": "t2",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "t3",
+      "type": "float",
+      "value": 129
+     },
+     {
+      "name": "t4",
+      "type": "float",
+      "value": 7.25
+     },
+     {
+      "name": "t5",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "t6",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "what1",
+      "type": "string",
+      "value": "2 items"
+     },
+     {
+      "name": "what2",
+      "type": "string",
+      "value": "Coffee beans"
+     },
+     {
+      "name": "what3",
+      "type": "string",
+      "value": "Standing desk"
+     },
+     {
+      "name": "what4",
+      "type": "string",
+      "value": "Oat milk"
+     },
+     {
+      "name": "what5",
+      "type": "string",
+      "value": "Item 5"
+     },
+     {
+      "name": "what6",
+      "type": "string",
+      "value": "Item 6"
+     },
+     {
+      "name": "who1",
+      "type": "string",
+      "value": "Ada Lovelace"
+     },
+     {
+      "name": "who2",
+      "type": "string",
+      "value": "Grace Hopper"
+     },
+     {
+      "name": "who3",
+      "type": "string",
+      "value": "Katherine Johnson"
+     },
+     {
+      "name": "who4",
+      "type": "string",
+      "value": "Hedy Lamarr"
+     },
+     {
+      "name": "who5",
+      "type": "string",
+      "value": "Slot 5"
+     },
+     {
+      "name": "who6",
+      "type": "string",
+      "value": "Slot 6"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 15096,
+    "component_modes": {
+     "AdaptiveSplit": "expand",
+     "RowList": "expand",
+     "Icon": "expand"
+    },
+    "motion_removed": 6,
+    "op_count": 800,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "n",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "note1",
+      "type": "string",
+      "value": "Paid by card, ships Monday"
+     },
+     {
+      "name": "note2",
+      "type": "string",
+      "value": "Waiting for payment"
+     },
+     {
+      "name": "note3",
+      "type": "string",
+      "value": "Paid, in the warehouse, large parcel"
+     },
+     {
+      "name": "note4",
+      "type": "string",
+      "value": "Paid, pick up in store"
+     },
+     {
+      "name": "note5",
+      "type": "string",
+      "value": "Note 5"
+     },
+     {
+      "name": "note6",
+      "type": "string",
+      "value": "Note 6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "openRow",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "t1",
+      "type": "float",
+      "value": 48.5
+     },
+     {
+      "name": "t2",
+      "type": "float",
+      "value": 12
+     },
+     {
+      "name": "t3",
+      "type": "float",
+      "value": 129
+     },
+     {
+      "name": "t4",
+      "type": "float",
+      "value": 7.25
+     },
+     {
+      "name": "t5",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "t6",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "what1",
+      "type": "string",
+      "value": "2 items"
+     },
+     {
+      "name": "what2",
+      "type": "string",
+      "value": "Coffee beans"
+     },
+     {
+      "name": "what3",
+      "type": "string",
+      "value": "Standing desk"
+     },
+     {
+      "name": "what4",
+      "type": "string",
+      "value": "Oat milk"
+     },
+     {
+      "name": "what5",
+      "type": "string",
+      "value": "Item 5"
+     },
+     {
+      "name": "what6",
+      "type": "string",
+      "value": "Item 6"
+     },
+     {
+      "name": "who1",
+      "type": "string",
+      "value": "Ada Lovelace"
+     },
+     {
+      "name": "who2",
+      "type": "string",
+      "value": "Grace Hopper"
+     },
+     {
+      "name": "who3",
+      "type": "string",
+      "value": "Katherine Johnson"
+     },
+     {
+      "name": "who4",
+      "type": "string",
+      "value": "Hedy Lamarr"
+     },
+     {
+      "name": "who5",
+      "type": "string",
+      "value": "Slot 5"
+     },
+     {
+      "name": "who6",
+      "type": "string",
+      "value": "Slot 6"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "widget": {
+    "render": "render-widget.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ],
+    "size": [
+     240,
+     240
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ],
+    "size": [
+     480,
+     200
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: deep_expressions",
+     "info: expression_entries"
+    ]
+   },
+   "empty": {
+    "theme": "light",
+    "render": "render-empty.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "one": {
+    "theme": "light",
+    "render": "render-one.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: unused_space"
+    ]
+   },
+   "many": {
+    "theme": "light",
+    "render": "render-many.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   },
+   "open": {
+    "theme": "light",
+    "render": "render-open.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ]
+   }
+  },
+  "json_keys": [
+   "Icon",
+   "RowList",
+   "adaptivesplit1_s",
+   "adaptivesplit1_sw",
+   "adaptivesplit1_v1",
+   "anim",
+   "apiLevel",
+   "background",
+   "bottom",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "count",
+   "dark",
+   "decimal",
+   "drawLine",
+   "drawPath",
+   "emptyText",
+   "end",
+   "export",
+   "flags",
+   "flow",
+   "fontSize",
+   "fontWeight",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "icon_package_2_outlined",
+   "id1",
+   "id2",
+   "len",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "n",
+   "name",
+   "onClick",
+   "onSurface",
+   "open",
+   "openRow",
+   "operation",
+   "ops",
+   "outline",
+   "overflow",
+   "padding",
+   "paint",
+   "path",
+   "paths",
+   "primary",
+   "profiles",
+   "resources",
+   "root",
+   "row",
+   "rowlist1_body",
+   "rowlist1_cellW",
+   "rowlist1_cm",
+   "rowlist1_cols",
+   "rowlist1_first",
+   "rowlist1_fit",
+   "rowlist1_h0",
+   "rowlist1_headOn",
+   "rowlist1_ih",
+   "rowlist1_isEmpty",
+   "rowlist1_iw",
+   "rowlist1_lines0",
+   "rowlist1_n",
+   "rowlist1_openH",
+   "rowlist1_rowH",
+   "rowlist1_rw",
+   "rowlist1_shown",
+   "rowlist1_side",
+   "rowlist1_subOn",
+   "rowlist1_sumOn",
+   "rowlist1_sw",
+   "rows",
+   "save",
+   "scale",
+   "semantics",
+   "size",
+   "slots",
+   "start",
+   "stateDescription",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "summary",
+   "sx",
+   "sy",
+   "t1",
+   "t2",
+   "t3",
+   "t4",
+   "t5",
+   "t6",
+   "target",
+   "text",
+   "textAlign",
+   "textSubtext",
+   "textTransform",
+   "title",
+   "top",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "vis_1",
+   "visibility",
+   "vtype",
+   "weight",
+   "whole",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.flow": [
+    "flow"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "input.tap": [
+    "onClick"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "a11y.state": [
+    "stateDescription"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ]
+  },
+  "built_at": "2026-11-01T19:05:30.706Z"
+ }
+}

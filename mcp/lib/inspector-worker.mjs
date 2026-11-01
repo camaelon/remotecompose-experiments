@@ -368,8 +368,11 @@ function accessibility() {
     const merged = new Map();
     const spoken = [];
     let owner = null;
+    const box = (n) => { const b = bounds(n.bounds); return b && "x" in b ? b : null; };
+    // Inside means inside: a later button deeper in the tree can be the tappable one's neighbour.
+    const within = (n, o) => { const a = box(n), b = box(o); return a && b && a.x >= b.x - 0.5 && a.y >= b.y - 0.5 && a.x + a.w <= b.x + b.w + 0.5 && a.y + a.h <= b.y + b.h + 0.5; };
     for (const n of shown) {
-        if (owner && n.depth > owner.depth) { const t = n.contentDescription ?? n.semanticsText ?? n.ownText; if (t) merged.get(owner).push(t); continue; }
+        if (owner && n.depth > owner.depth && within(n, owner)) { const t = n.contentDescription ?? n.semanticsText ?? n.ownText; if (t) merged.get(owner).push(t); continue; }
         owner = n.clickable ? n : null;
         if (owner) merged.set(n, []);
         spoken.push(n);

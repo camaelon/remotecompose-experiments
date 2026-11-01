@@ -15,15 +15,17 @@
 // (/images/...), all under this server's own MCP_PUBLIC_URL.
 
 import { definition as json2rc } from "./json2rc-server.mjs";
-import { definition as render } from "./rc-render-server.mjs";
+import { definition as render, publishImage } from "./rc-render-server.mjs";
 import { definition as inspect } from "./inspect-server.mjs";
 import { definition as deploy } from "./deploy-server.mjs";
 import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { resolvePath } from "./lib/workspace.mjs";
+import { outputFile, displayPath, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 import { compileComponents } from "./lib/json2rc.mjs";
-import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, tapSettle } from "./lib/checks.mjs";
+import { loadLibrary } from "./lib/components.mjs";
+import { loadCatalog, exampleDoc } from "./lib/catalog.mjs";
+import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { enginesTool } from "./lib/engines.mjs";
 import os from "node:os";
@@ -389,6 +391,9 @@ Canvas (when you do draw)
   {commands} (text commands: textSubtext, textTransform, textLookup, textMeasure; textFromFloat and textMerge are not
   commands but VALUE objects, usable wherever a text goes — a text's value, drawText's text, a contentDescription — and
   identical objects convert to one shared op, so repeating one costs nothing). get DRW-* examples show each.
+- textMeasure: {"textMeasure": {"name": "w", "text": "@label", "mode": 0}} inside a canvas's global commands binds a text's size as seen by
+  that canvas's paint (mode 0 width, 1 height, 2 left, 3 right, 4 top, 5 bottom). It serves drawing on a canvas. A layout cannot ask it whether a
+  layout text fits its box: for a text that may be long, give it a weight with maxLines 1 or 2 and overflow "ellipsis", and put the full text in the label.
 - Derive coordinates from componentWidth() / componentHeight() (named "variable" commands, then reused), or
   scale a fixed design box to the size: literal coordinates only fit the header size.
 - The paint is sticky: set color/style/strokeWidth/textSize before each kind of draw.
@@ -471,6 +476,46 @@ function withLook(args, componentTheme) {
 /** An error in one line: "rc2image failed:" alone says nothing, the reason is on the next line. */
 const errorLine = (e) => String(e?.message ?? e).split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join(" ").slice(0, 300);
 
+/** An inspect tool's JSON result. */
+async function inspectJson(name, args) {
+    const r = await tool(inspect, name).handler(args);
+    return JSON.parse(r.find((c) => c.type === "text").text);
+}
+/** Where the document is, for the inspect tools. */
+const docSource = (args) => (args.json !== undefined ? { json: args.json } : args.json_path ? { json_path: args.json_path } : { rc_path: args.rc_path });
+/** The tap targets at a size and the words on them. */
+async function targetsAt(src, width, height, variables) {
+    const size = { ...src, ...(width ? { width, height } : {}), ...(variables && Object.keys(variables).length ? { variables } : {}) };
+    const [{ targets = [] }, { nodes = [] }] = await Promise.all([inspectJson("list_interactions", size), inspectJson("inspect_accessibility", size)]);
+    return { targets: targets.filter((t) => t.center && t.dispatchable !== false), nodes };
+}
+/** Taps as positions: the words of a tappable thing become its centre at this size. */
+async function resolveTaps(src, width, height, variables, taps) {
+    if (!taps.some((t) => typeof t === "string")) return taps;
+    const { targets, nodes } = await targetsAt(src, width, height, variables);
+    return taps.map((t) => {
+        if (typeof t !== "string") return t;
+        const hit = findTapTarget(t, targets, nodes);
+        if (!hit) throw new Error(`$tap: nothing tappable says "${t}" at ${width}×${height}. Tappable: ${targets.map((x) => JSON.stringify(targetWords(x, nodes)[0] ?? x.component)).slice(0, 8).join(", ") || "nothing"}`);
+        return hit.center;
+    });
+}
+/** A sample's $expect, run in the inspector: lines for the caller, a warning for each mismatch. */
+async function checkExpect(src, width, height, variables, clock, points, wait, expect) {
+    const size = { ...src, ...(width ? { width, height } : {}), ...(variables && Object.keys(variables).length ? { variables } : {}), ...(clock !== undefined ? { clock } : {}) };
+    const r = points.length ? await inspectJson("interact", { ...size, actions: [...points.flatMap((tap) => [{ tap }, { wait: 0.1 }]), { wait: wait ?? 0.5 }] }) : null;
+    const changed = Object.fromEntries((r?.changed_variables ?? []).map((v) => [v.name, v.with_input]));
+    const actual = {};
+    for (const name of Object.keys(expect)) {
+        if (name in changed) actual[name] = changed[name];
+        else { try { actual[name] = (await inspectJson("inspect_variables", { ...size, variable: name })).variable?.value; } catch { actual[name] = undefined; } }
+    }
+    const results = compareExpected(expect, actual);
+    const bad = results.filter((x) => !x.ok);
+    return bad.length ? bad.map((x) => `warning: [expect_failed] ${x.name} is ${JSON.stringify(x.actual ?? null)}, expected ${JSON.stringify(x.expected)}`)
+        : [`ok: ${results.map((x) => `${x.name} = ${JSON.stringify(x.expected)}`).join(", ")}`];
+}
+
 /** One render per set of host variables, captioned with the values; eased values settled. */
 async function renderSamples(t, args, samples) {
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
@@ -485,11 +530,14 @@ async function renderSamples(t, args, samples) {
         const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${short(v)}`).join(" ");
         // A sample may pin its own clock ("$clock": "2026-06-21T12:00"): a time-of-day scenario
         // is its data AND its hour.
-        const { values, clock: $clock, taps } = splitSample(vars);
-        const a = { ...args, variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}), ...(taps.length ? { touch_events: tapEvents(taps), duration: tapSettle(taps) } : {}) };
+        const { values, clock: $clock, taps, size: $size, wait, expect } = splitSample(vars);
+        const a = { ...args, ...(Array.isArray($size) ? { width: $size[0], height: $size[1] } : {}), variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}) };
         if (stem) a.output_path = `${stem}-sample${i}.png`;
         try {
+            const points = await resolveTaps(docSource(args), a.width, a.height, a.variables, taps);
+            if (points.length) { a.touch_events = tapEvents(points); a.duration = tapSettle(points, wait); }
             const r = await t.handler(a);
+            if (expect) content.push({ type: "text", text: (await checkExpect(docSource(args), a.width, a.height, a.variables, $clock, points, wait, expect)).join("\n") });
             // Errors, warnings and the infos about what the image shows (a text cut with "…").
             const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
                 .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)).join("\n") }))
@@ -655,25 +703,33 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
     const cases = [];
     for (const [w, h] of size) {
         for (const look of usable) cases.push({ w, h, look, vars: null });
-        for (const look of everyLook ? usable : usable.slice(0, 1)) for (const smp of samples ?? []) if (fitsSize(smp?.$size, w, h)) cases.push({ w, h, look, vars: smp ?? {} });
+        for (const look of everyLook ? usable : usable.slice(0, 1)) for (const smp of samples ?? []) if (!smp?.$size && fitsSize(undefined, w, h)) cases.push({ w, h, look, vars: smp });
+    }
+    // A sample with its own $size runs at that size, whether or not sizes lists it.
+    for (const smp of samples ?? []) if (Array.isArray(smp?.$size)) {
+        for (const look of everyLook ? usable : usable.slice(0, 1)) cases.push({ w: smp.$size[0], h: smp.$size[1], look, vars: smp });
     }
     if (cases.length > MATRIX_MAX) notes.push(`${cases.length} renders asked, the first ${MATRIX_MAX} made: call again with fewer sizes or samples for the rest.`);
-    const short = (v) => typeof v === "string" && v.length > 16 ? JSON.stringify(v.slice(0, 14) + "…") : Array.isArray(v) && v.length > 4 ? `[${v.length}]` : JSON.stringify(v);
+    const short = (v) => typeof v === "string" && v.length > 16 ? JSON.stringify(v.slice(0, 14) + "…") : Array.isArray(v) && v.length > 4 ? `[${v.slice(0, 3).join(",")}…${v.length}]` : JSON.stringify(v);
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
     const { rc_path, json: _j, json_path, output_path: _o, ...rest } = args;
     const parts = await inPool(cases.slice(0, MATRIX_MAX), async (c, i) => {
-        const { values, clock: $clock, taps } = splitSample(c.vars);
+        const { values, clock: $clock, taps, wait, expect } = splitSample(c.vars);
         const mono = c.look.startsWith("mono");
         const a = { ...rest, width: c.w, height: c.h, theme: LOOK_THEME[c.look], variables: { ...(args.variables ?? {}), ...values },
             ...($clock !== undefined ? { clock: $clock } : {}),
-            ...(taps.length ? { touch_events: tapEvents(taps), duration: tapSettle(taps) } : {}),
             ...(mono ? { json: { ...json, componentTheme: c.look } } : args.json !== undefined ? { json: args.json } : json_path ? { json_path } : { rc_path }),
             ...(stem ? { output_path: `${stem}-cell-${i + 1}.png` } : {}) };
-        const label = [`${c.w}×${c.h}`, c.look, ...Object.entries(c.vars ?? {}).filter(([k]) => k !== "$size").map(([k, v]) => `${k.replace(/^\$/, "")}=${short(v)}`)].join(" ");
+        const label = [`${c.w}×${c.h}`, c.look, ...Object.entries(c.vars ?? {}).filter(([k]) => !["$size", "$expect"].includes(k)).map(([k, v]) => `${k.replace(/^\$/, "")}=${short(v)}`)].join(" ");
         try {
+            const src = args.json !== undefined ? { json: args.json } : json_path ? { json_path } : { rc_path };
+            const points = await resolveTaps(src, c.w, c.h, a.variables, taps);
+            if (points.length) { a.touch_events = tapEvents(points); a.duration = tapSettle(points, wait); }
             const r = await t.handler(a);
             const lines = r.filter((x) => x.type === "text" && /^(error|warning|info): /m.test(x.text))
                 .flatMap((x) => x.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)));
+            // (Logic does not depend on the look: checked once.)
+            if (expect && c.look === usable[0]) lines.push(...await checkExpect(src, c.w, c.h, a.variables, $clock, points, wait, expect));
             const images = r.filter((x) => x.type === "image");
             return { label, hash: images[0] ? imageHash(images[0].data) : undefined, head: `── ${label}${a.output_path ? ` → ${a.output_path}` : ""}`, images, lines };
         } catch (e) { return { label, head: `── ${label}: ${errorLine(e)}`, images: [], lines: [], failed: true }; }
@@ -685,22 +741,25 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
     // Only the pictures that differ from what the caller has seen; findings are always listed.
     const src = args.json_path ?? args.rc_path;
     const planFile = src ? resolveIn(planPathOf(src)) : null;
-    const { changed, unchanged } = changedCells(parts, planFile ? loadPlan(planFile)?.hashes : null, showAll);
+    // (Asking for a file asks for all of it: an output_path is a deliverable.)
+    const { changed, unchanged } = changedCells(parts, planFile ? loadPlan(planFile)?.hashes : null, showAll || Boolean(stem));
     if (planFile) {
         const cleanSizes = given.length ? given : undefined;
         savePlan(planFile, { looks, sizes: cleanSizes, samples, every_look: everyLook || undefined, width: args.width, height: args.height, clock: args.clock, variables: args.variables },
             Object.fromEntries(parts.filter((x) => x.hash).map((x) => [x.label, x.hash])));
     }
-    const warnings = parts.reduce((n, x) => n + x.lines.filter((l) => /^(error|warning): /.test(l)).length, 0);
+    // (A case that could not run is not a pass.)
+    const warnings = parts.reduce((n, x) => n + (x.failed ? 1 : 0) + x.lines.filter((l) => /^(error|warning): /.test(l)).length, 0);
     const summary = `Checked ${parts.length} render(s): ${changed.size} shown, ${unchanged.length} unchanged since the last check, ${warnings} warning(s).` +
-        (unchanged.length ? " show_all: true shows every picture." : "") + (planFile ? " To repeat it: render {\"again\": true} with the same path, or convert with edits." : "");
+        (unchanged.length ? " show_all: true shows every picture." : "") +
+        (parts.length && !changed.size ? " NOTHING in the check looks different, so if you just changed something, no sample reaches it and it is NOT verified: add a sample that shows it." : "") + (planFile ? " To repeat it: render {\"again\": true} with the same path, or convert with edits." : "");
     // An info is said once, however many pictures it applies to; a warning stays until it is fixed.
     const saidInfo = new Set();
     const cells = parts.flatMap((x) => {
         const shown = changed.has(x.label);
-        const lines = x.lines.filter((l) => !l.startsWith("info: ") || (shown && !saidInfo.has(l.slice(0, 30)) && saidInfo.add(l.slice(0, 30))));
+        const lines = x.lines.filter((l) => l.startsWith("ok: ") || !l.startsWith("info: ") || (shown && !saidInfo.has(l.slice(0, 30)) && saidInfo.add(l.slice(0, 30))));
         if (!shown && !lines.length) return [];   // counted in the summary
-        return [{ type: "text", text: `${x.head}${shown ? "" : " · unchanged"}${x.lines.length || x.failed ? "" : " · findings: none"}` },
+        return [{ type: "text", text: `${x.head}${shown ? "" : " · unchanged"}${x.lines.some((l) => !l.startsWith("ok: ")) || x.failed ? "" : " · findings: none"}` },
             ...(shown ? x.images : []), ...(lines.length ? [{ type: "text", text: lines.join("\n") }] : [])];
     });
     return withDesign([{ type: "text", text: summary }, ...[...notes, ...covered].map((n) => ({ type: "text", text: n })), ...cells], args, { first: true });
@@ -716,7 +775,7 @@ function repeatHint(args) {
     singleRenders.set(key, n);
     if (n !== 4) return [];
     return [{ type: "text", text: "Tip: this is the 4th single render of this document. One call can check everything and return one contact sheet: " +
-        "render {\"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"title\": \"A very long name\"}, {\"$tap\": [40, 60], \"$size\": [320, 160]}]} (with this document's own sizes, variables and tap positions); repeat it with {\"again\": true}." }];
+        "render {\"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"title\": \"A very long name\"}, {\"$tap\": \"Save\", \"$expect\": {\"saved\": 1}}]} (with this document's own sizes, variables and labels); repeat it with {\"again\": true}." }];
 }
 
 /**
@@ -752,6 +811,43 @@ async function toSheet(content, args) {
         const texts = content.filter((c) => c.type !== "image");
         return [...images, { type: "text", text: `contact sheet: ${imgs.length} renders${pages > 1 ? ` on ${pages} sheets` : ""}${names.length ? ` → ${names.join(", ")}` : ""}` }, ...texts];
     } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
+}
+
+/** What the inspector says about the document, once: unchanged notes are not repeated. */
+async function inspectionNotes(kept, sizes) {
+    try {
+        const src = { json_path: kept };
+        const [first] = sizes;
+        const targetsBySize = [];
+        for (const [width, height] of sizes.filter(([w]) => w)) {
+            const { targets, nodes } = await targetsAt(src, width, height);
+            targetsBySize.push({ size: [width, height], targets, nodes });
+        }
+        const at = first?.[0] ? { width: first[0], height: first[1] } : {};
+        const nodes = targetsBySize[0]?.nodes ?? (await inspectJson("inspect_accessibility", { ...src, ...at })).nodes;
+        const engines = [];
+        for (const [width, height] of sizes.filter(([w]) => w)) {
+            const e = JSON.parse((await enginesTool.handler({ ...src, width, height })).find((c) => c.type === "text").text);
+            engines.push({ size: [width, height], structural: Array.isArray(e.structural) ? e.structural.length : Number(e.structural) || 0 });
+        }
+        const repaint = (await inspectJson("inspect_runtime", { ...src, ...at })).repaint?.verdict;
+        const lines = summarizeInspection({ nodes, targetsBySize, engines, repaint });
+        const planFile = resolveIn(planPathOf(kept));
+        const plan = loadPlan(planFile) ?? {};
+        const said = plan.said ?? [];
+        writeFileSync(planFile, JSON.stringify({ ...plan, said: lines }));
+        const fresh = lines.filter((l) => !said.includes(l));
+        return fresh.length ? [{ type: "text", text: fresh.join("\n") }] : [];
+    } catch (e) { return [{ type: "text", text: `(inspection summary unavailable: ${errorLine(e)})` }]; }
+}
+
+/** A clean check: say so, and write the full contact sheet so no further render is needed. */
+async function finishNote(kept) {
+    const rendered = await tools.find((x) => x.name === "render").handler({ json_path: kept, again: true, show_all: true, output_path: kept.replace(/\.json$/i, "") + "-final.png" });
+    const line = rendered.find((c) => c.type === "text" && c.text.startsWith("contact sheet:"))?.text ?? "";
+    const files = (/→ (.+)$/.exec(line)?.[1] ?? "").split(", ").filter(Boolean);
+    const links = workspaceRoot() && process.env.MCP_PUBLIC_URL ? files.map((f) => { try { return publishImage(resolveIn(f)); } catch { return null; } }).filter(Boolean) : [];
+    return [{ type: "text", text: `READY: every size, look and sample in the check passes with no warnings. If you have looked at the pictures and nothing needs changing, you are done. Full contact sheet: ${files.join(", ")}${links.length ? ` (${links.join(", ")})` : ""}.` }];
 }
 
 const tools = [
@@ -827,6 +923,8 @@ const tools = [
             type: "object",
             properties: {
                 json_path: { type: "string", description: "Path to the JSON document (same as input_path)." },
+                from_example: { type: "string", description: "Start from a catalog example (\"CMP-15\") WITHOUT writing it out: the fastest way to adapt one. Change it with set and edits in the same call. Written to json_path, or to a generated path returned in the result." },
+                set: { type: "object", description: "Starting values of the document's named variables, {\"stop\": \"Central\", \"d1Min\": 4}: its sample data, without text edits." },
                 ...tool(json2rc, "json2rc").inputSchema.properties,
                 ...tool(examples, "expand_components").inputSchema.properties,
                 check: { type: "boolean", description: "Also validate the result (parse, data pass, findings)." },
@@ -834,18 +932,33 @@ const tools = [
                 expanded: { type: "boolean", description: "Return the expanded JSON instead of converting." },
                 edits: { type: "array", items: { type: "object", properties: { old: { type: "string" }, new: { type: "string" }, all: { type: "boolean" } }, required: ["old", "new"] },
                     description: "With json_path: change the stored document instead of sending it all again, then convert it. Each {\"old\": text, \"new\": text}; old must occur once (or \"all\": true). The file is updated in place. All or nothing: on any failure nothing changes." },
-                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings and audit warnings for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves." },
+                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict, for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves. When nothing is wrong it says READY and writes the full contact sheet. Prefer this to separate render, audit and inspect calls." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "With looks: the [width, height] sizes to check." },
-                samples: { type: "array", items: { type: "object" }, description: "With looks: data cases and taps, as in render." },
+                samples: { type: "array", items: { type: "object" }, description: "With looks: data cases and taps, as in render: host values, \"$tap\", \"$wait\", \"$expect\", \"$clock\", and \"$size\": [w, h] to run a case at one size only (a tap on something only that size shows)." },
+                clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "With looks: pinned clocks, each one a data case; with samples, each sample at each clock." },
                 every_look: { type: "boolean", description: "With looks and samples: every sample in every look." },
                 recheck: { type: "boolean", description: "true: repeat the saved check after converting. false: skip it after edits (default: edits repeat it when one is saved)." },
                 show_all: { type: "boolean", description: "With a check: include pictures unchanged since the last check (for the final contact sheet)." },
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "The look to build: auto (default) light and dark by the system theme; all: light, dark AND mono in ONE file, mono switched at run time by the host, which sets the theme.mono float AND the mono colours (larger); mono-dark or mono-light: that look only (a json_path then writes <name>-<look>.rc beside it, not over <name>.rc). Same as theme." },
             },
         },
-        handler: async ({ check, expanded, render: doRender, json_path, edits, componentTheme, looks, sizes, samples, every_look, recheck, show_all, ...args } = {}) => {
+        handler: async ({ from_example, set, check, expanded, render: doRender, json_path, edits, componentTheme, looks, sizes, samples, clocks, every_look, recheck, show_all, ...args } = {}) => {
             // One name for a JSON file everywhere: json2rc calls it input_path, the others json_path.
             let file = json_path ?? args.input_path;
+            // Start from a catalog example without writing it out: only the differences are sent.
+            if (from_example) {
+                const example = loadCatalog().examples.find((e) => e.id === from_example || e.folder === from_example);
+                const doc = example && exampleDoc(example);
+                if (!doc) throw new Error(`convert: no example "${from_example}" (find kind "examples" lists them)`);
+                file = file ?? displayPath(outputFile(String(from_example).toLowerCase(), ".json"));
+                writeFileSync(resolveIn(file), JSON.stringify(doc));
+                delete args.input_path;
+            }
+            if (set && Object.keys(set).length) {
+                if (!file) throw new Error("convert: set changes a stored document: give json_path or from_example");
+                const p = resolveIn(file);
+                writeFileSync(p, JSON.stringify(setVariables(JSON.parse(readFileSync(p, "utf8")), set)));
+            }
             if (edits?.length) {
                 if (!file) throw new Error("convert: edits change a stored document: give its json_path (a convert of inline JSON keeps it beside the .rc, x.json)");
                 const p = resolveIn(file);
@@ -885,7 +998,7 @@ const tools = [
             if (recheck === true && !looks?.length && !saved?.looks) throw new Error("convert: no saved check to repeat: give looks (and sizes, samples) once");
             if (verify) {
                 const shown = await tools.find((x) => x.name === "render").handler({ json_path: kept, show_all,
-                    ...(looks?.length ? { looks, sizes, samples, every_look } : { again: true }) });
+                    ...(looks?.length ? { looks, sizes, samples, clocks, every_look } : { again: true }) });
                 const plan = loadPlan(resolveIn(planPathOf(kept)));
                 const auditSizes = plan?.sizes?.length ? plan.sizes : [[undefined, undefined]];
                 const findings = new Map();
@@ -896,8 +1009,13 @@ const tools = [
                     } catch (e) { findings.set("audit_failed", { severity: "warning", code: "audit_failed", title: errorLine(e) }); }
                 }
                 const audit = findings.size ? `audit:\n${[...findings.values()].map((f) => `${f.severity}: [${f.code}] ${f.title}`).join("\n")}` : "audit: no errors or warnings.";
+                const inspected = await inspectionNotes(kept, auditSizes);
+                // Finished? Then the deliverable is ready too, with no further call.
+                const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
+                const clean = /, 0 warning\(s\)/.test(summary) && !findings.size;
+                const finish = clean ? await finishNote(kept) : [];
                 // (The design warnings are already in json2rc's result.)
-                return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }];
+                return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];
             }
             if (!check) return [...out, ...hint];   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
@@ -922,14 +1040,14 @@ const tools = [
                 "clocks: [\"2026-12-31T23:59:59\", ...] (several pinned dates in one call); for a host-data document, " +
                 "samples: [{\"aqi\": 12}, {\"aqi\": 480}] (several sets of host variables in one call, each settled).",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call), \"$tap\": [x, y] (or a list of them) to show the state after tapping, in dp at that size, and \"$size\": [w, h] to run only at that size with looks (a tap position usually fits one size). With output_path, files are <stem>-sample1.png, -sample2…" },
+                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call), \"$tap\" to show the state after tapping: the words on it (\"$tap\": \"Harbour Front\", found at every size), [x, y] in dp, or a list of either; \"$wait\": seconds after the taps; \"$expect\": {\"open\": 2} to check variables at the end (reported as ok or expect_failed); and \"$size\": [w, h] to run at that size only. With output_path, files are <stem>-sample1.png, -sample2…" },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "Several pinned clocks in one call (the same formats as clock; up to 12 per call), one captioned image each: check a date-driven document at its edges (\"2026-12-31T23:59:59\", \"2027-01-01T00:00:00\", a full-moon day) without a call per date. With output_path, files are <stem>-<clock>.png." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Extra [width, height] sizes to render (up to 10): with variants, added to them; alone, only these sizes (with samples or clocks: each at each size) (the target device's own screens, e.g. [[800, 480], [600, 600]] for a car display), each captioned with its size." },
                 looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "The whole check in one call, up to 96 renders, 4 at a time, as contact sheets of 24 (sheet: false for separate images): every look at every size (sizes, or the document's own), and every sample at every size in the FIRST look (every_look: true: in all of them). An .rc's mono looks come from the JSON kept beside it. Prefer this to a call per combination." },
                 every_look: { type: "boolean", description: "With looks and samples: run every sample in every look, not only the first." },
                 again: { type: "boolean", description: "Repeat this document's last looks check (json_path or rc_path): the looks, sizes and samples are remembered beside it. Pictures that did not change since the last check are left out, findings are always listed." },
                 show_all: { type: "boolean", description: "With looks or again: include unchanged pictures too (for the final contact sheet)." },
-                sheet: { type: "boolean", description: "With samples, clocks, sizes or variants: ONE contact-sheet image (every render in a captioned grid; more than 24 renders make several sheets) instead of one image each; the findings are kept per render. Saves reading many images. On by default with looks." },
+                sheet: { type: "boolean", description: "With samples, clocks, sizes or variants: ONE contact-sheet image (every render in a captioned grid; more than 24 renders make several sheets) instead of one image each; the findings are kept per render. On by default with looks and from 4 pictures; false for separate images." },
                 variants: { type: "boolean", description: "Check every state in one call: dark, light, mono-dark and mono-light, narrow, wide, short, small (narrow and short) and tiny (half the width), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-<variant>.png named after each caption (-dark, -light, -mono-dark, -mono-light, -narrow-259x640, -widget-4x2-320x160, -seven-hours-later, ...) or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono-dark (light on black) / mono-light (dark on white): the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
             handler: async ({ sheet, looks, again, show_all, ...all } = {}) => {
@@ -942,13 +1060,18 @@ const tools = [
                     all = { ...saved, ...all };
                 }
                 if (Array.isArray(looks) && looks.length) {
-                    const { componentTheme: _c, variants: _v, clocks: _k, samples, sizes, every_look, ...args } = all;
+                    const { componentTheme: _c, variants: _v, clocks, samples: given, sizes, every_look, ...args } = all;
+                    // Clocks are data cases too: each sample at each clock, or each clock alone.
+                    const samples = Array.isArray(clocks) && clocks.length
+                        ? (given?.length ? given : [{}]).flatMap((smp) => smp && "$clock" in smp ? [smp] : clocks.map((c) => ({ ...(smp ?? {}), $clock: c })))
+                        : given;
                     const r = await renderMatrix(t, args, looks, sizes, samples, every_look, show_all);
                     return sheet === false ? r : toSheet(r, all);
                 }
                 const many = all.variants || all.samples?.length || all.clocks?.length || all.sizes?.length;
                 const r = await renderMany(all, sheet);
-                const out = sheet ? await toSheet(r, all) : r;
+                // Several pictures are one sheet unless separate ones are asked for.
+                const out = sheet ?? r.filter((c) => c.type === "image").length >= 4 ? await toSheet(r, all) : r;
                 return many ? out : [...out, ...repeatHint(all)];
             } };
         // The render itself (samples, clocks, sizes, variants or one image).
@@ -1105,7 +1228,9 @@ async function getGenerated(id, { parts = ["meta", "json"] } = {}) {
 /** The reference's paragraphs that best match some words, across every topic. */
 async function searchReference(query) {
     const guide = (await tool(examples, "component_authoring_guide").handler({})).map((c) => c.text ?? "").join("\n");
-    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide,
+    // The library's components, one paragraph each: a kit's advice names them ("a TextChoice").
+    const library = [...loadLibrary().components.values()].map((c) => `- ${c.component}: ${c.summary ?? ""} Call: ${JSON.stringify(c.call ?? {})}. Full details: get {"id": "${c.component}"}.`).join("\n\n");
+    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide, library,
         tools: tools.map(describeTool).join("\n\n") };
     const stem = (w) => w.toLowerCase().replace(/(ies)$/, "y").replace(/(es|s)$/, "");
     const words = [...new Set(String(query).toLowerCase().split(/[^a-z0-9$@#.]+/).filter((w) => w.length > 1).map(stem))];
@@ -1129,7 +1254,7 @@ async function searchReference(query) {
         const hits = words.filter((w) => has(toks, w));
         const tf = hits.reduce((n, w) => n + idf[w] * (1 + Math.log(1 + toks.filter((t) => t === w).length)), 0);
         // Prose topics first: a tool schema mentions every option name in passing.
-        return { ...p, hits: hits.length, score: (tf / Math.sqrt(1 + toks.length / 60)) * (p.topic === "tools" ? 0.6 : 1) };
+        return { ...p, hits: hits.length, score: (tf / Math.sqrt(1 + toks.length / 60)) * (p.topic === "tools" ? 0.35 : 1) };
     });
     // Two of the words when any paragraph has them, else any one.
     const need = scored.some((p) => p.hits >= Math.min(words.length, 2)) ? Math.min(words.length, 2) : 1;

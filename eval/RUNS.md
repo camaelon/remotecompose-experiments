@@ -908,3 +908,48 @@ After one-call checks (convert looks, edits repeat the check, changed pictures o
 | 4 | next departures | 22 | 3 | 6 min | 16.1 KB | was 36 calls in run 3; text_overflow left at 2x2 on a long word |
 | 2 | prompt 11, weather | 20 | 3 | 4 min | 8.1 KB | was 28 calls in its run 1, on earlier tools; no prompt-specific example |
 
+Timed local reruns on the committed tools (no scripts; one tool call per command):
+
+| prompt | calls | dead ends | size |
+| :-- | --: | --: | --: |
+| next departures | 12 | 2 | 12.3 KB (adapted CMP-15, a near-exact example) |
+| prompt 11, weather | 14 | 0 | 8.1 KB |
+| prompt 6, Pomodoro | 16 | 1 | 8.5 KB |
+
+With inspection in the check, label taps, $expect, a richer kit and READY:
+
+| prompt | calls | dead ends | size |
+| :-- | --: | --: | --: |
+| next departures | 13 | 0 | 12.4 KB (adapted CMP-15) |
+| prompt 11, weather | 10 | 0 | 7.7 KB |
+| prompt 6, Pomodoro | 8 | 0 | 10.4 KB (160x160 lost its controls) |
+
+Where the time goes (2026-11-01, six runs): model time follows output at about 100 tokens/s; a turn
+with little output takes about 1.5 s even with 100K+ of context, so reading costs almost no time on
+this model. Output: thinking about 50% (worked out as the rest), document and edits 15-25%, CLI commands
+and notes about 25-30% (mostly an eval artefact).
+
+With from_example and set:
+
+| prompt | calls | output tokens (before) | used from_example |
+| :-- | --: | --: | :-- |
+| next departures | 12 | 22.3K (21.2K) | yes: document 3.2K to 0, edits 0.5K to 2.7K, thinking unchanged |
+| prompt 11, weather | 7 | 15.6K (18.6K) | no |
+| prompt 6, Pomodoro | 10 | 15.8K (18.6K) | no |
+
+The brief also asked for shorter notes, which accounts for part of the drop. Structures and selection
+scores: docs/structures/.
+
+Structure selection: start example of the right structure 11 to 22 of 32 held-out prompts (eval/score-selection.mjs).
+
+RowList with and without (one run each, brief notes):
+
+| prompt | arm | output tokens | calls | what happened |
+| :-- | :-- | --: | --: | :-- |
+| 31 to-do | kit offers RowList | 9.5K | 11 | ignored it: a column of Checkbox was simpler |
+| 31 to-do | hidden | 10.8K | 9 | |
+| 13 battery | kit offers RowList | 13.3K | 7 | tried and dropped it: rows and tiles hid the wrong things |
+| 13 battery | hidden | 12.9K | 6 | |
+| 25 server | kit offers RowList | 14.7K | 11 | kept it, with two inline components |
+| 25 server | hidden (clean rerun; a first control leaked RowList, 15.2K) | 17.2K | 7 | hand-written; shows all 6 rows at small sizes, where RowList shows 3 and can hide a down service |
+

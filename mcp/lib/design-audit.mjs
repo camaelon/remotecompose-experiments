@@ -877,12 +877,14 @@ function fixedWidthFindings(doc) {
     let texts = 0, boxes = 0;
     // (A narrow fixed column, such as labels lined up in a table, is fine.)
     const fixed = (ms) => ms.some((m) => isObj(m) && typeof m.width === "number" && m.width >= 100);
+    // (Under a fitBox a fixed width is how an alternative says what it needs, so it is meant.)
     const visit = (x, inCanvas) => {
         if (Array.isArray(x)) { x.forEach((y) => visit(y, inCanvas)); return; }
         if (!isObj(x)) return;
         for (const [k, v] of Object.entries(x)) {
             if (!isObj(v)) { if (Array.isArray(v) || isObj(v)) visit(v, inCanvas); continue; }
             const lk = k.toLowerCase();
+            if (lk === "fitbox") continue;
             if (!inCanvas && Array.isArray(v.modifiers) && fixed(v.modifiers)) {
                 if (lk === "text") texts++;
                 else if (["column", "row", "box", "collapsiblecolumn", "collapsiblerow"].includes(lk) && v.modifiers.some((m) => isObj(m) && typeof m.width === "number" && m.width >= 120)) boxes++;

@@ -47,7 +47,7 @@ function pruneImages() {
 }
 
 /** Copy a render to the public folder; returns its URL. */
-function publishImage(pngPath) {
+export function publishImage(pngPath) {
     mkdirSync(IMAGES_DIR, { recursive: true });
     pruneImages();
     const name = `${randomBytes(16).toString("base64url")}.png`;

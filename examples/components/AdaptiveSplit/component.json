@@ -1,0 +1,158 @@
+{
+ "component": "AdaptiveSplit",
+ "version": 1,
+ "summary": "Two parts that sit side by side when the window is wide and stack when it is not, and that drop by priority when it is short: one flow, so each part is written once and not copied per layout. Decided by window size and never by content.",
+ "params": {
+  "side": {
+   "type": "float",
+   "doc": "0/1 expression: 1 side by side, 0 stacked. Default: the width reaches sideAt"
+  },
+  "sideAt": {
+   "type": "float",
+   "default": 480,
+   "static": true,
+   "doc": "Width in dp from which the parts sit side by side, when side is not given"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width the split has. Give it when the split is not the whole window (the window minus your padding)"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height the split has"
+  },
+  "ratio": {
+   "type": "float",
+   "default": 0.5,
+   "doc": "The first part's share of the width when side by side"
+  },
+  "firstHeight": {
+   "type": "float",
+   "default": 0,
+   "doc": "The first part's height when stacked, spacing included; the second gets the rest. 0: half the height"
+  },
+  "gap": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Space between the parts when side by side"
+  },
+  "dropFirst": {
+   "type": "float",
+   "default": 0,
+   "doc": "0/1 expression: while 1 the first part is gone and the second takes everything"
+  },
+  "dropSecond": {
+   "type": "float",
+   "default": 0,
+   "doc": "0/1 expression: while 1 the second part is gone and the first takes everything"
+  }
+ },
+ "slots": {
+  "first": {
+   "doc": "The first part, on the left or on top. It gets an exact box: fill it"
+  },
+  "second": {
+   "doc": "The second part, on the right or below. It gets an exact box"
+  }
+ },
+ "locals": {
+  "s": {
+   "$if": "side",
+   "then": "@side * (1 - @dropFirst) * (1 - @dropSecond)",
+   "else": "step(@width, @sideAt - 0.5) * (1 - @dropFirst) * (1 - @dropSecond)"
+  },
+  "fh": {
+   "$if": "firstHeight",
+   "then": "@firstHeight",
+   "else": "@height / 2"
+  },
+  "sw": "floor(@width * @ratio - @gap / 2)",
+  "v1": "1 - @dropFirst",
+  "v2": "1 - @dropSecond"
+ },
+ "capabilities": [
+  "layout.flow"
+ ],
+ "call": {
+  "AdaptiveSplit": {
+   "firstHeight": 60,
+   "slots": {
+    "first": [
+     {
+      "text": {
+       "value": "First",
+       "color": "@colors.onSurface"
+      }
+     }
+    ],
+    "second": [
+     {
+      "text": {
+       "value": "Second",
+       "color": "@colors.onSurface"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "Each slot gets a box of exact width and height, so what is inside must fill or be smaller; give firstHeight for a part that needs a fixed height when stacked",
+  "A slot cannot read the split's values: the format has no way for a component to hand a computed value to its slot content. When content must follow the layout (a row count, a hidden caption), compute the same 0/1 flag in your document or a local, pass it as side, and read it in the slot",
+  "width and height default to the whole window. Inside padding, pass the window minus the padding: flow wraps as soon as the two widths exceed the real space",
+  "Weights do not reach through the flow: a part that grows must take the exact box (fillMaxSize)"
+ ],
+ "body": {
+  "flow": {
+   "horizontalArrangement": "spaceBetween",
+   "modifiers": [
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       {
+        "visibility": "@v1"
+       },
+       {
+        "width": "ifElse(@width, @sw, @s)"
+       },
+       {
+        "height": "ifElse(ifElse(@fh, @height, @dropSecond), @height, @s)"
+       }
+      ],
+      "children": [
+       {
+        "$slot": "first"
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "visibility": "@v2"
+       },
+       {
+        "width": "ifElse(@width, @width - @sw - @gap, @s)"
+       },
+       {
+        "height": "ifElse(@height - @fh * (1 - @dropFirst), @height, @s)"
+       }
+      ],
+      "children": [
+       {
+        "$slot": "second"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

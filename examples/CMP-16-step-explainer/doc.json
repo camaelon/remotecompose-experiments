@@ -1,0 +1,1343 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 480,
+  "profiles": 513,
+  "contentDescription": "How a heat pump works, in four steps: a loop diagram showing the current step, its caption, step dots, and previous, play and next buttons"
+ },
+ "resources": {
+  "floatArrays": {
+   "temps": {
+    "value": [
+     5,
+     70,
+     35,
+     -5
+    ]
+   }
+  },
+  "variables": {
+   "stage": {
+    "value": 0,
+    "export": true
+   },
+   "W": "windowWidth()",
+   "H": "windowHeight()",
+   "pad": "ifElse(ifElse(8, 12, step(min(@W, @H), 199)), 16, step(min(@W, @H), 300))",
+   "iw": "@W - 2 * @pad",
+   "ih": "@H - 2 * @pad",
+   "wide": "step(@W, @H * 1.25) * step(@W, 280)",
+   "hasTitle": "ifElse(step(@H, 260), step(@H, 190), @wide)",
+   "titleH": "@hasTitle * ifElse(28, 40, step(@H, 300))",
+   "ch": "@ih - @titleH",
+   "long": "step(@H, 190) * max(@wide, step(@H, 300))",
+   "short": "(1 - @long) * max(@wide, step(@H, 199))",
+   "hasCap": "max(@long, @short)",
+   "capFs": "ifElse(14, 15, step(@H, 300))",
+   "capH": "ifElse(ifElse(@short * 38, 66, @long), @ch - 88, @wide)",
+   "vw": "ifElse(@iw, min(@ch, @iw * 0.42), @wide)",
+   "vh": "ifElse(@ch - 94 - @capH, @ch, @wide)",
+   "tw": "ifElse(@iw, @iw - @vw - 12, @wide)",
+   "tiny": "1 - step(@vh, 70)"
+  }
+ },
+ "components": {
+  "StepFrame": {
+   "summary": "The step-explainer frame: a title, a visual the step drives, dots, a caption that shortens with the height, and back, play and next. Beside the caption when wide, above it otherwise.",
+   "params": {
+    "title": {
+     "type": "string",
+     "required": true,
+     "doc": "What is being explained"
+    },
+    "icon": {
+     "type": "string",
+     "static": true,
+     "required": true,
+     "doc": "Icon beside the title"
+    },
+    "titles": {
+     "type": "list",
+     "static": true,
+     "required": true,
+     "doc": "One short title per step, at most 16 characters: the only text at the smallest size"
+    },
+    "texts": {
+     "type": "list",
+     "static": true,
+     "required": true,
+     "doc": "The full caption of each step, at most 100 characters"
+    },
+    "shorts": {
+     "type": "list",
+     "static": true,
+     "required": true,
+     "doc": "The caption of each step when short, at most 36 characters"
+    },
+    "at": {
+     "type": "variable",
+     "required": true,
+     "doc": "The step, 0-based, which the buttons write and the host may set"
+    },
+    "interval": {
+     "type": "float",
+     "static": true,
+     "default": 3,
+     "doc": "Seconds per step while playing"
+    },
+    "shown": {
+     "type": "variable",
+     "required": true,
+     "doc": "Publishes the step on screen under this name, for the visual slot. Do not declare it in resources"
+    },
+    "eased": {
+     "type": "variable",
+     "required": true,
+     "doc": "Publishes that step eased over 0.6 s under this name, for the visual slot. Do not declare it in resources"
+    }
+   },
+   "slots": {
+    "visual": {
+     "doc": "The drawing: it reads @stepNow, or @stepEased to move between steps, and fills the box it gets"
+    }
+   },
+   "locals": {
+    "n": {
+     "$count": "titles"
+    },
+    "last": "@n - 1",
+    "playing": 0,
+    "t0": 0,
+    "s0": 0,
+    "cur": {
+     "$if": "theme.mono",
+     "then": "clamp(0, @last, round(@at))",
+     "else": "clamp(0, @last, round(@at) + @playing * (@s0 + floor((animationTime() - @t0) / @interval) - round(@at)))"
+    },
+    "run": {
+     "$if": "theme.mono",
+     "then": 0,
+     "else": "@playing * min(1, @last - @cur)"
+    },
+    "tick": {
+     "$if": "theme.mono",
+     "then": 0,
+     "else": "@run * floor(animationTime() * 2)"
+    },
+    "drive": {
+     "value": "@tick",
+     "anim": 0.75
+    },
+    "pos": {
+     "value": "@cur",
+     "anim": 0.6
+    }
+   },
+   "call": {
+    "StepFrame": {
+     "title": "Demo",
+     "icon": "info",
+     "titles": [
+      "One",
+      "Two"
+     ],
+     "texts": [
+      "First",
+      "Second"
+     ],
+     "shorts": [
+      "1st",
+      "2nd"
+     ],
+     "at": "@stage",
+     "shown": "@stepNow",
+     "eased": "@stepEased"
+    }
+   },
+   "body": {
+    "column": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "background": "@colors.background"
+      }
+     ],
+     "children": [
+      {
+       "variable": {
+        "name": {
+         "$name": "shown"
+        },
+        "value": "@cur + 0"
+       }
+      },
+      {
+       "variable": {
+        "name": {
+         "$name": "eased"
+        },
+        "value": "@pos + 0"
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "width": "@iw"
+         },
+         {
+          "height": "@ih"
+         }
+        ],
+        "children": [
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "visibility": "@hasTitle"
+            },
+            "fillMaxWidth",
+            {
+             "height": "@titleH"
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "@icon",
+              "size": "ifElse(18, 24, step(@H, 300))",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "text": {
+              "value": "@title",
+              "fontSize": "ifElse(15, 20, step(@H, 300))",
+              "fontWeight": 600,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "padding": {
+                 "start": 6
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            "fillMaxWidth",
+            {
+             "height": "@ch"
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "horizontalAlignment": "center",
+              "verticalAlignment": "center",
+              "modifiers": [
+               {
+                "width": "@vw"
+               },
+               {
+                "height": "@vh"
+               }
+              ],
+              "children": [
+               {
+                "$slot": "visual"
+               }
+              ]
+             }
+            },
+            {
+             "column": {
+              "modifiers": [
+               "fillMaxWidth"
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "height": "(1 - @wide) * (@vh + 6)"
+                  }
+                 ]
+                }
+               },
+               {
+                "row": {
+                 "modifiers": [
+                  "fillMaxWidth"
+                 ],
+                 "children": [
+                  {
+                   "box": {
+                    "modifiers": [
+                     {
+                      "width": "@wide * (@vw + 12)"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "column": {
+                    "modifiers": [
+                     {
+                      "width": "@tw"
+                     }
+                    ],
+                    "children": [
+                     {
+                      "box": {
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "height": 16
+                        }
+                       ],
+                       "children": [
+                        {
+                         "PagerDots": {
+                          "count": "@n",
+                          "current": "@cur + 0 * @drive"
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "box": {
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "height": 24
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$each": "titles",
+                         "as": "t",
+                         "index": "i",
+                         "do": {
+                          "text": {
+                           "value": "@t",
+                           "fontSize": 16,
+                           "fontWeight": 600,
+                           "color": "@colors.onSurface",
+                           "maxLines": 1,
+                           "overflow": "ellipsis",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@cur - @i))"
+                            },
+                            {
+                             "semantics": {
+                              "contentDescription": {
+                               "type": "textMerge",
+                               "id1": {
+                                "type": "textMerge",
+                                "id1": "Step ",
+                                "id2": {
+                                 "type": "textFromFloat",
+                                 "value": "@i + 1",
+                                 "whole": 2,
+                                 "decimal": 0,
+                                 "flags": 5
+                                }
+                               },
+                               "id2": " of @n: @t"
+                              }
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "box": {
+                       "modifiers": [
+                        {
+                         "visibility": "@hasCap"
+                        },
+                        "fillMaxWidth",
+                        {
+                         "height": "@capH"
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$each": "texts",
+                         "as": "t",
+                         "index": "i",
+                         "do": {
+                          "text": {
+                           "value": "@t",
+                           "fontSize": "@capFs",
+                           "color": "@colors.onSurface",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "visibility": "@long * (1 - min(1, abs(@cur - @i)))"
+                            }
+                           ]
+                          }
+                         }
+                        },
+                        {
+                         "$each": "shorts",
+                         "as": "t",
+                         "index": "i",
+                         "do": {
+                          "text": {
+                           "value": "@t",
+                           "fontSize": 13,
+                           "color": "@colors.onSurface",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "visibility": "@short * (1 - min(1, abs(@cur - @i)))"
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       ]
+                      }
+                     },
+                     {
+                      "row": {
+                       "verticalAlignment": "center",
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "height": 48
+                        }
+                       ],
+                       "children": [
+                        {
+                         "IconButton": {
+                          "label": "Previous step",
+                          "style": "outlined",
+                          "enabled": "min(1, @cur)",
+                          "onClick": [
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@at",
+                            "value": "max(0, @cur - 1)"
+                           },
+                           {
+                            "$if": "!theme.mono",
+                            "then": {
+                             "type": "valueFloatChange",
+                             "target": "@playing",
+                             "value": 0
+                            }
+                           }
+                          ],
+                          "slots": {
+                           "icon": [
+                            {
+                             "Icon": {
+                              "name": "arrow_back",
+                              "size": 24,
+                              "color": "@colors.onSurface"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        },
+                        {
+                         "$if": "theme.mono",
+                         "then": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": "@tw - 96"
+                            }
+                           ]
+                          }
+                         },
+                         "else": {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "width": "(@tw - 144) / 2"
+                            }
+                           ]
+                          }
+                         }
+                        },
+                        {
+                         "$if": "theme.mono",
+                         "else": [
+                          {
+                           "canvas": {
+                            "modifiers": [
+                             {
+                              "size": 0
+                             }
+                            ],
+                            "commands": [
+                             {
+                              "global": {
+                               "commands": [
+                                {
+                                 "textSubtext": {
+                                  "text": "Play the stepsPause        ",
+                                  "start": "@run * 14",
+                                  "len": 14,
+                                  "varName": "playP"
+                                 }
+                                },
+                                {
+                                 "textTransform": {
+                                  "text": "@playP",
+                                  "start": 0,
+                                  "len": -1,
+                                  "operation": 3,
+                                  "varName": "playLabel"
+                                 }
+                                }
+                               ]
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "box": {
+                            "children": [
+                             {
+                              "IconButton": {
+                               "label": "@playLabel",
+                               "onClick": [
+                                {
+                                 "type": "valueFloatExpressionChange",
+                                 "target": "@at",
+                                 "value": "@cur + 0"
+                                },
+                                {
+                                 "type": "valueFloatExpressionChange",
+                                 "target": "@at",
+                                 "value": "@at * (1 - (1 - @run) * max(0, @at - @last + 1))"
+                                },
+                                {
+                                 "type": "valueFloatExpressionChange",
+                                 "target": "@s0",
+                                 "value": "@at + 0"
+                                },
+                                {
+                                 "type": "valueFloatExpressionChange",
+                                 "target": "@t0",
+                                 "value": "animationTime() + 0"
+                                },
+                                {
+                                 "type": "valueFloatExpressionChange",
+                                 "target": "@playing",
+                                 "value": "1 - @run"
+                                }
+                               ],
+                               "slots": {
+                                "icon": [
+                                 {
+                                  "box": {
+                                   "horizontalAlignment": "center",
+                                   "verticalAlignment": "center",
+                                   "modifiers": [
+                                    {
+                                     "size": 24
+                                    }
+                                   ],
+                                   "children": [
+                                    {
+                                     "box": {
+                                      "modifiers": [
+                                       {
+                                        "visibility": "1 - @run"
+                                       }
+                                      ],
+                                      "children": [
+                                       {
+                                        "Icon": {
+                                         "name": "play_arrow",
+                                         "filled": true,
+                                         "color": "@colors.onSurface"
+                                        }
+                                       }
+                                      ]
+                                     }
+                                    },
+                                    {
+                                     "box": {
+                                      "modifiers": [
+                                       {
+                                        "visibility": "@run"
+                                       }
+                                      ],
+                                      "children": [
+                                       {
+                                        "Icon": {
+                                         "name": "pause",
+                                         "filled": true,
+                                         "color": "@colors.onSurface"
+                                        }
+                                       }
+                                      ]
+                                     }
+                                    }
+                                   ]
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "box": {
+                            "modifiers": [
+                             {
+                              "width": "(@tw - 144) / 2"
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        },
+                        {
+                         "box": {
+                          "modifiers": [
+                           {
+                            "visibility": "min(1, @last - @cur)"
+                           }
+                          ],
+                          "children": [
+                           {
+                            "IconButton": {
+                             "label": "Next step",
+                             "style": "filled",
+                             "onClick": [
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@at",
+                               "value": "min(@last, @cur + 1)"
+                              },
+                              {
+                               "$if": "!theme.mono",
+                               "then": {
+                                "type": "valueFloatChange",
+                                "target": "@playing",
+                                "value": 0
+                               }
+                              }
+                             ],
+                             "slots": {
+                              "icon": [
+                               {
+                                "Icon": {
+                                 "name": "arrow_forward",
+                                 "size": 24,
+                                 "color": "@colors.onPrimary"
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        },
+                        {
+                         "box": {
+                          "modifiers": [
+                           {
+                            "visibility": "1 - min(1, @last - @cur)"
+                           }
+                          ],
+                          "children": [
+                           {
+                            "IconButton": {
+                             "label": "Next step",
+                             "style": "outlined",
+                             "enabled": false,
+                             "slots": {
+                              "icon": [
+                               {
+                                "Icon": {
+                                 "name": "arrow_forward",
+                                 "size": 24,
+                                 "color": "@colors.onSurface"
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Station": {
+   "summary": "One station on the loop: a disc holding an icon, filled while the step is its own.",
+   "params": {
+    "g": {
+     "type": "float",
+     "required": true,
+     "doc": "How filled it is, 0 to 1: a canvas variable of the drawing"
+    },
+    "x": {
+     "type": "float",
+     "static": true,
+     "required": true,
+     "doc": "Centre x in the 100-unit box"
+    },
+    "y": {
+     "type": "float",
+     "static": true,
+     "required": true,
+     "doc": "Centre y in the 100-unit box"
+    },
+    "name": {
+     "type": "string",
+     "static": true,
+     "required": true,
+     "doc": "Icon name"
+    }
+   },
+   "call": {
+    "Station": {
+     "g": 1,
+     "x": 50,
+     "y": 50,
+     "name": "air"
+    }
+   },
+   "body": [
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.background"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "@x",
+      "cy": "@y",
+      "radius": 14
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.primary"
+       },
+       {
+        "alpha": "@g"
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "@x",
+      "cy": "@y",
+      "radius": 14
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.outline"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 1.5
+       },
+       {
+        "alpha": "1 - @g"
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "@x",
+      "cy": "@y",
+      "radius": 14
+     }
+    },
+    {
+     "save": [
+      {
+       "translate": {
+        "dx": "@x - 10",
+        "dy": "@y - 10"
+       }
+      },
+      {
+       "scale": {
+        "sx": "20 / 960",
+        "sy": "20 / 960"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "1 - @g"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": {
+         "$icon": {
+          "name": "@name"
+         }
+        }
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onPrimary"
+         },
+         {
+          "alpha": "@g"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": {
+         "$icon": {
+          "name": "@name"
+         }
+        }
+       }
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "root": {
+  "StepFrame": {
+   "title": "How a heat pump works",
+   "icon": "heat_pump",
+   "at": "@stage",
+   "shown": "@stepNow",
+   "eased": "@stepEased",
+   "interval": 3,
+   "titles": [
+    "Gather heat",
+    "Compress",
+    "Release heat",
+    "Expand"
+   ],
+   "texts": [
+    "Outdoor air warms a very cold fluid in the outside coil, even on a freezing day. It turns to gas.",
+    "The compressor squeezes the gas. That packs its heat together, so the gas gets very hot.",
+    "The hot gas runs through a coil indoors and gives its heat to the radiators and hot water.",
+    "The cooled fluid passes a valve. Its pressure drops, it turns very cold, and the loop starts again."
+   ],
+   "shorts": [
+    "Outdoor air warms the cold fluid.",
+    "Squeezing makes the gas very hot.",
+    "The hot gas warms your home.",
+    "A valve makes it cold again."
+   ],
+   "slots": {
+    "visual": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "visibility": "1 - @tiny"
+        },
+        "fillMaxSize",
+        {
+         "semantics": {
+          "contentDescription": "Diagram of the heat pump loop: outside coil, compressor, indoor coil and valve, with the current step's part filled"
+         }
+        }
+       ],
+       "commands": [
+        {
+         "variable": {
+          "name": "g0",
+          "value": "1 - min(1, abs(@stepEased - 0))"
+         }
+        },
+        {
+         "variable": {
+          "name": "g1",
+          "value": "1 - min(1, abs(@stepEased - 1))"
+         }
+        },
+        {
+         "variable": {
+          "name": "g2",
+          "value": "1 - min(1, abs(@stepEased - 2))"
+         }
+        },
+        {
+         "variable": {
+          "name": "g3",
+          "value": "1 - min(1, abs(@stepEased - 3))"
+         }
+        },
+        {
+         "variable": {
+          "name": "sc",
+          "value": "min(componentWidth(), componentHeight()) / 100"
+         }
+        },
+        {
+         "translate": {
+          "dx": "(componentWidth() - 100 * @sc) / 2",
+          "dy": "(componentHeight() - 100 * @sc) / 2"
+         }
+        },
+        {
+         "scale": {
+          "sx": "@sc",
+          "sy": "@sc"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 2
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 16,
+          "top": 16,
+          "right": 84,
+          "bottom": 84,
+          "startAngle": 90,
+          "sweepAngle": 180
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.warning"
+           },
+           {
+            "strokeWidth": 4
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": 16,
+          "top": 16,
+          "right": 84,
+          "bottom": 84,
+          "startAngle": -90,
+          "sweepAngle": 180
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": 2
+           }
+          ]
+         }
+        },
+        {
+         "save": [
+          {
+           "rotate": {
+            "angle": -45,
+            "pivotX": 50,
+            "pivotY": 50
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 46,
+            "y1": 12,
+            "x2": 51,
+            "y2": 16
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 51,
+            "y1": 16,
+            "x2": 46,
+            "y2": 20
+           }
+          }
+         ]
+        },
+        {
+         "save": [
+          {
+           "rotate": {
+            "angle": 45,
+            "pivotX": 50,
+            "pivotY": 50
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 46,
+            "y1": 12,
+            "x2": 51,
+            "y2": 16
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 51,
+            "y1": 16,
+            "x2": 46,
+            "y2": 20
+           }
+          }
+         ]
+        },
+        {
+         "save": [
+          {
+           "rotate": {
+            "angle": 135,
+            "pivotX": 50,
+            "pivotY": 50
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 46,
+            "y1": 12,
+            "x2": 51,
+            "y2": 16
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 51,
+            "y1": 16,
+            "x2": 46,
+            "y2": 20
+           }
+          }
+         ]
+        },
+        {
+         "save": [
+          {
+           "rotate": {
+            "angle": 225,
+            "pivotX": 50,
+            "pivotY": 50
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 46,
+            "y1": 12,
+            "x2": 51,
+            "y2": 16
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 51,
+            "y1": 16,
+            "x2": 46,
+            "y2": 20
+           }
+          }
+         ]
+        },
+        {
+         "Station": {
+          "g": "@g0",
+          "x": 16,
+          "y": 50,
+          "name": "air"
+         }
+        },
+        {
+         "Station": {
+          "g": "@g1",
+          "x": 50,
+          "y": 16,
+          "name": "compress"
+         }
+        },
+        {
+         "Station": {
+          "g": "@g2",
+          "x": 84,
+          "y": 50,
+          "name": "home"
+         }
+        },
+        {
+         "Station": {
+          "g": "@g3",
+          "x": 50,
+          "y": 84,
+          "name": "valve"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           },
+           {
+            "textSize": 15
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "arrayGet(@temps, @stepNow)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "°"
+          },
+          "x": 50,
+          "y": 50,
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "alpha": "step(@sc, 1.5)"
+           },
+           {
+            "textSize": 7
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "fluid",
+          "x": 50,
+          "y": 60,
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "visibility": "@tiny"
+        },
+        {
+         "size": "@vh"
+        },
+        {
+         "clip": 40
+        },
+        {
+         "background": "@colors.primary"
+        },
+        {
+         "semantics": {
+          "contentDescription": "Picture of the part of the heat pump this step is about"
+         }
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "1 - min(1, abs(@stepNow - 0))"
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "air",
+             "size": 32,
+             "color": "@colors.onPrimary"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "1 - min(1, abs(@stepNow - 1))"
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "compress",
+             "size": 32,
+             "color": "@colors.onPrimary"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "1 - min(1, abs(@stepNow - 2))"
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "home",
+             "size": 32,
+             "color": "@colors.onPrimary"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "1 - min(1, abs(@stepNow - 3))"
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "valve",
+             "size": 32,
+             "color": "@colors.onPrimary"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ }
+}
