@@ -76,6 +76,12 @@ function explainToken(message, source) {
     const names = Array.isArray(vars) ? vars.map((v) => v?.name ?? Object.keys(v ?? {})[0]) : Object.keys(vars ?? {});
     if (names.includes(name)) return `${message} — "${name}" is declared in resources.variables, but AFTER an expression that reads it: resources are written in order, so move it above its readers.`;
     if (/^[a-z]+\d+_/.test(name)) return `${message} — a component local ("${name.replace(/^[a-z]+\d+_/, "")}") read before its declaration is written: a local that reads a tree value (componentWidth(), a $each item) is declared inside the body, so the body ROOT's own modifiers cannot read it; compute it from params and resources only, or use it below the root.`;
+    // Text where an expression goes: resources.variables reads a string as a formula, and spaces vanish.
+    const asText = (Array.isArray(vars) ? [] : Object.entries(vars ?? {})).find(([, v]) => {
+        const val = v && typeof v === "object" ? v.value : v;
+        return typeof val === "string" && val.replace(/\s+/g, "") === name;
+    });
+    if (asText) return `${message} — "${asText[0]}" holds text, but a string in resources.variables is a formula. A text the app can change is a root-level variable: {"variable": {"name": "${asText[0]}", "vtype": "string", "value": ${JSON.stringify((v => v && typeof v === "object" ? v.value : v)(asText[1]))}, "export": true}} as the first entries of "root" (HST-01), read as "@${asText[0]}".`;
     const text = JSON.stringify(doc ?? {});
     if (text.includes(`"${name}"`) || text.includes(`{"name": "${name}"`) || text.includes(`"name":"${name}"`)) return `${message} — "${name}" is declared as a tree variable after the expression that reads it: declare it before (resources.variables for a number, a root-level variable command for a string).`;
     return `${message} — no variable "${name}" is declared: add it to resources.variables ({"${name}": 0}) or fix the spelling.`;

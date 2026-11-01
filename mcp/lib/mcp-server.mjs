@@ -231,7 +231,7 @@ function serveHttp(def, handle, port) {
         const session = isInit ? randomUUID() : sent;
         const addr = String(req.headers["x-forwarded-for"] ?? req.socket.remoteAddress ?? "").split(",")[0].trim();
         const ua = String(req.headers["user-agent"] ?? "").slice(0, 80);
-        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update(addr + "|" + ua).digest("hex").slice(0, 6), ua };
+        const ctx = { client: session ? session.slice(0, 8) : "~" + createHash("sha1").update((req.headers.authorization ? String(req.headers.authorization) : addr) + "|" + ua).digest("hex").slice(0, 6), ua };   // (a proxying client changes address call to call; its token does not, and only a hash of it is logged)
         const out = (await Promise.all(msgs.map((m) => handle(m, ctx)))).filter(Boolean);
         const headers = isInit ? { "Mcp-Session-Id": session } : {};
         if (!out.length) return reply(res, 202, undefined, headers);   // only notifications / responses

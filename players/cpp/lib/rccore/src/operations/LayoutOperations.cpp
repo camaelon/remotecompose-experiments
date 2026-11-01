@@ -2563,6 +2563,34 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                     }
                     continue;
                 }
+                // A row of a list its own visibility hid: fine for absent data, but also what a
+                // wrong condition looks like, with nothing else to say a row went missing.
+                // Only containers with content that have a like sibling: not a rule, a badge,
+                // or one of two alternative texts.
+                if (!c.isVisible() && !paneOfState && (op->name() == "LAYOUT_ROW" || op->name() == "LAYOUT_COLUMN")) {
+                    auto& cls = getLS(ctx, child);
+                    inflateLayout(child, cls);
+                    bool asked = cls.visibilityId >= 0 && ctx.getInteger(cls.visibilityId) != 1;
+                    int like = 0, likeHidden = 0;
+                    for (auto* sib : ls.layoutChildren) {
+                        if (sib->opcode() != child->opcode()) continue;
+                        auto& sls = getLS(ctx, sib);
+                        inflateLayout(sib, sls);
+                        if (sls.layoutChildren.empty()) continue;
+                        like++;
+                        int sid = getComponentId(sib);
+                        if (sid != -1 && measure.contains(sid) && !measure.get(sid).isVisible()) likeHidden++;
+                    }
+                    // (Two hidden of two is usually closed details or alternatives: not a list.)
+                    if (asked && like >= 2 && (likeHidden < like || like >= 3) && !cls.layoutChildren.empty() && gLayoutOverflowIds.insert(ccid).second) {
+                        gLayoutOverflow.hidden++;
+                        if (gLayoutOverflow.hiddenExamples.size() < 6) {
+                            char buf[200];
+                            std::snprintf(buf, sizeof buf, "%s#%d in %s#%d (%d of %d like it hidden)", child->name().c_str(), ccid, op->name().c_str(), cid, likeHidden, like);
+                            gLayoutOverflow.hiddenExamples.push_back(buf);
+                        }
+                    }
+                }
                 if (!c.isVisible()) continue;
                 if (c.w <= 0.5f || c.h <= 0.5f) {
                     // No size at all: a weight with nothing left to share (or next to a
@@ -2581,13 +2609,21 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                         if (cls.layoutChildren.empty()) return true;
                         for (auto* gc : cls.layoutChildren) {
                             int gid = getComponentId(gc);
-                            if (gid == -1 || !measure.contains(gid) || measure.get(gid).isVisible()) return false;
+                            if (gid == -1 || !measure.contains(gid)) return false;
+                            if (measure.get(gid).isVisible()) {
+                                // An empty box is only a filler: nothing is lost with it.
+                                auto& gls = getLS(ctx, gc);
+                                inflateLayout(gc, gls);
+                                if (gc->name() != "LAYOUT_BOX" || !gls.layoutChildren.empty()) return false;
+                            }
                         }
                         return true;
                     };
                     auto intendedZero = [&](DimType t, float declared) {
                         return ((t == DimType::EXACT || t == DimType::EXACT_DP) && resolveVar(declared, ctx) <= 0.5f)
-                            || (t == DimType::WRAP && allHidden());
+                            || (t == DimType::WRAP && allHidden())
+                            // (Any size type: with everything inside hidden, nothing is lost.)
+                            || (!cls.layoutChildren.empty() && allHidden());
                     };
                     bool intended = (c.w > 0.5f || intendedZero(cls.widthType, cls.widthValue))
                                  && (c.h > 0.5f || intendedZero(cls.heightType, cls.heightValue));
@@ -2996,6 +3032,8 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
     const bool clip = overflow != 2 && overflows;
     if (clip) { pc->matrixSave(); pc->clipRect(0, 0, contentW, contentH); }
     bool anyCut = false;   // a line shortened with an ellipsis (counted even when it then fits)
+    bool wordCut = false;  // a line (a long word) wider than the box and not ellipsized: cut mid-word
+    int shownChars = -1;   // what an ellipsized line kept, without the ellipsis
     for (size_t li = 0; li < lines.size(); li++) {
         const auto& line = lines[li];
         if (line.start >= line.end) continue;
@@ -3015,6 +3053,11 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
             }
             drawn = ellipsize(pc, text, line.start, to, fsize, contentW, overflow);
             lineW = pc->measureTextWidth(drawn, fsize) + lsPx * utf8Count(drawn);
+            shownChars = std::max(0, (int) utf8Count(drawn) - 1);
+            // It came out whole (the width was a rounding short): nothing was cut.
+            if (drawn.size() < 3 || drawn.compare(drawn.size() - 3, 3, "\xE2\x80\xA6") != 0) { anyCut = false; shownChars = -1; }
+        } else if (lineW > contentW + 0.5f && contentW > 0) {
+            wordCut = true;
         }
         widest = std::max(widest, lineW);
         float x = 0;
@@ -3045,11 +3088,14 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
     // The count uses the lines as painted (fullW is the unwrapped width: a wrapped text is
     // not cut just because it wrapped).
     if (anyCut || truncated || widest > contentW + 0.5f || textH > contentH + 0.5f) {
-        const char* kind = ellipsis ? "ellipsized" : truncated ? "truncated" : "clipped";
-        if (ellipsis) gTextOverflow.ellipsized++;
+        // An ellipsis on the last line does not excuse an earlier line cut at the box's edge.
+        const char* kind = wordCut ? "clipped" : ellipsis ? "ellipsized" : truncated ? "truncated" : "clipped";
+        if (wordCut) gTextOverflow.clipped++;
+        else if (ellipsis) gTextOverflow.ellipsized++;
         else if (truncated) gTextOverflow.truncated++;
         else gTextOverflow.clipped++;
         if (gTextOverflow.examples.size() < 6) gTextOverflow.examples.push_back({kind, text.substr(0, 48)});
+        if (gTextOverflow.shown.size() < 6) gTextOverflow.shown.push_back(wordCut ? -1 : shownChars);
     }
     if (clip) pc->matrixRestore();
 }

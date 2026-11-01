@@ -1,0 +1,1053 @@
+{
+ "id": "CMP-15",
+ "name": "next-departures",
+ "version": 1,
+ "title": "Next departures",
+ "summary": "A transit departures widget the app fills: a stop name and up to three rows from host strings and numbers, each a line badge, destination, delay and minutes, which open one at a time. One layout adapts by expression to any size from 160x160 to 360x480, hides absent slots and shows an empty state.",
+ "prompt": "Build a next departures widget for a transit stop: the app sends the stop, and for up to three departures the line, destination and minutes. Show a line badge, Now when it is leaving, a delay on the row, hide slots with no data, show an empty state, and tap a row to expand its details. It must fit 320x160, 160x160 and 360x480 and sizes in between.",
+ "level": 3,
+ "family": "CMP",
+ "components": [
+  "ExpandableRow",
+  "Icon",
+  "Departure"
+ ],
+ "capabilities": {
+  "primary": [
+   "layout.stack",
+   "host.variables",
+   "input.tap"
+  ],
+  "secondary": [
+   "layout.weight",
+   "a11y.labels",
+   "a11y.state",
+   "text.dynamic",
+   "expr.system",
+   "layout.decoration"
+  ]
+ },
+ "use_cases": [
+  "transit",
+  "widget",
+  "list"
+ ],
+ "form_factor": "widget-4x2",
+ "keywords": [
+  "transit",
+  "departures",
+  "next departures",
+  "departure board",
+  "bus",
+  "bus times",
+  "next bus",
+  "train",
+  "train times",
+  "tram",
+  "metro",
+  "schedule",
+  "timetable",
+  "arrivals",
+  "expandable",
+  "expandable row",
+  "expandable list",
+  "accordion",
+  "collapsible row",
+  "collapsible list",
+  "list rows",
+  "rows from the app",
+  "host rows",
+  "host list",
+  "tap to expand",
+  "one open at a time",
+  "line badge",
+  "hidden when absent",
+  "empty state",
+  "adaptive widget",
+  "any size"
+ ],
+ "teaches": [
+  "Rows the app fills: a fixed number of slots of exported strings and numbers, one ExpandableRow per slot through a small local component, with -1 minutes hiding a slot",
+  "One layout for every size: compute how many rows fit (cap), a row height, a font size and a stack flag from windowWidth() and windowHeight(), rather than copying the rows into a stateLayout. Nothing is a hard-coded container width",
+  "Keep the open row on screen in a short box: when details take the room, the shown window of slots slides so the open one stays in it",
+  "Live labels: a canvas global block computes \"in 3 minutes\" and \"Delayed 4 min\" (textSubtext cut from a textMerge, then trimmed), and the row's label is a textMerge of those and the host strings",
+  "In a narrow box the stack param gives the destination its own full-width line instead of squeezing it beside the minutes"
+ ],
+ "snippets": [
+  {
+   "pointer": "/components/Departure",
+   "shows": "layout.stack",
+   "note": "one slot: a local component around ExpandableRow, with its badge, delay, minutes and details"
+  },
+  {
+   "pointer": "/resources/variables/cap",
+   "shows": "input.tap",
+   "note": "how many rows fit, given the height and whether a row is open: tapping changes @open and the rows follow"
+  },
+  {
+   "pointer": "/root/0",
+   "shows": "host.variables",
+   "note": "an exported host string, with an initial value distinct from the others"
+  },
+  {
+   "pointer": "/resources/variables/stack",
+   "shows": "expr.system",
+   "note": "the destination gets its own line when the box is narrow or there is height to spare"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "stop": {
+    "type": "string",
+    "meaning": "the stop's name",
+    "default": "Central Station"
+   },
+   "d1Line": {
+    "type": "string",
+    "meaning": "departure 1: the line, shown on the badge",
+    "default": "12"
+   },
+   "d1Dest": {
+    "type": "string",
+    "meaning": "departure 1: the destination",
+    "default": "Airport Terminal"
+   },
+   "d1Info": {
+    "type": "string",
+    "meaning": "departure 1: the line shown when the row is open (platform, stops)",
+    "default": "Platform 4"
+   },
+   "d1Min": {
+    "min": -1,
+    "max": 120,
+    "meaning": "departure 1: minutes until it leaves. 0 shows Now, -1 hides the slot"
+   },
+   "d1Delay": {
+    "min": 0,
+    "max": 120,
+    "meaning": "departure 1: minutes late, shown as +N on the row. 0 = on time"
+   },
+   "d2Line": {
+    "type": "string",
+    "meaning": "departure 2: the line, shown on the badge",
+    "default": "7"
+   },
+   "d2Dest": {
+    "type": "string",
+    "meaning": "departure 2: the destination",
+    "default": "Harbour Front"
+   },
+   "d2Info": {
+    "type": "string",
+    "meaning": "departure 2: the line shown when the row is open (platform, stops)",
+    "default": "Platform 2, stops at Old Town"
+   },
+   "d2Min": {
+    "min": -1,
+    "max": 120,
+    "meaning": "departure 2: minutes until it leaves. 0 shows Now, -1 hides the slot"
+   },
+   "d2Delay": {
+    "min": 0,
+    "max": 120,
+    "meaning": "departure 2: minutes late, shown as +N on the row. 0 = on time"
+   },
+   "d3Line": {
+    "type": "string",
+    "meaning": "departure 3: the line, shown on the badge",
+    "default": "N3"
+   },
+   "d3Dest": {
+    "type": "string",
+    "meaning": "departure 3: the destination",
+    "default": "Old Town"
+   },
+   "d3Info": {
+    "type": "string",
+    "meaning": "departure 3: the line shown when the row is open (platform, stops)",
+    "default": "Platform 1B"
+   },
+   "d3Min": {
+    "min": -1,
+    "max": 120,
+    "meaning": "departure 3: minutes until it leaves. 0 shows Now, -1 hides the slot"
+   },
+   "d3Delay": {
+    "min": 0,
+    "max": 120,
+    "meaning": "departure 3: minutes late, shown as +N on the row. 0 = on time"
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Central Station with a bus icon, then rows 12 Airport Terminal 3 min, 7 Harbour Front +4 9 min, N3 Old Town 17 min. 320x160 and 480x200: three one-line rows. 160x160: two rows, the destination on its own line. 240x240 and 360x480: three stacked rows filling the height. Tapping a row opens its status and details (the row grows, the slots shift to keep it on screen) and tapping it again closes it. With d1Min 0 row 1 reads Now; with all minutes -1 the empty state shows.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "small",
+    "width": 160,
+    "height": 160
+   },
+   {
+    "name": "tall",
+    "width": 360,
+    "height": 480
+   },
+   {
+    "name": "square",
+    "width": 240,
+    "height": 240
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 200
+   },
+   {
+    "name": "open",
+    "width": 320,
+    "height": 160,
+    "theme": "light",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 160,
+      "y": 80
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "empty",
+    "width": 320,
+    "height": 160,
+    "theme": "light",
+    "variables": {
+     "d1Min": -1,
+     "d2Min": -1,
+     "d3Min": -1
+    }
+   },
+   {
+    "name": "now-delayed",
+    "width": 160,
+    "height": 160,
+    "theme": "light",
+    "variables": {
+     "d1Min": 0,
+     "d1Delay": 12
+    }
+   }
+  ]
+ },
+ "related": [
+  "ExpandableRow",
+  "LAY-15",
+  "HST-01",
+  "CMP-05",
+  "A11Y-02"
+ ],
+ "pitfalls": [
+  "Minutes and delay are exported floats, not strings: the document tests them for Now, for an absent slot and for the plural, which it cannot do with a string",
+  "Fill slots from the first: a hidden d1 leaves its turn in the window of slots shown, so in a short box a later slot may wait for a row that is not shown",
+  "Give every host string a distinct initial value: equal strings share one text id, and setting one sets them all (shared_string_value)",
+  "The document does not count down: the app sends fresh minutes. Add a clock expression if it may be stale",
+  "padding takes no expression, so a tall row's spare height is shared with ExpandableRow verticalPadding, which is two spacer boxes"
+ ],
+ "derived": {
+  "components": [
+   "Departure",
+   "ExpandableRow",
+   "Icon"
+  ],
+  "component_instances": 8,
+  "component_modes": {
+   "Icon": "expand",
+   "Departure": "expand",
+   "ExpandableRow": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 12010,
+  "header": {
+   "width": 320,
+   "height": 160
+  },
+  "op_count": 621,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 3,
+   "ANIMATED_FLOAT": 81,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 11,
+   "CoreText": 24,
+   "DATA_FLOAT": 8,
+   "DATA_TEXT": 26,
+   "DRAW_LINE": 6,
+   "DRAW_PATH": 2,
+   "HEADER": 1,
+   "IntegerExpression": 3,
+   "LAYOUT_BOX": 22,
+   "LAYOUT_CANVAS": 11,
+   "LAYOUT_COLUMN": 21,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 10,
+   "LayoutComponentContent": 70,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 2,
+   "MATRIX_SAVE": 2,
+   "MATRIX_SCALE": 2,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 29,
+   "MODIFIER_HEIGHT_IN": 3,
+   "MODIFIER_PADDING": 18,
+   "MODIFIER_VISIBILITY": 29,
+   "MODIFIER_WIDTH": 45,
+   "MODIFIER_WIDTH_IN": 3,
+   "NAMED_VARIABLE": 24,
+   "PAINT_VALUES": 5,
+   "PATH_DATA": 1,
+   "RoundedClipRectModifierOperation": 3,
+   "THEME": 21,
+   "TextFromFloat": 6,
+   "TextMerge": 51,
+   "TextSubtext": 9,
+   "TextTransform": 9,
+   "ValueFloatExpressionChangeActionOperation": 3
+  },
+  "host_variables": [
+   {
+    "name": "d1Delay",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "d1Dest",
+    "type": "string",
+    "value": "Airport Terminal"
+   },
+   {
+    "name": "d1Info",
+    "type": "string",
+    "value": "Platform 4"
+   },
+   {
+    "name": "d1Line",
+    "type": "string",
+    "value": "12"
+   },
+   {
+    "name": "d1Min",
+    "type": "float",
+    "value": 3
+   },
+   {
+    "name": "d2Delay",
+    "type": "float",
+    "value": 4
+   },
+   {
+    "name": "d2Dest",
+    "type": "string",
+    "value": "Harbour Front"
+   },
+   {
+    "name": "d2Info",
+    "type": "string",
+    "value": "Platform 2, stops at Old Town"
+   },
+   {
+    "name": "d2Line",
+    "type": "string",
+    "value": "7"
+   },
+   {
+    "name": "d2Min",
+    "type": "float",
+    "value": 9
+   },
+   {
+    "name": "d3Delay",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "d3Dest",
+    "type": "string",
+    "value": "Old Town"
+   },
+   {
+    "name": "d3Info",
+    "type": "string",
+    "value": "Platform 1B"
+   },
+   {
+    "name": "d3Line",
+    "type": "string",
+    "value": "N3"
+   },
+   {
+    "name": "d3Min",
+    "type": "float",
+    "value": 17
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "open",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "outline",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "stop",
+    "type": "string",
+    "value": "Central Station"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "warning",
+    "type": "color",
+    "value": "#FFFFB74D"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 11245,
+    "component_modes": {
+     "Icon": "expand",
+     "Departure": "expand",
+     "ExpandableRow": "expand"
+    },
+    "op_count": 562,
+    "host_variables": [
+     {
+      "name": "d1Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d1Dest",
+      "type": "string",
+      "value": "Airport Terminal"
+     },
+     {
+      "name": "d1Info",
+      "type": "string",
+      "value": "Platform 4"
+     },
+     {
+      "name": "d1Line",
+      "type": "string",
+      "value": "12"
+     },
+     {
+      "name": "d1Min",
+      "type": "float",
+      "value": 3
+     },
+     {
+      "name": "d2Delay",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "d2Dest",
+      "type": "string",
+      "value": "Harbour Front"
+     },
+     {
+      "name": "d2Info",
+      "type": "string",
+      "value": "Platform 2, stops at Old Town"
+     },
+     {
+      "name": "d2Line",
+      "type": "string",
+      "value": "7"
+     },
+     {
+      "name": "d2Min",
+      "type": "float",
+      "value": 9
+     },
+     {
+      "name": "d3Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d3Dest",
+      "type": "string",
+      "value": "Old Town"
+     },
+     {
+      "name": "d3Info",
+      "type": "string",
+      "value": "Platform 1B"
+     },
+     {
+      "name": "d3Line",
+      "type": "string",
+      "value": "N3"
+     },
+     {
+      "name": "d3Min",
+      "type": "float",
+      "value": 17
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "open",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "stop",
+      "type": "string",
+      "value": "Central Station"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 11245,
+    "component_modes": {
+     "Icon": "expand",
+     "Departure": "expand",
+     "ExpandableRow": "expand"
+    },
+    "op_count": 562,
+    "host_variables": [
+     {
+      "name": "d1Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d1Dest",
+      "type": "string",
+      "value": "Airport Terminal"
+     },
+     {
+      "name": "d1Info",
+      "type": "string",
+      "value": "Platform 4"
+     },
+     {
+      "name": "d1Line",
+      "type": "string",
+      "value": "12"
+     },
+     {
+      "name": "d1Min",
+      "type": "float",
+      "value": 3
+     },
+     {
+      "name": "d2Delay",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "d2Dest",
+      "type": "string",
+      "value": "Harbour Front"
+     },
+     {
+      "name": "d2Info",
+      "type": "string",
+      "value": "Platform 2, stops at Old Town"
+     },
+     {
+      "name": "d2Line",
+      "type": "string",
+      "value": "7"
+     },
+     {
+      "name": "d2Min",
+      "type": "float",
+      "value": 9
+     },
+     {
+      "name": "d3Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d3Dest",
+      "type": "string",
+      "value": "Old Town"
+     },
+     {
+      "name": "d3Info",
+      "type": "string",
+      "value": "Platform 1B"
+     },
+     {
+      "name": "d3Line",
+      "type": "string",
+      "value": "N3"
+     },
+     {
+      "name": "d3Min",
+      "type": "float",
+      "value": 17
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "open",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "stop",
+      "type": "string",
+      "value": "Central Station"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": []
+   },
+   "tall": {
+    "render": "render-tall.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     360,
+     480
+    ],
+    "audit_findings": []
+   },
+   "square": {
+    "render": "render-square.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     240,
+     240
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     480,
+     200
+    ],
+    "audit_findings": []
+   },
+   "open": {
+    "theme": "light",
+    "render": "render-open.png",
+    "render_findings": [
+     "info: hidden_rows",
+     "info: text_ellipsized"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": []
+   },
+   "empty": {
+    "theme": "light",
+    "render": "render-empty.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     320,
+     160
+    ],
+    "audit_findings": []
+   },
+   "now-delayed": {
+    "theme": "light",
+    "render": "render-now-delayed.png",
+    "render_findings": [
+     "info: hidden_rows"
+    ],
+    "size": [
+     160,
+     160
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "Departure",
+   "ExpandableRow",
+   "Icon",
+   "anim",
+   "apiLevel",
+   "avail",
+   "background",
+   "big",
+   "body",
+   "bottom",
+   "box",
+   "call",
+   "canvas",
+   "cap",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "compact",
+   "components",
+   "contentDescription",
+   "count",
+   "d1Delay",
+   "d1Min",
+   "d2Delay",
+   "d2Min",
+   "d3Delay",
+   "d3Min",
+   "dark",
+   "decimal",
+   "default",
+   "delay",
+   "departure1_late",
+   "departure1_now",
+   "departure1_soon",
+   "departure2_late",
+   "departure2_now",
+   "departure2_soon",
+   "departure3_late",
+   "departure3_now",
+   "departure3_soon",
+   "dest",
+   "details",
+   "doc",
+   "drawLine",
+   "drawPath",
+   "empty",
+   "end",
+   "expandablerow1_open",
+   "expandablerow2_open",
+   "expandablerow3_open",
+   "export",
+   "first",
+   "flags",
+   "fontSize",
+   "fontWeight",
+   "fs",
+   "global",
+   "headH",
+   "header",
+   "height",
+   "heightIn",
+   "horizontalAlignment",
+   "icon_directions_bus_outlined",
+   "id1",
+   "id2",
+   "index",
+   "info",
+   "k",
+   "label",
+   "late",
+   "leading",
+   "len",
+   "light",
+   "line",
+   "locals",
+   "maxLines",
+   "min",
+   "minH",
+   "minHeight",
+   "modifiers",
+   "muted",
+   "name",
+   "need",
+   "now",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "open",
+   "openH",
+   "operation",
+   "ops",
+   "outline",
+   "overflow",
+   "padding",
+   "paint",
+   "params",
+   "path",
+   "paths",
+   "primary",
+   "profiles",
+   "required",
+   "resources",
+   "root",
+   "roundedRect",
+   "row",
+   "rowH",
+   "rule",
+   "rule2",
+   "rule3",
+   "save",
+   "scale",
+   "selected",
+   "semantics",
+   "show",
+   "show1",
+   "show2",
+   "show3",
+   "size",
+   "slots",
+   "small",
+   "soon",
+   "spacedBy",
+   "stack",
+   "start",
+   "stateDescription",
+   "static",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "summary",
+   "surface",
+   "sx",
+   "sy",
+   "tall",
+   "target",
+   "text",
+   "textSubtext",
+   "textTransform",
+   "title",
+   "titleSize",
+   "top",
+   "trailing",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalPadding",
+   "verticalWeight",
+   "vis_0",
+   "visibility",
+   "vpad",
+   "vtype",
+   "warning",
+   "weight",
+   "whole",
+   "width",
+   "widthIn",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "layout.stack": [
+    "column",
+    "row",
+    "box"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "input.tap": [
+    "onClick"
+   ],
+   "layout.weight": [
+    "weight",
+    "verticalWeight"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "a11y.state": [
+    "stateDescription"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "expr.system": [
+    "fontSize()",
+    "windowWidth",
+    "windowHeight",
+    "componentWidth",
+    "componentHeight"
+   ],
+   "layout.decoration": [
+    "background",
+    "clip"
+   ]
+  },
+  "built_at": "2026-11-01T17:07:09.261Z"
+ }
+}

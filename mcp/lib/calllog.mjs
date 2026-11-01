@@ -69,7 +69,7 @@ export function summarizeResult(content) {
                 errors: Array.isArray(j.errors) && j.errors.length ? j.errors.slice(0, 5) : undefined,
                 warnings: Array.isArray(j.warnings) && j.warnings.length ? j.warnings.length : undefined,
                 counts: j.counts,
-                findings: Array.isArray(j.findings) ? j.findings.map((f) => (typeof f === "string" ? f : `${f.severity}:${f.code}`)).slice(0, 15) : undefined,
+                findings: Array.isArray(j.findings) ? j.findings.map((f) => (typeof f === "string" ? f : `${f.severity ?? "note"}:${f.code ?? f.name ?? f.feature ?? "?"}`)).slice(0, 15) : undefined,
                 bytes: typeof j.bytes === "number" ? j.bytes : undefined,
                 rc_path: j.rc_path,
                 url: j.url ?? j.page_url ?? j.public_url,

@@ -1,0 +1,2485 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Next departures from a transit stop: up to three rows the app fills, tap one to see its details"
+ },
+ "resources": {
+  "variables": {
+   "open": {
+    "value": 0,
+    "export": true
+   },
+   "d1Min": {
+    "value": 3,
+    "export": true
+   },
+   "d1Delay": {
+    "value": 0,
+    "export": true
+   },
+   "d2Min": {
+    "value": 9,
+    "export": true
+   },
+   "d2Delay": {
+    "value": 4,
+    "export": true
+   },
+   "d3Min": {
+    "value": 17,
+    "export": true
+   },
+   "d3Delay": {
+    "value": 0,
+    "export": true
+   },
+   "tall": "step(windowHeight(), 300)",
+   "headH": "ifElse(16, 56, @tall)",
+   "avail": "windowHeight() - @headH - 2 * @tall - 8 * @tall",
+   "stack": "max(1 - step(windowWidth(), 220), step(@avail / 3, 60))",
+   "need": "ifElse(48, 64, @stack)",
+   "openH": "step(@open, 0.5) * ifElse(22, 36, 1 - step(windowWidth(), 300))",
+   "count": "step(@d1Min, -0.5) + step(@d2Min, -0.5) + step(@d3Min, -0.5)",
+   "small": "(1 - step(windowWidth(), 220)) * (1 - step(windowHeight(), 220))",
+   "cap": "ifElse(max(1, floor((@avail - @openH) / @need)), 1, @small)",
+   "first": "max(1, @open - @cap + 1)",
+   "rowH": "clamp(@need, 150, (@avail - @openH) / max(1, min(@cap, @count)))",
+   "fs": "ifElse(floor(clamp(13, ifElse(15, 20, @tall), min(@rowH / 3.2, windowWidth() / 16))), 15, @small)",
+   "big": "ifElse(@fs + 1, ifElse(@fs * 1.5, 18, @small), max(@tall, @small))",
+   "minH": "ifElse(@rowH, @big * 1.3, @stack)",
+   "vpad": "@stack * max(0, (@rowH - @big * 1.3 - @fs * 1.3 - 10) / 2)",
+   "empty": "1 - step(@count, 0.5)",
+   "show1": "step(@d1Min, -0.5) * step(1.5, @first) * step(@first + @cap - 0.5, 1)",
+   "show2": "step(@d2Min, -0.5) * step(2.5, @first) * step(@first + @cap - 0.5, 2)",
+   "show3": "step(@d3Min, -0.5) * step(3.5, @first) * step(@first + @cap - 0.5, 3)",
+   "rule2": "@show2 * @show1 * @tall",
+   "rule3": "@show3 * max(@show1, @show2) * @tall",
+   "departure1_now": "1 - step(@d1Min, 0.5)",
+   "departure1_soon": "step(@d1Min, 0.5)",
+   "departure1_late": "step(@d1Delay, 0.5)",
+   "expandablerow1_open": "1 - min(1, abs(@open - 1))",
+   "expandablerow1_side": "7 + 6 * @expandablerow1_open",
+   "expandablerow1_mid": "13 - 6 * @expandablerow1_open",
+   "departure2_now": "1 - step(@d2Min, 0.5)",
+   "departure2_soon": "step(@d2Min, 0.5)",
+   "departure2_late": "step(@d2Delay, 0.5)",
+   "expandablerow2_open": "1 - min(1, abs(@open - 2))",
+   "expandablerow2_side": "7 + 6 * @expandablerow2_open",
+   "expandablerow2_mid": "13 - 6 * @expandablerow2_open",
+   "departure3_now": "1 - step(@d3Min, 0.5)",
+   "departure3_soon": "step(@d3Min, 0.5)",
+   "departure3_late": "step(@d3Delay, 0.5)",
+   "expandablerow3_open": "1 - min(1, abs(@open - 3))",
+   "expandablerow3_side": "7 + 6 * @expandablerow3_open",
+   "expandablerow3_mid": "13 - 6 * @expandablerow3_open",
+   "vis_0": 0
+  },
+  "paths": {
+   "icon_directions_bus_outlined": [
+    {
+     "type": "moveTo",
+     "x": 240,
+     "y": 840
+    },
+    {
+     "type": "quadTo",
+     "x1": 223,
+     "y1": 840,
+     "x2": 211.5,
+     "y2": 828.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 200,
+     "y1": 817,
+     "x2": 200,
+     "y2": 800
+    },
+    {
+     "type": "lineTo",
+     "x": 200,
+     "y": 718
+    },
+    {
+     "type": "quadTo",
+     "x1": 182,
+     "y1": 698,
+     "x2": 171,
+     "y2": 673.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 160,
+     "y1": 649,
+     "x2": 160,
+     "y2": 620
+    },
+    {
+     "type": "lineTo",
+     "x": 160,
+     "y": 240
+    },
+    {
+     "type": "quadTo",
+     "x1": 160,
+     "y1": 157,
+     "x2": 237,
+     "y2": 118.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 314,
+     "y1": 80,
+     "x2": 480,
+     "y2": 80
+    },
+    {
+     "type": "quadTo",
+     "x1": 652,
+     "y1": 80,
+     "x2": 726,
+     "y2": 117
+    },
+    {
+     "type": "quadTo",
+     "x1": 800,
+     "y1": 154,
+     "x2": 800,
+     "y2": 240
+    },
+    {
+     "type": "lineTo",
+     "x": 800,
+     "y": 620
+    },
+    {
+     "type": "quadTo",
+     "x1": 800,
+     "y1": 649,
+     "x2": 789,
+     "y2": 673.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 778,
+     "y1": 698,
+     "x2": 760,
+     "y2": 718
+    },
+    {
+     "type": "lineTo",
+     "x": 760,
+     "y": 800
+    },
+    {
+     "type": "quadTo",
+     "x1": 760,
+     "y1": 817,
+     "x2": 748.5,
+     "y2": 828.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 737,
+     "y1": 840,
+     "x2": 720,
+     "y2": 840
+    },
+    {
+     "type": "lineTo",
+     "x": 680,
+     "y": 840
+    },
+    {
+     "type": "quadTo",
+     "x1": 663,
+     "y1": 840,
+     "x2": 651.5,
+     "y2": 828.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 640,
+     "y1": 817,
+     "x2": 640,
+     "y2": 800
+    },
+    {
+     "type": "lineTo",
+     "x": 640,
+     "y": 760
+    },
+    {
+     "type": "lineTo",
+     "x": 320,
+     "y": 760
+    },
+    {
+     "type": "lineTo",
+     "x": 320,
+     "y": 800
+    },
+    {
+     "type": "quadTo",
+     "x1": 320,
+     "y1": 817,
+     "x2": 308.5,
+     "y2": 828.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 297,
+     "y1": 840,
+     "x2": 280,
+     "y2": 840
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 482,
+     "y": 200
+    },
+    {
+     "type": "quadTo",
+     "x1": 592,
+     "y1": 200,
+     "x2": 641.5,
+     "y2": 200
+    },
+    {
+     "type": "quadTo",
+     "x1": 691,
+     "y1": 200,
+     "x2": 706,
+     "y2": 200
+    },
+    {
+     "type": "lineTo",
+     "x": 258,
+     "y": 200
+    },
+    {
+     "type": "quadTo",
+     "x1": 276,
+     "y1": 200,
+     "x2": 325.5,
+     "y2": 200
+    },
+    {
+     "type": "quadTo",
+     "x1": 375,
+     "y1": 200,
+     "x2": 482,
+     "y2": 200
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 640,
+     "y": 480
+    },
+    {
+     "type": "lineTo",
+     "x": 320,
+     "y": 480
+    },
+    {
+     "type": "quadTo",
+     "x1": 287,
+     "y1": 480,
+     "x2": 263.5,
+     "y2": 480
+    },
+    {
+     "type": "quadTo",
+     "x1": 240,
+     "y1": 480,
+     "x2": 240,
+     "y2": 480
+    },
+    {
+     "type": "lineTo",
+     "x": 720,
+     "y": 480
+    },
+    {
+     "type": "quadTo",
+     "x1": 720,
+     "y1": 480,
+     "x2": 696.5,
+     "y2": 480
+    },
+    {
+     "type": "quadTo",
+     "x1": 673,
+     "y1": 480,
+     "x2": 640,
+     "y2": 480
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 240,
+     "y": 400
+    },
+    {
+     "type": "lineTo",
+     "x": 720,
+     "y": 400
+    },
+    {
+     "type": "lineTo",
+     "x": 720,
+     "y": 280
+    },
+    {
+     "type": "lineTo",
+     "x": 240,
+     "y": 280
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 340,
+     "y": 640
+    },
+    {
+     "type": "quadTo",
+     "x1": 365,
+     "y1": 640,
+     "x2": 382.5,
+     "y2": 622.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 400,
+     "y1": 605,
+     "x2": 400,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 400,
+     "y1": 555,
+     "x2": 382.5,
+     "y2": 537.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 365,
+     "y1": 520,
+     "x2": 340,
+     "y2": 520
+    },
+    {
+     "type": "quadTo",
+     "x1": 315,
+     "y1": 520,
+     "x2": 297.5,
+     "y2": 537.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 280,
+     "y1": 555,
+     "x2": 280,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 280,
+     "y1": 605,
+     "x2": 297.5,
+     "y2": 622.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 315,
+     "y1": 640,
+     "x2": 340,
+     "y2": 640
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 620,
+     "y": 640
+    },
+    {
+     "type": "quadTo",
+     "x1": 645,
+     "y1": 640,
+     "x2": 662.5,
+     "y2": 622.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 680,
+     "y1": 605,
+     "x2": 680,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 680,
+     "y1": 555,
+     "x2": 662.5,
+     "y2": 537.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 645,
+     "y1": 520,
+     "x2": 620,
+     "y2": 520
+    },
+    {
+     "type": "quadTo",
+     "x1": 595,
+     "y1": 520,
+     "x2": 577.5,
+     "y2": 537.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 560,
+     "y1": 555,
+     "x2": 560,
+     "y2": 580
+    },
+    {
+     "type": "quadTo",
+     "x1": 560,
+     "y1": 605,
+     "x2": 577.5,
+     "y2": 622.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 595,
+     "y1": 640,
+     "x2": 620,
+     "y2": 640
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 258,
+     "y": 200
+    },
+    {
+     "type": "lineTo",
+     "x": 706,
+     "y": 200
+    },
+    {
+     "type": "quadTo",
+     "x1": 691,
+     "y1": 183,
+     "x2": 641.5,
+     "y2": 171.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 592,
+     "y1": 160,
+     "x2": 482,
+     "y2": 160
+    },
+    {
+     "type": "quadTo",
+     "x1": 375,
+     "y1": 160,
+     "x2": 325.5,
+     "y2": 172.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 276,
+     "y1": 185,
+     "x2": 258,
+     "y2": 200
+    },
+    {
+     "type": "close"
+    },
+    {
+     "type": "moveTo",
+     "x": 320,
+     "y": 680
+    },
+    {
+     "type": "lineTo",
+     "x": 640,
+     "y": 680
+    },
+    {
+     "type": "quadTo",
+     "x1": 673,
+     "y1": 680,
+     "x2": 696.5,
+     "y2": 656.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 720,
+     "y1": 633,
+     "x2": 720,
+     "y2": 600
+    },
+    {
+     "type": "lineTo",
+     "x": 720,
+     "y": 480
+    },
+    {
+     "type": "lineTo",
+     "x": 240,
+     "y": 480
+    },
+    {
+     "type": "lineTo",
+     "x": 240,
+     "y": 600
+    },
+    {
+     "type": "quadTo",
+     "x1": 240,
+     "y1": 633,
+     "x2": 263.5,
+     "y2": 656.5
+    },
+    {
+     "type": "quadTo",
+     "x1": 287,
+     "y1": 680,
+     "x2": 320,
+     "y2": 680
+    },
+    {
+     "type": "close"
+    }
+   ]
+  },
+  "colors": {
+   "muted": "#FF9E9E9E",
+   "onPrimary": "#FF000000",
+   "onSurface": "#FFFFFFFF",
+   "outline": "#FF9E9E9E",
+   "primary": "#FFFFFFFF",
+   "surface": "#FF000000",
+   "warning": "#FFFFFFFF"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "stop",
+    "vtype": "string",
+    "value": "Central Station",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Line",
+    "vtype": "string",
+    "value": "12",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Dest",
+    "vtype": "string",
+    "value": "Airport Terminal",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Info",
+    "vtype": "string",
+    "value": "Platform 4",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Line",
+    "vtype": "string",
+    "value": "7",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Dest",
+    "vtype": "string",
+    "value": "Harbour Front",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Info",
+    "vtype": "string",
+    "value": "Platform 2, stops at Old Town",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Line",
+    "vtype": "string",
+    "value": "N3",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Dest",
+    "vtype": "string",
+    "value": "Old Town",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Info",
+    "vtype": "string",
+    "value": "Platform 1B",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "padding": [
+       8,
+       0
+      ]
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@headH"
+        }
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": "ifElse(14, 18, @tall)"
+           }
+          ],
+          "commands": [
+           {
+            "save": [
+             {
+              "scale": {
+               "sx": "componentWidth() / 960",
+               "sy": "componentHeight() / 960"
+              }
+             },
+             {
+              "paint": {
+               "color": "@colors.primary",
+               "style": "fill"
+              }
+             },
+             {
+              "drawPath": {
+               "path": "$paths.icon_directions_bus_outlined"
+              }
+             }
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@stop",
+             "fontSize": "ifElse(13, 18, @tall)",
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "text": {
+             "value": "Next departures",
+             "fontSize": 13,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@tall"
+              },
+              {
+               "padding": {
+                "top": 3
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        {
+         "visibility": "@show1"
+        },
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 0
+           }
+          ],
+          "commands": [
+           {
+            "global": {
+             "commands": [
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "On time ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "Delayed ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d1Delay",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " min     "
+                  }
+                 }
+                },
+                "start": "8 * @departure1_late",
+                "len": "ifElse(8, 15, @departure1_late)",
+                "varName": "departure1_statusP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure1_statusP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure1_status"
+               }
+              },
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "leaving now     ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "in ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d1Min",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " minutes     "
+                  }
+                 }
+                },
+                "start": "16 * @departure1_soon",
+                "len": "ifElse(16, 11, 1 - min(1, abs(@d1Min - 1)))",
+                "varName": "departure1_whenP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure1_whenP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure1_when"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "@vis_0"
+           },
+           "fillMaxWidth",
+           {
+            "height": 1
+           },
+           {
+            "background": "@colors.outline"
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": 0
+              }
+             ],
+             "commands": [
+              {
+               "global": {
+                "commands": [
+                 {
+                  "textSubtext": {
+                   "text": "Collapsed Expanded ",
+                   "start": "10 * @expandablerow1_open",
+                   "len": 9,
+                   "varName": "expandablerow1_state9"
+                  }
+                 },
+                 {
+                  "textTransform": {
+                   "text": "@expandablerow1_state9",
+                   "start": 0,
+                   "len": -1,
+                   "operation": 3,
+                   "varName": "expandablerow1_state"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "Line ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@d1Line",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " to ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@d1Dest",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@departure1_when",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", ",
+                       "id2": "@departure1_status"
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                },
+                "stateDescription": "@expandablerow1_state",
+                "clickable": true
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@open",
+                 "value": "1 * (1 - @expandablerow1_open)"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "heightIn": [
+                   "@minH",
+                   10000
+                  ]
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "horizontalAlignment": "center",
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "widthIn": [
+                      "@fs * 2.2",
+                      "windowWidth() * 0.32"
+                     ]
+                    },
+                    {
+                     "height": "@fs * 1.7"
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 6
+                     }
+                    },
+                    {
+                     "background": "@colors.primary"
+                    },
+                    {
+                     "padding": [
+                      5,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@d1Line",
+                      "fontSize": "@fs",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "color": "@colors.onPrimary"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "@stack"
+                       },
+                       {
+                        "height": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@d1Dest",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "fontWeight": 400,
+                      "color": "@colors.onSurface",
+                      "fontSize": "@fs",
+                      "modifiers": [
+                       {
+                        "visibility": "1 - (@stack)"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure1_late"
+                       },
+                       {
+                        "padding": {
+                         "end": 6
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "+",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@d1Delay",
+                           "whole": 3,
+                           "decimal": 0,
+                           "flags": 5
+                          }
+                         },
+                         "fontSize": "@fs - 1",
+                         "fontWeight": 600,
+                         "maxLines": 1,
+                         "color": "@colors.warning"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "Now",
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.primary",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure1_now"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@d1Min",
+                        "whole": 3,
+                        "decimal": 0,
+                        "flags": 5
+                       },
+                       "id2": " min"
+                      },
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.onSurface",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure1_soon"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": [
+                      20,
+                      20
+                     ]
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 2
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 7,
+                      "y1": "@expandablerow1_side",
+                      "x2": 13,
+                      "y2": "@expandablerow1_mid"
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 13,
+                      "y1": "@expandablerow1_mid",
+                      "x2": 19,
+                      "y2": "@expandablerow1_side"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@stack"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 4,
+                   "top": 6
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@d1Dest",
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "fontWeight": 400,
+                   "color": "@colors.onSurface",
+                   "fontSize": "@fs"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@expandablerow1_open"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 8,
+                   "top": 2
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "@departure1_status",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ". ",
+                     "id2": "@d1Info"
+                    }
+                   },
+                   "fontSize": "@fs - 1",
+                   "color": "@colors.muted",
+                   "maxLines": 2,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        {
+         "visibility": "@show2"
+        },
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 0
+           }
+          ],
+          "commands": [
+           {
+            "global": {
+             "commands": [
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "On time ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "Delayed ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d2Delay",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " min     "
+                  }
+                 }
+                },
+                "start": "8 * @departure2_late",
+                "len": "ifElse(8, 15, @departure2_late)",
+                "varName": "departure2_statusP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure2_statusP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure2_status"
+               }
+              },
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "leaving now     ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "in ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d2Min",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " minutes     "
+                  }
+                 }
+                },
+                "start": "16 * @departure2_soon",
+                "len": "ifElse(16, 11, 1 - min(1, abs(@d2Min - 1)))",
+                "varName": "departure2_whenP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure2_whenP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure2_when"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "@rule2"
+           },
+           "fillMaxWidth",
+           {
+            "height": 1
+           },
+           {
+            "background": "@colors.outline"
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": 0
+              }
+             ],
+             "commands": [
+              {
+               "global": {
+                "commands": [
+                 {
+                  "textSubtext": {
+                   "text": "Collapsed Expanded ",
+                   "start": "10 * @expandablerow2_open",
+                   "len": 9,
+                   "varName": "expandablerow2_state9"
+                  }
+                 },
+                 {
+                  "textTransform": {
+                   "text": "@expandablerow2_state9",
+                   "start": 0,
+                   "len": -1,
+                   "operation": 3,
+                   "varName": "expandablerow2_state"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "Line ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@d2Line",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " to ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@d2Dest",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@departure2_when",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", ",
+                       "id2": "@departure2_status"
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                },
+                "stateDescription": "@expandablerow2_state",
+                "clickable": true
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@open",
+                 "value": "2 * (1 - @expandablerow2_open)"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "heightIn": [
+                   "@minH",
+                   10000
+                  ]
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "horizontalAlignment": "center",
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "widthIn": [
+                      "@fs * 2.2",
+                      "windowWidth() * 0.32"
+                     ]
+                    },
+                    {
+                     "height": "@fs * 1.7"
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 6
+                     }
+                    },
+                    {
+                     "background": "@colors.primary"
+                    },
+                    {
+                     "padding": [
+                      5,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@d2Line",
+                      "fontSize": "@fs",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "color": "@colors.onPrimary"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "@stack"
+                       },
+                       {
+                        "height": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@d2Dest",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "fontWeight": 400,
+                      "color": "@colors.onSurface",
+                      "fontSize": "@fs",
+                      "modifiers": [
+                       {
+                        "visibility": "1 - (@stack)"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure2_late"
+                       },
+                       {
+                        "padding": {
+                         "end": 6
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "+",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@d2Delay",
+                           "whole": 3,
+                           "decimal": 0,
+                           "flags": 5
+                          }
+                         },
+                         "fontSize": "@fs - 1",
+                         "fontWeight": 600,
+                         "maxLines": 1,
+                         "color": "@colors.warning"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "Now",
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.primary",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure2_now"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@d2Min",
+                        "whole": 3,
+                        "decimal": 0,
+                        "flags": 5
+                       },
+                       "id2": " min"
+                      },
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.onSurface",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure2_soon"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": [
+                      20,
+                      20
+                     ]
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 2
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 7,
+                      "y1": "@expandablerow2_side",
+                      "x2": 13,
+                      "y2": "@expandablerow2_mid"
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 13,
+                      "y1": "@expandablerow2_mid",
+                      "x2": 19,
+                      "y2": "@expandablerow2_side"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@stack"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 4,
+                   "top": 6
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@d2Dest",
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "fontWeight": 400,
+                   "color": "@colors.onSurface",
+                   "fontSize": "@fs"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@expandablerow2_open"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 8,
+                   "top": 2
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "@departure2_status",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ". ",
+                     "id2": "@d2Info"
+                    }
+                   },
+                   "fontSize": "@fs - 1",
+                   "color": "@colors.muted",
+                   "maxLines": 2,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        {
+         "visibility": "@show3"
+        },
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": 0
+           }
+          ],
+          "commands": [
+           {
+            "global": {
+             "commands": [
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "On time ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "Delayed ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d3Delay",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " min     "
+                  }
+                 }
+                },
+                "start": "8 * @departure3_late",
+                "len": "ifElse(8, 15, @departure3_late)",
+                "varName": "departure3_statusP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure3_statusP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure3_status"
+               }
+              },
+              {
+               "textSubtext": {
+                "text": {
+                 "type": "textMerge",
+                 "id1": "leaving now     ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "in ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@d3Min",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " minutes     "
+                  }
+                 }
+                },
+                "start": "16 * @departure3_soon",
+                "len": "ifElse(16, 11, 1 - min(1, abs(@d3Min - 1)))",
+                "varName": "departure3_whenP"
+               }
+              },
+              {
+               "textTransform": {
+                "text": "@departure3_whenP",
+                "start": 0,
+                "len": -1,
+                "operation": 3,
+                "varName": "departure3_when"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "visibility": "@rule3"
+           },
+           "fillMaxWidth",
+           {
+            "height": 1
+           },
+           {
+            "background": "@colors.outline"
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": 0
+              }
+             ],
+             "commands": [
+              {
+               "global": {
+                "commands": [
+                 {
+                  "textSubtext": {
+                   "text": "Collapsed Expanded ",
+                   "start": "10 * @expandablerow3_open",
+                   "len": 9,
+                   "varName": "expandablerow3_state9"
+                  }
+                 },
+                 {
+                  "textTransform": {
+                   "text": "@expandablerow3_state9",
+                   "start": 0,
+                   "len": -1,
+                   "operation": 3,
+                   "varName": "expandablerow3_state"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "Line ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@d3Line",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " to ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@d3Dest",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@departure3_when",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", ",
+                       "id2": "@departure3_status"
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                },
+                "stateDescription": "@expandablerow3_state",
+                "clickable": true
+               }
+              },
+              {
+               "onClick": [
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@open",
+                 "value": "3 * (1 - @expandablerow3_open)"
+                }
+               ]
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "heightIn": [
+                   "@minH",
+                   10000
+                  ]
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "horizontalAlignment": "center",
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "widthIn": [
+                      "@fs * 2.2",
+                      "windowWidth() * 0.32"
+                     ]
+                    },
+                    {
+                     "height": "@fs * 1.7"
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 6
+                     }
+                    },
+                    {
+                     "background": "@colors.primary"
+                    },
+                    {
+                     "padding": [
+                      5,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@d3Line",
+                      "fontSize": "@fs",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "color": "@colors.onPrimary"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "@stack"
+                       },
+                       {
+                        "height": 1
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "@d3Dest",
+                      "maxLines": 1,
+                      "overflow": "ellipsis",
+                      "fontWeight": 400,
+                      "color": "@colors.onSurface",
+                      "fontSize": "@fs",
+                      "modifiers": [
+                       {
+                        "visibility": "1 - (@stack)"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure3_late"
+                       },
+                       {
+                        "padding": {
+                         "end": 6
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "+",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@d3Delay",
+                           "whole": 3,
+                           "decimal": 0,
+                           "flags": 5
+                          }
+                         },
+                         "fontSize": "@fs - 1",
+                         "fontWeight": 600,
+                         "maxLines": 1,
+                         "color": "@colors.warning"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "Now",
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.primary",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure3_now"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@d3Min",
+                        "whole": 3,
+                        "decimal": 0,
+                        "flags": 5
+                       },
+                       "id2": " min"
+                      },
+                      "fontSize": "@big",
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "color": "@colors.onSurface",
+                      "modifiers": [
+                       {
+                        "visibility": "@departure3_soon"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": [
+                      20,
+                      20
+                     ]
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "paint": {
+                      "ops": [
+                       {
+                        "color": "@colors.muted"
+                       },
+                       {
+                        "style": "stroke"
+                       },
+                       {
+                        "strokeWidth": 2
+                       },
+                       {
+                        "strokeCap": "round"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 7,
+                      "y1": "@expandablerow3_side",
+                      "x2": 13,
+                      "y2": "@expandablerow3_mid"
+                     }
+                    },
+                    {
+                     "drawLine": {
+                      "x1": 13,
+                      "y1": "@expandablerow3_mid",
+                      "x2": 19,
+                      "y2": "@expandablerow3_side"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@stack"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 4,
+                   "top": 6
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@d3Dest",
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "fontWeight": 400,
+                   "color": "@colors.onSurface",
+                   "fontSize": "@fs"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "@expandablerow3_open"
+                 },
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "start": 0,
+                   "end": 0,
+                   "bottom": 8,
+                   "top": 2
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "@departure3_status",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ". ",
+                     "id2": "@d3Info"
+                    }
+                   },
+                   "fontSize": "@fs - 1",
+                   "color": "@colors.muted",
+                   "maxLines": 2,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "height": "@vpad"
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "visibility": "@empty"
+        },
+        "fillMaxWidth",
+        {
+         "verticalWeight": 1
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "spacedBy": 4
+           }
+          ],
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "size": 28
+              }
+             ],
+             "commands": [
+              {
+               "save": [
+                {
+                 "scale": {
+                  "sx": "componentWidth() / 960",
+                  "sy": "componentHeight() / 960"
+                 }
+                },
+                {
+                 "paint": {
+                  "color": "@colors.muted",
+                  "style": "fill"
+                 }
+                },
+                {
+                 "drawPath": {
+                  "path": "$paths.icon_directions_bus_outlined"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "No departures",
+             "fontSize": 14,
+             "fontWeight": 600,
+             "color": "@colors.onSurface"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

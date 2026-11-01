@@ -226,6 +226,8 @@ struct TextOverflowCounts {
     int ellipsized = 0;   // ends in an ellipsis: overflow by design
     // The first few, so a report can name them: {kind, the text's start}.
     std::vector<std::pair<std::string, std::string>> examples;
+    // Parallel to examples: the characters an ellipsized line kept, -1 when not ellipsized.
+    std::vector<int> shown;
 };
 void resetTextOverflowCounts();
 TextOverflowCounts textOverflowCounts();
@@ -242,6 +244,9 @@ struct LayoutOverflowCounts {
     // Children a collapsible layout dropped for want of room (by priority, lowest first).
     int collapsed = 0;
     std::vector<std::string> collapsedExamples;  // "RowLayout#-9 in CollapsibleColumn#-5 (priority 2)"
+    // Containers their own visibility hid, beside others like them (a row of a list).
+    int hidden = 0;
+    std::vector<std::string> hiddenExamples;     // "LAYOUT_COLUMN#-9 in LAYOUT_COLUMN#-5 (1 of 3 like it hidden)"
 };
 LayoutOverflowCounts layoutOverflowCounts();
 void resetLayoutOverflowCounts();

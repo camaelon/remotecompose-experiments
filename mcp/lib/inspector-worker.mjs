@@ -16,6 +16,7 @@ import vm from "node:vm";
 import { parentPort, workerData } from "node:worker_threads";
 import { designAudit, textAudit } from "./design-audit.mjs";
 import { installEnvironment } from "./inspector-env.mjs";
+import { normalizeAction } from "./checks.mjs";
 
 const { bundlePath, panelsDir, bytes, task, options: O = {} } = workerData;
 
@@ -360,10 +361,24 @@ function accessibility() {
                 ...("left" in n.bounds ? { left: c.globalX, top: c.globalY, right: c.globalX + c.width, bottom: c.globalY + c.height } : {}) };
         }
     } catch {}
+    // A tappable component (a click modifier) is one item to a screen reader: the Android
+    // player's semantics mode for a click is MERGE, so what is inside it is not read separately
+    // (CoreDocumentAccessibility.semanticallyRelevantChildComponents; Compose: mergeDescendants).
+    // Its contentDescription, if any, is what is announced.
+    const merged = new Map();
+    const spoken = [];
+    let owner = null;
+    for (const n of shown) {
+        if (owner && n.depth > owner.depth) { const t = n.contentDescription ?? n.semanticsText ?? n.ownText; if (t) merged.get(owner).push(t); continue; }
+        owner = n.clickable ? n : null;
+        if (owner) merged.set(n, []);
+        spoken.push(n);
+    }
     return {
         has_semantics: a.hasSemantics, document_description: a.documentDescription || header().content_description,
         ...(shown.length < a.nodes.length ? { hidden_nodes_skipped: a.nodes.length - shown.length } : {}),
-        nodes: shown.map((n) => ({
+        ...(spoken.length < shown.length ? { merged_note: "Texts inside a tappable component are merged into it, not read separately (the merged field); its content_description is what is announced." } : {}),
+        nodes: spoken.map((n) => ({
             component: n.name, id: n.componentId, depth: n.depth, bounds: bounds(n.bounds),
             role: n.role === 255 ? null : n.role, clickable: n.clickable || Boolean(n.semanticsClickable), enabled: n.enabled,
             content_description: n.contentDescription,
@@ -371,6 +386,7 @@ function accessibility() {
             // reader announces: only its semantics speak for it.
             text: n.semanticsText ?? (/Canvas/.test(n.name ?? "") ? null : n.ownText) ?? null, state: n.stateDescription,
             has_semantics: n.hasSemantics,
+            ...(merged.get(n)?.length ? { merged: merged.get(n) } : {}),
         })),
         click_areas: (a.areas ?? []).map((x) => ({ id: x.areaId ?? x.id, content_description: x.contentDescription ?? null, bounds: bounds(x.bounds) })),
     };
@@ -596,6 +612,8 @@ function audit() {
     try {
         for (const op of ops) if (/NamedVariable/.test(nameOf(op)) && op.mVarName !== undefined) names.set(op.mVarId ?? op.varId, op.mVarName ?? op.varName);
     } catch {}
+    // theme.mono is read by the host's switch, not by the document, when a file carries every look.
+    for (let i = unusedDefs.length - 1; i >= 0; i--) if (names.get(unusedDefs[i]) === "theme.mono") unusedDefs.splice(i, 1);
     if (unusedDefs.length) {
         const named = unusedDefs.map((id) => names.get(id)).filter(Boolean);
         // What defines each one (op type, index), so an unnamed id can still be found.
@@ -1030,7 +1048,8 @@ const TASKS = {
             ...CL.getVariableUsageInfo(doc, ops).definedVarIds,
         ])].filter((x) => typeof x === "number" && Number.isFinite(x));
         const log = [];
-        for (const [k, a] of (O.actions ?? []).entries()) {
+        for (const [k, raw] of (O.actions ?? []).entries()) {
+            const a = normalizeAction(raw);
             if (a.wait !== undefined) {
                 const n = Math.max(0, Math.round(a.wait * fps));
                 main.frames(n); base.frames(n);

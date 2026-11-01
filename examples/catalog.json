@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-11-01T05:24:32.696Z",
+ "built_at": "2026-11-01T17:10:34.349Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -990,7 +990,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 1
     },
     "evidence": {
@@ -9552,6 +9552,929 @@
    }
   },
   {
+   "id": "CMP-15",
+   "name": "next-departures",
+   "version": 1,
+   "title": "Next departures",
+   "summary": "A transit departures widget the app fills: a stop name and up to three rows from host strings and numbers, each a line badge, destination, delay and minutes, which open one at a time. One layout adapts by expression to any size from 160x160 to 360x480, hides absent slots and shows an empty state.",
+   "prompt": "Build a next departures widget for a transit stop: the app sends the stop, and for up to three departures the line, destination and minutes. Show a line badge, Now when it is leaving, a delay on the row, hide slots with no data, show an empty state, and tap a row to expand its details. It must fit 320x160, 160x160 and 360x480 and sizes in between.",
+   "level": 3,
+   "family": "CMP",
+   "components": [
+    "ExpandableRow",
+    "Icon",
+    "Departure"
+   ],
+   "capabilities": {
+    "primary": [
+     "layout.stack",
+     "host.variables",
+     "input.tap"
+    ],
+    "secondary": [
+     "layout.weight",
+     "a11y.labels",
+     "a11y.state",
+     "text.dynamic",
+     "expr.system",
+     "layout.decoration"
+    ]
+   },
+   "use_cases": [
+    "transit",
+    "widget",
+    "list"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "transit",
+    "departures",
+    "next departures",
+    "departure board",
+    "bus",
+    "bus times",
+    "next bus",
+    "train",
+    "train times",
+    "tram",
+    "metro",
+    "schedule",
+    "timetable",
+    "arrivals",
+    "expandable",
+    "expandable row",
+    "expandable list",
+    "accordion",
+    "collapsible row",
+    "collapsible list",
+    "list rows",
+    "rows from the app",
+    "host rows",
+    "host list",
+    "tap to expand",
+    "one open at a time",
+    "line badge",
+    "hidden when absent",
+    "empty state",
+    "adaptive widget",
+    "any size"
+   ],
+   "teaches": [
+    "Rows the app fills: a fixed number of slots of exported strings and numbers, one ExpandableRow per slot through a small local component, with -1 minutes hiding a slot",
+    "One layout for every size: compute how many rows fit (cap), a row height, a font size and a stack flag from windowWidth() and windowHeight(), rather than copying the rows into a stateLayout. Nothing is a hard-coded container width",
+    "Keep the open row on screen in a short box: when details take the room, the shown window of slots slides so the open one stays in it",
+    "Live labels: a canvas global block computes \"in 3 minutes\" and \"Delayed 4 min\" (textSubtext cut from a textMerge, then trimmed), and the row's label is a textMerge of those and the host strings",
+    "In a narrow box the stack param gives the destination its own full-width line instead of squeezing it beside the minutes"
+   ],
+   "snippets": [
+    {
+     "pointer": "/components/Departure",
+     "shows": "layout.stack",
+     "note": "one slot: a local component around ExpandableRow, with its badge, delay, minutes and details"
+    },
+    {
+     "pointer": "/resources/variables/cap",
+     "shows": "input.tap",
+     "note": "how many rows fit, given the height and whether a row is open: tapping changes @open and the rows follow"
+    },
+    {
+     "pointer": "/root/0",
+     "shows": "host.variables",
+     "note": "an exported host string, with an initial value distinct from the others"
+    },
+    {
+     "pointer": "/resources/variables/stack",
+     "shows": "expr.system",
+     "note": "the destination gets its own line when the box is narrow or there is height to spare"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "stop": {
+      "type": "string",
+      "meaning": "the stop's name",
+      "default": "Central Station"
+     },
+     "d1Line": {
+      "type": "string",
+      "meaning": "departure 1: the line, shown on the badge",
+      "default": "12"
+     },
+     "d1Dest": {
+      "type": "string",
+      "meaning": "departure 1: the destination",
+      "default": "Airport Terminal"
+     },
+     "d1Info": {
+      "type": "string",
+      "meaning": "departure 1: the line shown when the row is open (platform, stops)",
+      "default": "Platform 4"
+     },
+     "d1Min": {
+      "min": -1,
+      "max": 120,
+      "meaning": "departure 1: minutes until it leaves. 0 shows Now, -1 hides the slot"
+     },
+     "d1Delay": {
+      "min": 0,
+      "max": 120,
+      "meaning": "departure 1: minutes late, shown as +N on the row. 0 = on time"
+     },
+     "d2Line": {
+      "type": "string",
+      "meaning": "departure 2: the line, shown on the badge",
+      "default": "7"
+     },
+     "d2Dest": {
+      "type": "string",
+      "meaning": "departure 2: the destination",
+      "default": "Harbour Front"
+     },
+     "d2Info": {
+      "type": "string",
+      "meaning": "departure 2: the line shown when the row is open (platform, stops)",
+      "default": "Platform 2, stops at Old Town"
+     },
+     "d2Min": {
+      "min": -1,
+      "max": 120,
+      "meaning": "departure 2: minutes until it leaves. 0 shows Now, -1 hides the slot"
+     },
+     "d2Delay": {
+      "min": 0,
+      "max": 120,
+      "meaning": "departure 2: minutes late, shown as +N on the row. 0 = on time"
+     },
+     "d3Line": {
+      "type": "string",
+      "meaning": "departure 3: the line, shown on the badge",
+      "default": "N3"
+     },
+     "d3Dest": {
+      "type": "string",
+      "meaning": "departure 3: the destination",
+      "default": "Old Town"
+     },
+     "d3Info": {
+      "type": "string",
+      "meaning": "departure 3: the line shown when the row is open (platform, stops)",
+      "default": "Platform 1B"
+     },
+     "d3Min": {
+      "min": -1,
+      "max": 120,
+      "meaning": "departure 3: minutes until it leaves. 0 shows Now, -1 hides the slot"
+     },
+     "d3Delay": {
+      "min": 0,
+      "max": 120,
+      "meaning": "departure 3: minutes late, shown as +N on the row. 0 = on time"
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Central Station with a bus icon, then rows 12 Airport Terminal 3 min, 7 Harbour Front +4 9 min, N3 Old Town 17 min. 320x160 and 480x200: three one-line rows. 160x160: two rows, the destination on its own line. 240x240 and 360x480: three stacked rows filling the height. Tapping a row opens its status and details (the row grows, the slots shift to keep it on screen) and tapping it again closes it. With d1Min 0 row 1 reads Now; with all minutes -1 the empty state shows.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "small",
+      "width": 160,
+      "height": 160
+     },
+     {
+      "name": "tall",
+      "width": 360,
+      "height": 480
+     },
+     {
+      "name": "square",
+      "width": 240,
+      "height": 240
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 200
+     },
+     {
+      "name": "open",
+      "width": 320,
+      "height": 160,
+      "theme": "light",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 160,
+        "y": 80
+       }
+      ],
+      "duration": 1
+     },
+     {
+      "name": "empty",
+      "width": 320,
+      "height": 160,
+      "theme": "light",
+      "variables": {
+       "d1Min": -1,
+       "d2Min": -1,
+       "d3Min": -1
+      }
+     },
+     {
+      "name": "now-delayed",
+      "width": 160,
+      "height": 160,
+      "theme": "light",
+      "variables": {
+       "d1Min": 0,
+       "d1Delay": 12
+      }
+     }
+    ]
+   },
+   "related": [
+    "ExpandableRow",
+    "LAY-15",
+    "HST-01",
+    "CMP-05",
+    "A11Y-02"
+   ],
+   "pitfalls": [
+    "Minutes and delay are exported floats, not strings: the document tests them for Now, for an absent slot and for the plural, which it cannot do with a string",
+    "Fill slots from the first: a hidden d1 leaves its turn in the window of slots shown, so in a short box a later slot may wait for a row that is not shown",
+    "Give every host string a distinct initial value: equal strings share one text id, and setting one sets them all (shared_string_value)",
+    "The document does not count down: the app sends fresh minutes. Add a clock expression if it may be stale",
+    "padding takes no expression, so a tall row's spare height is shared with ExpandableRow verticalPadding, which is two spacer boxes"
+   ],
+   "folder": "CMP-15-next-departures",
+   "derived": {
+    "bytes": 12010,
+    "op_count": 621,
+    "header": {
+     "width": 320,
+     "height": 160
+    },
+    "host_variables": [
+     {
+      "name": "d1Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d1Dest",
+      "type": "string",
+      "value": "Airport Terminal"
+     },
+     {
+      "name": "d1Info",
+      "type": "string",
+      "value": "Platform 4"
+     },
+     {
+      "name": "d1Line",
+      "type": "string",
+      "value": "12"
+     },
+     {
+      "name": "d1Min",
+      "type": "float",
+      "value": 3
+     },
+     {
+      "name": "d2Delay",
+      "type": "float",
+      "value": 4
+     },
+     {
+      "name": "d2Dest",
+      "type": "string",
+      "value": "Harbour Front"
+     },
+     {
+      "name": "d2Info",
+      "type": "string",
+      "value": "Platform 2, stops at Old Town"
+     },
+     {
+      "name": "d2Line",
+      "type": "string",
+      "value": "7"
+     },
+     {
+      "name": "d2Min",
+      "type": "float",
+      "value": 9
+     },
+     {
+      "name": "d3Delay",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "d3Dest",
+      "type": "string",
+      "value": "Old Town"
+     },
+     {
+      "name": "d3Info",
+      "type": "string",
+      "value": "Platform 1B"
+     },
+     {
+      "name": "d3Line",
+      "type": "string",
+      "value": "N3"
+     },
+     {
+      "name": "d3Min",
+      "type": "float",
+      "value": 17
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "open",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "stop",
+      "type": "string",
+      "value": "Central Station"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "warning",
+      "type": "color",
+      "value": "#FFFFB74D"
+     }
+    ],
+    "components": [
+     "Departure",
+     "ExpandableRow",
+     "Icon"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 11245,
+      "host_variables": [
+       {
+        "name": "d1Delay",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "d1Dest",
+        "type": "string",
+        "value": "Airport Terminal"
+       },
+       {
+        "name": "d1Info",
+        "type": "string",
+        "value": "Platform 4"
+       },
+       {
+        "name": "d1Line",
+        "type": "string",
+        "value": "12"
+       },
+       {
+        "name": "d1Min",
+        "type": "float",
+        "value": 3
+       },
+       {
+        "name": "d2Delay",
+        "type": "float",
+        "value": 4
+       },
+       {
+        "name": "d2Dest",
+        "type": "string",
+        "value": "Harbour Front"
+       },
+       {
+        "name": "d2Info",
+        "type": "string",
+        "value": "Platform 2, stops at Old Town"
+       },
+       {
+        "name": "d2Line",
+        "type": "string",
+        "value": "7"
+       },
+       {
+        "name": "d2Min",
+        "type": "float",
+        "value": 9
+       },
+       {
+        "name": "d3Delay",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "d3Dest",
+        "type": "string",
+        "value": "Old Town"
+       },
+       {
+        "name": "d3Info",
+        "type": "string",
+        "value": "Platform 1B"
+       },
+       {
+        "name": "d3Line",
+        "type": "string",
+        "value": "N3"
+       },
+       {
+        "name": "d3Min",
+        "type": "float",
+        "value": 17
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "open",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "stop",
+        "type": "string",
+        "value": "Central Station"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 11245,
+      "host_variables": [
+       {
+        "name": "d1Delay",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "d1Dest",
+        "type": "string",
+        "value": "Airport Terminal"
+       },
+       {
+        "name": "d1Info",
+        "type": "string",
+        "value": "Platform 4"
+       },
+       {
+        "name": "d1Line",
+        "type": "string",
+        "value": "12"
+       },
+       {
+        "name": "d1Min",
+        "type": "float",
+        "value": 3
+       },
+       {
+        "name": "d2Delay",
+        "type": "float",
+        "value": 4
+       },
+       {
+        "name": "d2Dest",
+        "type": "string",
+        "value": "Harbour Front"
+       },
+       {
+        "name": "d2Info",
+        "type": "string",
+        "value": "Platform 2, stops at Old Town"
+       },
+       {
+        "name": "d2Line",
+        "type": "string",
+        "value": "7"
+       },
+       {
+        "name": "d2Min",
+        "type": "float",
+        "value": 9
+       },
+       {
+        "name": "d3Delay",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "d3Dest",
+        "type": "string",
+        "value": "Old Town"
+       },
+       {
+        "name": "d3Info",
+        "type": "string",
+        "value": "Platform 1B"
+       },
+       {
+        "name": "d3Line",
+        "type": "string",
+        "value": "N3"
+       },
+       {
+        "name": "d3Min",
+        "type": "float",
+        "value": 17
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "open",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "stop",
+        "type": "string",
+        "value": "Central Station"
+       },
+       {
+        "name": "surface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "warning",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "small": {
+      "render": "render-small.png"
+     },
+     "tall": {
+      "render": "render-tall.png"
+     },
+     "square": {
+      "render": "render-square.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "open": {
+      "render": "render-open.png",
+      "theme": "light"
+     },
+     "empty": {
+      "render": "render-empty.png",
+      "theme": "light"
+     },
+     "now-delayed": {
+      "render": "render-now-delayed.png",
+      "theme": "light"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 3,
+     "click": 3,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "input.tap": [
+      "onClick"
+     ],
+     "layout.weight": [
+      "weight",
+      "verticalWeight"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "a11y.state": [
+      "stateDescription"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "expr.system": [
+      "fontSize()",
+      "windowWidth",
+      "windowHeight",
+      "componentWidth",
+      "componentHeight"
+     ],
+     "layout.decoration": [
+      "background",
+      "clip"
+     ]
+    },
+    "json_keys": [
+     "Departure",
+     "ExpandableRow",
+     "Icon",
+     "anim",
+     "apiLevel",
+     "avail",
+     "background",
+     "big",
+     "body",
+     "bottom",
+     "box",
+     "call",
+     "canvas",
+     "cap",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "compact",
+     "components",
+     "contentDescription",
+     "count",
+     "d1Delay",
+     "d1Min",
+     "d2Delay",
+     "d2Min",
+     "d3Delay",
+     "d3Min",
+     "dark",
+     "decimal",
+     "default",
+     "delay",
+     "departure1_late",
+     "departure1_now",
+     "departure1_soon",
+     "departure2_late",
+     "departure2_now",
+     "departure2_soon",
+     "departure3_late",
+     "departure3_now",
+     "departure3_soon",
+     "dest",
+     "details",
+     "doc",
+     "drawLine",
+     "drawPath",
+     "empty",
+     "end",
+     "expandablerow1_open",
+     "expandablerow2_open",
+     "expandablerow3_open",
+     "export",
+     "first",
+     "flags",
+     "fontSize",
+     "fontWeight",
+     "fs",
+     "global",
+     "headH",
+     "header",
+     "height",
+     "heightIn",
+     "horizontalAlignment",
+     "icon_directions_bus_outlined",
+     "id1",
+     "id2",
+     "index",
+     "info",
+     "k",
+     "label",
+     "late",
+     "leading",
+     "len",
+     "light",
+     "line",
+     "locals",
+     "maxLines",
+     "min",
+     "minH",
+     "minHeight",
+     "modifiers",
+     "muted",
+     "name",
+     "need",
+     "now",
+     "onClick",
+     "onPrimary",
+     "onSurface",
+     "open",
+     "openH",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "padding",
+     "paint",
+     "params",
+     "path",
+     "paths",
+     "primary",
+     "profiles",
+     "required",
+     "resources",
+     "root",
+     "roundedRect",
+     "row",
+     "rowH",
+     "rule",
+     "rule2",
+     "rule3",
+     "save",
+     "scale",
+     "selected",
+     "semantics",
+     "show",
+     "show1",
+     "show2",
+     "show3",
+     "size",
+     "slots",
+     "small",
+     "soon",
+     "spacedBy",
+     "stack",
+     "start",
+     "stateDescription",
+     "static",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "summary",
+     "surface",
+     "sx",
+     "sy",
+     "tall",
+     "target",
+     "text",
+     "textSubtext",
+     "textTransform",
+     "title",
+     "titleSize",
+     "top",
+     "trailing",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalPadding",
+     "verticalWeight",
+     "vis_0",
+     "visibility",
+     "vpad",
+     "vtype",
+     "warning",
+     "weight",
+     "whole",
+     "width",
+     "widthIn",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
    "id": "DOC-01",
    "name": "hello-box",
    "version": 2,
@@ -13771,8 +14694,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
-     "info": 3
+     "warning": 2,
+     "info": 2
     },
     "evidence": {
      "expr.operators": [
@@ -21304,8 +22227,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
-     "info": 2
+     "warning": 2,
+     "info": 1
     },
     "evidence": {
      "layout.align": [
@@ -21831,7 +22754,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 0
     },
     "evidence": {
@@ -23381,8 +24304,8 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
-     "info": 3
+     "warning": 2,
+     "info": 2
     },
     "evidence": {
      "layout.responsive": [
@@ -23873,7 +24796,7 @@
     "crossfade layouts"
    ],
    "teaches": [
-    "Hold one layout per state as the children of a stateLayout and pick one with indexId, an integer variable (here an exported integer the host can set to 0, 1 or 2)",
+    "Hold one layout per state as the children of a stateLayout and pick one with indexId, a variable (here an exported integer the host can set to 0, 1 or 2; use a float when an expression or a TextChoice reads it too, as both read an integer as 0)",
     "Advance the state from each state's root: an onClick with valueIntegerChange to the next index (1, 2, then back to 0), with semantics describing what the tap does",
     "Pair the parts that exist in every state with the same animationSpec animationId (card 200, header row 203, badge 201, title 202) so they morph in size and position; unpaired parts enter and exit",
     "Size each state for its own content (72, 148 and 128 dp): only the current state is measured, so the stateLayout resizes with it"
@@ -24921,7 +25844,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 2
     },
     "evidence": {
@@ -25803,7 +26726,7 @@
     "heat map of countries"
    ],
    "teaches": [
-    "WorldMap values is a float array the app sets (exported), valueCountries the countries in its order (map_info lists a region's countries); 0 leaves the land, 1 fills in valueColor, a fraction blends",
+    "WorldMap values is a float array the app sets (exported), valueCountries the countries in its order: map_info {region: \"Europe\"} lists the 48 countries alphabetically (Russia in, Turkey out); 0 leaves the land, 1 fills in valueColor, a fraction blends; a microstate with no outline at the detail is a dot",
     "A count from the same array: textFromFloat of arraySum(@visited)",
     "Russia is a country of Europe whose outline reaches outside the box: the map clips it"
    ],
@@ -25812,14 +26735,14 @@
      "visited": {
       "type": "float[]",
       "meaning": "1 per visited country, in valueCountries order",
-      "default": "9 of 37"
+      "default": "9 of 48"
      }
     },
     "clock": null,
     "touch": false
    },
    "check": {
-    "describe": "Europe; France, Germany, Spain, Italy, the Netherlands, Portugal, the United Kingdom, Greece and Czechia filled; the header reads 9 of 37 countries; in mono the visited countries are solid on an outline map.",
+    "describe": "Europe; France, Germany, Spain, Italy, the Netherlands, Portugal, the United Kingdom, Greece and Czechia filled; the header reads 9 of 48 countries; in mono the visited countries are solid on an outline map.",
     "render": {},
     "renders": [
      {
@@ -25842,6 +26765,17 @@
       "name": "none",
       "variables": {
        "visited": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0,
         0,
         0,
@@ -25915,8 +26849,8 @@
    ],
    "folder": "MAP-04-visited-countries",
    "derived": {
-    "bytes": 29771,
-    "op_count": 257,
+    "bytes": 33115,
+    "op_count": 301,
     "header": {
      "width": 360,
      "height": 400
@@ -25963,25 +26897,14 @@
        0,
        0,
        0,
-       1,
-       0,
-       0,
-       0,
-       1,
-       1,
-       1,
-       0,
        0,
        0,
        1,
        0,
        0,
        0,
-       0,
        1,
-       0,
-       0,
-       0,
+       1,
        1,
        0,
        0,
@@ -25992,7 +26915,29 @@
        0,
        0,
        0,
-       1
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0
       ]
      }
     ],
@@ -26012,7 +26957,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 29183,
+      "bytes": 32527,
       "host_variables": [
        {
         "name": "background",
@@ -26045,25 +26990,14 @@
          0,
          0,
          0,
-         1,
-         0,
-         0,
-         0,
-         1,
-         1,
-         1,
-         0,
          0,
          0,
          1,
          0,
          0,
          0,
-         0,
          1,
-         0,
-         0,
-         0,
+         1,
          1,
          0,
          0,
@@ -26074,7 +27008,29 @@
          0,
          0,
          0,
-         1
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0
         ]
        }
       ]
@@ -26082,7 +27038,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 29183,
+      "bytes": 32527,
       "host_variables": [
        {
         "name": "background",
@@ -26115,25 +27071,14 @@
          0,
          0,
          0,
-         1,
-         0,
-         0,
-         0,
-         1,
-         1,
-         1,
-         0,
          0,
          0,
          1,
          0,
          0,
          0,
-         0,
          1,
-         0,
-         0,
-         0,
+         1,
          1,
          0,
          0,
@@ -26144,7 +27089,29 @@
          0,
          0,
          0,
-         1
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0
         ]
        }
       ]
@@ -26248,7 +27215,18 @@
      "map_europe_countries_low_35",
      "map_europe_countries_low_36",
      "map_europe_countries_low_37",
+     "map_europe_countries_low_38",
+     "map_europe_countries_low_39",
      "map_europe_countries_low_4",
+     "map_europe_countries_low_40",
+     "map_europe_countries_low_41",
+     "map_europe_countries_low_42",
+     "map_europe_countries_low_43",
+     "map_europe_countries_low_44",
+     "map_europe_countries_low_45",
+     "map_europe_countries_low_46",
+     "map_europe_countries_low_47",
+     "map_europe_countries_low_48",
      "map_europe_countries_low_5",
      "map_europe_countries_low_6",
      "map_europe_countries_low_7",
@@ -28104,7 +29082,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "struct.pattern_data": [
@@ -28939,7 +29917,7 @@
     "audit": {
      "error": 0,
      "warning": 0,
-     "info": 0
+     "info": 1
     },
     "evidence": {
      "struct.macro": [
@@ -32015,7 +32993,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 2
     },
     "evidence": {
@@ -34201,7 +35179,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 1
     },
     "evidence": {
@@ -37477,7 +38455,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 0
     },
     "evidence": {
@@ -42601,6 +43579,464 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "ExpandableRow",
+   "name": "expandable-row",
+   "version": 1,
+   "title": "ExpandableRow",
+   "prompt": "Make a list of rows where tapping a row opens its details under it and tapping again closes it, with only one row open at a time.",
+   "level": 2,
+   "use_cases": [
+    "list"
+   ],
+   "form_factor": "phone",
+   "components": [
+    "ExpandableRow",
+    "Icon",
+    "Badge",
+    "ProgressBar",
+    "Divider"
+   ],
+   "keywords": [
+    "expandable row",
+    "expandable list",
+    "accordion",
+    "collapsible row",
+    "collapsible list",
+    "disclosure",
+    "tap to expand",
+    "expand collapse",
+    "expanding row",
+    "list rows",
+    "host rows",
+    "one open at a time",
+    "details row",
+    "chevron row",
+    "grow when open"
+   ],
+   "teaches": [
+    "Call {\"ExpandableRow\": {\"title\": ..., \"slots\": {\"details\": [...]}}}: the whole row is the tap target, it opens on a tap and closes on the next, and the details take no space until it opens",
+    "One open at a time: bind the same variable on every row (\"selected\": \"@open\") and number them (\"index\": 1, 2, 3). Tapping the open row sets it to 0",
+    "Put a badge or an icon in slots.leading and a value in slots.trailing; the title takes the remaining width and ellipsizes, or takes two lines with titleLines 2"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "layout.stack",
+     "note": "a row with leading, trailing and details slots, bound to the group's variable"
+    },
+    {
+     "pointer": "/root/column/children/2",
+     "shows": "layout.weight",
+     "note": "titleLines 2: a long title wraps in the weighted column and the row grows"
+    },
+    {
+     "pointer": "/root/column/children/4",
+     "shows": "input.tap",
+     "note": "tapping sets open to 3, or to 0 when it is already open"
+    },
+    {
+     "pointer": "/root/column/children/6",
+     "shows": "a11y.labels",
+     "note": "a row keeping its own state, with an accessibility label of its own"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "open": 1
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Four rows; Storage is open with its progress bar under it and an up chevron, the others are closed with down chevrons and take only their header. The 'closed' render taps Storage so it closes. Resized, the rows fill the width: at 200 the titles ellipsize while slots and chevrons keep their size.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 200,
+      "height": 320
+     },
+     {
+      "name": "wide",
+      "width": 540,
+      "height": 320
+     },
+     {
+      "name": "closed",
+      "variables": {},
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 180,
+        "y": 32
+       }
+      ],
+      "duration": 1
+     }
+    ]
+   },
+   "related": [
+    "CMP-15",
+    "ListItem",
+    "ANM-08"
+   ],
+   "summary": "A full-width row the user taps to open and close: optional leading and trailing slots, a weighted one-line title with an optional subtitle, a chevron that follows the state, and a details slot that takes no space until open. Rows sharing a `selected` variable open one at a time.",
+   "capabilities": {
+    "primary": [
+     "layout.stack",
+     "layout.weight",
+     "input.tap",
+     "a11y.labels"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "Group rows by binding the same variable and numbering them from 1: {\"selected\": \"@open\", \"index\": 2}. Tapping the open row sets the variable to 0, so 0 must stay free. Left unbound, each row keeps its own state and several can be open",
+    "The row has no fixed height: it grows with its content and with the details, so whatever holds it must have room for it open. In a short box, hide other rows while one is open (visible, or a visibility around it) or put the rows in a verticalScroll",
+    "titleLines 2 wraps at spaces only. In the C++ render a single word wider than the column loses its end on the first line with no ellipsis, so if a host may send long single words (place names) keep one line, which ellipsizes cleanly, or use stack to give the title the full width",
+    "The row is tappable, so a screen reader treats it as one item: the player merges the texts inside it (click modifiers are MERGE mode) and announces `label` and the state. So `label` must say everything, including what the details show when open. Build it live with textMerge from the same variables the row shows",
+    "Padding and spacedBy take literals only, so verticalPadding is written as two spacer boxes; minHeight is a heightIn minimum and does accept an expression",
+    "Below 48 dp (compact, or a small minHeight) the row misses the touch-target guideline; the audit reports it as info. Keep the default wherever three rows fit",
+    "Costs about 700 B per extra row before its slots, always expanded: the body declares a named text for the state, so it cannot be a definePattern template. Use one component call per row, not a stateLayout of copies"
+   ],
+   "folder": "components/ExpandableRow",
+   "derived": {
+    "bytes": 7312,
+    "op_count": 387,
+    "header": {
+     "width": 360,
+     "height": 320
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "Badge",
+     "Divider",
+     "ExpandableRow",
+     "Icon",
+     "ProgressBar"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 6466,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 6466,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     },
+     "closed": {
+      "render": "render-closed.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 4,
+     "click": 4,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ],
+     "layout.weight": [
+      "weight"
+     ],
+     "input.tap": [
+      "onClick"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ]
+    },
+    "json_keys": [
+     "Badge",
+     "Divider",
+     "Divider__p",
+     "ExpandableRow",
+     "Icon",
+     "ProgressBar",
+     "anim",
+     "apiLevel",
+     "arguments",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "definePattern",
+     "details",
+     "drawLine",
+     "drawPath",
+     "drawRoundRect",
+     "end",
+     "expandablerow1_open",
+     "expandablerow2_open",
+     "expandablerow3_open",
+     "expandablerow4_open",
+     "expandablerow4_selected",
+     "fontSize",
+     "fontWeight",
+     "global",
+     "header",
+     "height",
+     "heightIn",
+     "horizontalAlignment",
+     "icon_battery_full_outlined",
+     "icon_storage_outlined",
+     "icon_wifi_outlined",
+     "index",
+     "label",
+     "leading",
+     "left",
+     "len",
+     "light",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onPrimary",
+     "onSurface",
+     "open",
+     "operation",
+     "ops",
+     "outline",
+     "overflow",
+     "padding",
+     "paint",
+     "parameters",
+     "path",
+     "paths",
+     "primary",
+     "profiles",
+     "progress",
+     "resources",
+     "right",
+     "root",
+     "roundedRect",
+     "row",
+     "rx",
+     "ry",
+     "save",
+     "scale",
+     "selected",
+     "semantics",
+     "size",
+     "slots",
+     "start",
+     "stateDescription",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "subtitle",
+     "success",
+     "sx",
+     "sy",
+     "target",
+     "text",
+     "textSubtext",
+     "textTransform",
+     "title",
+     "titleLines",
+     "top",
+     "track",
+     "trailing",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "visibility",
+     "weight",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Gauge",
    "name": "gauge",
    "version": 2,
@@ -42877,7 +44313,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 0
     },
     "evidence": {
@@ -45307,7 +46743,7 @@
     },
     "audit": {
      "error": 0,
-     "warning": 0,
+     "warning": 1,
      "info": 1
     },
     "evidence": {
@@ -52851,7 +54287,7 @@
     "WeatherIcon"
    ],
    "pitfalls": [
-    "condition is static: each condition is a different drawing written into the document. To show a condition the host chooses at run time, put one call per condition in a stateLayout (or behind visibility) driven by a host integer. night, by contrast, is read at run time: with a \"@variable\" both the sun and the moon are written, each in a conditionalOperations block (night < 0.5 draws the sun, >= 0.5 the moon)",
+    "condition is static: each condition is a different drawing written into the document. To show a condition the host chooses at run time, put one call per condition in a stateLayout (or behind visibility) driven by a host number: a float variable, which stateLayout reads as its index and a TextChoice for the condition word can read too (a TextChoice reads an integer variable as 0). night, by contrast, is read at run time: with a \"@variable\" both the sun and the moon are written, each in a conditionalOperations block (night < 0.5 draws the sun, >= 0.5 the moon)",
     "No SVG paths: the cloud is three circles over a rounded rectangle, and the bolt three round-capped lines (an SVG path string costs about 4 KB in Java, padded to 1024 floats)",
     "The moon is a crescent path (pathData from an op list of cubics, about 200 B), not an SVG string and not a disc with a background-coloured bite, so it sits on any surface; mono strokes the same path as an outline",
     "Mono draws the cloud as an outline: the same shapes 1.25 units larger in onSurface, then the shapes themselves in @colors.background, so the ring follows their union. It assumes the icon sits on the background colour, which every surface is in mono",
@@ -53204,7 +54640,7 @@
    "pitfalls": [
     "Geometry is fixed when the document is built (region, detail, borders, highlight, cities, states, the route's ends); at run time the app can colour countries (values + valueCountries), move points (pointsLon/pointsLat arrays), move the marker (markLon/markLat), advance the route (progress) and the clock moves the night",
     "night assumes the world box (\"world\": latitudes 84 to -58, plate carrée): on a continent or a country it is not drawn correctly; leave it off there. The night side is one filled pathExpression along the terminator (atan(-cos(H) / tan(declination)))",
-    "Bytes grow with detail and borders: a world of land at low detail is ~6 KB, countries ~10 KB; Europe with borders at medium ~28 KB; each valueCountries entry adds its own outline (Europe's 44 at low ~25 KB). Prefer land for a backdrop and borders only where they matter",
+    "Bytes grow with detail and borders: a world of land at low detail is ~6 KB, countries ~10 KB; Europe with borders at medium ~28 KB; each valueCountries entry adds its own outline (Europe's 48 at low ~30 KB). Prefer land for a backdrop and borders only where they matter",
     "For anything else at map coordinates draw in your own canvas inside the same translate/scale: {\"$mapPoint\": {\"region\": ..., \"lon\": \"@lon\", \"lat\": \"@lat\"}} (x; \"axis\": \"y\" for y), {\"$mapHeight\": region} (the box height for width 1000), {\"$mapRoute\": {region, from, to, axis: \"path\" | \"x\" | \"y\" | \"angle\"}} (a great circle, or its samples as an array for arraySpline(@array, t)). In your own canvas use {\"$map\": {..., \"outline\": true}} for a stroked coast (a clipped fill's straight edges would show)",
     "In mono the land is an outline (no fills), the highlight a fill, the night a grey shade",
     "It fills the width it is given (fillMaxWidth): beside other content in a row, give it a weight or a width, or the row's other children get nothing"

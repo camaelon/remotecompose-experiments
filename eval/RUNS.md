@@ -884,3 +884,27 @@ Fixed after run 1: a country region keeps islands across narrow straits (Tasmani
 | 1 | 22 | 0 | right: slider for the meeting hour, the 09:00–18:00 band shaded by longitude (solar, not real zones), five city dots from host arrays filled when in working hours, a team list with local times, "+1 day" and Working/Late/Night/Early | slider guidance contradicts itself on live vs release; slider a11y formatting and no steps; WorldMap's byte claim (3.5 KB vs 5.7 KB measured); the slider gallery's "drops trailing zeros" claim is wrong; a widget warning on a scrolling phone screen; no guidance for shading a band on a map |
 
 Fixed after run 1: Slider step and stateText; the guide says live derived values go after the slider in the tree; the map byte figure corrected (~6 KB); CMP-03's trailing-zero claim corrected; the size warning on a scrolling screen is a note.
+
+## Comparison prompt: next departures widget (2026-11-01)
+
+The transit widget prompt (three sizes, four data cases, every look), run on ChatGPT over the
+deployed server, then twice with a fresh Claude agent through the CLI.
+
+| run | client | tools | calls | dead ends | elapsed | size | result |
+| :-- | :-- | :-- | --: | --: | --: | --: | :-- |
+| 1 | ChatGPT | as deployed | ~200 (log, estimated) | ~8 | 18 min | 10.4 KB | so-so: header clipped at every size (padding before clip), fixed widths, "Oc…" at 2x2, no icons, mono faked |
+| 2 | Claude, with its own scripts | before the fixes | ~136 | 9 | 12 min | 33.5 KB | good, but large and hand-written |
+| 3 | Claude, no scripts | after the fixes | 36 | 5 | 7 min | 13.3 KB | good: built on CMP-15 and edited in place |
+
+Different clients and infrastructure: compare calls and rewrites, not minutes. Run 3 has not been
+repeated on ChatGPT. Fixes: render looks (one call, contact sheets), convert edits (no resend),
+ExpandableRow and CMP-15, icon and error messages, padding_before_background, fixed_widths,
+text_barely_shown, clipped long words, stateLayout rather than fitBox for text alternatives.
+
+After one-call checks (convert looks, edits repeat the check, changed pictures only, $tap in samples):
+
+| run | prompt | calls | dead ends | elapsed | size | note |
+| :-- | :-- | --: | --: | --: | --: | :-- |
+| 4 | next departures | 22 | 3 | 6 min | 16.1 KB | was 36 calls in run 3; text_overflow left at 2x2 on a long word |
+| 2 | prompt 11, weather | 20 | 3 | 4 min | 8.1 KB | was 28 calls in its run 1, on earlier tools; no prompt-specific example |
+

@@ -122,6 +122,8 @@ function buildArgs(a, rcPath, pngPath) {
     }
     if (a.touch_events?.length) {
         const spec = a.touch_events.map((e, i) => {
+            const missing = ["t", "type", "x", "y"].filter((k) => e?.[k] === undefined);
+            if (missing.length) throw new Error(`touch_events[${i}] needs ${missing.join(", ")}: {"t": seconds, "type": ${EVENT_TYPES.map((x) => `"${x}"`).join(" | ")}, "x": dp, "y": dp}`);
             if (!EVENT_TYPES.includes(e.type)) {
                 throw new Error(`touch_events[${i}].type must be one of ${EVENT_TYPES.join(", ")}`);
             }
@@ -359,7 +361,7 @@ export const definition = {
                 // Infos about what the image shows (an ellipsis, a dropped child) are kept: a
                 // render said "findings: none" while its main row was cut and a label ended in
                 // "…". The informational facts about the document (host variables) stay out.
-                const SHOWN_INFO = new Set(["text_ellipsized", "collapsed", "fitbox_shows", "unused_space", "unpainted_corners"]);
+                const SHOWN_INFO = new Set(["text_ellipsized", "hidden_rows", "collapsed", "fitbox_shows", "unused_space", "unpainted_corners"]);
                 const findings = analyze(report, { ...analysisOpts(a), log })
                     .filter((x) => x.level !== "info" || SHOWN_INFO.has(x.code))
                     .map((x) => (paths ? { ...x, message: withComponentPaths(x.message, paths) } : x));

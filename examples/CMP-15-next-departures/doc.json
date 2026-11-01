@@ -1,0 +1,674 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Next departures from a transit stop: up to three rows the app fills, tap one to see its details"
+ },
+ "resources": {
+  "variables": {
+   "open": {
+    "value": 0,
+    "export": true
+   },
+   "d1Min": {
+    "value": 3,
+    "export": true
+   },
+   "d1Delay": {
+    "value": 0,
+    "export": true
+   },
+   "d2Min": {
+    "value": 9,
+    "export": true
+   },
+   "d2Delay": {
+    "value": 4,
+    "export": true
+   },
+   "d3Min": {
+    "value": 17,
+    "export": true
+   },
+   "d3Delay": {
+    "value": 0,
+    "export": true
+   },
+   "tall": "step(windowHeight(), 300)",
+   "headH": "ifElse(16, 56, @tall)",
+   "avail": "windowHeight() - @headH - 2 * @tall - 8 * @tall",
+   "stack": "max(1 - step(windowWidth(), 220), step(@avail / 3, 60))",
+   "need": "ifElse(48, 64, @stack)",
+   "openH": "step(@open, 0.5) * ifElse(22, 36, 1 - step(windowWidth(), 300))",
+   "count": "step(@d1Min, -0.5) + step(@d2Min, -0.5) + step(@d3Min, -0.5)",
+   "small": "(1 - step(windowWidth(), 220)) * (1 - step(windowHeight(), 220))",
+   "cap": "ifElse(max(1, floor((@avail - @openH) / @need)), 1, @small)",
+   "first": "max(1, @open - @cap + 1)",
+   "rowH": "clamp(@need, 150, (@avail - @openH) / max(1, min(@cap, @count)))",
+   "fs": "ifElse(floor(clamp(13, ifElse(15, 20, @tall), min(@rowH / 3.2, windowWidth() / 16))), 15, @small)",
+   "big": "ifElse(@fs + 1, ifElse(@fs * 1.5, 18, @small), max(@tall, @small))",
+   "minH": "ifElse(@rowH, @big * 1.3, @stack)",
+   "vpad": "@stack * max(0, (@rowH - @big * 1.3 - @fs * 1.3 - 10) / 2)",
+   "empty": "1 - step(@count, 0.5)",
+   "show1": "step(@d1Min, -0.5) * step(1.5, @first) * step(@first + @cap - 0.5, 1)",
+   "show2": "step(@d2Min, -0.5) * step(2.5, @first) * step(@first + @cap - 0.5, 2)",
+   "show3": "step(@d3Min, -0.5) * step(3.5, @first) * step(@first + @cap - 0.5, 3)",
+   "rule2": "@show2 * @show1 * @tall",
+   "rule3": "@show3 * max(@show1, @show2) * @tall"
+  }
+ },
+ "components": {
+  "Departure": {
+   "summary": "One departure slot: a line badge, the destination, the delay and the minutes, which opens to show the status and the host's details.",
+   "params": {
+    "k": {
+     "type": "float",
+     "static": true,
+     "doc": "Slot number, 1 to 3"
+    },
+    "line": {
+     "type": "string",
+     "required": true,
+     "doc": "Line"
+    },
+    "dest": {
+     "type": "string",
+     "required": true,
+     "doc": "Destination"
+    },
+    "info": {
+     "type": "string",
+     "required": true,
+     "doc": "Details line"
+    },
+    "min": {
+     "type": "float",
+     "required": true,
+     "doc": "Minutes, 0 = now"
+    },
+    "delay": {
+     "type": "float",
+     "required": true,
+     "doc": "Delay in minutes"
+    },
+    "show": {
+     "type": "float",
+     "required": true,
+     "doc": "0/1 slot is shown"
+    },
+    "rule": {
+     "type": "float",
+     "default": 0,
+     "doc": "0/1 rule above"
+    }
+   },
+   "locals": {
+    "now": "1 - step(@min, 0.5)",
+    "soon": "step(@min, 0.5)",
+    "late": "step(@delay, 0.5)"
+   },
+   "call": {
+    "Departure": {
+     "k": 1,
+     "line": "12",
+     "dest": "Airport",
+     "info": "Platform 4",
+     "min": 3,
+     "delay": 0,
+     "show": 1
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "visibility": "@show"
+      },
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": 0
+         }
+        ],
+        "commands": [
+         {
+          "global": {
+           "commands": [
+            {
+             "textSubtext": {
+              "text": {
+               "type": "textMerge",
+               "id1": "On time ",
+               "id2": {
+                "type": "textMerge",
+                "id1": "Delayed ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@delay",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " min     "
+                }
+               }
+              },
+              "start": "8 * @late",
+              "len": "ifElse(8, 15, @late)",
+              "varName": "statusP"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@statusP",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "status"
+             }
+            },
+            {
+             "textSubtext": {
+              "text": {
+               "type": "textMerge",
+               "id1": "leaving now     ",
+               "id2": {
+                "type": "textMerge",
+                "id1": "in ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@min",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " minutes     "
+                }
+               }
+              },
+              "start": "16 * @soon",
+              "len": "ifElse(16, 11, 1 - min(1, abs(@min - 1)))",
+              "varName": "whenP"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@whenP",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "when"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@rule"
+         },
+         "fillMaxWidth",
+         {
+          "height": 1
+         },
+         {
+          "background": "@colors.outline"
+         }
+        ]
+       }
+      },
+      {
+       "ExpandableRow": {
+        "title": "@dest",
+        "label": {
+         "type": "textMerge",
+         "id1": "Line ",
+         "id2": {
+          "type": "textMerge",
+          "id1": "@line",
+          "id2": {
+           "type": "textMerge",
+           "id1": " to ",
+           "id2": {
+            "type": "textMerge",
+            "id1": "@dest",
+            "id2": {
+             "type": "textMerge",
+             "id1": ", ",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@when",
+              "id2": {
+               "type": "textMerge",
+               "id1": ", ",
+               "id2": "@status"
+              }
+             }
+            }
+           }
+          }
+         }
+        },
+        "selected": "@open",
+        "index": "@k",
+        "compact": true,
+        "padding": 0,
+        "stack": "@stack",
+        "minHeight": "@minH",
+        "verticalPadding": "@vpad",
+        "titleSize": "@fs",
+        "slots": {
+         "leading": [
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "widthIn": [
+               "@fs * 2.2",
+               "windowWidth() * 0.32"
+              ]
+             },
+             {
+              "height": "@fs * 1.7"
+             },
+             {
+              "clip": {
+               "roundedRect": 6
+              }
+             },
+             {
+              "background": "@colors.primary"
+             },
+             {
+              "padding": [
+               5,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "@line",
+               "fontSize": "@fs",
+               "fontWeight": 700,
+               "maxLines": 1,
+               "overflow": "ellipsis",
+               "color": "@colors.onPrimary"
+              }
+             }
+            ]
+           }
+          }
+         ],
+         "trailing": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "visibility": "@late"
+                },
+                {
+                 "padding": {
+                  "end": 6
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "+",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@delay",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "fontSize": "@fs - 1",
+                  "fontWeight": 600,
+                  "maxLines": 1,
+                  "color": "@colors.warning"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Now",
+               "fontSize": "@big",
+               "fontWeight": 700,
+               "maxLines": 1,
+               "color": "@colors.primary",
+               "modifiers": [
+                {
+                 "visibility": "@now"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@min",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " min"
+               },
+               "fontSize": "@big",
+               "fontWeight": 700,
+               "maxLines": 1,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "@soon"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ],
+         "details": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "@status",
+             "id2": {
+              "type": "textMerge",
+              "id1": ". ",
+              "id2": "@info"
+             }
+            },
+            "fontSize": "@fs - 1",
+            "color": "@colors.muted",
+            "maxLines": 2,
+            "overflow": "ellipsis"
+           }
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "stop",
+    "vtype": "string",
+    "value": "Central Station",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Line",
+    "vtype": "string",
+    "value": "12",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Dest",
+    "vtype": "string",
+    "value": "Airport Terminal",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d1Info",
+    "vtype": "string",
+    "value": "Platform 4",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Line",
+    "vtype": "string",
+    "value": "7",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Dest",
+    "vtype": "string",
+    "value": "Harbour Front",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d2Info",
+    "vtype": "string",
+    "value": "Platform 2, stops at Old Town",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Line",
+    "vtype": "string",
+    "value": "N3",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Dest",
+    "vtype": "string",
+    "value": "Old Town",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "d3Info",
+    "vtype": "string",
+    "value": "Platform 1B",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "padding": [
+       8,
+       0
+      ]
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@headH"
+        }
+       ],
+       "children": [
+        {
+         "Icon": {
+          "name": "directions_bus",
+          "size": "ifElse(14, 18, @tall)",
+          "color": "@colors.primary"
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "padding": {
+             "start": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@stop",
+             "fontSize": "ifElse(13, 18, @tall)",
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           },
+           {
+            "text": {
+             "value": "Next departures",
+             "fontSize": 13,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@tall"
+              },
+              {
+               "padding": {
+                "top": 3
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "Departure": {
+       "k": 1,
+       "line": "@d1Line",
+       "dest": "@d1Dest",
+       "info": "@d1Info",
+       "min": "@d1Min",
+       "delay": "@d1Delay",
+       "show": "@show1"
+      }
+     },
+     {
+      "Departure": {
+       "k": 2,
+       "line": "@d2Line",
+       "dest": "@d2Dest",
+       "info": "@d2Info",
+       "min": "@d2Min",
+       "delay": "@d2Delay",
+       "show": "@show2",
+       "rule": "@rule2"
+      }
+     },
+     {
+      "Departure": {
+       "k": 3,
+       "line": "@d3Line",
+       "dest": "@d3Dest",
+       "info": "@d3Info",
+       "min": "@d3Min",
+       "delay": "@d3Delay",
+       "show": "@show3",
+       "rule": "@rule3"
+      }
+     },
+     {
+      "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "visibility": "@empty"
+        },
+        "fillMaxWidth",
+        {
+         "verticalWeight": 1
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "horizontalAlignment": "center",
+          "modifiers": [
+           {
+            "spacedBy": 4
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "directions_bus",
+             "size": 28,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "text": {
+             "value": "No departures",
+             "fontSize": 14,
+             "fontWeight": 600,
+             "color": "@colors.onSurface"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

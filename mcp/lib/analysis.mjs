@@ -130,6 +130,11 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
             ". If one of them is the main content, give it no collapsiblePriority (kept) or a fitBox alternative that fits.");
     }
 
+    if (lo?.hidden) {
+        add("info", "hidden_rows", `${lo.hidden} list row(s) hidden by their visibility: ${(lo.hiddenExamples ?? []).slice(0, 3).join("; ")}. ` +
+            "Right if the data has no such row or this size shows fewer; otherwise check that condition (a step() comparison the wrong way round hides a row silently).");
+    }
+
     // Text the renderer could not fit (rc2image's `text` section, counted while painting).
     const tx = report.text;
     if (tx && (tx.truncated || tx.clipped)) {
@@ -143,6 +148,11 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
         const cut = (tx.examples ?? []).filter((e) => e.kind === "ellipsized").slice(0, 4).map((e) => JSON.stringify(e.text));
         add("info", "text_ellipsized", `${tx.ellipsized} text(s) end in an ellipsis: they do not fit their box at this size${cut.length ? `: ${cut.join(", ")}` : ""}.`);
     }
+
+    // A long text left with a few characters says nothing ("Oc…"): an ellipsis by design, in
+    // the wrong place. Give it its own line or a weight, whatever the data.
+    const barely = (tx?.examples ?? []).filter((e) => e.kind === "ellipsized" && e.shown !== undefined && e.shown <= 4 && [...e.text].length >= 8);
+    if (barely.length) add("warning", "text_barely_shown", `${barely.map((e) => `${JSON.stringify(e.text)} shows only ${e.shown} characters`).slice(0, 3).join("; ")}. Too short to read: give it its own line, or a weight so it takes the room, and drop something else at this size.`);
 
     // A round screen hides everything outside its inscribed circle.
     const rd = report.round;

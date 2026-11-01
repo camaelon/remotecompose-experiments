@@ -581,7 +581,8 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
             why: "Structure the screen like this: layout components (column, row, text, library components) for the " +
                  "structure and every text, a canvas only for a drawing, values computed in the document. get it for the full JSON.",
         } } : {}),
-        not_covered: [...remaining, ...(CALENDAR_MATH.test(goal) ? ["calendar arithmetic: no example, but recipes in reference expressions (Calendar arithmetic): an app date as an EPOCH DAY with today's epoch day from year() and dayOfYear(), days until/since, dates N days away, week numbers, month names"] : []),
+        // Looks are not a feature to find an example of: theme colours give them all.
+        not_covered: [...[...remaining].filter((c) => c !== "theme.mode"), ...(CALENDAR_MATH.test(goal) ? ["calendar arithmetic: no example, but recipes in reference expressions (Calendar arithmetic): an app date as an EPOCH DAY with today's epoch day from year() and dayOfYear(), days until/since, dates N days away, week numbers, month names"] : []),
             ...(TEXT_ENTRY.test(goal) ? ["text entry: the format has NO keyboard input — see the design rule \"Text entry is the app's\""] : [])],
         ...(needs ? { needs_component: needs } : {}),
         ...(icons ? { icons } : {}),
@@ -602,7 +603,8 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
  */
 // Words about the document's qualities, not things on screen: an icon for them is noise (a
 // wheelchair for "accessible", a lamp for the "light" theme).
-const NOT_ICON_TERMS = /^(local|local time|difference|home screen|home screen widget|widget|widgets|compact|accessible|accessibility|mono|monochrome|theme|themes?d?|light|dark|open|opens|zero|cap|capped|large|small|count|counts|unread|summary|state)$/i;
+const NOT_ICON_TERMS = /^(platform|platforms|local|local time|difference|home screen|home screen widget|widget|widgets|compact|accessible|accessibility|mono|monochrome|theme|themes?d?|light|dark|open|opens|zero|cap|capped|large|small|count|counts|unread|summary|state)$/i;
+const ICONS_FOR = { transit: ["directions_bus", "train", "tram"], departure: ["departure_board", "schedule"], arrival: ["departure_board", "schedule"], delay: ["schedule", "warning"], delayed: ["schedule", "warning"] };
 function suggestIcons(goal, r, skip) {
     let out = [];
     // Content words only (not filler, not stopwords), and an icon whose NAME has the word: a
@@ -614,6 +616,9 @@ function suggestIcons(goal, r, skip) {
     try {
         for (const t of terms) {
             const words = normalizeWords(t);
+            // A subject whose icon has another name (no icon is named "transit" that shows one).
+            if (ICONS_FOR[words.join(" ")]) continue;   // listed below, whatever the term
+            if (words.join(" ") === "home" && /\bhome ?screen\b/i.test(goal)) continue;   // where it goes, not what it shows
             const hit = findIcons({ query: t, limit: 6 }).icons.map((i) => i.name)
                 // The icon is named after the word (moon, moon_stars), not merely containing it
                 // (shield_moon): a word inside a compound name names something else.
@@ -626,15 +631,17 @@ function suggestIcons(goal, r, skip) {
             if (hit.length) out.push({ for: t, icons: hit });
         }
     } catch { return undefined; }   // no icon catalog on this install
+    const said = new Set(normalizeWords(goal));
+    const subjects = Object.entries(ICONS_FOR).filter(([w]) => said.has(w)).map(([w, icons]) => ({ for: w, icons }));
     return {
-        suggestions: out.slice(0, 8),
+        suggestions: [...subjects, ...out].slice(0, 8),
         how: "Every symbol on screen (status, action, navigation, category) is {\"Icon\": {\"name\": ...}} (style outlined|rounded|sharp, filled for a selected state, size, color, label). find kind \"icons\" searches 4,157 Material Symbols by meaning.",
     };
 }
 
 // Reference screens laid out with components, with a drawing in a canvas and values computed
 // from the clock: the default layout_model when no better-matching one exists.
-const LAYOUT_MODELS = ["TIM-12", "TIM-13", "TIM-11", "TIM-08", "TIM-10", "TIM-14", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14"];
+const LAYOUT_MODELS = ["TIM-12", "TIM-13", "TIM-11", "TIM-08", "TIM-10", "TIM-14", "CMP-05", "CMP-08", "LAY-14", "CMP-12", "CMP-14", "CMP-15"];
 
 // Examples that teach drawing a shape from a value, for a component the library lacks.
 const DRAWING_KIT = ["DRW-01", "DRW-02", "DRW-06", "DRW-12", "EXP-06"];
@@ -686,8 +693,10 @@ function designRules(goal, r, needed) {
         { rule: "Show meaning with drawing, not characters", how: "A symbol (status, action, navigation, category) is an Icon ({\"Icon\": {\"name\": \"wifi\"}}; see icons, and find kind \"icons\"); a visual that depends on a value (a phase, a level, a progress) is a library component or one you define (see needs_component). Never text glyphs or emoji (◐ ★ ☀ ✓): they render inconsistently, can't be themed, sized or animated, and are usually approximations." },
         { rule: "Repeat by definition, not by copy", how: "A cell, row or tile that appears N times is one inline component (top-level `components`) or a loop, called with its value. N pasted copies are large and drift: one wrong copy goes unnoticed." },
         { rule: "Theme colours", how: "Use @colors.* (and the library's components) so light, dark and mono (always-on, e-ink) work; literal hex colours lock one look. The theme's colours: background, surface, surfaceHigh, onSurface, muted, outline, track, primary, onPrimary, secondary, success, warning, error, disabled, onDisabled; numbers (@theme.*): space_1..4, radius_sm/md/lg, text_sm/md/lg/xl, control_height, stroke." },
-        { rule: "Switch content by state", how: "A screen with phases (work / break, playing / paused, empty / loaded) switches what it shows from a variable, never by rebuilding: a word from an index is a TextChoice; two alternatives are two children with a visibility modifier each (\"@isBreak\" and \"1 - @isBreak\"; an integer 0/1), stacked in a box so the layout does not move; a whole layout per state is a stateLayout node ({\"stateLayout\": {\"indexId\": \"@phase\", \"children\": [...]}}, a format node, not a component: LAY-15); a state colour is two coloured copies switched by visibility (LAY-12), a host colour the app sets, or (json2rc) a computed colour in resources.colors — {\"hsv\": [h, s, v]} or {\"argb\": [a, r, g, b]} from variables. A hidden alternative takes no taps and no space." },
-        { rule: "Adapt to the size, including smaller", how: `A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout with a fitBox (its first child that fits is shown: list the full layout first, then a compact one, then a minimal one; LAY-09) — a stateLayout switches whole layouts by an index, which may come from the window (round or square vs wide: \"step(windowWidth(), windowHeight() * 1.3)\"; LAY-15) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height instead of a weight (a weight does not combine with heightIn), and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
+        { rule: "Switch content by state", how: "A state a stateLayout, an expression or a TextChoice reads is a float variable: all three can read a float, and the last two read an integer variable as 0. A screen with phases (work / break, playing / paused, empty / loaded) switches what it shows from a variable, never by rebuilding: a word from an index is a TextChoice; two alternatives are two children with a visibility modifier each (\"@isBreak\" and \"1 - @isBreak\"; an integer 0/1), stacked in a box so the layout does not move; a whole layout per state is a stateLayout node ({\"stateLayout\": {\"indexId\": \"@phase\", \"children\": [...]}}, a format node, not a component: LAY-15); a state colour is two coloured copies switched by visibility (LAY-12), a host colour the app sets, or (json2rc) a computed colour in resources.colors — {\"hsv\": [h, s, v]} or {\"argb\": [a, r, g, b]} from variables. A hidden alternative takes no taps and no space." },
+        { rule: "Check it all in one call", how: "convert the document once with its whole check: {\"json\": ..., \"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"name\": \"A very long name\"}, {\"$tap\": [40, 60], \"$size\": [320, 160]}]}. It returns the contact sheets, findings and audit warnings: every look at every size, every data case and tap in the first look. Then send only each change, convert {\"json_path\": ..., \"edits\": [{\"old\": ..., \"new\": ...}]}: the same check comes back with just the pictures that changed. Rewriting the whole document each time is the slowest part of building one. Finish with render {\"json_path\": ..., \"again\": true, \"show_all\": true} for the final sheet." },
+        { rule: "Light, dark and mono come from the theme", how: "With @colors.* every look exists already: no theme switch to write and no colour overrides to test with. Check them with render looks. To ship them: convert with componentTheme \"all\" makes ONE file (to show mono the host sets the theme.mono float AND the mono colours as named colours, so a separate file is simpler); mono-dark or mono-light makes a file for that look." },
+        { rule: "Adapt to the size, including smaller", how: `In a row or column with a weighted child, separate the children with spacer boxes, not spacedBy (the gaps overflow). A widget is resized by the host, often smaller than designed. Fill the width and scale drawings to their box (componentWidth()/componentHeight()); when the height shrinks, drop the least important content first, or switch to a compact layout. Alternatives that hold TEXT switch with a stateLayout on the window, by size and never by content ({\"stateLayout\": {\"indexId\": \"@layout\", ...}} with layout = \"step(windowWidth(), 300) + step(windowHeight(), 140)\"; LAY-15), or one layout whose row count and sizes are computed from windowWidth() and windowHeight() (CMP-15): a fitBox measures a text's whole one-line width, so a long name from the app can blank every alternative; a fitBox suits fixed-size alternatives without long text (its first child that fits is shown; LAY-09) — or at minimum put the content in a verticalScroll. Dropping content: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers": ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [title, main, {"text": {..., "modifiers": [{"collapsiblePriority": {"orientation": "vertical", "priority": 2}}]}}, ...]}}]}} — padding on the wrapping box (collapsibleColumn ignores its own), alignment start (it centres by default), the lowest priority is dropped first, children without one are dropped last, only when they don't fit on their own (LAY-13, LAY-14). A weighted child (a chart with weight) is never dropped and absorbs the shortage first, so nothing else goes: give it a fixed height instead of a weight (a weight does not combine with heightIn), and let the optional lines carry the priorities. Check with render variants (it includes a short size and reports overflow).` },
     ];
     if (NOW_WORDS.test(g) || needed.has("time.date") || needed.has("time.clock")) rules.push({
         rule: "Compute dates from the clock",

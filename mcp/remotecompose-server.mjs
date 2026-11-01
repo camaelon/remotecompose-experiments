@@ -22,11 +22,13 @@ import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
+import { compileComponents } from "./lib/json2rc.mjs";
+import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, tapSettle } from "./lib/checks.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { enginesTool } from "./lib/engines.mjs";
 import os from "node:os";
 import path from "node:path";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { designNotes, blockingFindings, readsClock } from "./lib/design-audit.mjs";
 
 const resolveIn = (p) => resolvePath(p, "json_path");
@@ -37,6 +39,42 @@ function jsonOf(args) {
         const j = args.json ?? ((args.json_path ?? args.input_path) ? readFileSync(resolveIn(args.json_path ?? args.input_path), "utf8") : null);
         return typeof j === "string" ? JSON.parse(j) : j;
     } catch { return null; }
+}
+/** The JSON an .rc was converted from: convert keeps it beside the .rc (x.rc, x.json). */
+function sidecarJson(rcPath) {
+    try { return typeof rcPath === "string" ? JSON.parse(readFileSync(resolveIn(rcPath.replace(/\.rc$/i, ".json")), "utf8")) : null; } catch { return null; }
+}
+
+/** JSON text without the whitespace outside its strings, so an edit need not match the layout. */
+function compactJson(s) {
+    let out = "", inStr = false;
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (inStr) { out += c; if (c === "\\") out += s[++i] ?? ""; else if (c === "\"") inStr = false; continue; }
+        if (c === "\"") { inStr = true; out += c; continue; }
+        if (!/\s/.test(c)) out += c;
+    }
+    return out;
+}
+/**
+ * A stored document with some text replaced. Each `old` must occur once (or set all: true), as
+ * written, or else ignoring the whitespace between JSON tokens: the document may have been
+ * sent as an object and stored compact. All or nothing: the result must still be JSON.
+ */
+export function applyEdits(source, edits) {
+    let text = source;
+    edits.forEach((e, i) => {
+        if (typeof e?.old !== "string" || !e.old || typeof e?.new !== "string") throw new Error(`edits[${i}]: give {"old": text to find, "new": its replacement}`);
+        const count = (hay, needle) => hay.split(needle).length - 1;
+        let [from, to] = [e.old, e.new];
+        if (!count(text, from)) { text = compactJson(text); from = compactJson(e.old); to = compactJson(e.new); }
+        const n = count(text, from);
+        if (n === 0) throw new Error(`edits[${i}]: "${e.old.slice(0, 80)}" is not in the document (nothing was changed)`);
+        if (n > 1 && !e.all) throw new Error(`edits[${i}]: "${e.old.slice(0, 80)}" occurs ${n} times: add surrounding text to pick one, or "all": true (nothing was changed)`);
+        text = text.split(from).join(to);
+    });
+    try { JSON.parse(text); } catch (x) { throw new Error(`edits: the result is not valid JSON (${x.message}); nothing was changed`); }
+    return text;
 }
 /** A tool's content with the document's design warnings appended (see designNotes). */
 function withDesign(content, args, { first = false } = {}) {
@@ -285,7 +323,7 @@ Structure
   children's minimums: seven 32 dp discs need 224 dp; a text's minimum is its own width; fill and wrap count 0).
   A TEXT's minimum is its whole one-line width even when it may wrap or ellipsize (a sentence or a long name inside an
   alternative makes it "need" 300+ dp, and the two players disagree on a weighted text's minimum): when the
-  alternatives hold texts, switch layouts with a stateLayout on the window instead — {"stateLayout": {"indexId":
+  alternatives hold texts (a stateLayout's indexId takes a float or an integer variable), switch layouts with a stateLayout on the window instead — {"stateLayout": {"indexId":
   "@layout", ...}} with layout = "step(windowWidth(), 300) + step(windowHeight(), 140)" — which picks by size, not by
   content. Each alternative is a full copy of its content (bytes add up): keep two or three, with inline components.
   So a wrap child does not always fit: order the children largest first, and make the last one fit the smallest
@@ -430,6 +468,9 @@ function withLook(args, componentTheme) {
     return json ? { ...args, json: { ...json, componentTheme }, json_path: undefined } : args;
 }
 
+/** An error in one line: "rc2image failed:" alone says nothing, the reason is on the next line. */
+const errorLine = (e) => String(e?.message ?? e).split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 2).join(" ").slice(0, 300);
+
 /** One render per set of host variables, captioned with the values; eased values settled. */
 async function renderSamples(t, args, samples) {
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
@@ -444,18 +485,18 @@ async function renderSamples(t, args, samples) {
         const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${short(v)}`).join(" ");
         // A sample may pin its own clock ("$clock": "2026-06-21T12:00"): a time-of-day scenario
         // is its data AND its hour.
-        const { $clock, ...values } = vars ?? {};
-        const a = { ...args, variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}) };
+        const { values, clock: $clock, taps } = splitSample(vars);
+        const a = { ...args, variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}), ...(taps.length ? { touch_events: tapEvents(taps), duration: tapSettle(taps) } : {}) };
         if (stem) a.output_path = `${stem}-sample${i}.png`;
         try {
             const r = await t.handler(a);
             // Errors, warnings and the infos about what the image shows (a text cut with "…").
             const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
-                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized)/.test(l)).join("\n") }))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)).join("\n") }))
                 .filter((c) => c.text);
             const file = a.output_path ? ` → ${a.output_path}` : "";
             content.push({ type: "text", text: `── sample ${i}: ${label}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
-        } catch (e) { content.push({ type: "text", text: `── sample ${i} (${label}): ${String(e?.message ?? e).split("\n")[0]}` }); }
+        } catch (e) { content.push({ type: "text", text: `── sample ${i} (${label}): ${errorLine(e)}` }); }
     }
     return withDesign(content, args, { first: true });
 }
@@ -473,7 +514,7 @@ async function renderClocks(t, args, clocks) {
             // Only the findings: the png_path / Success lines repeat what the caption says.
             // Errors, warnings and the infos about what the image shows (a text cut with "…").
             const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
-                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized)/.test(l)).join("\n") }))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)).join("\n") }))
                 .filter((c) => c.text);
             const file = a.output_path ? ` → ${a.output_path}` : "";
             content.push({ type: "text", text: `── clock ${clock}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
@@ -483,7 +524,7 @@ async function renderClocks(t, args, clocks) {
 }
 
 const SIZE_MARK = Symbol("size");
-async function renderVariants(t, args, sizes = [], onlySizes = false, samples = null, clocks = null) {
+async function renderVariants(t, args, sizes = [], onlySizes = false, samples = null, clocks = null, cap = 24) {
     const json = jsonOf(args);
     const header = json?.header ?? {};
     const W = args.width ?? header.width ?? 360, H = args.height ?? header.height ?? 640;
@@ -541,8 +582,8 @@ async function renderVariants(t, args, sizes = [], onlySizes = false, samples = 
     // Samples with sizes: each sample at each size, up to 24 renders in all; what does not fit
     // is said, not dropped quietly.
     if (Array.isArray(samples) && samples.length && onlySizes) {
-        const per = Math.max(1, Math.floor(24 / plan.length));
-        const more = samples.length > per ? [{ type: "text", text: `── ${samples.length} samples × ${plan.length} sizes: the first ${per} samples rendered at each size (24 renders at most); call again for samples ${per + 1}-${samples.length}.` }] : [];
+        const per = Math.max(1, Math.floor(cap / plan.length));
+        const more = samples.length > per ? [{ type: "text", text: `── ${samples.length} samples × ${plan.length} sizes: the first ${per} samples rendered at each size (${cap} renders at most); call again for samples ${per + 1}-${samples.length}.` }] : [];
         for (const [label, a] of plan) more.push(...(await renderSamples(t, { ...a, ...(typeof args.output_path === "string" ? { output_path: args.output_path.replace(/\.png$/i, "") + `-${label.split(" (")[0].replace(/[^a-z0-9]+/gi, "-")}.png` } : {}) }, samples.slice(0, per))).map((c) =>
             c.type === "text" && c.text.startsWith("── sample") ? { ...c, text: c.text.replace("── sample", `── ${label.split(" (")[0]} · sample`) } : c));
         return more;
@@ -579,7 +620,103 @@ async function renderVariants(t, args, sizes = [], onlySizes = false, samples = 
     // (Asked sizes only: the caller chose them, a smaller-size guess is beside the point.)
     const small = onlySizes ? "" : await smallSizeNote(args);
     if (small) content.unshift({ type: "text", text: small });
+    // Variants and samples together: the variants, then each sample at the document's size.
+    if (Array.isArray(samples) && samples.length) {
+        content.push(...(await renderSamples(t, { ...base, ...(stem ? { output_path: `${stem}-data.png` } : {}) }, samples)).filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))));
+    }
     return withDesign(content, args, { first: true });
+}
+
+const LOOK_THEME = { light: "light", dark: "dark", "mono-dark": "dark", "mono-light": "light" };
+const MATRIX_MAX = 96;
+/** Runs fn over items, a few at a time, keeping their order. */
+async function inPool(items, fn, width = 4) {
+    const out = new Array(items.length);
+    let next = 0;
+    await Promise.all(Array.from({ length: Math.min(width, items.length) }, async () => {
+        while (next < items.length) { const i = next++; out[i] = await fn(items[i], i); }
+    }));
+    return out;
+}
+/**
+ * render looks: a whole check in one call. Every look at every size with the document's own
+ * data, and every sample at every size in the FIRST look: a data case rarely breaks in one
+ * look only, and the full product would be too many pictures to read.
+ */
+async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, showAll = false) {
+    const json = jsonOf(args) ?? sidecarJson(args.rc_path);
+    const header = json?.header ?? {};
+    const given = (Array.isArray(sizes) ? sizes : []).filter((s) => Array.isArray(s) && s[0] > 0 && s[1] > 0);
+    const size = given.length ? given : [[args.width ?? header.width ?? 360, args.height ?? header.height ?? 640]];
+    const unknown = looks.filter((l) => !LOOK_THEME[l]);
+    if (unknown.length) throw new Error(`render: unknown look ${unknown.join(", ")}: use ${Object.keys(LOOK_THEME).join(", ")}`);
+    const notes = [];
+    const usable = looks.filter((l) => { if (!l.startsWith("mono") || json) return true; notes.push(`${l}: skipped, a mono look needs the JSON document (json or json_path).`); return false; });
+    const cases = [];
+    for (const [w, h] of size) {
+        for (const look of usable) cases.push({ w, h, look, vars: null });
+        for (const look of everyLook ? usable : usable.slice(0, 1)) for (const smp of samples ?? []) if (fitsSize(smp?.$size, w, h)) cases.push({ w, h, look, vars: smp ?? {} });
+    }
+    if (cases.length > MATRIX_MAX) notes.push(`${cases.length} renders asked, the first ${MATRIX_MAX} made: call again with fewer sizes or samples for the rest.`);
+    const short = (v) => typeof v === "string" && v.length > 16 ? JSON.stringify(v.slice(0, 14) + "…") : Array.isArray(v) && v.length > 4 ? `[${v.length}]` : JSON.stringify(v);
+    const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
+    const { rc_path, json: _j, json_path, output_path: _o, ...rest } = args;
+    const parts = await inPool(cases.slice(0, MATRIX_MAX), async (c, i) => {
+        const { values, clock: $clock, taps } = splitSample(c.vars);
+        const mono = c.look.startsWith("mono");
+        const a = { ...rest, width: c.w, height: c.h, theme: LOOK_THEME[c.look], variables: { ...(args.variables ?? {}), ...values },
+            ...($clock !== undefined ? { clock: $clock } : {}),
+            ...(taps.length ? { touch_events: tapEvents(taps), duration: tapSettle(taps) } : {}),
+            ...(mono ? { json: { ...json, componentTheme: c.look } } : args.json !== undefined ? { json: args.json } : json_path ? { json_path } : { rc_path }),
+            ...(stem ? { output_path: `${stem}-cell-${i + 1}.png` } : {}) };
+        const label = [`${c.w}×${c.h}`, c.look, ...Object.entries(c.vars ?? {}).filter(([k]) => k !== "$size").map(([k, v]) => `${k.replace(/^\$/, "")}=${short(v)}`)].join(" ");
+        try {
+            const r = await t.handler(a);
+            const lines = r.filter((x) => x.type === "text" && /^(error|warning|info): /m.test(x.text))
+                .flatMap((x) => x.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)));
+            const images = r.filter((x) => x.type === "image");
+            return { label, hash: images[0] ? imageHash(images[0].data) : undefined, head: `── ${label}${a.output_path ? ` → ${a.output_path}` : ""}`, images, lines };
+        } catch (e) { return { label, head: `── ${label}: ${errorLine(e)}`, images: [], lines: [], failed: true }; }
+    });
+    // A document that does not convert fails every case the same way: say it once.
+    const failed = parts.map((x) => /^── [^:]*: (json2rc failed.*|components: .*)$/s.exec(x.head)?.[1]);
+    if (failed.length && failed.every((f) => f && f === failed[0])) return [{ type: "text", text: `The document does not convert, so nothing was rendered:\n${failed[0]}` }];
+    const covered = samples?.length && usable.length > 1 && !everyLook ? [`Samples ran in the first look (${usable[0]}); the other looks show the document's own data. every_look: true runs them in all.`] : [];
+    // Only the pictures that differ from what the caller has seen; findings are always listed.
+    const src = args.json_path ?? args.rc_path;
+    const planFile = src ? resolveIn(planPathOf(src)) : null;
+    const { changed, unchanged } = changedCells(parts, planFile ? loadPlan(planFile)?.hashes : null, showAll);
+    if (planFile) {
+        const cleanSizes = given.length ? given : undefined;
+        savePlan(planFile, { looks, sizes: cleanSizes, samples, every_look: everyLook || undefined, width: args.width, height: args.height, clock: args.clock, variables: args.variables },
+            Object.fromEntries(parts.filter((x) => x.hash).map((x) => [x.label, x.hash])));
+    }
+    const warnings = parts.reduce((n, x) => n + x.lines.filter((l) => /^(error|warning): /.test(l)).length, 0);
+    const summary = `Checked ${parts.length} render(s): ${changed.size} shown, ${unchanged.length} unchanged since the last check, ${warnings} warning(s).` +
+        (unchanged.length ? " show_all: true shows every picture." : "") + (planFile ? " To repeat it: render {\"again\": true} with the same path, or convert with edits." : "");
+    // An info is said once, however many pictures it applies to; a warning stays until it is fixed.
+    const saidInfo = new Set();
+    const cells = parts.flatMap((x) => {
+        const shown = changed.has(x.label);
+        const lines = x.lines.filter((l) => !l.startsWith("info: ") || (shown && !saidInfo.has(l.slice(0, 30)) && saidInfo.add(l.slice(0, 30))));
+        if (!shown && !lines.length) return [];   // counted in the summary
+        return [{ type: "text", text: `${x.head}${shown ? "" : " · unchanged"}${x.lines.length || x.failed ? "" : " · findings: none"}` },
+            ...(shown ? x.images : []), ...(lines.length ? [{ type: "text", text: lines.join("\n") }] : [])];
+    });
+    return withDesign([{ type: "text", text: summary }, ...[...notes, ...covered].map((n) => ({ type: "text", text: n })), ...cells], args, { first: true });
+}
+
+// How many single renders each document had: after a few, say that one call could do them all.
+const singleRenders = new Map();
+function repeatHint(args) {
+    const src = args.rc_path ?? args.json_path ?? JSON.stringify(args.json ?? "");
+    const key = createHash("sha1").update(String(src)).digest("hex");
+    const n = (singleRenders.get(key) ?? 0) + 1;
+    if (singleRenders.size > 500) singleRenders.clear();
+    singleRenders.set(key, n);
+    if (n !== 4) return [];
+    return [{ type: "text", text: "Tip: this is the 4th single render of this document. One call can check everything and return one contact sheet: " +
+        "render {\"looks\": [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], \"sizes\": [[320, 160], [160, 160]], \"samples\": [{\"count\": 0}, {\"title\": \"A very long name\"}, {\"$tap\": [40, 60], \"$size\": [320, 160]}]} (with this document's own sizes, variables and tap positions); repeat it with {\"again\": true}." }];
 }
 
 /**
@@ -599,13 +736,21 @@ async function toSheet(content, args) {
     mkdirSync(dir, { recursive: true });
     try {
         const files = imgs.map((im, i) => { const f = path.join(dir, `${i}.png`); writeFileSync(f, Buffer.from(im.data, "base64")); return `${f}=${im.caption.replace(/=/g, ":")}`; });
-        const out = typeof args.output_path === "string" ? resolvePath(args.output_path.replace(/\.png$/i, "") + "-sheet.png", "output_path") : path.join(dir, "sheet.png");
-        const { err, stderr } = await runRc2image(["--sheet", out, "--cell", "360", ...files]);
-        if (err) return [...content, { type: "text", text: `(no contact sheet: ${String(stderr || err.message).split("\n")[0]})` }];
-        const sheetPng = readFileSync(out).toString("base64");
+        // One sheet per SHEET_CELLS renders: a client scales a tall image down until it cannot be read.
+        const SHEET_CELLS = 24;
+        const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
+        const pages = Math.ceil(files.length / SHEET_CELLS);
+        const images = [], names = [];
+        for (let p = 0; p < pages; p++) {
+            const name = stem ? `${/(^|\/)sheet$/i.test(stem) ? stem : `${stem}-sheet`}${p > 0 ? `-${p + 1}` : ""}.png` : null;   // (output_path "sheet.png" is the first sheet, sheet-2.png the next)
+            const out = name ? resolvePath(name, "output_path") : path.join(dir, `sheet-${p}.png`);
+            const { err, stderr } = await runRc2image(["--sheet", out, "--cell", "360", ...files.slice(p * SHEET_CELLS, (p + 1) * SHEET_CELLS)]);
+            if (err) return [...content, { type: "text", text: `(no contact sheet: ${String(stderr || err.message).split("\n")[0]})` }];
+            images.push({ type: "image", data: readFileSync(out).toString("base64"), mimeType: "image/png" });
+            if (name) names.push(name);
+        }
         const texts = content.filter((c) => c.type !== "image");
-        return [{ type: "image", data: sheetPng, mimeType: "image/png" },
-                { type: "text", text: `contact sheet: ${imgs.length} renders${typeof args.output_path === "string" ? ` → ${args.output_path.replace(/\.png$/i, "")}-sheet.png` : ""}` }, ...texts];
+        return [...images, { type: "text", text: `contact sheet: ${imgs.length} renders${pages > 1 ? ` on ${pages} sheets` : ""}${names.length ? ` → ${names.join(", ")}` : ""}` }, ...texts];
     } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
 
@@ -687,20 +832,77 @@ const tools = [
                 check: { type: "boolean", description: "Also validate the result (parse, data pass, findings)." },
                 render: { type: "boolean", description: "With check: also render it (default true)." },
                 expanded: { type: "boolean", description: "Return the expanded JSON instead of converting." },
+                edits: { type: "array", items: { type: "object", properties: { old: { type: "string" }, new: { type: "string" }, all: { type: "boolean" } }, required: ["old", "new"] },
+                    description: "With json_path: change the stored document instead of sending it all again, then convert it. Each {\"old\": text, \"new\": text}; old must occur once (or \"all\": true). The file is updated in place. All or nothing: on any failure nothing changes." },
+                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings and audit warnings for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves." },
+                sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "With looks: the [width, height] sizes to check." },
+                samples: { type: "array", items: { type: "object" }, description: "With looks: data cases and taps, as in render." },
+                every_look: { type: "boolean", description: "With looks and samples: every sample in every look." },
+                recheck: { type: "boolean", description: "true: repeat the saved check after converting. false: skip it after edits (default: edits repeat it when one is saved)." },
+                show_all: { type: "boolean", description: "With a check: include pictures unchanged since the last check (for the final contact sheet)." },
+                componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "The look to build: auto (default) light and dark by the system theme; all: light, dark AND mono in ONE file, mono switched at run time by the host, which sets the theme.mono float AND the mono colours (larger); mono-dark or mono-light: that look only (a json_path then writes <name>-<look>.rc beside it, not over <name>.rc). Same as theme." },
             },
         },
-        handler: async ({ check, expanded, render: doRender, json_path, ...args } = {}) => {
+        handler: async ({ check, expanded, render: doRender, json_path, edits, componentTheme, looks, sizes, samples, every_look, recheck, show_all, ...args } = {}) => {
             // One name for a JSON file everywhere: json2rc calls it input_path, the others json_path.
-            const file = json_path ?? args.input_path;
+            let file = json_path ?? args.input_path;
+            if (edits?.length) {
+                if (!file) throw new Error("convert: edits change a stored document: give its json_path (a convert of inline JSON keeps it beside the .rc, x.json)");
+                const p = resolveIn(file);
+                const changed = applyEdits(readFileSync(p, "utf8"), edits);
+                writeFileSync(p, changed);
+            }
             if (expanded) {
                 const json = args.json ?? (file ? JSON.parse(readFileSync(resolveIn(file), "utf8")) : undefined);
                 return tool(examples, "expand_components").handler({ ...args, json });
             }
+            // The look and the component mode go ON the document: json2rc only reads them from there.
+            const look = componentTheme ?? args.theme;
+            const { theme: _t, mode, ...plain } = args;
+            args = plain;
+            if ((look && look !== "auto") || mode) {
+                const doc = args.json !== undefined ? (typeof args.json === "string" ? JSON.parse(args.json) : args.json) : JSON.parse(readFileSync(resolveIn(file), "utf8"));
+                if (file && !args.output_path && look && look !== "auto") args.output_path = file.replace(/\.json$/i, "") + `-${look}.rc`;
+                args = { ...args, json: { ...doc, ...(look && look !== "auto" ? { componentTheme: look } : {}), ...(mode ? { componentMode: mode } : {}) }, base_dir: args.base_dir ?? (file ? path.dirname(file) : undefined) };
+                delete args.input_path;
+                file = undefined;
+            }
             const out = await tool(json2rc, "json2rc").handler({ ...args, ...(file ? { input_path: file } : {}) });
-            if (!check) return out;   // json2rc already appends the design warnings
+            // Where the document is kept, so the next change need not send it all again.
+            let kept = file;
+            try { kept ??= JSON.parse(out[0].text).rc_path?.replace(/\.rc$/i, ".json"); } catch { /* no path to give */ }
+            const hint = kept ? [{ type: "text", text: `json_path: ${kept}. To change it, send only the change: convert {"json_path": "${kept}", "edits": [{"old": "...", "new": "..."}]}; with looks, sizes and samples once, every later edit returns the check too.` }] : [];
+            // A file with every look: what the app must send to show mono.
+            if (look === "all") {
+                try {
+                    const { mono } = compileComponents(args.json, resolvePath(args.base_dir ?? "."));
+                    if (mono) hint.push({ type: "text", text: `To show mono, the app sets the float ${mono.variable} to 1 and these named colours: ${JSON.stringify(mono.palettes)}` });
+                } catch { /* the conversion stands without the note */ }
+            }
+            // Convert and check in one call: the edit-render-audit round is most of a document's calls.
+            const saved = kept ? loadPlan(resolveIn(planPathOf(kept))) : null;
+            const verify = kept && (looks?.length || recheck === true || (edits?.length && recheck !== false && saved?.looks));
+            if (recheck === true && !looks?.length && !saved?.looks) throw new Error("convert: no saved check to repeat: give looks (and sizes, samples) once");
+            if (verify) {
+                const shown = await tools.find((x) => x.name === "render").handler({ json_path: kept, show_all,
+                    ...(looks?.length ? { looks, sizes, samples, every_look } : { again: true }) });
+                const plan = loadPlan(resolveIn(planPathOf(kept)));
+                const auditSizes = plan?.sizes?.length ? plan.sizes : [[undefined, undefined]];
+                const findings = new Map();
+                for (const [width, height] of auditSizes) {
+                    try {
+                        const a = await tool(inspect, "audit").handler({ json_path: kept, ...(width ? { width, height } : {}) });
+                        for (const f of JSON.parse(a[0].text).findings ?? []) if (["error", "warning"].includes(f.severity) && !findings.has(f.code)) findings.set(f.code, f);
+                    } catch (e) { findings.set("audit_failed", { severity: "warning", code: "audit_failed", title: errorLine(e) }); }
+                }
+                const audit = findings.size ? `audit:\n${[...findings.values()].map((f) => `${f.severity}: [${f.code}] ${f.title}`).join("\n")}` : "audit: no errors or warnings.";
+                // (The design warnings are already in json2rc's result.)
+                return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }];
+            }
+            if (!check) return [...out, ...hint];   // json2rc already appends the design warnings
             const { input_path: _, output_path: __, include_base64: ___, ...vargs } = args;
             const v = await tool(render, "validate").handler({ ...vargs, ...(file ? { json_path: file } : {}), render: doRender ?? true });
-            return [...out, ...v];
+            return [...out, ...hint, ...v];
         },
     },
     (() => {
@@ -715,29 +917,49 @@ const tools = [
                 "of a JSON document (always-on displays, e-ink) without editing it: the same component calls, expanded with the components' mono " +
                 "implementation. By default the document follows the system's light or dark theme, and a single render " +
                 "is DARK unless theme: \"light\". Before publishing, " +
+                "make ONE call for the whole check: looks + sizes + samples, returned as contact sheets (looks: [\"light\", \"dark\", \"mono-dark\", \"mono-light\"], sizes: [[320, 160], [160, 160]], samples: [{\"count\": 0}]). Or " +
                 "render with variants: true (every theme and size in one call) and, for a date-driven document, with " +
                 "clocks: [\"2026-12-31T23:59:59\", ...] (several pinned dates in one call); for a host-data document, " +
                 "samples: [{\"aqi\": 12}, {\"aqi\": 480}] (several sets of host variables in one call, each settled).",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call). With output_path, files are <stem>-sample1.png, -sample2…" },
+                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call), \"$tap\": [x, y] (or a list of them) to show the state after tapping, in dp at that size, and \"$size\": [w, h] to run only at that size with looks (a tap position usually fits one size). With output_path, files are <stem>-sample1.png, -sample2…" },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "Several pinned clocks in one call (the same formats as clock; up to 12 per call), one captioned image each: check a date-driven document at its edges (\"2026-12-31T23:59:59\", \"2027-01-01T00:00:00\", a full-moon day) without a call per date. With output_path, files are <stem>-<clock>.png." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Extra [width, height] sizes to render (up to 10): with variants, added to them; alone, only these sizes (with samples or clocks: each at each size) (the target device's own screens, e.g. [[800, 480], [600, 600]] for a car display), each captioned with its size." },
-                sheet: { type: "boolean", description: "With samples, clocks, sizes or variants: ONE contact-sheet image (every render in a captioned grid) instead of one image each; the findings are kept per render. Saves reading many images." },
+                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "The whole check in one call, up to 96 renders, 4 at a time, as contact sheets of 24 (sheet: false for separate images): every look at every size (sizes, or the document's own), and every sample at every size in the FIRST look (every_look: true: in all of them). An .rc's mono looks come from the JSON kept beside it. Prefer this to a call per combination." },
+                every_look: { type: "boolean", description: "With looks and samples: run every sample in every look, not only the first." },
+                again: { type: "boolean", description: "Repeat this document's last looks check (json_path or rc_path): the looks, sizes and samples are remembered beside it. Pictures that did not change since the last check are left out, findings are always listed." },
+                show_all: { type: "boolean", description: "With looks or again: include unchanged pictures too (for the final contact sheet)." },
+                sheet: { type: "boolean", description: "With samples, clocks, sizes or variants: ONE contact-sheet image (every render in a captioned grid; more than 24 renders make several sheets) instead of one image each; the findings are kept per render. Saves reading many images. On by default with looks." },
                 variants: { type: "boolean", description: "Check every state in one call: dark, light, mono-dark and mono-light, narrow, wide, short, small (narrow and short) and tiny (half the width), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-<variant>.png named after each caption (-dark, -light, -mono-dark, -mono-light, -narrow-259x640, -widget-4x2-320x160, -seven-hours-later, ...) or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono-dark (light on black) / mono-light (dark on white): the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
-            handler: async ({ sheet, ...all } = {}) => {
-                const r = await renderMany(all);
-                return sheet ? toSheet(r, all) : r;
+            handler: async ({ sheet, looks, again, show_all, ...all } = {}) => {
+                if (again) {
+                    const src = all.json_path ?? all.rc_path;
+                    const plan = src ? loadPlan(resolveIn(planPathOf(src))) : null;
+                    if (!plan?.looks) throw new Error(`render: no saved check for ${src ?? "this document"}: give json_path or rc_path, and make the first check with looks (and sizes, samples)`);
+                    const { hashes: _h, looks: savedLooks, ...saved } = plan;
+                    looks = looks ?? savedLooks;
+                    all = { ...saved, ...all };
+                }
+                if (Array.isArray(looks) && looks.length) {
+                    const { componentTheme: _c, variants: _v, clocks: _k, samples, sizes, every_look, ...args } = all;
+                    const r = await renderMatrix(t, args, looks, sizes, samples, every_look, show_all);
+                    return sheet === false ? r : toSheet(r, all);
+                }
+                const many = all.variants || all.samples?.length || all.clocks?.length || all.sizes?.length;
+                const r = await renderMany(all, sheet);
+                const out = sheet ? await toSheet(r, all) : r;
+                return many ? out : [...out, ...repeatHint(all)];
             } };
         // The render itself (samples, clocks, sizes, variants or one image).
-        async function renderMany({ componentTheme, variants, clocks, samples, sizes, ...args } = {}) {
+        async function renderMany({ componentTheme, variants, clocks, samples, sizes, ...args } = {}, sheet = false) {
             // Samples and clocks together: each sample at each clock (a sample's own $clock wins),
             // rather than the clocks dropped without a word.
             if (Array.isArray(samples) && samples.length && Array.isArray(clocks) && clocks.length) {
                 samples = samples.flatMap((smp) => smp && "$clock" in smp ? [smp] : clocks.map((c) => ({ ...(smp ?? {}), $clock: c })));
                 clocks = undefined;
             }
-            return variants || (Array.isArray(sizes) && sizes.length) ? renderVariants(t, withLook(args, componentTheme), sizes, !variants, samples, clocks)
+            return variants || (Array.isArray(sizes) && sizes.length) ? renderVariants(t, withLook(args, componentTheme), sizes, !variants, samples, clocks, sheet ? 48 : 24)
                 // (A mono look asked for with samples or clocks applies to every image: the JSON is expanded for it once.)
                 : Array.isArray(samples) && samples.length ? renderSamples(t, withLook(args, componentTheme), samples)
                 : Array.isArray(clocks) && clocks.length ? renderClocks(t, withLook(args, componentTheme), clocks) : withDesign(await (async () => {

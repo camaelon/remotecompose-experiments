@@ -798,6 +798,107 @@ function paddingKeyFindings(doc) {
     }] : [];
 }
 
+// {"padding": 16} before the background or clip is a margin outside them: the content then sits
+// on the card's edge and a rounded clip cuts its corner (a header lost its first letter, in every
+// render, and the picture was the only sign). Modifiers apply in order.
+function modifierOrderFindings(doc) {
+    let count = 0;
+    const has = (m, k) => isObj(m) && k in m;
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        // (Content centred in its box stays clear of the edge: a margin there is a touch target.)
+        const centred = x.horizontalAlignment === "center" && x.verticalAlignment === "center";
+        if (Array.isArray(x.modifiers) && !centred && (Array.isArray(x.children) || "value" in x)) {
+            const ms = x.modifiers;
+            const edge = ms.findIndex((m) => has(m, "background") || has(m, "clip"));
+            const lastEdge = ms.reduce((acc, m, i) => (has(m, "background") || has(m, "clip") ? i : acc), -1);
+            const before = ms.findIndex((m) => has(m, "padding"));
+            const after = ms.findIndex((m, i) => i > lastEdge && has(m, "padding"));
+            if (edge >= 0 && before >= 0 && before < edge && after < 0) count++;
+        }
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return count ? [{
+        severity: "warning", code: "padding_before_background",
+        title: `${count} container(s) have their padding before their background or clip`,
+        message: "Modifiers apply in order, so that padding is a margin outside the background: the content touches the edge and a rounded clip cuts it. Put padding after them: [{\"clip\": 12}, {\"background\": \"@colors.surface\"}, {\"padding\": 16}]. (A margin as well: a second padding before.)",
+        count,
+    }] : [];
+}
+
+// Weights share the whole width and spacedBy then adds to it: the gaps run past the edge and cut
+// the last child (a condition word became "Clea").
+function spacedByWeightFindings(doc) {
+    let count = 0;
+    const weighted = (c) => isObj(c) && Object.values(c).some((n) => isObj(n) && Array.isArray(n.modifiers) && n.modifiers.some((m) => isObj(m) && ("weight" in m || "verticalWeight" in m || "horizontalWeight" in m)));
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (Array.isArray(x.modifiers) && Array.isArray(x.children)
+            && x.modifiers.some((m) => isObj(m) && Number(m.spacedBy) > 0) && x.children.some(weighted)) count++;
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return count ? [{
+        severity: "info", code: "spaced_by_with_weight",   // (a render reports the overflow when it really happens)
+        title: `${count} row(s) or column(s) mix spacedBy with a weighted child`,
+        message: "The weights share the whole size, then the gaps overflow it by their sum and the last child is cut. Separate the children with spacer boxes ({\"box\": {\"modifiers\": [{\"width\": 8}]}}) instead of spacedBy.",
+        count,
+    }] : [];
+}
+
+// A label on a container that cannot be tapped is read, and then so is every text inside: only a
+// click merges them into one item (semantics in JSON are always mode SET).
+function repeatedLabelFindings(doc) {
+    let count = 0;
+    const hasText = (x) => Array.isArray(x) ? x.some(hasText) : isObj(x) && (isObj(x.text) || Object.values(x).some(hasText));
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (Array.isArray(x.modifiers) && Array.isArray(x.children)
+            && x.modifiers.some((m) => isObj(m) && isObj(m.semantics) && m.semantics.contentDescription !== undefined)
+            && !JSON.stringify(x.modifiers).includes("onClick") && hasText(x.children)) count++;
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return count ? [{
+        severity: "info", code: "label_read_twice",
+        title: `${count} labelled container(s) that cannot be tapped hold text`,
+        message: "A screen reader reads the label and then the texts inside as well. Only a tappable container merges them. Drop the label and let the text speak, or word the label to add only what the text lacks.",
+        count,
+    }] : [];
+}
+
+// A text or container with a fixed number for its width fits one screen size only: a text cut to
+// "Oc…" in a 2x2 widget, a card floating in the middle of a larger one.
+function fixedWidthFindings(doc) {
+    let texts = 0, boxes = 0;
+    // (A narrow fixed column, such as labels lined up in a table, is fine.)
+    const fixed = (ms) => ms.some((m) => isObj(m) && typeof m.width === "number" && m.width >= 100);
+    const visit = (x, inCanvas) => {
+        if (Array.isArray(x)) { x.forEach((y) => visit(y, inCanvas)); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (!isObj(v)) { if (Array.isArray(v) || isObj(v)) visit(v, inCanvas); continue; }
+            const lk = k.toLowerCase();
+            if (!inCanvas && Array.isArray(v.modifiers) && fixed(v.modifiers)) {
+                if (lk === "text") texts++;
+                else if (["column", "row", "box", "collapsiblecolumn", "collapsiblerow"].includes(lk) && v.modifiers.some((m) => isObj(m) && typeof m.width === "number" && m.width >= 120)) boxes++;
+            }
+            visit(v, inCanvas || lk === "canvas");
+        }
+    };
+    visit(doc.root, false); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body, false);
+    return texts >= 2 || boxes >= 1 ? [{
+        severity: "warning", code: "fixed_widths",
+        title: `${texts} text(s) and ${boxes} container(s) have a fixed width`,
+        message: "They fit one size only: at another a text is cut, or the content floats in empty space. Let the size decide: \"fillMaxWidth\" on containers, {\"weight\": 1} on the text that should take the room in a row (it ellipsizes when short of it), and a fixed width only for small things such as a badge.",
+        count: texts + boxes,
+    }] : [];
+}
+
 // An `integers` resource read in a float expression (an index, a size, a TextChoice): float
 // expressions read an integer variable as 0, so the choice never moves (a weather name stayed
 // "Sunny" next to a rain icon).
@@ -956,6 +1057,10 @@ export function designAudit(json) {
         ...animOneFindings(doc),
         ...undeclaredRefFindings(doc),
         ...paddingKeyFindings(doc),
+        ...modifierOrderFindings(doc),
+        ...spacedByWeightFindings(doc),
+        ...repeatedLabelFindings(doc),
+        ...fixedWidthFindings(doc),
         ...integerInFloatFindings(doc),
         ...repeatedPaneFindings(doc),
         ...shadowedFunctionFindings(doc),

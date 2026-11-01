@@ -1,0 +1,531 @@
+{
+ "component": "ExpandableRow",
+ "version": 1,
+ "summary": "A full-width row the user taps to open and close: optional leading and trailing slots, a weighted one-line title with an optional subtitle, a chevron that follows the state, and a details slot that takes no space until open. Rows sharing a `selected` variable open one at a time.",
+ "params": {
+  "title": {
+   "type": "string",
+   "required": true,
+   "doc": "Fixed text or a \"@textVariable\" the host sets. Takes the remaining width and ellipsizes. Also the accessibility label unless `label` is given"
+  },
+  "subtitle": {
+   "type": "string",
+   "doc": "Optional second line, muted, one line"
+  },
+  "label": {
+   "type": "string",
+   "doc": "The row's accessibility label when the title alone is not enough: a text, a \"@textVariable\", or a live {\"type\": \"textMerge\", ...} of the host's values. The state (Expanded or Collapsed) is announced separately"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "Which row of a group is open: bind the same \"@variable\" on every row for one open at a time (0 = none). Omitted, the row keeps its own state"
+  },
+  "index": {
+   "type": "float",
+   "default": 1,
+   "doc": "This row's number in the group, from 1. The row is open while selected equals it"
+  },
+  "titleLines": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "Lines the title may take: 1 by default, 2 for long titles (the row grows)"
+  },
+  "compact": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true: 40 dp minimum height and 13 sp text, for a small widget where 48 dp rows do not fit. Below the 48 dp touch-target guideline, so use it only there"
+  },
+  "minHeight": {
+   "type": "float",
+   "doc": "Minimum height of the header line in dp, a number or an expression (\"@rowH\"), overriding the 48 (or compact 40). The row still grows with its content"
+  },
+  "padding": {
+   "type": "float",
+   "default": 16,
+   "static": true,
+   "doc": "Start and end padding in dp. 0 inside a Card or any parent that already pads"
+  },
+  "titleSize": {
+   "type": "float",
+   "doc": "Title size in sp, a number or an expression; by default the theme's text_md (compact: 13)"
+  },
+  "titleWeight": {
+   "type": "float",
+   "default": 400,
+   "static": true,
+   "doc": "Title font weight"
+  },
+  "subtitleSize": {
+   "type": "float",
+   "default": "@theme.text_sm",
+   "doc": "Subtitle size in sp"
+  },
+  "stack": {
+   "type": "float",
+   "doc": "Optional 0/1 expression: while 1, the title and subtitle drop to their own full-width line under the slots, for a narrow box (\"1 - step(windowWidth(), 220)\"). Omitted: always one line and nothing extra is written"
+  },
+  "inset": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Extra start padding for the details, to line them up with the title after a leading slot of known width"
+  },
+  "verticalPadding": {
+   "type": "float",
+   "doc": "Optional space above and below the row's content, inside the tap target: a number or an expression, for rows that share out a tall box"
+  },
+  "visible": {
+   "type": "float",
+   "doc": "Optional 0/1 expression: while 0 the whole row is gone and takes no space (a list slot the host left empty)"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions on every tap after the toggle (a hostNamedAction, ...)"
+  }
+ },
+ "slots": {
+  "leading": {
+   "optional": true,
+   "doc": "Before the title: a badge, an icon, an Avatar"
+  },
+  "trailing": {
+   "optional": true,
+   "doc": "After the title, before the chevron: a value, a time, a Badge"
+  },
+  "details": {
+   "optional": true,
+   "doc": "Shown only while open, under the header, full width. Reserves no space while closed, so the row grows when it opens"
+  }
+ },
+ "locals": {
+  "open": "1 - min(1, abs(@selected - @index))",
+  "p": {
+   "value": "@open",
+   "anim": 0.2
+  },
+  "side": "7 + 6 * @p",
+  "mid": "13 - 6 * @p"
+ },
+ "capabilities": [
+  "layout.stack",
+  "layout.weight",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "ExpandableRow": {
+   "title": "Airport Terminal",
+   "subtitle": "Platform 4",
+   "selected": 1,
+   "slots": {
+    "leading": [
+     {
+      "Badge": {
+       "text": "12",
+       "color": "@colors.primary"
+      }
+     }
+    ],
+    "trailing": [
+     {
+      "text": {
+       "value": "3 min",
+       "fontSize": 14,
+       "color": "@colors.onSurface"
+      }
+     }
+    ],
+    "details": [
+     {
+      "text": {
+       "value": "On time, arrives 14:32",
+       "fontSize": 13,
+       "color": "@colors.muted"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "Group rows by binding the same variable and numbering them from 1: {\"selected\": \"@open\", \"index\": 2}. Tapping the open row sets the variable to 0, so 0 must stay free. Left unbound, each row keeps its own state and several can be open",
+  "The row has no fixed height: it grows with its content and with the details, so whatever holds it must have room for it open. In a short box, hide other rows while one is open (visible, or a visibility around it) or put the rows in a verticalScroll",
+  "titleLines 2 wraps at spaces only. In the C++ render a single word wider than the column loses its end on the first line with no ellipsis, so if a host may send long single words (place names) keep one line, which ellipsizes cleanly, or use stack to give the title the full width",
+  "The row is tappable, so a screen reader treats it as one item: the player merges the texts inside it (click modifiers are MERGE mode) and announces `label` and the state. So `label` must say everything, including what the details show when open. Build it live with textMerge from the same variables the row shows",
+  "Padding and spacedBy take literals only, so verticalPadding is written as two spacer boxes; minHeight is a heightIn minimum and does accept an expression",
+  "Below 48 dp (compact, or a small minHeight) the row misses the touch-target guideline; the audit reports it as info. Keep the default wherever three rows fit",
+  "Costs about 700 B per extra row before its slots, always expanded: the body declares a named text for the state, so it cannot be a definePattern template. Use one component call per row, not a stateLayout of copies"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    {
+     "$if": "visible",
+     "then": {
+      "visibility": "@visible"
+     }
+    },
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": 0
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "Collapsed Expanded ",
+            "start": "10 * @open",
+            "len": 9,
+            "varName": "state9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@state9",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "state"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "label",
+          "then": "@label",
+          "else": "@title"
+         },
+         "stateDescription": "@state",
+         "clickable": true
+        }
+       },
+       {
+        "onClick": [
+         {
+          "type": "valueFloatExpressionChange",
+          "target": "@selected",
+          "value": "@index * (1 - @open)"
+         },
+         {
+          "$if": "onClick",
+          "then": "@onClick"
+         }
+        ]
+       }
+      ],
+      "children": [
+       {
+        "$if": "verticalPadding",
+        "then": {
+         "box": {
+          "modifiers": [
+           {
+            "height": "@verticalPadding"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "heightIn": [
+            {
+             "$if": "minHeight",
+             "then": "@minHeight",
+             "else": {
+              "$if": "compact",
+              "then": 40,
+              "else": 48
+             }
+            },
+            10000
+           ]
+          },
+          {
+           "padding": [
+            "@padding",
+            0
+           ]
+          }
+         ],
+         "children": [
+          {
+           "$slot": "leading"
+          },
+          {
+           "$if": "leading",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "width": {
+                "$if": "compact",
+                "then": "@theme.space_2",
+                "else": "@theme.space_3"
+               }
+              }
+             ]
+            }
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ],
+            "children": [
+             {
+              "$if": "stack",
+              "then": {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@stack"
+                 },
+                 {
+                  "height": 1
+                 }
+                ]
+               }
+              }
+             },
+             {
+              "text": {
+               "value": "@title",
+               "maxLines": "@titleLines",
+               "overflow": "ellipsis",
+               "fontWeight": "@titleWeight",
+               "color": "@colors.onSurface",
+               "fontSize": {
+                "$if": "titleSize",
+                "then": "@titleSize",
+                "else": {
+                 "$if": "compact",
+                 "then": 13,
+                 "else": "@theme.text_md"
+                }
+               },
+               "modifiers": [
+                {
+                 "$if": "stack",
+                 "then": {
+                  "visibility": "1 - (@stack)"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "$if": "subtitle",
+              "then": {
+               "text": {
+                "value": "@subtitle",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "fontSize": "@subtitleSize",
+                "color": "@colors.muted",
+                "modifiers": [
+                 {
+                  "$if": "stack",
+                  "then": {
+                   "visibility": "1 - (@stack)"
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "$if": "trailing",
+           "then": {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@theme.space_2"
+              }
+             ]
+            }
+           }
+          },
+          {
+           "$slot": "trailing"
+          },
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               20,
+               20
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 2
+                },
+                {
+                 "strokeCap": "round"
+                }
+               ]
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 7,
+               "y1": "@side",
+               "x2": 13,
+               "y2": "@mid"
+              }
+             },
+             {
+              "drawLine": {
+               "x1": 13,
+               "y1": "@mid",
+               "x2": 19,
+               "y2": "@side"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "stack",
+        "then": {
+         "column": {
+          "modifiers": [
+           {
+            "visibility": "@stack"
+           },
+           "fillMaxWidth",
+           {
+            "padding": {
+             "start": "@padding",
+             "end": "@padding",
+             "bottom": 4,
+             "top": 6
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "maxLines": "@titleLines",
+             "overflow": "ellipsis",
+             "fontWeight": "@titleWeight",
+             "color": "@colors.onSurface",
+             "fontSize": {
+              "$if": "titleSize",
+              "then": "@titleSize",
+              "else": {
+               "$if": "compact",
+               "then": 13,
+               "else": "@theme.text_md"
+              }
+             }
+            }
+           },
+           {
+            "$if": "subtitle",
+            "then": {
+             "text": {
+              "value": "@subtitle",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "fontSize": "@subtitleSize",
+              "color": "@colors.muted"
+             }
+            }
+           }
+          ]
+         }
+        }
+       },
+       {
+        "$if": "details",
+        "then": {
+         "column": {
+          "modifiers": [
+           {
+            "visibility": "@open"
+           },
+           "fillMaxWidth",
+           {
+            "padding": {
+             "start": "@padding + @inset",
+             "end": "@padding",
+             "bottom": "@theme.space_2",
+             "top": 2
+            }
+           }
+          ],
+          "children": [
+           {
+            "$slot": "details"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "$if": "verticalPadding",
+        "then": {
+         "box": {
+          "modifiers": [
+           {
+            "height": "@verticalPadding"
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

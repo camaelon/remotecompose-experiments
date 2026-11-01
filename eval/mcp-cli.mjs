@@ -31,7 +31,9 @@ if (cmd === "list") {
     const t = (await load(server)).tools.find((x) => x.name === tool);
     console.log(t.description + "\n" + JSON.stringify(t.inputSchema, null, 1));
 } else if (cmd === "call") {
-    const t = (await load(server)).tools.find((x) => x.name === tool);
+    const def = await load(server);
+    const t = def.tools.find((x) => x.name === tool);
+    if (!t) { console.log(`Error: ${server} has no tool "${tool}". Its tools: ${def.tools.map((x) => x.name).join(", ")}`); process.exit(1); }
     const args = raw ? JSON.parse(raw.startsWith("@") ? readFileSync(raw.slice(1), "utf8") : raw) : {};
     // A tool error is what an MCP client shows: the message, not a stack trace.
     let res;

@@ -142,8 +142,18 @@ export function loadIconCatalog() {
 /** Icon names close to `name`: same prefix, or `name` among their tags, most popular first. */
 export function similarIcons(name, n = 6) {
     const c = loadIconCatalog(), w = String(name).toLowerCase().replace(/[\s-]+/g, "_");
-    return c.icons.filter((i) => i.name.includes(w) || w.includes(i.name) || (i.tags ?? []).some((t) => t.toLowerCase() === w.replace(/_/g, " ")))
-        .sort((a, b) => (b.popularity ?? 0) - (a.popularity ?? 0)).slice(0, n).map((i) => i.name);
+    const strong = c.icons.filter((i) => i.name.includes(w) || w.includes(i.name) || (i.tags ?? []).some((t) => t.toLowerCase() === w.replace(/_/g, " ")));
+    // A guessed name (directions_transit) also matches by its words: the name's own or its tags,
+    // more words first, so the answer is a usable icon and not just the name's common prefix.
+    const words = w.split("_").filter((x) => x.length > 2);
+    const score = (i) => { const hay = new Set([...i.name.split("_"), ...(i.tags ?? []).flatMap((t) => t.toLowerCase().split(/[\s_-]+/))]); return words.filter((x) => hay.has(x)).length; };
+    const byPop = (a, b) => (b.popularity ?? 0) - (a.popularity ?? 0);
+    const seen = new Set(strong.map((i) => i.name));
+    // The distinctive word comes first: the last one of directions_transit says what it shows.
+    const last = (i) => Number(new Set([...i.name.split("_"), ...(i.tags ?? []).flatMap((t) => t.toLowerCase().split(/[\s_-]+/))]).has(words.at(-1)));
+    const related = c.icons.filter((i) => !seen.has(i.name) && score(i) > 0)
+        .sort((a, b) => last(b) - last(a) || byPop(a, b));
+    return [...strong.sort(byPop).slice(0, related.length ? 2 : n), ...related].slice(0, n).map((i) => i.name);
 }
 /**
  * {"$icon": {"name": "wifi", "style": "rounded", "filled": true}}: the icon's path, registered
@@ -1520,7 +1530,7 @@ function substituteString(s, env, state, name) {
         if (typeof v === "string" && env.text.has(k)) {
             // Text spliced into text ("Decrease @label"), as written. A runtime text cannot
             // be joined this way: the result would be literal text naming the variable.
-            if (isRuntimeRef(v)) throw new Error(`${name}: '${k}' is bound to ${v}, a runtime value, and cannot be joined into "${s}"; pass literal text`);
+            if (isRuntimeRef(v)) throw new Error(`${name}: '${k}' is bound to ${v}, a runtime value, and cannot be joined into "${s}". Join it at run time: bind the whole text to a variable with textMerge, {"variable": {"name": "label", "vtype": "string", "value": {"type": "textMerge", "id1": "Line ", "id2": "@line"}}} in the root, and pass "@label" (nest textMerge for more parts; a number goes through textFromFloat). Or pass literal text.`);
             return v;
         }
         if (typeof v === "string") return /^[@$][\w.]+$/.test(v) || /^-?\d+(\.\d+)?$/.test(v) ? v : `(${v})`;
