@@ -4,7 +4,7 @@
 
 import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { jsonToRc } from "./lib/json2rc.mjs";
+import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { designNotes } from "./lib/design-audit.mjs";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import { displayPath, outputFile, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
@@ -91,7 +91,12 @@ export const definition = {
             // The design warnings (a UI hand-drawn on a canvas, glyph icons, hard-coded dates...):
             // here, because converting is the one step every client takes.
             let notes = "";
-            try { notes = designNotes(typeof source === "string" ? JSON.parse(source) : source); } catch { /* not JSON we can read */ }
+            try {
+                const doc = typeof source === "string" ? JSON.parse(source) : source;
+                let expanded = null;
+                try { expanded = compileComponents(doc, dir).doc; } catch { /* a plain document, or reported above */ }
+                notes = designNotes(doc, expanded);
+            } catch { /* not JSON we can read */ }
             return [{ type: "text", text: JSON.stringify(result) }, ...(notes ? [{ type: "text", text: notes }] : [])];
         },
     }],

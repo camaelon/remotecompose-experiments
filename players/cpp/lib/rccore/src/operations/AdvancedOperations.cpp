@@ -797,14 +797,6 @@ float TouchExpressionOp::getStopPosition(float pos, float slope) const {
 }
 
 void TouchExpressionOp::apply(RemoteContext& context) {
-    // Update screen bounds from the current canvas bounds in the context.
-    if (context.getMode() == ContextMode::PAINT) {
-        auto& cb = context.currentCanvasBounds();
-        mScrLeft = cb.x;
-        mScrTop = cb.y;
-        mScrRight = cb.x + cb.w;
-        mScrBottom = cb.y + cb.h;
-    }
     if (context.getMode() != ContextMode::DATA) return;
 
 
@@ -868,7 +860,7 @@ void TouchExpressionOp::apply(RemoteContext& context) {
 }
 
 void TouchExpressionOp::touchDown(RemoteContext& context, float x, float y) {
-    // Hit-test: only respond if touch is within the containing canvas bounds
+    // x, y are in the owning component's coordinates (CoreDocument's touch walk).
     if (!(x >= mScrLeft && x <= mScrRight && y >= mScrTop && y <= mScrBottom)) {
         return;
     }

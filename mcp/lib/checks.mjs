@@ -29,10 +29,10 @@ export const imageHash = (base64) => createHash("sha1").update(base64).digest("h
  * variables at the end ({"open": 2}); $size limits it to one size.
  */
 export function splitSample(sample) {
-    const { $clock, $tap, $size, $wait, $expect, ...values } = sample ?? {};
+    const { $clock, $tap, $drag, $size, $wait, $expect, ...values } = sample ?? {};
     const isPoint = (t) => Array.isArray(t) && t.length === 2 && t.every((n) => typeof n === "number");
     const taps = $tap === undefined ? [] : typeof $tap === "string" || isPoint($tap) ? [$tap] : $tap;
-    return { values, clock: $clock, taps, size: $size, wait: $wait, expect: $expect };
+    return { values, clock: $clock, taps, drag: $drag, size: $size, wait: $wait, expect: $expect };
 }
 
 /** What a tap target says, from the accessibility nodes (its label and the texts merged into it). */
@@ -67,7 +67,7 @@ export function summarizeInspection({ nodes, targetsBySize, engines, repaint }) 
     const lines = [];
     if (nodes) {
         const said = nodes.map((n) => [n.content_description ?? n.text, n.state].filter(Boolean).join(", ")).filter(Boolean);
-        lines.push(`screen reader: ${said.length ? said.slice(0, 10).map((s) => `"${cut(s)}"`).join("; ") + (said.length > 10 ? `; and ${said.length - 10} more` : "") : "nothing announced"}`);
+        lines.push(`screen reader: ${said.length ? said.slice(0, 16).map((s) => `"${cut(s)}"`).join("; ") + (said.length > 16 ? `; and ${said.length - 16} more` : "") : "nothing announced"}`);
     }
     for (const { size, targets, nodes: sizeNodes } of targetsBySize ?? []) {
         const list = targets.slice(0, 8).map((t) => `"${cut(targetWords(t, sizeNodes)[0] ?? t.component, 30)}" at ${t.center.map(Math.round).join(",")}`);
@@ -84,6 +84,12 @@ export function summarizeInspection({ nodes, targetsBySize, engines, repaint }) 
 /** touch_events for taps: apart, so an animation that a tap starts settles before the next. */
 export function tapEvents(taps) {
     return taps.map(([x, y], i) => ({ t: 0.1 + i * 0.7, type: "tap", x, y }));
+}
+
+/** touch_events for a drag [x0, y0, x1, y1], after any taps: it presses, moves in steps, lifts. */
+export function dragEvents([x0, y0, x1, y1], start = 0.1) {
+    const steps = [0.25, 0.5, 0.75, 1].map((f, i) => ({ t: start + 0.05 * (i + 1), type: "move", x: x0 + (x1 - x0) * f, y: y0 + (y1 - y0) * f }));
+    return [{ t: start, type: "down", x: x0, y: y0 }, ...steps, { t: start + 0.3, type: "up", x: x1, y: y1 }];
 }
 
 /** How long to run so the tap's ripple and any animation have ended in the picture. */

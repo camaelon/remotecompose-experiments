@@ -6,7 +6,7 @@ import type { WireBuffer } from '../WireBuffer';
 import type { RemoteContext } from '../RemoteContext';
 import type { VariableSupport } from '../VariableSupport';
 import { isNaNBits, idFromBits, intBitsToFloat } from './Utils';
-import { floatToStringLegacy, floatToStringFull } from './utilities/StringUtils';
+import { floatToStringLegacy, floatToStringFull, javaFloatToString } from './utilities/StringUtils';
 
 // Flag constants (matching Java TextFromFloat)
 const PAD_AFTER_SPACE = 0;
@@ -111,9 +111,11 @@ export class TextFromFloat extends Operation implements VariableSupport {
         // listener leaves mOutValue at whatever it held when this op was last marked
         // dirty, so the rendered text silently lags or stays empty.
         this.updateVariables(context);
-        const v = this.mOutValue;
+        const v = Math.fround(this.mOutValue); // a float in the reference
         let s: string;
-        if (this.mLegacy) {
+        if ((this.mFlags & 4096) !== 0) { // FULL_FORMAT
+            s = javaFloatToString(v);
+        } else if (this.mLegacy) {
             s = floatToStringLegacy(v, this.mDigitsBefore, this.mDigitsAfter, this.mPre, this.mAfter);
         } else {
             s = floatToStringFull(

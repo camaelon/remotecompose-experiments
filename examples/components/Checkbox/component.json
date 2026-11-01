@@ -1,6 +1,6 @@
 {
  "component": "Checkbox",
- "version": 4,
+ "version": 5,
  "summary": "A checkbox with its label: tapping the row flips its variable (0 or 1), then runs any extra `onClick` actions; the box fills and shows a tick when checked. A screen reader hears the label and the state, Checked or Not checked, which follows the value.",
  "params": {
   "checked": {
@@ -21,6 +21,11 @@
   "onClick": {
    "type": "action",
    "doc": "Extra actions run on every tap after the flip of `checked` (hostNamedAction, valueFloatChange, ...), e.g. [{\"type\": \"hostNamedAction\", \"name\": \"kitchenLight\"}]. Omitted: the tap only flips `checked`"
+  },
+  "maxLines": {
+   "type": "float",
+   "static": true,
+   "doc": "At most this many lines of label, then it ellipsizes. Left out, the label wraps as far as it needs and the row grows"
   }
  },
  "capabilities": [
@@ -80,12 +85,9 @@
       "modifiers": [
        {
         "heightIn": [
-         "@theme.control_height",
+         48,
          400
         ]
-       },
-       {
-        "spacedBy": "@theme.space_3"
        },
        {
         "semantics": {
@@ -303,8 +305,21 @@
          "modifiers": [
           {
            "weight": 1
+          },
+          {
+           "padding": {
+            "start": "@theme.space_3"
+           }
           }
-         ]
+         ],
+         "maxLines": {
+          "$if": "maxLines",
+          "then": "@maxLines"
+         },
+         "overflow": {
+          "$if": "maxLines",
+          "then": "ellipsis"
+         }
         }
        }
       ]
@@ -315,10 +330,10 @@
  },
  "pitfalls": [
   "The tick is two drawLine calls, not an SVG path string: the Java JSON parser writes every path string padded to 1024 floats (about 4 KB)",
-  "The row is at least the control height (40 dp) and grows with its label, which takes the rest of the row and wraps; the whole row (box and label) is the touch target",
+  "The row is at least 48 dp (the touch minimum) and grows with its label, which takes the rest of the row and wraps, or ellipsizes at maxLines; the whole row (box and label) is the touch target",
   "Checking animates at paint time: an animated local p = {\"value\": \"@checked\", \"anim\": 0.15} fades the fill and the tick in (paint alpha p); in mono they appear at once",
   "`onClick` actions run after the flip: an app reading the exported `checked` on a hostNamedAction sees the new state",
-  "Accessibility: the row carries the label (contentDescription), the state (stateDescription) and the click. The state is cut from \"Not checkedChecked    \" by textSubtext at 11 * checked and trimmed, in the global section of a 0-size canvas placed before the row (the parsers bind the name in document order, and the row's modifiers come before its children). No role: the JSON semantics has no role key. About 140 B per call, and the named text ops keep it from compiling to a pattern"
+  "Accessibility: the row carries the label (contentDescription), the state (stateDescription) and the click, and a tappable row is one item, so the text inside is not read again. The state is cut from \"Not checkedChecked    \" by textSubtext at 11 * checked and trimmed, in the global section of a 0-size canvas placed before the row (the parsers bind the name in document order, and the row's modifiers come before its children). No role: the JSON semantics has no role key. About 140 B per call, and the named text ops keep it from compiling to a pattern"
  ],
  "locals": {
   "p": {

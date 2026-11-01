@@ -25,7 +25,7 @@ import { outputFile, displayPath, resolvePath, workspaceRoot } from "./lib/works
 import { compileComponents } from "./lib/json2rc.mjs";
 import { loadLibrary } from "./lib/components.mjs";
 import { loadCatalog, exampleDoc } from "./lib/catalog.mjs";
-import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
+import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, dragEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { enginesTool } from "./lib/engines.mjs";
 import os from "node:os";
@@ -81,7 +81,9 @@ export function applyEdits(source, edits) {
 /** A tool's content with the document's design warnings appended (see designNotes). */
 function withDesign(content, args, { first = false } = {}) {
     const json = jsonOf(args);
-    const notes = json ? designNotes(json) : "";
+    let expanded = null;
+    try { if (json) expanded = compileComponents(json, resolvePath(".")).doc; } catch { /* reported by the conversion */ }
+    const notes = json ? designNotes(json, expanded) : "";
     if (!notes) return content;
     const block = { type: "text", text: "Design warnings to fix before this is shown or published (an image may still look right: they are about other players, sizes or states).\n" + notes };
     return first ? [block, ...content] : [...content, block];
@@ -501,9 +503,9 @@ async function resolveTaps(src, width, height, variables, taps) {
     });
 }
 /** A sample's $expect, run in the inspector: lines for the caller, a warning for each mismatch. */
-async function checkExpect(src, width, height, variables, clock, points, wait, expect) {
+async function checkExpect(src, width, height, variables, clock, points, wait, expect, drag) {
     const size = { ...src, ...(width ? { width, height } : {}), ...(variables && Object.keys(variables).length ? { variables } : {}), ...(clock !== undefined ? { clock } : {}) };
-    const r = points.length ? await inspectJson("interact", { ...size, actions: [...points.flatMap((tap) => [{ tap }, { wait: 0.1 }]), { wait: wait ?? 0.5 }] }) : null;
+    const r = points.length || drag ? await inspectJson("interact", { ...size, actions: [...points.flatMap((tap) => [{ tap }, { wait: 0.1 }]), ...(drag ? [{ drag }] : []), { wait: wait ?? 0.5 }] }) : null;
     const changed = Object.fromEntries((r?.changed_variables ?? []).map((v) => [v.name, v.with_input]));
     const actual = {};
     for (const name of Object.keys(expect)) {
@@ -530,14 +532,14 @@ async function renderSamples(t, args, samples) {
         const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${short(v)}`).join(" ");
         // A sample may pin its own clock ("$clock": "2026-06-21T12:00"): a time-of-day scenario
         // is its data AND its hour.
-        const { values, clock: $clock, taps, size: $size, wait, expect } = splitSample(vars);
+        const { values, clock: $clock, taps, drag, size: $size, wait, expect } = splitSample(vars);
         const a = { ...args, ...(Array.isArray($size) ? { width: $size[0], height: $size[1] } : {}), variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}) };
         if (stem) a.output_path = `${stem}-sample${i}.png`;
         try {
             const points = await resolveTaps(docSource(args), a.width, a.height, a.variables, taps);
-            if (points.length) { a.touch_events = tapEvents(points); a.duration = tapSettle(points, wait); }
+            if (points.length || drag) { a.touch_events = [...tapEvents(points), ...(drag ? dragEvents(drag, 0.1 + points.length * 0.7) : [])]; a.duration = tapSettle(points, wait) + (drag ? 0.4 : 0); }
             const r = await t.handler(a);
-            if (expect) content.push({ type: "text", text: (await checkExpect(docSource(args), a.width, a.height, a.variables, $clock, points, wait, expect)).join("\n") });
+            if (expect) content.push({ type: "text", text: (await checkExpect(docSource(args), a.width, a.height, a.variables, $clock, points, wait, expect, drag)).join("\n") });
             // Errors, warnings and the infos about what the image shows (a text cut with "…").
             const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
                 .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)).join("\n") }))
@@ -714,7 +716,7 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
     const { rc_path, json: _j, json_path, output_path: _o, ...rest } = args;
     const parts = await inPool(cases.slice(0, MATRIX_MAX), async (c, i) => {
-        const { values, clock: $clock, taps, wait, expect } = splitSample(c.vars);
+        const { values, clock: $clock, taps, drag, wait, expect } = splitSample(c.vars);
         const mono = c.look.startsWith("mono");
         const a = { ...rest, width: c.w, height: c.h, theme: LOOK_THEME[c.look], variables: { ...(args.variables ?? {}), ...values },
             ...($clock !== undefined ? { clock: $clock } : {}),
@@ -724,12 +726,12 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
         try {
             const src = args.json !== undefined ? { json: args.json } : json_path ? { json_path } : { rc_path };
             const points = await resolveTaps(src, c.w, c.h, a.variables, taps);
-            if (points.length) { a.touch_events = tapEvents(points); a.duration = tapSettle(points, wait); }
+            if (points.length || drag) { a.touch_events = [...tapEvents(points), ...(drag ? dragEvents(drag, 0.1 + points.length * 0.7) : [])]; a.duration = tapSettle(points, wait) + (drag ? 0.4 : 0); }
             const r = await t.handler(a);
             const lines = r.filter((x) => x.type === "text" && /^(error|warning|info): /m.test(x.text))
                 .flatMap((x) => x.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized|hidden_rows)/.test(l)));
             // (Logic does not depend on the look: checked once.)
-            if (expect && c.look === usable[0]) lines.push(...await checkExpect(src, c.w, c.h, a.variables, $clock, points, wait, expect));
+            if (expect && c.look === usable[0]) lines.push(...await checkExpect(src, c.w, c.h, a.variables, $clock, points, wait, expect, drag));
             const images = r.filter((x) => x.type === "image");
             return { label, hash: images[0] ? imageHash(images[0].data) : undefined, head: `── ${label}${a.output_path ? ` → ${a.output_path}` : ""}`, images, lines };
         } catch (e) { return { label, head: `── ${label}: ${errorLine(e)}`, images: [], lines: [], failed: true }; }
@@ -1040,7 +1042,7 @@ const tools = [
                 "clocks: [\"2026-12-31T23:59:59\", ...] (several pinned dates in one call); for a host-data document, " +
                 "samples: [{\"aqi\": 12}, {\"aqi\": 480}] (several sets of host variables in one call, each settled).",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call), \"$tap\" to show the state after tapping: the words on it (\"$tap\": \"Harbour Front\", found at every size), [x, y] in dp, or a list of either; \"$wait\": seconds after the taps; \"$expect\": {\"open\": 2} to check variables at the end (reported as ok or expect_failed); and \"$size\": [w, h] to run at that size only. With output_path, files are <stem>-sample1.png, -sample2…" },
+                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call), \"$tap\" to show the state after tapping: the words on it (\"$tap\": \"Harbour Front\", found at every size), [x, y] in dp, or a list of either; \"$drag\": [x0, y0, x1, y1] to drag (a slider, a scroll); \"$wait\": seconds after the taps; \"$expect\": {\"open\": 2} to check variables at the end (reported as ok or expect_failed); and \"$size\": [w, h] to run at that size only. With output_path, files are <stem>-sample1.png, -sample2…" },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "Several pinned clocks in one call (the same formats as clock; up to 12 per call), one captioned image each: check a date-driven document at its edges (\"2026-12-31T23:59:59\", \"2027-01-01T00:00:00\", a full-moon day) without a call per date. With output_path, files are <stem>-<clock>.png." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Extra [width, height] sizes to render (up to 10): with variants, added to them; alone, only these sizes (with samples or clocks: each at each size) (the target device's own screens, e.g. [[800, 480], [600, 600]] for a car display), each captioned with its size." },
                 looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "The whole check in one call, up to 96 renders, 4 at a time, as contact sheets of 24 (sheet: false for separate images): every look at every size (sizes, or the document's own), and every sample at every size in the FIRST look (every_look: true: in all of them). An .rc's mono looks come from the JSON kept beside it. Prefer this to a call per combination." },

@@ -3,13 +3,12 @@
  "name": "row-list",
  "version": 1,
  "title": "Row list",
- "summary": "A list screen the app fills: a heading and up to six uniform rows from host strings and numbers, each with an icon, a title, a subtitle, a value and details to tap open. One small RowList call adapts it to any size: rows while tall, subtitles and heading gone when short, columns when wide, an empty state.",
+ "summary": "A list screen the app fills: a heading and up to six uniform rows from host strings and numbers, each with an icon, a title, a subtitle, a value and details to tap open. One small RowList call adapts it to any size: columns when wide, an empty state, and the rows scroll when they do not fit.",
  "prompt": "Build a list of today's orders the app fills: a customer, the items and the total on each row, tap a row for its details, and an empty state when there are none. It must fit a widget and a phone.",
  "level": 2,
  "family": "CMP",
  "components": [
   "RowList",
-  "AdaptiveSplit",
   "Icon"
  ],
  "capabilities": {
@@ -65,6 +64,7 @@
   "settings rows"
  ],
  "teaches": [
+  "Rows are named objects: {\"title\": \"@who1\", \"value\": ..., \"details\": \"@note1\"}",
   "A whole list screen in one RowList call: the adaptive decisions are the component's, so the document holds only the data",
   "Host rows: exported strings and numbers in the row fields, count: \"@n\" for how many show, the written rows are the capacity",
   "Numbers in a row are text objects: a textMerge of \"$\" and a textFromFloat goes directly in the value field",
@@ -89,7 +89,7 @@
   {
    "pointer": "/root/18",
    "shows": "input.tap",
-   "note": "a row with a sixth field, its details, opens on a tap"
+   "note": "a row with details opens on a tap"
   }
  ],
  "inputs": {
@@ -154,7 +154,7 @@
   "touch": true
  },
  "check": {
-  "describe": "360x480: Today's orders, a muted summary, four divided rows: package icon, customer, items, a total; a chevron at the end. 480x200: two columns. 320x160 and 160x160: no heading when it would cost a row, no subtitles; 160 hides the chevrons. n 0: heading and 'No orders yet'. n 6 at 240x240: 3 of 6 in the header. A tap opens the row's note under it; nothing touches.",
+  "describe": "360x480: Today's orders, a muted summary, four divided rows: package icon, customer, items, a total; a chevron at the end. 480x200: two columns. 320x160: two rows under the heading, 'N items' beside it when they do not all fit, and the list scrolls. 160x160: no lead icons and no chevrons, customer and total only. n 0: heading and 'No orders yet'. A tap opens the row's note under it; nothing touches.",
   "render": {},
   "renders": [
    {
@@ -242,64 +242,65 @@
  ],
  "derived": {
   "components": [
-   "AdaptiveSplit",
    "Icon",
    "RowList"
   ],
-  "component_instances": 8,
+  "component_instances": 7,
   "component_modes": {
-   "AdaptiveSplit": "expand",
    "RowList": "expand",
    "Icon": "expand"
   },
   "component_patterns": [],
   "converter": "json2rc",
-  "bytes": 15630,
+  "bytes": 13199,
   "header": {
    "width": 360,
    "height": 480
   },
-  "op_count": 840,
+  "op_count": 767,
   "operations": {
    "ACCESSIBILITY_SEMANTICS": 12,
-   "ANIMATED_FLOAT": 94,
+   "ANIMATED_FLOAT": 84,
    "COLOR_CONSTANT": 10,
    "COLOR_EXPRESSIONS": 10,
    "COMPONENT_VALUE": 12,
    "CanvasContent": 18,
+   "ClipRectModifierOperation": 1,
    "CoreText": 28,
    "DATA_FLOAT": 9,
    "DATA_TEXT": 25,
    "DRAW_LINE": 12,
    "DRAW_PATH": 6,
    "HEADER": 1,
-   "IntegerExpression": 32,
-   "LAYOUT_BOX": 36,
+   "IntegerExpression": 24,
+   "LAYOUT_BOX": 26,
    "LAYOUT_CANVAS": 18,
-   "LAYOUT_COLUMN": 19,
+   "LAYOUT_COLUMN": 20,
    "LAYOUT_FLOW": 2,
    "LAYOUT_ROOT": 1,
    "LAYOUT_ROW": 7,
-   "LayoutComponentContent": 104,
+   "LayoutComponentContent": 96,
    "LoopOperation": 10,
    "MATRIX_RESTORE": 6,
    "MATRIX_SAVE": 6,
    "MATRIX_SCALE": 6,
-   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_BACKGROUND": 6,
    "MODIFIER_CLICK": 6,
-   "MODIFIER_HEIGHT": 54,
-   "MODIFIER_PADDING": 52,
-   "MODIFIER_VISIBILITY": 42,
-   "MODIFIER_WIDTH": 64,
+   "MODIFIER_HEIGHT": 46,
+   "MODIFIER_PADDING": 40,
+   "MODIFIER_VISIBILITY": 33,
+   "MODIFIER_WIDTH": 55,
    "MODIFIER_WIDTH_IN": 6,
    "NAMED_VARIABLE": 31,
    "PAINT_VALUES": 12,
    "PATH_DATA": 1,
+   "ScrollModifierOperation": 1,
    "THEME": 15,
-   "TextFromFloat": 9,
-   "TextMerge": 39,
+   "TextFromFloat": 8,
+   "TextMerge": 38,
    "TextSubtext": 6,
    "TextTransform": 6,
+   "TouchExpression": 1,
    "ValueFloatExpressionChangeActionOperation": 6
   },
   "host_variables": [
@@ -460,25 +461,20 @@
    }
   ],
   "render_findings": [
-   "info: hidden_rows",
    "info: unused_space"
   ],
   "audit": {
    "error": 0,
    "warning": 0,
-   "info": 3
+   "info": 0
   },
-  "audit_findings": [
-   "info: layout_deep_nesting",
-   "info: deep_expressions",
-   "info: expression_entries"
-  ],
+  "audit_findings": [],
   "repaint": "idle",
   "interaction_targets": {
-   "total": 4,
+   "total": 5,
    "click": 4,
    "area": 0,
-   "touch": 0
+   "touch": 1
   },
   "java_identical": true,
   "renders": {
@@ -486,7 +482,6 @@
     "theme": "light",
     "render": "render-light.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
@@ -494,20 +489,18 @@
     "theme": "dark",
     "render": "render-dark.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
    "mono-dark": {
     "componentTheme": "mono-dark",
-    "bytes": 15096,
+    "bytes": 12587,
     "component_modes": {
-     "AdaptiveSplit": "expand",
      "RowList": "expand",
      "Icon": "expand"
     },
     "motion_removed": 6,
-    "op_count": 800,
+    "op_count": 721,
     "host_variables": [
      {
       "name": "background",
@@ -669,20 +662,18 @@
     "repaint": "idle",
     "render": "render-mono-dark.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
    "mono-light": {
     "componentTheme": "mono-light",
-    "bytes": 15096,
+    "bytes": 12587,
     "component_modes": {
-     "AdaptiveSplit": "expand",
      "RowList": "expand",
      "Icon": "expand"
     },
     "motion_removed": 6,
-    "op_count": 800,
+    "op_count": 721,
     "host_variables": [
      {
       "name": "background",
@@ -844,7 +835,6 @@
     "repaint": "idle",
     "render": "render-mono-light.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
@@ -858,64 +848,43 @@
      160,
      160
     ],
-    "audit_findings": [
-     "info: layout_deep_nesting",
-     "info: deep_expressions",
-     "info: expression_entries"
-    ]
+    "audit_findings": []
    },
    "widget": {
     "render": "render-widget.png",
-    "render_findings": [
-     "info: hidden_rows"
-    ],
+    "render_findings": [],
     "size": [
      320,
      160
     ],
-    "audit_findings": [
-     "info: layout_deep_nesting",
-     "info: deep_expressions",
-     "info: expression_entries"
-    ]
+    "audit_findings": []
    },
    "square": {
     "render": "render-square.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: text_ellipsized"
     ],
     "size": [
      240,
      240
     ],
-    "audit_findings": [
-     "info: layout_deep_nesting",
-     "info: deep_expressions",
-     "info: expression_entries"
-    ]
+    "audit_findings": []
    },
    "wide": {
     "render": "render-wide.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: text_ellipsized"
     ],
     "size": [
      480,
      200
     ],
-    "audit_findings": [
-     "info: layout_deep_nesting",
-     "info: deep_expressions",
-     "info: expression_entries"
-    ]
+    "audit_findings": []
    },
    "empty": {
     "theme": "light",
     "render": "render-empty.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
@@ -923,31 +892,23 @@
     "theme": "light",
     "render": "render-one.png",
     "render_findings": [
-     "info: hidden_rows",
      "info: unused_space"
     ]
    },
    "many": {
     "theme": "light",
     "render": "render-many.png",
-    "render_findings": [
-     "info: hidden_rows"
-    ]
+    "render_findings": []
    },
    "open": {
     "theme": "light",
     "render": "render-open.png",
-    "render_findings": [
-     "info: hidden_rows"
-    ]
+    "render_findings": []
    }
   },
   "json_keys": [
    "Icon",
    "RowList",
-   "adaptivesplit1_s",
-   "adaptivesplit1_sw",
-   "adaptivesplit1_v1",
    "anim",
    "apiLevel",
    "background",
@@ -964,6 +925,7 @@
    "count",
    "dark",
    "decimal",
+   "details",
    "drawLine",
    "drawPath",
    "emptyText",
@@ -981,6 +943,7 @@
    "icon_package_2_outlined",
    "id1",
    "id2",
+   "lead",
    "len",
    "light",
    "maxLines",
@@ -1007,23 +970,18 @@
    "row",
    "rowlist1_body",
    "rowlist1_cellW",
-   "rowlist1_cm",
    "rowlist1_cols",
-   "rowlist1_first",
-   "rowlist1_fit",
    "rowlist1_h0",
-   "rowlist1_headOn",
-   "rowlist1_ih",
+   "rowlist1_half",
    "rowlist1_isEmpty",
    "rowlist1_iw",
+   "rowlist1_lines",
    "rowlist1_lines0",
    "rowlist1_n",
-   "rowlist1_openH",
+   "rowlist1_over",
    "rowlist1_rowH",
    "rowlist1_rw",
-   "rowlist1_shown",
    "rowlist1_side",
-   "rowlist1_subOn",
    "rowlist1_sumOn",
    "rowlist1_sw",
    "rows",
@@ -1037,6 +995,7 @@
    "strokeCap",
    "strokeWidth",
    "style",
+   "subtitle",
    "summary",
    "sx",
    "sy",
@@ -1059,7 +1018,8 @@
    "variable",
    "variables",
    "verticalAlignment",
-   "vis_1",
+   "verticalArrangement",
+   "verticalScroll",
    "visibility",
    "vtype",
    "weight",
@@ -1102,6 +1062,6 @@
     "componentHeight"
    ]
   },
-  "built_at": "2026-11-01T19:05:30.706Z"
+  "built_at": "2026-11-01T20:57:43.030Z"
  }
 }

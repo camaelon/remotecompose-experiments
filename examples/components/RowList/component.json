@@ -1,13 +1,13 @@
 {
  "component": "RowList",
- "version": 1,
- "summary": "A titled list of uniform rows from data: each row a title, an optional subtitle, a value, a leading mark, a trailing control and optional details to tap open. It adapts by itself to any window: rows while tall, subtitles and the header gone when short, as many rows as fit at 48 dp, two or three columns when wide, an empty state when the app sends no rows.",
+ "version": 2,
+ "summary": "A titled list of uniform rows from data, each a title with an optional subtitle, value, leading mark, trailing control, bar under it and details to tap open; or a check list. It adapts to any window: tappable rows keep 48 dp and the list scrolls; read-only rows shrink to 18 dp and say \"+N more\" if some still do not fit. Columns when wide, an empty state when the app sends no rows.",
  "params": {
   "rows": {
    "type": "list",
    "required": true,
    "static": true,
-   "doc": "One array per row, by position: [title, subtitle, value, lead, trail, details, onClick, detailsNode, label]. Stop at the last field you use and put null for one you skip. title, subtitle, value and details are a text, a \"@textVariable\" or a text object (textFromFloat, textMerge); lead, trail and detailsNode are any node (Icon, Badge, Switch, Slider, canvas). This list is also the capacity: the app changes the strings and count, not the number of rows written"
+   "doc": "One object per row: {\"title\", \"subtitle\", \"value\", \"lead\", \"trail\", \"details\", \"onClick\", \"detailsNode\", \"label\", \"below\", \"state\"}, all but the title optional. title, subtitle, value, details and label are a text, a \"@textVariable\" or a text object (textFromFloat, textMerge); lead, trail, detailsNode and below are any node (Icon, Badge, Switch, ProgressBar); onClick an action; state a check row's 0/1 \"@variable\". An array in that order also works (with check, [title, state]). It is also the capacity: the app changes the strings and count, not the number of rows written"
   },
   "title": {
    "type": "string",
@@ -45,12 +45,41 @@
     "compact"
    ],
    "default": "comfortable",
-   "doc": "compact: 40 dp minimum rows and smaller text, for small widgets only (below the touch guideline)"
+   "doc": "compact: 40 dp minimum rows and smaller text, below the touch guideline, for small widgets. A check list keeps 48"
+  },
+  "readOnly": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true: nobody taps these rows. They shrink (down to 18 dp and 11 sp) so a small window shows them all, and \"+N more\" says when some still do not fit. Use it for every status or data list. Off, rows keep 48 dp and the list scrolls"
+  },
+  "check": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true: a check list, {\"title\": \"Buy milk\", \"state\": \"@t1\"}. Each row is a Checkbox labelled by its title (two lines at most) and the whole row flips it. No subtitle. Rows keep 48 dp and the list scrolls"
+  },
+  "belowHeight": {
+   "type": "float",
+   "default": 10,
+   "static": true,
+   "doc": "Height of a row's below field (6 dp ProgressBar plus a gap by default)"
+  },
+  "leadSize": {
+   "type": "float",
+   "default": 22,
+   "static": true,
+   "doc": "readOnly only: the lead's largest size; it shrinks with the row"
+  },
+  "trailSpace": {
+   "type": "float",
+   "static": true,
+   "doc": "Ignored, kept for old calls: a trail takes its own width"
   },
   "rowHeight": {
    "type": "float",
    "static": true,
-   "doc": "The tallest a row grows to share spare height: 72 by default (compact 56). The minimum stays 48 (compact 40). Give 48 for rows that never grow"
+   "doc": "The tallest a row grows to share spare height: 72 by default (compact 56)"
   },
   "maxColumns": {
    "type": "float",
@@ -62,7 +91,7 @@
    "type": "float",
    "default": 220,
    "static": true,
-   "doc": "Width in dp each column needs: columns = width / tileWidth, up to maxColumns"
+   "doc": "Width each column needs: columns = width / tileWidth, up to maxColumns"
   },
   "summaryHeight": {
    "type": "float",
@@ -72,18 +101,18 @@
   "summaryAt": {
    "type": "float",
    "default": 240,
-   "doc": "Window height from which the summary shows above the rows; below, it goes, unless the window is wide enough to put it beside them"
+   "doc": "Window height from which the summary shows above the rows"
   },
   "sideAt": {
    "type": "float",
-   "default": 600,
+   "default": 840,
    "doc": "Width from which the summary sits beside the rows instead of above"
   },
   "detailsHeight": {
    "type": "float",
    "default": 40,
    "static": true,
-   "doc": "Height of an open row's details, space included (two lines of text by default). The list reserves it when a row opens. Taller detail nodes need a larger value"
+   "doc": "Height of an open row's details (two lines of text by default)"
   },
   "open": {
    "type": "variable",
@@ -92,7 +121,7 @@
   },
   "trailWidth": {
    "type": "float",
-   "doc": "Share of the row's width for the trailing cell, 0 to 1 (0.5): needed for a Slider, which fills what it is given. Left out, the cell wraps its content (a Switch, a Badge)"
+   "doc": "Share of the row for the trailing cell, 0 to 1: needed for a Slider, which fills what it is given. Left out, it wraps its content, up to half the row"
   },
   "titleWeight": {
    "type": "float",
@@ -135,7 +164,7 @@
  "slots": {
   "summary": {
    "optional": true,
-   "doc": "A line or block about the whole list (\"4 of 6 up\", a total, a bar). Above the rows when tall, beside them when wide, gone when short"
+   "doc": "A line or block about the whole list (\"4 of 6 up\"). Above the rows when tall, beside them when very wide, gone when short"
   },
   "headerEnd": {
    "optional": true,
@@ -148,9 +177,17 @@
  },
  "locals": {
   "mh": {
-   "$if": "density == 'compact'",
-   "then": 40,
-   "else": 48
+   "$if": "readOnly",
+   "then": 18,
+   "else": {
+    "$if": "check",
+    "then": 48,
+    "else": {
+     "$if": "density == 'compact'",
+     "then": 40,
+     "else": 48
+    }
+   }
   },
   "mxh": {
    "$if": "rowHeight",
@@ -161,39 +198,28 @@
     "else": 72
    }
   },
-  "ts": {
-   "$if": "density == 'compact'",
-   "then": 13,
-   "else": "@theme.text_md"
-  },
-  "ss": {
-   "$if": "density == 'compact'",
-   "then": 11,
-   "else": "@theme.text_sm"
-  },
-  "vs": {
-   "$if": "valueSize",
-   "then": "@valueSize",
-   "else": {
-    "$if": "density == 'compact'",
-    "then": 13,
-    "else": "@theme.text_md"
-   }
-  },
   "subAt": {
    "$if": "density == 'compact'",
    "then": 44,
    "else": 52
   },
   "leadGap": {
-   "$if": "density == 'compact'",
+   "$if": "readOnly",
    "then": 8,
-   "else": 12
+   "else": {
+    "$if": "density == 'compact'",
+    "then": 8,
+    "else": 12
+   }
   },
   "hh": {
-   "$if": "density == 'compact'",
-   "then": 24,
-   "else": 32
+   "$if": "readOnly",
+   "then": "20 + 12 * step(@height, 199.5)",
+   "else": {
+    "$if": "density == 'compact'",
+    "then": 24,
+    "else": 32
+   }
   },
   "gx": {
    "$if": "surface == 'card'",
@@ -240,13 +266,38 @@
    "else": 0
   },
   "iw": "@width - 2 * @pad",
-  "sw": "floor(@iw * 0.34)",
-  "rw": "@iw - @side * (@sw + 12)",
-  "cm": "clamp(1, @maxColumns, floor((@rw + @gx) / @tileWidth))",
-  "cols": "max(1, min(@cm, @n))",
+  "sw": {
+   "$if": "summary",
+   "then": "floor(@iw * 0.34)",
+   "else": 0
+  },
+  "rw": {
+   "$if": "summary",
+   "then": "@iw - @side * (@sw + 12)",
+   "else": "@iw"
+  },
+  "cols": {
+   "$if": "maxColumns == '1'",
+   "then": 1,
+   "else": "max(1, min(clamp(1, @maxColumns, floor((@rw + @gx) / @tileWidth)), @n))"
+  },
+  "ry": "@mh + @gy",
+  "fn": {
+   "$if": "readOnly",
+   "then": {
+    "$if": "title",
+    "then": "floor((@h0 - 16 * step(@n, floor(@h0 / @ry) * @cols + 0.5)) / @ry) * @cols",
+    "else": 0
+   },
+   "else": 0
+  },
   "headOn": {
    "$if": "title",
-   "then": "max(step(@height, 199.5), step(floor((@h0 - @hh) / @mh) * @cols + 0.5, min(@n, floor(@h0 / @mh) * @cols)))",
+   "then": {
+    "$if": "readOnly",
+    "then": "max(step(@height, 199.5), step(floor((@h0 - @hh) / @ry) * @cols + 0.5, min(@n, @fn)))",
+    "else": 1
+   },
    "else": 0
   },
   "sumOn": {
@@ -260,16 +311,76 @@
    "then": "@summaryHeight",
    "else": 0
   },
-  "lines0": "@body - @sumOn * (1 - @side) * @sumH",
-  "openH": "step(@open, 0.5) * @detailsHeight",
-  "fit": "max(1, floor((@lines0 - @openH) / (@mh + @gy)))",
-  "shown": "min(@n, @fit * @cols)",
-  "rowH": "clamp(@mh + @gy, @mxh + @gy, (@lines0 - @openH) / max(1, ceil(@shown / @cols)))",
-  "ih": "@rowH - @gy",
-  "cellW": "floor(@rw / @cols)",
-  "subOn": "step(@ih, @subAt - 0.5)",
-  "first": "max(0, @open - @shown)",
-  "isEmpty": "1 - step(@n, 0.5)"
+  "lines0": {
+   "$if": "summary",
+   "then": "@body - @sumOn * (1 - @side) * @sumH",
+   "else": "@body"
+  },
+  "moreOn": {
+   "$if": "readOnly",
+   "then": "(1 - @headOn) * step(@n, max(1, floor(@lines0 / @ry)) * @cols + 0.5)",
+   "else": 0
+  },
+  "lines": "@lines0 - @moreOn * 16",
+  "shown": {
+   "$if": "readOnly",
+   "then": "min(@n, max(1, floor(@lines / @ry)) * @cols)",
+   "else": "@n"
+  },
+  "rowH": "clamp(@ry, @mxh + @gy, (@lines - step(@open, 0.5) * @detailsHeight) / max(1, ceil(@shown / @cols)))",
+  "ih": {
+   "$if": "surface == 'card'",
+   "then": "@rowH - @gy",
+   "else": "@rowH"
+  },
+  "half": "floor(@rw / @cols / 2)",
+  "cellW": "@half * 2",
+  "em": {
+   "$if": "readOnly",
+   "then": {
+    "$if": "density == 'compact'",
+    "then": "floor(clamp(11, min(13, @cellW / 13.4), @ih / 1.85)) + 5",
+    "else": "floor(clamp(11, min(@theme.text_md, @cellW / 13.4), @ih / 1.85)) + 5"
+   },
+   "else": 0
+  },
+  "ts": {
+   "$if": "readOnly",
+   "then": {
+    "$if": "density == 'compact'",
+    "then": "@em - 5",
+    "else": "@em - 5"
+   },
+   "else": {
+    "$if": "density == 'compact'",
+    "then": 13,
+    "else": "@theme.text_md"
+   }
+  },
+  "ss": {
+   "$if": "density == 'compact'",
+   "then": 11,
+   "else": "@theme.text_sm"
+  },
+  "vs": {
+   "$if": "valueSize",
+   "then": {
+    "$if": "readOnly",
+    "then": "floor(clamp(11, @valueSize, @ih / 1.85))",
+    "else": "@valueSize"
+   },
+   "else": "@ts"
+  },
+  "isEmpty": "1 - step(@n, 0.5)",
+  "over": {
+   "$if": "title",
+   "then": {
+    "$if": "readOnly",
+    "then": 0,
+    "else": "step(@n, floor(@lines / @ry) * @cols + 0.5)"
+   },
+   "else": 0
+  }
  },
  "capabilities": [
   "layout.flow",
@@ -279,36 +390,36 @@
  "call": {
   "RowList": {
    "title": "Cities",
+   "readOnly": true,
    "rows": [
-    [
-     "London",
-     "+7 h",
-     "10:30"
-    ],
-    [
-     "New York",
-     "+3 h",
-     "06:30"
-    ],
-    [
-     "Tokyo",
-     "+16 h",
-     "19:30"
-    ]
+    {
+     "title": "London",
+     "subtitle": "+7 h",
+     "value": "10:30"
+    },
+    {
+     "title": "New York",
+     "subtitle": "+3 h",
+     "value": "06:30"
+    },
+    {
+     "title": "Tokyo",
+     "subtitle": "+16 h",
+     "value": "19:30"
+    }
    ]
   }
  },
  "pitfalls": [
-  "rows is positional, because a list item's fields cannot be named in a body ($each has no @r.title): [title, subtitle, value, lead, trail, details, onClick, detailsNode, label]. Stop at the last field used; null skips one",
-  "Rows from the app: put \"@name1\" in the fields, declare the strings as exported root variables (with distinct initial values, or they share one text id) and give count: \"@n\". rows is the capacity: the app can show fewer rows, never more than were written, and each written row costs about 300 B to 1 KB in the document (expand mode, because of text)",
-  "A row is tappable only if it has details or onClick, that is 6 fields or more. Its label is built live from its title, subtitle and value (textMerge, so host text is read as it is now); a 9th field replaces it. Say a status that only an icon shows with that field. Rows without a tap are read text by text and a trailing Switch or Slider is its own target with its own label: give it one",
-  "To make a whole row flip a switch, give the row onClick and show the state with a lead or a trailing drawing without its own tap: a Switch inside a tappable row is two targets",
-  "All decisions read the window (or width and height when you pass them) and the row count, never the content: long text ellipsizes and never changes the layout. Below 180 dp of cell width the chevron goes, and the lead too when the row also has a value or a wide trailing control, so the title stays readable. If the lead is a status, say it in the title or label as well",
-  "A list cut to fit says \"3 of 8\" in the header. Where the header is dropped to fit one more row (a short window), nothing says rows are missing. Set maxRows, or keep the window at 200 dp or more, when that matters",
-  "Details have a fixed height (detailsHeight, 40 dp: two lines of text): a taller detailsNode is cut off unless you raise it. In a short window the rows slide so the open one stays on screen",
-  "A value is at most 42 % of the row and ellipsizes; the title takes the rest. A long value is a sign it belongs in the subtitle",
-  "embedded: true for a list inside a screen. Pass width and height of the box it gets: the layout cannot read its parent's size in a visibility, so the window is the default",
-  "surface card in mono is a 1 dp ring. The row is laid out by a flow with exact cell widths: a surface or padding of your own around it needs width passed"
+  "Status or data list: add readOnly: true, always, or every row keeps 48 dp and a 160 dp window scrolls through 2 or 3 of 6. With it rows go down to 18 dp, too small a target, so no onClick, details or Switch in those rows. The expander cannot read the rows' fields into a global height, so this one is yours to say",
+  "Without readOnly the list scrolls under its header when rows do not fit, and the header says \"8 items\". There is no scroll bar. With readOnly it cannot scroll: it says \"+5 more\", in the header or, when short, under the rows. That does not say which: put what matters first, or a down service in last place can be the one left out",
+  "Narrow, by the cell's width and never by content: under 180 dp (a window under about 190) a row keeps its title and one other thing: the trail if it has one, else the value, else the lead. The chevron goes too. If the lead is a status, say it in the trail, value or label as well",
+  "A trail or a value takes its own width, up to half the row, and pushes the title, which ellipsizes. A text longer than that is cut, not hidden, and the check reports it: shorten it or move it to the subtitle",
+  "Rows from the app: put \"@name1\" in the fields, declare the strings as exported root variables (with distinct initial values, or they share one text id) and give count: \"@n\". rows is the capacity: the app can show fewer, never more than were written, and each written row costs 300 B to 1 KB",
+  "A row with details, detailsNode or onClick is one tappable item. Its label is built live from title, subtitle and value; the label field replaces it, and says a status only an icon shows. Other rows are read text by text; a trailing Switch or Slider is its own target: give it a label. To flip a switch from the whole row, give the row onClick and draw the state without a tap of its own",
+  "below goes while the row is under 24 dp plus belowHeight, so it must not be the only place that says something. Details are detailsHeight tall (two lines of text): raise it for a taller detailsNode",
+  "embedded: pass the width and height of the box it gets, because a visibility cannot read its parent's size. A surface or padding of your own around the list needs width passed too",
+  "A Slider in a trail is safe without onRelease. With onRelease it misbehaves in a scrolling list, and tappable rows scroll: use readOnly rows or leave onRelease out"
  ],
  "body": {
   "column": {
@@ -338,13 +449,26 @@
    ],
    "children": [
     {
+     "$if": "readOnly",
+     "then": null,
+     "else": {
+      "variable": {
+       "name": "sy",
+       "value": 0
+      }
+     }
+    },
+    {
      "$if": "title",
      "then": {
       "row": {
        "verticalAlignment": "center",
        "modifiers": [
         {
-         "visibility": "@headOn"
+         "$if": "readOnly",
+         "then": {
+          "visibility": "@headOn"
+         }
         },
         "fillMaxWidth",
         {
@@ -366,7 +490,11 @@
           "fontSize": {
            "$if": "density == 'compact'",
            "then": 14,
-           "else": "@theme.text_lg"
+           "else": {
+            "$if": "readOnly",
+            "then": "13 + (@theme.text_lg - 13) * step(@height, 199.5)",
+            "else": "@theme.text_lg"
+           }
           },
           "fontWeight": 700,
           "color": "@colors.onSurface",
@@ -381,7 +509,13 @@
          "box": {
           "modifiers": [
            {
-            "visibility": "clamp(0, 1, @n - @shown)"
+            "$if": "readOnly",
+            "then": {
+             "visibility": "clamp(0, 1, @n - @shown)"
+            },
+            "else": {
+             "visibility": "@over"
+            }
            },
            {
             "padding": {
@@ -393,24 +527,32 @@
            {
             "text": {
              "value": {
-              "type": "textMerge",
-              "id1": {
-               "type": "textFromFloat",
-               "value": "@shown",
-               "whole": 2,
-               "decimal": 0,
-               "flags": 5
-              },
-              "id2": {
+              "$if": "readOnly",
+              "then": {
                "type": "textMerge",
-               "id1": " of ",
+               "id1": "+",
                "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@n - @shown",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " more"
+               }
+              },
+              "else": {
+               "type": "textMerge",
+               "id1": {
                 "type": "textFromFloat",
                 "value": "@n",
                 "whole": 3,
                 "decimal": 0,
                 "flags": 5
-               }
+               },
+               "id2": " items"
               }
              },
              "maxLines": 1,
@@ -455,8 +597,6 @@
         "height": "@body"
        }
       ],
-      "horizontalAlignment": "center",
-      "verticalAlignment": "center",
       "children": [
        {
         "$if": "empty",
@@ -478,11 +618,14 @@
          }
         }
        }
-      ]
+      ],
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center"
      }
     },
     {
-     "box": {
+     "flow": {
+      "horizontalArrangement": "spaceBetween",
       "modifiers": [
        {
         "visibility": "1 - @isEmpty"
@@ -491,1045 +634,980 @@
       ],
       "children": [
        {
-        "AdaptiveSplit": {
-         "side": "@side",
-         "width": "@iw",
-         "height": "@body",
-         "ratio": 0.34,
-         "firstHeight": "@sumH",
-         "dropFirst": "1 - @sumOn",
-         "slots": {
-          "first": [
+        "$if": "summary",
+        "then": {
+         "box": {
+          "modifiers": [
            {
-            "$if": "summary",
-            "then": {
-             "box": {
-              "modifiers": [
-               "fillMaxSize",
-               {
-                "padding": [
-                 "@gx / 2",
-                 0
-                ]
-               }
-              ],
-              "children": [
-               {
-                "$slot": "summary"
-               }
-              ]
-             }
-            }
+            "visibility": "@sumOn"
+           },
+           {
+            "width": "ifElse(@iw, @sw, @side)"
+           },
+           {
+            "height": "ifElse(@sumH, @lines, @side)"
+           },
+           {
+            "padding": [
+             "@gx / 2",
+             0
+            ]
            }
           ],
-          "second": [
+          "children": [
            {
-            "flow": {
-             "modifiers": [
-              "fillMaxWidth"
-             ],
-             "children": [
-              {
-               "$each": "rows",
-               "as": "r",
-               "index": "i",
-               "do": {
-                "box": {
+            "$slot": "summary"
+           }
+          ]
+         }
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": "@rw"
+          },
+          {
+           "height": "@lines"
+          },
+          {
+           "$if": "readOnly",
+           "then": null,
+           "else": {
+            "verticalScroll": "@sy"
+           }
+          }
+         ],
+         "children": [
+          {
+           "flow": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "$each": "rows",
+              "as": "r",
+              "index": "i",
+              "fields": [
+               "title",
+               "subtitle",
+               "value",
+               "lead",
+               "trail",
+               "details",
+               "onClick",
+               "detailsNode",
+               "label",
+               "below",
+               "state"
+              ],
+              "do": [
+               {
+                "$if": "r_details",
+                "then": {
+                 "canvas": {
+                  "modifiers": [
+                   {
+                    "size": 0
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "global": {
+                     "commands": [
+                      {
+                       "variable": {
+                        "name": "o@i",
+                        "value": "1 - min(1, abs(@open - @i - 1))"
+                       }
+                      },
+                      {
+                       "textSubtext": {
+                        "text": "Collapsed Expanded ",
+                        "start": "10 * @o@i",
+                        "len": 9,
+                        "varName": "sp@i"
+                       }
+                      },
+                      {
+                       "textTransform": {
+                        "text": "@sp@i",
+                        "start": 0,
+                        "len": -1,
+                        "operation": 3,
+                        "varName": "st@i"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                "else": {
+                 "$if": "r_detailsNode",
+                 "then": {
+                  "canvas": {
+                   "modifiers": [
+                    {
+                     "size": 0
+                    }
+                   ],
+                   "commands": [
+                    {
+                     "global": {
+                      "commands": [
+                       {
+                        "variable": {
+                         "name": "o@i",
+                         "value": "1 - min(1, abs(@open - @i - 1))"
+                        }
+                       },
+                       {
+                        "textSubtext": {
+                         "text": "Collapsed Expanded ",
+                         "start": "10 * @o@i",
+                         "len": 9,
+                         "varName": "sp@i"
+                        }
+                       },
+                       {
+                        "textTransform": {
+                         "text": "@sp@i",
+                         "start": 0,
+                         "len": -1,
+                         "operation": 3,
+                         "varName": "st@i"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                }
+               },
+               {
+                "column": {
                  "modifiers": [
                   {
-                   "visibility": "clamp(0, 1, @i + 1 - @first) * clamp(0, 1, @first + @shown - @i)"
+                   "$if": "count",
+                   "then": {
+                    "visibility": "clamp(0, 1, @shown - @i)"
+                   },
+                   "else": {
+                    "$if": "readOnly",
+                    "then": {
+                     "$if": "i != '0'",
+                     "then": {
+                      "visibility": "clamp(0, 1, @shown - @i)"
+                     }
+                    }
+                   }
                   },
                   {
                    "width": "@cellW"
                   },
                   {
-                   "height": "@rowH + @detailsHeight * (1 - min(1, abs(@open - @i - 1)))"
+                   "$if": "r_details",
+                   "then": {
+                    "height": "@rowH + @detailsHeight * @o@i"
+                   },
+                   "else": {
+                    "$if": "r_detailsNode",
+                    "then": {
+                     "height": "@rowH + @detailsHeight * @o@i"
+                    },
+                    "else": {
+                     "height": "@rowH"
+                    }
+                   }
                   },
                   {
                    "padding": [
                     "@gx / 2",
                     "@gy / 2"
                    ]
-                  }
-                 ],
-                 "children": [
+                  },
                   {
-                   "$each": "r",
-                   "as": "f",
-                   "index": "k",
-                   "do": {
-                    "$if": "k == '5'",
+                   "$if": "surface == 'card'",
+                   "then": {
+                    "clip": {
+                     "roundedRect": "@theme.radius_md"
+                    }
+                   }
+                  },
+                  {
+                   "$if": "surface == 'card'",
+                   "then": {
+                    "$if": "theme.mono",
                     "then": {
-                     "$if": "f",
-                     "then": {
-                      "canvas": {
-                       "modifiers": [
-                        {
-                         "size": 0
-                        }
-                       ],
-                       "commands": [
-                        {
-                         "global": {
-                          "commands": [
-                           {
-                            "textSubtext": {
-                             "text": "Collapsed Expanded ",
-                             "start": "10 * (1 - min(1, abs(@open - @i - 1)))",
-                             "len": 9,
-                             "varName": "sp@i"
-                            }
-                           },
-                           {
-                            "textTransform": {
-                             "text": "@sp@i",
-                             "start": 0,
-                             "len": -1,
-                             "operation": 3,
-                             "varName": "st@i"
-                            }
-                           }
-                          ]
-                         }
-                        }
-                       ]
-                      }
+                     "background": "@colors.outline"
+                    }
+                   }
+                  },
+                  {
+                   "$if": "surface == 'card'",
+                   "then": {
+                    "$if": "theme.mono",
+                    "then": {
+                     "padding": 1
+                    }
+                   }
+                  },
+                  {
+                   "$if": "surface == 'card'",
+                   "then": {
+                    "$if": "theme.mono",
+                    "then": {
+                     "clip": {
+                      "roundedRect": "@theme.radius_md - 1"
                      }
                     }
                    }
                   },
                   {
-                   "$each": "r",
-                   "as": "f",
-                   "index": "k",
-                   "do": {
-                    "$if": "k == '7'",
-                    "then": {
-                     "$if": "f",
-                     "then": {
-                      "canvas": {
-                       "modifiers": [
-                        {
-                         "size": 0
-                        }
-                       ],
-                       "commands": [
-                        {
-                         "global": {
-                          "commands": [
-                           {
-                            "textSubtext": {
-                             "text": "Collapsed Expanded ",
-                             "start": "10 * (1 - min(1, abs(@open - @i - 1)))",
-                             "len": 9,
-                             "varName": "sp@i"
-                            }
-                           },
-                           {
-                            "textTransform": {
-                             "text": "@sp@i",
-                             "start": 0,
-                             "len": -1,
-                             "operation": 3,
-                             "varName": "st@i"
-                            }
-                           }
-                          ]
-                         }
-                        }
-                       ]
-                      }
-                     }
-                    }
+                   "$if": "surface == 'card'",
+                   "then": {
+                    "background": "@colors.surface"
                    }
                   },
                   {
-                   "column": {
-                    "modifiers": [
-                     "fillMaxSize",
-                     {
-                      "$if": "surface == 'card'",
-                      "then": {
-                       "clip": {
-                        "roundedRect": "@theme.radius_md"
-                       }
-                      }
-                     },
-                     {
-                      "$if": "surface == 'card'",
-                      "then": {
-                       "$if": "theme.mono",
+                   "$if": "r_label",
+                   "then": {
+                    "semantics": {
+                     "clickable": true,
+                     "contentDescription": "@r_label"
+                    }
+                   },
+                   "else": {
+                    "$if": "r_details",
+                    "then": {
+                     "semantics": {
+                      "clickable": true,
+                      "contentDescription": {
+                       "$if": "r_value",
                        "then": {
-                        "background": "@colors.outline"
-                       }
-                      }
-                     },
-                     {
-                      "$if": "surface == 'card'",
-                      "then": {
-                       "$if": "theme.mono",
-                       "then": {
-                        "padding": 1
-                       }
-                      }
-                     },
-                     {
-                      "$if": "surface == 'card'",
-                      "then": {
-                       "$if": "theme.mono",
-                       "then": {
-                        "clip": {
-                         "roundedRect": "@theme.radius_md - 1"
-                        }
-                       }
-                      }
-                     },
-                     {
-                      "$if": "surface == 'card'",
-                      "then": {
-                       "background": "@colors.surface"
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "count": "m",
-                      "do": {
-                       "$if": "m == '9'",
-                       "then": {
-                        "$if": "k == '8'",
-                        "then": {
-                         "semantics": {
-                          "clickable": true,
-                          "contentDescription": "@f"
-                         }
+                        "type": "textMerge",
+                        "id1": {
+                         "$if": "r_subtitle",
+                         "then": {
+                          "type": "textMerge",
+                          "id1": "@r_title",
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": ", ",
+                           "id2": "@r_subtitle"
+                          }
+                         },
+                         "else": "@r_title"
+                        },
+                        "id2": {
+                         "type": "textMerge",
+                         "id1": ", ",
+                         "id2": "@r_value"
                         }
                        },
                        "else": {
-                        "$if": "k == '0'",
-                        "then": [
-                         {
-                          "$each": "r",
-                          "as": "t",
-                          "index": "a",
-                          "count": "q",
-                          "do": {
-                           "$if": "a == '0'",
-                           "then": {
-                            "$if": "q == '6'",
-                            "then": [
-                             {
-                              "$each": "r",
-                              "as": "s",
-                              "index": "b",
-                              "do": {
-                               "$if": "b == '1'",
-                               "then": [
-                                {
-                                 "$each": "r",
-                                 "as": "v",
-                                 "index": "c",
-                                 "do": {
-                                  "$if": "c == '2'",
-                                  "then": {
-                                   "semantics": {
-                                    "clickable": true,
-                                    "contentDescription": {
-                                     "$if": "s",
-                                     "then": {
-                                      "$if": "v",
-                                      "then": {
-                                       "type": "textMerge",
-                                       "id1": "@t",
-                                       "id2": {
-                                        "type": "textMerge",
-                                        "id1": ", ",
-                                        "id2": {
-                                         "type": "textMerge",
-                                         "id1": "@s",
-                                         "id2": {
-                                          "type": "textMerge",
-                                          "id1": ", ",
-                                          "id2": "@v"
-                                         }
-                                        }
-                                       }
-                                      },
-                                      "else": {
-                                       "type": "textMerge",
-                                       "id1": "@t",
-                                       "id2": {
-                                        "type": "textMerge",
-                                        "id1": ", ",
-                                        "id2": "@s"
-                                       }
-                                      }
-                                     },
-                                     "else": {
-                                      "$if": "v",
-                                      "then": {
-                                       "type": "textMerge",
-                                       "id1": "@t",
-                                       "id2": {
-                                        "type": "textMerge",
-                                        "id1": ", ",
-                                        "id2": "@v"
-                                       }
-                                      },
-                                      "else": "@t"
-                                     }
-                                    }
-                                   }
-                                  }
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ],
-                            "else": {
-                             "$if": "q == '7'",
-                             "then": [
-                              {
-                               "$each": "r",
-                               "as": "s",
-                               "index": "b",
-                               "do": {
-                                "$if": "b == '1'",
-                                "then": [
-                                 {
-                                  "$each": "r",
-                                  "as": "v",
-                                  "index": "c",
-                                  "do": {
-                                   "$if": "c == '2'",
-                                   "then": {
-                                    "semantics": {
-                                     "clickable": true,
-                                     "contentDescription": {
-                                      "$if": "s",
-                                      "then": {
-                                       "$if": "v",
-                                       "then": {
-                                        "type": "textMerge",
-                                        "id1": "@t",
-                                        "id2": {
-                                         "type": "textMerge",
-                                         "id1": ", ",
-                                         "id2": {
-                                          "type": "textMerge",
-                                          "id1": "@s",
-                                          "id2": {
-                                           "type": "textMerge",
-                                           "id1": ", ",
-                                           "id2": "@v"
-                                          }
-                                         }
-                                        }
-                                       },
-                                       "else": {
-                                        "type": "textMerge",
-                                        "id1": "@t",
-                                        "id2": {
-                                         "type": "textMerge",
-                                         "id1": ", ",
-                                         "id2": "@s"
-                                        }
-                                       }
-                                      },
-                                      "else": {
-                                       "$if": "v",
-                                       "then": {
-                                        "type": "textMerge",
-                                        "id1": "@t",
-                                        "id2": {
-                                         "type": "textMerge",
-                                         "id1": ", ",
-                                         "id2": "@v"
-                                        }
-                                       },
-                                       "else": "@t"
-                                      }
-                                     }
-                                    }
-                                   }
-                                  }
-                                 }
-                                ]
-                               }
-                              }
-                             ],
-                             "else": {
-                              "$if": "q == '8'",
-                              "then": [
-                               {
-                                "$each": "r",
-                                "as": "s",
-                                "index": "b",
-                                "do": {
-                                 "$if": "b == '1'",
-                                 "then": [
-                                  {
-                                   "$each": "r",
-                                   "as": "v",
-                                   "index": "c",
-                                   "do": {
-                                    "$if": "c == '2'",
-                                    "then": {
-                                     "semantics": {
-                                      "clickable": true,
-                                      "contentDescription": {
-                                       "$if": "s",
-                                       "then": {
-                                        "$if": "v",
-                                        "then": {
-                                         "type": "textMerge",
-                                         "id1": "@t",
-                                         "id2": {
-                                          "type": "textMerge",
-                                          "id1": ", ",
-                                          "id2": {
-                                           "type": "textMerge",
-                                           "id1": "@s",
-                                           "id2": {
-                                            "type": "textMerge",
-                                            "id1": ", ",
-                                            "id2": "@v"
-                                           }
-                                          }
-                                         }
-                                        },
-                                        "else": {
-                                         "type": "textMerge",
-                                         "id1": "@t",
-                                         "id2": {
-                                          "type": "textMerge",
-                                          "id1": ", ",
-                                          "id2": "@s"
-                                         }
-                                        }
-                                       },
-                                       "else": {
-                                        "$if": "v",
-                                        "then": {
-                                         "type": "textMerge",
-                                         "id1": "@t",
-                                         "id2": {
-                                          "type": "textMerge",
-                                          "id1": ", ",
-                                          "id2": "@v"
-                                         }
-                                        },
-                                        "else": "@t"
-                                       }
-                                      }
-                                     }
-                                    }
-                                   }
-                                  }
-                                 ]
-                                }
-                               }
-                              ]
-                             }
-                            }
+                        "$if": "r_subtitle",
+                        "then": {
+                         "type": "textMerge",
+                         "id1": "@r_title",
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": ", ",
+                          "id2": "@r_subtitle"
+                         }
+                        },
+                        "else": "@r_title"
+                       }
+                      }
+                     }
+                    },
+                    "else": {
+                     "$if": "r_detailsNode",
+                     "then": {
+                      "semantics": {
+                       "clickable": true,
+                       "contentDescription": {
+                        "$if": "r_value",
+                        "then": {
+                         "type": "textMerge",
+                         "id1": {
+                          "$if": "r_subtitle",
+                          "then": {
+                           "type": "textMerge",
+                           "id1": "@r_title",
+                           "id2": {
+                            "type": "textMerge",
+                            "id1": ", ",
+                            "id2": "@r_subtitle"
                            }
-                          }
+                          },
+                          "else": "@r_title"
+                         },
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": ", ",
+                          "id2": "@r_value"
                          }
-                        ]
-                       }
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '5'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "semantics": {
-                          "stateDescription": "@st@i"
-                         }
-                        }
-                       }
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '7'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "semantics": {
-                          "stateDescription": "@st@i"
-                         }
-                        }
-                       }
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '5'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "onClick": [
-                          {
-                           "type": "valueFloatExpressionChange",
-                           "target": "@open",
-                           "value": "(@i + 1) * (1 - (1 - min(1, abs(@open - @i - 1))))"
+                        },
+                        "else": {
+                         "$if": "r_subtitle",
+                         "then": {
+                          "type": "textMerge",
+                          "id1": "@r_title",
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": ", ",
+                           "id2": "@r_subtitle"
                           }
-                         ]
+                         },
+                         "else": "@r_title"
                         }
                        }
                       }
                      },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '7'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "onClick": [
-                          {
-                           "type": "valueFloatExpressionChange",
-                           "target": "@open",
-                           "value": "(@i + 1) * (1 - (1 - min(1, abs(@open - @i - 1))))"
+                     "else": {
+                      "$if": "r_onClick",
+                      "then": {
+                       "semantics": {
+                        "clickable": true,
+                        "contentDescription": {
+                         "$if": "r_value",
+                         "then": {
+                          "type": "textMerge",
+                          "id1": {
+                           "$if": "r_subtitle",
+                           "then": {
+                            "type": "textMerge",
+                            "id1": "@r_title",
+                            "id2": {
+                             "type": "textMerge",
+                             "id1": ", ",
+                             "id2": "@r_subtitle"
+                            }
+                           },
+                           "else": "@r_title"
+                          },
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": ", ",
+                           "id2": "@r_value"
                           }
-                         ]
-                        }
-                       }
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '6'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "onClick": "@f"
+                         },
+                         "else": {
+                          "$if": "r_subtitle",
+                          "then": {
+                           "type": "textMerge",
+                           "id1": "@r_title",
+                           "id2": {
+                            "type": "textMerge",
+                            "id1": ", ",
+                            "id2": "@r_subtitle"
+                           }
+                          },
+                          "else": "@r_title"
+                         }
                         }
                        }
                       }
                      }
-                    ],
-                    "children": [
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_details",
+                   "then": {
+                    "semantics": {
+                     "stateDescription": "@st@i"
+                    }
+                   },
+                   "else": {
+                    "$if": "r_detailsNode",
+                    "then": {
+                     "semantics": {
+                      "stateDescription": "@st@i"
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_details",
+                   "then": {
+                    "onClick": [
                      {
-                      "$if": "surface == 'divided'",
-                      "then": {
-                       "box": {
-                        "modifiers": [
-                         {
-                          "visibility": "clamp(0, 1, @i + 1 - @first - @cols)"
-                         },
-                         "fillMaxWidth",
-                         {
-                          "height": 1
-                         },
-                         {
-                          "background": "@colors.outline"
-                         }
-                        ]
-                       }
-                      }
-                     },
-                     {
-                      "row": {
-                       "verticalAlignment": "center",
-                       "modifiers": [
-                        "fillMaxWidth",
-                        {
-                         "height": "@ih"
-                        },
-                        {
-                         "padding": [
-                          "@rp",
-                          0
-                         ]
-                        }
-                       ],
-                       "children": [
-                        {
-                         "$each": "r",
-                         "as": "f",
-                         "index": "k",
-                         "do": {
-                          "$if": "k == '3'",
-                          "then": {
-                           "$if": "f",
-                           "then": {
-                            "box": {
-                             "modifiers": [
-                              {
-                               "$if": "trailWidth",
-                               "then": {
-                                "visibility": "clamp(0, 1, @cellW - 180)"
-                               },
-                               "else": [
-                                {
-                                 "$each": "r",
-                                 "as": "g",
-                                 "index": "j",
-                                 "do": {
-                                  "$if": "j == '2'",
-                                  "then": {
-                                   "$if": "g",
-                                   "then": {
-                                    "visibility": "clamp(0, 1, @cellW - 180)"
-                                   }
-                                  }
-                                 }
-                                }
-                               ]
-                              },
-                              {
-                               "padding": {
-                                "end": "@leadGap"
-                               }
-                              }
-                             ],
-                             "children": [
-                              "@f"
-                             ]
-                            }
-                           }
-                          }
-                         }
-                        },
-                        {
-                         "column": {
-                          "modifiers": [
-                           {
-                            "weight": 1
-                           }
-                          ],
-                          "children": [
-                           {
-                            "$each": "r",
-                            "as": "f",
-                            "index": "k",
-                            "do": {
-                             "$if": "k == '0'",
-                             "then": {
-                              "$if": "f",
-                              "then": {
-                               "text": {
-                                "value": "@f",
-                                "maxLines": 1,
-                                "overflow": "ellipsis",
-                                "fontSize": "@ts",
-                                "fontWeight": "@titleWeight",
-                                "color": "@colors.onSurface"
-                               }
-                              }
-                             }
-                            }
-                           },
-                           {
-                            "$each": "r",
-                            "as": "f",
-                            "index": "k",
-                            "do": {
-                             "$if": "k == '1'",
-                             "then": {
-                              "$if": "f",
-                              "then": {
-                               "text": {
-                                "value": "@f",
-                                "maxLines": 1,
-                                "overflow": "ellipsis",
-                                "fontSize": "@ss",
-                                "color": "@colors.muted",
-                                "modifiers": [
-                                 {
-                                  "visibility": "@subOn"
-                                 },
-                                 {
-                                  "padding": {
-                                   "top": 2
-                                  }
-                                 }
-                                ]
-                               }
-                              }
-                             }
-                            }
-                           }
-                          ]
-                         }
-                        },
-                        {
-                         "$each": "r",
-                         "as": "f",
-                         "index": "k",
-                         "do": {
-                          "$if": "k == '2'",
-                          "then": {
-                           "$if": "f",
-                           "then": {
-                            "box": {
-                             "modifiers": [
-                              {
-                               "widthIn": [
-                                0,
-                                "@cellW * 0.42"
-                               ]
-                              },
-                              {
-                               "padding": {
-                                "start": 8
-                               }
-                              }
-                             ],
-                             "children": [
-                              {
-                               "text": {
-                                "value": "@f",
-                                "maxLines": 1,
-                                "overflow": "ellipsis",
-                                "fontSize": "@vs",
-                                "fontWeight": "@valueWeight",
-                                "color": "@valueColor"
-                               }
-                              }
-                             ]
-                            }
-                           }
-                          }
-                         }
-                        },
-                        {
-                         "$each": "r",
-                         "as": "f",
-                         "index": "k",
-                         "do": {
-                          "$if": "k == '4'",
-                          "then": {
-                           "$if": "f",
-                           "then": {
-                            "$if": "trailWidth",
-                            "then": {
-                             "box": {
-                              "modifiers": [
-                               {
-                                "width": "@cellW * @trailWidth"
-                               },
-                               {
-                                "padding": {
-                                 "start": 8
-                                }
-                               }
-                              ],
-                              "children": [
-                               "@f"
-                              ]
-                             }
-                            },
-                            "else": {
-                             "box": {
-                              "modifiers": [
-                               {
-                                "padding": {
-                                 "start": 8
-                                }
-                               }
-                              ],
-                              "children": [
-                               "@f"
-                              ]
-                             }
-                            }
-                           }
-                          }
-                         }
-                        },
-                        {
-                         "$each": "r",
-                         "as": "f",
-                         "index": "k",
-                         "do": {
-                          "$if": "k == '5'",
-                          "then": {
-                           "$if": "f",
-                           "then": {
-                            "box": {
-                             "modifiers": [
-                              {
-                               "visibility": "clamp(0, 1, @cellW - 180)"
-                              },
-                              {
-                               "padding": {
-                                "start": 4
-                               }
-                              }
-                             ],
-                             "children": [
-                              {
-                               "canvas": {
-                                "modifiers": [
-                                 {
-                                  "size": [
-                                   20,
-                                   20
-                                  ]
-                                 },
-                                 {
-                                  "padding": {
-                                   "start": 0
-                                  }
-                                 }
-                                ],
-                                "commands": [
-                                 {
-                                  "variable": {
-                                   "name": "chev@i",
-                                   "value": {
-                                    "value": "(1 - min(1, abs(@open - @i - 1)))",
-                                    "anim": 0.2
-                                   }
-                                  }
-                                 },
-                                 {
-                                  "paint": {
-                                   "ops": [
-                                    {
-                                     "color": "@colors.muted"
-                                    },
-                                    {
-                                     "style": "stroke"
-                                    },
-                                    {
-                                     "strokeWidth": 2
-                                    },
-                                    {
-                                     "strokeCap": "round"
-                                    }
-                                   ]
-                                  }
-                                 },
-                                 {
-                                  "drawLine": {
-                                   "x1": 5,
-                                   "y1": "7 + 6 * @chev@i",
-                                   "x2": 10,
-                                   "y2": "13 - 6 * @chev@i"
-                                  }
-                                 },
-                                 {
-                                  "drawLine": {
-                                   "x1": 10,
-                                   "y1": "13 - 6 * @chev@i",
-                                   "x2": 15,
-                                   "y2": "7 + 6 * @chev@i"
-                                  }
-                                 }
-                                ]
-                               }
-                              }
-                             ]
-                            }
-                           }
-                          }
-                         }
-                        },
-                        {
-                         "$each": "r",
-                         "as": "f",
-                         "index": "k",
-                         "do": {
-                          "$if": "k == '7'",
-                          "then": {
-                           "$if": "f",
-                           "then": {
-                            "box": {
-                             "modifiers": [
-                              {
-                               "visibility": "clamp(0, 1, @cellW - 180)"
-                              },
-                              {
-                               "padding": {
-                                "start": 4
-                               }
-                              }
-                             ],
-                             "children": [
-                              {
-                               "canvas": {
-                                "modifiers": [
-                                 {
-                                  "size": [
-                                   20,
-                                   20
-                                  ]
-                                 },
-                                 {
-                                  "padding": {
-                                   "start": 0
-                                  }
-                                 }
-                                ],
-                                "commands": [
-                                 {
-                                  "variable": {
-                                   "name": "chev@i",
-                                   "value": {
-                                    "value": "(1 - min(1, abs(@open - @i - 1)))",
-                                    "anim": 0.2
-                                   }
-                                  }
-                                 },
-                                 {
-                                  "paint": {
-                                   "ops": [
-                                    {
-                                     "color": "@colors.muted"
-                                    },
-                                    {
-                                     "style": "stroke"
-                                    },
-                                    {
-                                     "strokeWidth": 2
-                                    },
-                                    {
-                                     "strokeCap": "round"
-                                    }
-                                   ]
-                                  }
-                                 },
-                                 {
-                                  "drawLine": {
-                                   "x1": 5,
-                                   "y1": "7 + 6 * @chev@i",
-                                   "x2": 10,
-                                   "y2": "13 - 6 * @chev@i"
-                                  }
-                                 },
-                                 {
-                                  "drawLine": {
-                                   "x1": 10,
-                                   "y1": "13 - 6 * @chev@i",
-                                   "x2": 15,
-                                   "y2": "7 + 6 * @chev@i"
-                                  }
-                                 }
-                                ]
-                               }
-                              }
-                             ]
-                            }
-                           }
-                          }
-                         }
-                        }
-                       ]
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '5'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "column": {
-                          "modifiers": [
-                           {
-                            "visibility": "(1 - min(1, abs(@open - @i - 1)))"
-                           },
-                           "fillMaxWidth",
-                           {
-                            "height": "@detailsHeight"
-                           },
-                           {
-                            "padding": {
-                             "start": "@rp",
-                             "end": "@rp",
-                             "bottom": 6
-                            }
-                           }
-                          ],
-                          "children": [
-                           {
-                            "text": {
-                             "value": "@f",
-                             "fontSize": "@ss",
-                             "maxLines": 2,
-                             "overflow": "ellipsis",
-                             "color": "@colors.muted"
-                            }
-                           }
-                          ]
-                         }
-                        }
-                       }
-                      }
-                     },
-                     {
-                      "$each": "r",
-                      "as": "f",
-                      "index": "k",
-                      "do": {
-                       "$if": "k == '7'",
-                       "then": {
-                        "$if": "f",
-                        "then": {
-                         "column": {
-                          "modifiers": [
-                           {
-                            "visibility": "(1 - min(1, abs(@open - @i - 1)))"
-                           },
-                           "fillMaxWidth",
-                           {
-                            "height": "@detailsHeight"
-                           },
-                           {
-                            "padding": {
-                             "start": "@rp",
-                             "end": "@rp",
-                             "bottom": 6
-                            }
-                           }
-                          ],
-                          "children": [
-                           "@f"
-                          ]
-                         }
-                        }
-                       }
-                      }
+                      "type": "valueFloatExpressionChange",
+                      "target": "@open",
+                      "value": "(@i + 1) * (1 - @o@i)"
                      }
                     ]
+                   },
+                   "else": {
+                    "$if": "r_detailsNode",
+                    "then": {
+                     "onClick": [
+                      {
+                       "type": "valueFloatExpressionChange",
+                       "target": "@open",
+                       "value": "(@i + 1) * (1 - @o@i)"
+                      }
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_onClick",
+                   "then": {
+                    "onClick": "@r_onClick"
+                   }
+                  }
+                 ],
+                 "verticalArrangement": "center",
+                 "children": [
+                  {
+                   "$if": "surface == 'divided'",
+                   "then": {
+                    "$if": "r_below",
+                    "then": null,
+                    "else": {
+                     "$if": "i == '0'",
+                     "then": null,
+                     "else": {
+                      "box": {
+                       "modifiers": [
+                        {
+                         "$if": "readOnly",
+                         "then": {
+                          "visibility": "clamp(0, 1, @i + 1 - @cols) * clamp(0, 1, @ih - 24)"
+                         },
+                         "else": {
+                          "visibility": "clamp(0, 1, @i + 1 - @cols)"
+                         }
+                        },
+                        "fillMaxWidth",
+                        {
+                         "height": 1
+                        },
+                        {
+                         "background": "@colors.outline"
+                        }
+                       ],
+                       "children": []
+                      }
+                     }
+                    }
+                   }
+                  },
+                  {
+                   "$if": "check",
+                   "then": {
+                    "$if": "r_state",
+                    "then": {
+                     "Checkbox": {
+                      "label": "@r_title",
+                      "checked": "@r_state",
+                      "maxLines": 2
+                     }
+                    },
+                    "else": {
+                     "Checkbox": {
+                      "label": "@r_title",
+                      "checked": "@r_subtitle",
+                      "maxLines": 2
+                     }
+                    }
+                   },
+                   "else": {
+                    "row": {
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      "fillMaxWidth",
+                      {
+                       "$if": "r_below",
+                       "then": null,
+                       "else": {
+                        "height": "@ih"
+                       }
+                      },
+                      {
+                       "$if": "surface == 'card'",
+                       "then": {
+                        "padding": [
+                         12,
+                         0
+                        ]
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "$if": "r_lead",
+                       "then": {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "$if": "r_value",
+                           "then": {
+                            "visibility": "clamp(0, 1, @cellW - 179)"
+                           },
+                           "else": {
+                            "$if": "r_trail",
+                            "then": {
+                             "visibility": "clamp(0, 1, @cellW - 179)"
+                            }
+                           }
+                          },
+                          {
+                           "padding": {
+                            "end": "@leadGap"
+                           }
+                          },
+                          {
+                           "$if": "readOnly",
+                           "then": {
+                            "$if": "leadSize == '22'",
+                            "then": {
+                             "size": "@em"
+                            },
+                            "else": {
+                             "size": "min(@leadSize, @em)"
+                            }
+                           }
+                          }
+                         ],
+                         "children": [
+                          "@r_lead"
+                         ],
+                         "horizontalAlignment": "center",
+                         "verticalAlignment": "center"
+                        }
+                       }
+                      },
+                      {
+                       "column": {
+                        "modifiers": [
+                         {
+                          "weight": 1
+                         }
+                        ],
+                        "children": [
+                         {
+                          "text": {
+                           "value": "@r_title",
+                           "maxLines": 1,
+                           "overflow": "ellipsis",
+                           "fontSize": "@ts",
+                           "fontWeight": "@titleWeight",
+                           "color": "@colors.onSurface"
+                          }
+                         },
+                         {
+                          "$if": "r_subtitle",
+                          "then": {
+                           "text": {
+                            "value": "@r_subtitle",
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "fontSize": "@ss",
+                            "color": "@colors.muted",
+                            "modifiers": [
+                             {
+                              "$if": "readOnly",
+                              "then": {
+                               "visibility": "clamp(0, 1, @ih - @subAt + 1)"
+                              }
+                             },
+                             {
+                              "padding": {
+                               "top": 2
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "$if": "r_value",
+                       "then": {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "$if": "r_trail",
+                           "then": {
+                            "visibility": "clamp(0, 1, @cellW - 179)"
+                           }
+                          },
+                          {
+                           "widthIn": [
+                            0,
+                            "@half"
+                           ]
+                          },
+                          {
+                           "padding": {
+                            "start": 8
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "text": {
+                            "value": "@r_value",
+                            "maxLines": 1,
+                            "overflow": "ellipsis",
+                            "fontSize": "@vs",
+                            "fontWeight": "@valueWeight",
+                            "color": "@valueColor"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      },
+                      {
+                       "$if": "r_trail",
+                       "then": {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "$if": "trailSpace",
+                           "then": null
+                          },
+                          {
+                           "$if": "trailWidth",
+                           "then": {
+                            "width": "@cellW * @trailWidth"
+                           },
+                           "else": {
+                            "widthIn": [
+                             0,
+                             "@half"
+                            ]
+                           }
+                          },
+                          {
+                           "padding": {
+                            "start": 8
+                           }
+                          }
+                         ],
+                         "children": [
+                          "@r_trail"
+                         ]
+                        }
+                       }
+                      },
+                      {
+                       "$if": "r_details",
+                       "then": {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "clamp(0, 1, @cellW - 179)"
+                          },
+                          {
+                           "padding": {
+                            "start": 4
+                           }
+                          }
+                         ],
+                         "children": [
+                          {
+                           "canvas": {
+                            "modifiers": [
+                             {
+                              "size": [
+                               20,
+                               20
+                              ]
+                             }
+                            ],
+                            "commands": [
+                             {
+                              "variable": {
+                               "name": "chev@i",
+                               "value": {
+                                "value": "@o@i",
+                                "anim": 0.2
+                               }
+                              }
+                             },
+                             {
+                              "paint": {
+                               "ops": [
+                                {
+                                 "color": "@colors.muted"
+                                },
+                                {
+                                 "style": "stroke"
+                                },
+                                {
+                                 "strokeWidth": 2
+                                },
+                                {
+                                 "strokeCap": "round"
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "drawLine": {
+                               "x1": 5,
+                               "y1": "7 + 6 * @chev@i",
+                               "x2": 10,
+                               "y2": "13 - 6 * @chev@i"
+                              }
+                             },
+                             {
+                              "drawLine": {
+                               "x1": 10,
+                               "y1": "13 - 6 * @chev@i",
+                               "x2": 15,
+                               "y2": "7 + 6 * @chev@i"
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       "else": {
+                        "$if": "r_detailsNode",
+                        "then": {
+                         "box": {
+                          "modifiers": [
+                           {
+                            "visibility": "clamp(0, 1, @cellW - 179)"
+                           },
+                           {
+                            "padding": {
+                             "start": 4
+                            }
+                           }
+                          ],
+                          "children": [
+                           {
+                            "canvas": {
+                             "modifiers": [
+                              {
+                               "size": [
+                                20,
+                                20
+                               ]
+                              }
+                             ],
+                             "commands": [
+                              {
+                               "variable": {
+                                "name": "chev@i",
+                                "value": {
+                                 "value": "@o@i",
+                                 "anim": 0.2
+                                }
+                               }
+                              },
+                              {
+                               "paint": {
+                                "ops": [
+                                 {
+                                  "color": "@colors.muted"
+                                 },
+                                 {
+                                  "style": "stroke"
+                                 },
+                                 {
+                                  "strokeWidth": 2
+                                 },
+                                 {
+                                  "strokeCap": "round"
+                                 }
+                                ]
+                               }
+                              },
+                              {
+                               "drawLine": {
+                                "x1": 5,
+                                "y1": "7 + 6 * @chev@i",
+                                "x2": 10,
+                                "y2": "13 - 6 * @chev@i"
+                               }
+                              },
+                              {
+                               "drawLine": {
+                                "x1": 10,
+                                "y1": "13 - 6 * @chev@i",
+                                "x2": 15,
+                                "y2": "7 + 6 * @chev@i"
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_below",
+                   "then": {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "visibility": "clamp(0, 1, @ih - 23 - @belowHeight)"
+                      },
+                      "fillMaxWidth",
+                      {
+                       "height": "@belowHeight"
+                      },
+                      {
+                       "$if": "surface == 'card'",
+                       "then": {
+                        "padding": [
+                         12,
+                         0
+                        ]
+                       }
+                      }
+                     ],
+                     "children": [
+                      "@r_below"
+                     ],
+                     "verticalAlignment": "bottom"
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_details",
+                   "then": {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@o@i"
+                      },
+                      "fillMaxWidth",
+                      {
+                       "height": "@detailsHeight"
+                      },
+                      {
+                       "padding": {
+                        "start": "@rp",
+                        "end": "@rp",
+                        "bottom": 6
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "@r_details",
+                        "fontSize": "@ss",
+                        "maxLines": 2,
+                        "overflow": "ellipsis",
+                        "color": "@colors.muted"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  },
+                  {
+                   "$if": "r_detailsNode",
+                   "then": {
+                    "column": {
+                     "modifiers": [
+                      {
+                       "visibility": "@o@i"
+                      },
+                      "fillMaxWidth",
+                      {
+                       "height": "@detailsHeight"
+                      },
+                      {
+                       "padding": {
+                        "start": "@rp",
+                        "end": "@rp",
+                        "bottom": 6
+                       }
+                      }
+                     ],
+                     "children": [
+                      "@r_detailsNode"
+                     ]
+                    }
                    }
                   }
                  ]
                 }
                }
-              }
-             ]
-            }
+              ]
+             }
+            ]
            }
-          ]
-         }
+          }
+         ]
         }
        }
       ]
+     }
+    },
+    {
+     "$if": "readOnly",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "visibility": "@moreOn"
+        },
+        "fillMaxWidth",
+        {
+         "height": 16
+        },
+        {
+         "padding": [
+          "@gx / 2",
+          0
+         ]
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": "+",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@n - @shown",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " more"
+           }
+          },
+          "maxLines": 1,
+          "fontSize": 11,
+          "color": "@colors.muted"
+         }
+        }
+       ],
+       "verticalAlignment": "center"
+      }
      }
     }
    ]

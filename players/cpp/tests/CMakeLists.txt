@@ -28,3 +28,15 @@ add_executable(visibility_test visibility_test.cpp)
 target_link_libraries(visibility_test PRIVATE rcskia rccore skia_lib)
 add_test(NAME visibility
          COMMAND visibility_test "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# A drag moves the touched slider only (with and without a scrolling parent).
+add_executable(slider_touch_test slider_touch_test.cpp)
+target_link_libraries(slider_touch_test PRIVATE rcskia rccore skia_lib)
+add_test(NAME slider_touch
+         COMMAND slider_touch_test "${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+
+# TextFromFloat formats as the Java reference (fixture written on the JVM).
+add_executable(text_from_float_test text_from_float_test.cpp)
+target_link_libraries(text_from_float_test PRIVATE rccore)
+add_test(NAME text_from_float
+         COMMAND text_from_float_test "${CMAKE_CURRENT_SOURCE_DIR}/fixtures/text_from_float_java.tsv")

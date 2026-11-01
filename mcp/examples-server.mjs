@@ -84,6 +84,7 @@ export const definition = {
                     goal: { type: "string", description: "What to build, in plain words." },
                     capabilities: { ...STR_LIST, description: "Capability ids (or prefixes such as \"input\") to cover as well." },
                     max_examples: { type: "number", description: "At most this many examples (default 4)." },
+                    structure: { type: "string", description: "The screen structure you judge the request needs (ids in the structures list of a kit): picks the starting example and any template. Without it the kit guesses from the words." },
                     include_generated: { type: "boolean", description: "Also list documents an assistant built from a similar prompt with these tools (the generated corpus, GEN-NN): whole, not minimal, not Java-verified. Off by default." },
                 },
             },

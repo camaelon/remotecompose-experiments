@@ -953,3 +953,26 @@ RowList with and without (one run each, brief notes):
 | 25 server | kit offers RowList | 14.7K | 11 | kept it, with two inline components |
 | 25 server | hidden (clean rerun; a first control leaked RowList, 15.2K) | 17.2K | 7 | hand-written; shows all 6 rows at small sizes, where RowList shows 3 and can hide a down service |
 
+RowList after its fixes (readOnly, cut lists counted, below, check):
+
+| prompt | calls | dead ends | .rc | what happened |
+| :-- | --: | --: | --: | :-- |
+| 25 server | 8 | 1 | 16.4 KB | kept it, with readOnly; all 6 rows at small sizes, latency dropped at 160 |
+| 13 battery | 7 | 3 | 13.1 KB | kept it; trailSpace and the drop order misled it |
+| 31 to-do | 8 | 3 | 5.6 KB | dropped it: no scrolling, 2 of 8 rows reachable at 320x160; a scrolling column of Checkbox won |
+
+Fresh data-row and control-row prompts, kit offering RowList or not (one run each; "hidden" only removes it from the kit, find can still reach it):
+
+| prompt | kit | output tokens | kept RowList | notes |
+| :-- | :-- | --: | :-- | :-- |
+| 14 stocks | offered | 27.5K | no | structure guessed hero-chart; no slot for price, change and sparkline; found wrong number formatting |
+| 14 stocks | hidden | 18.3K | yes, found through find | |
+| 38 budget | offered | 14.6K | yes | structure guessed meter-breakdown; bars gone at widget sizes |
+| 38 budget | hidden | 16.9K | no | |
+| 28 mixer | offered | 24.6K | no, dropped | sliders in a scrolling list cross-talk in TypeScript |
+| 28 mixer | hidden | 30.0K | no | sliders move together in C++ |
+
+After the slider fix: prompt 28 mixer, 12 calls, 2 dead ends, 13.4 KB. RowList was suggested and dropped: cross-talk with onRelease in a scroll, which is the reference player's behaviour.
+
+Classifier on 36 fresh prompts written without sight of it (docs/structures/fresh-labels.json): 25 right, 27 before the last tuning. Keyword rules have reached their limit at about 70%, so build_kit now takes the structure the caller chooses.
+

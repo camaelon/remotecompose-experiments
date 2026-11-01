@@ -1,3 +1,4 @@
+#include <functional>
 #include "rccore/CoreDocument.h"
 #include "rccore/Loom.h"
 #include "rccore/WireBuffer.h"
@@ -308,10 +309,34 @@ static void childOrigin(RemoteContext& context, const Operation* op,
     }
 }
 
+// Touch expressions belonging to a component: directly in its list, in a data container there
+// (a loop or conditional, which has no component id), or in its scroll modifier's list, as
+// ScrollModifierOperation.inflate binds its own. Never into a child component.
+static void forEachOwnExpression(const std::vector<std::unique_ptr<Operation>>& ops,
+                                 const std::function<void(TouchExpressionOp*)>& fn) {
+    for (const auto& child : ops) {
+        if (auto* touch = dynamic_cast<TouchExpressionOp*>(child.get())) fn(touch);
+        else if (child->getOpComponentId() == -1 && !child->mChildren.empty())
+            forEachOwnExpression(child->mChildren, fn);
+    }
+}
+
+// Component.inflate / setComponent: an expression inside a component is reached through the
+// tree walk, not as a document listener (TouchExpression.registerListening).
+static void markExpressionOwners(const std::vector<std::unique_ptr<Operation>>& ops, bool inComponent) {
+    for (const auto& op : ops) {
+        if (auto* touch = dynamic_cast<TouchExpressionOp*>(op.get())) touch->mHasComponent = inComponent;
+        if (!op->mChildren.empty())
+            markExpressionOwners(op->mChildren, inComponent || op->getOpComponentId() != -1);
+    }
+}
+
 // The reference's Component.onTouchDown walk: the topmost child component under the point
 // handles it first (siblings below are skipped), then this component's own touch handlers —
-// an onTouchDown modifier runs its actions now, and a component with touch handlers or a touch
-// expression is remembered so its onTouchUp / onTouchCancel actions run when the touch ends.
+// an onTouchDown modifier runs its actions now, a touch expression gets the down in this
+// component's coordinates (hit-tested against its box, so only the touched slider takes the
+// drag), and a component with touch handlers or a touch expression is remembered so its
+// onTouchUp / onTouchCancel actions run when the touch ends.
 static bool touchDownRecursive(RemoteContext& context, const std::vector<std::unique_ptr<Operation>>& ops,
                                float x, float y, float parentX, float parentY, std::vector<Operation*>& targets) {
     bool anyHandled = false;
@@ -322,19 +347,26 @@ static bool touchDownRecursive(RemoteContext& context, const std::vector<std::un
         if (cid != -1 && !dim) continue;
         if (dim && !dim->visible) continue;
         float absX = dim ? parentX + dim->x : parentX, absY = dim ? parentY + dim->y : parentY;
-        if (dim && (x < absX || x > absX + dim->w || y < absY || y > absY + dim->h)) continue;
+        // Component.contains: right and bottom edges excluded, so a point on the line between
+        // two rows belongs to the lower one only.
+        if (dim && (x < absX || x >= absX + dim->w || y < absY || y >= absY + dim->h)) continue;
         float ox = absX, oy = absY;
         childOrigin(context, op.get(), dim, ox, oy);
         bool childHandled = !op->mChildren.empty() && touchDownRecursive(context, op->mChildren, x, y, ox, oy, targets);
         if (!dim) { if (childHandled) anyHandled = true; continue; }
         bool own = false;
+        forEachOwnExpression(op->mChildren, [&](TouchExpressionOp* touch) {
+            touch->updateVariables(context);
+            touch->setBounds(dim->w, dim->h);
+            touch->touchDown(context, x - absX, y - absY);
+            own = true;
+        });
         for (const auto& child : op->mChildren) {
             const int oc = child->opcode();
             if (oc == Operations::MODIFIER_TOUCH_DOWN) {
                 for (const auto& action : child->mChildren) action->runAction(context, x, y);
                 own = true;
-            } else if (oc == Operations::MODIFIER_TOUCH_UP || oc == Operations::MODIFIER_TOUCH_CANCEL
-                       || dynamic_cast<TouchExpressionOp*>(child.get())) {
+            } else if (oc == Operations::MODIFIER_TOUCH_UP || oc == Operations::MODIFIER_TOUCH_CANCEL) {
                 own = true;
             }
         }
@@ -388,11 +420,15 @@ static void collectScrollTargets(RemoteContext& context,
 }
 
 void CoreDocument::touchDown(RemoteContext& context, float x, float y) {
+    mTouchStartX = x; mTouchStartY = y; mTouchMoved = false;
     context.loadFloat(RemoteContext::ID_TOUCH_POS_X, x);
     context.loadFloat(RemoteContext::ID_TOUCH_POS_Y, y);
+    markExpressionOwners(mOperations, false);
+    // Only an expression outside any component is a document listener; as in the reference its
+    // bounds stay empty, so it takes the down only at the origin.
     for (auto* op : context.getTouchListeners()) {
         auto* touch = dynamic_cast<TouchExpressionOp*>(op);
-        if (touch) {
+        if (touch && !touch->mHasComponent) {
             touch->touchDown(context, x, y);
         }
     }
@@ -440,6 +476,9 @@ static bool rippleRecursive(RemoteContext& context, const std::vector<std::uniqu
 }
 
 void CoreDocument::touchDrag(RemoteContext& context, float x, float y) {
+    // RemoteComposeView.onTouchEvent: past the touch slop it is a drag, not a tap.
+    { const float dx = x - mTouchStartX, dy = y - mTouchStartY;
+      if (dx * dx + dy * dy > kTouchSlop * kTouchSlop) mTouchMoved = true; }
     context.loadFloat(RemoteContext::ID_TOUCH_POS_X, x);
     context.loadFloat(RemoteContext::ID_TOUCH_POS_Y, y);
     for (auto* op : context.getTouchListeners()) {
@@ -656,6 +695,8 @@ static bool onClickRecursive(RemoteContext& context, const std::vector<std::uniq
 }
 
 bool CoreDocument::onClick(RemoteContext& context, float windowX, float windowY) {
+    // Releasing a drag clicks nothing (scrolling a list would tick the row under the finger).
+    if (mTouchMoved) { mTouchMoved = false; return false; }
     float docX = windowX;
     float docY = windowY;
 

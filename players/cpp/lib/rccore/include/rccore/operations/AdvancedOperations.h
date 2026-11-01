@@ -409,8 +409,11 @@ public:
     float mMaxVelocity = 7.0f;
     VelocityEasing mEasyTouch;
 
-    // Screen bounds of the containing canvas (captured during apply for hit-testing)
-    float mScrLeft = 0, mScrTop = 0, mScrRight = 99999, mScrBottom = 99999;
+    // TouchExpression.updateBounds under FIX_TOUCH_EVENT: the owning component's box in its own
+    // coordinates, set by the touch walk. Outside a component they stay 0, as in the reference.
+    float mScrLeft = 0, mScrTop = 0, mScrRight = 0, mScrBottom = 0;
+    bool mHasComponent = false;   // Component.inflate called setComponent
+    void setBounds(float w, float h) { mScrLeft = 0; mScrTop = 0; mScrRight = w; mScrBottom = h; }
 
     // Expression evaluator (reuse per instance for preCalcValues eval)
     ExpressionEvaluator mExp;

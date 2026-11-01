@@ -2,7 +2,7 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { designNotes, dateKind, designAudit, designAudit as designAuditAll, isGlyphText, readsClock, textAudit } from "./design-audit.mjs";
+import { designNotes, dateKind, designAudit, designAudit as designAuditAll, isGlyphText, readsClock, textAudit, expandedFindings } from "./design-audit.mjs";
 
 const header = { apiLevel: 7, width: 360, height: 640, profiles: 513 };
 const codes = (fs) => fs.map((f) => `${f.severity}:${f.code}`).sort();
@@ -157,4 +157,20 @@ test("text_only: a screen of texts gets a suggestion, one with an icon does not"
     assert.match(designNotes(plain), /suggestions:[\s\S]*text_only/);
     const withIcon = { header, root: { column: { children: [{ Icon: { name: "wifi" } }, ...plain.root.column.children] } } };
     assert.ok(!designAuditAll(withIcon).some((f) => f.code === "text_only"));
+});
+
+test("a bare call in a visibility is flagged; one with an operator is not", () => {
+    const vis = (v) => designAudit({ root: [{ box: { modifiers: [{ visibility: v }] } }] }).filter((f) => f.code === "inline_visibility").length;
+    assert.equal(vis("max(@a, @b)"), 1);
+    assert.equal(vis("abs(@a)"), 1);
+    assert.equal(vis("1 - min(1, @a)"), 0);
+    assert.equal(vis("@a"), 0);
+});
+
+test("expandedFindings sees what only expansion reveals", () => {
+    const expanded = { resources: { variables: { round: 1, k: "round(@round)" } }, root: [{ box: { modifiers: [{ visibility: "step(windowWidth(), 100)" }] } }] };
+    const codes = expandedFindings(expanded, []).map((f) => f.code);
+    assert.ok(codes.includes("inline_visibility"));
+    assert.ok(codes.includes("shadowed_function"));
+    assert.deepEqual(expandedFindings(expanded, [{ code: "inline_visibility" }, { code: "shadowed_function" }]), []);
 });

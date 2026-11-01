@@ -834,6 +834,9 @@ static int run(int argc, char* argv[]) {
             float t = (nFrames == 1) ? simDuration
                                      : simDuration * (float) f / (float) (nFrames - 1);
             doc.setFixedTimeMs(simStartMs + static_cast<int64_t>(t * 1000.0f + 0.5f));
+            // A finger lands on a laid-out screen: touches hit-test the components' boxes, which
+            // the first paint computes, so an event at t=0 needs that paint first.
+            if (f == 0 && next < events.size() && events[next].t <= t + 1e-6f) doc.paint(context, theme);
             while (next < events.size() && events[next].t <= t + 1e-6f) {
                 const TouchEvent& e = events[next++];
                 if (e.type == "down" || e.type == "tap") {

@@ -487,7 +487,10 @@ function visibilityFindings(doc) {
             // arithmetic on variables works, a function call (step, min, abs) does not reliably,
             // and the component vanishes (a seasons widget lost its day count to
             // {"visibility": "step(@days, 0.5)"}).
-            else if (typeof m.visibility === "string" && (/\b(?!abs\b|min\b|max\b|clamp\b)[A-Za-z_]\w*\s*\(/.test(m.visibility) || /\d\.\d/.test(m.visibility))) { inline++; exprs.add(m.visibility); }
+            // (Nor does a bare call with no operator, even abs, min, max or clamp: without + - * / %
+            // the string is taken for a text id. "1 - min(1, @x)" works, "min(1, @x)" hides.)
+            else if (typeof m.visibility === "string" && (/\b(?!abs\b|min\b|max\b|clamp\b)[A-Za-z_]\w*\s*\(/.test(m.visibility) || /\d\.\d/.test(m.visibility)
+                || (m.visibility.includes("(") && !/[-+*/%]/.test(m.visibility)))) { inline++; exprs.add(m.visibility); }
         }
         for (const v of Object.values(x)) visit(v);
     };
@@ -540,7 +543,7 @@ function visibilityFindings(doc) {
         severity: "warning", code: "inline_visibility",
         title: `${inline} visibility modifier(s) calling a function inline (${[...exprs].slice(0, 2).map((e) => JSON.stringify(e)).join(", ")})`,
         message: "An expression inside \"visibility\" is an INTEGER expression (+ - * / %, abs, min, max, clamp, whole numbers): anything " +
-            "else (step, ifElse, floor, a decimal) is not one, the string becomes a text id and the component is hidden. Compute the " +
+            "else (step, ifElse, floor, a decimal, or a bare call with no operator such as max(@a, @b)) is not one, the string becomes a text id and the component is hidden. In a component, a param passed to a visibility counts too. Compute the " +
             "condition as a float variable (resources.variables {\"shown\": \"step(@days, 0.5)\"}, exactly 0 or 1) and write {\"visibility\": \"@shown\"}.",
         count: inline,
     });
@@ -828,6 +831,30 @@ function modifierOrderFindings(doc) {
     }] : [];
 }
 
+// A bare "verticalScroll" does not scroll in Java or TS, only in C++ (U84). And an onRelease inside
+// a scroll also fires for the LAST child wherever the finger was, and never for the dragged
+// control (U80): that is the Java player's behaviour, so it is what a device does.
+function scrollFindings(doc) {
+    let bare = 0, released = 0;
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (Array.isArray(x.modifiers)) {
+            const scrolls = x.modifiers.some((m) => m === "verticalScroll" || m === "horizontalScroll" || (isObj(m) && ("verticalScroll" in m || "horizontalScroll" in m)));
+            if (x.modifiers.includes("verticalScroll") || x.modifiers.includes("horizontalScroll")) bare++;
+            if (scrolls && /"onRelease"/.test(JSON.stringify(x.children ?? []))) released++;
+        }
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    const out = [];
+    if (bare) out.push({ severity: "warning", code: "bare_scroll", title: `${bare} bare "verticalScroll" modifier(s)`,
+        message: "As a bare word it does not scroll on Android or in TypeScript, though the C++ render scrolls. Bind it: {\"verticalScroll\": \"@scroll\"} with resources.variables {\"scroll\": 0}.", count: bare });
+    if (released) out.push({ severity: "warning", code: "release_in_scroll", title: `${released} scrolling container(s) hold a control with onRelease`,
+        message: "Inside a scroll, onRelease also fires for the last child wherever the finger lifts, and the dragged control's own may not fire (the reference player does this). Tell the app from the value instead (it reads the exported variable), or put the control outside the scroll.", count: released });
+    return out;
+}
+
 // Weights share the whole width and spacedBy then adds to it: the gaps run past the edge and cut
 // the last child (a condition word became "Clea").
 function spacedByWeightFindings(doc) {
@@ -1060,6 +1087,7 @@ export function designAudit(json) {
         ...undeclaredRefFindings(doc),
         ...paddingKeyFindings(doc),
         ...modifierOrderFindings(doc),
+        ...scrollFindings(doc),
         ...spacedByWeightFindings(doc),
         ...repeatedLabelFindings(doc),
         ...fixedWidthFindings(doc),
@@ -1093,9 +1121,18 @@ export function textAudit(strings, { readsClock: clock = true } = {}) {
 // a feature demo, a weak result for a generated UI).
 const SUGGEST = new Set(["text_only"]);
 
-export function designNotes(json) {
+// Faults that only exist once components are expanded: an expression passed through a param to
+// a visibility, and a variable whose name hijacks a function the expansion calls ("round" breaks
+// every TextChoice, which expands to round()).
+export function expandedFindings(expanded, own) {
+    if (!isObj(expanded)) return [];
+    const sameAsOwn = (f) => own.some((o) => o.code === f.code);
+    return [...visibilityFindings(expanded).filter((f) => f.code === "inline_visibility"), ...shadowedFunctionFindings(expanded), ...scrollFindings(expanded)].filter((f) => !sameAsOwn(f));
+}
+
+export function designNotes(json, expanded = null) {
     let all;
-    try { all = designAudit(json); } catch { return ""; }
+    try { all = designAudit(json); all = [...all, ...expandedFindings(expanded, all)]; } catch { return ""; }
     const findings = all.filter((f) => f.severity === "warning");
     const suggest = all.filter((f) => f.severity !== "warning" && SUGGEST.has(f.code));
     if (!findings.length && !suggest.length) return "";

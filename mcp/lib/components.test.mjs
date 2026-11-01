@@ -603,3 +603,31 @@ test("a component made of canvas commands is never a pattern", () => {
     assert.equal(compile(doc, { Mark }).modes.Mark, "expand");
     assert.ok(jsonToRc({ ...doc, components: { Mark } }).length > 0);
 });
+
+test("$each fields name an item's parts, by key or position, and leave out what is missing", () => {
+    const List = { params: { rows: { type: "list", required: true } }, body: { column: { children: [
+        { $each: "rows", as: "r", fields: ["title", "value"], do: { row: { children: [
+            { text: { value: "@r_title" } },
+            { $if: "r_value", then: { text: { value: "@r_value" } } },
+        ] } } },
+    ] } } };
+    const flat = (rows) => JSON.stringify(expandComponents({ header: { width: 10, height: 10 }, components: { List }, root: [{ List: { rows } }] }).doc);
+    const named = flat([{ title: "A", value: "1" }, { title: "B" }]);
+    assert.equal(named, flat([["A", "1"], ["B"]]));
+    assert.equal(named, flat([["A", "1"], ["B", null]]));
+    assert.match(named, /"A"/);
+    assert.equal((named.match(/"value":/g) ?? []).length, 3);
+    assert.match(flat(["C"]), /"C"/);
+    assert.throws(() => flat([{ title: "A", nope: 1 }]), /no field nope; it takes: title, value/);
+});
+
+test("$if takes a || b, and an empty list is false", () => {
+    const C = { params: { a: { type: "bool", default: false, static: true }, b: { type: "bool", default: false, static: true }, l: { type: "list", default: [] } },
+        body: { column: { children: [{ $if: "a || b", then: { text: { value: "either" } } }, { $if: "l", then: { text: { value: "listed" } } }] } } };
+    const flat = (call) => JSON.stringify(expandComponents({ header: { width: 10, height: 10 }, components: { C }, root: [{ C: call }] }).doc);
+    assert.doesNotMatch(flat({}), /either/);
+    assert.match(flat({ b: true }), /either/);
+    assert.doesNotMatch(flat({ l: [] }), /listed/);
+    assert.match(flat({ l: [1] }), /listed/);
+});
+

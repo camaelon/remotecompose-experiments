@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
+import { dragEvents, changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
 
 test("planPathOf: one plan for a document's json and rc", () => {
     assert.equal(planPathOf("out/a.json"), "out/a.checks.json");
@@ -18,7 +18,7 @@ test("savePlan and loadPlan keep the check and the hashes, not the document", ()
 });
 
 test("splitSample separates the special keys from host values", () => {
-    assert.deepEqual(splitSample({ n: 1, $tap: [3, 4], $size: [5, 6], $clock: "c" }), { values: { n: 1 }, clock: "c", taps: [[3, 4]], size: [5, 6], wait: undefined, expect: undefined });
+    assert.deepEqual(splitSample({ n: 1, $tap: [3, 4], $size: [5, 6], $clock: "c" }), { values: { n: 1 }, clock: "c", taps: [[3, 4]], drag: undefined, size: [5, 6], wait: undefined, expect: undefined });
     assert.deepEqual(splitSample({ $tap: [[1, 2], [3, 4]] }).taps, [[1, 2], [3, 4]]);
     assert.deepEqual(splitSample(null).taps, []);
     assert.deepEqual(splitSample({ $tap: "Start" }).taps, ["Start"]);
@@ -71,6 +71,13 @@ test("setVariables changes starting values, not formulas, and names what it can 
     assert.equal(r.root[0].variable.value, "y");
     assert.equal(doc.resources.variables.a.value, 1);
     assert.throws(() => setVariables(doc, { f: 1 }), /It can set: a, b, s/);
+});
+
+test("dragEvents press, move and lift in order", () => {
+    const e = dragEvents([0, 0, 40, 0], 1);
+    assert.deepEqual(e.map((x) => x.type), ["down", "move", "move", "move", "move", "up"]);
+    assert.ok(e.every((x, i) => i === 0 || x.t > e[i - 1].t));
+    assert.equal(e.at(-1).x, 40);
 });
 
 test("fitsSize: no $size fits all", () => {

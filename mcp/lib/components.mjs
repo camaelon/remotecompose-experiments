@@ -1411,12 +1411,33 @@ function substitute(node, env, state, name) {
                 const items = typeof list === "number" ? Array.from({ length: list }, (_, k) => k) : list;
                 if (!Array.isArray(items)) throw new Error(`${name}: $each needs a list or a count, '${x.$each}' is ${JSON.stringify(list)}`);
                 items.forEach((item, k) => {
-                    const bound = { [x.as ?? "item"]: item, [x.index ?? "index"]: k };
+                    const as = x.as ?? "item";
+                    const bound = { [as]: item, [x.index ?? "index"]: k };
                     if (x.count) bound[x.count] = items.length;
                     const text = new Set(env.text);
-                    if (typeof item === "string") text.add(x.as ?? "item"); else text.delete(x.as ?? "item");
-                    const inner = { ...env, params: { ...env.params, ...bound }, statics: { ...env.statics, ...bound }, text };
-                    if (env.cond) inner.cond = { ...env.cond, params: { ...env.cond.params, ...bound }, statics: { ...env.cond.statics, ...bound }, text };
+                    if (typeof item === "string") text.add(as); else text.delete(as);
+                    // "fields": ["title", "value"] names an item's parts as @r_title, @r_value:
+                    // an object by key, an array by position, a bare value as the first. One
+                    // an item leaves out is missing, as an optional param is.
+                    const missing = new Set(env.missing);
+                    if (Array.isArray(x.fields)) {
+                        const part = (f, i) => (item && typeof item === "object" && !Array.isArray(item) ? item[f]
+                            : Array.isArray(item) ? item[i] : (i === 0 ? item : undefined));
+                        if (item && typeof item === "object" && !Array.isArray(item)) {
+                            const unknown = Object.keys(item).filter((f) => !x.fields.includes(f));
+                            if (unknown.length) throw new Error(`${name}: ${x.$each} item has no field ${unknown.join(", ")}; it takes: ${x.fields.join(", ")}`);
+                        }
+                        x.fields.forEach((f, i) => {
+                            const key = `${as}_${f}`, v = part(f, i);
+                            if (v === undefined || v === null) { missing.add(key); text.delete(key); delete bound[key]; return; }
+                            missing.delete(key);
+                            bound[key] = v;
+                            if (typeof v === "string") text.add(key); else text.delete(key);
+                        });
+                    }
+                    const dropGone = (o) => Object.fromEntries(Object.entries(o).filter(([key]) => !missing.has(key)));
+                    const inner = { ...env, params: dropGone({ ...env.params, ...bound }), statics: dropGone({ ...env.statics, ...bound }), text, missing };
+                    if (env.cond) inner.cond = { ...env.cond, params: dropGone({ ...env.cond.params, ...bound }), statics: dropGone({ ...env.cond.statics, ...bound }), text, missing };
                     const v = substitute(structuredClone(x.do), inner, state, name);
                     if (Array.isArray(v)) out.push(...v.filter((y) => y !== DROP));
                     else if (v !== DROP) out.push(v);
@@ -1576,6 +1597,8 @@ function evalIf(cond, env, name) {
         if (v === undefined) throw new Error(`${name}: $if reads theme.${m[2]}, which is not a theme number`);
         return m[1] ? !v : Boolean(v);
     }
+    // "a || b": either, each as below. (No && or nesting: a nested $if says that.)
+    if (c.includes("||")) return c.split("||").some((part) => evalIf(part, env, name));
     m = /^([A-Za-z_]\w*)\s*(==|!=)\s*'([^']*)'$/.exec(c);
     if (m) {
         const v = String(paramValue(m[1], env, name));
@@ -1589,10 +1612,10 @@ function evalIf(cond, env, name) {
             : (k in env.statics || !(k in env.params) && !env.missing.has(k)) ? paramValue(k, env, name)
             : k in env.params && !isRuntimeRef(env.params[k]) ? env.params[k]
             : k in env.params;
-        const truthy = Boolean(v) && v !== "0" && v !== 0;
+        const truthy = Boolean(v) && v !== "0" && v !== 0 && !(Array.isArray(v) && !v.length);   // (an empty list is false)
         return m[1] ? !truthy : truthy;
     }
-    throw new Error(`${name}: unsupported $if condition "${c}" (use p == 'x', p != 'x', p, !p, theme.mono or !theme.mono)`);
+    throw new Error(`${name}: unsupported $if condition "${c}" (use p == 'x', p != 'x', p, !p, a || b, theme.mono or !theme.mono)`);
 }
 
 const isRuntimeRef = (v) => typeof v === "string" && /^[@$]/.test(v);
@@ -1644,6 +1667,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             if (typeof n.$name === "string") refs.add(n.$name);
             if (n.$icon && typeof n.$icon === "object") for (const v of Object.values(n.$icon)) if (typeof v === "string" && v.startsWith("@")) refs.add(v.slice(1));
             for (const k of ["as", "index", "count"]) if (n.$each !== undefined && typeof n[k] === "string") bound.add(n[k]);
+            if (n.$each !== undefined && Array.isArray(n.fields)) for (const f of n.fields) bound.add(`${n.as ?? "item"}_${f}`);
             // A canvas loop's index ({"loop": {"index": "i", ...}}) is a name the loop binds.
             if (n.loop && typeof n.loop === "object" && typeof n.loop.index === "string") bound.add(n.loop.index);
             if (typeof n.index === "string" && ("from" in n || "until" in n || "commands" in n)) bound.add(n.index);

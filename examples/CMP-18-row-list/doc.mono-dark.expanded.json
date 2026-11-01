@@ -42,29 +42,20 @@
    },
    "rowlist1_n": "clamp(0, min(6, 99), floor(@n))",
    "rowlist1_h0": "(windowHeight()) - 2 * 8",
-   "rowlist1_side": "step((windowWidth()), 600 - 0.5)",
+   "rowlist1_side": "step((windowWidth()), 840 - 0.5)",
    "rowlist1_iw": "(windowWidth()) - 2 * 4",
    "rowlist1_sw": "floor(@rowlist1_iw * 0.34)",
    "rowlist1_rw": "@rowlist1_iw - @rowlist1_side * (@rowlist1_sw + 12)",
-   "rowlist1_cm": "clamp(1, 3, floor((@rowlist1_rw + 16) / 220))",
-   "rowlist1_cols": "max(1, min(@rowlist1_cm, @rowlist1_n))",
-   "rowlist1_headOn": "max(step((windowHeight()), 199.5), step(floor((@rowlist1_h0 - 32) / 48) * @rowlist1_cols + 0.5, min(@rowlist1_n, floor(@rowlist1_h0 / 48) * @rowlist1_cols)))",
+   "rowlist1_cols": "max(1, min(clamp(1, 3, floor((@rowlist1_rw + 16) / 220)), @rowlist1_n))",
    "rowlist1_sumOn": "max(@rowlist1_side, step((windowHeight()), 240 - 0.5))",
-   "rowlist1_body": "@rowlist1_h0 - @rowlist1_headOn * 32",
+   "rowlist1_body": "@rowlist1_h0 - 1 * 32",
    "rowlist1_lines0": "@rowlist1_body - @rowlist1_sumOn * (1 - @rowlist1_side) * 28",
-   "rowlist1_openH": "step(@openRow, 0.5) * 40",
-   "rowlist1_fit": "max(1, floor((@rowlist1_lines0 - @rowlist1_openH) / (48 + 0)))",
-   "rowlist1_shown": "min(@rowlist1_n, @rowlist1_fit * @rowlist1_cols)",
-   "rowlist1_rowH": "clamp(48 + 0, 72 + 0, (@rowlist1_lines0 - @rowlist1_openH) / max(1, ceil(@rowlist1_shown / @rowlist1_cols)))",
-   "rowlist1_ih": "@rowlist1_rowH - 0",
-   "rowlist1_cellW": "floor(@rowlist1_rw / @rowlist1_cols)",
-   "rowlist1_subOn": "step(@rowlist1_ih, 52 - 0.5)",
-   "rowlist1_first": "max(0, @openRow - @rowlist1_shown)",
+   "rowlist1_lines": "@rowlist1_lines0 - 0 * 16",
+   "rowlist1_rowH": "clamp(48, 72 + 0, (@rowlist1_lines - step(@openRow, 0.5) * 40) / max(1, ceil(@rowlist1_n / @rowlist1_cols)))",
+   "rowlist1_half": "floor(@rowlist1_rw / @rowlist1_cols / 2)",
+   "rowlist1_cellW": "@rowlist1_half * 2",
    "rowlist1_isEmpty": "1 - step(@rowlist1_n, 0.5)",
-   "adaptivesplit1_s": "@rowlist1_side * (1 - (1 - @rowlist1_sumOn)) * (1 - 0)",
-   "adaptivesplit1_sw": "floor(@rowlist1_iw * 0.34 - 12 / 2)",
-   "adaptivesplit1_v1": "1 - (1 - @rowlist1_sumOn)",
-   "vis_1": 1
+   "rowlist1_over": "step(@rowlist1_n, floor(@rowlist1_lines / 48) * @rowlist1_cols + 0.5)"
   },
   "paths": {
    "icon_package_2_outlined": [
@@ -453,12 +444,15 @@
     ],
     "children": [
      {
+      "variable": {
+       "name": "rowlist1_sy",
+       "value": 0
+      }
+     },
+     {
       "row": {
        "verticalAlignment": "center",
        "modifiers": [
-        {
-         "visibility": "@rowlist1_headOn"
-        },
         "fillMaxWidth",
         {
          "height": 32
@@ -490,7 +484,7 @@
          "box": {
           "modifiers": [
            {
-            "visibility": "clamp(0, 1, @rowlist1_n - @rowlist1_shown)"
+            "visibility": "@rowlist1_over"
            },
            {
             "padding": {
@@ -505,22 +499,12 @@
               "type": "textMerge",
               "id1": {
                "type": "textFromFloat",
-               "value": "@rowlist1_shown",
-               "whole": 2,
+               "value": "@rowlist1_n",
+               "whole": 3,
                "decimal": 0,
                "flags": 5
               },
-              "id2": {
-               "type": "textMerge",
-               "id1": " of ",
-               "id2": {
-                "type": "textFromFloat",
-                "value": "@rowlist1_n",
-                "whole": 3,
-                "decimal": 0,
-                "flags": 5
-               }
-              }
+              "id2": " items"
              },
              "maxLines": 1,
              "fontSize": 12,
@@ -544,8 +528,6 @@
          "height": "@rowlist1_body"
         }
        ],
-       "horizontalAlignment": "center",
-       "verticalAlignment": "center",
        "children": [
         {
          "text": {
@@ -555,11 +537,14 @@
           "color": "@colors.muted"
          }
         }
-       ]
+       ],
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center"
       }
      },
      {
-      "box": {
+      "flow": {
+       "horizontalArrangement": "spaceBetween",
        "modifiers": [
         {
          "visibility": "1 - @rowlist1_isEmpty"
@@ -568,129 +553,630 @@
        ],
        "children": [
         {
-         "flow": {
-          "horizontalArrangement": "spaceBetween",
+         "box": {
           "modifiers": [
-           "fillMaxWidth"
+           {
+            "visibility": "@rowlist1_sumOn"
+           },
+           {
+            "width": "ifElse(@rowlist1_iw, @rowlist1_sw, @rowlist1_side)"
+           },
+           {
+            "height": "ifElse(28, @rowlist1_lines, @rowlist1_side)"
+           },
+           {
+            "padding": [
+             8,
+             0
+            ]
+           }
           ],
           "children": [
            {
-            "box": {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@n",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " in the queue"
+             },
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "fontSize": 14,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "width": "@rowlist1_rw"
+           },
+           {
+            "height": "@rowlist1_lines"
+           },
+           {
+            "verticalScroll": "@rowlist1_sy"
+           }
+          ],
+          "children": [
+           {
+            "flow": {
              "modifiers": [
-              {
-               "visibility": "@adaptivesplit1_v1"
-              },
-              {
-               "width": "ifElse(@rowlist1_iw, @adaptivesplit1_sw, @adaptivesplit1_s)"
-              },
-              {
-               "height": "ifElse(ifElse(28, @rowlist1_body, 0), @rowlist1_body, @adaptivesplit1_s)"
-              }
+              "fillMaxWidth"
              ],
              "children": [
               {
-               "box": {
+               "canvas": {
                 "modifiers": [
-                 "fillMaxSize",
+                 {
+                  "size": 0
+                 }
+                ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o0",
+                      "value": "1 - min(1, abs(@openRow - 0 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o0",
+                      "len": 9,
+                      "varName": "rowlist1_sp0"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp0",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st0"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 0)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o0"
+                 },
                  {
                   "padding": [
                    8,
                    0
                   ]
-                 }
-                ],
-                "children": [
+                 },
                  {
-                  "text": {
-                   "value": {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
                     "type": "textMerge",
                     "id1": {
-                     "type": "textFromFloat",
-                     "value": "@n",
-                     "whole": 2,
-                     "decimal": 0,
-                     "flags": 5
+                     "type": "textMerge",
+                     "id1": "@who1",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what1"
+                     }
                     },
-                    "id2": " in the queue"
-                   },
-                   "maxLines": 1,
-                   "overflow": "ellipsis",
-                   "fontSize": 14,
-                   "color": "@colors.muted"
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t1",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st0"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(0 + 1) * (1 - @rowlist1_o0)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
+                "children": [
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rowlist1_rowH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
+                         "commands": [
+                          {
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who1",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what1",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
+                          {
+                           "padding": {
+                            "top": 2
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
+                        ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t1",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
+                          }
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": [
+                            20,
+                            20
+                           ]
+                          }
+                         ],
+                         "commands": [
+                          {
+                           "variable": {
+                            "name": "rowlist1_chev0",
+                            "value": "@rowlist1_o0"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "color": "@colors.muted"
+                             },
+                             {
+                              "style": "stroke"
+                             },
+                             {
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev0",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev0"
+                           }
+                          },
+                          {
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev0",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev0"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "column": {
+                   "modifiers": [
+                    {
+                     "visibility": "@rowlist1_o0"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
+                    },
+                    {
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": "@note1",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
+                     }
+                    }
+                   ]
                   }
                  }
                 ]
                }
-              }
-             ]
-            }
-           },
-           {
-            "box": {
-             "modifiers": [
-              {
-               "visibility": "@vis_1"
               },
               {
-               "width": "ifElse(@rowlist1_iw, @rowlist1_iw - @adaptivesplit1_sw - 12, @adaptivesplit1_s)"
-              },
-              {
-               "height": "ifElse(@rowlist1_body - 28 * (1 - (1 - @rowlist1_sumOn)), @rowlist1_body, @adaptivesplit1_s)"
-              }
-             ],
-             "children": [
-              {
-               "flow": {
+               "canvas": {
                 "modifiers": [
-                 "fillMaxWidth"
+                 {
+                  "size": 0
+                 }
                 ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o1",
+                      "value": "1 - min(1, abs(@openRow - 1 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o1",
+                      "len": 9,
+                      "varName": "rowlist1_sp1"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp1",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st1"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 1)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o1"
+                 },
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 },
+                 {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "@who2",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what2"
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t2",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st1"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(1 + 1) * (1 - @rowlist1_o1)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
                 "children": [
                  {
                   "box": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 0 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 0)"
+                     "visibility": "clamp(0, 1, 1 + 1 - @rowlist1_cols)"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 1
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
+                     "background": "@colors.outline"
+                    }
+                   ],
+                   "children": []
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
                     {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 0 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "height": "@rowlist1_rowH"
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
+                     "box": {
                       "modifiers": [
                        {
-                        "size": 0
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
                        }
                       ],
-                      "commands": [
+                      "children": [
                        {
-                        "global": {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
                          "commands": [
                           {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 0 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp0"
-                           }
-                          },
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who2",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what2",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
                           {
-                           "textTransform": {
-                            "text": "@rowlist1_sp0",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st0"
+                           "padding": {
+                            "top": 2
                            }
                           }
                          ]
@@ -700,320 +1186,106 @@
                      }
                     },
                     {
-                     "column": {
+                     "box": {
                       "modifiers": [
-                       "fillMaxSize",
                        {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who1",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what1",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t1",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st0"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(0 + 1) * (1 - (1 - min(1, abs(@openRow - 0 - 1))))"
-                         }
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
                         ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
                        }
                       ],
                       "children": [
                        {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 0 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t2",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
                           }
-                         ]
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
                         }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
                        },
                        {
-                        "row": {
-                         "verticalAlignment": "center",
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
                          "modifiers": [
-                          "fillMaxWidth",
                           {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
+                           "size": [
+                            20,
+                            20
                            ]
                           }
                          ],
-                         "children": [
+                         "commands": [
                           {
-                           "box": {
-                            "modifiers": [
+                           "variable": {
+                            "name": "rowlist1_chev1",
+                            "value": "@rowlist1_o1"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
                              {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
+                              "color": "@colors.muted"
                              },
                              {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
+                              "style": "stroke"
+                             },
                              {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
                              }
                             ]
                            }
                           },
                           {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who1",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what1",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev1",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev1"
                            }
                           },
                           {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t1",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev0",
-                                  "value": "(1 - min(1, abs(@openRow - 0 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev0",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev0"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev0",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev0"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 0 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note1",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev1",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev1"
                            }
                           }
                          ]
@@ -1026,51 +1298,252 @@
                   }
                  },
                  {
-                  "box": {
+                  "column": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 1 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 1)"
+                     "visibility": "@rowlist1_o1"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
-                    {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 1 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
+                     "text": {
+                      "value": "@note2",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 0
+                 }
+                ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o2",
+                      "value": "1 - min(1, abs(@openRow - 2 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o2",
+                      "len": 9,
+                      "varName": "rowlist1_sp2"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp2",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st2"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 2)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o2"
+                 },
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 },
+                 {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "@who3",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what3"
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t3",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st2"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(2 + 1) * (1 - @rowlist1_o2)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "clamp(0, 1, 2 + 1 - @rowlist1_cols)"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 1
+                    },
+                    {
+                     "background": "@colors.outline"
+                    }
+                   ],
+                   "children": []
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rowlist1_rowH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
                       "modifiers": [
                        {
-                        "size": 0
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
                        }
                       ],
-                      "commands": [
+                      "children": [
                        {
-                        "global": {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
                          "commands": [
                           {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 1 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp1"
-                           }
-                          },
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who3",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what3",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
                           {
-                           "textTransform": {
-                            "text": "@rowlist1_sp1",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st1"
+                           "padding": {
+                            "top": 2
                            }
                           }
                          ]
@@ -1080,320 +1553,106 @@
                      }
                     },
                     {
-                     "column": {
+                     "box": {
                       "modifiers": [
-                       "fillMaxSize",
                        {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who2",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what2",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t2",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st1"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(1 + 1) * (1 - (1 - min(1, abs(@openRow - 1 - 1))))"
-                         }
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
                         ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
                        }
                       ],
                       "children": [
                        {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 1 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t3",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
                           }
-                         ]
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
                         }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
                        },
                        {
-                        "row": {
-                         "verticalAlignment": "center",
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
                          "modifiers": [
-                          "fillMaxWidth",
                           {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
+                           "size": [
+                            20,
+                            20
                            ]
                           }
                          ],
-                         "children": [
+                         "commands": [
                           {
-                           "box": {
-                            "modifiers": [
+                           "variable": {
+                            "name": "rowlist1_chev2",
+                            "value": "@rowlist1_o2"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
                              {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
+                              "color": "@colors.muted"
                              },
                              {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
+                              "style": "stroke"
+                             },
                              {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
                              }
                             ]
                            }
                           },
                           {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who2",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what2",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev2",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev2"
                            }
                           },
                           {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t2",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev1",
-                                  "value": "(1 - min(1, abs(@openRow - 1 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev1",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev1"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev1",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev1"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 1 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note2",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev2",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev2"
                            }
                           }
                          ]
@@ -1406,51 +1665,252 @@
                   }
                  },
                  {
-                  "box": {
+                  "column": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 2 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 2)"
+                     "visibility": "@rowlist1_o2"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
-                    {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 2 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
+                     "text": {
+                      "value": "@note3",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 0
+                 }
+                ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o3",
+                      "value": "1 - min(1, abs(@openRow - 3 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o3",
+                      "len": 9,
+                      "varName": "rowlist1_sp3"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp3",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st3"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 3)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o3"
+                 },
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 },
+                 {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "@who4",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what4"
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t4",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st3"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(3 + 1) * (1 - @rowlist1_o3)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "clamp(0, 1, 3 + 1 - @rowlist1_cols)"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 1
+                    },
+                    {
+                     "background": "@colors.outline"
+                    }
+                   ],
+                   "children": []
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rowlist1_rowH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
                       "modifiers": [
                        {
-                        "size": 0
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
                        }
                       ],
-                      "commands": [
+                      "children": [
                        {
-                        "global": {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
                          "commands": [
                           {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 2 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp2"
-                           }
-                          },
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who4",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what4",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
                           {
-                           "textTransform": {
-                            "text": "@rowlist1_sp2",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st2"
+                           "padding": {
+                            "top": 2
                            }
                           }
                          ]
@@ -1460,320 +1920,106 @@
                      }
                     },
                     {
-                     "column": {
+                     "box": {
                       "modifiers": [
-                       "fillMaxSize",
                        {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who3",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what3",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t3",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st2"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(2 + 1) * (1 - (1 - min(1, abs(@openRow - 2 - 1))))"
-                         }
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
                         ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
                        }
                       ],
                       "children": [
                        {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 2 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t4",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
                           }
-                         ]
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
                         }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
                        },
                        {
-                        "row": {
-                         "verticalAlignment": "center",
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
                          "modifiers": [
-                          "fillMaxWidth",
                           {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
+                           "size": [
+                            20,
+                            20
                            ]
                           }
                          ],
-                         "children": [
+                         "commands": [
                           {
-                           "box": {
-                            "modifiers": [
+                           "variable": {
+                            "name": "rowlist1_chev3",
+                            "value": "@rowlist1_o3"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
                              {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
+                              "color": "@colors.muted"
                              },
                              {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
+                              "style": "stroke"
+                             },
                              {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
                              }
                             ]
                            }
                           },
                           {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who3",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what3",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev3",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev3"
                            }
                           },
                           {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t3",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev2",
-                                  "value": "(1 - min(1, abs(@openRow - 2 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev2",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev2"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev2",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev2"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 2 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note3",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev3",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev3"
                            }
                           }
                          ]
@@ -1786,51 +2032,252 @@
                   }
                  },
                  {
-                  "box": {
+                  "column": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 3 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 3)"
+                     "visibility": "@rowlist1_o3"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
-                    {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 3 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
+                     "text": {
+                      "value": "@note4",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 0
+                 }
+                ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o4",
+                      "value": "1 - min(1, abs(@openRow - 4 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o4",
+                      "len": 9,
+                      "varName": "rowlist1_sp4"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp4",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st4"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 4)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o4"
+                 },
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 },
+                 {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "@who5",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what5"
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t5",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st4"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(4 + 1) * (1 - @rowlist1_o4)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "clamp(0, 1, 4 + 1 - @rowlist1_cols)"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 1
+                    },
+                    {
+                     "background": "@colors.outline"
+                    }
+                   ],
+                   "children": []
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rowlist1_rowH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
                       "modifiers": [
                        {
-                        "size": 0
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
                        }
                       ],
-                      "commands": [
+                      "children": [
                        {
-                        "global": {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
                          "commands": [
                           {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 3 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp3"
-                           }
-                          },
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who5",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what5",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
                           {
-                           "textTransform": {
-                            "text": "@rowlist1_sp3",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st3"
+                           "padding": {
+                            "top": 2
                            }
                           }
                          ]
@@ -1840,320 +2287,106 @@
                      }
                     },
                     {
-                     "column": {
+                     "box": {
                       "modifiers": [
-                       "fillMaxSize",
                        {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who4",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what4",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t4",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st3"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(3 + 1) * (1 - (1 - min(1, abs(@openRow - 3 - 1))))"
-                         }
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
                         ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
                        }
                       ],
                       "children": [
                        {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 3 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t5",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
                           }
-                         ]
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
                         }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
                        },
                        {
-                        "row": {
-                         "verticalAlignment": "center",
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
                          "modifiers": [
-                          "fillMaxWidth",
                           {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
+                           "size": [
+                            20,
+                            20
                            ]
                           }
                          ],
-                         "children": [
+                         "commands": [
                           {
-                           "box": {
-                            "modifiers": [
+                           "variable": {
+                            "name": "rowlist1_chev4",
+                            "value": "@rowlist1_o4"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
                              {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
+                              "color": "@colors.muted"
                              },
                              {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
+                              "style": "stroke"
+                             },
                              {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
                              }
                             ]
                            }
                           },
                           {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who4",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what4",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev4",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev4"
                            }
                           },
                           {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t4",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev3",
-                                  "value": "(1 - min(1, abs(@openRow - 3 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev3",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev3"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev3",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev3"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 3 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note4",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev4",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev4"
                            }
                           }
                          ]
@@ -2166,51 +2399,252 @@
                   }
                  },
                  {
-                  "box": {
+                  "column": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 4 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 4)"
+                     "visibility": "@rowlist1_o4"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
-                    {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 4 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
+                     "text": {
+                      "value": "@note5",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": 0
+                 }
+                ],
+                "commands": [
+                 {
+                  "global": {
+                   "commands": [
+                    {
+                     "variable": {
+                      "name": "rowlist1_o5",
+                      "value": "1 - min(1, abs(@openRow - 5 - 1))"
+                     }
+                    },
+                    {
+                     "textSubtext": {
+                      "text": "Collapsed Expanded ",
+                      "start": "10 * @rowlist1_o5",
+                      "len": 9,
+                      "varName": "rowlist1_sp5"
+                     }
+                    },
+                    {
+                     "textTransform": {
+                      "text": "@rowlist1_sp5",
+                      "start": 0,
+                      "len": -1,
+                      "operation": 3,
+                      "varName": "rowlist1_st5"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "visibility": "clamp(0, 1, @rowlist1_n - 5)"
+                 },
+                 {
+                  "width": "@rowlist1_cellW"
+                 },
+                 {
+                  "height": "@rowlist1_rowH + 40 * @rowlist1_o5"
+                 },
+                 {
+                  "padding": [
+                   8,
+                   0
+                  ]
+                 },
+                 {
+                  "semantics": {
+                   "clickable": true,
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "@who6",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ", ",
+                      "id2": "@what6"
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "$",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@t6",
+                       "whole": 5,
+                       "decimal": 2,
+                       "flags": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "stateDescription": "@rowlist1_st5"
+                  }
+                 },
+                 {
+                  "onClick": [
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@openRow",
+                    "value": "(5 + 1) * (1 - @rowlist1_o5)"
+                   }
+                  ]
+                 }
+                ],
+                "verticalArrangement": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "clamp(0, 1, 5 + 1 - @rowlist1_cols)"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 1
+                    },
+                    {
+                     "background": "@colors.outline"
+                    }
+                   ],
+                   "children": []
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@rowlist1_rowH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "box": {
                       "modifiers": [
                        {
-                        "size": 0
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
+                       },
+                       {
+                        "padding": {
+                         "end": 12
+                        }
                        }
                       ],
-                      "commands": [
+                      "children": [
                        {
-                        "global": {
+                        "canvas": {
+                         "modifiers": [
+                          {
+                           "size": 22
+                          }
+                         ],
                          "commands": [
                           {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 4 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp4"
-                           }
-                          },
+                           "save": [
+                            {
+                             "scale": {
+                              "sx": "componentWidth() / 960",
+                              "sy": "componentHeight() / 960"
+                             }
+                            },
+                            {
+                             "paint": {
+                              "color": "@colors.primary",
+                              "style": "fill"
+                             }
+                            },
+                            {
+                             "drawPath": {
+                              "path": "$paths.icon_package_2_outlined"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ],
+                      "horizontalAlignment": "center",
+                      "verticalAlignment": "center"
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@who6",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 500,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@what6",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 12,
+                         "color": "@colors.muted",
+                         "modifiers": [
                           {
-                           "textTransform": {
-                            "text": "@rowlist1_sp4",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st4"
+                           "padding": {
+                            "top": 2
                            }
                           }
                          ]
@@ -2220,320 +2654,106 @@
                      }
                     },
                     {
-                     "column": {
+                     "box": {
                       "modifiers": [
-                       "fillMaxSize",
                        {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who5",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what5",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t5",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st4"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(4 + 1) * (1 - (1 - min(1, abs(@openRow - 4 - 1))))"
-                         }
+                        "widthIn": [
+                         0,
+                         "@rowlist1_half"
                         ]
+                       },
+                       {
+                        "padding": {
+                         "start": 8
+                        }
                        }
                       ],
                       "children": [
                        {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 4 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "$",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@t6",
+                           "whole": 5,
+                           "decimal": 2,
+                           "flags": 7
                           }
-                         ]
+                         },
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "fontSize": 15,
+                         "fontWeight": 600,
+                         "color": "@colors.onSurface"
                         }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "visibility": "clamp(0, 1, @rowlist1_cellW - 179)"
                        },
                        {
-                        "row": {
-                         "verticalAlignment": "center",
+                        "padding": {
+                         "start": 4
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "canvas": {
                          "modifiers": [
-                          "fillMaxWidth",
                           {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
+                           "size": [
+                            20,
+                            20
                            ]
                           }
                          ],
-                         "children": [
+                         "commands": [
                           {
-                           "box": {
-                            "modifiers": [
+                           "variable": {
+                            "name": "rowlist1_chev5",
+                            "value": "@rowlist1_o5"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
                              {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
+                              "color": "@colors.muted"
                              },
                              {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
+                              "style": "stroke"
+                             },
                              {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
+                              "strokeWidth": 2
+                             },
+                             {
+                              "strokeCap": "round"
                              }
                             ]
                            }
                           },
                           {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who5",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what5",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
+                           "drawLine": {
+                            "x1": 5,
+                            "y1": "7 + 6 * @rowlist1_chev5",
+                            "x2": 10,
+                            "y2": "13 - 6 * @rowlist1_chev5"
                            }
                           },
                           {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t5",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev4",
-                                  "value": "(1 - min(1, abs(@openRow - 4 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev4",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev4"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev4",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev4"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 4 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note5",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
+                           "drawLine": {
+                            "x1": 10,
+                            "y1": "13 - 6 * @rowlist1_chev5",
+                            "x2": 15,
+                            "y2": "7 + 6 * @rowlist1_chev5"
                            }
                           }
                          ]
@@ -2546,380 +2766,31 @@
                   }
                  },
                  {
-                  "box": {
+                  "column": {
                    "modifiers": [
                     {
-                     "visibility": "clamp(0, 1, 5 + 1 - @rowlist1_first) * clamp(0, 1, @rowlist1_first + @rowlist1_shown - 5)"
+                     "visibility": "@rowlist1_o5"
+                    },
+                    "fillMaxWidth",
+                    {
+                     "height": 40
                     },
                     {
-                     "width": "@rowlist1_cellW"
-                    },
-                    {
-                     "height": "@rowlist1_rowH + 40 * (1 - min(1, abs(@openRow - 5 - 1)))"
-                    },
-                    {
-                     "padding": [
-                      8,
-                      0
-                     ]
+                     "padding": {
+                      "start": 0,
+                      "end": 0,
+                      "bottom": 6
+                     }
                     }
                    ],
                    "children": [
                     {
-                     "canvas": {
-                      "modifiers": [
-                       {
-                        "size": 0
-                       }
-                      ],
-                      "commands": [
-                       {
-                        "global": {
-                         "commands": [
-                          {
-                           "textSubtext": {
-                            "text": "Collapsed Expanded ",
-                            "start": "10 * (1 - min(1, abs(@openRow - 5 - 1)))",
-                            "len": 9,
-                            "varName": "rowlist1_sp5"
-                           }
-                          },
-                          {
-                           "textTransform": {
-                            "text": "@rowlist1_sp5",
-                            "start": 0,
-                            "len": -1,
-                            "operation": 3,
-                            "varName": "rowlist1_st5"
-                           }
-                          }
-                         ]
-                        }
-                       }
-                      ]
-                     }
-                    },
-                    {
-                     "column": {
-                      "modifiers": [
-                       "fillMaxSize",
-                       {
-                        "semantics": {
-                         "clickable": true,
-                         "contentDescription": {
-                          "type": "textMerge",
-                          "id1": "@who6",
-                          "id2": {
-                           "type": "textMerge",
-                           "id1": ", ",
-                           "id2": {
-                            "type": "textMerge",
-                            "id1": "@what6",
-                            "id2": {
-                             "type": "textMerge",
-                             "id1": ", ",
-                             "id2": {
-                              "type": "textMerge",
-                              "id1": "$",
-                              "id2": {
-                               "type": "textFromFloat",
-                               "value": "@t6",
-                               "whole": 5,
-                               "decimal": 2,
-                               "flags": 7
-                              }
-                             }
-                            }
-                           }
-                          }
-                         }
-                        }
-                       },
-                       {
-                        "semantics": {
-                         "stateDescription": "@rowlist1_st5"
-                        }
-                       },
-                       {
-                        "onClick": [
-                         {
-                          "type": "valueFloatExpressionChange",
-                          "target": "@openRow",
-                          "value": "(5 + 1) * (1 - (1 - min(1, abs(@openRow - 5 - 1))))"
-                         }
-                        ]
-                       }
-                      ],
-                      "children": [
-                       {
-                        "box": {
-                         "modifiers": [
-                          {
-                           "visibility": "clamp(0, 1, 5 + 1 - @rowlist1_first - @rowlist1_cols)"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 1
-                          },
-                          {
-                           "background": "@colors.outline"
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "row": {
-                         "verticalAlignment": "center",
-                         "modifiers": [
-                          "fillMaxWidth",
-                          {
-                           "height": "@rowlist1_ih"
-                          },
-                          {
-                           "padding": [
-                            0,
-                            0
-                           ]
-                          }
-                         ],
-                         "children": [
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "end": 12
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": 22
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "save": [
-                                  {
-                                   "scale": {
-                                    "sx": "componentWidth() / 960",
-                                    "sy": "componentHeight() / 960"
-                                   }
-                                  },
-                                  {
-                                   "paint": {
-                                    "color": "@colors.primary",
-                                    "style": "fill"
-                                   }
-                                  },
-                                  {
-                                   "drawPath": {
-                                    "path": "$paths.icon_package_2_outlined"
-                                   }
-                                  }
-                                 ]
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "column": {
-                            "modifiers": [
-                             {
-                              "weight": 1
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": "@who6",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 500,
-                               "color": "@colors.onSurface"
-                              }
-                             },
-                             {
-                              "text": {
-                               "value": "@what6",
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 12,
-                               "color": "@colors.muted",
-                               "modifiers": [
-                                {
-                                 "visibility": "@rowlist1_subOn"
-                                },
-                                {
-                                 "padding": {
-                                  "top": 2
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "widthIn": [
-                               0,
-                               "@rowlist1_cellW * 0.42"
-                              ]
-                             },
-                             {
-                              "padding": {
-                               "start": 8
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "text": {
-                               "value": {
-                                "type": "textMerge",
-                                "id1": "$",
-                                "id2": {
-                                 "type": "textFromFloat",
-                                 "value": "@t6",
-                                 "whole": 5,
-                                 "decimal": 2,
-                                 "flags": 7
-                                }
-                               },
-                               "maxLines": 1,
-                               "overflow": "ellipsis",
-                               "fontSize": 15,
-                               "fontWeight": 600,
-                               "color": "@colors.onSurface"
-                              }
-                             }
-                            ]
-                           }
-                          },
-                          {
-                           "box": {
-                            "modifiers": [
-                             {
-                              "visibility": "clamp(0, 1, @rowlist1_cellW - 180)"
-                             },
-                             {
-                              "padding": {
-                               "start": 4
-                              }
-                             }
-                            ],
-                            "children": [
-                             {
-                              "canvas": {
-                               "modifiers": [
-                                {
-                                 "size": [
-                                  20,
-                                  20
-                                 ]
-                                },
-                                {
-                                 "padding": {
-                                  "start": 0
-                                 }
-                                }
-                               ],
-                               "commands": [
-                                {
-                                 "variable": {
-                                  "name": "rowlist1_chev5",
-                                  "value": "(1 - min(1, abs(@openRow - 5 - 1)))"
-                                 }
-                                },
-                                {
-                                 "paint": {
-                                  "ops": [
-                                   {
-                                    "color": "@colors.muted"
-                                   },
-                                   {
-                                    "style": "stroke"
-                                   },
-                                   {
-                                    "strokeWidth": 2
-                                   },
-                                   {
-                                    "strokeCap": "round"
-                                   }
-                                  ]
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 5,
-                                  "y1": "7 + 6 * @rowlist1_chev5",
-                                  "x2": 10,
-                                  "y2": "13 - 6 * @rowlist1_chev5"
-                                 }
-                                },
-                                {
-                                 "drawLine": {
-                                  "x1": 10,
-                                  "y1": "13 - 6 * @rowlist1_chev5",
-                                  "x2": 15,
-                                  "y2": "7 + 6 * @rowlist1_chev5"
-                                 }
-                                }
-                               ]
-                              }
-                             }
-                            ]
-                           }
-                          }
-                         ]
-                        }
-                       },
-                       {
-                        "column": {
-                         "modifiers": [
-                          {
-                           "visibility": "(1 - min(1, abs(@openRow - 5 - 1)))"
-                          },
-                          "fillMaxWidth",
-                          {
-                           "height": 40
-                          },
-                          {
-                           "padding": {
-                            "start": 0,
-                            "end": 0,
-                            "bottom": 6
-                           }
-                          }
-                         ],
-                         "children": [
-                          {
-                           "text": {
-                            "value": "@note6",
-                            "fontSize": 12,
-                            "maxLines": 2,
-                            "overflow": "ellipsis",
-                            "color": "@colors.muted"
-                           }
-                          }
-                         ]
-                        }
-                       }
-                      ]
+                     "text": {
+                      "value": "@note6",
+                      "fontSize": 12,
+                      "maxLines": 2,
+                      "overflow": "ellipsis",
+                      "color": "@colors.muted"
                      }
                     }
                    ]

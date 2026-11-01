@@ -96,11 +96,15 @@ arithmetic). Static values fold to literals, which is smaller than an expression
   folds: `"@theme.space_2 * 2"` becomes `16`.
 - `{"$slot": "icon"}`: the caller's slot content, dropped when it isn't given.
 - `{"$if": "style == 'filled'", "then": X, "else": Y}`: a choice made when the document is
-  expanded. It also takes `a != 'x'`, `a` and `!a`. On a slot, or a param bound to a
+  expanded. It also takes `a != 'x'`, `a`, `!a` and `a || b`. An empty list is false. On a slot, or a param bound to a
   variable, `a` tests whether it was given. `theme.mono` and `!theme.mono` test the theme
   (any theme number works: 0 is false). Use it for the monochrome variant.
 - `{"$each": "labels", "as": "label", "index": "i", "count": "n", "do": X}`: X once per
   item of a list param (or `count` times for a number).
+  With `"fields": ["title", "value"]` an item's parts are `@r_title` and `@r_value` (for
+  `"as": "r"`): an object by key, an array by position, a bare value as the first field.
+  A field an item leaves out is missing, as an optional param is: `{"$if": "r_value", ...}`
+  tests it, and using it as a whole value drops the key. An unknown key is an error.
 - `{"$count": "labels"}`: the number of items, as a literal.
 - `{"$name": "value"}`: the bare name (`vol` for `"@vol"`) of the variable a `variable` param
   or a state local is bound to, for an op that declares a name. Slider names its
