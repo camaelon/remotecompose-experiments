@@ -1,0 +1,1579 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 210,
+  "profiles": 513,
+  "contentDescription": "BigNumber: revenue of 1,284,530 dollars up 4.2 percent, costs of 48 210,75 euros up 3.1 percent shown red because lower is better, and 2.5 million active users down 1.4 percent"
+ },
+ "resources": {
+  "variables": {
+   "revenue": {
+    "value": 1284530,
+    "export": true
+   },
+   "revenueChange": {
+    "value": 4.2,
+    "export": true
+   },
+   "users": {
+    "value": 2480000,
+    "export": true
+   },
+   "bignumber1_up": "step(@revenueChange, 0)",
+   "bignumber1_dn": "step(0 - @revenueChange, 0)",
+   "bignumber1_fl": "1 - @bignumber1_up - @bignumber1_dn",
+   "bignumber1_mag": "abs(@revenueChange)",
+   "bignumber3_mm": "step(abs(@users), 999999.5)",
+   "bignumber3_kk": "step(abs(@users), 999.5) - @bignumber3_mm",
+   "bignumber3_div": "1 + 999 * @bignumber3_kk + 999999 * @bignumber3_mm"
+  },
+  "colors": {
+   "background": "#FFFFFFFF",
+   "error": "#FF000000",
+   "muted": "#FF616161",
+   "onSurface": "#FF000000",
+   "success": "#FF000000"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 16
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 90
+          }
+         ],
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "updownunchanged",
+            "start": "2 * @bignumber1_dn + 6 * @bignumber1_fl",
+            "len": "2 * @bignumber1_up + 4 * @bignumber1_dn + 9 * @bignumber1_fl",
+            "varName": "bignumber1_dir"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "textSize": 12
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": "Revenue this month",
+            "mode": 0,
+            "name": "bignumber1_cw"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, componentWidth() / @bignumber1_cw)",
+              "sy": "min(1, componentWidth() / @bignumber1_cw)",
+              "pivotX": 0,
+              "pivotY": 9
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": "Revenue this month",
+              "x": 0,
+              "y": 9,
+              "panX": -1,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "textSize": 40
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textMerge",
+             "id1": "$",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@revenue",
+              "whole": 9,
+              "decimal": 0,
+              "flags": 23
+             }
+            },
+            "mode": 0,
+            "name": "bignumber1_vw"
+           }
+          },
+          {
+           "save": [
+            {
+             "scale": {
+              "sx": "min(1, componentWidth() / @bignumber1_vw)",
+              "sy": "min(1, componentWidth() / @bignumber1_vw)",
+              "pivotX": 0,
+              "pivotY": 42.8
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": "$",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@revenue",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "x": 0,
+              "y": 42.8,
+              "panX": -1,
+              "panY": 0
+             }
+            }
+           ]
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "textSize": 14
+             }
+            ]
+           }
+          },
+          {
+           "textMeasure": {
+            "text": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "+",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@bignumber1_mag",
+               "whole": 6,
+               "decimal": 1,
+               "flags": 7
+              }
+             },
+             "id2": "%"
+            },
+            "mode": 0,
+            "name": "bignumber1_tw"
+           }
+          },
+          {
+           "save": [
+            {
+             "translate": {
+              "dx": 0,
+              "dy": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.success"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1.5
+               },
+               {
+                "strokeCap": "round"
+               },
+               {
+                "alpha": "@bignumber1_up"
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 6,
+              "y1": 85,
+              "x2": 6,
+              "y2": 73
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 1,
+              "y1": 78,
+              "x2": 6,
+              "y2": 73
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 11,
+              "y1": 78,
+              "x2": 6,
+              "y2": 73
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@bignumber1_mag",
+                 "whole": 6,
+                 "decimal": 1,
+                 "flags": 7
+                }
+               },
+               "id2": "%"
+              },
+              "x": 18,
+              "y": 79,
+              "panX": -1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.error"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1.5
+               },
+               {
+                "strokeCap": "round"
+               },
+               {
+                "alpha": "@bignumber1_dn"
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 6,
+              "y1": 73,
+              "x2": 6,
+              "y2": 85
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 1,
+              "y1": 80,
+              "x2": 6,
+              "y2": 85
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 11,
+              "y1": 80,
+              "x2": 6,
+              "y2": 85
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "−",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@bignumber1_mag",
+                 "whole": 6,
+                 "decimal": 1,
+                 "flags": 7
+                }
+               },
+               "id2": "%"
+              },
+              "x": 18,
+              "y": 79,
+              "panX": -1,
+              "panY": 0
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 1.5
+               },
+               {
+                "strokeCap": "round"
+               },
+               {
+                "alpha": "@bignumber1_fl"
+               }
+              ]
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 1,
+              "y1": 79,
+              "x2": 11,
+              "y2": 79
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 7,
+              "y1": 75,
+              "x2": 11,
+              "y2": 79
+             }
+            },
+            {
+             "drawLine": {
+              "x1": 7,
+              "y1": 83,
+              "x2": 11,
+              "y2": 79
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@bignumber1_mag",
+                "whole": 6,
+                "decimal": 1,
+                "flags": 7
+               },
+               "id2": "%"
+              },
+              "x": 18,
+              "y": 79,
+              "panX": -1,
+              "panY": 0
+             }
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 90
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": "Revenue this month, ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "$",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@revenue",
+                   "whole": 9,
+                   "decimal": 0,
+                   "flags": 23
+                  }
+                 }
+                },
+                "id2": ", "
+               },
+               "id2": "@bignumber1_dir"
+              },
+              "id2": " "
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@bignumber1_mag",
+               "whole": 6,
+               "decimal": 1,
+               "flags": 7
+              },
+              "id2": " percent"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 75
+                }
+               ],
+               "commands": [
+                {
+                 "textSubtext": {
+                  "text": "updownunchanged",
+                  "start": 0,
+                  "len": 2,
+                  "varName": "bignumber2_dir"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "textSize": 12
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": "Costs",
+                  "mode": 0,
+                  "name": "bignumber2_cw"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "scale": {
+                    "sx": "min(1, componentWidth() / @bignumber2_cw)",
+                    "sy": "min(1, componentWidth() / @bignumber2_cw)",
+                    "pivotX": 0,
+                    "pivotY": 9
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": "Costs",
+                    "x": 0,
+                    "y": 9,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "textSize": 28
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": 48210.75,
+                    "whole": 9,
+                    "decimal": 2,
+                    "flags": 151
+                   },
+                   "id2": " €"
+                  },
+                  "mode": 0,
+                  "name": "bignumber2_vw"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "scale": {
+                    "sx": "min(1, componentWidth() / @bignumber2_vw)",
+                    "sy": "min(1, componentWidth() / @bignumber2_vw)",
+                    "pivotX": 0,
+                    "pivotY": 35.36
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": 48210.75,
+                      "whole": 9,
+                      "decimal": 2,
+                      "flags": 151
+                     },
+                     "id2": " €"
+                    },
+                    "x": 0,
+                    "y": 35.36,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "textSize": 14
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "+",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": 3.1,
+                     "whole": 6,
+                     "decimal": 1,
+                     "flags": 7
+                    }
+                   },
+                   "id2": "%"
+                  },
+                  "mode": 0,
+                  "name": "bignumber2_tw"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "translate": {
+                    "dx": 0,
+                    "dy": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.error"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 1
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 6,
+                    "y1": 70,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 63,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 11,
+                    "y1": 63,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": 3.1,
+                       "whole": 6,
+                       "decimal": 1,
+                       "flags": 7
+                      }
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.success"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 0
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 6,
+                    "y1": 58,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 65,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 11,
+                    "y1": 65,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "−",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": 3.1,
+                       "whole": 6,
+                       "decimal": 1,
+                       "flags": 7
+                      }
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.muted"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 0
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 64,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 7,
+                    "y1": 60,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 7,
+                    "y1": 68,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": 3.1,
+                      "whole": 6,
+                      "decimal": 1,
+                      "flags": 7
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 75
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textMerge",
+                       "id1": "Costs, ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": 48210.75,
+                         "whole": 9,
+                         "decimal": 2,
+                         "flags": 151
+                        },
+                        "id2": " €"
+                       }
+                      },
+                      "id2": ", "
+                     },
+                     "id2": "@bignumber2_dir"
+                    },
+                    "id2": " "
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": 3.1,
+                     "whole": 6,
+                     "decimal": 1,
+                     "flags": 7
+                    },
+                    "id2": " percent"
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 16
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "canvas": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 75
+                }
+               ],
+               "commands": [
+                {
+                 "textSubtext": {
+                  "text": "updownunchanged",
+                  "start": 2,
+                  "len": 4,
+                  "varName": "bignumber3_dir"
+                 }
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.muted"
+                   },
+                   {
+                    "textSize": 12
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": "Active users",
+                  "mode": 0,
+                  "name": "bignumber3_cw"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "scale": {
+                    "sx": "min(1, componentWidth() / @bignumber3_cw)",
+                    "sy": "min(1, componentWidth() / @bignumber3_cw)",
+                    "pivotX": "componentWidth()",
+                    "pivotY": 9
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": "Active users",
+                    "x": "componentWidth()",
+                    "y": 9,
+                    "panX": 1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "color": "@colors.onSurface"
+                   },
+                   {
+                    "textSize": 28
+                   },
+                   {
+                    "style": "fill"
+                   },
+                   {
+                    "alpha": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@users",
+                   "whole": 9,
+                   "decimal": 0,
+                   "flags": 23
+                  },
+                  "mode": 0,
+                  "name": "bignumber3_wp"
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@users / @bignumber3_div",
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "id2": "K"
+                  },
+                  "mode": 0,
+                  "name": "bignumber3_wk"
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@users / @bignumber3_div",
+                    "whole": 4,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "id2": "M"
+                  },
+                  "mode": 0,
+                  "name": "bignumber3_wm"
+                 }
+                },
+                {
+                 "variable": {
+                  "name": "bignumber3_vw",
+                  "value": "@bignumber3_wp * (1 - @bignumber3_kk - @bignumber3_mm) + @bignumber3_wk * @bignumber3_kk + @bignumber3_wm * @bignumber3_mm"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "scale": {
+                    "sx": "min(1, componentWidth() / @bignumber3_vw)",
+                    "sy": "min(1, componentWidth() / @bignumber3_vw)",
+                    "pivotX": "componentWidth()",
+                    "pivotY": 35.36
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "alpha": "1 - @bignumber3_kk - @bignumber3_mm"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textFromFloat",
+                     "value": "@users",
+                     "whole": 9,
+                     "decimal": 0,
+                     "flags": 23
+                    },
+                    "x": "componentWidth()",
+                    "y": 35.36,
+                    "panX": 1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "alpha": "@bignumber3_kk"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@users / @bignumber3_div",
+                      "whole": 4,
+                      "decimal": 1,
+                      "flags": 5
+                     },
+                     "id2": "K"
+                    },
+                    "x": "componentWidth()",
+                    "y": 35.36,
+                    "panX": 1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "alpha": "@bignumber3_mm"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@users / @bignumber3_div",
+                      "whole": 4,
+                      "decimal": 1,
+                      "flags": 5
+                     },
+                     "id2": "M"
+                    },
+                    "x": "componentWidth()",
+                    "y": 35.36,
+                    "panX": 1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                },
+                {
+                 "paint": {
+                  "ops": [
+                   {
+                    "textSize": 14
+                   }
+                  ]
+                 }
+                },
+                {
+                 "textMeasure": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "+",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": 1.4,
+                     "whole": 6,
+                     "decimal": 1,
+                     "flags": 7
+                    }
+                   },
+                   "id2": "%"
+                  },
+                  "mode": 0,
+                  "name": "bignumber3_tw"
+                 }
+                },
+                {
+                 "save": [
+                  {
+                   "translate": {
+                    "dx": "componentWidth() - 18 - @bignumber3_tw",
+                    "dy": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.success"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 0
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 6,
+                    "y1": 70,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 63,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 11,
+                    "y1": 63,
+                    "x2": 6,
+                    "y2": 58
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "+",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": 1.4,
+                       "whole": 6,
+                       "decimal": 1,
+                       "flags": 7
+                      }
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.error"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 1
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 6,
+                    "y1": 58,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 65,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 11,
+                    "y1": 65,
+                    "x2": 6,
+                    "y2": 70
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "−",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": 1.4,
+                       "whole": 6,
+                       "decimal": 1,
+                       "flags": 7
+                      }
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "color": "@colors.muted"
+                     },
+                     {
+                      "style": "stroke"
+                     },
+                     {
+                      "strokeWidth": 1.5
+                     },
+                     {
+                      "strokeCap": "round"
+                     },
+                     {
+                      "alpha": 0
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 1,
+                    "y1": 64,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 7,
+                    "y1": 60,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "drawLine": {
+                    "x1": 7,
+                    "y1": 68,
+                    "x2": 11,
+                    "y2": 64
+                   }
+                  },
+                  {
+                   "paint": {
+                    "ops": [
+                     {
+                      "style": "fill"
+                     }
+                    ]
+                   }
+                  },
+                  {
+                   "drawTextAnchored": {
+                    "text": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": 1.4,
+                      "whole": 6,
+                      "decimal": 1,
+                      "flags": 7
+                     },
+                     "id2": "%"
+                    },
+                    "x": 18,
+                    "y": 64,
+                    "panX": -1,
+                    "panY": 0
+                   }
+                  }
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 75
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textMerge",
+                       "id1": "Active users, ",
+                       "id2": {
+                        "type": "textFromFloat",
+                        "value": "@users",
+                        "whole": 9,
+                        "decimal": 0,
+                        "flags": 23
+                       }
+                      },
+                      "id2": ", "
+                     },
+                     "id2": "@bignumber3_dir"
+                    },
+                    "id2": " "
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": 1.4,
+                     "whole": 6,
+                     "decimal": 1,
+                     "flags": 7
+                    },
+                    "id2": " percent"
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

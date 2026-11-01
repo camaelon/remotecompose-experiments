@@ -1,0 +1,149 @@
+{
+ "component": "LabelValue",
+ "version": 1,
+ "summary": "A label and its value (Gate / B34, Seat / 14C, Balance / €1,240) read by a screen reader as ONE item, \"Gate, B34\": the label small and muted over the value (stacked) or beside it (inline), drawn on one canvas that carries the merged description, so the two texts are never read separately. Lines too wide for the box shrink to fit.",
+ "params": {
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "The caption, literal text (\"Gate\"): drawn muted, and the first half of the description"
+  },
+  "value": {
+   "type": "text",
+   "required": true,
+   "doc": "The value: literal text (\"B34\"), a \"@textVariable\" the host sets, or a text expression ({\"type\": \"textFromFloat\", ...})"
+  },
+  "layout": {
+   "type": "enum",
+   "values": ["stacked", "inline"],
+   "default": "stacked",
+   "static": true,
+   "doc": "stacked: the label on a line over the value; inline: the label and the value on one line"
+  },
+  "size": {
+   "type": "enum",
+   "values": ["sm", "md", "lg"],
+   "default": "md",
+   "static": true,
+   "doc": "The value's size: sm 15 dp, md 20 dp, lg 28 dp (a boarding pass's gate). The label is 12 dp stacked (15 with lg) and 15 dp inline (sm and md: the same size as the value)"
+  },
+  "align": {
+   "type": "enum",
+   "values": ["start", "center", "end", "spread"],
+   "default": "start",
+   "static": true,
+   "doc": "Where the text sits in the width it fills. stacked: start, center or end for both lines (spread is start). inline: start, center or end place \"label value\" as a group; spread puts the label at the start and the value at the end, like a KeyValueRow"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "The value's colour (the label is always muted): @colors.primary or @colors.error to emphasise it"
+  },
+  "description": {
+   "type": "string",
+   "doc": "What a screen reader says instead of \"<label>, <value>\" (for a value that reads badly: \"Seat 14 C\"). Literal text"
+  }
+ },
+ "locals": {
+  "lf": {"$if": "layout == 'inline'", "then": 15, "else": {"$if": "size == 'lg'", "then": 15, "else": 12}},
+  "vf": {"$if": "size == 'sm'", "then": 15, "else": {"$if": "size == 'md'", "then": 20, "else": 28}},
+  "h": {"$if": "layout == 'inline'", "then": "max(@lf, @vf) * 1.4", "else": "@lf * 1.4 + @vf * 1.3"}
+ },
+ "capabilities": ["text.anchor", "text.measure", "a11y.labels", "draw.transform"],
+ "call": {
+  "LabelValue": {
+   "label": "Gate",
+   "value": "B34"
+  }
+ },
+ "pitfalls": [
+  "One accessibility node: the label and the value are drawn on one canvas (drawTextAnchored), and the canvas's semantics carries textMerge(\"<label>, \", value). Two layout texts under a container with a contentDescription are read three times (the container, then each text): the JSON semantics has no merge mode (the parsers always write SET), so drawing is the only way to keep the parts out of the tree",
+  "The label must be literal text: it is joined into the description at build time (\"Gate, \"). The value may be a \"@textVariable\" (the description follows it) or a text expression",
+  "Drawn text does not wrap or follow the system font scale, and has no bold: a line wider than the box is measured (textMeasure) and scaled down about its anchor, never cut off. Inline, the label and value shrink together",
+  "It fills its parent's width (fillMaxWidth) at a fixed height (stacked: 1.4 × label + 1.3 × value size; inline: 1.4 × the larger): in a row, put it in a weighted box, or it has no width",
+  "The value is onSurface and the label muted in every look, so mono needs no variant; a `color` like error is white (mono-dark) or black (mono-light) there, so do not let the colour alone carry a meaning"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxWidth",
+    {"height": "@h"},
+    {"semantics": {"contentDescription": {"$if": "description", "then": "@description", "else": {"type": "textMerge", "id1": "@label, ", "id2": "@value"}}}}
+   ],
+   "commands": [
+    {"paint": {"ops": [{"color": "@colors.muted"}, {"textSize": "@lf"}, {"alpha": 1}]}},
+    {"textMeasure": {"text": "@label", "mode": 0, "name": "lw"}},
+    {"paint": {"ops": [{"color": "@color"}, {"textSize": "@vf"}]}},
+    {"textMeasure": {"text": "@value", "mode": 0, "name": "vw"}},
+    {
+     "$if": "layout == 'stacked'",
+     "then": [
+      {"paint": {"ops": [{"color": "@colors.muted"}, {"textSize": "@lf"}]}},
+      {"save": [
+       {"scale": {
+        "sx": "min(1, componentWidth() / @lw)", "sy": "min(1, componentWidth() / @lw)",
+        "pivotX": {"$if": "align == 'center'", "then": "componentWidth() / 2", "else": {"$if": "align == 'end'", "then": "componentWidth()", "else": 0}},
+        "pivotY": "@lf * 0.7"
+       }},
+       {"drawTextAnchored": {
+        "text": "@label",
+        "x": {"$if": "align == 'center'", "then": "componentWidth() / 2", "else": {"$if": "align == 'end'", "then": "componentWidth()", "else": 0}},
+        "y": "@lf * 0.7",
+        "panX": {"$if": "align == 'center'", "then": 0, "else": {"$if": "align == 'end'", "then": 1, "else": -1}},
+        "panY": 0
+       }}
+      ]},
+      {"paint": {"ops": [{"color": "@color"}, {"textSize": "@vf"}]}},
+      {"save": [
+       {"scale": {
+        "sx": "min(1, componentWidth() / @vw)", "sy": "min(1, componentWidth() / @vw)",
+        "pivotX": {"$if": "align == 'center'", "then": "componentWidth() / 2", "else": {"$if": "align == 'end'", "then": "componentWidth()", "else": 0}},
+        "pivotY": "@lf * 1.4 + @vf * 0.65"
+       }},
+       {"drawTextAnchored": {
+        "text": "@value",
+        "x": {"$if": "align == 'center'", "then": "componentWidth() / 2", "else": {"$if": "align == 'end'", "then": "componentWidth()", "else": 0}},
+        "y": "@lf * 1.4 + @vf * 0.65",
+        "panX": {"$if": "align == 'center'", "then": 0, "else": {"$if": "align == 'end'", "then": 1, "else": -1}},
+        "panY": 0
+       }}
+      ]}
+     ]
+    },
+    {
+     "$if": "layout == 'inline'",
+     "then": [
+      {"variable": {"name": "s", "value": "min(1, componentWidth() / (@lw + 8 + @vw))"}},
+      {"$if": "align == 'spread'",
+       "then": [
+        {"paint": {"ops": [{"color": "@colors.muted"}, {"textSize": "@lf"}]}},
+        {"save": [
+         {"scale": {"sx": "@s", "sy": "@s", "pivotX": 0, "pivotY": "@h / 2"}},
+         {"drawTextAnchored": {"text": "@label", "x": 0, "y": "@h / 2", "panX": -1, "panY": 0}}
+        ]},
+        {"paint": {"ops": [{"color": "@color"}, {"textSize": "@vf"}]}},
+        {"save": [
+         {"scale": {"sx": "@s", "sy": "@s", "pivotX": "componentWidth()", "pivotY": "@h / 2"}},
+         {"drawTextAnchored": {"text": "@value", "x": "componentWidth()", "y": "@h / 2", "panX": 1, "panY": 0}}
+        ]}
+       ],
+       "else": [
+        {"save": [
+         {"translate": {
+          "dx": {"$if": "align == 'center'", "then": "(componentWidth() - @s * (@lw + 8 + @vw)) / 2", "else": {"$if": "align == 'end'", "then": "componentWidth() - @s * (@lw + 8 + @vw)", "else": 0}},
+          "dy": 0
+         }},
+         {"scale": {"sx": "@s", "sy": "@s", "pivotX": 0, "pivotY": "@h / 2"}},
+         {"paint": {"ops": [{"color": "@colors.muted"}, {"textSize": "@lf"}]}},
+         {"drawTextAnchored": {"text": "@label", "x": 0, "y": "@h / 2", "panX": -1, "panY": 0}},
+         {"paint": {"ops": [{"color": "@color"}, {"textSize": "@vf"}]}},
+         {"drawTextAnchored": {"text": "@value", "x": "@lw + 8", "y": "@h / 2", "panX": -1, "panY": 0}}
+        ]}
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ }
+}

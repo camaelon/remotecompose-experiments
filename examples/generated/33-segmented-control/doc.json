@@ -1,0 +1,908 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Activity summary with a Day, Week and Month view switcher"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "PeriodBars": {
+   "component": "PeriodBars",
+   "version": 1,
+   "summary": "Bars for the first `count` values of a float array, the bar at `highlight` (now: this hour, today) filled in the accent colour with a marker under it; optional static labels under the bars.",
+   "params": {
+    "values": {
+     "type": "float",
+     "required": true,
+     "doc": "\"@name\" of a float array (host-exported)"
+    },
+    "count": {
+     "type": "float",
+     "required": true,
+     "doc": "How many bars to draw (expression, e.g. days in this month)"
+    },
+    "highlight": {
+     "type": "float",
+     "default": -1,
+     "doc": "Index of the highlighted bar (-1: none)"
+    },
+    "labels": {
+     "type": "list",
+     "doc": "Static labels under bars from index 0 (\"\" to skip one)"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Highlighted bar colour"
+    },
+    "height": {
+     "type": "float",
+     "default": 200,
+     "static": true,
+     "doc": "Height in dp, labels included"
+    },
+    "label": {
+     "type": "string",
+     "default": "Bar chart",
+     "doc": "Accessibility label"
+    },
+    "upTo": {
+     "type": "float",
+     "default": 1000,
+     "doc": "Last index drawn (bars after it are the future: not drawn)"
+    }
+   },
+   "locals": {
+    "max": "max(arrayMax(@values), 0.001)",
+    "base": 22
+   },
+   "call": {
+    "PeriodBars": {
+     "values": "@week",
+     "count": 7,
+     "highlight": 2,
+     "labels": [
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S",
+      "S"
+     ],
+     "label": "Steps per day this week"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@height"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "w",
+        "value": "componentWidth() / @count"
+       }
+      },
+      {
+       "variable": {
+        "name": "ph",
+        "value": "componentHeight() - @base - 4"
+       }
+      },
+      {
+       "translate": {
+        "dx": 0,
+        "dy": "componentHeight() - @base"
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "clipRect": {
+           "left": 0,
+           "top": "-componentHeight()",
+           "right": "componentWidth()",
+           "bottom": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "$if": "theme.mono",
+             "then": {
+              "color": "@colors.onSurface"
+             },
+             "else": {
+              "color": "@colors.muted"
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "style": "stroke"
+             },
+             "else": {
+              "style": "fill"
+             }
+            },
+            {
+             "strokeWidth": 1.5
+            }
+           ]
+          }
+         },
+         {
+          "loop": {
+           "index": "i",
+           "from": 0,
+           "until": "@count",
+           "commands": [
+            {
+             "drawRoundRect": {
+              "left": "(i + 0.15) * @w",
+              "top": "-arrayGet(@values, i) * @ph / @max * (1 - step(i, @upTo + 0.5))",
+              "right": "(i + 0.85) * @w",
+              "bottom": 4,
+              "rx": 3,
+              "ry": 3
+             }
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "$if": "theme.mono",
+             "then": {
+              "color": "@colors.onSurface"
+             },
+             "else": {
+              "color": "@color"
+             }
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "(@highlight + 0.15) * @w",
+           "top": "-arrayGet(@values, max(0, @highlight)) * @ph / @max",
+           "right": "(@highlight + 0.85) * @w",
+           "bottom": 4,
+           "rx": 3,
+           "ry": 3
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 0,
+        "y1": 0,
+        "x2": "componentWidth()",
+        "y2": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "$if": "theme.mono",
+          "then": {
+           "color": "@colors.onSurface"
+          },
+          "else": {
+           "color": "@color"
+          }
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(@highlight + 0.5) * @w",
+        "cy": 19,
+        "radius": 2.5
+       }
+      },
+      {
+       "$if": "labels",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": 11
+           }
+          ]
+         }
+        },
+        {
+         "$each": "labels",
+         "as": "text",
+         "index": "k",
+         "do": {
+          "drawTextAnchored": {
+           "text": "@text",
+           "x": "(@k + 0.5) * @w",
+           "y": 9,
+           "panX": 0,
+           "panY": 0
+          }
+         }
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "day": {
+    "value": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     120,
+     850,
+     1400,
+     600,
+     300,
+     450,
+     900,
+     500,
+     350,
+     400,
+     700,
+     1200,
+     950,
+     500,
+     300,
+     150,
+     40,
+     0
+    ],
+    "export": true
+   },
+   "week": {
+    "value": [
+     6200,
+     8400,
+     7100,
+     10300,
+     5600,
+     12100,
+     9000
+    ],
+    "export": true
+   },
+   "month": {
+    "value": [
+     7200,
+     8100,
+     6400,
+     9900,
+     10400,
+     5200,
+     11800,
+     7600,
+     8800,
+     6900,
+     9300,
+     10100,
+     4800,
+     12600,
+     8000,
+     7400,
+     9100,
+     6600,
+     10800,
+     9700,
+     5900,
+     11200,
+     8300,
+     7700,
+     9500,
+     6800,
+     10200,
+     8900,
+     7300,
+     9800,
+     8600
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "view": {
+    "value": 0,
+    "export": true
+   },
+   "scroll": 0,
+   "showDay": "1 - min(1, abs(@view))",
+   "showWeek": "1 - min(1, abs(@view - 1))",
+   "showMonth": "1 - min(1, abs(@view - 2))",
+   "m": "calendarMonth()",
+   "leap": "1 - min(1, year() % 4) - (1 - min(1, year() % 100)) + (1 - min(1, year() % 400))",
+   "nd": "30 + (@m + floor(@m / 8)) % 2 - (1 - min(1, abs(@m - 2))) * (2 - @leap)",
+   "nowHour": "timeInHr()",
+   "today": "weekDay() - 1",
+   "dom": "dayOfMonth() - 1",
+   "dsum0": "arrayGet(@day, 0) * step(@nowHour + 0.5, 0) + arrayGet(@day, 1) * step(@nowHour + 0.5, 1) + arrayGet(@day, 2) * step(@nowHour + 0.5, 2)",
+   "dsum1": "arrayGet(@day, 3) * step(@nowHour + 0.5, 3) + arrayGet(@day, 4) * step(@nowHour + 0.5, 4) + arrayGet(@day, 5) * step(@nowHour + 0.5, 5)",
+   "dsum2": "arrayGet(@day, 6) * step(@nowHour + 0.5, 6) + arrayGet(@day, 7) * step(@nowHour + 0.5, 7) + arrayGet(@day, 8) * step(@nowHour + 0.5, 8)",
+   "dsum3": "arrayGet(@day, 9) * step(@nowHour + 0.5, 9) + arrayGet(@day, 10) * step(@nowHour + 0.5, 10) + arrayGet(@day, 11) * step(@nowHour + 0.5, 11)",
+   "dsum4": "arrayGet(@day, 12) * step(@nowHour + 0.5, 12) + arrayGet(@day, 13) * step(@nowHour + 0.5, 13) + arrayGet(@day, 14) * step(@nowHour + 0.5, 14)",
+   "dsum5": "arrayGet(@day, 15) * step(@nowHour + 0.5, 15) + arrayGet(@day, 16) * step(@nowHour + 0.5, 16) + arrayGet(@day, 17) * step(@nowHour + 0.5, 17)",
+   "dsum6": "arrayGet(@day, 18) * step(@nowHour + 0.5, 18) + arrayGet(@day, 19) * step(@nowHour + 0.5, 19) + arrayGet(@day, 20) * step(@nowHour + 0.5, 20)",
+   "dsum7": "arrayGet(@day, 21) * step(@nowHour + 0.5, 21) + arrayGet(@day, 22) * step(@nowHour + 0.5, 22) + arrayGet(@day, 23) * step(@nowHour + 0.5, 23)",
+   "dayTotal": "@dsum0 + @dsum1 + @dsum2 + @dsum3 + @dsum4 + @dsum5 + @dsum6 + @dsum7",
+   "wsum0": "arrayGet(@week, 0) * step(@today + 0.5, 0) + arrayGet(@week, 1) * step(@today + 0.5, 1) + arrayGet(@week, 2) * step(@today + 0.5, 2)",
+   "wsum1": "arrayGet(@week, 3) * step(@today + 0.5, 3) + arrayGet(@week, 4) * step(@today + 0.5, 4) + arrayGet(@week, 5) * step(@today + 0.5, 5)",
+   "wsum2": "arrayGet(@week, 6) * step(@today + 0.5, 6)",
+   "weekTotal": "@wsum0 + @wsum1 + @wsum2",
+   "msum0": "arrayGet(@month, 0) * step(@dom + 0.5, 0) + arrayGet(@month, 1) * step(@dom + 0.5, 1) + arrayGet(@month, 2) * step(@dom + 0.5, 2)",
+   "msum1": "arrayGet(@month, 3) * step(@dom + 0.5, 3) + arrayGet(@month, 4) * step(@dom + 0.5, 4) + arrayGet(@month, 5) * step(@dom + 0.5, 5)",
+   "msum2": "arrayGet(@month, 6) * step(@dom + 0.5, 6) + arrayGet(@month, 7) * step(@dom + 0.5, 7) + arrayGet(@month, 8) * step(@dom + 0.5, 8)",
+   "msum3": "arrayGet(@month, 9) * step(@dom + 0.5, 9) + arrayGet(@month, 10) * step(@dom + 0.5, 10) + arrayGet(@month, 11) * step(@dom + 0.5, 11)",
+   "msum4": "arrayGet(@month, 12) * step(@dom + 0.5, 12) + arrayGet(@month, 13) * step(@dom + 0.5, 13) + arrayGet(@month, 14) * step(@dom + 0.5, 14)",
+   "msum5": "arrayGet(@month, 15) * step(@dom + 0.5, 15) + arrayGet(@month, 16) * step(@dom + 0.5, 16) + arrayGet(@month, 17) * step(@dom + 0.5, 17)",
+   "msum6": "arrayGet(@month, 18) * step(@dom + 0.5, 18) + arrayGet(@month, 19) * step(@dom + 0.5, 19) + arrayGet(@month, 20) * step(@dom + 0.5, 20)",
+   "msum7": "arrayGet(@month, 21) * step(@dom + 0.5, 21) + arrayGet(@month, 22) * step(@dom + 0.5, 22) + arrayGet(@month, 23) * step(@dom + 0.5, 23)",
+   "msum8": "arrayGet(@month, 24) * step(@dom + 0.5, 24) + arrayGet(@month, 25) * step(@dom + 0.5, 25) + arrayGet(@month, 26) * step(@dom + 0.5, 26)",
+   "msum9": "arrayGet(@month, 27) * step(@dom + 0.5, 27) + arrayGet(@month, 28) * step(@dom + 0.5, 28) + arrayGet(@month, 29) * step(@dom + 0.5, 29)",
+   "msum10": "arrayGet(@month, 30) * step(@dom + 0.5, 30)",
+   "monthTotal": "@msum0 + @msum1 + @msum2 + @msum3 + @msum4 + @msum5 + @msum6 + @msum7 + @msum8 + @msum9 + @msum10"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "verticalScroll": "@scroll"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 16
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": [
+         0,
+         0
+        ]
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "January  February March    April    May      June     July     August   SeptemberOctober  November December ",
+            "start": "(calendarMonth() - 1) * 9",
+            "len": 9,
+            "varName": "month9"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@month9",
+            "start": 0,
+            "len": 9,
+            "operation": 3,
+            "varName": "monthName"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "text": "Activity",
+      "fontSize": 22,
+      "fontWeight": 700,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "Tabs": {
+      "labels": [
+       "Day",
+       "Week",
+       "Month"
+      ],
+      "style": "segmented",
+      "selected": "@view",
+      "onClick": [
+       {
+        "type": "hostNamedAction",
+        "name": "viewSelected",
+        "value": "@view",
+        "valueType": "float"
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "clip": {
+         "roundedRect": 16
+        }
+       },
+       {
+        "background": "@colors.surface"
+       },
+       {
+        "padding": 16
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "visibility": "@showDay"
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Today",
+             "id2": {
+              "type": "textMerge",
+              "id1": ", ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@dayTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "id2": " steps"
+              }
+             }
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Today",
+            "fontSize": 14,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "bottom",
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textFromFloat",
+                "value": "@dayTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "fontSize": 34,
+               "fontWeight": 700,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "text": " steps",
+               "fontSize": 16,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "padding": {
+                  "bottom": 5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "text": "Steps per hour",
+            "fontSize": 12,
+            "color": "@colors.muted",
+            "modifiers": [
+             {
+              "padding": {
+               "bottom": 12
+              }
+             }
+            ]
+           }
+          },
+          {
+           "PeriodBars": {
+            "values": "@day",
+            "count": 24,
+            "highlight": "@nowHour",
+            "upTo": "@nowHour",
+            "labels": [
+             "00",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "06",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "12",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "18",
+             "",
+             "",
+             "",
+             "",
+             ""
+            ],
+            "label": "Steps per hour today, current hour highlighted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "visibility": "@showWeek"
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "This week",
+             "id2": {
+              "type": "textMerge",
+              "id1": ", ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@weekTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "id2": " steps"
+              }
+             }
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "This week",
+            "fontSize": 14,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "bottom",
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textFromFloat",
+                "value": "@weekTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "fontSize": 34,
+               "fontWeight": 700,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "text": " steps",
+               "fontSize": 16,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "padding": {
+                  "bottom": 5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "text": "Steps per day, Monday to Sunday",
+            "fontSize": 12,
+            "color": "@colors.muted",
+            "modifiers": [
+             {
+              "padding": {
+               "bottom": 12
+              }
+             }
+            ]
+           }
+          },
+          {
+           "PeriodBars": {
+            "values": "@week",
+            "count": 7,
+            "highlight": "@today",
+            "upTo": "@today",
+            "labels": [
+             "M",
+             "T",
+             "W",
+             "T",
+             "F",
+             "S",
+             "S"
+            ],
+            "label": "Steps per day this week, today highlighted"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "visibility": "@showMonth"
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@monthName",
+              "id2": {
+               "type": "textMerge",
+               "id1": " ",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "year()",
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               }
+              }
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ", ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@monthTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "id2": " steps"
+              }
+             }
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "@monthName",
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "year()",
+               "whole": 4,
+               "decimal": 0,
+               "flags": 5
+              }
+             }
+            },
+            "fontSize": 14,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "bottom",
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textFromFloat",
+                "value": "@monthTotal",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 21
+               },
+               "fontSize": 34,
+               "fontWeight": 700,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "text": " steps",
+               "fontSize": 16,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "padding": {
+                  "bottom": 5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "text": "Steps per day this month",
+            "fontSize": 12,
+            "color": "@colors.muted",
+            "modifiers": [
+             {
+              "padding": {
+               "bottom": 12
+              }
+             }
+            ]
+           }
+          },
+          {
+           "PeriodBars": {
+            "values": "@month",
+            "count": "@nd",
+            "highlight": "@dom",
+            "upTo": "@dom",
+            "labels": [
+             "1",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "8",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "15",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "",
+             "22"
+            ],
+            "label": "Steps per day this month, today highlighted"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

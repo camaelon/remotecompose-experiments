@@ -1,0 +1,1136 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 400,
+  "height": 860,
+  "profiles": 513,
+  "contentDescription": "Meeting time planner: a slider picks the meeting time in your time zone; a world map shades where that moment is 09:00 to 18:00 local time, and a list gives each team city's local time and whether it is working hours, early, late or night"
+ },
+ "components": {
+  "CityRow": {
+   "summary": "One team city: its name and UTC offset, its local time for the meeting (with a day shift), and whether that is working hours, early, late or night",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "City name (a host string)"
+    },
+    "i": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "Index into the cityOff array"
+    }
+   },
+   "locals": {
+    "off": "arrayGet(@cityOff, @i)",
+    "raw": "@q - @uo + @off",
+    "t": "(@raw + 48) % 24",
+    "hh": "floor(@t)",
+    "mm": "round((@t - floor(@t)) * 60)",
+    "work": "step(@t, 8.99) * (1 - step(@t, 17.99))",
+    "early": "step(@t, 5.99) * (1 - step(@t, 8.99))",
+    "late": "step(@t, 17.99) * (1 - step(@t, 21.99))",
+    "night": "1 - step(@t, 5.99) + step(@t, 21.99)",
+    "nextd": "step(@raw, 23.99)",
+    "prevd": "1 - step(@raw, -0.001)",
+    "pos": "step(@off, -0.001)",
+    "neg": "1 - step(@off, -0.001)",
+    "oh": "floor(abs(@off))",
+    "om": "round((abs(@off) - floor(abs(@off))) * 60)"
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "padding": [
+        0,
+        8
+       ]
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 16,
+           "color": "@colors.onSurface",
+           "maxLines": 2,
+           "fontWeight": 500,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "row": {
+           "children": [
+            {
+             "text": {
+              "value": "UTC+",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@pos"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "UTC\u2212",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@neg"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@oh",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@om",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              },
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "width": 116
+         }
+        ],
+        "horizontalAlignment": "end",
+        "children": [
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "children": [
+            {
+             "text": {
+              "value": "+1 day ",
+              "fontSize": 11,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@nextd"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "\u22121 day ",
+              "fontSize": 11,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@prevd"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@hh",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@mm",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              },
+              "fontSize": 18,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "fontWeight": 500,
+              "modifiers": [
+               {
+                "semantics": {
+                 "contentDescription": {
+                  "type": "textMerge",
+                  "id1": "@name",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " local time ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@hh",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 13
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@mm",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "height": 4
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "Working hours",
+           "fontSize": 12,
+           "color": "@colors.onPrimary",
+           "maxLines": 1,
+           "fontWeight": 500,
+           "modifiers": [
+            {
+             "visibility": "@work"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": " is in working hours"
+              }
+             }
+            },
+            {
+             "clip": {
+              "roundedRect": 10
+             }
+            },
+            {
+             "background": "@colors.success"
+            },
+            {
+             "padding": [
+              8,
+              2
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "Early",
+           "fontSize": 12,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@early"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": " is early, before 09:00"
+              }
+             }
+            },
+            {
+             "padding": [
+              8,
+              2
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "Late",
+           "fontSize": 12,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@late"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": " is late, after 18:00"
+              }
+             }
+            },
+            {
+             "padding": [
+              8,
+              2
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "Night",
+           "fontSize": 12,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@night"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": " is at night"
+              }
+             }
+            },
+            {
+             "padding": [
+              8,
+              2
+             ]
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CityRow": {
+     "name": "Tokyo",
+     "i": 0
+    }
+   }
+  },
+  "WorkHoursMap": {
+   "summary": "A world map with the longitudes where it is 09:00-18:00 local solar time at a UTC hour shaded, and the team cities marked (filled when in working hours)",
+   "params": {
+    "utc": {
+     "type": "float",
+     "required": true,
+     "doc": "Meeting time in UTC hours (0..24)"
+    },
+    "height": {
+     "type": "float",
+     "default": 160,
+     "static": true,
+     "doc": "Height in dp"
+    },
+    "label": {
+     "type": "string",
+     "default": "World map",
+     "doc": "Accessibility label"
+    }
+   },
+   "locals": {
+    "x0": "((9 - @utc) * 1000 / 24 + 3500) % 1000"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@height"
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "mh",
+        "value": {
+         "$mapHeight": "world"
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "sc",
+        "value": "min(componentWidth() / 1000, componentHeight() / @mh)"
+       }
+      },
+      {
+       "save": {}
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - 1000 * @sc) / 2",
+        "dy": "(componentHeight() - @mh * @sc) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@sc",
+        "sy": "@sc"
+       }
+      },
+      {
+       "clipRect": {
+        "left": 0,
+        "top": 0,
+        "right": 1000,
+        "bottom": "@mh"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "color": "@colors.muted",
+         "style": "fill",
+         "alpha": 1
+        }
+       },
+       "else": {
+        "paint": {
+         "color": "@colors.success",
+         "style": "fill",
+         "alpha": 0.35
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawRect": {
+         "left": "@x0",
+         "top": 0,
+         "right": "@x0 + 375",
+         "bottom": 14
+        }
+       },
+       "else": {
+        "drawRect": {
+         "left": "@x0",
+         "top": 0,
+         "right": "@x0 + 375",
+         "bottom": "@mh"
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawRect": {
+         "left": "@x0 - 1000",
+         "top": 0,
+         "right": "@x0 - 625",
+         "bottom": 14
+        }
+       },
+       "else": {
+        "drawRect": {
+         "left": "@x0 - 1000",
+         "top": 0,
+         "right": "@x0 - 625",
+         "bottom": "@mh"
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "color": "@colors.muted",
+         "style": "stroke",
+         "strokeWidth": 4
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawLine": {
+         "x1": "@x0",
+         "y1": 0,
+         "x2": "@x0",
+         "y2": "@mh"
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawLine": {
+         "x1": "(@x0 + 375) % 1000",
+         "y1": 0,
+         "x2": "(@x0 + 375) % 1000",
+         "y2": "@mh"
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "color": "@colors.onSurface",
+         "style": "stroke",
+         "strokeWidth": 2,
+         "alpha": 1
+        }
+       },
+       "else": {
+        "paint": {
+         "color": "@colors.track",
+         "style": "fill",
+         "alpha": 0.9
+        }
+       }
+      },
+      {
+       "drawPath": {
+        "path": {
+         "$map": {
+          "region": "world",
+          "layer": "land",
+          "detail": "low"
+         }
+        }
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": "arrayLength(@cityLon)",
+        "commands": [
+         {
+          "variable": {
+           "name": "mx",
+           "value": "(arrayGet(@cityLon, k) + 180) * 1000 / 360"
+          }
+         },
+         {
+          "variable": {
+           "name": "my",
+           "value": "(84 - arrayGet(@cityLat, k)) * @mh / 142"
+          }
+         },
+         {
+          "variable": {
+           "name": "lt",
+           "value": "(@utc + arrayGet(@cityOff, k) + 48) % 24"
+          }
+         },
+         {
+          "variable": {
+           "name": "w",
+           "value": "step(@lt, 8.99) * (1 - step(@lt, 17.99))"
+          }
+         },
+         {
+          "paint": {
+           "color": "@colors.onSurface",
+           "style": "stroke",
+           "strokeWidth": 4,
+           "alpha": 1
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@mx",
+           "cy": "@my",
+           "radius": 12
+          }
+         },
+         {
+          "paint": {
+           "color": "@colors.onSurface",
+           "style": "fill"
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@mx",
+           "cy": "@my",
+           "radius": "@w * 12"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "restore": {}
+      }
+     ]
+    }
+   },
+   "call": {
+    "WorkHoursMap": {
+     "utc": 12
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "hour": {
+    "value": 16.5,
+    "export": true
+   },
+   "q": "min(23.75, round(@hour * 4) / 4)",
+   "uo": "offsetToUtc() / 3600",
+   "utc": "(@q - @uo + 48) % 24",
+   "qh": "floor(@q)",
+   "qm": "round((@q - floor(@q)) * 60)",
+   "uh": "floor(@utc)",
+   "um": "round((@utc - floor(@utc)) * 60)",
+   "uoPos": "step(@uo, -0.001)",
+   "uoh": "floor(abs(@uo))",
+   "uom": "round((abs(@uo) - floor(abs(@uo))) * 60)",
+   "uoNeg": "1 - step(@uo, -0.001)",
+   "scroll": 0
+  },
+  "floatArrays": {
+   "cityOff": {
+    "value": [
+     -7,
+     -4,
+     0,
+     5.5,
+     9
+    ],
+    "export": true
+   },
+   "cityLon": {
+    "value": [
+     -122.42,
+     -74.0,
+     -0.13,
+     77.59,
+     139.69
+    ],
+    "export": true
+   },
+   "cityLat": {
+    "value": [
+     37.77,
+     40.71,
+     51.5,
+     12.97,
+     35.69
+    ],
+    "export": true
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "city0",
+    "vtype": "string",
+    "value": "San Francisco",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "city1",
+    "vtype": "string",
+    "value": "New York",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "city2",
+    "vtype": "string",
+    "value": "London",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "city3",
+    "vtype": "string",
+    "value": "Bengaluru",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "city4",
+    "vtype": "string",
+    "value": "Tokyo",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "verticalScroll": "@scroll"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "text": {
+       "value": "Meeting planner",
+       "fontSize": 22,
+       "color": "@colors.onSurface",
+       "maxLines": 1,
+       "fontWeight": 600
+      }
+     },
+     {
+      "row": {
+       "children": [
+        {
+         "text": {
+          "value": "Your time zone: UTC+",
+          "fontSize": 13,
+          "color": "@colors.muted",
+          "maxLines": 1,
+          "modifiers": [
+           {
+            "visibility": "@uoPos"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "Your time zone: UTC\u2212",
+          "fontSize": 13,
+          "color": "@colors.muted",
+          "maxLines": 1,
+          "modifiers": [
+           {
+            "visibility": "@uoNeg"
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@uoh",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ":",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@uom",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          },
+          "fontSize": 13,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        }
+       ]
+      }
+     },
+     {
+      "spacer": {
+       "modifiers": [
+        {
+         "height": 12
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "verticalAlignment": "bottom",
+       "children": [
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@qh",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ":",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@qm",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          },
+          "fontSize": 40,
+          "color": "@colors.onSurface",
+          "maxLines": 1,
+          "fontWeight": 600,
+          "modifiers": [
+           {
+            "semantics": {
+             "contentDescription": {
+              "type": "textMerge",
+              "id1": "Meeting at ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@qh",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@qm",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 }
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " your time, ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@uh",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@um",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 },
+                 "id2": " UTC"
+                }
+               }
+              }
+             }
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": 12
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@uh",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ":",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@um",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 13
+             }
+            }
+           },
+           "id2": " UTC"
+          },
+          "fontSize": 15,
+          "color": "@colors.muted",
+          "maxLines": 1,
+          "modifiers": [
+           {
+            "padding": [
+             0,
+             0,
+             0,
+             8
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": "Meeting time (your time)",
+       "fontSize": 13,
+       "color": "@colors.muted",
+       "maxLines": 1
+      }
+     },
+     {
+      "Slider": {
+       "label": "Meeting time, your time",
+       "value": "@hour",
+       "min": 0,
+       "max": 23.75,
+       "onRelease": {
+        "type": "hostNamedAction",
+        "name": "setMeetingHour",
+        "value": "@hour",
+        "valueType": "float"
+       }
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "horizontalArrangement": "spaceBetween",
+       "children": [
+        {
+         "text": {
+          "value": "00:00",
+          "fontSize": 11,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        },
+        {
+         "text": {
+          "value": "06:00",
+          "fontSize": 11,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        },
+        {
+         "text": {
+          "value": "12:00",
+          "fontSize": 11,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        },
+        {
+         "text": {
+          "value": "18:00",
+          "fontSize": 11,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        },
+        {
+         "text": {
+          "value": "24:00",
+          "fontSize": 11,
+          "color": "@colors.muted",
+          "maxLines": 1
+         }
+        }
+       ]
+      }
+     },
+     {
+      "spacer": {
+       "modifiers": [
+        {
+         "height": 16
+        }
+       ]
+      }
+     },
+     {
+      "WorkHoursMap": {
+       "utc": "@utc",
+       "height": 160,
+       "label": "World map: the band of longitudes where the meeting falls between 09:00 and 18:00 local time is shaded; team cities are marked, filled when in working hours"
+      }
+     },
+     {
+      "text": {
+       "value": "Shaded: 09:00-18:00 local solar time (by longitude). Filled dot: city in working hours.",
+       "fontSize": 12,
+       "color": "@colors.muted",
+       "maxLines": 2
+      }
+     },
+     {
+      "spacer": {
+       "modifiers": [
+        {
+         "height": 16
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": "Team",
+       "fontSize": 17,
+       "color": "@colors.onSurface",
+       "maxLines": 1,
+       "fontWeight": 600
+      }
+     },
+     {
+      "CityRow": {
+       "name": "@city0",
+       "i": 0
+      }
+     },
+     {
+      "CityRow": {
+       "name": "@city1",
+       "i": 1
+      }
+     },
+     {
+      "CityRow": {
+       "name": "@city2",
+       "i": 2
+      }
+     },
+     {
+      "CityRow": {
+       "name": "@city3",
+       "i": 3
+      }
+     },
+     {
+      "CityRow": {
+       "name": "@city4",
+       "i": 4
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

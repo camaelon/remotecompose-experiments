@@ -1,0 +1,612 @@
+{
+ "id": "Walkthrough",
+ "name": "walkthrough",
+ "version": 1,
+ "title": "Walkthrough",
+ "prompt": "Explain why a² + b² = c² in four steps: a drawing of a 3-4-5 triangle whose squares grow in one by one, a title and a sentence per step, Back / Next (Start over on the last step), \"Step 2 of 4\" with dots, and a play button that advances every three seconds.",
+ "level": 3,
+ "use_cases": [
+  "onboarding",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "walkthrough",
+  "step by step",
+  "step-by-step explanation",
+  "tutorial",
+  "explainer",
+  "guided tour",
+  "slideshow",
+  "autoplay",
+  "play pause",
+  "previous next",
+  "how it works",
+  "proof",
+  "stepper explanation",
+  "storyboard"
+ ],
+ "components": [
+  "Walkthrough",
+  "Button",
+  "IconButton"
+ ],
+ "teaches": [
+  "Call {\"Walkthrough\": {\"step\": \"@step\", \"shown\": \"@stepNow\", \"eased\": \"@stepEased\", \"titles\": [...], \"texts\": [...], \"slots\": {\"content\": [DRAWING]}}}: the drawing reads @stepNow (the step on screen) or @stepEased (the same, eased over 0.6 s) and the walkthrough supplies caption, progress, Back / Next and autoplay",
+  "A component publishes a value by declaring a tree variable named after the caller's variable ({\"$name\": \"shown\"}): readable in the content slot or anywhere after the call, never declared in resources",
+  "Morph a drawing between steps from one eased number: grow the k-th element with clamp(0, 1, @stepEased - (k - 1)), so the square on b grows while the step goes from 1 to 2 and stays full after",
+  "Autoplay without a timer and without a clock listener: the step on screen is step + playing × (min(last, s0 + floor((animationTime() − t0) / interval)) − step); Play stores s0 and t0 = animationTime(), Pause writes the step on screen back into step. Frames come from an animated local whose target, run × floor(animationTime() × 2), changes every half second while playing, so a paused or finished walkthrough is idle",
+  "The caption is one text per title and per text, each with an exact 0/1 visibility (1 − min(1, |shown − i|)); the title is announced \"Step N of M: <title>.\" and the \"Step N of M\" line is drawn on a canvas, so a screen reader hears it once"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "input.tap",
+   "note": "Back and Next write @step; play / pause writes playing, s0 and t0"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "layout.state",
+   "note": "the current step's title and text, switched by exact 0/1 visibility"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "anim.value",
+   "note": "@stepEased grows each square in; the accent dot slides"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "a11y.labels",
+   "note": "Step N of 4: <title>. on the title; Back, Play / Pause, Next labelled"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "draw.shapes",
+   "note": "the triangle and the three squares, drawn by the caller from @stepEased"
+  },
+  {
+   "pointer": "/root/column/children/1/box/children/0",
+   "shows": "text.dynamic",
+   "note": "\"Step N of 4\" from textFromFloat(shown + 1), drawn on the progress canvas and announced with the title"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "step": {
+    "type": "float",
+    "meaning": "the step, 0-based (what Back, Next and Pause write)",
+    "default": 0,
+    "min": 0,
+    "max": 3,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Step 1 of 4: a white 3-4-5 right triangle with a, b and c labels, the title \"A right triangle\" and two lines of text under it, a dimmed Back with a play triangle beside it, and Next on the right. Next (tap at 312, 440) shows \"The square on a\" and a blue square growing under side a with 9 in it; the next adds a purple square left of side b with 16; the last a green square tilted on the hypotenuse with 25, the text ending \"So a² + b² = c²\", and Next becomes Start over, which goes back to step 1. Play (105, 440) advances every 3 s, its icon becomes two bars (Pause), and stops on step 4; a tap on Back or Next while playing stops playing. step 3 renders the full figure. Mono: no play button (no motion), outlined Back, dots as grey rings with a white (black) current one. A screen reader hears \"Step 1 of 4: A right triangle\", the text, Back (disabled), Play and Next.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "last",
+    "variables": {
+     "step": 3
+    },
+    "duration": 1
+   },
+   {
+    "name": "next",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 312,
+      "y": 440
+     }
+    ],
+    "duration": 1
+   },
+   {
+    "name": "playing",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "tap",
+      "x": 105,
+      "y": 440
+     }
+    ],
+    "duration": 4
+   },
+   {
+    "name": "narrow",
+    "width": 280,
+    "height": 420
+   },
+   {
+    "name": "wide",
+    "width": 520,
+    "height": 400
+   }
+  ]
+ },
+ "related": [
+  "Pager",
+  "Steps",
+  "TIM-14"
+ ],
+ "derived": {
+  "components": [
+   "Button",
+   "IconButton",
+   "Walkthrough"
+  ],
+  "component_instances": 5,
+  "component_modes": {
+   "IconButton": "expand",
+   "Walkthrough": "expand",
+   "Button": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 7619,
+  "header": {
+   "width": 360,
+   "height": 480
+  },
+  "op_count": 434,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 9,
+   "ANIMATED_FLOAT": 49,
+   "COLOR_CONSTANT": 18,
+   "COLOR_EXPRESSIONS": 18,
+   "COMPONENT_VALUE": 4,
+   "CanvasContent": 4,
+   "CoreText": 13,
+   "DATA_FLOAT": 4,
+   "DATA_TEXT": 25,
+   "DRAW_CIRCLE": 5,
+   "DRAW_LINE": 10,
+   "DRAW_RECT": 6,
+   "DRAW_TEXT_ANCHOR": 7,
+   "HEADER": 1,
+   "IntegerExpression": 9,
+   "LAYOUT_BOX": 15,
+   "LAYOUT_CANVAS": 4,
+   "LAYOUT_COLUMN": 3,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 35,
+   "LoopOperation": 18,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_ROTATE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 7,
+   "MODIFIER_CLICK": 4,
+   "MODIFIER_HEIGHT": 16,
+   "MODIFIER_PADDING": 17,
+   "MODIFIER_RIPPLE": 3,
+   "MODIFIER_VISIBILITY": 12,
+   "MODIFIER_WIDTH": 18,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 17,
+   "RoundedClipRectModifierOperation": 7,
+   "THEME": 27,
+   "TextFromFloat": 5,
+   "TextMerge": 14,
+   "TextSubtext": 1,
+   "TextTransform": 1,
+   "ValueFloatExpressionChangeActionOperation": 11
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "disabled",
+    "type": "color",
+    "value": "#FF3A4556"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onDisabled",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "step",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "success",
+    "type": "color",
+    "value": "#FF66BB6A"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: text_in_canvas"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 2,
+   "click": 2,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 6142,
+    "component_modes": {
+     "Walkthrough": "expand",
+     "Button": "expand"
+    },
+    "op_count": 330,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onDisabled",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "step",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 6142,
+    "component_modes": {
+     "Walkthrough": "expand",
+     "Button": "expand"
+    },
+    "op_count": 330,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onDisabled",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "step",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "last": {
+    "render": "render-last.png",
+    "render_findings": []
+   },
+   "next": {
+    "render": "render-next.png",
+    "render_findings": []
+   },
+   "playing": {
+    "render": "render-playing.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     280,
+     420
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     520,
+     400
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "Walkthrough",
+   "alpha",
+   "angle",
+   "anim",
+   "apiLevel",
+   "autoplay",
+   "background",
+   "bottom",
+   "box",
+   "button1_enOff",
+   "button1_enOn",
+   "canvas",
+   "captionHeight",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "content",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "disabled",
+   "drawCircle",
+   "drawLine",
+   "drawRect",
+   "drawTextAnchored",
+   "dx",
+   "dy",
+   "eased",
+   "enabled",
+   "export",
+   "flags",
+   "fontSize",
+   "fontWeight",
+   "global",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "interval",
+   "left",
+   "len",
+   "light",
+   "maxLines",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onDisabled",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "ops",
+   "overflow",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rotate",
+   "row",
+   "save",
+   "scale",
+   "secondary",
+   "semantics",
+   "shown",
+   "size",
+   "slots",
+   "start",
+   "step",
+   "strokeCap",
+   "strokeJoin",
+   "strokeWidth",
+   "style",
+   "success",
+   "sx",
+   "sy",
+   "target",
+   "text",
+   "textSize",
+   "textSubtext",
+   "textTransform",
+   "texts",
+   "titles",
+   "top",
+   "translate",
+   "type",
+   "value",
+   "varName",
+   "variable",
+   "variables",
+   "verticalAlignment",
+   "verticalWeight",
+   "visibility",
+   "walkthrough1_cur",
+   "walkthrough1_more",
+   "walkthrough1_playing",
+   "walkthrough1_run",
+   "walkthrough1_s0",
+   "walkthrough1_t0",
+   "walkthrough1_tick",
+   "weight",
+   "whole",
+   "width",
+   "x",
+   "x1",
+   "x2",
+   "y",
+   "y1",
+   "y2"
+  ],
+  "evidence": {
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "draw.shapes": [
+    "drawRect",
+    "drawCircle",
+    "drawLine"
+   ]
+  },
+  "built_at": "2026-11-01T05:35:51.232Z"
+ }
+}

@@ -1,0 +1,1888 @@
+{
+ "component": "BigNumber",
+ "version": 1,
+ "summary": "A money or number KPI: a caption, a big formatted value (thousands grouping, a prefix or suffix such as a currency, decimals, optional K / M abbreviation, 7 digits and more) that shrinks to fit its width, and an optional change in percent with a drawn up or down arrow and its sign, green when good and red when bad. Read as one item: \"Revenue, $1,234,567, up 4.2 percent\".",
+ "params": {
+  "value": {
+   "type": "float",
+   "required": true,
+   "doc": "The number: a literal, a \"@variable\" or an expression. Floats hold 7 significant digits exactly (integers up to 16,777,216); beyond that the last digits are approximate"
+  },
+  "caption": {
+   "type": "string",
+   "default": "",
+   "doc": "Small muted line over the value (\"Revenue this month\"), literal text; also the start of the description"
+  },
+  "prefix": {
+   "type": "string",
+   "default": "",
+   "doc": "Before the number, no space added: \"$\", \"€\", \"£\""
+  },
+  "suffix": {
+   "type": "string",
+   "default": "",
+   "doc": "After the number, as written: \" €\", \" kWh\", \"%\""
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the decimal point (2 for cents)"
+  },
+  "grouping": {
+   "type": "enum",
+   "values": [
+    "comma",
+    "period",
+    "space",
+    "none"
+   ],
+   "default": "comma",
+   "static": true,
+   "doc": "Thousands separator: comma 1,234,567.89; period 1.234.567,89; space 1 234 567,89; none 1234567.89"
+  },
+  "abbreviate": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "Show 1,000 and over as 1.2K and 1,000,000 and over as 3.4M (one decimal); under 1,000 the value keeps `decimals`. The description still reads the full value"
+  },
+  "change": {
+   "type": "float",
+   "doc": "Change in percent, signed (4.2 for +4.2 %): a literal or a \"@variable\". Its sign picks the arrow, the sign and the colour (exactly 0: a muted flat arrow, read \"unchanged\"); omitted, or a literal 0, no change line"
+  },
+  "changeDecimals": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "Digits after the point in the change"
+  },
+  "invert": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true when a fall is good (costs, churn): a rise turns red and a fall green"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": 40,
+   "static": true,
+   "doc": "Value text size in dp (the canvas is 1.25 × this tall for the value, plus 18 dp for the caption and 22 dp for the change)"
+  },
+  "align": {
+   "type": "enum",
+   "values": [
+    "start",
+    "center",
+    "end"
+   ],
+   "default": "start",
+   "static": true,
+   "doc": "Where the lines sit in the width the component fills"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "The value's colour"
+  },
+  "label": {
+   "type": "string",
+   "doc": "What a screen reader says instead of the built description, literal text"
+  }
+ },
+ "locals": {
+  "up": {
+   "$if": "change",
+   "then": "step(@change, 0)",
+   "else": 0
+  },
+  "dn": {
+   "$if": "change",
+   "then": "step(0 - @change, 0)",
+   "else": 0
+  },
+  "fl": {
+   "$if": "change",
+   "then": "1 - @up - @dn",
+   "else": 0
+  },
+  "mag": {
+   "$if": "change",
+   "then": "abs(@change)",
+   "else": 0
+  },
+  "mm": {
+   "$if": "abbreviate",
+   "then": "step(abs(@value), 999999.5)",
+   "else": 0
+  },
+  "kk": {
+   "$if": "abbreviate",
+   "then": "step(abs(@value), 999.5) - @mm",
+   "else": 0
+  },
+  "div": {
+   "$if": "abbreviate",
+   "then": "1 + 999 * @kk + 999999 * @mm",
+   "else": 1
+  },
+  "capH": {
+   "$if": "caption",
+   "then": 18,
+   "else": 0
+  },
+  "chgH": {
+   "$if": "change",
+   "then": 22,
+   "else": 0
+  },
+  "h": "@capH + @fontSize * 1.25 + @chgH",
+  "yc": "@capH + @fontSize * 1.25 + 11"
+ },
+ "capabilities": [
+  "text.dynamic",
+  "text.measure",
+  "draw.shapes",
+  "a11y.labels",
+  "data.condition"
+ ],
+ "call": {
+  "BigNumber": {
+   "caption": "Revenue",
+   "value": 1234567,
+   "prefix": "$",
+   "change": 4.2
+  }
+ },
+ "pitfalls": [
+  "Everything is drawn on one canvas (drawTextAnchored), so a screen reader hears one item: an empty box over the canvas, after it, carries textMerge(caption, value, \"up\" or \"down\", the change, \"percent\"). The word is cut from \"updownunchanged\" with textSubtext inside the canvas, which is why the description sits on a box after it: \"@name\" resolves only once the name is defined",
+  "Numbers are textFromFloat with flags 7 (no leading padding, trailing zeros kept so cents read .50) + 16 (group by three) + the separator style (64 period, 128 space): 23, 87, 151. whole is 9 digits; a float carries about 7 significant digits, so 12,345,678.91 prints as 12,345,679.00, and cents on 7-digit amounts are wrong (the C++ player draws 1,284,530.25 as 1,284,530.30 while the description says .25): show amounts of a million and more without cents (decimals 0) or abbreviated",
+  "The value is measured (textMeasure) and drawn under a scale of min(1, width / measured), so 7 or 9 digits shrink to fit a narrow tile instead of being cut off (StatTile stops at 6 digits). It fills its parent's width: in a row, give it a weighted box",
+  "abbreviate draws three texts (full, K, M) and shows one with paint alpha: k = step(|v|, 999.5) − m, m = step(|v|, 999999.5); the abbreviated number is value / (1 + 999 k + 999999 m) with one decimal, so 999,960 shows 1000.0K",
+  "The change line is three copies (the up arrow and +x% in success, the down arrow and −x% in error, a flat muted arrow and 0.0%) switched by paint alpha up = step(change, 0), dn = step(−change, 0), flat = 1 − up − dn; the spoken word (up, down, unchanged) is cut from \"updownunchanged\" with the same three. In mono both colours are white (black on mono-light): the arrow's direction and the sign carry the meaning",
+  "The prefix goes before the sign: a negative value with prefix \"$\" prints $-1,234; put the minus in your caption or use suffix instead",
+  "Drawn text has no bold and does not follow the system font scale"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": "@h"
+       }
+      ],
+      "commands": [
+       {
+        "$if": "change",
+        "then": {
+         "textSubtext": {
+          "text": "updownunchanged",
+          "start": "2 * @dn + 6 * @fl",
+          "len": "2 * @up + 4 * @dn + 9 * @fl",
+          "varName": "dir"
+         }
+        }
+       },
+       {
+        "$if": "caption",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "textSize": "@theme.text_sm"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "textMeasure": {
+           "text": "@caption",
+           "mode": 0,
+           "name": "cw"
+          }
+         },
+         {
+          "save": [
+           {
+            "scale": {
+             "sx": "min(1, componentWidth() / @cw)",
+             "sy": "min(1, componentWidth() / @cw)",
+             "pivotX": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "pivotY": "@capH / 2"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": "@caption",
+             "x": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "y": "@capH / 2",
+             "panX": {
+              "$if": "align == 'center'",
+              "then": 0,
+              "else": {
+               "$if": "align == 'end'",
+               "then": 1,
+               "else": -1
+              }
+             },
+             "panY": 0
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@color"
+          },
+          {
+           "textSize": "@fontSize"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       {
+        "$if": "abbreviate",
+        "then": [
+         {
+          "textMeasure": {
+           "text": {
+            "$if": "suffix",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             },
+             "id2": "@suffix"
+            },
+            "else": {
+             "$if": "prefix",
+             "then": {
+              "type": "textMerge",
+              "id1": "@prefix",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             },
+             "else": {
+              "type": "textFromFloat",
+              "value": "@value",
+              "whole": 9,
+              "decimal": "@decimals",
+              "flags": {
+               "$if": "grouping == 'comma'",
+               "then": 23,
+               "else": {
+                "$if": "grouping == 'period'",
+                "then": 87,
+                "else": {
+                 "$if": "grouping == 'space'",
+                 "then": 151,
+                 "else": 7
+                }
+               }
+              }
+             }
+            }
+           },
+           "mode": 0,
+           "name": "wp"
+          }
+         },
+         {
+          "textMeasure": {
+           "text": {
+            "$if": "suffix",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@value / @div",
+                 "whole": 4,
+                 "decimal": 1,
+                 "flags": 5
+                },
+                "id2": "K"
+               }
+              },
+              "else": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@value / @div",
+                "whole": 4,
+                "decimal": 1,
+                "flags": 5
+               },
+               "id2": "K"
+              }
+             },
+             "id2": "@suffix"
+            },
+            "else": {
+             "$if": "prefix",
+             "then": {
+              "type": "textMerge",
+              "id1": "@prefix",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@value / @div",
+                "whole": 4,
+                "decimal": 1,
+                "flags": 5
+               },
+               "id2": "K"
+              }
+             },
+             "else": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@value / @div",
+               "whole": 4,
+               "decimal": 1,
+               "flags": 5
+              },
+              "id2": "K"
+             }
+            }
+           },
+           "mode": 0,
+           "name": "wk"
+          }
+         },
+         {
+          "textMeasure": {
+           "text": {
+            "$if": "suffix",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@value / @div",
+                 "whole": 4,
+                 "decimal": 1,
+                 "flags": 5
+                },
+                "id2": "M"
+               }
+              },
+              "else": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@value / @div",
+                "whole": 4,
+                "decimal": 1,
+                "flags": 5
+               },
+               "id2": "M"
+              }
+             },
+             "id2": "@suffix"
+            },
+            "else": {
+             "$if": "prefix",
+             "then": {
+              "type": "textMerge",
+              "id1": "@prefix",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@value / @div",
+                "whole": 4,
+                "decimal": 1,
+                "flags": 5
+               },
+               "id2": "M"
+              }
+             },
+             "else": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@value / @div",
+               "whole": 4,
+               "decimal": 1,
+               "flags": 5
+              },
+              "id2": "M"
+             }
+            }
+           },
+           "mode": 0,
+           "name": "wm"
+          }
+         },
+         {
+          "variable": {
+           "name": "vw",
+           "value": "@wp * (1 - @kk - @mm) + @wk * @kk + @wm * @mm"
+          }
+         },
+         {
+          "save": [
+           {
+            "scale": {
+             "sx": "min(1, componentWidth() / @vw)",
+             "sy": "min(1, componentWidth() / @vw)",
+             "pivotX": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "pivotY": "@capH + @fontSize * 0.62"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": "1 - @kk - @mm"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "$if": "suffix",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "prefix",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@prefix",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@value",
+                  "whole": 9,
+                  "decimal": "@decimals",
+                  "flags": {
+                   "$if": "grouping == 'comma'",
+                   "then": 23,
+                   "else": {
+                    "$if": "grouping == 'period'",
+                    "then": 87,
+                    "else": {
+                     "$if": "grouping == 'space'",
+                     "then": 151,
+                     "else": 7
+                    }
+                   }
+                  }
+                 }
+                },
+                "else": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "id2": "@suffix"
+              },
+              "else": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              }
+             },
+             "x": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "y": "@capH + @fontSize * 0.62",
+             "panX": {
+              "$if": "align == 'center'",
+              "then": 0,
+              "else": {
+               "$if": "align == 'end'",
+               "then": 1,
+               "else": -1
+              }
+             },
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": "@kk"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "$if": "suffix",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "prefix",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@prefix",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@value / @div",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "id2": "K"
+                 }
+                },
+                "else": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@value / @div",
+                  "whole": 4,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": "K"
+                }
+               },
+               "id2": "@suffix"
+              },
+              "else": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@value / @div",
+                  "whole": 4,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": "K"
+                }
+               },
+               "else": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@value / @div",
+                 "whole": 4,
+                 "decimal": 1,
+                 "flags": 5
+                },
+                "id2": "K"
+               }
+              }
+             },
+             "x": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "y": "@capH + @fontSize * 0.62",
+             "panX": {
+              "$if": "align == 'center'",
+              "then": 0,
+              "else": {
+               "$if": "align == 'end'",
+               "then": 1,
+               "else": -1
+              }
+             },
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "alpha": "@mm"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "$if": "suffix",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "prefix",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@prefix",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@value / @div",
+                   "whole": 4,
+                   "decimal": 1,
+                   "flags": 5
+                  },
+                  "id2": "M"
+                 }
+                },
+                "else": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@value / @div",
+                  "whole": 4,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": "M"
+                }
+               },
+               "id2": "@suffix"
+              },
+              "else": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@value / @div",
+                  "whole": 4,
+                  "decimal": 1,
+                  "flags": 5
+                 },
+                 "id2": "M"
+                }
+               },
+               "else": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@value / @div",
+                 "whole": 4,
+                 "decimal": 1,
+                 "flags": 5
+                },
+                "id2": "M"
+               }
+              }
+             },
+             "x": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "y": "@capH + @fontSize * 0.62",
+             "panX": {
+              "$if": "align == 'center'",
+              "then": 0,
+              "else": {
+               "$if": "align == 'end'",
+               "then": 1,
+               "else": -1
+              }
+             },
+             "panY": 0
+            }
+           }
+          ]
+         }
+        ],
+        "else": [
+         {
+          "textMeasure": {
+           "text": {
+            "$if": "suffix",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             },
+             "id2": "@suffix"
+            },
+            "else": {
+             "$if": "prefix",
+             "then": {
+              "type": "textMerge",
+              "id1": "@prefix",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             },
+             "else": {
+              "type": "textFromFloat",
+              "value": "@value",
+              "whole": 9,
+              "decimal": "@decimals",
+              "flags": {
+               "$if": "grouping == 'comma'",
+               "then": 23,
+               "else": {
+                "$if": "grouping == 'period'",
+                "then": 87,
+                "else": {
+                 "$if": "grouping == 'space'",
+                 "then": 151,
+                 "else": 7
+                }
+               }
+              }
+             }
+            }
+           },
+           "mode": 0,
+           "name": "vw"
+          }
+         },
+         {
+          "save": [
+           {
+            "scale": {
+             "sx": "min(1, componentWidth() / @vw)",
+             "sy": "min(1, componentWidth() / @vw)",
+             "pivotX": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "pivotY": "@capH + @fontSize * 0.62"
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "$if": "suffix",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "prefix",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@prefix",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@value",
+                  "whole": 9,
+                  "decimal": "@decimals",
+                  "flags": {
+                   "$if": "grouping == 'comma'",
+                   "then": 23,
+                   "else": {
+                    "$if": "grouping == 'period'",
+                    "then": 87,
+                    "else": {
+                     "$if": "grouping == 'space'",
+                     "then": 151,
+                     "else": 7
+                    }
+                   }
+                  }
+                 }
+                },
+                "else": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "id2": "@suffix"
+              },
+              "else": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              }
+             },
+             "x": {
+              "$if": "align == 'center'",
+              "then": "componentWidth() / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth()",
+               "else": 0
+              }
+             },
+             "y": "@capH + @fontSize * 0.62",
+             "panX": {
+              "$if": "align == 'center'",
+              "then": 0,
+              "else": {
+               "$if": "align == 'end'",
+               "then": 1,
+               "else": -1
+              }
+             },
+             "panY": 0
+            }
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "$if": "change",
+        "then": [
+         {
+          "paint": {
+           "ops": [
+            {
+             "textSize": 14
+            }
+           ]
+          }
+         },
+         {
+          "textMeasure": {
+           "text": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "+",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@mag",
+              "whole": 6,
+              "decimal": "@changeDecimals",
+              "flags": 7
+             }
+            },
+            "id2": "%"
+           },
+           "mode": 0,
+           "name": "tw"
+          }
+         },
+         {
+          "save": [
+           {
+            "translate": {
+             "dx": {
+              "$if": "align == 'center'",
+              "then": "(componentWidth() - 18 - @tw) / 2",
+              "else": {
+               "$if": "align == 'end'",
+               "then": "componentWidth() - 18 - @tw",
+               "else": 0
+              }
+             },
+             "dy": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "invert",
+                "then": "@colors.error",
+                "else": "@colors.success"
+               }
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": {
+                "$if": "theme.mono",
+                "then": 1.5,
+                "else": 2
+               }
+              },
+              {
+               "strokeCap": "round"
+              },
+              {
+               "alpha": "@up"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 6,
+             "y1": "@yc + 6",
+             "x2": 6,
+             "y2": "@yc + -6"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 1,
+             "y1": "@yc + -1",
+             "x2": 6,
+             "y2": "@yc + -6"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 11,
+             "y1": "@yc + -1",
+             "x2": 6,
+             "y2": "@yc + -6"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "+",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@mag",
+                "whole": 6,
+                "decimal": "@changeDecimals",
+                "flags": 7
+               }
+              },
+              "id2": "%"
+             },
+             "x": 18,
+             "y": "@yc",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "invert",
+                "then": "@colors.success",
+                "else": "@colors.error"
+               }
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": {
+                "$if": "theme.mono",
+                "then": 1.5,
+                "else": 2
+               }
+              },
+              {
+               "strokeCap": "round"
+              },
+              {
+               "alpha": "@dn"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 6,
+             "y1": "@yc + -6",
+             "x2": 6,
+             "y2": "@yc + 6"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 1,
+             "y1": "@yc + 1",
+             "x2": 6,
+             "y2": "@yc + 6"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 11,
+             "y1": "@yc + 1",
+             "x2": 6,
+             "y2": "@yc + 6"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "−",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@mag",
+                "whole": 6,
+                "decimal": "@changeDecimals",
+                "flags": 7
+               }
+              },
+              "id2": "%"
+             },
+             "x": 18,
+             "y": "@yc",
+             "panX": -1,
+             "panY": 0
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": {
+                "$if": "theme.mono",
+                "then": 1.5,
+                "else": 2
+               }
+              },
+              {
+               "strokeCap": "round"
+              },
+              {
+               "alpha": "@fl"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 1,
+             "y1": "@yc",
+             "x2": 11,
+             "y2": "@yc"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 7,
+             "y1": "@yc - 4",
+             "x2": 11,
+             "y2": "@yc"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 7,
+             "y1": "@yc + 4",
+             "x2": 11,
+             "y2": "@yc"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawTextAnchored": {
+             "text": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@mag",
+               "whole": 6,
+               "decimal": "@changeDecimals",
+               "flags": 7
+              },
+              "id2": "%"
+             },
+             "x": 18,
+             "y": "@yc",
+             "panX": -1,
+             "panY": 0
+            }
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": "@h"
+       },
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "label",
+          "then": "@label",
+          "else": {
+           "$if": "change",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "caption",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@caption, ",
+                 "id2": {
+                  "$if": "suffix",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": {
+                    "$if": "prefix",
+                    "then": {
+                     "type": "textMerge",
+                     "id1": "@prefix",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@value",
+                      "whole": 9,
+                      "decimal": "@decimals",
+                      "flags": {
+                       "$if": "grouping == 'comma'",
+                       "then": 23,
+                       "else": {
+                        "$if": "grouping == 'period'",
+                        "then": 87,
+                        "else": {
+                         "$if": "grouping == 'space'",
+                         "then": 151,
+                         "else": 7
+                        }
+                       }
+                      }
+                     }
+                    },
+                    "else": {
+                     "type": "textFromFloat",
+                     "value": "@value",
+                     "whole": 9,
+                     "decimal": "@decimals",
+                     "flags": {
+                      "$if": "grouping == 'comma'",
+                      "then": 23,
+                      "else": {
+                       "$if": "grouping == 'period'",
+                       "then": 87,
+                       "else": {
+                        "$if": "grouping == 'space'",
+                        "then": 151,
+                        "else": 7
+                       }
+                      }
+                     }
+                    }
+                   },
+                   "id2": "@suffix"
+                  },
+                  "else": {
+                   "$if": "prefix",
+                   "then": {
+                    "type": "textMerge",
+                    "id1": "@prefix",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "@value",
+                     "whole": 9,
+                     "decimal": "@decimals",
+                     "flags": {
+                      "$if": "grouping == 'comma'",
+                      "then": 23,
+                      "else": {
+                       "$if": "grouping == 'period'",
+                       "then": 87,
+                       "else": {
+                        "$if": "grouping == 'space'",
+                        "then": 151,
+                        "else": 7
+                       }
+                      }
+                     }
+                    }
+                   },
+                   "else": {
+                    "type": "textFromFloat",
+                    "value": "@value",
+                    "whole": 9,
+                    "decimal": "@decimals",
+                    "flags": {
+                     "$if": "grouping == 'comma'",
+                     "then": 23,
+                     "else": {
+                      "$if": "grouping == 'period'",
+                      "then": 87,
+                      "else": {
+                       "$if": "grouping == 'space'",
+                       "then": 151,
+                       "else": 7
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                },
+                "else": {
+                 "$if": "suffix",
+                 "then": {
+                  "type": "textMerge",
+                  "id1": {
+                   "$if": "prefix",
+                   "then": {
+                    "type": "textMerge",
+                    "id1": "@prefix",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "@value",
+                     "whole": 9,
+                     "decimal": "@decimals",
+                     "flags": {
+                      "$if": "grouping == 'comma'",
+                      "then": 23,
+                      "else": {
+                       "$if": "grouping == 'period'",
+                       "then": 87,
+                       "else": {
+                        "$if": "grouping == 'space'",
+                        "then": 151,
+                        "else": 7
+                       }
+                      }
+                     }
+                    }
+                   },
+                   "else": {
+                    "type": "textFromFloat",
+                    "value": "@value",
+                    "whole": 9,
+                    "decimal": "@decimals",
+                    "flags": {
+                     "$if": "grouping == 'comma'",
+                     "then": 23,
+                     "else": {
+                      "$if": "grouping == 'period'",
+                      "then": 87,
+                      "else": {
+                       "$if": "grouping == 'space'",
+                       "then": 151,
+                       "else": 7
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "id2": "@suffix"
+                 },
+                 "else": {
+                  "$if": "prefix",
+                  "then": {
+                   "type": "textMerge",
+                   "id1": "@prefix",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@value",
+                    "whole": 9,
+                    "decimal": "@decimals",
+                    "flags": {
+                     "$if": "grouping == 'comma'",
+                     "then": 23,
+                     "else": {
+                      "$if": "grouping == 'period'",
+                      "then": 87,
+                      "else": {
+                       "$if": "grouping == 'space'",
+                       "then": 151,
+                       "else": 7
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "else": {
+                   "type": "textFromFloat",
+                   "value": "@value",
+                   "whole": 9,
+                   "decimal": "@decimals",
+                   "flags": {
+                    "$if": "grouping == 'comma'",
+                    "then": 23,
+                    "else": {
+                     "$if": "grouping == 'period'",
+                     "then": 87,
+                     "else": {
+                      "$if": "grouping == 'space'",
+                      "then": 151,
+                      "else": 7
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               },
+               "id2": ", "
+              },
+              "id2": "@dir"
+             },
+             "id2": " "
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@mag",
+              "whole": 6,
+              "decimal": "@changeDecimals",
+              "flags": 7
+             },
+             "id2": " percent"
+            }
+           },
+           "else": {
+            "$if": "caption",
+            "then": {
+             "type": "textMerge",
+             "id1": "@caption, ",
+             "id2": {
+              "$if": "suffix",
+              "then": {
+               "type": "textMerge",
+               "id1": {
+                "$if": "prefix",
+                "then": {
+                 "type": "textMerge",
+                 "id1": "@prefix",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@value",
+                  "whole": 9,
+                  "decimal": "@decimals",
+                  "flags": {
+                   "$if": "grouping == 'comma'",
+                   "then": 23,
+                   "else": {
+                    "$if": "grouping == 'period'",
+                    "then": 87,
+                    "else": {
+                     "$if": "grouping == 'space'",
+                     "then": 151,
+                     "else": 7
+                    }
+                   }
+                  }
+                 }
+                },
+                "else": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "id2": "@suffix"
+              },
+              "else": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              }
+             }
+            },
+            "else": {
+             "$if": "suffix",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "$if": "prefix",
+               "then": {
+                "type": "textMerge",
+                "id1": "@prefix",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@value",
+                 "whole": 9,
+                 "decimal": "@decimals",
+                 "flags": {
+                  "$if": "grouping == 'comma'",
+                  "then": 23,
+                  "else": {
+                   "$if": "grouping == 'period'",
+                   "then": 87,
+                   "else": {
+                    "$if": "grouping == 'space'",
+                    "then": 151,
+                    "else": 7
+                   }
+                  }
+                 }
+                }
+               },
+               "else": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "id2": "@suffix"
+             },
+             "else": {
+              "$if": "prefix",
+              "then": {
+               "type": "textMerge",
+               "id1": "@prefix",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@value",
+                "whole": 9,
+                "decimal": "@decimals",
+                "flags": {
+                 "$if": "grouping == 'comma'",
+                 "then": 23,
+                 "else": {
+                  "$if": "grouping == 'period'",
+                  "then": 87,
+                  "else": {
+                   "$if": "grouping == 'space'",
+                   "then": 151,
+                   "else": 7
+                  }
+                 }
+                }
+               }
+              },
+              "else": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "grouping == 'comma'",
+                "then": 23,
+                "else": {
+                 "$if": "grouping == 'period'",
+                 "then": 87,
+                 "else": {
+                  "$if": "grouping == 'space'",
+                  "then": 151,
+                  "else": 7
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

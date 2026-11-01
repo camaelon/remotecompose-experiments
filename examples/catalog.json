@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-10-31T22:23:38.411Z",
+ "built_at": "2026-11-01T05:24:32.696Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -4336,7 +4336,7 @@
     "component library"
    ],
    "teaches": [
-    "min and max set the range, negative ones included (balance: -50 to 50); decimals sets the digits of the printed value (opacity: 0.8; textFromFloat drops trailing zeros)",
+    "min and max set the range, negative ones included (balance: -50 to 50); decimals sets the digits of the printed value (opacity: 0.8; flags 5 trims trailing zeros down to one decimal, so 1 prints 1.0; flags 7 keeps them, 1.00)",
     "Bind each slider to a document variable and read it below the slider: the summary line follows the drags",
     "Each slider maps the finger through its own position (componentValue POS_ROOT_X), so they work stacked anywhere in the layout"
    ],
@@ -24357,6 +24357,2377 @@
    }
   },
   {
+   "id": "MAP-01",
+   "name": "world-day-night",
+   "version": 1,
+   "title": "Day and night around the world",
+   "summary": "A world map with the night side shaded from the clock (solar declination and the sun's longitude), four labelled cities and the UTC time above it.",
+   "prompt": "Show a world map with day and night, London, New York, Tokyo and Sydney marked, and the current time in UTC.",
+   "level": 3,
+   "family": "MAP",
+   "capabilities": {
+    "primary": [
+     "map.world",
+     "map.daynight"
+    ],
+    "secondary": [
+     "map.marker",
+     "time.clock",
+     "text.dynamic",
+     "data.expression"
+    ]
+   },
+   "use_cases": [
+    "map",
+    "travel",
+    "widget"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "world map",
+    "day and night",
+    "night side",
+    "terminator",
+    "world clock",
+    "time zones",
+    "sunlight",
+    "utc",
+    "cities on a map"
+   ],
+   "teaches": [
+    "WorldMap with night: true shades where it is night now, from the clock; cities by name, labels beside them",
+    "UTC minutes of the day: (timeInMin() - offsetToUtc() / 60 + 1440) % 1440",
+    "The map is geometry fixed at build time (~3.5 KB for the world at low detail); the night shade is one pathExpression that moves with the clock"
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": "2026-10-31T10:30:00Z",
+    "touch": false
+   },
+   "check": {
+    "describe": "At 10:30 UTC on 31 October the day is centred on Europe and Africa (the sun over 22.5°E), the Americas and East Asia are in night; the header reads 10:30 UTC in any time zone.",
+    "render": {
+     "clock": 1793442600000
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 260,
+      "height": 200
+     },
+     {
+      "name": "evening",
+      "clock": 1793475000000
+     }
+    ]
+   },
+   "related": [
+    "TIM-08",
+    "TIM-12"
+   ],
+   "components": [
+    "WorldMap"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.world",
+     "note": "the world at low detail, four cities by name"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.daynight",
+     "note": "night: true shades the night side from the clock"
+    },
+    {
+     "pointer": "/resources/variables/utcMin",
+     "shows": "time.clock",
+     "note": "UTC minutes of the day from the local time and offsetToUtc()"
+    }
+   ],
+   "folder": "MAP-01-world-day-night",
+   "derived": {
+    "bytes": 8170,
+    "op_count": 132,
+    "header": {
+     "width": 360,
+     "height": 220
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "WorldMap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 7662,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 7662,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "evening": {
+      "render": "render-evening.png"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "map.world": [
+      "WorldMap"
+     ],
+     "map.daynight": [
+      "night"
+     ],
+     "map.marker": [
+      "cities"
+     ],
+     "time.clock": [
+      "timeInMin"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "data.expression": [
+      "pathExpression",
+      "<arithmetic>"
+     ]
+    },
+    "json_keys": [
+     "WorldMap",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "cities",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "drawPath",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "end",
+     "error",
+     "expressionX",
+     "expressionY",
+     "flags",
+     "fontSize",
+     "fontWeight",
+     "header",
+     "height",
+     "id",
+     "id1",
+     "id2",
+     "label",
+     "labels",
+     "left",
+     "light",
+     "map_world_land_low",
+     "modifiers",
+     "muted",
+     "name",
+     "night",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "path",
+     "pathExpression",
+     "paths",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "start",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "utcH",
+     "utcM",
+     "utcMin",
+     "value",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "weight",
+     "whole",
+     "width",
+     "worldmap1_decl",
+     "worldmap1_nEdge",
+     "worldmap1_off",
+     "worldmap1_sunLon",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "id": "MAP-02",
+   "name": "europe-highlight",
+   "version": 1,
+   "title": "Countries highlighted on a map",
+   "summary": "Europe with borders, five countries filled in the primary colour, their capitals marked, and a legend.",
+   "prompt": "A map of Europe showing the countries we deliver to (France, Germany, Spain, Italy, the Netherlands) highlighted, with their capitals.",
+   "level": 2,
+   "family": "MAP",
+   "capabilities": {
+    "primary": [
+     "map.region"
+    ],
+    "secondary": [
+     "map.marker",
+     "layout.stack"
+    ]
+   },
+   "use_cases": [
+    "map",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "europe map",
+    "highlight countries",
+    "coverage map",
+    "where we ship",
+    "delivery area",
+    "countries",
+    "borders"
+   ],
+   "teaches": [
+    "region takes a continent (or a country, or a lon/lat box); borders: true draws the countries",
+    "highlight takes ISO A3 codes (or ISO A2, or names): one filled path",
+    "A legend is laid-out text beside a swatch: the map stays geometry"
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Europe from Iceland to the Urals and from North Africa to the North Cape; France, Germany, Spain, Italy and the Netherlands filled, the five capitals marked; in mono the land is an outline and the highlight a fill.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "small",
+      "width": 240,
+      "height": 340
+     }
+    ]
+   },
+   "related": [
+    "MAP-01",
+    "MAP-04"
+   ],
+   "components": [
+    "WorldMap"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.region",
+     "note": "Europe with borders and five countries highlighted by ISO code"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.marker",
+     "note": "the capitals by name"
+    }
+   ],
+   "folder": "MAP-02-europe-highlight",
+   "derived": {
+    "bytes": 24098,
+    "op_count": 133,
+    "header": {
+     "width": 360,
+     "height": 360
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "WorldMap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 23357,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 23357,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "small": {
+      "render": "render-small.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "map.region": [
+      "region",
+      "highlight",
+      "borders"
+     ],
+     "map.marker": [
+      "cities"
+     ],
+     "layout.stack": [
+      "column",
+      "row",
+      "box"
+     ]
+    },
+    "json_keys": [
+     "WorldMap",
+     "apiLevel",
+     "background",
+     "borders",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "cities",
+     "clip",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "drawCircle",
+     "drawPath",
+     "dx",
+     "dy",
+     "error",
+     "fontSize",
+     "fontWeight",
+     "header",
+     "height",
+     "highlight",
+     "label",
+     "left",
+     "light",
+     "map_europe_countries_low",
+     "map_europe_countries_low_1",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "path",
+     "paths",
+     "primary",
+     "profiles",
+     "radius",
+     "region",
+     "resources",
+     "right",
+     "root",
+     "roundedRect",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "size",
+     "spacedBy",
+     "strokeWidth",
+     "style",
+     "surface",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "value",
+     "variable",
+     "verticalAlignment",
+     "weight",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "id": "MAP-03",
+   "name": "flight-tracker",
+   "version": 1,
+   "title": "A flight on a map",
+   "summary": "The map building blocks in a canvas of their own: the North Atlantic from {\"$map\"} scaled uniformly and clipped, the airports from {\"$mapPoint\"}, the great-circle route from {\"$mapRoute\"}, the flown part as a pathExpression ending at the progress the app sends, and the plane at that fraction of the distance.",
+   "prompt": "A flight tracker card: London to New York on a map, the plane along the route at the flight's progress, and the time left.",
+   "level": 3,
+   "family": "MAP",
+   "capabilities": {
+    "primary": [
+     "map.marker",
+     "map.region",
+     "map.route"
+    ],
+    "secondary": [
+     "draw.path",
+     "host.variables",
+     "text.dynamic",
+     "data.expression"
+    ]
+   },
+   "use_cases": [
+    "map",
+    "travel",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "delivery tracker map",
+    "flight map",
+    "flight path",
+    "flight tracker",
+    "great circle",
+    "path between cities",
+    "plane",
+    "plane heading",
+    "progress on a map",
+    "route",
+    "route on a map",
+    "tracker map"
+   ],
+   "teaches": [
+    "{\"$mapRoute\": {region, from, to}} is the great-circle path between two places; with \"axis\": \"x\" | \"y\" | \"angle\" it is the route's samples as a float array the document declares, and \"wrap\": \"arraySpline({}, @progress)\" the point at that fraction of the distance",
+    "The flown part is a pathExpression over the same samples (arraySpline(..., a[0])) whose end is the host progress",
+    "{\"$map\"} with a [lonMin, latMin, lonMax, latMax] region is a box 1000 wide and {\"$mapHeight\"} tall: scale it by ONE factor, min(componentWidth() / 1000, componentHeight() / height), centre it and clipRect it, or it stretches",
+    "{\"$mapPoint\"} in resources.variables gives a city's x and y as numbers when the document is built"
+   ],
+   "inputs": {
+    "variables": {
+     "progress": {
+      "type": "float",
+      "meaning": "Flight progress 0..1",
+      "default": 0.42,
+      "min": 0,
+      "max": 1,
+      "step": 0.01
+     },
+     "minutesLeft": {
+      "type": "float",
+      "meaning": "Minutes to arrival",
+      "default": 238,
+      "min": 0,
+      "max": 600,
+      "step": 1
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "The North Atlantic from 100°W to 20°E, not stretched; London and New York marked, the great-circle route arching north between them, the part flown in the primary colour up to the plane 42 % of the way; variables {progress: 0.9} puts it near New York; the header reads 03 h 58 left.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "arrival",
+      "variables": {
+       "progress": 0.95,
+       "minutesLeft": 12
+      }
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 240
+     }
+    ]
+   },
+   "related": [
+    "MAP-01",
+    "MAP-02"
+   ],
+   "snippets": [
+    {
+     "pointer": "/resources/variables/x0",
+     "shows": "map.marker",
+     "note": "a city's x from {\"$mapPoint\"}, a number fixed when the document is built"
+    },
+    {
+     "pointer": "/root/column/children/1/canvas/commands/0/save/2",
+     "shows": "map.region",
+     "note": "the North Atlantic from a lon/lat box with {\"$map\"}"
+    },
+    {
+     "pointer": "/resources/variables/px",
+     "shows": "map.marker",
+     "note": "the plane at the progress: arraySpline over the route's x samples from {\"$mapRoute\"}"
+    },
+    {
+     "pointer": "/resources/variables/px",
+     "shows": "map.route",
+     "note": "the plane at the progress along the great circle: {\"$mapRoute\"} x samples through arraySpline"
+    }
+   ],
+   "folder": "MAP-03-flight-tracker",
+   "derived": {
+    "bytes": 14726,
+    "op_count": 123,
+    "header": {
+     "width": 360,
+     "height": 240
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "minutesLeft",
+      "type": "float",
+      "value": 238
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "progress",
+      "type": "float",
+      "value": 0.419999987
+     },
+     {
+      "name": "route_1_x",
+      "type": "float_array",
+      "value": [
+       832.299988,
+       819,
+       805.5,
+       791.700012,
+       777.900024,
+       763.799988,
+       749.700012,
+       735.400024,
+       721,
+       706.5,
+       691.900024,
+       677.299988,
+       662.599976,
+       647.900024,
+       633.200012,
+       618.5,
+       603.799988,
+       589.099976,
+       574.599976,
+       560.099976,
+       545.700012,
+       531.400024,
+       517.299988,
+       503.200012,
+       489.399994,
+       475.700012,
+       462.100006,
+       448.799988,
+       435.700012,
+       422.700012,
+       410,
+       397.399994,
+       385.100006,
+       373,
+       361.100006,
+       349.399994,
+       338,
+       326.700012,
+       315.700012,
+       304.899994,
+       294.299988,
+       283.899994,
+       273.700012,
+       263.700012,
+       253.899994,
+       244.300003,
+       234.899994,
+       225.699997,
+       216.699997
+      ]
+     },
+     {
+      "name": "route_1_y",
+      "type": "float_array",
+      "value": [
+       152.600006,
+       149,
+       145.600006,
+       142.600006,
+       139.699997,
+       137.199997,
+       134.899994,
+       132.899994,
+       131.199997,
+       129.699997,
+       128.600006,
+       127.699997,
+       127.099998,
+       126.800003,
+       126.800003,
+       127.099998,
+       127.699997,
+       128.600006,
+       129.800003,
+       131.300003,
+       133,
+       135,
+       137.300003,
+       139.899994,
+       142.800003,
+       145.899994,
+       149.199997,
+       152.800003,
+       156.699997,
+       160.699997,
+       165.100006,
+       169.600006,
+       174.399994,
+       179.300003,
+       184.5,
+       189.800003,
+       195.399994,
+       201.100006,
+       207,
+       213.100006,
+       219.399994,
+       225.699997,
+       232.300003,
+       239,
+       245.800003,
+       252.800003,
+       259.899994,
+       267.100006,
+       274.399994
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 14216,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "minutesLeft",
+        "type": "float",
+        "value": 238
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "progress",
+        "type": "float",
+        "value": 0.419999987
+       },
+       {
+        "name": "route_1_x",
+        "type": "float_array",
+        "value": [
+         832.299988,
+         819,
+         805.5,
+         791.700012,
+         777.900024,
+         763.799988,
+         749.700012,
+         735.400024,
+         721,
+         706.5,
+         691.900024,
+         677.299988,
+         662.599976,
+         647.900024,
+         633.200012,
+         618.5,
+         603.799988,
+         589.099976,
+         574.599976,
+         560.099976,
+         545.700012,
+         531.400024,
+         517.299988,
+         503.200012,
+         489.399994,
+         475.700012,
+         462.100006,
+         448.799988,
+         435.700012,
+         422.700012,
+         410,
+         397.399994,
+         385.100006,
+         373,
+         361.100006,
+         349.399994,
+         338,
+         326.700012,
+         315.700012,
+         304.899994,
+         294.299988,
+         283.899994,
+         273.700012,
+         263.700012,
+         253.899994,
+         244.300003,
+         234.899994,
+         225.699997,
+         216.699997
+        ]
+       },
+       {
+        "name": "route_1_y",
+        "type": "float_array",
+        "value": [
+         152.600006,
+         149,
+         145.600006,
+         142.600006,
+         139.699997,
+         137.199997,
+         134.899994,
+         132.899994,
+         131.199997,
+         129.699997,
+         128.600006,
+         127.699997,
+         127.099998,
+         126.800003,
+         126.800003,
+         127.099998,
+         127.699997,
+         128.600006,
+         129.800003,
+         131.300003,
+         133,
+         135,
+         137.300003,
+         139.899994,
+         142.800003,
+         145.899994,
+         149.199997,
+         152.800003,
+         156.699997,
+         160.699997,
+         165.100006,
+         169.600006,
+         174.399994,
+         179.300003,
+         184.5,
+         189.800003,
+         195.399994,
+         201.100006,
+         207,
+         213.100006,
+         219.399994,
+         225.699997,
+         232.300003,
+         239,
+         245.800003,
+         252.800003,
+         259.899994,
+         267.100006,
+         274.399994
+        ]
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 14216,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "minutesLeft",
+        "type": "float",
+        "value": 238
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "progress",
+        "type": "float",
+        "value": 0.419999987
+       },
+       {
+        "name": "route_1_x",
+        "type": "float_array",
+        "value": [
+         832.299988,
+         819,
+         805.5,
+         791.700012,
+         777.900024,
+         763.799988,
+         749.700012,
+         735.400024,
+         721,
+         706.5,
+         691.900024,
+         677.299988,
+         662.599976,
+         647.900024,
+         633.200012,
+         618.5,
+         603.799988,
+         589.099976,
+         574.599976,
+         560.099976,
+         545.700012,
+         531.400024,
+         517.299988,
+         503.200012,
+         489.399994,
+         475.700012,
+         462.100006,
+         448.799988,
+         435.700012,
+         422.700012,
+         410,
+         397.399994,
+         385.100006,
+         373,
+         361.100006,
+         349.399994,
+         338,
+         326.700012,
+         315.700012,
+         304.899994,
+         294.299988,
+         283.899994,
+         273.700012,
+         263.700012,
+         253.899994,
+         244.300003,
+         234.899994,
+         225.699997,
+         216.699997
+        ]
+       },
+       {
+        "name": "route_1_y",
+        "type": "float_array",
+        "value": [
+         152.600006,
+         149,
+         145.600006,
+         142.600006,
+         139.699997,
+         137.199997,
+         134.899994,
+         132.899994,
+         131.199997,
+         129.699997,
+         128.600006,
+         127.699997,
+         127.099998,
+         126.800003,
+         126.800003,
+         127.099998,
+         127.699997,
+         128.600006,
+         129.800003,
+         131.300003,
+         133,
+         135,
+         137.300003,
+         139.899994,
+         142.800003,
+         145.899994,
+         149.199997,
+         152.800003,
+         156.699997,
+         160.699997,
+         165.100006,
+         169.600006,
+         174.399994,
+         179.300003,
+         184.5,
+         189.800003,
+         195.399994,
+         201.100006,
+         207,
+         213.100006,
+         219.399994,
+         225.699997,
+         232.300003,
+         239,
+         245.800003,
+         252.800003,
+         259.899994,
+         267.100006,
+         274.399994
+        ]
+       },
+       {
+        "name": "track",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "arrival": {
+      "render": "render-arrival.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "map.marker": [
+      "$mapPoint"
+     ],
+     "map.region": [
+      "region"
+     ],
+     "map.route": [
+      "$mapRoute"
+     ],
+     "draw.path": [
+      "drawPath"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "data.expression": [
+      "pathExpression",
+      "<arithmetic>"
+     ]
+    },
+    "json_keys": [
+     "$map",
+     "$mapHeight",
+     "$mapPoint",
+     "$mapRoute",
+     "apiLevel",
+     "at",
+     "axis",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "detail",
+     "drawCircle",
+     "drawPath",
+     "dx",
+     "dy",
+     "end",
+     "export",
+     "expressionX",
+     "expressionY",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "from",
+     "hLeft",
+     "header",
+     "height",
+     "id",
+     "id1",
+     "id2",
+     "layer",
+     "left",
+     "light",
+     "mLeft",
+     "map_box_land_medium",
+     "mh",
+     "minutesLeft",
+     "modifiers",
+     "muted",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "path",
+     "pathExpression",
+     "paths",
+     "primary",
+     "profiles",
+     "progress",
+     "px",
+     "py",
+     "radius",
+     "region",
+     "resources",
+     "right",
+     "root",
+     "route_1_path",
+     "route_1_x",
+     "route_1_y",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "start",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "to",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "value",
+     "variables",
+     "verticalAlignment",
+     "weight",
+     "whole",
+     "width",
+     "wrap",
+     "x",
+     "x0",
+     "x1",
+     "y",
+     "y0",
+     "y1"
+    ]
+   }
+  },
+  {
+   "id": "MAP-04",
+   "name": "visited-countries",
+   "version": 1,
+   "title": "Countries coloured from data",
+   "summary": "Europe with each country filled from a host array, one 0/1 (or 0..1) value per country in a fixed order: the app changes the set without a new document, and the count is the array's sum.",
+   "prompt": "A map of Europe highlighting the countries I have visited, with a count in the corner.",
+   "level": 2,
+   "family": "MAP",
+   "capabilities": {
+    "primary": [
+     "map.data",
+     "map.region"
+    ],
+    "secondary": [
+     "host.variables",
+     "text.dynamic"
+    ]
+   },
+   "use_cases": [
+    "map",
+    "travel",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "visited countries",
+    "choropleth",
+    "countries from data",
+    "travel map",
+    "colour countries",
+    "country count",
+    "heat map of countries"
+   ],
+   "teaches": [
+    "WorldMap values is a float array the app sets (exported), valueCountries the countries in its order (map_info lists a region's countries); 0 leaves the land, 1 fills in valueColor, a fraction blends",
+    "A count from the same array: textFromFloat of arraySum(@visited)",
+    "Russia is a country of Europe whose outline reaches outside the box: the map clips it"
+   ],
+   "inputs": {
+    "variables": {
+     "visited": {
+      "type": "float[]",
+      "meaning": "1 per visited country, in valueCountries order",
+      "default": "9 of 37"
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Europe; France, Germany, Spain, Italy, the Netherlands, Portugal, the United Kingdom, Greece and Czechia filled; the header reads 9 of 37 countries; in mono the visited countries are solid on an outline map.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "none",
+      "variables": {
+       "visited": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+       ]
+      }
+     },
+     {
+      "name": "small",
+      "width": 240,
+      "height": 300
+     }
+    ]
+   },
+   "related": [
+    "MAP-02",
+    "MAP-05"
+   ],
+   "components": [
+    "WorldMap"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.data",
+     "note": "countries filled from the host array @visited, in valueCountries order"
+    },
+    {
+     "pointer": "/root/column/children/0/row/children/1",
+     "shows": "text.dynamic",
+     "note": "the count: arraySum of the same array"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.region",
+     "note": "region Europe: a continent box"
+    }
+   ],
+   "folder": "MAP-04-visited-countries",
+   "derived": {
+    "bytes": 29771,
+    "op_count": 257,
+    "header": {
+     "width": 360,
+     "height": 400
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     },
+     {
+      "name": "visited",
+      "type": "float_array",
+      "value": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       1,
+       1,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       0,
+       0,
+       1,
+       0,
+       0,
+       0,
+       1
+      ]
+     }
+    ],
+    "components": [
+     "WorldMap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 29183,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "visited",
+        "type": "float_array",
+        "value": [
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         1,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1
+        ]
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 29183,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "visited",
+        "type": "float_array",
+        "value": [
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         1,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         1
+        ]
+       }
+      ]
+     },
+     "none": {
+      "render": "render-none.png"
+     },
+     "small": {
+      "render": "render-small.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {
+     "map.data": [
+      "valueCountries"
+     ],
+     "map.region": [
+      "region"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ]
+    },
+    "json_keys": [
+     "WorldMap",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "decimal",
+     "detail",
+     "drawPath",
+     "dx",
+     "dy",
+     "error",
+     "export",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "label",
+     "left",
+     "light",
+     "map_europe_countries_low_1",
+     "map_europe_countries_low_10",
+     "map_europe_countries_low_11",
+     "map_europe_countries_low_12",
+     "map_europe_countries_low_13",
+     "map_europe_countries_low_14",
+     "map_europe_countries_low_15",
+     "map_europe_countries_low_16",
+     "map_europe_countries_low_17",
+     "map_europe_countries_low_18",
+     "map_europe_countries_low_19",
+     "map_europe_countries_low_2",
+     "map_europe_countries_low_20",
+     "map_europe_countries_low_21",
+     "map_europe_countries_low_22",
+     "map_europe_countries_low_23",
+     "map_europe_countries_low_24",
+     "map_europe_countries_low_25",
+     "map_europe_countries_low_26",
+     "map_europe_countries_low_27",
+     "map_europe_countries_low_28",
+     "map_europe_countries_low_29",
+     "map_europe_countries_low_3",
+     "map_europe_countries_low_30",
+     "map_europe_countries_low_31",
+     "map_europe_countries_low_32",
+     "map_europe_countries_low_33",
+     "map_europe_countries_low_34",
+     "map_europe_countries_low_35",
+     "map_europe_countries_low_36",
+     "map_europe_countries_low_37",
+     "map_europe_countries_low_4",
+     "map_europe_countries_low_5",
+     "map_europe_countries_low_6",
+     "map_europe_countries_low_7",
+     "map_europe_countries_low_8",
+     "map_europe_countries_low_9",
+     "map_europe_land_low",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "path",
+     "paths",
+     "primary",
+     "profiles",
+     "region",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "value",
+     "valueCountries",
+     "values",
+     "variable",
+     "verticalAlignment",
+     "visited",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "id": "MAP-05",
+   "name": "states-and-points",
+   "version": 1,
+   "title": "States and points from data",
+   "summary": "Australia with its state borders and a dot per store from two host arrays (longitudes, latitudes): the app adds or moves stores without a new document.",
+   "prompt": "A map of Australia with its states and a dot for each of our stores; the app sends the store locations.",
+   "level": 2,
+   "family": "MAP",
+   "capabilities": {
+    "primary": [
+     "map.marker",
+     "map.region"
+    ],
+    "secondary": [
+     "host.variables",
+     "text.dynamic"
+    ]
+   },
+   "use_cases": [
+    "map",
+    "card"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "store locator",
+    "points on a map",
+    "states",
+    "provinces",
+    "state borders",
+    "dots from data",
+    "locations map",
+    "australia map"
+   ],
+   "teaches": [
+    "region a country (ISO A3) frames its main landmass with nearby islands (Tasmania)",
+    "states: [\"AUS\"] draws state/province borders (map_info says which countries have them)",
+    "pointsLon/pointsLat are float arrays the app sets: any number of dots, drawn by a canvas loop over arrayLength"
+   ],
+   "inputs": {
+    "variables": {
+     "storeLon": {
+      "type": "float[]",
+      "meaning": "store longitudes"
+     },
+     "storeLat": {
+      "type": "float[]",
+      "meaning": "store latitudes, same order"
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Australia with Tasmania and the state borders; eight dots on the state capitals; the header reads 8 stores; in mono the land is an outline.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "two",
+      "variables": {
+       "storeLon": [
+        151.21,
+        115.86
+       ],
+       "storeLat": [
+        -33.87,
+        -31.95
+       ]
+      }
+     },
+     {
+      "name": "small",
+      "width": 240,
+      "height": 280
+     }
+    ]
+   },
+   "related": [
+    "MAP-04",
+    "MAP-03"
+   ],
+   "components": [
+    "WorldMap"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.marker",
+     "note": "dots from the host arrays @storeLon/@storeLat"
+    },
+    {
+     "pointer": "/root/column/children/1",
+     "shows": "map.region",
+     "note": "a country region with its state borders"
+    }
+   ],
+   "folder": "MAP-05-states-and-points",
+   "derived": {
+    "bytes": 19401,
+    "op_count": 121,
+    "header": {
+     "width": 360,
+     "height": 380
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "storeLat",
+      "type": "float_array",
+      "value": [
+       -33.8699989,
+       -37.8100014,
+       -27.4699993,
+       -31.9500008,
+       -34.9300003,
+       -42.8800011,
+       -35.2799988,
+       -12.46
+      ]
+     },
+     {
+      "name": "storeLon",
+      "type": "float_array",
+      "value": [
+       151.210007,
+       144.960007,
+       153.029999,
+       115.860001,
+       138.600006,
+       147.330002,
+       149.130005,
+       130.839996
+      ]
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "WorldMap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 18762,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "storeLat",
+        "type": "float_array",
+        "value": [
+         -33.8699989,
+         -37.8100014,
+         -27.4699993,
+         -31.9500008,
+         -34.9300003,
+         -42.8800011,
+         -35.2799988,
+         -12.46
+        ]
+       },
+       {
+        "name": "storeLon",
+        "type": "float_array",
+        "value": [
+         151.210007,
+         144.960007,
+         153.029999,
+         115.860001,
+         138.600006,
+         147.330002,
+         149.130005,
+         130.839996
+        ]
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 18762,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "storeLat",
+        "type": "float_array",
+        "value": [
+         -33.8699989,
+         -37.8100014,
+         -27.4699993,
+         -31.9500008,
+         -34.9300003,
+         -42.8800011,
+         -35.2799988,
+         -12.46
+        ]
+       },
+       {
+        "name": "storeLon",
+        "type": "float_array",
+        "value": [
+         151.210007,
+         144.960007,
+         153.029999,
+         115.860001,
+         138.600006,
+         147.330002,
+         149.130005,
+         130.839996
+        ]
+       }
+      ]
+     },
+     "two": {
+      "render": "render-two.png"
+     },
+     "small": {
+      "render": "render-small.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "map.marker": [
+      "pointsLon"
+     ],
+     "map.region": [
+      "region",
+      "states"
+     ],
+     "host.variables": [
+      "export",
+      "colors"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ]
+    },
+    "json_keys": [
+     "WorldMap",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "detail",
+     "drawCircle",
+     "drawPath",
+     "dx",
+     "dy",
+     "export",
+     "flags",
+     "floatArrays",
+     "fontSize",
+     "fontWeight",
+     "from",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "index",
+     "label",
+     "left",
+     "light",
+     "loop",
+     "map_aus_land_medium",
+     "map_aus_states_medium_1",
+     "markerColor",
+     "markerSize",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "path",
+     "paths",
+     "pointsLat",
+     "pointsLon",
+     "primary",
+     "profiles",
+     "radius",
+     "region",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "states",
+     "storeLat",
+     "storeLon",
+     "strokeWidth",
+     "style",
+     "surface",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "until",
+     "value",
+     "variable",
+     "verticalAlignment",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
    "id": "RU-05",
    "name": "pattern-counter",
    "version": 3,
@@ -37119,6 +39490,453 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "BigNumber",
+   "name": "big-number",
+   "version": 1,
+   "title": "BigNumber",
+   "prompt": "Show this month's revenue as a big dollar amount with its change in percent, and under it costs in euros (lower is better) and active users abbreviated to millions, each with an up or down arrow.",
+   "level": 2,
+   "use_cases": [
+    "dashboard",
+    "finance",
+    "widget"
+   ],
+   "form_factor": "widget-4x2",
+   "keywords": [
+    "big number",
+    "kpi",
+    "money",
+    "amount",
+    "currency",
+    "revenue",
+    "balance",
+    "price",
+    "formatted number",
+    "thousands separator",
+    "abbreviated number",
+    "1.2M",
+    "percent change",
+    "trend arrow",
+    "hero number",
+    "metric"
+   ],
+   "teaches": [
+    "Call {\"BigNumber\": {\"caption\": \"Revenue\", \"value\": \"@revenue\", \"prefix\": \"$\", \"change\": \"@revenueChange\"}}: the value is grouped by thousands (textFromFloat flags 23) and shrinks to fit its width, so 7 digits and more fit a half-width tile",
+    "grouping comma, period or space picks the separators (1,234.50, 1.234,50, 1 234,50); decimals keeps trailing zeros for cents; abbreviate shows 2.5M and 12.3K",
+    "The change is a drawn arrow and a signed percent in success or error (invert for costs), switched by paint alpha over step(change, 0): readable by shape and sign in mono",
+    "A screen reader hears one item, \"Revenue this month, $1,284,530, up 4.2 percent\": the canvas draws, an empty box over it after it carries the description, with the word cut from \"updownunchanged\" by textSubtext"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "text.dynamic",
+     "note": "a 7-digit dollar amount bound to an exported variable, grouped by commas"
+    },
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "a11y.labels",
+     "note": "one description for caption, value and change"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0/box/children/0",
+     "shows": "data.condition",
+     "note": "invert: a rise in costs is red; euros with space grouping and cents"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/2/box/children/0",
+     "shows": "text.measure",
+     "note": "abbreviate: 2,480,000 shows 2.5M, end-aligned"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/2/box/children/0",
+     "shows": "draw.shapes",
+     "note": "the down arrow, drawn with three lines"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "revenue": {
+      "type": "float",
+      "meaning": "revenue this month in dollars",
+      "default": 1284530,
+      "min": 0,
+      "max": 99999999,
+      "step": 1
+     },
+     "revenueChange": {
+      "type": "float",
+      "meaning": "change since last month in percent",
+      "default": 4.2,
+      "min": -50,
+      "max": 50,
+      "step": 0.1
+     },
+     "users": {
+      "type": "float",
+      "meaning": "active users",
+      "default": 2480000,
+      "min": 0,
+      "max": 999999999,
+      "step": 1000
+     }
+    },
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Revenue this month $1,284,530 in 40 dp with a green up arrow and +4.2%; under it Costs 48 210,75 € with a red up arrow and +3.1% (invert), and Active users 2.5M end-aligned with a red down arrow and −1.4%. revenueChange −3 turns the first change red with a down arrow and −3.0%; 0 shows a muted flat arrow and 0.0%. Mono: the same arrows and signs in white (black on mono-light). At 240 dp the values shrink to fit their tiles; at 520 dp the end-aligned one follows the edge. A screen reader hears three items: \"Revenue this month, $1,284,530, up 4.2 percent\", \"Costs, 48 210,75 €, up 3.1 percent\", \"Active users, 2,480,000, down 1.4 percent\".",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 210
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 210
+     }
+    ]
+   },
+   "related": [
+    "CMP-08",
+    "TXT-08",
+    "EXP-11"
+   ],
+   "summary": "A money or number KPI: a caption, a big formatted value (thousands grouping, a prefix or suffix such as a currency, decimals, optional K / M abbreviation, 7 digits and more) that shrinks to fit its width, and an optional change in percent with a drawn up or down arrow and its sign, green when good and red when bad. Read as one item: \"Revenue, $1,234,567, up 4.2 percent\".",
+   "capabilities": {
+    "primary": [
+     "text.dynamic",
+     "text.measure",
+     "draw.shapes",
+     "a11y.labels",
+     "data.condition"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "BigNumber"
+   ],
+   "pitfalls": [
+    "Everything is drawn on one canvas (drawTextAnchored), so a screen reader hears one item: an empty box over the canvas, after it, carries textMerge(caption, value, \"up\" or \"down\", the change, \"percent\"). The word is cut from \"updownunchanged\" with textSubtext inside the canvas, which is why the description sits on a box after it: \"@name\" resolves only once the name is defined",
+    "Numbers are textFromFloat with flags 7 (no leading padding, trailing zeros kept so cents read .50) + 16 (group by three) + the separator style (64 period, 128 space): 23, 87, 151. whole is 9 digits; a float carries about 7 significant digits, so 12,345,678.91 prints as 12,345,679.00, and cents on 7-digit amounts are wrong (the C++ player draws 1,284,530.25 as 1,284,530.30 while the description says .25): show amounts of a million and more without cents (decimals 0) or abbreviated",
+    "The value is measured (textMeasure) and drawn under a scale of min(1, width / measured), so 7 or 9 digits shrink to fit a narrow tile instead of being cut off (StatTile stops at 6 digits). It fills its parent's width: in a row, give it a weighted box",
+    "abbreviate draws three texts (full, K, M) and shows one with paint alpha: k = step(|v|, 999.5) − m, m = step(|v|, 999999.5); the abbreviated number is value / (1 + 999 k + 999999 m) with one decimal, so 999,960 shows 1000.0K",
+    "The change line is three copies (the up arrow and +x% in success, the down arrow and −x% in error, a flat muted arrow and 0.0%) switched by paint alpha up = step(change, 0), dn = step(−change, 0), flat = 1 − up − dn; the spoken word (up, down, unchanged) is cut from \"updownunchanged\" with the same three. In mono both colours are white (black on mono-light): the arrow's direction and the sign carry the meaning",
+    "The prefix goes before the sign: a negative value with prefix \"$\" prints $-1,234; put the minus in your caption or use suffix instead",
+    "Drawn text has no bold and does not follow the system font scale"
+   ],
+   "folder": "components/BigNumber",
+   "derived": {
+    "bytes": 5462,
+    "op_count": 333,
+    "header": {
+     "width": 360,
+     "height": 210
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "revenue",
+      "type": "float",
+      "value": 1284530
+     },
+     {
+      "name": "revenueChange",
+      "type": "float",
+      "value": 4.19999981
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     },
+     {
+      "name": "users",
+      "type": "float",
+      "value": 2480000
+     }
+    ],
+    "components": [
+     "BigNumber"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 4952,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "revenue",
+        "type": "float",
+        "value": 1284530
+       },
+       {
+        "name": "revenueChange",
+        "type": "float",
+        "value": 4.19999981
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "users",
+        "type": "float",
+        "value": 2480000
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 4952,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "revenue",
+        "type": "float",
+        "value": 1284530
+       },
+       {
+        "name": "revenueChange",
+        "type": "float",
+        "value": 4.19999981
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "users",
+        "type": "float",
+        "value": 2480000
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "text.measure": [
+      "textMeasure"
+     ],
+     "draw.shapes": [
+      "drawLine"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "data.condition": [
+      "step()"
+     ]
+    },
+    "json_keys": [
+     "BigNumber",
+     "abbreviate",
+     "align",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bignumber1_dn",
+     "bignumber1_fl",
+     "bignumber1_mag",
+     "bignumber1_up",
+     "bignumber3_div",
+     "bignumber3_kk",
+     "bignumber3_mm",
+     "box",
+     "canvas",
+     "caption",
+     "change",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "decimal",
+     "decimals",
+     "drawLine",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "error",
+     "export",
+     "flags",
+     "fontSize",
+     "grouping",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "invert",
+     "len",
+     "light",
+     "mode",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "prefix",
+     "profiles",
+     "resources",
+     "revenue",
+     "revenueChange",
+     "root",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "start",
+     "strokeCap",
+     "strokeWidth",
+     "style",
+     "success",
+     "suffix",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "textSubtext",
+     "translate",
+     "type",
+     "users",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Button",
    "name": "button",
    "version": 3,
@@ -41206,6 +44024,357 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "LabelValue",
+   "name": "label-value",
+   "version": 1,
+   "title": "LabelValue",
+   "prompt": "Show a boarding pass strip: gate, seat and boarding time as small labels over large values, then flight, status and bag-drop rows, each pair read by a screen reader as one item (\"Gate, B34\").",
+   "level": 1,
+   "use_cases": [
+    "card",
+    "transit",
+    "widget"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "label value",
+    "label and value",
+    "caption value",
+    "key value",
+    "field",
+    "data field",
+    "labelled value",
+    "boarding pass field",
+    "gate",
+    "seat",
+    "property",
+    "stat label",
+    "accessible pair",
+    "merged semantics",
+    "one accessibility node"
+   ],
+   "teaches": [
+    "Call {\"LabelValue\": {\"label\": \"Gate\", \"value\": \"@gate\"}}: a screen reader hears one item, \"Gate, B34\", not the label and the value separately",
+    "The two texts are drawn on one canvas whose semantics is textMerge(\"Gate, \", value): JSON semantics has no merge mode, so two layout texts under a described container are read three times",
+    "layout inline puts the pair on one line; align spread pushes the value to the end, start, center or end place the pair as a group",
+    "A line wider than its box is measured with textMeasure and scaled down about its anchor; in a row, give each LabelValue a weighted box"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/1/column/children/0/row/children/0/box/children/0",
+     "shows": "a11y.labels",
+     "note": "read as \"Gate, B34\"; the value is a string variable the host sets"
+    },
+    {
+     "pointer": "/root/1/column/children/0/row/children/2/box/children/0",
+     "shows": "text.anchor",
+     "note": "align center, with a description that spells the seat"
+    },
+    {
+     "pointer": "/root/1/column/children/2",
+     "shows": "text.measure",
+     "note": "inline spread: the label at the start, the value at the end"
+    },
+    {
+     "pointer": "/root/1/column/children/4",
+     "shows": "draw.transform",
+     "note": "inline, large, at the end: the group shrinks together when it is too wide"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "A row of three stacked pairs, Gate B34, Seat 14C (centred) and Boards 09:40 (blue, at the end), with small muted labels over 28 dp values; then Terminal 2E, Hall L (small), Flight … AF 1234 across the width, Status Delayed 25 min in red and Bag drop closes 08:55 at the end. The accessibility tree has exactly one node per pair: \"Gate, B34\", \"Seat, 14 C\", \"Boards, 09:40\", \"Terminal, 2E, Hall L\", \"Flight, AF 1234\", \"Status, Delayed 25 min\", \"Bag drop closes, 08:55\". At 220 dp the large values shrink to fit their thirds; at 480 dp the pairs follow the width.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 220,
+      "height": 284
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 284
+     }
+    ]
+   },
+   "related": [
+    "CMP-12",
+    "A11Y-01",
+    "TXT-05"
+   ],
+   "summary": "A label and its value (Gate / B34, Seat / 14C, Balance / €1,240) read by a screen reader as ONE item, \"Gate, B34\": the label small and muted over the value (stacked) or beside it (inline), drawn on one canvas that carries the merged description, so the two texts are never read separately. Lines too wide for the box shrink to fit.",
+   "capabilities": {
+    "primary": [
+     "text.anchor",
+     "text.measure",
+     "a11y.labels",
+     "draw.transform"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "LabelValue"
+   ],
+   "pitfalls": [
+    "One accessibility node: the label and the value are drawn on one canvas (drawTextAnchored), and the canvas's semantics carries textMerge(\"<label>, \", value). Two layout texts under a container with a contentDescription are read three times (the container, then each text): the JSON semantics has no merge mode (the parsers always write SET), so drawing is the only way to keep the parts out of the tree",
+    "The label must be literal text: it is joined into the description at build time (\"Gate, \"). The value may be a \"@textVariable\" (the description follows it) or a text expression",
+    "Drawn text does not wrap or follow the system font scale, and has no bold: a line wider than the box is measured (textMeasure) and scaled down about its anchor, never cut off. Inline, the label and value shrink together",
+    "It fills its parent's width (fillMaxWidth) at a fixed height (stacked: 1.4 × label + 1.3 × value size; inline: 1.4 × the larger): in a row, put it in a weighted box, or it has no width",
+    "The value is onSurface and the label muted in every look, so mono needs no variant; a `color` like error is white (mono-dark) or black (mono-light) there, so do not let the colour alone carry a meaning"
+   ],
+   "folder": "components/LabelValue",
+   "derived": {
+    "bytes": 4248,
+    "op_count": 271,
+    "header": {
+     "width": 360,
+     "height": 284
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "gate",
+      "type": "string",
+      "value": "B34"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     }
+    ],
+    "components": [
+     "LabelValue"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 3738,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "gate",
+        "type": "string",
+        "value": "B34"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 3738,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "gate",
+        "type": "string",
+        "value": "B34"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "text.anchor": [
+      "drawTextAnchored"
+     ],
+     "text.measure": [
+      "textMeasure"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "draw.transform": [
+      "save",
+      "scale",
+      "translate"
+     ]
+    },
+    "json_keys": [
+     "LabelValue",
+     "align",
+     "alpha",
+     "apiLevel",
+     "background",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "description",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "error",
+     "export",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "label",
+     "layout",
+     "light",
+     "mode",
+     "modifiers",
+     "muted",
+     "name",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "resources",
+     "root",
+     "row",
+     "save",
+     "scale",
+     "semantics",
+     "size",
+     "spacedBy",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "translate",
+     "type",
+     "value",
+     "variable",
+     "vtype",
+     "weight",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Legend",
    "name": "legend",
    "version": 1,
@@ -43043,6 +46212,394 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "Pager",
+   "name": "pager",
+   "version": 1,
+   "title": "Pager",
+   "prompt": "Make a three-page onboarding carousel: swipe left or right to change page, tap a dot to jump, the new page fades in, and a screen reader hears \"Onboarding, Page 2 of 3\".",
+   "level": 2,
+   "use_cases": [
+    "onboarding",
+    "card",
+    "widget"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "pager",
+    "carousel",
+    "swipe pages",
+    "horizontal pager",
+    "view pager",
+    "onboarding",
+    "slides",
+    "swipe",
+    "page indicator",
+    "pages with dots",
+    "walkthrough",
+    "paging"
+   ],
+   "teaches": [
+    "Call {\"Pager\": {\"page\": \"@page\", \"pages\": [PAGE1, PAGE2, PAGE3]}}: each page is any JSON node, shown alone; the dots, the swipe and \"Page N of M\" come with it",
+    "A swipe is onTouchDown storing touchX() into the call's own `start`, and onTouchUp setting page = clamp(0, n − 1, page + clamp(−1, 1, round((start − touchX()) / (0.5 × windowWidth()))))",
+    "Pages switch by visibility (only the current one is laid out and read) and fade in with graphicsLayer alpha over an animated copy of the page",
+    "Each dot sits in a 24 × 40 dp tap target that sets the page and is announced \"Go to page N\""
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "input.tap",
+     "note": "a dot tap sets page; the swipe is onTouchDown / onTouchUp on the pager"
+    },
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "layout.state",
+     "note": "only the current page is visible"
+    },
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "anim.value",
+     "note": "the new page fades in and the accent dot slides"
+    },
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "a11y.labels",
+     "note": "Onboarding, Page N of 3; Go to page N on each dot"
+    },
+    {
+     "pointer": "/root/box/children/0",
+     "shows": "draw.shapes",
+     "note": "the dots"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "page": {
+      "type": "float",
+      "meaning": "the current page, 0-based",
+      "default": 0,
+      "min": 0,
+      "max": 2,
+      "step": 1
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Page 1, \"Welcome\" over \"Plan your week in a minute\", centred, with three dots at the bottom, the first blue. A swipe to the left shows \"Track your runs\" (fading in) and moves the blue dot to the second; a swipe to the right goes back; a swipe at the last page stays there; a tap on the third dot jumps to \"Share with friends\"; a tap on the page changes nothing. page 2 shows the third page. Mono: white (black) filled current dot, grey rings, no fade. A screen reader hears \"Onboarding, Page 1 of 3\", the page's two texts and the three dots \"Go to page 1\" to \"Go to page 3\".",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "page3",
+      "variables": {
+       "page": 2
+      }
+     },
+     {
+      "name": "swiped",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "down",
+        "x": 300,
+        "y": 300
+       },
+       {
+        "t": 0.15,
+        "type": "move",
+        "x": 180,
+        "y": 300
+       },
+       {
+        "t": 0.2,
+        "type": "up",
+        "x": 60,
+        "y": 300
+       }
+      ],
+      "duration": 0.8
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 360
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 360
+     }
+    ]
+   },
+   "related": [
+    "INT-06",
+    "CMP-06",
+    "LAY-12"
+   ],
+   "summary": "Swipeable pages with dots: a horizontal swipe on the pager moves one page (onTouchDown keeps where the finger went down, onTouchUp steps the page by the clamped, rounded distance), the new page fades in, the dots under it follow and a tap on a dot jumps to its page. A screen reader hears \"Page N of M\" and can tap each dot.",
+   "capabilities": {
+    "primary": [
+     "input.tap",
+     "layout.state",
+     "anim.value",
+     "a11y.labels",
+     "draw.shapes"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "Pager"
+   ],
+   "pitfalls": [
+    "The swipe is two touch modifiers on the pager's column: onTouchDown stores touchX() into the call's own `start`, onTouchUp sets page = clamp(0, n − 1, page + clamp(−1, 1, round((start − touchX()) / (0.5 × windowWidth())))): a swipe of more than a quarter of the window moves exactly one page, a tap (no distance) moves none. No drag tracking: the page does not follow the finger, it changes on release",
+    "Each page is a box with visibility 1 − min(1, |k − i|) (k = clamp(0, n − 1, round(page))) and graphicsLayer alpha 1 − min(1, |f − i|) over the animated local f = {value: page, anim: 0.3}: the new page fades in, and the old one disappears when the layout next reads its visibility (in the TS player it fades out alongside; a visibility is an integer expression and cannot read the eased value itself, U57). Mono has no motion: pages switch",
+    "The pager fills its parent (the pages box has verticalWeight 1, the dots row is 40 dp): give it a parent with a height (a box with a height, or a weighted child of a screen column). Pages are stacked in one box, each fillMaxSize: centre their content yourself",
+    "pages is a static list of JSON nodes: one page box each, written out when the document is built (a page can call components). With `count` and the `content` slot, the pager only owns the swipe, the dots and the description: your content reads the page variable",
+    "The dots are 8 dp at a 24 dp pitch so each one sits in a 24 × 40 dp tap target (onClick sets page to its index, announced \"Go to page N\"); the accent dot slides with f. The pages box carries \"Page N of M\" (textFromFloat(k + 1)), prefixed by `label`",
+    "windowWidth() is the document's width: in a pager narrower than the window, a swipe must still cross a quarter of the window, not of the pager"
+   ],
+   "folder": "components/Pager",
+   "derived": {
+    "bytes": 2801,
+    "op_count": 177,
+    "header": {
+     "width": 360,
+     "height": 360
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "page",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     }
+    ],
+    "components": [
+     "Pager"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 2388,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "page",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 2388,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "page",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "page3": {
+      "render": "render-page3.png"
+     },
+     "swiped": {
+      "render": "render-swiped.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 3,
+     "click": 3,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "input.tap": [
+      "onClick",
+      "valueFloatChange"
+     ],
+     "layout.state": [
+      "visibility"
+     ],
+     "anim.value": [
+      "anim"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "draw.shapes": [
+      "drawCircle"
+     ]
+    },
+    "json_keys": [
+     "Pager",
+     "alpha",
+     "anim",
+     "apiLevel",
+     "background",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "export",
+     "flags",
+     "fontSize",
+     "graphicsLayer",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "id1",
+     "id2",
+     "label",
+     "light",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onSurface",
+     "onTouchDown",
+     "onTouchUp",
+     "ops",
+     "padding",
+     "page",
+     "pager1_k",
+     "pager1_start",
+     "pages",
+     "paint",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "root",
+     "row",
+     "semantics",
+     "spacedBy",
+     "style",
+     "target",
+     "text",
+     "textAlign",
+     "type",
+     "value",
+     "variable",
+     "variables",
+     "verticalArrangement",
+     "verticalWeight",
+     "visibility",
+     "whole",
+     "width"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "PagerDots",
    "name": "pager-dots",
    "version": 1,
@@ -43996,6 +47553,766 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "QrPlaceholder",
+   "name": "qr-placeholder",
+   "version": 1,
+   "title": "QrPlaceholder",
+   "prompt": "Put a QR code on a boarding pass, and a small pairing code next to an instruction in a row; the codes stay black on white in dark mode and on e-ink.",
+   "level": 2,
+   "use_cases": [
+    "card",
+    "transit",
+    "notification"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "qr code",
+    "qr",
+    "barcode",
+    "2d code",
+    "scan code",
+    "ticket code",
+    "boarding pass code",
+    "pairing code",
+    "qr placeholder",
+    "matrix code"
+   ],
+   "teaches": [
+    "Call {\"QrPlaceholder\": {\"seed\": 7, \"contentDescription\": \"Boarding pass QR code\"}}: three finder patterns, timing lanes and a 21 × 21 pseudo-random grid, black on white in every look",
+    "441 modules cost two nested canvas loops: each module's paint alpha is an integer hash of its column, row and the seed, so the pattern is exact and identical in every player",
+    "The drawing is a 29-module unit square scaled by min(width, height) / 29 and centred: an 88 dp code in a 56 dp row draws at 56 dp instead of being cut"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "data.loop",
+     "note": "the module grid: two nested loops over r and c"
+    },
+    {
+     "pointer": "/root/column/children/0",
+     "shows": "draw.shapes",
+     "note": "finder patterns as three nested squares"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0",
+     "shows": "draw.transform",
+     "note": "asked for 88 dp in a 56 dp row: scaled to 56 dp, centred"
+    },
+    {
+     "pointer": "/root/column/children/1/row/children/0",
+     "shows": "a11y.labels",
+     "note": "says what the code is for"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "A 168 dp QR-like code centred at the top: a white rounded square with a thin outline, three black 7 × 7 finder rings at the top-left, top-right and bottom-left corners, alternating timing modules between them and a random-looking module grid; under it a 56 dp row with a small code (asked 88 dp, drawn 56 dp) and \"Scan with the app to pair the speaker\". The codes are black on white in light, dark, mono-dark and mono-light. A screen reader hears \"Boarding pass QR code, flight AF 1234\" and \"Pairing code for the living room speaker\", then the text.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 280
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 280
+     }
+    ]
+   },
+   "related": [
+    "VAR-05",
+    "STR-03",
+    "DRW-11"
+   ],
+   "summary": "A believable QR code picture for a ticket, a boarding pass or a pairing screen: a 21 × 21 module grid with the three 7 × 7 finder patterns and the timing lanes, data modules from a deterministic pseudo-random seed, black on white in every look inside a 4-module quiet zone, scaled to the square its box allows. It is a placeholder, not a scannable code.",
+   "capabilities": {
+    "primary": [
+     "data.loop",
+     "draw.shapes",
+     "draw.transform",
+     "a11y.labels"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "QrPlaceholder"
+   ],
+   "pitfalls": [
+    "Black on white in every look, on purpose: ink and paper default to literal #FF000000 and #FFFFFFFF, not theme colours, because a code inverted for dark or mono-dark would not scan (and would not look like one). In mono-dark that is a lit white square: keep it the size the task needs. Only the 1 dp frame round the quiet zone is a theme colour (outline), so the white square still has an edge on a white page",
+    "Not a real QR code: there is no encoder in the format. The 441 modules come from two nested canvas loops (r, c), each module's paint alpha step((7c² + 13r² + 5cr + 3c + 11r + 17 seed) mod 23, 11), an integer hash every player computes exactly, so the pattern is the same in Java, C++ and TypeScript. For a scannable code, render it on the server and send a bitmap",
+    "The finder corners and the row and column 6 timing lanes are cleared with paper and redrawn over the data, so they are always clean: 7 × 7 rings at three corners, alternating modules between them",
+    "Drawn in a 29-module unit square (21 + 2 × 4 quiet zone) under one scale of min(width, height) / 29, centred: an 88 dp code in a 56 dp row is a 56 dp code, never cut. Modules overlap by 0.02 so no hairline shows between them at fractional scales, and the clearing rectangles reach 0.02 further so no sliver of a neighbour shows along them",
+    "One accessibility node, the canvas, with contentDescription: say what the code is for"
+   ],
+   "folder": "components/QrPlaceholder",
+   "derived": {
+    "bytes": 3614,
+    "op_count": 184,
+    "header": {
+     "width": 360,
+     "height": 280
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF3A4556"
+     }
+    ],
+    "components": [
+     "QrPlaceholder"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 3308,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 3308,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "data.loop": [
+      "loop"
+     ],
+     "draw.shapes": [
+      "drawRect",
+      "drawRoundRect"
+     ],
+     "draw.transform": [
+      "scale",
+      "translate"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ]
+    },
+    "json_keys": [
+     "QrPlaceholder",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bottom",
+     "box",
+     "canvas",
+     "children",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "dark",
+     "drawRect",
+     "drawRoundRect",
+     "dx",
+     "dy",
+     "fontSize",
+     "from",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "index",
+     "left",
+     "light",
+     "loop",
+     "modifiers",
+     "name",
+     "onSurface",
+     "ops",
+     "outline",
+     "padding",
+     "paint",
+     "profiles",
+     "resources",
+     "right",
+     "root",
+     "row",
+     "rx",
+     "ry",
+     "scale",
+     "seed",
+     "semantics",
+     "size",
+     "spacedBy",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "top",
+     "translate",
+     "until",
+     "value",
+     "variable",
+     "verticalAlignment",
+     "weight",
+     "width"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "RankedList",
+   "name": "ranked-list",
+   "version": 1,
+   "title": "RankedList",
+   "prompt": "Show a café's five best sellers this week as a leaderboard, with rank badges, unit counts and share bars, and the top three baristas by orders under it; one item per row for a screen reader.",
+   "level": 2,
+   "use_cases": [
+    "list",
+    "dashboard",
+    "chart"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "ranked list",
+    "leaderboard",
+    "top list",
+    "top 5",
+    "top products",
+    "best sellers",
+    "ranking",
+    "rank badge",
+    "share bar",
+    "bar list",
+    "scoreboard",
+    "top performers"
+   ],
+   "teaches": [
+    "Call {\"RankedList\": {\"names\": [\"Espresso beans\", \"@special\", ...], \"values\": \"@sales\", \"unit\": \" units\"}}: names is a static JSON list (an entry may be a host string variable), values a float array read with arrayGet(values, i)",
+    "Each row is one canvas with its own semantics, so a screen reader hears \"Number 1, Espresso beans, 412 units\" once per row, not the rank, name and value as three items",
+    "The bars are value / max(arrayMax(values)), so the leader's bar is full; showBars false gives a compact list",
+    "Rank 1 is a filled disc, the others rings: the leader stands out without colour, in mono too"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "data.array",
+     "note": "five rows over an exported float array; the second name is a string variable"
+    },
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "a11y.labels",
+     "note": "one description per row: Number N, name, value unit"
+    },
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "draw.shapes",
+     "note": "rank discs and share bars"
+    },
+    {
+     "pointer": "/root/1/column/children/0",
+     "shows": "draw.clip",
+     "note": "a long name is clipped before the value"
+    },
+    {
+     "pointer": "/root/1/column/children/1",
+     "shows": "text.dynamic",
+     "note": "no bars, grouped numbers with a unit, secondary colour"
+    }
+   ],
+   "inputs": {
+    "variables": {},
+    "clock": null,
+    "touch": false
+   },
+   "check": {
+    "describe": "Five rows: a filled blue 1 and Espresso beans 412 units with a full bar, then rings 2 to 5 for Pumpkin spice latte 288, Oat milk flat white 231, Butter croissant 154 and Cinnamon bun 97, bars shrinking with the value; then a compact list, a violet 1 Ana 1,284 orders, 2 Bilal 1,102 orders, 3 Chloé 876 orders. A screen reader hears eight items, \"Number 1, Espresso beans, 412 units\" … \"Number 3, Chloé, 876 orders\". Mono: white (black) filled first disc, rings, white bars over 1 dp outlined tracks. At 240 dp the long names shrink and are clipped before the value; at 480 dp the rows widen.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 376
+     },
+     {
+      "name": "wide",
+      "width": 480,
+      "height": 376
+     }
+    ]
+   },
+   "related": [
+    "CMP-09",
+    "VAR-06",
+    "EXP-08"
+   ],
+   "summary": "A leaderboard of a few rows (top products, longest runs, busiest stations): each row a rank badge, a name, its value with a unit at the end and a share bar of value / the largest value, read by a screen reader as one item per row: \"Number 1, Espresso beans, 412 units\".",
+   "capabilities": {
+    "primary": [
+     "data.array",
+     "text.dynamic",
+     "a11y.labels",
+     "draw.shapes",
+     "draw.clip"
+    ],
+    "secondary": []
+   },
+   "components": [
+    "RankedList"
+   ],
+   "pitfalls": [
+    "One canvas per row, with its own semantics (\"Number N, name, value unit\" from textMerge): the rank, the name and the value are drawn, not layout texts, so a screen reader stops once per row instead of three times. The JSON semantics has no merge mode",
+    "names is a JSON list written into the document ($each); values is the name of a float array (\"@sales\" in resources.floatArrays), read with arrayGet(values, i): a host can change the numbers (and the names, through string variables) but not the number of rows. Give one value per name, sorted, highest first: the list does not sort",
+    "The bar is (width − 36) × value / max(arrayMax(values), 0.0001), at least 6 dp so a tiny share still shows; the track is the full width (mono: a 1 dp outline instead of a track fill)",
+    "A long name shrinks to 80 % to fit before the value and is then clipped (drawn text has no ellipsis); the value never shrinks. Numbers are grouped by thousands (textFromFloat flags 23)",
+    "The rank is textFromFloat(i + 1), a constant per row; rank 1 is a filled disc in `color`, the others a ring, so the leader stands out in mono too",
+    "It fills its parent's width, 48 dp per row (32 without bars): in a row, give it a weighted box",
+    "Each row measures its own name and value (per-row names nw_@i, vw_@i...): a long name shrinks only its own row"
+   ],
+   "folder": "components/RankedList",
+   "derived": {
+    "bytes": 7792,
+    "op_count": 462,
+    "header": {
+     "width": 360,
+     "height": 376
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "orders",
+      "type": "float_array",
+      "value": [
+       1284,
+       1102,
+       876
+      ]
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "sales",
+      "type": "float_array",
+      "value": [
+       412,
+       288,
+       231,
+       154,
+       97
+      ]
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "special",
+      "type": "string",
+      "value": "Pumpkin spice latte"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "RankedList"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 7120,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "orders",
+        "type": "float_array",
+        "value": [
+         1284,
+         1102,
+         876
+        ]
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "sales",
+        "type": "float_array",
+        "value": [
+         412,
+         288,
+         231,
+         154,
+         97
+        ]
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "special",
+        "type": "string",
+        "value": "Pumpkin spice latte"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 7120,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "orders",
+        "type": "float_array",
+        "value": [
+         1284,
+         1102,
+         876
+        ]
+       },
+       {
+        "name": "outline",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "sales",
+        "type": "float_array",
+        "value": [
+         412,
+         288,
+         231,
+         154,
+         97
+        ]
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "special",
+        "type": "string",
+        "value": "Pumpkin spice latte"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 0
+    },
+    "evidence": {
+     "data.array": [
+      "floatArrays",
+      "arrayGet"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "draw.shapes": [
+      "drawRoundRect",
+      "drawCircle"
+     ],
+     "draw.clip": [
+      "clipRect"
+     ]
+    },
+    "json_keys": [
+     "RankedList",
+     "alpha",
+     "apiLevel",
+     "background",
+     "bottom",
+     "canvas",
+     "children",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "drawCircle",
+     "drawRoundRect",
+     "drawTextAnchored",
+     "export",
+     "flags",
+     "floatArrays",
+     "header",
+     "height",
+     "id1",
+     "id2",
+     "left",
+     "light",
+     "mode",
+     "modifiers",
+     "muted",
+     "name",
+     "names",
+     "onPrimary",
+     "onSurface",
+     "ops",
+     "orders",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rx",
+     "ry",
+     "sales",
+     "save",
+     "scale",
+     "secondary",
+     "semantics",
+     "showBars",
+     "spacedBy",
+     "strokeWidth",
+     "style",
+     "sx",
+     "sy",
+     "text",
+     "textMeasure",
+     "textSize",
+     "top",
+     "track",
+     "type",
+     "unit",
+     "value",
+     "values",
+     "variable",
+     "vtype",
+     "whole",
+     "width",
+     "x",
+     "y"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "Rating",
    "name": "rating",
    "version": 1,
@@ -44694,14 +49011,14 @@
     "Slider"
    ],
    "pitfalls": [
-    "The drag is a touchExpression in absolute mode (touchMode 6) named after the bound variable: from the slider on, \"@volume\" is the touch value (it starts at the variable's own value and keeps where the finger left it). Read the value AFTER the slider in the document: the parsers bind names in document order, so a text placed before it, or an expression in resources, keeps reading the starting value",
+    "The drag is a touchExpression in absolute mode (touchMode 6) named after the bound variable: from the slider on, \"@volume\" is the touch value (it starts at the variable's own value and keeps where the finger left it). LIVE values derived from it (a preview, a time, a status) must be computed AFTER the slider in the tree: a text or canvas expression placed after it, or a tree `variable` command after it. resources.variables are written before the tree and keep the bound variable, which changes only on release (with onRelease): computed there, a value updates when the finger lifts",
     "onRelease: the canvas carries two onTouchUp modifiers, which come BEFORE the touchExpression in the document, so there \"@volume\" still names the bound (resources) variable, not the touch value. The first modifier therefore recomputes the level from where the finger lifted (valueFloatExpressionChange: clamp(min, max, the touch expression's own formula)) into the bound variable; the second runs the caller's actions, which read it. A plain tap ends the same way. About 120 B per call with one host action (measured: 1040 -> 1162 B)",
     "touchX() is in document coordinates, so the slider measures where it sits (componentValue POS_ROOT_X into a local) and subtracts it: it works anywhere in the layout, scrolled or padded",
     "Players that predate the T31-T33 / C49-C50 fixes (2026-10-30) map the drag wrong: the TS player read 0 for POS_ROOT_X and let every slider take every touch, and the C++ player hit-tested a nested touch expression in its own coordinates. Java, and the TS and C++ players from that date, put the value under the finger",
-    "The value is continuous: there are no steps (the notch stop modes need touchSpec, which the Java parser ignores, U8). Round where you read it (textFromFloat decimals, floor())",
+    "step snaps the value (round to multiples of step from min) in the drag and on release; without it the value is continuous (the notch stop modes need touchSpec, which the Java parser ignores, U8)",
     "It fills the width it is given (fillMaxWidth) and is 40 dp tall: in a row, give it a weight or a box with a width",
     "No easing on the value: the thumb follows the finger frame for frame (an animated value would trail it). In mono it looks the same, a thin grey track, a thicker white active part and a smaller thumb",
-    "Accessibility: a transparent box over the track carries the label and the value as its state (textFromFloat of the live value: `decimals` digits, at least 2 when max - min is under 1.5, so 0..1 reads 0.7, not 0). It comes after the canvas because only from the touchExpression on does the name read the dragged value; it takes no touch, so the drag still works. No role (the JSON semantics has no role key), and no adjust actions: a screen reader announces the value but cannot step it. About 85 B per call"
+    "Accessibility: a transparent box over the track carries the label and the value as its state (textFromFloat of the live value: `decimals` digits, at least 2 when max - min is under 1.5, so 0..1 reads 0.7, not 0; stateText replaces it, e.g. a time \"16:30\"). It comes after the canvas because only from the touchExpression on does the name read the dragged value; it takes no touch, so the drag still works. No role (the JSON semantics has no role key), and no adjust actions: a screen reader announces the value but cannot step it. About 85 B per call"
    ],
    "folder": "components/Slider",
    "derived": {
@@ -47874,6 +52191,560 @@
   {
    "family": "COMP",
    "kind": "component",
+   "id": "Walkthrough",
+   "name": "walkthrough",
+   "version": 1,
+   "title": "Walkthrough",
+   "prompt": "Explain why a² + b² = c² in four steps: a drawing of a 3-4-5 triangle whose squares grow in one by one, a title and a sentence per step, Back / Next (Start over on the last step), \"Step 2 of 4\" with dots, and a play button that advances every three seconds.",
+   "level": 3,
+   "use_cases": [
+    "onboarding",
+    "widget"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "walkthrough",
+    "step by step",
+    "step-by-step explanation",
+    "tutorial",
+    "explainer",
+    "guided tour",
+    "slideshow",
+    "autoplay",
+    "play pause",
+    "previous next",
+    "how it works",
+    "proof",
+    "stepper explanation",
+    "storyboard"
+   ],
+   "components": [
+    "Walkthrough",
+    "Button",
+    "IconButton"
+   ],
+   "teaches": [
+    "Call {\"Walkthrough\": {\"step\": \"@step\", \"shown\": \"@stepNow\", \"eased\": \"@stepEased\", \"titles\": [...], \"texts\": [...], \"slots\": {\"content\": [DRAWING]}}}: the drawing reads @stepNow (the step on screen) or @stepEased (the same, eased over 0.6 s) and the walkthrough supplies caption, progress, Back / Next and autoplay",
+    "A component publishes a value by declaring a tree variable named after the caller's variable ({\"$name\": \"shown\"}): readable in the content slot or anywhere after the call, never declared in resources",
+    "Morph a drawing between steps from one eased number: grow the k-th element with clamp(0, 1, @stepEased - (k - 1)), so the square on b grows while the step goes from 1 to 2 and stays full after",
+    "Autoplay without a timer and without a clock listener: the step on screen is step + playing × (min(last, s0 + floor((animationTime() − t0) / interval)) − step); Play stores s0 and t0 = animationTime(), Pause writes the step on screen back into step. Frames come from an animated local whose target, run × floor(animationTime() × 2), changes every half second while playing, so a paused or finished walkthrough is idle",
+    "The caption is one text per title and per text, each with an exact 0/1 visibility (1 − min(1, |shown − i|)); the title is announced \"Step N of M: <title>.\" and the \"Step N of M\" line is drawn on a canvas, so a screen reader hears it once"
+   ],
+   "snippets": [
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "input.tap",
+     "note": "Back and Next write @step; play / pause writes playing, s0 and t0"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "layout.state",
+     "note": "the current step's title and text, switched by exact 0/1 visibility"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "anim.value",
+     "note": "@stepEased grows each square in; the accent dot slides"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "a11y.labels",
+     "note": "Step N of 4: <title>. on the title; Back, Play / Pause, Next labelled"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "draw.shapes",
+     "note": "the triangle and the three squares, drawn by the caller from @stepEased"
+    },
+    {
+     "pointer": "/root/column/children/1/box/children/0",
+     "shows": "text.dynamic",
+     "note": "\"Step N of 4\" from textFromFloat(shown + 1), drawn on the progress canvas and announced with the title"
+    }
+   ],
+   "inputs": {
+    "variables": {
+     "step": {
+      "type": "float",
+      "meaning": "the step, 0-based (what Back, Next and Pause write)",
+      "default": 0,
+      "min": 0,
+      "max": 3,
+      "step": 1
+     }
+    },
+    "clock": null,
+    "touch": true
+   },
+   "check": {
+    "describe": "Step 1 of 4: a white 3-4-5 right triangle with a, b and c labels, the title \"A right triangle\" and two lines of text under it, a dimmed Back with a play triangle beside it, and Next on the right. Next (tap at 312, 440) shows \"The square on a\" and a blue square growing under side a with 9 in it; the next adds a purple square left of side b with 16; the last a green square tilted on the hypotenuse with 25, the text ending \"So a² + b² = c²\", and Next becomes Start over, which goes back to step 1. Play (105, 440) advances every 3 s, its icon becomes two bars (Pause), and stops on step 4; a tap on Back or Next while playing stops playing. step 3 renders the full figure. Mono: no play button (no motion), outlined Back, dots as grey rings with a white (black) current one. A screen reader hears \"Step 1 of 4: A right triangle\", the text, Back (disabled), Play and Next.",
+    "render": {},
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "last",
+      "variables": {
+       "step": 3
+      },
+      "duration": 1
+     },
+     {
+      "name": "next",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 312,
+        "y": 440
+       }
+      ],
+      "duration": 1
+     },
+     {
+      "name": "playing",
+      "touch_events": [
+       {
+        "t": 0.1,
+        "type": "tap",
+        "x": 105,
+        "y": 440
+       }
+      ],
+      "duration": 4
+     },
+     {
+      "name": "narrow",
+      "width": 280,
+      "height": 420
+     },
+     {
+      "name": "wide",
+      "width": 520,
+      "height": 400
+     }
+    ]
+   },
+   "related": [
+    "Pager",
+    "Steps",
+    "TIM-14"
+   ],
+   "summary": "The frame of a step-by-step explanation: the caller draws the explanation (in the `content` slot) from the current step, and the walkthrough shows that step's title and text, \"Step N of M\" with dots, Back and Next (Done on the last step), and optionally a play / pause button that advances one step every `interval` seconds. It publishes the live step and an eased copy of it for the drawing.",
+   "capabilities": {
+    "primary": [
+     "input.tap",
+     "layout.state",
+     "anim.value",
+     "a11y.labels",
+     "text.dynamic",
+     "draw.shapes"
+    ],
+    "secondary": []
+   },
+   "pitfalls": [
+    "The drawing must read `shown` or `eased`, not `step`: while autoplay plays, `step` stays where play started and the step on screen is computed from the clock. Pause, Back and Next write the step on screen back into `step`, so a paused walkthrough has step = shown",
+    "`shown` and `eased` are published as tree variables named after the variables you bind ({\"$name\": ...}): read them in the `content` slot or anywhere after the call in the document. Never declare them in resources as well: the resources variable wins and reads 0 (check_component's demo declares every @name a call references, so a sweep of a call whose content reads @stepEased draws step 0; check the drawing with the document instead). A reader before the call fails to convert (Variable not found)",
+    "Grow the k-th element of a drawing with clamp(0, 1, @stepEased - (k - 1)) (0 before step k, 1 after, easing in between), and fade its labels with the same value as paint alpha. Keep the drawing's own canvas variables out of resources too",
+    "Autoplay reads animationTime() (seconds since the player started the document), not the wall clock: shown = clamp(0, last, step + playing × (s0 + floor((animationTime() − t0) / interval) − step)). Play runs five actions in order: step = shown, step = 0 if not running and on the last step (play there starts over), s0 = step, t0 = animationTime(), playing = 1 − running. Running is playing × (shown < last), so the button shows Play again on the last step",
+    "No clock listener: frames while playing come from an animated local whose target, running × floor(animationTime() × 2), changes every half second (each change restarts a 0.75 s ease), so a PLAYING walkthrough repaints every frame and a paused or finished one is idle (inspect runtime: idle). check_component's lint warning \"animationTime() alone never schedules a repaint\" is expected: that local is what schedules it. A continuousSec() clock would keep the document repainting even while paused (TIM-14)",
+    "Playing does not survive a reload: t0 is relative to the player's animationTime, so a document reloaded with playing 1 times its steps from the load. Pass \"playing\": 1 to start playing at load; the first step comes after `interval`. A timed step runs no action and tells the host nothing: onStep, onNext and onBack run on taps only",
+    "Mono (mono-dark, mono-light) has no play button and no autoplay (no motion on e-ink or always-on displays), and `eased` is `shown` itself: the drawing snaps",
+    "The step on screen is clamp(0, last, round(step)): a host value out of range shows the first or last step. The caption is one text per title and per text, each with an exact 0/1 visibility 1 − min(1, |shown − i|); the title is announced \"Step N of M: <title>\" and the text after it. The \"Step N of M\" line is drawn on the progress canvas, so a screen reader does not hear it twice",
+    "With a `content` slot the walkthrough fills its parent (fillMaxSize) and the content takes the height the caption and controls leave: give it a parent with a height. Without `captionHeight` the caption takes the current step's height and everything above and below moves when the text length changes; with it, a longer text is clipped",
+    "Back is a Button with a runtime enabled (min(1, shown)), dimmed and inert on step 1. Next and the last step's button are two Buttons switched by visibility; the last one runs onDone, or without it reads Start over and goes back to step 1. A tap on Back or Next while playing stops playing. Every target is 48 dp tall",
+    "Give a hostNamedAction to onNext / onBack / onDone, never to onStep: a named action written in two click lists reaches the host by name from one of them only (Stepper)",
+    "A document variable named `step` hides the step() function in your own expressions (json2rc resolves the bare token as the variable, so step(x, e) becomes nonsense); this component avoids step() for that reason. Use min/max arithmetic, or name the variable otherwise",
+    "The dots are 7 dp at a 14 dp pitch, right-aligned, decorative (not tappable); past about 12 steps they crowd the \"Step N of M\" line",
+    "inspect pins animationTime() to its clock (seconds since 2026-01-01, which loses sub-second precision as a float): pin clock \"2026-01-01T00:00:00\" when checking autoplay with inspect interact",
+    "Expanded, never a pattern: it contains texts (U7) and declares named values. Each instance costs about 3.7 KB with three short steps and autoplay (3.0 KB without autoplay; mono about 3.8 KB, no play button) plus about 350 B per further step and the length of its strings, mostly in the three Buttons (Back has two faces for its runtime enabled)",
+    "loop: the eased step (eased) runs back from the last step to the first when the cycle wraps; a drawing that must jump forward at the wrap reads shown (the whole step) and its own phase"
+   ],
+   "folder": "components/Walkthrough",
+   "derived": {
+    "bytes": 7619,
+    "op_count": 434,
+    "header": {
+     "width": 360,
+     "height": 480
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "disabled",
+      "type": "color",
+      "value": "#FF3A4556"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onDisabled",
+      "type": "color",
+      "value": "#FF8A94A6"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF0B1A2E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF7C4DFF"
+     },
+     {
+      "name": "step",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "success",
+      "type": "color",
+      "value": "#FF66BB6A"
+     }
+    ],
+    "components": [
+     "Button",
+     "IconButton",
+     "Walkthrough"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 6142,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onDisabled",
+        "type": "color",
+        "value": "#FF9E9E9E"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "step",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 6142,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "disabled",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "muted",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onDisabled",
+        "type": "color",
+        "value": "#FF616161"
+       },
+       {
+        "name": "onPrimary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "secondary",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "step",
+        "type": "float",
+        "value": 0
+       },
+       {
+        "name": "success",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "last": {
+      "render": "render-last.png"
+     },
+     "next": {
+      "render": "render-next.png"
+     },
+     "playing": {
+      "render": "render-playing.png"
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "idle",
+    "interaction_targets": {
+     "total": 2,
+     "click": 2,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 1
+    },
+    "evidence": {
+     "input.tap": [
+      "onClick",
+      "valueFloatChange"
+     ],
+     "layout.state": [
+      "visibility"
+     ],
+     "anim.value": [
+      "anim"
+     ],
+     "a11y.labels": [
+      "semantics"
+     ],
+     "text.dynamic": [
+      "textFromFloat",
+      "textMerge"
+     ],
+     "draw.shapes": [
+      "drawRect",
+      "drawCircle",
+      "drawLine"
+     ]
+    },
+    "json_keys": [
+     "Walkthrough",
+     "alpha",
+     "angle",
+     "anim",
+     "apiLevel",
+     "autoplay",
+     "background",
+     "bottom",
+     "box",
+     "button1_enOff",
+     "button1_enOn",
+     "canvas",
+     "captionHeight",
+     "children",
+     "clickable",
+     "clip",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "content",
+     "contentDescription",
+     "cx",
+     "cy",
+     "dark",
+     "decimal",
+     "disabled",
+     "drawCircle",
+     "drawLine",
+     "drawRect",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "eased",
+     "enabled",
+     "export",
+     "flags",
+     "fontSize",
+     "fontWeight",
+     "global",
+     "header",
+     "height",
+     "horizontalAlignment",
+     "id1",
+     "id2",
+     "interval",
+     "left",
+     "len",
+     "light",
+     "maxLines",
+     "modifiers",
+     "muted",
+     "name",
+     "onClick",
+     "onDisabled",
+     "onPrimary",
+     "onSurface",
+     "operation",
+     "ops",
+     "overflow",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "pivotX",
+     "pivotY",
+     "primary",
+     "profiles",
+     "radius",
+     "resources",
+     "right",
+     "root",
+     "rotate",
+     "row",
+     "save",
+     "scale",
+     "secondary",
+     "semantics",
+     "shown",
+     "size",
+     "slots",
+     "start",
+     "step",
+     "strokeCap",
+     "strokeJoin",
+     "strokeWidth",
+     "style",
+     "success",
+     "sx",
+     "sy",
+     "target",
+     "text",
+     "textSize",
+     "textSubtext",
+     "textTransform",
+     "texts",
+     "titles",
+     "top",
+     "translate",
+     "type",
+     "value",
+     "varName",
+     "variable",
+     "variables",
+     "verticalAlignment",
+     "verticalWeight",
+     "visibility",
+     "walkthrough1_cur",
+     "walkthrough1_more",
+     "walkthrough1_playing",
+     "walkthrough1_run",
+     "walkthrough1_s0",
+     "walkthrough1_t0",
+     "walkthrough1_tick",
+     "weight",
+     "whole",
+     "width",
+     "x",
+     "x1",
+     "x2",
+     "y",
+     "y1",
+     "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
    "id": "WeatherIcon",
    "name": "weather-icon",
    "version": 1,
@@ -48212,6 +53083,382 @@
      "x2",
      "y1",
      "y2"
+    ]
+   }
+  },
+  {
+   "family": "COMP",
+   "kind": "component",
+   "id": "WorldMap",
+   "name": "world map",
+   "version": 1,
+   "title": "WorldMap",
+   "prompt": "A world map with day and night and four cities, and a map of Europe with two countries highlighted and a marker the app moves.",
+   "level": 2,
+   "use_cases": [
+    "map",
+    "travel",
+    "weather",
+    "dashboard"
+   ],
+   "form_factor": "phone",
+   "keywords": [
+    "map",
+    "world map",
+    "maps",
+    "country",
+    "countries",
+    "continent",
+    "europe",
+    "day and night",
+    "night side",
+    "terminator",
+    "world clock map",
+    "city markers",
+    "location",
+    "marker",
+    "pin",
+    "lat lon",
+    "latitude",
+    "longitude",
+    "geography",
+    "highlight country",
+    "choropleth",
+    "region map",
+    "tracker map"
+   ],
+   "teaches": [
+    "Call it with a region and what to mark: {\"WorldMap\": {\"cities\": [\"Tokyo\"], \"labels\": true}}; region takes world, a continent, a country (ISO code) or a lon/lat box",
+    "night: true shades the night side from the clock (world maps)",
+    "markLon/markLat take host variables: one marker the app moves",
+    "{\"$map\"}, {\"$mapHeight\"} and {\"$mapPoint\"} are the building blocks for a map of your own in a canvas"
+   ],
+   "inputs": {
+    "variables": {
+     "lon": {
+      "type": "float",
+      "meaning": "Marker longitude",
+      "default": 2.35,
+      "min": -180,
+      "max": 180,
+      "step": 0.1
+     },
+     "lat": {
+      "type": "float",
+      "meaning": "Marker latitude",
+      "default": 48.86,
+      "min": -60,
+      "max": 84,
+      "step": 0.1
+     }
+    },
+    "clock": "2026-10-31T10:30:00",
+    "touch": false
+   },
+   "check": {
+    "describe": "Top: a world in plate carrée with the night side shaded for the pinned clock and four labelled cities; bottom: Europe with borders, France and Germany in the primary colour and a marker on Paris (lon/lat host variables).",
+    "render": {
+     "clock": "2026-10-31T10:30:00"
+    },
+    "renders": [
+     {
+      "name": "light",
+      "theme": "light"
+     },
+     {
+      "name": "dark",
+      "theme": "dark"
+     },
+     {
+      "name": "mono-dark",
+      "componentTheme": "mono-dark"
+     },
+     {
+      "name": "mono-light",
+      "componentTheme": "mono-light"
+     },
+     {
+      "name": "narrow",
+      "width": 240,
+      "height": 330
+     },
+     {
+      "name": "wide",
+      "width": 560,
+      "height": 330
+     }
+    ]
+   },
+   "related": [
+    "TIM-08",
+    "TIM-12"
+   ],
+   "summary": "A map of the world, a continent or a country (Natural Earth, public domain): land or countries with borders, highlighted countries, city markers with labels, a marker from host lon/lat, and an optional day/night shade from the clock. It scales to fit the box it gets.",
+   "capabilities": {
+    "primary": [],
+    "secondary": []
+   },
+   "components": [
+    "WorldMap"
+   ],
+   "pitfalls": [
+    "Geometry is fixed when the document is built (region, detail, borders, highlight, cities, states, the route's ends); at run time the app can colour countries (values + valueCountries), move points (pointsLon/pointsLat arrays), move the marker (markLon/markLat), advance the route (progress) and the clock moves the night",
+    "night assumes the world box (\"world\": latitudes 84 to -58, plate carrée): on a continent or a country it is not drawn correctly; leave it off there. The night side is one filled pathExpression along the terminator (atan(-cos(H) / tan(declination)))",
+    "Bytes grow with detail and borders: a world of land at low detail is ~6 KB, countries ~10 KB; Europe with borders at medium ~28 KB; each valueCountries entry adds its own outline (Europe's 44 at low ~25 KB). Prefer land for a backdrop and borders only where they matter",
+    "For anything else at map coordinates draw in your own canvas inside the same translate/scale: {\"$mapPoint\": {\"region\": ..., \"lon\": \"@lon\", \"lat\": \"@lat\"}} (x; \"axis\": \"y\" for y), {\"$mapHeight\": region} (the box height for width 1000), {\"$mapRoute\": {region, from, to, axis: \"path\" | \"x\" | \"y\" | \"angle\"}} (a great circle, or its samples as an array for arraySpline(@array, t)). In your own canvas use {\"$map\": {..., \"outline\": true}} for a stroked coast (a clipped fill's straight edges would show)",
+    "In mono the land is an outline (no fills), the highlight a fill, the night a grey shade",
+    "It fills the width it is given (fillMaxWidth): beside other content in a row, give it a weight or a width, or the row's other children get nothing"
+   ],
+   "folder": "components/WorldMap",
+   "derived": {
+    "bytes": 29291,
+    "op_count": 164,
+    "header": {
+     "width": 360,
+     "height": 330
+    },
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF101828"
+     },
+     {
+      "name": "error",
+      "type": "color",
+      "value": "#FFEF5350"
+     },
+     {
+      "name": "lat",
+      "type": "float",
+      "value": 48.8600006
+     },
+     {
+      "name": "lon",
+      "type": "float",
+      "value": 2.3499999
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFE6EAF2"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF4DA3FF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF1C2433"
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF2A3342"
+     }
+    ],
+    "components": [
+     "WorldMap"
+    ],
+    "java_identical": true,
+    "renders": {
+     "light": {
+      "render": "render-light.png",
+      "theme": "light"
+     },
+     "dark": {
+      "render": "render-dark.png",
+      "theme": "dark"
+     },
+     "mono-dark": {
+      "render": "render-mono-dark.png",
+      "componentTheme": "mono-dark",
+      "bytes": 28681,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "lat",
+        "type": "float",
+        "value": 48.8600006
+       },
+       {
+        "name": "lon",
+        "type": "float",
+        "value": 2.3499999
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       }
+      ]
+     },
+     "mono-light": {
+      "render": "render-mono-light.png",
+      "componentTheme": "mono-light",
+      "bytes": 28681,
+      "host_variables": [
+       {
+        "name": "background",
+        "type": "color",
+        "value": "#FFFFFFFF"
+       },
+       {
+        "name": "error",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "lat",
+        "type": "float",
+        "value": 48.8600006
+       },
+       {
+        "name": "lon",
+        "type": "float",
+        "value": 2.3499999
+       },
+       {
+        "name": "onSurface",
+        "type": "color",
+        "value": "#FF000000"
+       },
+       {
+        "name": "primary",
+        "type": "color",
+        "value": "#FF000000"
+       }
+      ]
+     },
+     "narrow": {
+      "render": "render-narrow.png"
+     },
+     "wide": {
+      "render": "render-wide.png"
+     }
+    },
+    "repaint": "scheduled",
+    "interaction_targets": {
+     "total": 0,
+     "click": 0,
+     "area": 0,
+     "touch": 0
+    },
+    "audit": {
+     "error": 0,
+     "warning": 0,
+     "info": 2
+    },
+    "evidence": {},
+    "json_keys": [
+     "WorldMap",
+     "alpha",
+     "apiLevel",
+     "background",
+     "borders",
+     "bottom",
+     "canvas",
+     "children",
+     "cities",
+     "clipRect",
+     "color",
+     "colors",
+     "column",
+     "commands",
+     "contentDescription",
+     "count",
+     "cx",
+     "cy",
+     "dark",
+     "drawCircle",
+     "drawPath",
+     "drawTextAnchored",
+     "dx",
+     "dy",
+     "end",
+     "error",
+     "export",
+     "expressionX",
+     "expressionY",
+     "fontSize",
+     "header",
+     "height",
+     "highlight",
+     "id",
+     "label",
+     "labels",
+     "lat",
+     "left",
+     "light",
+     "lon",
+     "map_europe_countries_low_1",
+     "map_europe_countries_low_2",
+     "map_world_land_low",
+     "markLat",
+     "markLon",
+     "modifiers",
+     "name",
+     "night",
+     "onSurface",
+     "ops",
+     "padding",
+     "paint",
+     "panX",
+     "panY",
+     "path",
+     "pathExpression",
+     "paths",
+     "primary",
+     "profiles",
+     "radius",
+     "region",
+     "resources",
+     "right",
+     "root",
+     "save",
+     "scale",
+     "semantics",
+     "spacedBy",
+     "start",
+     "strokeWidth",
+     "style",
+     "surface",
+     "sx",
+     "sy",
+     "text",
+     "textSize",
+     "top",
+     "track",
+     "translate",
+     "type",
+     "value",
+     "variable",
+     "variables",
+     "width",
+     "worldmap1_decl",
+     "worldmap1_nEdge",
+     "worldmap1_off",
+     "worldmap1_sunLon",
+     "worldmap2_mx",
+     "worldmap2_my",
+     "x",
+     "y"
     ]
    }
   }

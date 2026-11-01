@@ -30,7 +30,7 @@ export function resolvePath(p, what = "path") {
     while (!existsSync(probe) && path.dirname(probe) !== probe) probe = path.dirname(probe);
     const real = path.join(realpathOrSelf(probe), path.relative(probe, abs));
     if (real !== ROOT && !real.startsWith(ROOT + path.sep)) {
-        throw new Error(`${what} "${p}" is outside the workspace`);
+        throw new Error(`${what} "${p}" is outside the workspace (${ROOT}): give a path relative to it, e.g. "doc.json" or "out/render.png", or pass the document inline (json)`);
     }
     return real;
 }

@@ -1,0 +1,575 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 200,
+  "height": 200,
+  "profiles": 513,
+  "contentDescription": "Next calendar event tile"
+ },
+ "resources": {
+  "colors": {
+   "calColor": {
+    "value": "#FF4285F4",
+    "mono-dark": "#FFFFFFFF",
+    "mono-light": "#FF000000"
+   }
+  },
+  "variables": {
+   "hasEvent": {
+    "value": 1,
+    "export": true
+   },
+   "startDay": {
+    "value": 20757,
+    "export": true
+   },
+   "startMin": {
+    "value": 670,
+    "export": true
+   },
+   "endDay": {
+    "value": 20757,
+    "export": true
+   },
+   "endMin": {
+    "value": 720,
+    "export": true
+   },
+   "y": "year()",
+   "e1": "365 * (@y - 1970) + floor((@y - 1969) / 4)",
+   "today": "@e1 - floor((@y - 1901) / 100) + floor((@y - 1601) / 400) + dayOfYear() - 1",
+   "dd": "@startDay - @today",
+   "toStart": "@dd * 1440 + @startMin - timeInMin()",
+   "toEnd": "(@endDay - @today) * 1440 + @endMin - timeInMin()",
+   "vNone": "1 - @hasEvent",
+   "vEnded": "@hasEvent * (1 - step(@toEnd, 0))",
+   "vNow": "@hasEvent * step(@toEnd, 0) * (1 - step(@toStart, 0))",
+   "vSoon": "@hasEvent * step(@toStart, 0) * (1 - step(@toStart, 59.5))",
+   "vToday": "@hasEvent * step(@toStart, 59.5) * (1 - min(1, abs(@dd)))",
+   "vTomorrow": "@hasEvent * step(@toStart, 59.5) * (1 - min(1, abs(@dd - 1)))",
+   "vLater": "@hasEvent * step(@toStart, 59.5) * step(@dd, 1.5)",
+   "wd": "(@startDay + 3) % 7",
+   "inner": "0.74 * min(windowWidth(), windowHeight())"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "title",
+    "vtype": "string",
+    "value": "Design review",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "location",
+    "vtype": "string",
+    "value": "Room 4B, Main St",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "eventId",
+    "vtype": "string",
+    "value": "evt-123",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "onClick": {
+       "type": "hostNamedAction",
+       "name": "openEvent",
+       "value": "@eventId",
+       "valueType": "string"
+      }
+     },
+     {
+      "semantics": {
+       "contentDescription": "Next calendar event. Double tap to open in Calendar",
+       "clickable": true
+      }
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@inner"
+        },
+        {
+         "visibility": "@hasEvent"
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalArrangement": "center",
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "CalDot": {
+             "color": "@colors.calColor"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 6
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "text": "Next",
+             "fontSize": 13,
+             "color": "@colors.muted"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 2
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "@title",
+          "fontSize": 17,
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "textAlign": "center",
+          "maxLines": 2,
+          "overflow": "ellipsis",
+          "modifiers": [
+           "fillMaxWidth"
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 4
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "horizontalAlignment": "center",
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "In ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@toStart",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": " min"
+              }
+             },
+             "fontSize": 17,
+             "fontWeight": 700,
+             "color": "@colors.primary",
+             "modifiers": [
+              {
+               "visibility": "@vSoon"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Now · until ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@endMin / 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@endMin % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             },
+             "fontSize": 17,
+             "fontWeight": 700,
+             "color": "@colors.primary",
+             "modifiers": [
+              {
+               "visibility": "@vNow"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Today ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@startMin / 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@startMin % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             },
+             "fontSize": 17,
+             "fontWeight": 700,
+             "color": "@colors.primary",
+             "modifiers": [
+              {
+               "visibility": "@vToday"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Tomorrow ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@startMin / 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@startMin % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             },
+             "fontSize": 17,
+             "fontWeight": 700,
+             "color": "@colors.primary",
+             "modifiers": [
+              {
+               "visibility": "@vTomorrow"
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              {
+               "visibility": "@vLater"
+              }
+             ],
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "Mon",
+                 "Tue",
+                 "Wed",
+                 "Thu",
+                 "Fri",
+                 "Sat",
+                 "Sun"
+                ],
+                "index": "@wd",
+                "fontSize": 17,
+                "fontWeight": 700,
+                "color": "@colors.primary"
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": " ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "floor(@startMin / 60)",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@startMin % 60",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 }
+                },
+                "fontSize": 17,
+                "fontWeight": 700,
+                "color": "@colors.primary"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Ended ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@endMin / 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@endMin % 60",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             },
+             "fontSize": 17,
+             "fontWeight": 700,
+             "color": "@colors.muted",
+             "modifiers": [
+              {
+               "visibility": "@vEnded"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 4
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "Icon": {
+             "name": "location_on",
+             "size": 14,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 2
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@location",
+             "fontSize": 13,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@inner"
+        },
+        {
+         "visibility": "@vNone"
+        }
+       ],
+       "horizontalAlignment": "center",
+       "children": [
+        {
+         "Icon": {
+          "name": "event_available",
+          "size": 28,
+          "color": "@colors.primary"
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 6
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "text": "No upcoming events",
+          "fontSize": 16,
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "textAlign": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "height": 4
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "text": "Tap to open Calendar",
+          "fontSize": 12,
+          "color": "@colors.muted",
+          "textAlign": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "components": {
+  "CalDot": {
+   "summary": "The event's calendar colour as a small dot; the plain onSurface dot in mono (host colours do not survive always-on)",
+   "params": {
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Calendar colour"
+    },
+    "size": {
+     "type": "float",
+     "default": 8,
+     "static": true,
+     "doc": "Diameter dp"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "size": "@size"
+      },
+      {
+       "clip": {
+        "roundedRect": "@size / 2"
+       }
+      },
+      {
+       "background": {
+        "$if": "theme.mono",
+        "then": "@colors.onSurface",
+        "else": "@color"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CalDot": {
+     "color": "@colors.calColor"
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,1369 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Stopwatch with Start, Stop, Lap and Reset buttons and a list of the last five laps"
+ },
+ "resources": {
+  "variables": {
+   "running": {
+    "value": 0,
+    "export": true
+   },
+   "startAt": {
+    "value": 0,
+    "export": true
+   },
+   "accumulated": {
+    "value": 0,
+    "export": true
+   },
+   "lapCount": {
+    "value": 0,
+    "export": true
+   },
+   "minLap": {
+    "value": 1000000,
+    "export": true
+   },
+   "maxLap": {
+    "value": 0,
+    "export": true
+   },
+   "l1": {
+    "value": 0,
+    "export": true
+   },
+   "l2": {
+    "value": 0,
+    "export": true
+   },
+   "l3": {
+    "value": 0,
+    "export": true
+   },
+   "l4": {
+    "value": 0,
+    "export": true
+   },
+   "l5": {
+    "value": 0,
+    "export": true
+   },
+   "l6": {
+    "value": 0,
+    "export": true
+   },
+   "scroll": 0,
+   "now": "timeInMin() * 60 + continuousSec() % 60",
+   "elapsed": "@accumulated + @running * ((@now - @startAt + 86400) % 86400)",
+   "overHour": "step(@elapsed, 3599.99)",
+   "underHour": "1 - @overHour",
+   "canReset": "(1 - @running) * step(@accumulated, 0)",
+   "canLapReset": "@running + @canReset",
+   "noLaps": "1 - step(@lapCount, 0.5)",
+   "marks": "step(@lapCount, 2.5)",
+   "layout": "step(windowWidth(), 259) * step(windowHeight(), 399)",
+   "show1": "step(@lapCount, 0.5)",
+   "num1": "@lapCount - 0",
+   "t1": "@l1 - @l2",
+   "totLong1": "step(@l1, 3599.99)",
+   "totShort1": "1 - @totLong1",
+   "fast1": "@marks * (1 - step(abs(@t1 - @minLap), 0.001))",
+   "slow1": "@marks * (1 - step(abs(@t1 - @maxLap), 0.001))",
+   "show2": "step(@lapCount, 1.5)",
+   "num2": "@lapCount - 1",
+   "t2": "@l2 - @l3",
+   "totLong2": "step(@l2, 3599.99)",
+   "totShort2": "1 - @totLong2",
+   "fast2": "@marks * (1 - step(abs(@t2 - @minLap), 0.001))",
+   "slow2": "@marks * (1 - step(abs(@t2 - @maxLap), 0.001))",
+   "show3": "step(@lapCount, 2.5)",
+   "num3": "@lapCount - 2",
+   "t3": "@l3 - @l4",
+   "totLong3": "step(@l3, 3599.99)",
+   "totShort3": "1 - @totLong3",
+   "fast3": "@marks * (1 - step(abs(@t3 - @minLap), 0.001))",
+   "slow3": "@marks * (1 - step(abs(@t3 - @maxLap), 0.001))",
+   "show4": "step(@lapCount, 3.5)",
+   "num4": "@lapCount - 3",
+   "t4": "@l4 - @l5",
+   "totLong4": "step(@l4, 3599.99)",
+   "totShort4": "1 - @totLong4",
+   "fast4": "@marks * (1 - step(abs(@t4 - @minLap), 0.001))",
+   "slow4": "@marks * (1 - step(abs(@t4 - @maxLap), 0.001))",
+   "show5": "step(@lapCount, 4.5)",
+   "num5": "@lapCount - 4",
+   "t5": "@l5 - @l6",
+   "totLong5": "step(@l5, 3599.99)",
+   "totShort5": "1 - @totLong5",
+   "fast5": "@marks * (1 - step(abs(@t5 - @minLap), 0.001))",
+   "slow5": "@marks * (1 - step(abs(@t5 - @maxLap), 0.001))"
+  }
+ },
+ "components": {
+  "ElapsedText": {
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 56,
+     "static": true,
+     "doc": "font size"
+    }
+   },
+   "body": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@elapsed / 60)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@elapsed % 60)",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ".",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "floor(@elapsed * 100) % 100",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          }
+         }
+        },
+        "fontSize": "@size",
+        "fontWeight": 500,
+        "fontFamily": "monospace",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@underHour"
+         },
+         {
+          "semantics": {
+           "contentDescription": {
+            "type": "textMerge",
+            "id1": "Elapsed time ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "floor(@elapsed / 60)",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ":",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@elapsed % 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ".",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@elapsed * 100) % 100",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@elapsed / 3600)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@elapsed / 60) % 60",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ":",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "floor(@elapsed % 60)",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          }
+         }
+        },
+        "fontSize": "@size",
+        "fontWeight": 500,
+        "fontFamily": "monospace",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@overHour"
+         },
+         {
+          "semantics": {
+           "contentDescription": {
+            "type": "textMerge",
+            "id1": "Elapsed time ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "floor(@elapsed / 3600)",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ":",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@elapsed / 60) % 60",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ":",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@elapsed % 60)",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "LapRow": {
+   "params": {
+    "num": {
+     "type": "float",
+     "doc": "lap number"
+    },
+    "lap": {
+     "type": "float",
+     "doc": "lap time s"
+    },
+    "total": {
+     "type": "float",
+     "doc": "total s"
+    },
+    "fast": {
+     "type": "float",
+     "doc": "0/1 fastest visibility var"
+    },
+    "totLong": {
+     "type": "float",
+     "doc": "0/1 total over an hour"
+    },
+    "totShort": {
+     "type": "float",
+     "doc": "0/1 total under an hour"
+    },
+    "slow": {
+     "type": "float",
+     "doc": "0/1 slowest visibility var"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": 40
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Lap ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@num",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": ", lap time ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "floor(@lap / 60)",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ":",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "floor(@lap % 60)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": ".",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "floor(@lap * 100) % 100",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               }
+              }
+             }
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ", total ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "floor(@total / 60)",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": ":",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@total % 60)",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ".",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "floor(@total * 100) % 100",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": "Lap ",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "@num",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         }
+        },
+        "fontSize": 14,
+        "color": "@colors.muted",
+        "modifiers": [
+         {
+          "width": 64
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@lap / 60)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@lap % 60)",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ".",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "floor(@lap * 100) % 100",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          }
+         }
+        },
+        "fontSize": 16,
+        "fontFamily": "monospace",
+        "color": "@colors.onSurface",
+        "modifiers": [
+         {
+          "width": 96
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "weight": 1
+         },
+         {
+          "height": 16
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "Fastest",
+           "fontSize": 12,
+           "fontWeight": 600,
+           "color": "@colors.success",
+           "modifiers": [
+            {
+             "visibility": "@fast"
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "Slowest",
+           "fontSize": 12,
+           "fontWeight": 600,
+           "color": "@colors.error",
+           "modifiers": [
+            {
+             "visibility": "@slow"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@total / 60)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@total % 60)",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ".",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "floor(@total * 100) % 100",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          }
+         }
+        },
+        "fontSize": 14,
+        "fontFamily": "monospace",
+        "color": "@colors.muted",
+        "textAlign": "end",
+        "modifiers": [
+         {
+          "visibility": "@totShort"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@total / 3600)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@total / 60) % 60",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 13
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ":",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "floor(@total % 60)",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 13
+            }
+           }
+          }
+         }
+        },
+        "fontSize": 14,
+        "fontFamily": "monospace",
+        "color": "@colors.muted",
+        "textAlign": "end",
+        "modifiers": [
+         {
+          "visibility": "@totLong"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": 0
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "Start Stop  ",
+            "start": "@running * 6",
+            "len": 6,
+            "varName": "toggleLabel6"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@toggleLabel6",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "toggleLabel"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "Reset Lap   ",
+            "start": "@running * 6",
+            "len": 6,
+            "varName": "lrLabel6"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@lrLabel6",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "lrLabel"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "stateLayout": {
+      "indexId": "@layout",
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "horizontalAlignment": "center",
+         "verticalArrangement": "center",
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 12
+          },
+          {
+           "spacedBy": 4
+          }
+         ],
+         "children": [
+          {
+           "ElapsedText": {
+            "size": 30
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "Lap ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@num1",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": "  ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "floor(@t1 / 60)",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "floor(@t1 % 60)",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ".",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "floor(@t1 * 100) % 100",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            },
+            "fontSize": 13,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@show1"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             }
+            ],
+            "children": [
+             {
+              "Button": {
+               "label": "@lrLabel",
+               "style": "outlined",
+               "enabled": "@canLapReset",
+               "onClick": [
+                {
+                 "type": "hostNamedAction",
+                 "name": "watchLapOrReset",
+                 "value": "@elapsed",
+                 "valueType": "float"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@minLap",
+                 "value": "@running * min(@minLap, @elapsed - @l1) + (1 - @running) * 1000000"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@maxLap",
+                 "value": "@running * max(@maxLap, @elapsed - @l1)"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l6",
+                 "value": "@running * @l5"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l5",
+                 "value": "@running * @l4"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l4",
+                 "value": "@running * @l3"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l3",
+                 "value": "@running * @l2"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l2",
+                 "value": "@running * @l1"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l1",
+                 "value": "@running * @elapsed"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@lapCount",
+                 "value": "@running * (@lapCount + 1)"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@accumulated",
+                 "value": "@running * @accumulated"
+                }
+               ]
+              }
+             },
+             {
+              "Button": {
+               "label": "@toggleLabel",
+               "onClick": [
+                {
+                 "type": "hostNamedAction",
+                 "name": "watchStartStop",
+                 "value": "@elapsed",
+                 "valueType": "float"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@accumulated",
+                 "value": "@elapsed + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@startAt",
+                 "value": "timeInMin() * 60 + continuousSec() % 60"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@running",
+                 "value": "1 - @running"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "horizontalAlignment": "center",
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "verticalScroll": "@scroll"
+          },
+          {
+           "padding": 16
+          },
+          {
+           "spacedBy": 12
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "timer",
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "text": {
+               "value": "Stopwatch",
+               "fontSize": 20,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "padding": [
+                  8,
+                  0
+                 ]
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 120
+             }
+            ],
+            "children": [
+             {
+              "ElapsedText": {
+               "size": 56
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 12
+             }
+            ],
+            "children": [
+             {
+              "Button": {
+               "label": "Reset",
+               "style": "outlined",
+               "enabled": "@canReset",
+               "onClick": [
+                {
+                 "type": "hostNamedAction",
+                 "name": "reset",
+                 "value": "@elapsed",
+                 "valueType": "float"
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@running",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@accumulated",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@startAt",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@lapCount",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@minLap",
+                 "value": 1000000
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@maxLap",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l1",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l2",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l3",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l4",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l5",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@l6",
+                 "value": 0
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "horizontalAlignment": "center",
+               "modifiers": [
+                {
+                 "width": 112
+                }
+               ],
+               "children": [
+                {
+                 "Button": {
+                  "label": "@toggleLabel",
+                  "onClick": [
+                   {
+                    "type": "hostNamedAction",
+                    "name": "startStop",
+                    "value": "@elapsed",
+                    "valueType": "float"
+                   },
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@accumulated",
+                    "value": "@elapsed + 0"
+                   },
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@startAt",
+                    "value": "timeInMin() * 60 + continuousSec() % 60"
+                   },
+                   {
+                    "type": "valueFloatExpressionChange",
+                    "target": "@running",
+                    "value": "1 - @running"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "Button": {
+               "label": "Lap",
+               "style": "outlined",
+               "enabled": "@running",
+               "onClick": [
+                {
+                 "type": "hostNamedAction",
+                 "name": "lap",
+                 "value": "@elapsed",
+                 "valueType": "float"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@minLap",
+                 "value": "min(@minLap, @elapsed - @l1)"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@maxLap",
+                 "value": "max(@maxLap, @elapsed - @l1)"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l6",
+                 "value": "@l5 + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l5",
+                 "value": "@l4 + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l4",
+                 "value": "@l3 + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l3",
+                 "value": "@l2 + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l2",
+                 "value": "@l1 + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@l1",
+                 "value": "@elapsed + 0"
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@lapCount",
+                 "value": "@lapCount + 1"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "background": "@colors.surface"
+             },
+             {
+              "clip": {
+               "roundedRect": 16
+              }
+             },
+             {
+              "padding": [
+               16,
+               8
+              ]
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": 32
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Laps",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Lap time / total",
+                  "fontSize": 12,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "No laps yet. Tap Lap while running.",
+               "fontSize": 14,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "visibility": "@noLaps"
+                },
+                {
+                 "padding": [
+                  0,
+                  8
+                 ]
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "@show1"
+                }
+               ],
+               "children": [
+                {
+                 "LapRow": {
+                  "num": "@num1",
+                  "lap": "@t1",
+                  "total": "@l1",
+                  "fast": "@fast1",
+                  "slow": "@slow1",
+                  "totLong": "@totLong1",
+                  "totShort": "@totShort1"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "@show2"
+                }
+               ],
+               "children": [
+                {
+                 "LapRow": {
+                  "num": "@num2",
+                  "lap": "@t2",
+                  "total": "@l2",
+                  "fast": "@fast2",
+                  "slow": "@slow2",
+                  "totLong": "@totLong2",
+                  "totShort": "@totShort2"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "@show3"
+                }
+               ],
+               "children": [
+                {
+                 "LapRow": {
+                  "num": "@num3",
+                  "lap": "@t3",
+                  "total": "@l3",
+                  "fast": "@fast3",
+                  "slow": "@slow3",
+                  "totLong": "@totLong3",
+                  "totShort": "@totShort3"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "@show4"
+                }
+               ],
+               "children": [
+                {
+                 "LapRow": {
+                  "num": "@num4",
+                  "lap": "@t4",
+                  "total": "@l4",
+                  "fast": "@fast4",
+                  "slow": "@slow4",
+                  "totLong": "@totLong4",
+                  "totShort": "@totShort4"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "@show5"
+                }
+               ],
+               "children": [
+                {
+                 "LapRow": {
+                  "num": "@num5",
+                  "lap": "@t5",
+                  "total": "@l5",
+                  "fast": "@fast5",
+                  "slow": "@slow5",
+                  "totLong": "@totLong5",
+                  "totShort": "@totShort5"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

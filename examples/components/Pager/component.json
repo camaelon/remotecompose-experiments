@@ -1,0 +1,408 @@
+{
+ "component": "Pager",
+ "version": 1,
+ "summary": "Swipeable pages with dots: a horizontal swipe on the pager moves one page (onTouchDown keeps where the finger went down, onTouchUp steps the page by the clamped, rounded distance), the new page fades in, the dots under it follow and a tap on a dot jumps to its page. A screen reader hears \"Page N of M\" and can tap each dot.",
+ "params": {
+  "pages": {
+   "type": "list",
+   "static": true,
+   "doc": "The pages, one JSON node each (a column, a Card, any component call), in order; fixed when the document is built. Only the current page is shown (the others are gone, so a screen reader skips them). Omit it to pass `count` and your own content"
+  },
+  "count": {
+   "type": "float",
+   "default": 3,
+   "static": true,
+   "doc": "Number of pages when `pages` is omitted: the pager then holds the `content` slot, which reads the page variable itself"
+  },
+  "page": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The current page, 0-based. Bind a document variable (\"@page\") to read it elsewhere or set it from the host; unbound, the call keeps its own"
+  },
+  "showDots": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false hides the dots row (40 dp); the swipe still works"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The current dot; the others are muted"
+  },
+  "label": {
+   "type": "string",
+   "doc": "What the pages are, said before the position: \"Onboarding\" gives \"Onboarding, Page 2 of 3\". Literal text"
+  }
+ },
+ "slots": {
+  "content": {
+   "optional": true,
+   "doc": "With `count` instead of `pages`: what fills the pager (it reads the page variable); the call's children go here"
+  }
+ },
+ "locals": {
+  "n": {
+   "$if": "pages",
+   "then": {
+    "$count": "pages"
+   },
+   "else": "@count"
+  },
+  "k": "clamp(0, @n - 1, round(@page))",
+  "start": 0,
+  "f": {
+   "value": "@page",
+   "anim": 0.3
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.state",
+  "anim.value",
+  "a11y.labels",
+  "draw.shapes"
+ ],
+ "call": {
+  "Pager": {
+   "page": "@page",
+   "pages": [
+    {
+     "text": {
+      "value": "Welcome",
+      "fontSize": 28,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "text": {
+      "value": "Track your runs",
+      "fontSize": 28,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "text": {
+      "value": "Share with friends",
+      "fontSize": 28,
+      "color": "@colors.onSurface"
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The swipe is two touch modifiers on the pager's column: onTouchDown stores touchX() into the call's own `start`, onTouchUp sets page = clamp(0, n − 1, page + clamp(−1, 1, round((start − touchX()) / (0.5 × windowWidth())))): a swipe of more than a quarter of the window moves exactly one page, a tap (no distance) moves none. No drag tracking: the page does not follow the finger, it changes on release",
+  "Each page is a box with visibility 1 − min(1, |k − i|) (k = clamp(0, n − 1, round(page))) and graphicsLayer alpha 1 − min(1, |f − i|) over the animated local f = {value: page, anim: 0.3}: the new page fades in, and the old one disappears when the layout next reads its visibility (in the TS player it fades out alongside; a visibility is an integer expression and cannot read the eased value itself, U57). Mono has no motion: pages switch",
+  "The pager fills its parent (the pages box has verticalWeight 1, the dots row is 40 dp): give it a parent with a height (a box with a height, or a weighted child of a screen column). Pages are stacked in one box, each fillMaxSize: centre their content yourself",
+  "pages is a static list of JSON nodes: one page box each, written out when the document is built (a page can call components). With `count` and the `content` slot, the pager only owns the swipe, the dots and the description: your content reads the page variable",
+  "The dots are 8 dp at a 24 dp pitch so each one sits in a 24 × 40 dp tap target (onClick sets page to its index, announced \"Go to page N\"); the accent dot slides with f. The pages box carries \"Page N of M\" (textFromFloat(k + 1)), prefixed by `label`",
+  "windowWidth() is the document's width: in a pager narrower than the window, a swipe must still cross a quarter of the window, not of the pager"
+ ],
+ "body": {
+  "column": {
+   "horizontalAlignment": "center",
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "onTouchDown": {
+      "type": "valueFloatExpressionChange",
+      "target": "@start",
+      "value": "touchX()"
+     }
+    },
+    {
+     "onTouchUp": {
+      "type": "valueFloatExpressionChange",
+      "target": "@page",
+      "value": "clamp(0, @n - 1, @page + clamp(-1, 1, round((@start - touchX()) / (0.5 * windowWidth()))))"
+     }
+    }
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "verticalWeight": 1
+       },
+       {
+        "semantics": {
+         "contentDescription": {
+          "$if": "label",
+          "then": {
+           "type": "textMerge",
+           "id1": "@label, ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "Page ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@k + 1",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": " of @n"
+           }
+          },
+          "else": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": "Page ",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@k + 1",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            }
+           },
+           "id2": " of @n"
+          }
+         }
+        }
+       }
+      ],
+      "children": [
+       {
+        "$if": "pages",
+        "then": [
+         {
+          "$each": "pages",
+          "as": "pg",
+          "index": "i",
+          "do": {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "visibility": "1 - min(1, abs(@k - @i))"
+             },
+             {
+              "graphicsLayer": {
+               "alpha": "1 - min(1, abs(@f - @i))"
+              }
+             }
+            ],
+            "children": [
+             "@pg"
+            ]
+           }
+          }
+         }
+        ],
+        "else": {
+         "$slot": "content"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "$if": "showDots",
+     "then": {
+      "box": {
+       "modifiers": [
+        {
+         "width": "@n * 24"
+        },
+        {
+         "height": 40
+        }
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "commands": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.muted"
+              },
+              {
+               "style": {
+                "$if": "theme.mono",
+                "then": "stroke",
+                "else": "fill"
+               }
+              },
+              {
+               "$if": "theme.mono",
+               "then": {
+                "strokeWidth": 1.5
+               }
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "$if": "pages",
+            "then": [
+             {
+              "$each": "pages",
+              "index": "i",
+              "do": {
+               "drawCircle": {
+                "cx": "12 + @i * 24",
+                "cy": 20,
+                "radius": {
+                 "$if": "theme.mono",
+                 "then": 3.25,
+                 "else": 4
+                }
+               }
+              }
+             }
+            ],
+            "else": [
+             {
+              "$each": "count",
+              "index": "i",
+              "do": {
+               "drawCircle": {
+                "cx": "12 + @i * 24",
+                "cy": 20,
+                "radius": {
+                 "$if": "theme.mono",
+                 "then": 3.25,
+                 "else": 4
+                }
+               }
+              }
+             }
+            ]
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "$if": "theme.mono",
+               "then": {
+                "style": "fill"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "12 + @f * 24",
+             "cy": 20,
+             "radius": 4
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "$if": "pages",
+            "then": [
+             {
+              "$each": "pages",
+              "index": "i",
+              "do": {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 24
+                 },
+                 "fillMaxHeight",
+                 {
+                  "onClick": {
+                   "type": "valueFloatChange",
+                   "target": "@page",
+                   "value": "@i"
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": "Go to page ",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "@i + 1",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    }
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ],
+            "else": [
+             {
+              "$each": "count",
+              "index": "i",
+              "do": {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 24
+                 },
+                 "fillMaxHeight",
+                 {
+                  "onClick": {
+                   "type": "valueFloatChange",
+                   "target": "@page",
+                   "value": "@i"
+                  }
+                 },
+                 {
+                  "semantics": {
+                   "contentDescription": {
+                    "type": "textMerge",
+                    "id1": "Go to page ",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "@i + 1",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    }
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

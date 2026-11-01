@@ -1,0 +1,751 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Volume mixer: master, music, voice and effects"
+ },
+ "components": {
+  "MixerSlider": {
+   "component": "MixerSlider",
+   "version": 1,
+   "summary": "A 0..100 level slider that starts at the app's level, greys out when muted, and on release copies the dragged value into the app's exported level and tells the app.",
+   "params": {
+    "drag": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "the slider's own touch variable (read it after the slider)"
+    },
+    "level": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "the exported level the app sets and reads"
+    },
+    "muted": {
+     "type": "float",
+     "default": 0,
+     "doc": "1 when the channel is silenced (its own mute or master's)"
+    },
+    "label": {
+     "type": "string",
+     "required": true
+    },
+    "action": {
+     "type": "string",
+     "required": true,
+     "doc": "hostNamedAction sent on release"
+    },
+    "h": {
+     "type": "float",
+     "default": 40
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary"
+    }
+   },
+   "call": {
+    "MixerSlider": {
+     "drag": "@vol_drag",
+     "level": "@vol",
+     "label": "Volume",
+     "action": "setVolume"
+    }
+   },
+   "locals": {
+    "x0": 0
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      {
+       "height": "@h"
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": "@h"
+         }
+        ],
+        "commands": [
+         {
+          "componentValue": {
+           "id": "@x0",
+           "valueType": 4
+          }
+         },
+         {
+          "touchExpression": {
+           "name": {
+            "$name": "drag"
+           },
+           "defaultValue": "@level",
+           "min": 0,
+           "max": 100,
+           "expression": [
+            "(touchX() - @x0 - 12) / (componentWidth() - 24) * 100"
+           ],
+           "touchMode": 6
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.track"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 4
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 12,
+           "y1": "componentHeight() / 2",
+           "x2": "componentWidth() - 12",
+           "y2": "componentHeight() / 2"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@color"
+            }
+           ]
+          }
+         },
+         {
+          "conditionalOperations": {
+           "condition": "eq",
+           "v1": "@muted",
+           "v2": 1,
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 12,
+           "y1": "componentHeight() / 2",
+           "x2": "12 + (componentWidth() - 24) * @drag / 100",
+           "y2": "componentHeight() / 2"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "12 + (componentWidth() - 24) * @drag / 100",
+           "cy": "componentHeight() / 2",
+           "radius": 9
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": "@h"
+         },
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "stateDescription": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@drag",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " percent"
+           }
+          }
+         },
+         {
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@level",
+            "value": "@drag"
+           },
+           {
+            "type": "hostNamedAction",
+            "name": "@action"
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "MuteButton": {
+   "component": "MuteButton",
+   "version": 1,
+   "summary": "A round mute toggle: speaker icon when sound is on, crossed speaker on a red face when muted; each tap flips the exported mute variable and tells the app.",
+   "params": {
+    "muted": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "exported 0/1 mute state"
+    },
+    "on": {
+     "type": "variable",
+     "initial": 1,
+     "doc": "declared 1 - muted, for visibility"
+    },
+    "onLabel": {
+     "type": "string",
+     "required": true
+    },
+    "mutedLabel": {
+     "type": "string",
+     "required": true
+    },
+    "muteAction": {
+     "type": "string",
+     "required": true
+    },
+    "unmuteAction": {
+     "type": "string",
+     "required": true
+    },
+    "s": {
+     "type": "float",
+     "default": 40
+    }
+   },
+   "call": {
+    "MuteButton": {
+     "muted": "@m",
+     "on": "@m_on",
+     "onLabel": "Mute volume, sound on",
+     "mutedLabel": "Unmute volume, muted",
+     "muteAction": "mute",
+     "unmuteAction": "unmute"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "width": "@s"
+      },
+      {
+       "height": "@s"
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "width": "@s"
+         },
+         {
+          "height": "@s"
+         },
+         {
+          "visibility": "@on"
+         },
+         {
+          "clip": {
+           "roundedRect": 20
+          }
+         },
+         {
+          "background": "@colors.surfaceHigh"
+         },
+         {
+          "onClick": [
+           {
+            "type": "valueFloatChange",
+            "target": "@muted",
+            "value": 1
+           },
+           {
+            "type": "hostNamedAction",
+            "name": "@muteAction"
+           }
+          ]
+         },
+         {
+          "semantics": {
+           "contentDescription": "@onLabel",
+           "clickable": true
+          }
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "volume_up",
+           "size": 22,
+           "color": "@colors.onSurface"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "width": "@s"
+         },
+         {
+          "height": "@s"
+         },
+         {
+          "visibility": "@muted"
+         },
+         {
+          "clip": {
+           "roundedRect": 20
+          }
+         },
+         {
+          "background": "@colors.error"
+         },
+         {
+          "onClick": [
+           {
+            "type": "valueFloatChange",
+            "target": "@muted",
+            "value": 0
+           },
+           {
+            "type": "hostNamedAction",
+            "name": "@unmuteAction"
+           }
+          ]
+         },
+         {
+          "semantics": {
+           "contentDescription": "@mutedLabel",
+           "clickable": true
+          }
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "volume_off",
+           "size": 22,
+           "color": "@colors.onPrimary"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "MixerRow": {
+   "component": "MixerRow",
+   "version": 1,
+   "summary": "One channel: name, level slider, live level, mute button.",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true
+    },
+    "level": {
+     "type": "variable",
+     "initial": 0
+    },
+    "drag": {
+     "type": "variable",
+     "initial": 0
+    },
+    "muted": {
+     "type": "variable",
+     "initial": 0
+    },
+    "on": {
+     "type": "variable",
+     "initial": 1
+    },
+    "dim": {
+     "type": "float",
+     "default": 0
+    },
+    "sliderLabel": {
+     "type": "string",
+     "required": true
+    },
+    "onLabel": {
+     "type": "string",
+     "required": true
+    },
+    "mutedLabel": {
+     "type": "string",
+     "required": true
+    },
+    "levelAction": {
+     "type": "string",
+     "required": true
+    },
+    "muteAction": {
+     "type": "string",
+     "required": true
+    },
+    "unmuteAction": {
+     "type": "string",
+     "required": true
+    },
+    "weight": {
+     "type": "float",
+     "default": 400
+    },
+    "h": {
+     "type": "float",
+     "default": 48
+    },
+    "bs": {
+     "type": "float",
+     "default": 40
+    }
+   },
+   "call": {
+    "MixerRow": {
+     "name": "Music",
+     "level": "@music_level",
+     "drag": "@music_drag",
+     "muted": "@music_muted",
+     "on": "@music_on",
+     "dim": "@music_dim",
+     "sliderLabel": "Music volume",
+     "onLabel": "Mute music, sound on",
+     "mutedLabel": "Unmute music, muted",
+     "levelAction": "setMusicLevel",
+     "muteAction": "muteMusic",
+     "unmuteAction": "unmuteMusic"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@h"
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "text": "@name",
+        "fontSize": 15,
+        "fontWeight": "@weight",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "width": 64
+         }
+        ]
+       }
+      },
+      {
+       "MixerSlider": {
+        "drag": "@drag",
+        "level": "@level",
+        "muted": "@dim",
+        "label": "@sliderLabel",
+        "action": "@levelAction",
+        "h": "@h"
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "@drag",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 5
+        },
+        "fontSize": 14,
+        "color": "@colors.muted",
+        "textAlign": "end",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "width": 32
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 8
+         }
+        ]
+       }
+      },
+      {
+       "MuteButton": {
+        "muted": "@muted",
+        "on": "@on",
+        "onLabel": "@onLabel",
+        "mutedLabel": "@mutedLabel",
+        "muteAction": "@muteAction",
+        "unmuteAction": "@unmuteAction",
+        "s": "@bs"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "master_level": {
+    "value": 80,
+    "export": true
+   },
+   "music_level": {
+    "value": 65,
+    "export": true
+   },
+   "voice_level": {
+    "value": 90,
+    "export": true
+   },
+   "effects_level": {
+    "value": 40,
+    "export": true
+   },
+   "master_muted": {
+    "value": 0,
+    "export": true
+   },
+   "music_muted": {
+    "value": 0,
+    "export": true
+   },
+   "voice_muted": {
+    "value": 0,
+    "export": true
+   },
+   "effects_muted": {
+    "value": 0,
+    "export": true
+   },
+   "master_on": "1 - @master_muted",
+   "music_on": "1 - @music_muted",
+   "voice_on": "1 - @voice_muted",
+   "effects_on": "1 - @effects_muted",
+   "music_dim": "max(@music_muted, @master_muted)",
+   "voice_dim": "max(@voice_muted, @master_muted)",
+   "effects_dim": "max(@effects_muted, @master_muted)",
+   "showHeader": "step(windowHeight(), 240)",
+   "rowH": "min(60, (windowHeight() - 24) / 4)",
+   "btn": "min(48, @rowH - 2)",
+   "frac": "min(1, 600 / (windowWidth() - 24))"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 12
+    }
+   ],
+   "horizontalAlignment": "center",
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       {
+        "fillMaxWidth": "@frac"
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "text": "Volume mixer",
+         "fontSize": 20,
+         "fontWeight": 700,
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "visibility": "@showHeader"
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "text": "Master sets the overall output; muting it silences every channel.",
+         "fontSize": 13,
+         "color": "@colors.muted",
+         "modifiers": [
+          {
+           "visibility": "@showHeader"
+          },
+          {
+           "padding": {
+            "bottom": 8
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "clip": {
+            "roundedRect": 12
+           }
+          },
+          {
+           "background": "@colors.surface"
+          },
+          {
+           "padding": {
+            "left": 8,
+            "right": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "MixerRow": {
+            "name": "Master",
+            "weight": 700,
+            "level": "@master_level",
+            "drag": "@master_drag",
+            "muted": "@master_muted",
+            "on": "@master_on",
+            "dim": "@master_muted",
+            "sliderLabel": "Master volume",
+            "onLabel": "Mute master, sound on",
+            "mutedLabel": "Unmute master, muted",
+            "levelAction": "setMasterLevel",
+            "muteAction": "muteMaster",
+            "unmuteAction": "unmuteMaster",
+            "h": "@rowH",
+            "bs": "@btn"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "MixerRow": {
+         "name": "Music",
+         "level": "@music_level",
+         "drag": "@music_drag",
+         "muted": "@music_muted",
+         "on": "@music_on",
+         "dim": "@music_dim",
+         "sliderLabel": "Music volume",
+         "onLabel": "Mute music, sound on",
+         "mutedLabel": "Unmute music, muted",
+         "levelAction": "setMusicLevel",
+         "muteAction": "muteMusic",
+         "unmuteAction": "unmuteMusic",
+         "h": "@rowH",
+         "bs": "@btn"
+        }
+       },
+       {
+        "MixerRow": {
+         "name": "Voice",
+         "level": "@voice_level",
+         "drag": "@voice_drag",
+         "muted": "@voice_muted",
+         "on": "@voice_on",
+         "dim": "@voice_dim",
+         "sliderLabel": "Voice volume",
+         "onLabel": "Mute voice, sound on",
+         "mutedLabel": "Unmute voice, muted",
+         "levelAction": "setVoiceLevel",
+         "muteAction": "muteVoice",
+         "unmuteAction": "unmuteVoice",
+         "h": "@rowH",
+         "bs": "@btn"
+        }
+       },
+       {
+        "MixerRow": {
+         "name": "Effects",
+         "level": "@effects_level",
+         "drag": "@effects_drag",
+         "muted": "@effects_muted",
+         "on": "@effects_on",
+         "dim": "@effects_dim",
+         "sliderLabel": "Effects volume",
+         "onLabel": "Mute effects, sound on",
+         "mutedLabel": "Unmute effects, muted",
+         "levelAction": "setEffectsLevel",
+         "muteAction": "muteEffects",
+         "unmuteAction": "unmuteEffects",
+         "h": "@rowH",
+         "bs": "@btn"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

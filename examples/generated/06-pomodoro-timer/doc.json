@@ -1,0 +1,175 @@
+{
+  "header": {
+    "apiLevel": 7,
+    "width": 360,
+    "height": 400,
+    "profiles": 513,
+    "contentDescription": "A Pomodoro timer: 25 minutes of work then a 5-minute break, a ring that empties over each period, Start, Pause and Reset buttons"
+  },
+  "resources": {
+    "variables": {
+      "running": {"value": 0, "export": true},
+      "startAt": {"value": 0, "export": true},
+      "accumulated": {"value": 0, "export": true},
+      "workLen": {"value": 1500, "export": true},
+      "breakLen": {"value": 300, "export": true},
+      "now": "timeInMin() * 60 + continuousSec() % 60",
+      "elapsed": "@accumulated + @running * ((@now - @startAt + 86400) % 86400)",
+      "cycleLen": "@workLen + @breakLen",
+      "cycleT": "@elapsed % @cycleLen",
+      "isBreak": "step(@cycleT, @workLen - 0.0005)",
+      "isWork": "1 - @isBreak",
+      "phaseLen": "@workLen + @isBreak * (@breakLen - @workLen)",
+      "phaseT": "@cycleT - @isBreak * @workLen",
+      "remaining": "@phaseLen - @phaseT",
+      "remWhole": "ceil(@remaining)",
+      "ringLeft": "@remaining / @phaseLen",
+      "session": "floor(@elapsed / @cycleLen) + 1",
+      "state": "@running * 2 + (1 - @running) * step(@accumulated, 0)"
+    }
+  },
+  "components": {
+    "TimeText": {
+      "params": {
+        "size": {"type": "float", "default": 44, "static": true, "doc": "Font size of the MM:SS countdown"}
+      },
+      "body": {
+        "text": {
+          "value": {
+            "type": "textMerge",
+            "id1": {"type": "textFromFloat", "value": "floor(@remWhole / 60)", "whole": 2, "decimal": 0, "flags": 13},
+            "id2": {
+              "type": "textMerge",
+              "id1": ":",
+              "id2": {"type": "textFromFloat", "value": "@remWhole % 60", "whole": 2, "decimal": 0, "flags": 13}
+            }
+          },
+          "fontSize": "@size",
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "maxLines": 1
+        }
+      }
+    },
+    "PhaseLabel": {
+      "params": {
+        "size": {"type": "float", "default": 14, "static": true, "doc": "Font size of the phase word"}
+      },
+      "body": {
+        "TextChoice": {
+          "items": ["Focus", "Break"],
+          "index": "@isBreak",
+          "fontSize": "@size",
+          "fontWeight": 500,
+          "color": "@colors.muted"
+        }
+      }
+    },
+    "Header": {
+      "params": {},
+      "body": {
+        "row": {
+          "verticalAlignment": "center",
+          "modifiers": ["fillMaxWidth"],
+          "children": [
+            {"box": {"modifiers": [{"visibility": "@isWork"}], "children": [{"Icon": {"name": "timer", "color": "@colors.primary"}}]}},
+            {"box": {"modifiers": [{"visibility": "@isBreak"}], "children": [{"Icon": {"name": "coffee", "color": "@colors.success"}}]}},
+            {"text": {"value": "Pomodoro", "fontSize": 20, "color": "@colors.onSurface", "maxLines": 1, "overflow": "ellipsis", "modifiers": [{"weight": 1}, {"padding": [8, 0]}]}},
+            {"text": {
+              "value": {"type": "textMerge", "id1": "Session ", "id2": {"type": "textFromFloat", "value": "@session", "whole": 2, "decimal": 0, "flags": 5}},
+              "fontSize": 12, "color": "@colors.muted", "maxLines": 1
+            }}
+          ]
+        }
+      }
+    },
+    "Ring": {
+      "params": {
+        "size": {"type": "float", "default": 200, "static": true, "doc": "Ring diameter in dp"},
+        "thickness": {"type": "float", "default": 10, "static": true, "doc": "Stroke width in dp"}
+      },
+      "body": {
+        "box": {
+          "horizontalAlignment": "center",
+          "verticalAlignment": "center",
+          "children": [
+            {"box": {"modifiers": [{"visibility": "@isWork"}], "children": [{"ProgressRing": {"progress": "@ringLeft", "color": "@colors.primary", "size": "@size", "thickness": "@thickness", "showLabel": false}}]}},
+            {"box": {"modifiers": [{"visibility": "@isBreak"}], "children": [{"ProgressRing": {"progress": "@ringLeft", "color": "@colors.success", "size": "@size", "thickness": "@thickness", "showLabel": false}}]}},
+            {"column": {"horizontalAlignment": "center", "children": [
+              {"TimeText": {}},
+              {"PhaseLabel": {}}
+            ]}}
+          ]
+        }
+      }
+    },
+    "Controls": {
+      "params": {},
+      "body": {
+        "row": {
+          "verticalAlignment": "center",
+          "modifiers": [{"spacedBy": 12}],
+          "children": [
+            {"box": {"horizontalAlignment": "center", "modifiers": [{"width": 112}], "children": [
+              {"Button": {"label": "@stateLabel", "onClick": [
+                {"type": "valueFloatExpressionChange", "target": "@accumulated", "value": "@elapsed + 0"},
+                {"type": "valueFloatExpressionChange", "target": "@startAt", "value": "timeInMin() * 60 + continuousSec() % 60"},
+                {"type": "valueFloatExpressionChange", "target": "@running", "value": "1 - @running"}
+              ]}}
+            ]}},
+            {"Button": {"label": "Reset", "style": "outlined", "onClick": [
+              {"type": "valueFloatChange", "target": "@running", "value": 0},
+              {"type": "valueFloatChange", "target": "@accumulated", "value": 0},
+              {"type": "valueFloatChange", "target": "@startAt", "value": 0}
+            ]}}
+          ]
+        }
+      }
+    }
+  },
+  "root": {
+    "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "modifiers": ["fillMaxSize", {"background": "@colors.background"}, {"padding": 16}],
+      "children": [
+        {"canvas": {"modifiers": [{"size": 0}], "commands": [
+          {"global": {"commands": [
+            {"textSubtext": {"text": "Start Resume Pause ", "start": "@state * 6", "len": 6, "varName": "stateLabel6"}},
+            {"textTransform": {"text": "@stateLabel6", "start": 0, "len": -1, "operation": 3, "varName": "stateLabel"}}
+          ]}}
+        ]}},
+        {"fitBox": {"children": [
+          {"column": {"horizontalAlignment": "center", "modifiers": ["fillMaxWidth", {"height": 300}], "children": [
+            {"Header": {}},
+            {"box": {"horizontalAlignment": "center", "verticalAlignment": "center", "modifiers": ["fillMaxWidth", {"verticalWeight": 1}], "children": [
+              {"Ring": {}}
+            ]}},
+            {"Controls": {}}
+          ]}},
+          {"column": {"horizontalAlignment": "center", "modifiers": ["fillMaxWidth", {"height": 150}, {"spacedBy": 8}], "children": [
+            {"Header": {}},
+            {"row": {"verticalAlignment": "bottom", "modifiers": [{"spacedBy": 8}], "children": [
+              {"TimeText": {"size": 40}},
+              {"PhaseLabel": {"size": 16}}
+            ]}},
+            {"Controls": {}}
+          ]}},
+          {"row": {"verticalAlignment": "center", "modifiers": ["fillMaxWidth", {"height": 40}], "children": [
+            {"box": {"modifiers": [{"weight": 1}], "children": [
+              {"row": {"verticalAlignment": "bottom", "modifiers": [{"spacedBy": 8}], "children": [
+                {"TimeText": {"size": 28}},
+                {"PhaseLabel": {"size": 13}}
+              ]}}
+            ]}},
+            {"Controls": {}}
+          ]}},
+          {"row": {"verticalAlignment": "bottom", "modifiers": [{"spacedBy": 8}], "children": [
+            {"TimeText": {"size": 24}},
+            {"PhaseLabel": {"size": 12}}
+          ]}}
+        ]}}
+      ]
+    }
+  }
+}

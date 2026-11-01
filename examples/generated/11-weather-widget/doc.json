@@ -1,0 +1,488 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Weather widget: the current temperature and condition, today's high and low, and the temperature for the next six hours as a chart"
+ },
+ "componentTheme": "auto",
+ "resources": {
+  "floatArrays": {
+   "hourly": {
+    "value": [
+     20,
+     21,
+     23,
+     24,
+     23,
+     21
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "temp": {
+    "value": 21,
+    "export": true
+   },
+   "high": {
+    "value": 25,
+    "export": true
+   },
+   "low": {
+    "value": 14,
+    "export": true
+   },
+   "condition": {
+    "value": 2,
+    "export": true
+   },
+   "startHour": {
+    "value": -1,
+    "export": true
+   },
+   "isSun": "1 - min(1, abs(@condition - 0))",
+   "isCloud": "1 - min(1, abs(@condition - 1))",
+   "isRain": "1 - min(1, abs(@condition - 2))",
+   "isSnow": "1 - min(1, abs(@condition - 3))",
+   "isStorm": "1 - min(1, abs(@condition - 4))",
+   "h0": "ifElse(timeInHr() + 1, @startHour, step(@startHour, -0.5))",
+   "h1": "(@h0 + 0) % 24",
+   "h2": "(@h0 + 1) % 24",
+   "h3": "(@h0 + 2) % 24",
+   "h4": "(@h0 + 3) % 24",
+   "h5": "(@h0 + 4) % 24",
+   "h6": "(@h0 + 5) % 24",
+   "yLo": "arrayMin(@hourly) - 1",
+   "yHi": "arrayMax(@hourly) + 1",
+   "wide": "step(windowWidth(), 199)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "clip": {
+      "roundedRect": 16
+     }
+    },
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 12
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "horizontalAlignment": "start",
+      "verticalArrangement": "top",
+      "children": [
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 56
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "size": [
+               48,
+               48
+              ]
+             }
+            ],
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@isSun"
+                }
+               ],
+               "children": [
+                {
+                 "WeatherIcon": {
+                  "condition": "sun",
+                  "size": 48
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@isCloud"
+                }
+               ],
+               "children": [
+                {
+                 "WeatherIcon": {
+                  "condition": "cloud",
+                  "size": 48
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@isRain"
+                }
+               ],
+               "children": [
+                {
+                 "WeatherIcon": {
+                  "condition": "rain",
+                  "size": 48
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@isSnow"
+                }
+               ],
+               "children": [
+                {
+                 "WeatherIcon": {
+                  "condition": "snow",
+                  "size": 48
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "visibility": "@isStorm"
+                }
+               ],
+               "children": [
+                {
+                 "WeatherIcon": {
+                  "condition": "storm",
+                  "size": 48
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@temp",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": "\u00b0"
+               },
+               "fontSize": 32,
+               "fontWeight": 300,
+               "color": "@colors.onSurface",
+               "maxLines": 1
+              }
+             },
+             {
+              "TextChoice": {
+               "items": [
+                "Sunny",
+                "Cloudy",
+                "Rain",
+                "Snow",
+                "Storm"
+               ],
+               "index": "@condition",
+               "fontSize": 12,
+               "color": "@colors.muted",
+               "maxLines": 1
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 8
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "horizontalAlignment": "end",
+            "modifiers": [
+             {
+              "spacedBy": 2
+             },
+             {
+              "visibility": "@wide"
+             }
+            ],
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "High",
+                  "fontSize": 12,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@high",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "\u00b0"
+                  },
+                  "fontSize": 13,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Low",
+                  "fontSize": 12,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@low",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": "\u00b0"
+                  },
+                  "fontSize": 13,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "fitBox": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 72
+             }
+            ],
+            "verticalArrangement": "bottom",
+            "children": [
+             {
+              "LineChart": {
+               "values": "@hourly",
+               "x_min": 0,
+               "x_max": 5,
+               "y_min": "@yLo",
+               "y_max": "@yHi",
+               "marks": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+               ],
+               "height": 50,
+               "xLabels": [
+                {
+                 "type": "textFromFloat",
+                 "value": "@h1",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                {
+                 "type": "textFromFloat",
+                 "value": "@h2",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                {
+                 "type": "textFromFloat",
+                 "value": "@h3",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                {
+                 "type": "textFromFloat",
+                 "value": "@h4",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                {
+                 "type": "textFromFloat",
+                 "value": "@h5",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                {
+                 "type": "textFromFloat",
+                 "value": "@h6",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                }
+               ],
+               "label": "Temperature for the next six hours"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 38
+             }
+            ],
+            "verticalArrangement": "bottom",
+            "children": [
+             {
+              "LineChart": {
+               "values": "@hourly",
+               "x_min": 0,
+               "x_max": 5,
+               "y_min": "@yLo",
+               "y_max": "@yHi",
+               "marks": [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+               ],
+               "height": 34,
+               "label": "Temperature for the next six hours"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth"
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

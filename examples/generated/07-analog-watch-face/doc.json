@@ -1,0 +1,554 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 320,
+  "profiles": 513,
+  "contentDescription": "Analog watch face with a date window and a second hand"
+ },
+ "components": {
+  "WatchFace": {
+   "summary": "A round analog watch face from the host clock: 60 minute ticks, 12 hour ticks, a date window at 3 o'clock, hour and minute hands and a red second hand.",
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 200,
+     "static": true,
+     "doc": "Design size in dp; the drawing is scaled to the box it gets"
+    },
+    "fill": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "fillMaxSize instead of a fixed size"
+    },
+    "showSeconds": {
+     "type": "bool",
+     "default": true,
+     "static": true,
+     "doc": "Draw the second hand (repaints every second)"
+    },
+    "face": {
+     "type": "color",
+     "default": "@colors.surface",
+     "doc": "Dial colour"
+    },
+    "hands": {
+     "type": "color",
+     "default": "@colors.onSurface",
+     "doc": "Hour and minute hands, hour ticks, date digits"
+    },
+    "accent": {
+     "type": "color",
+     "default": "@colors.error",
+     "doc": "Second hand and centre cap"
+    },
+    "label": {
+     "type": "string",
+     "default": "Watch face",
+     "doc": "Accessibility label"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      {
+       "$if": "fill",
+       "then": "fillMaxSize",
+       "else": {
+        "size": "@size"
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth(), componentHeight())"
+       }
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - @s) / 2",
+        "dy": "(componentHeight() - @s) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@s / @size",
+        "sy": "@s / @size"
+       }
+      },
+      {
+       "variable": {
+        "name": "watchDay",
+        "vtype": "string",
+        "commit": true,
+        "value": {
+         "type": "textFromFloat",
+         "value": "dayOfMonth()",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 4
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "@theme.stroke"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@size / 2",
+          "cy": "@size / 2",
+          "radius": "@size * 0.49 - 1"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@size / 2",
+          "cy": "@size / 2",
+          "radius": "@size * 0.5"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@face"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@size / 2",
+          "cy": "@size / 2",
+          "radius": "@size * 0.48"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": "@size * 0.006"
+         },
+         {
+          "strokeCap": "butt"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 60,
+        "step": 1,
+        "commands": [
+         {
+          "rotate": {
+           "angle": 6,
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size / 2",
+           "y1": "@size * 0.04",
+           "x2": "@size / 2",
+           "y2": "@size * 0.075"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@hands"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": "@size * 0.012",
+           "else": "@size * 0.018"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "j",
+        "from": 0,
+        "until": 12,
+        "step": 1,
+        "commands": [
+         {
+          "rotate": {
+           "angle": 30,
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size / 2",
+           "y1": "@size * 0.04",
+           "x2": "@size / 2",
+           "y2": "@size * 0.11"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surfaceHigh"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@size * 0.66",
+          "top": "@size * 0.44",
+          "right": "@size * 0.80",
+          "bottom": "@size * 0.56"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": "@theme.stroke",
+           "else": "@size * 0.006"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawRect": {
+        "left": "@size * 0.66",
+        "top": "@size * 0.44",
+        "right": "@size * 0.80",
+        "bottom": "@size * 0.56"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@hands"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": "@size * 0.09"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "@watchDay",
+        "x": "@size * 0.73",
+        "y": "@size * 0.5",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "(timeInMin() % 720) * 0.5",
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@hands"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": {
+              "$if": "theme.mono",
+              "then": "@size * 0.025",
+              "else": "@size * 0.04"
+             }
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size / 2",
+           "y1": "@size * 0.56",
+           "x2": "@size / 2",
+           "y2": "@size * 0.26"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": {
+            "$if": "theme.mono",
+            "then": "(timeInMin() % 60) * 6",
+            "else": "(timeInMin() % 60) * 6 + (timeInSec() % 60) * 0.1"
+           },
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@hands"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": {
+              "$if": "theme.mono",
+              "then": "@size * 0.018",
+              "else": "@size * 0.028"
+             }
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size / 2",
+           "y1": "@size * 0.57",
+           "x2": "@size / 2",
+           "y2": "@size * 0.11"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "else": {
+        "$if": "showSeconds",
+        "then": {
+         "save": {
+          "commands": [
+           {
+            "rotate": {
+             "angle": "(timeInSec() % 60) * 6",
+             "pivotX": "@size / 2",
+             "pivotY": "@size / 2"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@accent"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "@size * 0.01"
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@size / 2",
+             "y1": "@size * 0.62",
+             "x2": "@size / 2",
+             "y2": "@size * 0.06"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@accent"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@size / 2",
+             "cy": "@size * 0.61",
+             "radius": "@size * 0.02"
+            }
+           }
+          ]
+         }
+        }
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "theme.mono",
+           "then": "@colors.onSurface",
+           "else": "@accent"
+          }
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@size / 2",
+        "cy": "@size / 2",
+        "radius": "@size * 0.025"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@face"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@size / 2",
+        "cy": "@size / 2",
+        "radius": "@size * 0.01"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "WatchFace": {
+     "size": 200
+    }
+   }
+  }
+ },
+ "root": {
+  "type": "box",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.background"
+   }
+  ],
+  "children": [
+   {
+    "WatchFace": {
+     "size": 200,
+     "fill": true
+    }
+   }
+  ]
+ }
+}

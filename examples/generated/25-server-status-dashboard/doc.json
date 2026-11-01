@@ -1,0 +1,2007 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Server status: six services with status, latency and uptime"
+ },
+ "components": {
+  "StatusIcon": {
+   "summary": "Status icon: check circle (up), triangle (degraded), cross circle (down), tinted by state",
+   "params": {
+    "status": {
+     "type": "float",
+     "required": true,
+     "doc": "0 up, 1 degraded, 2 down"
+    },
+    "size": {
+     "type": "float",
+     "default": 24,
+     "static": true,
+     "doc": "icon size dp"
+    },
+    "upLabel": {
+     "type": "text",
+     "default": "Up",
+     "doc": "spoken label when up"
+    },
+    "degLabel": {
+     "type": "text",
+     "default": "Degraded",
+     "doc": "spoken label when degraded"
+    },
+    "downLabel": {
+     "type": "text",
+     "default": "Down",
+     "doc": "spoken label when down"
+    }
+   },
+   "locals": {
+    "isUp": "1 - min(1, @status)",
+    "isDown": "max(0, @status - 1)",
+    "isDeg": "min(1, @status) - max(0, @status - 1)"
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "size": "@size"
+      }
+     ],
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@isUp"
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "check_circle",
+           "filled": true,
+           "size": "@size",
+           "color": "@colors.success",
+           "label": "@upLabel"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@isDeg"
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "warning",
+           "filled": true,
+           "size": "@size",
+           "color": "@colors.warning",
+           "label": "@degLabel"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@isDown"
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "cancel",
+           "filled": true,
+           "size": "@size",
+           "color": "@colors.error",
+           "label": "@downLabel"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "StatusIcon": {
+     "status": 1
+    }
+   }
+  },
+  "ServiceRow": {
+   "summary": "One service: status icon, host name and status word, latency bar, uptime bar",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "host name (a text variable)"
+    },
+    "status": {
+     "type": "float",
+     "required": true,
+     "doc": "0 up, 1 degraded, 2 down"
+    },
+    "latency": {
+     "type": "float",
+     "required": true,
+     "doc": "ms"
+    },
+    "uptime": {
+     "type": "float",
+     "required": true,
+     "doc": "percent"
+    }
+   },
+   "locals": {
+    "latFrac": "clamp(0, 1, @latency / 1000)",
+    "slow": "step(@latency, 1000)",
+    "fast": "1 - step(@latency, 1000)",
+    "upFrac": "clamp(0, 1, (@uptime - 90) / 10)",
+    "poor": "1 - step(@uptime, 99)",
+    "good": "step(@uptime, 99)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "clip": {
+        "roundedRect": 12
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": [
+        12,
+        10
+       ]
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "StatusIcon": {
+           "status": "@status",
+           "size": 24,
+           "upLabel": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@name",
+             "id2": " is up"
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": ". Latency ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@latency",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 5
+                }
+               },
+               "id2": " milliseconds, uptime "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@uptime",
+               "whole": 3,
+               "decimal": 2,
+               "flags": 5
+              }
+             },
+             "id2": " percent"
+            }
+           },
+           "degLabel": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@name",
+             "id2": " is degraded"
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": ". Latency ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@latency",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 5
+                }
+               },
+               "id2": " milliseconds, uptime "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@uptime",
+               "whole": 3,
+               "decimal": 2,
+               "flags": 5
+              }
+             },
+             "id2": " percent"
+            }
+           },
+           "downLabel": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@name",
+             "id2": " is down"
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": ". Latency ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@latency",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 5
+                }
+               },
+               "id2": " milliseconds, uptime "
+              },
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@uptime",
+               "whole": 3,
+               "decimal": 2,
+               "flags": 5
+              }
+             },
+             "id2": " percent"
+            }
+           }
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 10
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 15,
+           "fontWeight": 600,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 8
+            }
+           ]
+          }
+         },
+         {
+          "TextChoice": {
+           "items": [
+            "Up",
+            "Degraded",
+            "Down"
+           ],
+           "index": "@status",
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "height": 8
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "column": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "row": {
+              "modifiers": [
+               "fillMaxWidth"
+              ],
+              "children": [
+               {
+                "text": {
+                 "value": "Latency",
+                 "fontSize": 11,
+                 "color": "@colors.muted",
+                 "modifiers": [
+                  {
+                   "weight": 1
+                  }
+                 ],
+                 "maxLines": 1,
+                 "overflow": "ellipsis"
+                }
+               },
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@latency",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": " ms"
+                 },
+                 "fontSize": 12,
+                 "fontWeight": 600,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               "fillMaxWidth",
+               {
+                "height": 4
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               "fillMaxWidth"
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "visibility": "@fast"
+                  }
+                 ],
+                 "children": [
+                  {
+                   "ProgressBar": {
+                    "progress": "@latFrac",
+                    "color": "@colors.primary",
+                    "height": 6
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "visibility": "@slow"
+                  }
+                 ],
+                 "children": [
+                  {
+                   "ProgressBar": {
+                    "progress": "@latFrac",
+                    "color": "@colors.error",
+                    "height": 6
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 16
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "row": {
+              "modifiers": [
+               "fillMaxWidth"
+              ],
+              "children": [
+               {
+                "text": {
+                 "value": "Uptime",
+                 "fontSize": 11,
+                 "color": "@colors.muted",
+                 "modifiers": [
+                  {
+                   "weight": 1
+                  }
+                 ],
+                 "maxLines": 1,
+                 "overflow": "ellipsis"
+                }
+               },
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@uptime",
+                   "whole": 3,
+                   "decimal": 2,
+                   "flags": 5
+                  },
+                  "id2": " %"
+                 },
+                 "fontSize": 12,
+                 "fontWeight": 600,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               "fillMaxWidth",
+               {
+                "height": 4
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               "fillMaxWidth"
+              ],
+              "children": [
+               {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "visibility": "@good"
+                  }
+                 ],
+                 "children": [
+                  {
+                   "ProgressBar": {
+                    "progress": "@upFrac",
+                    "color": "@colors.success",
+                    "height": 6
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  "fillMaxWidth",
+                  {
+                   "visibility": "@poor"
+                  }
+                 ],
+                 "children": [
+                  {
+                   "ProgressBar": {
+                    "progress": "@upFrac",
+                    "color": "@colors.warning",
+                    "height": 6
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "ServiceRow": {
+     "name": "api",
+     "status": 0,
+     "latency": 120,
+     "uptime": 99.9
+    }
+   }
+  },
+  "ServiceCell": {
+   "summary": "Compact service cell for the widget: status icon, name, latency and uptime",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "host"
+    },
+    "status": {
+     "type": "float",
+     "required": true,
+     "doc": "0/1/2"
+    },
+    "latency": {
+     "type": "float",
+     "required": true,
+     "doc": "ms"
+    },
+    "uptime": {
+     "type": "float",
+     "required": true,
+     "doc": "%"
+    },
+    "line2": {
+     "type": "float",
+     "required": true,
+     "doc": "a declared 0/1 variable: show the latency/uptime line"
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "clip": {
+        "roundedRect": 8
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": [
+        6,
+        2
+       ]
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "StatusIcon": {
+        "status": "@status",
+        "size": 16,
+        "upLabel": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "@name",
+          "id2": " is up"
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": ". Latency ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@latency",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": " milliseconds, uptime "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@uptime",
+            "whole": 3,
+            "decimal": 2,
+            "flags": 5
+           }
+          },
+          "id2": " percent"
+         }
+        },
+        "degLabel": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "@name",
+          "id2": " is degraded"
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": ". Latency ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@latency",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": " milliseconds, uptime "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@uptime",
+            "whole": 3,
+            "decimal": 2,
+            "flags": 5
+           }
+          },
+          "id2": " percent"
+         }
+        },
+        "downLabel": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "@name",
+          "id2": " is down"
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": ". Latency ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@latency",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": " milliseconds, uptime "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@uptime",
+            "whole": 3,
+            "decimal": 2,
+            "flags": 5
+           }
+          },
+          "id2": " percent"
+         }
+        }
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 6
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 12,
+           "fontWeight": 600,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@latency",
+               "whole": 5,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " ms · "
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@uptime",
+              "whole": 3,
+              "decimal": 2,
+              "flags": 5
+             }
+            },
+            "id2": " %"
+           },
+           "fontSize": 11,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "visibility": "@line2"
+            }
+           ]
+          }
+         },
+         {
+          "row": {
+           "modifiers": [
+            "fillMaxWidth",
+            {
+             "padding": [
+              0,
+              2,
+              0,
+              0
+             ]
+            },
+            {
+             "visibility": "@line2"
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "weight": 1
+               }
+              ],
+              "children": [
+               {
+                "ProgressBar": {
+                 "progress": "clamp(0, 1, @latency / 1000)",
+                 "color": "@colors.primary",
+                 "height": 3
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "width": 6
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "weight": 1
+               }
+              ],
+              "children": [
+               {
+                "ProgressBar": {
+                 "progress": "clamp(0, 1, (@uptime - 90) / 10)",
+                 "color": "@colors.success",
+                 "height": 3
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "ServiceCell": {
+     "name": "api",
+     "status": 0,
+     "latency": 120,
+     "uptime": 99.9,
+     "line2": 1
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "st1": {
+    "value": 0,
+    "export": true
+   },
+   "lat1": {
+    "value": 84,
+    "export": true
+   },
+   "up1": {
+    "value": 99.99,
+    "export": true
+   },
+   "st2": {
+    "value": 0,
+    "export": true
+   },
+   "lat2": {
+    "value": 121,
+    "export": true
+   },
+   "up2": {
+    "value": 99.95,
+    "export": true
+   },
+   "st3": {
+    "value": 1,
+    "export": true
+   },
+   "lat3": {
+    "value": 342,
+    "export": true
+   },
+   "up3": {
+    "value": 99.2,
+    "export": true
+   },
+   "st4": {
+    "value": 0,
+    "export": true
+   },
+   "lat4": {
+    "value": 38,
+    "export": true
+   },
+   "up4": {
+    "value": 100,
+    "export": true
+   },
+   "st5": {
+    "value": 2,
+    "export": true
+   },
+   "lat5": {
+    "value": 1240,
+    "export": true
+   },
+   "up5": {
+    "value": 87.5,
+    "export": true
+   },
+   "st6": {
+    "value": 0,
+    "export": true
+   },
+   "lat6": {
+    "value": 97,
+    "export": true
+   },
+   "up6": {
+    "value": 99.9,
+    "export": true
+   },
+   "u1": "1 - min(1, @st1)",
+   "d1": "max(0, @st1 - 1)",
+   "u2": "1 - min(1, @st2)",
+   "d2": "max(0, @st2 - 1)",
+   "u3": "1 - min(1, @st3)",
+   "d3": "max(0, @st3 - 1)",
+   "u4": "1 - min(1, @st4)",
+   "d4": "max(0, @st4 - 1)",
+   "u5": "1 - min(1, @st5)",
+   "d5": "max(0, @st5 - 1)",
+   "u6": "1 - min(1, @st6)",
+   "d6": "max(0, @st6 - 1)",
+   "upCount": "@u1 + @u2 + @u3 + @u4 + @u5 + @u6",
+   "downCount": "@d1 + @d2 + @d3 + @d4 + @d5 + @d6",
+   "degCount": "6 - @upCount - @downCount",
+   "allUp": "step(@upCount, 5.5)",
+   "anyDown": "min(1, @downCount)",
+   "scroll": 0,
+   "wide": "step(windowWidth(), 600)",
+   "rowW": "(windowWidth() - 24 - 12 * @wide) / (1 + @wide)",
+   "layoutIdx": "2 - step(windowHeight(), 300) - step(windowHeight(), 100)",
+   "line2": "step(windowHeight(), 140)",
+   "overall": "2 * @anyDown + 1 - @allUp - @anyDown"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "name1",
+    "vtype": "string",
+    "value": "api.example.com",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name2",
+    "vtype": "string",
+    "value": "auth.example.com",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name3",
+    "vtype": "string",
+    "value": "db-primary.internal",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name4",
+    "vtype": "string",
+    "value": "cdn.example.net",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name5",
+    "vtype": "string",
+    "value": "search.internal",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name6",
+    "vtype": "string",
+    "value": "mail.example.com",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "indexId": "@layoutIdx",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "verticalScroll": "@scroll"
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@upCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " of 6 up"
+                  },
+                  "id2": ", "
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@degCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " degraded · "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@downCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "id2": " down"
+                 }
+                }
+               }
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "StatusIcon": {
+                "status": "@overall",
+                "size": 36,
+                "upLabel": "All services up",
+                "degLabel": "Some services degraded",
+                "downLabel": "A service is down"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 12
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@upCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " of 6 up"
+                   },
+                   "fontSize": 22,
+                   "fontWeight": 700,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@degCount",
+                       "whole": 1,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": " degraded · "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@downCount",
+                      "whole": 1,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": " down"
+                   },
+                   "fontSize": 13,
+                   "color": "@colors.muted"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 14
+              }
+             ]
+            }
+           },
+           {
+            "flow": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "horizontalArrangement": "spaceBetween",
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name1",
+                   "status": "@st1",
+                   "latency": "@lat1",
+                   "uptime": "@up1"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name2",
+                   "status": "@st2",
+                   "latency": "@lat2",
+                   "uptime": "@up2"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name3",
+                   "status": "@st3",
+                   "latency": "@lat3",
+                   "uptime": "@up3"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name4",
+                   "status": "@st4",
+                   "latency": "@lat4",
+                   "uptime": "@up4"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name5",
+                   "status": "@st5",
+                   "latency": "@lat5",
+                   "uptime": "@up5"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@rowW"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ServiceRow": {
+                   "name": "@name6",
+                   "status": "@st6",
+                   "latency": "@lat6",
+                   "uptime": "@up6"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@upCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " of 6 up"
+                  },
+                  "id2": ", "
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@degCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " degraded · "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@downCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "id2": " down"
+                 }
+                }
+               }
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "StatusIcon": {
+                "status": "@overall",
+                "size": 20,
+                "upLabel": "All services up",
+                "degLabel": "Some services degraded",
+                "downLabel": "A service is down"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@upCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " of 6 up"
+                   },
+                   "fontSize": 15,
+                   "fontWeight": 700,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@degCount",
+                       "whole": 1,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": " degraded · "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@downCount",
+                      "whole": 1,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": " down"
+                   },
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name1",
+                   "status": "@st1",
+                   "latency": "@lat1",
+                   "uptime": "@up1",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 6
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name2",
+                   "status": "@st2",
+                   "latency": "@lat2",
+                   "uptime": "@up2",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name3",
+                   "status": "@st3",
+                   "latency": "@lat3",
+                   "uptime": "@up3",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 6
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name4",
+                   "status": "@st4",
+                   "latency": "@lat4",
+                   "uptime": "@up4",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name5",
+                   "status": "@st5",
+                   "latency": "@lat5",
+                   "uptime": "@up5",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 6
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "ServiceCell": {
+                   "name": "@name6",
+                   "status": "@st6",
+                   "latency": "@lat6",
+                   "uptime": "@up6",
+                   "line2": "@line2"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@upCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " of 6 up"
+                  },
+                  "id2": ", "
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@degCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " degraded · "
+                   },
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@downCount",
+                    "whole": 1,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "id2": " down"
+                 }
+                }
+               }
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "StatusIcon": {
+                "status": "@overall",
+                "size": 20,
+                "upLabel": "All services up",
+                "degLabel": "Some services degraded",
+                "downLabel": "A service is down"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@upCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " of 6 up"
+                   },
+                   "fontSize": 15,
+                   "fontWeight": 700,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 8
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@degCount",
+                       "whole": 1,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": " degraded · "
+                     },
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@downCount",
+                      "whole": 1,
+                      "decimal": 0,
+                      "flags": 5
+                     }
+                    },
+                    "id2": " down"
+                   },
+                   "fontSize": 12,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "horizontalArrangement": "spaceEvenly",
+             "children": [
+              {
+               "StatusIcon": {
+                "status": "@st1",
+                "size": 22
+               }
+              },
+              {
+               "StatusIcon": {
+                "status": "@st2",
+                "size": 22
+               }
+              },
+              {
+               "StatusIcon": {
+                "status": "@st3",
+                "size": 22
+               }
+              },
+              {
+               "StatusIcon": {
+                "status": "@st4",
+                "size": 22
+               }
+              },
+              {
+               "StatusIcon": {
+                "status": "@st5",
+                "size": 22
+               }
+              },
+              {
+               "StatusIcon": {
+                "status": "@st6",
+                "size": 22
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

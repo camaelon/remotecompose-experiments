@@ -1,0 +1,1512 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 780,
+  "profiles": 513,
+  "contentDescription": "Boarding pass with gate, seat, boarding time, a countdown to boarding and a QR code"
+ },
+ "components": {
+  "Countdown": {
+   "summary": "Boarding countdown from the clock: Boarding in X h Y min, Boarding now, Gate closed",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 17,
+     "static": true,
+     "doc": "text size"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "visibility": "@cdShow"
+         },
+         {
+          "clip": {
+           "roundedRect": 12
+          }
+         },
+         {
+          "background": "@colors.surfaceHigh"
+         },
+         {
+          "padding": [
+           12,
+           10
+          ]
+         },
+         {
+          "spacedBy": 8
+         }
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "schedule",
+           "color": "@colors.primary",
+           "size": 20
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@cdH"
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": "Boarding in ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@hrs",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " h ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@mins",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": " min"
+                 }
+                }
+               }
+              },
+              "fontSize": "@fontSize",
+              "fontWeight": 600,
+              "color": "@colors.onSurface"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@cdM"
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": "Boarding in ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@mins",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " min"
+               }
+              },
+              "fontSize": "@fontSize",
+              "fontWeight": 600,
+              "color": "@colors.onSurface"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "visibility": "@isBoarding"
+         },
+         {
+          "clip": {
+           "roundedRect": 12
+          }
+         },
+         {
+          "background": "@colors.primary"
+         },
+         {
+          "padding": [
+           12,
+           10
+          ]
+         },
+         {
+          "spacedBy": 8
+         }
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "directions_walk",
+           "color": "@colors.onPrimary",
+           "size": 20
+          }
+         },
+         {
+          "text": {
+           "value": "Boarding now",
+           "fontSize": "@fontSize",
+           "fontWeight": 700,
+           "color": "@colors.onPrimary"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "visibility": "@isClosed"
+         },
+         {
+          "clip": {
+           "roundedRect": 12
+          }
+         },
+         {
+          "background": "@colors.outline"
+         },
+         {
+          "padding": 1
+         }
+        ],
+        "children": [
+         {
+          "row": {
+           "modifiers": [
+            "fillMaxWidth",
+            {
+             "clip": {
+              "roundedRect": 11
+             }
+            },
+            {
+             "background": "@colors.surface"
+            },
+            {
+             "padding": [
+              11,
+              9
+             ]
+            },
+            {
+             "spacedBy": 8
+            }
+           ],
+           "verticalAlignment": "center",
+           "children": [
+            {
+             "Icon": {
+              "name": "block",
+              "color": "@colors.muted",
+              "size": 20
+             }
+            },
+            {
+             "text": {
+              "value": "Gate closed",
+              "fontSize": "@fontSize",
+              "fontWeight": 600,
+              "color": "@colors.muted"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Countdown": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "boardDay": {
+    "value": 304,
+    "export": true
+   },
+   "boardMin": {
+    "value": 465,
+    "export": true
+   },
+   "departMin": {
+    "value": 510,
+    "export": true
+   },
+   "status": {
+    "value": 0,
+    "export": true
+   },
+   "delayMin": {
+    "value": 0,
+    "export": true
+   },
+   "toBoard": "(@boardDay - dayOfYear()) * 1440 + @boardMin - timeInMin()",
+   "toDepart": "(@boardDay - dayOfYear()) * 1440 + @departMin - timeInMin()",
+   "isClosed": "max(step(@status, 3.5), step(15, @toDepart))",
+   "isBoarding": "(1 - @isClosed) * max(step(0, @toBoard), step(@status, 2.5))",
+   "cdShow": "(1 - @isClosed) * (1 - @isBoarding)",
+   "hrs": "floor(max(0, @toBoard) / 60)",
+   "mins": "floor(max(0, @toBoard)) % 60",
+   "cdH": "@cdShow * step(@hrs, 1)",
+   "cdM": "@cdShow * (1 - step(@hrs, 1))",
+   "gateChanged": "step(@status, 1.5) * step(2.5, @status)",
+   "gateSame": "1 - @gateChanged",
+   "isDelayed": "step(@status, 0.5) * step(1.5, @status)",
+   "bH": "floor(@boardMin / 60) % 24",
+   "bM": "@boardMin % 60",
+   "dH": "floor(@departMin / 60) % 24",
+   "dM": "@departMin % 60",
+   "isDeparted": "step(0, @toDepart)",
+   "disp": "@isClosed * (4 + @isDeparted) + (1 - @isClosed) * (@status + (1 - step(@status, 0.5)) * 3 * @isBoarding)",
+   "p0": "1 - min(1, abs(@disp))",
+   "p1": "1 - min(1, abs(@disp - 1))",
+   "p2": "1 - min(1, abs(@disp - 2))",
+   "p3": "1 - min(1, abs(@disp - 3))",
+   "p4": "1 - min(1, abs(@disp - 4))",
+   "p5": "1 - min(1, abs(@disp - 5))",
+   "delayShow": "@isDelayed * (1 - @isClosed)",
+   "notDelayed": "1 - @isDelayed",
+   "isCompact": "1 - step(windowHeight(), 420)",
+   "isFull": "step(windowHeight(), 420)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "flight",
+    "vtype": "string",
+    "value": "AF 1234",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "fromCode",
+    "vtype": "string",
+    "value": "CDG",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "fromCity",
+    "vtype": "string",
+    "value": "Paris",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "toCode",
+    "vtype": "string",
+    "value": "JFK",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "toCity",
+    "vtype": "string",
+    "value": "New York",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "passenger",
+    "vtype": "string",
+    "value": "MARIE DUPONT",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "gate",
+    "vtype": "string",
+    "value": "K42",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "prevGate",
+    "vtype": "string",
+    "value": "K38",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "seat",
+    "vtype": "string",
+    "value": "14C",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "group",
+    "vtype": "string",
+    "value": "3",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "flightDate",
+    "vtype": "string",
+    "value": "Sat 31 Oct",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "visibility": "@isFull"
+        },
+        "verticalScroll",
+        {
+         "padding": 16
+        }
+       ],
+       "horizontalAlignment": "center",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "widthIn": [
+             0,
+             560
+            ]
+           },
+           {
+            "spacedBy": 12
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Boarding pass",
+                   "fontSize": 22,
+                   "fontWeight": 700,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "@flight",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " · ",
+                     "id2": "@flightDate"
+                    }
+                   },
+                   "fontSize": 14,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "modifiers": [
+                 {
+                  "clip": {
+                   "roundedRect": 16
+                  }
+                 },
+                 {
+                  "background": "@colors.surfaceHigh"
+                 },
+                 {
+                  "padding": [
+                   10,
+                   6
+                  ]
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p0"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "check_circle",
+                      "color": "@colors.success",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p1"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "schedule",
+                      "color": "@colors.error",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p2"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "warning",
+                      "color": "@colors.error",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p3"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "directions_walk",
+                      "color": "@colors.primary",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p4"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "block",
+                      "color": "@colors.muted",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@p5"
+                    },
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      6,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "flight_takeoff",
+                      "color": "@colors.muted",
+                      "size": 18
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "On time",
+                    "Delayed",
+                    "Gate changed",
+                    "Boarding",
+                    "Gate closed",
+                    "Departed"
+                   ],
+                   "index": "@disp",
+                   "fontSize": 14,
+                   "fontWeight": 600,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@delayShow"
+                    },
+                    {
+                     "padding": [
+                      6,
+                      0,
+                      0,
+                      0
+                     ]
+                    }
+                   ],
+                   "children": [
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "+",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": "@delayMin",
+                         "whole": 3,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "id2": " min"
+                       }
+                      },
+                      "fontSize": 14,
+                      "fontWeight": 600,
+                      "color": "@colors.error"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "clip": {
+                "roundedRect": 20
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "clip": {
+                   "roundedRect": 19
+                  }
+                 },
+                 {
+                  "background": "@colors.surface"
+                 },
+                 {
+                  "padding": 16
+                 },
+                 {
+                  "spacedBy": 14
+                 }
+                ],
+                "children": [
+                 {
+                  "row": {
+                   "modifiers": [
+                    "fillMaxWidth"
+                   ],
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@fromCode",
+                         "fontSize": 34,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@fromCity",
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 1,
+                         "overflow": "ellipsis"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "padding": [
+                         8,
+                         0
+                        ]
+                       }
+                      ],
+                      "children": [
+                       {
+                        "Icon": {
+                         "name": "flight_takeoff",
+                         "color": "@colors.primary",
+                         "size": 28,
+                         "label": "to"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "horizontalAlignment": "end",
+                      "children": [
+                       {
+                        "text": {
+                         "value": "@toCode",
+                         "fontSize": 34,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": "@toCity",
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 1,
+                         "overflow": "ellipsis",
+                         "textAlign": "end"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 1
+                    },
+                    {
+                     "background": "@colors.outline"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    "fillMaxWidth"
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "@gateSame"
+                          }
+                         ],
+                         "children": [
+                          {
+                           "LabelValue": {
+                            "label": "Gate",
+                            "value": "@gate",
+                            "size": "lg"
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "@gateChanged"
+                          }
+                         ],
+                         "children": [
+                          {
+                           "LabelValue": {
+                            "label": "New gate",
+                            "value": "@gate",
+                            "size": "lg",
+                            "color": "@colors.error"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "LabelValue": {
+                         "label": "Seat",
+                         "value": "@seat",
+                         "size": "lg",
+                         "align": "center"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "LabelValue": {
+                         "label": "Boards",
+                         "value": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textFromFloat",
+                           "value": "@bH",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 13
+                          },
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": ":",
+                           "id2": {
+                            "type": "textFromFloat",
+                            "value": "@bM",
+                            "whole": 2,
+                            "decimal": 0,
+                            "flags": 13
+                           }
+                          }
+                         },
+                         "size": "lg",
+                         "align": "end",
+                         "color": "@colors.primary"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    "fillMaxWidth"
+                   ],
+                   "children": [
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "LabelValue": {
+                         "label": "Group",
+                         "value": "@group"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "LabelValue": {
+                         "label": "Flight",
+                         "value": "@flight",
+                         "align": "center"
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 12
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       }
+                      ],
+                      "children": [
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "@notDelayed"
+                          }
+                         ],
+                         "children": [
+                          {
+                           "LabelValue": {
+                            "label": "Departs",
+                            "value": {
+                             "type": "textMerge",
+                             "id1": {
+                              "type": "textFromFloat",
+                              "value": "@dH",
+                              "whole": 2,
+                              "decimal": 0,
+                              "flags": 13
+                             },
+                             "id2": {
+                              "type": "textMerge",
+                              "id1": ":",
+                              "id2": {
+                               "type": "textFromFloat",
+                               "value": "@dM",
+                               "whole": 2,
+                               "decimal": 0,
+                               "flags": 13
+                              }
+                             }
+                            },
+                            "align": "end"
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "visibility": "@isDelayed"
+                          }
+                         ],
+                         "children": [
+                          {
+                           "LabelValue": {
+                            "label": "New departure",
+                            "value": {
+                             "type": "textMerge",
+                             "id1": {
+                              "type": "textFromFloat",
+                              "value": "@dH",
+                              "whole": 2,
+                              "decimal": 0,
+                              "flags": 13
+                             },
+                             "id2": {
+                              "type": "textMerge",
+                              "id1": ":",
+                              "id2": {
+                               "type": "textFromFloat",
+                               "value": "@dM",
+                               "whole": 2,
+                               "decimal": 0,
+                               "flags": 13
+                              }
+                             }
+                            },
+                            "align": "end",
+                            "color": "@colors.error"
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "LabelValue": {
+                   "label": "Passenger",
+                   "value": "@passenger"
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "visibility": "@gateChanged"
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 12
+                     }
+                    },
+                    {
+                     "background": "@colors.error"
+                    },
+                    {
+                     "padding": [
+                      12,
+                      10
+                     ]
+                    },
+                    {
+                     "spacedBy": 8
+                    }
+                   ],
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "swap_horiz",
+                      "color": "@colors.onPrimary",
+                      "size": 20
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": "Gate changed from ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": "@prevGate",
+                        "id2": {
+                         "type": "textMerge",
+                         "id1": " to ",
+                         "id2": "@gate"
+                        }
+                       }
+                      },
+                      "fontSize": 15,
+                      "fontWeight": 700,
+                      "color": "@colors.onPrimary"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "Countdown": {}
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "clip": {
+                "roundedRect": 20
+               }
+              },
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "clip": {
+                   "roundedRect": 19
+                  }
+                 },
+                 {
+                  "background": "@colors.surface"
+                 },
+                 {
+                  "padding": 16
+                 },
+                 {
+                  "spacedBy": 8
+                 }
+                ],
+                "horizontalAlignment": "center",
+                "children": [
+                 {
+                  "QrPlaceholder": {
+                   "seed": 7,
+                   "size": 200,
+                   "contentDescription": "Boarding pass QR code, scan at the gate"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Scan at the gate",
+                   "fontSize": 13,
+                   "color": "@colors.muted"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "visibility": "@isCompact"
+        },
+        {
+         "padding": 12
+        },
+        {
+         "spacedBy": 12
+        }
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "spacedBy": 6
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": "@fromCode",
+                "fontSize": 22,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "padding": [
+                   6,
+                   0
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "Icon": {
+                   "name": "flight_takeoff",
+                   "color": "@colors.primary",
+                   "size": 18,
+                   "label": "to"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@toCode",
+                "fontSize": 22,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@flight",
+                "fontSize": 13,
+                "color": "@colors.muted"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@gateSame"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LabelValue": {
+                      "label": "Gate",
+                      "value": "@gate",
+                      "size": "sm"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "visibility": "@gateChanged"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LabelValue": {
+                      "label": "New gate",
+                      "value": "@gate",
+                      "size": "sm",
+                      "color": "@colors.error"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "LabelValue": {
+                   "label": "Seat",
+                   "value": "@seat",
+                   "size": "sm"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "LabelValue": {
+                   "label": "Boards",
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@bH",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 13
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@bM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   },
+                   "size": "sm",
+                   "color": "@colors.primary"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "Countdown": {
+             "fontSize": 13
+            }
+           }
+          ]
+         }
+        },
+        {
+         "QrPlaceholder": {
+          "seed": 7,
+          "size": 96,
+          "contentDescription": "Boarding pass QR code"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

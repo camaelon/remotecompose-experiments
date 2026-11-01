@@ -1,0 +1,1005 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 240,
+  "profiles": 513,
+  "contentDescription": "Sunrise and sunset in Lisbon today, with the sun's path across the day and where it is now"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Header": {
+   "summary": "Place name with a pin, and the sun's altitude now",
+   "params": {
+    "alt": {
+     "type": "float",
+     "required": true,
+     "doc": "Sun altitude now, degrees"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "location_on",
+        "size": 20,
+        "color": "@colors.primary"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 6
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Lisbon",
+        "fontSize": 17,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ]
+       }
+      },
+      {
+       "Icon": {
+        "name": "light_mode",
+        "size": 18,
+        "color": "@colors.warning",
+        "label": "Sun altitude"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 4
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "round(@alt)",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": "°"
+        },
+        "fontSize": 15,
+        "color": "@colors.onSurface",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Header": {
+     "alt": 25
+    }
+   }
+  },
+  "SunPath": {
+   "summary": "The sun's altitude curve from midnight to midnight, the daylight part highlighted, and a dot where the sun is now",
+   "params": {
+    "A": {
+     "type": "float",
+     "required": true,
+     "doc": "sin(lat) * sin(dec)"
+    },
+    "B": {
+     "type": "float",
+     "required": true,
+     "doc": "cos(lat) * cos(dec)"
+    },
+    "noon": {
+     "type": "float",
+     "required": true,
+     "doc": "Solar noon, local minutes"
+    },
+    "rise": {
+     "type": "float",
+     "required": true,
+     "doc": "Sunrise, local minutes"
+    },
+    "set": {
+     "type": "float",
+     "required": true,
+     "doc": "Sunset, local minutes"
+    },
+    "now": {
+     "type": "float",
+     "required": true,
+     "doc": "Local minutes now"
+    },
+    "sNow": {
+     "type": "float",
+     "required": true,
+     "doc": "sin of the sun's altitude now"
+    },
+    "grow": {
+     "type": "bool",
+     "default": true,
+     "static": true,
+     "doc": "true: take the column's remaining height (verticalWeight); false: a fixed 32 dp strip"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "$if": "grow",
+       "then": {
+        "verticalWeight": 1
+       },
+       "else": {
+        "height": 32
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": "The sun's path today: its height above or below the horizon from midnight to midnight, the daylight part highlighted, and a dot where the sun is now"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "W",
+        "value": "componentWidth()"
+       }
+      },
+      {
+       "variable": {
+        "name": "px",
+        "value": "8"
+       }
+      },
+      {
+       "variable": {
+        "name": "pw",
+        "value": "@W - 16"
+       }
+      },
+      {
+       "variable": {
+        "name": "hy",
+        "value": "componentHeight() * 0.66"
+       }
+      },
+      {
+       "variable": {
+        "name": "ku",
+        "value": "@hy - 8"
+       }
+      },
+      {
+       "variable": {
+        "name": "kd",
+        "value": "componentHeight() - @hy - 6"
+       }
+      },
+      {
+       "pathExpression": {
+        "id": "sunPath",
+        "expressionX": "@px + @pw * a[0] / 1440",
+        "expressionY": "@hy - @ku * max(0, @A + @B * cos((a[0] - @noon) * 0.0043633)) - @kd * min(0, @A + @B * cos((a[0] - @noon) * 0.0043633))",
+        "start": 0,
+        "end": 1440,
+        "count": 96
+       }
+      },
+      {
+       "pathExpression": {
+        "id": "sunDay",
+        "expressionX": "@px + @pw * (@rise + a[0] * (@set - @rise)) / 1440",
+        "expressionY": "@hy - @ku * max(0, @A + @B * cos((@rise + a[0] * (@set - @rise) - @noon) * 0.0043633))",
+        "start": 0,
+        "end": 1,
+        "count": 64
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 0,
+           "else": 0.16
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sunDay"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         },
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sunPath"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": 2,
+           "else": 3
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "sunDay"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 0,
+        "y1": "@hy",
+        "x2": "@W",
+        "y2": "@hy"
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 9,
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "@px + @pw * i / 8",
+           "y1": "@hy - 3",
+           "x2": "@px + @pw * i / 8",
+           "y2": "@hy + 3"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": 2,
+           "else": 4
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@px + @pw * @rise / 1440",
+        "y1": "@hy",
+        "x2": "@px + @pw * @set / 1440",
+        "y2": "@hy"
+       }
+      },
+      {
+       "variable": {
+        "name": "sx",
+        "value": "@px + @pw * @now / 1440"
+       }
+      },
+      {
+       "variable": {
+        "name": "sy",
+        "value": "@hy - @ku * max(0, @sNow) - @kd * min(0, @sNow)"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "ops": [
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 2
+          },
+          {
+           "color": "@colors.onSurface"
+          },
+          {
+           "alpha": 1
+          }
+         ]
+        }
+       },
+       "else": {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          },
+          {
+           "color": "@colors.warning"
+          },
+          {
+           "alpha": "0.1 + 0.2 * step(@sNow, -0.0145439)"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@sx",
+        "cy": "@sy",
+        "radius": {
+         "$if": "theme.mono",
+         "then": 7,
+         "else": 12
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "ops": [
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": "step(@sNow, -0.0145439)"
+          }
+         ]
+        }
+       },
+       "else": {
+        "paint": {
+         "ops": [
+          {
+           "alpha": "0.45 + 0.55 * step(@sNow, -0.0145439)"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@sx",
+        "cy": "@sy",
+        "radius": 6
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "SunPath": {
+     "A": 0.28,
+     "B": 0.64,
+     "noon": 740,
+     "rise": 422,
+     "set": 1058,
+     "now": 900,
+     "sNow": 0.5
+    }
+   }
+  },
+  "TimeTile": {
+   "summary": "A labelled time on a rounded surface: an icon, the label and H:MM",
+   "params": {
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "What the time is"
+    },
+    "minutes": {
+     "type": "float",
+     "required": true,
+     "doc": "Lisbon minutes since midnight, already rounded"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "clip": {
+        "roundedRect": 12
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 11
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 8,
+        "else": 9
+       }
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "size": 18,
+           "color": "@colors.warning"
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 5
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "@label",
+           "fontSize": 11,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@minutes / 60)",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@minutes % 60",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 13
+          }
+         }
+        },
+        "fontSize": 19,
+        "color": "@colors.onSurface",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "TimeTile": {
+     "icon": "wb_twilight",
+     "label": "Sunrise",
+     "minutes": 422
+    }
+   }
+  },
+  "Tiles": {
+   "summary": "The sunrise and sunset tiles side by side",
+   "params": {
+    "rise": {
+     "type": "float",
+     "required": true,
+     "doc": "Sunrise, rounded local minutes"
+    },
+    "set": {
+     "type": "float",
+     "required": true,
+     "doc": "Sunset, rounded local minutes"
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "TimeTile": {
+           "icon": "wb_twilight",
+           "label": "Sunrise",
+           "minutes": "@rise"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 8
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "TimeTile": {
+           "icon": "wb_twilight_2",
+           "label": "Sunset",
+           "minutes": "@set"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Tiles": {
+     "rise": 422,
+     "set": 1058
+    }
+   }
+  },
+  "Axis": {
+   "summary": "0:00, 12:00 and 24:00 under the sun path",
+   "params": {},
+   "body": {
+    "row": {
+     "horizontalArrangement": "spaceBetween",
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "0:00",
+        "fontSize": 10,
+        "color": "@colors.muted"
+       }
+      },
+      {
+       "text": {
+        "value": "12:00",
+        "fontSize": 10,
+        "color": "@colors.muted"
+       }
+      },
+      {
+       "text": {
+        "value": "24:00",
+        "fontSize": 10,
+        "color": "@colors.muted"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Axis": {}
+   }
+  },
+  "Footer": {
+   "summary": "Today's date and the length of the day",
+   "params": {
+    "dayLen": {
+     "type": "float",
+     "required": true,
+     "doc": "Minutes of daylight"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "DateLabel": {
+           "format": "short",
+           "fontSize": 12,
+           "color": "@colors.muted"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 8
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "floor(@dayLen / 60)",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": " h ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@dayLen % 60",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " min of daylight"
+          }
+         }
+        },
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Footer": {
+     "dayLen": 636
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "latitude": 38.7223,
+   "longitude": -9.1393,
+   "utcMin": "timeInMin() - offsetToUtc() / 60",
+   "leap": "1 - min(1, year() % 4)",
+   "sun0": "weekDay() % 7",
+   "d31m": "90 + @leap",
+   "d31o": "304 + @leap",
+   "marSun": "@d31m - (@sun0 + @d31m - dayOfYear() + 700) % 7",
+   "octSun": "@d31o - (@sun0 + @d31o - dayOfYear() + 700) % 7",
+   "moy": "(dayOfYear() - 1) * 1440 + @utcMin",
+   "dst": "step(@moy, (@marSun - 1) * 1440 + 59.5) * (1 - step(@moy, (@octSun - 1) * 1440 + 59.5))",
+   "lisOff": "60 * @dst",
+   "lisMin": "@utcMin + @lisOff",
+   "dayShift": "floor(@lisMin / 1440)",
+   "now": "@lisMin - 1440 * @dayShift",
+   "n": "365 * (year() - 2000) + floor((year() - 1997) / 4) + dayOfYear() - 1 + @dayShift - @lisOff / 1440",
+   "L": "(280.46 + 0.9856474 * @n) % 360",
+   "g": "0.0174533 * ((357.528 + 0.9856003 * @n) % 360)",
+   "lam": "0.0174533 * (@L + 1.915 * sin(@g) + 0.02 * sin(2 * @g))",
+   "eps": "0.0174533 * (23.439 - 0.0000004 * @n)",
+   "dec": "asin(sin(@eps) * sin(@lam))",
+   "ra": "57.29578 * atan2(cos(@eps) * sin(@lam), cos(@lam))",
+   "E": "@L - @ra",
+   "eot": "4 * (@E - 360 * floor((@E + 180) / 360))",
+   "noon": "720 - 4 * @longitude - @eot + @lisOff",
+   "phi": "0.0174533 * @latitude",
+   "A": "sin(@phi) * sin(@dec)",
+   "B": "cos(@phi) * cos(@dec)",
+   "H0": "229.18312 * acos(clamp(-1, 1, (-0.0145439 - @A) / @B))",
+   "rise": "@noon - @H0",
+   "set": "@noon + @H0",
+   "riseR": "floor(@rise + 0.5)",
+   "setR": "floor(@set + 0.5)",
+   "dayLen": "@setR - @riseR",
+   "sNow": "@A + @B * cos((@now - @noon) * 0.0043633)",
+   "alt": "57.29578 * asin(@sNow)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 10
+    }
+   ],
+   "children": [
+    {
+     "fitBox": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 220
+          }
+         ],
+         "children": [
+          {
+           "Header": {
+            "alt": "@alt"
+           }
+          },
+          {
+           "SunPath": {
+            "A": "@A",
+            "B": "@B",
+            "noon": "@noon",
+            "rise": "@rise",
+            "set": "@set",
+            "now": "@now",
+            "sNow": "@sNow"
+           }
+          },
+          {
+           "Axis": {}
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 6
+             }
+            ]
+           }
+          },
+          {
+           "Tiles": {
+            "rise": "@riseR",
+            "set": "@setR"
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 6
+             }
+            ]
+           }
+          },
+          {
+           "Footer": {
+            "dayLen": "@dayLen"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 150
+          }
+         ],
+         "children": [
+          {
+           "Header": {
+            "alt": "@alt"
+           }
+          },
+          {
+           "SunPath": {
+            "A": "@A",
+            "B": "@B",
+            "noon": "@noon",
+            "rise": "@rise",
+            "set": "@set",
+            "now": "@now",
+            "sNow": "@sNow"
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 6
+             }
+            ]
+           }
+          },
+          {
+           "Tiles": {
+            "rise": "@riseR",
+            "set": "@setR"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "Header": {
+            "alt": "@alt"
+           }
+          },
+          {
+           "SunPath": {
+            "A": "@A",
+            "B": "@B",
+            "noon": "@noon",
+            "rise": "@rise",
+            "set": "@set",
+            "now": "@now",
+            "sNow": "@sNow",
+            "grow": false
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 4
+             }
+            ]
+           }
+          },
+          {
+           "Tiles": {
+            "rise": "@riseR",
+            "set": "@setR"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

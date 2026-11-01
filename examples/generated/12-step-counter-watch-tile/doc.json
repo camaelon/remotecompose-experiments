@@ -1,0 +1,298 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 192,
+  "height": 192,
+  "profiles": 513,
+  "contentDescription": "Step counter: today's steps against the daily goal as a ring, and the last seven days as bars"
+ },
+ "resources": {
+  "variables": {
+   "steps": {
+    "value": 7420,
+    "export": true
+   },
+   "goal": {
+    "value": 10000,
+    "export": true
+   },
+   "progress": "clamp(0, 1, @steps / @goal)",
+   "done": "clamp(0, 1, floor(@steps / @goal))",
+   "notDone": "1 - @done",
+   "wide": "clamp(0, 1, floor(windowWidth() / (windowHeight() * 1.5)))",
+   "m": "min(windowWidth(), windowHeight())",
+   "pad": "@m * 0.11",
+   "barW": "@m * 0.56",
+   "barH": "@m * 0.18",
+   "barHWide": "@m * 0.45",
+   "fsBig": "@m * 0.13",
+   "fsSmall": "@m * 0.065"
+  },
+  "floatArrays": {
+   "week": {
+    "value": [
+     6200,
+     8900,
+     10400,
+     4300,
+     12100,
+     7600,
+     7420
+    ],
+    "export": true
+   }
+  }
+ },
+ "components": {
+  "RingBlock": {
+   "summary": "The goal ring with today's steps and the remaining count or 'Goal reached' in its centre",
+   "params": {},
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": "Progress ring towards the daily step goal"
+       }
+      }
+     ],
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "ProgressRing": {
+        "progress": "@progress",
+        "size": 220,
+        "thickness": 18,
+        "showLabel": false
+       }
+      },
+      {
+       "column": {
+        "horizontalAlignment": "center",
+        "children": [
+         {
+          "text": {
+           "value": {
+            "type": "textFromFloat",
+            "value": "@steps",
+            "whole": 6,
+            "decimal": 0,
+            "flags": 21
+           },
+           "fontSize": "@fsBig",
+           "color": "@colors.onSurface"
+          }
+         },
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "children": [
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@goal - @steps",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 21
+               },
+               "id2": " to go"
+              },
+              "fontSize": "@fsSmall",
+              "color": "@colors.muted",
+              "modifiers": [
+               {
+                "visibility": "@notDone"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "Goal reached",
+              "fontSize": "@fsSmall",
+              "color": "@colors.success",
+              "modifiers": [
+               {
+                "visibility": "@done"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": "@pad"
+    }
+   ],
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "children": [
+    {
+     "stateLayout": {
+      "indexId": "@wide",
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "horizontalAlignment": "center",
+         "verticalArrangement": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "verticalWeight": 1
+             },
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "RingBlock": {}
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 4
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": "@barW"
+             },
+             {
+              "height": "@barH"
+             }
+            ],
+            "children": [
+             {
+              "BarChart": {
+               "values": "@week",
+               "fill": true,
+               "label": "Steps for the last seven days, today last"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             "fillMaxHeight"
+            ],
+            "children": [
+             {
+              "RingBlock": {}
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 16
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             {
+              "weight": 1.3
+             }
+            ],
+            "horizontalAlignment": "start",
+            "children": [
+             {
+              "text": {
+               "value": "Last 7 days",
+               "fontSize": "@fsSmall",
+               "color": "@colors.muted"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "height": 4
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "height": "@barHWide"
+                }
+               ],
+               "children": [
+                {
+                 "BarChart": {
+                  "values": "@week",
+                  "fill": true,
+                  "label": "Steps for the last seven days, today last"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,363 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 240,
+  "profiles": 513,
+  "contentDescription": "Flight tracker: London to New York on a map of the North Atlantic, the plane at the flight's progress along the great-circle route, with the time left"
+ },
+ "resources": {
+  "variables": {
+   "progress": {
+    "value": 0.42,
+    "export": true
+   },
+   "minutesLeft": {
+    "value": 238,
+    "export": true
+   },
+   "x0": {
+    "$mapPoint": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "at": "London"
+    }
+   },
+   "y0": {
+    "$mapPoint": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "at": "London",
+     "axis": "y"
+    }
+   },
+   "x1": {
+    "$mapPoint": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "at": "New York"
+    }
+   },
+   "y1": {
+    "$mapPoint": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "at": "New York",
+     "axis": "y"
+    }
+   },
+   "hLeft": "floor(@minutesLeft / 60)",
+   "mLeft": "floor(@minutesLeft % 60)",
+   "mh": {
+    "$mapHeight": [
+     -100,
+     20,
+     20,
+     65
+    ]
+   },
+   "px": {
+    "$mapRoute": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "from": "London",
+     "to": "New York",
+     "axis": "x",
+     "wrap": "arraySpline({}, @progress)"
+    }
+   },
+   "py": {
+    "$mapRoute": {
+     "region": [
+      -100,
+      20,
+      20,
+      65
+     ],
+     "from": "London",
+     "to": "New York",
+     "axis": "y",
+     "wrap": "arraySpline({}, @progress)"
+    }
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 8
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": "LHR → JFK",
+         "fontSize": 18,
+         "fontWeight": 600,
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@hLeft",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " h "
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@mLeft",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 4
+           }
+          },
+          "id2": " left"
+         },
+         "fontSize": 14,
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 160
+       },
+       {
+        "semantics": {
+         "contentDescription": "Map of the North Atlantic with the flight path from London to New York and the plane on it"
+        }
+       }
+      ],
+      "commands": [
+       {
+        "save": [
+         {
+          "translate": {
+           "dx": "(componentWidth() - 1000 * min(componentWidth() / 1000, componentHeight() / @mh)) / 2",
+           "dy": "(componentHeight() - @mh * min(componentWidth() / 1000, componentHeight() / @mh)) / 2"
+          }
+         },
+         {
+          "scale": {
+           "sx": "min(componentWidth() / 1000, componentHeight() / @mh)",
+           "sy": "min(componentWidth() / 1000, componentHeight() / @mh)"
+          }
+         },
+         {
+          "clipRect": {
+           "left": 0,
+           "top": 0,
+           "right": 1000,
+           "bottom": "@mh"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.track"
+            },
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": {
+            "$map": {
+             "region": [
+              -100,
+              20,
+              20,
+              65
+             ],
+             "layer": "land",
+             "detail": "medium"
+            }
+           }
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 3
+            },
+            {
+             "strokeCap": "round"
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": {
+            "$mapRoute": {
+             "region": [
+              -100,
+              20,
+              20,
+              65
+             ],
+             "from": "London",
+             "to": "New York"
+            }
+           }
+          }
+         },
+         {
+          "pathExpression": {
+           "id": "flown",
+           "expressionX": {
+            "$mapRoute": {
+             "region": [
+              -100,
+              20,
+              20,
+              65
+             ],
+             "from": "London",
+             "to": "New York",
+             "axis": "x",
+             "wrap": "arraySpline({}, a[0])"
+            }
+           },
+           "expressionY": {
+            "$mapRoute": {
+             "region": [
+              -100,
+              20,
+              20,
+              65
+             ],
+             "from": "London",
+             "to": "New York",
+             "axis": "y",
+             "wrap": "arraySpline({}, a[0])"
+            }
+           },
+           "start": 0,
+           "end": "max(0.002, @progress)",
+           "count": 40
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "strokeWidth": 6
+            }
+           ]
+          }
+         },
+         {
+          "drawPath": {
+           "path": "flown"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "style": "fill"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@x0",
+           "cy": "@y0",
+           "radius": 8
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@x1",
+           "cy": "@y1",
+           "radius": 8
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@px",
+           "cy": "@py",
+           "radius": 16
+          }
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

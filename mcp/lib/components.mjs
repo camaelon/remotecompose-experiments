@@ -121,6 +121,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mapPoint, mapRings, mapRoute, projection, ringsToPath } from "./maps.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const LIBRARY_DIR = process.env.RC_COMPONENTS_DIR
@@ -169,6 +170,59 @@ function iconPath(spec, state, name) {
     return `$paths.${id}`;
 }
 
+// Maps (mcp/lib/maps.mjs): {"$map": {region, layer, detail, countries, exclude}} is a path in a
+// 1000-unit-wide box, registered once per document like an icon; {"$mapHeight": region} is
+// that box's height; {"$mapPoint": {region, at | lon, lat, axis: "x" | "y"}} a point in it — a
+// number for a literal place or a city name, an expression for host values ("@lon").
+// {"$mapRoute": {region, from, to, points, axis: "path" | "x" | "y" | "angle", wrap}} is a great-circle
+// route: a path, or one of its sampled coordinates as a float array the document declares
+// ("@route_1_x"; "wrap": "arraySpline({}, @progress)" places a point at a fraction of the way).
+const MAP_KEYS = ["$map", "$mapHeight", "$mapPoint", "$mapRoute"];
+const mapKeyOf = (node) => MAP_KEYS.find((k) => k in node);
+function mapValue(key, spec, state, name) {
+    try {
+        if (key === "$mapHeight") return projection(typeof spec === "object" && spec && !Array.isArray(spec) ? spec.region ?? "world" : spec ?? "world").height;
+        if (key === "$mapPoint") {
+            const { region = "world", axis = "x", at, lon, lat, wrap } = spec ?? {};
+            const p = mapPoint(region, at ?? { lon, lat });
+            const v = axis === "y" ? p[1] : p[0];
+            // "wrap": an expression with {} where the coordinate goes ("ifElse(-1.2, 1.2, step({}, 820))").
+            return typeof wrap === "string" ? wrap.split("{}").join(`(${v})`) : v;
+        }
+        if (key === "$mapRoute") {
+            const { region = "world", from, to, points = 48, axis = "path", wrap } = spec ?? {};
+            const k = JSON.stringify([region, from, to, points]);
+            state.routes ??= new Map();
+            let r = state.routes.get(k);
+            if (!r) { r = { id: `route_${state.routes.size + 1}`, ...mapRoute(region, from, to, Math.max(2, Math.min(200, Math.round(points)))) }; state.routes.set(k, r); }
+            if (axis === "path") {
+                const id = `${r.id}_path`;
+                if (!state.paths.has(id)) state.paths.set(id, ringsToPath([Object.assign(r.x.map((x, i) => [x, r.y[i]]), { open: true })]));
+                return `$paths.${id}`;
+            }
+            if (axis === "km") return r.km;
+            if (!["x", "y", "angle"].includes(axis)) throw new Error(`$mapRoute axis '${axis}': path, x, y, angle or km`);
+            state.floatArrays ??= new Map();
+            state.floatArrays.set(`${r.id}_${axis}`, r[axis]);
+            const v = `@${r.id}_${axis}`;
+            return typeof wrap === "string" ? wrap.split("{}").join(v) : v;
+        }
+        const { region = "world", layer = "land", detail = "medium", countries, exclude } = spec ?? {};
+        const outline = [true, "true", 1].includes(spec?.outline);
+        const dot = Number(spec?.dot) > 0 ? Number(spec.dot) : 0;
+        const norm = (v) => (v === undefined || v === null || (Array.isArray(v) && !v.length) ? undefined : [].concat(v));
+        const key2 = JSON.stringify([region, layer, detail, norm(countries) ?? null, norm(exclude) ?? null, outline, dot]);
+        let id = state.mapIds?.get(key2);
+        if (!id) {
+            state.mapIds ??= new Map();
+            id = `map_${String(Array.isArray(region) ? "box" : region).toLowerCase().replace(/[^a-z0-9]+/g, "_")}_${layer}_${detail}${outline ? "_outline" : ""}${state.mapIds.size ? "_" + state.mapIds.size : ""}`;
+            state.mapIds.set(key2, id);
+            state.paths.set(id, ringsToPath(mapRings(region, { layer, detail, countries: norm(countries), exclude: norm(exclude), outline, dot })));
+        }
+        return `$paths.${id}`;
+    } catch (e) { throw new Error(`${name ?? "document"}: ${e.message}`); }
+}
+
 const DROP = Symbol("drop");
 let cached = null;
 
@@ -199,7 +253,7 @@ export function usesComponents(doc, library = loadLibrary()) {
     // No call, but the theme's colours, numbers or an icon: the expansion resolves those too
     // (a plain-layout document may still write "@colors.primary"; without this it failed with
     // "Color not found", so authors fell back to hex).
-    try { return /"@(colors|theme)\.|"\$icon"|"\$if":\s*"!?\s*theme\./.test(JSON.stringify(doc)); } catch { return false; }
+    try { return /"@(colors|theme)\.|"\$icon"|"\$map(Height|Point|Route)?"|"\$if":\s*"!?\s*theme\./.test(JSON.stringify(doc)); } catch { return false; }
 }
 
 /** The document's own definitions ({Name: def} under a top-level `components`), or null. */
@@ -718,6 +772,7 @@ function compileDoc(src, { library, traps, docMode, theme }, patterns) {
         res.variables = { ...mono, ...(res.variables ?? {}), ...hoisted, ...state.locals };
     }
     if (state.paths.size) res.paths = { ...Object.fromEntries(state.paths), ...(res.paths ?? {}) };
+    if (state.floatArrays?.size) res.floatArrays = { ...Object.fromEntries([...state.floatArrays].map(([n, v]) => [n, { value: v }])), ...(res.floatArrays ?? {}) };
     if (res.colors) res.colors = docColors(res.colors, theme);
     const defined = new Set(colorEntries(res.colors).map(([n]) => n));
     const missing = [...state.colors].filter((c) => !defined.has(c));
@@ -779,6 +834,8 @@ function expandNode(node, state, stack) {
             }
             return v;
         }
+        const mk = mapKeyOf(node);
+        if (mk) return mapValue(mk, node[mk], state, null);
         const out = {};
         for (const [k, v] of Object.entries(node)) out[k] = expandNode(v, state, stack);
         return out;
@@ -905,6 +962,14 @@ function expandCall(name, def, given, slots, n, state, stack) {
             // A duration of exactly 1 s writes no animation in the reference parser (1 is its
             // "default", packed as nothing): 0.999 eases the same and survives (U73).
             animated.push({ variable: { name: unique, value: { value: String(val), anim: Number(v.anim) === 1 ? 0.999 : v.anim } } });
+            continue;
+        }
+        // A map value as a local ({"$mapHeight": "@region"}, {"$mapPoint": {...}}): a number
+        // fixed when the document is built, or an expression over host values.
+        if (v && typeof v === "object" && !Array.isArray(v) && mapKeyOf(v)) {
+            const mv = substitute(v, env, state, name);
+            if (typeof mv === "number") env.locals[k] = { literal: mv };
+            else env.locals[k] = computedLocal(k, String(mv), unique, env, state, name);
             continue;
         }
         if (typeof v === "number" || (v && typeof v === "object" && !("$if" in v) && !("$count" in v))) {
@@ -1382,6 +1447,11 @@ function substitute(node, env, state, name) {
             const branch = evalIf(node.$if, env.cond ?? env, name) ? node.then : node.else;
             return branch === undefined || branch === null ? DROP : substitute(branch, env, state, name);
         }
+        const mk = mapKeyOf(node);
+        if (mk) {
+            if (env.inPattern) throw new PatternUnfit("a map ({\"$map\": ...}) is drawn when the document is built, not per call");
+            return mapValue(mk, substitute(structuredClone(node[mk]), env, state, name), state, name);
+        }
         if ("$icon" in node) {
             if (env.inPattern) throw new PatternUnfit("an icon ({\"$icon\": ...}) is chosen when the document is built, not per call");
             const spec = substitute(structuredClone(node.$icon), env, state, name);
@@ -1571,7 +1641,7 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
             // textLookup), a tree variable, a measure.
             // (A name per loop pass, "state_@i", is read as "@state_@i": its stem is the name.)
             if (typeof n.varName === "string") { bound.add(n.varName); bound.add(n.varName.replace(/@[A-Za-z_]\w*/g, "")); }
-            for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") bound.add(n[k].name);
+            for (const k of ["variable", "textMeasure", "textLength"]) if (typeof n[k]?.name === "string") { bound.add(n[k].name); bound.add(n[k].name.replace(/@[A-Za-z_]\w*/g, "")); }
             if (typeof n.$if === "string") {
                 const t = n.$if.replace(/'[^']*'|"[^"]*"/g, "");
                 for (const m of t.matchAll(/@?theme\.([A-Za-z_]\w*)/g)) refs.add(`theme.${m[1]}`);
@@ -1606,8 +1676,32 @@ export function lintComponent(def, name = def?.component, { library = loadLibrar
     for (const sl of Object.keys(def.slots ?? {})) if (!slotsUsed.has(sl)) warnings.push(`slot ${sl} is declared but never placed with {"$slot": "${sl}"}`);
     const text = strings.join("\n");
     if (/clamp\(\s*@\w+\s*,\s*[-\d.]+\s*,\s*[-\d.]+\s*\)/.test(text)) warnings.push("clamp takes (min, max, value): the value goes last");
-    if (/animationTime\(\)/.test(text) && !/continuousSec\(\)/.test(text)) warnings.push("animationTime() alone never schedules a repaint; use continuousSec() for motion");
+    // (An animated local — {"value": ..., "anim": s} — repaints while it eases: that is how a
+    // start/stop motion keeps frames coming without repainting forever.)
+    const easedLocal = Object.values(def.locals ?? {}).some((v) => v && typeof v === "object" && "anim" in v);
+    if (/animationTime\(\)/.test(text) && !/continuousSec\(\)/.test(text) && !easedLocal) warnings.push("animationTime() alone never schedules a repaint: drive start/stop motion with an animated local ({\"value\": \"@target\", \"anim\": 0.75}, it repaints while it eases), or continuousSec() for motion that never stops");
     if (JSON.stringify(def.body ?? null).match(/"(drawPath|path)"\s*:\s*\{[^}]*"path"\s*:\s*"M/)) warnings.push("an SVG path string costs ~4 KB in Java (padded to 1024 floats); use drawLine/primitives or the op-list path form");
     if (!def.call) warnings.push("no `call` example (get and check_component use it)");
+    // A "@name" inside a longer text ("Step @n. ") is not filled in: only a whole "@name" value
+    // is a param or local; the rest is literal (a screen reader read "Step @n."). textMerge joins.
+    {
+        const TEXT_KEYS = new Set(["text", "value", "label", "contentDescription", "stateDescription", "title"]);
+        // (A string param is spliced into a longer text; a number is not: it has no text form.)
+        const isText = (p) => ["string", "text", "enum"].includes(String(p?.type ?? ""));
+        const known = new Set([...Object.entries(def.params ?? {}).filter(([, p]) => !isText(p)).map(([k]) => k), ...Object.keys(def.locals ?? {})]);
+        const embedded = new Set();
+        const look = (x) => {
+            if (Array.isArray(x)) { x.forEach(look); return; }
+            if (!x || typeof x !== "object") return;
+            for (const [k, v] of Object.entries(x)) {
+                if (TEXT_KEYS.has(k) && typeof v === "string" && !/^@[A-Za-z_]\w*$/.test(v) && !/[*/()+]|\s-\s/.test(v)) {
+                    for (const m of v.matchAll(/@([A-Za-z_]\w*)/g)) if (known.has(m[1])) embedded.add(`"${v.slice(0, 40)}"`);
+                }
+                look(v);
+            }
+        };
+        look(def.body);
+        if (embedded.size) warnings.push(`${[...embedded].slice(0, 3).join(", ")}: a number param or local inside a longer text is not filled in (only text params are spliced); join the parts with {"type": "textMerge", "id1": "Step ", "id2": {"type": "textFromFloat", "value": "@n", ...}}`);
+    }
     return { errors, warnings };
 }

@@ -1,0 +1,646 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 170,
+  "profiles": 513,
+  "contentDescription": "Day and night world map with your city marked, its local time and whether it is day or night there"
+ },
+ "resources": {
+  "colors": {
+   "mapSea": {
+    "light": "#FFE9EEF5",
+    "dark": "#FF1A2434",
+    "mono-dark": "#FF000000",
+    "mono-light": "#FFFFFFFF"
+   },
+   "mapLand": {
+    "light": "#FFB4BFCE",
+    "dark": "#FF3A475C"
+   },
+   "nightShade": {
+    "light": "#FF0B1220",
+    "dark": "#FF000000",
+    "mono-dark": "#FF9E9E9E",
+    "mono-light": "#FF616161"
+   }
+  },
+  "variables": {
+   "lat": {
+    "value": 45.76,
+    "export": true
+   },
+   "lon": {
+    "value": 4.84,
+    "export": true
+   },
+   "utcMin": "(timeInMin() - offsetToUtc() / 60 + 1440) % 1440",
+   "dec": "-0.40911 * cos(6.2831853 * (dayOfYear() + 10) / 365)",
+   "latR": "@lat * 0.0174533",
+   "eotB": "6.2831853 * (dayOfYear() - 81) / 364",
+   "eot": "9.87 * sin(2 * @eotB) - 7.53 * cos(@eotB) - 1.5 * sin(@eotB)",
+   "ha": "((@utcMin + @eot) / 4 - 180 + @lon) * 0.0174533",
+   "sinEl": "sin(@latR) * sin(@dec) + cos(@latR) * cos(@dec) * cos(@ha)",
+   "dayIdx": "step(@sinEl, -0.1045) + step(@sinEl, -0.0145)",
+   "midLon": "fract((180 - @utcMin / 4) / 360 + 1) * 360 - 180",
+   "nightIdx": "floor((@midLon + 180) / 45) % 8",
+   "layout": "step(windowHeight(), 130) + step(windowHeight(), 300)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "city",
+    "vtype": "string",
+    "value": "Lyon",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": 0
+        }
+       ],
+       "commands": [
+        {
+         "global": {
+          "commands": [
+           {
+            "textSubtext": {
+             "text": "the Pacific                 the Pacific and the Americasthe Americas                the Atlantic                Europe and Africa           the Middle East and India   Asia and Australia          Asia and the Pacific        ",
+             "start": "@nightIdx * 28",
+             "len": 28,
+             "varName": "reg_p"
+            }
+           },
+           {
+            "textTransform": {
+             "text": "@reg_p",
+             "start": 0,
+             "len": -1,
+             "operation": 3,
+             "varName": "nightRegion"
+            }
+           },
+           {
+            "textSubtext": {
+             "text": "night    twilight daylight ",
+             "start": "@dayIdx * 9",
+             "len": 9,
+             "varName": "dw_p"
+            }
+           },
+           {
+            "textTransform": {
+             "text": "@dw_p",
+             "start": 0,
+             "len": -1,
+             "operation": 3,
+             "varName": "dayWord"
+            }
+           },
+           {
+            "textSubtext": {
+             "text": "Night    Twilight Daylight ",
+             "start": "@dayIdx * 9",
+             "len": 9,
+             "varName": "dwc_p"
+            }
+           },
+           {
+            "textTransform": {
+             "text": "@dwc_p",
+             "start": 0,
+             "len": -1,
+             "operation": 3,
+             "varName": "dayWordCap"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "min(130, windowWidth() * 0.4)"
+              },
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "World map. Night over ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@nightRegion",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ". Your city ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@city",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " is in ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@dayWord",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", local time ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": "timeInHr()",
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 5
+                         },
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": ":",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "timeInMin() % 60",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 13
+                          }
+                         }
+                        },
+                        "id2": "."
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             ],
+             "children": [
+              {
+               "WorldMap": {
+                "night": true,
+                "height": 52,
+                "sea": "@colors.mapSea",
+                "land": "@colors.mapLand",
+                "nightColor": "@colors.nightShade",
+                "nightAlpha": 0.5,
+                "markLon": "@lon",
+                "markLat": "@lat",
+                "markerSize": 3,
+                "label": "World map"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              {
+               "padding": {
+                "start": 10
+               }
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "text": {
+                   "value": "@city",
+                   "fontSize": 14,
+                   "fontWeight": 600,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "timeInHr()",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "timeInMin() % 60",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   },
+                   "fontSize": 14,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "start": 8
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@dayWordCap",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "spacedBy": 6
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "World map. Night over ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@nightRegion",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ". Your city ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@city",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " is in ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@dayWord",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", local time ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": "timeInHr()",
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 5
+                         },
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": ":",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "timeInMin() % 60",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 13
+                          }
+                         }
+                        },
+                        "id2": "."
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             ],
+             "horizontalAlignment": "center",
+             "children": [
+              {
+               "WorldMap": {
+                "night": true,
+                "height": 96,
+                "markLon": "@lon",
+                "markLat": "@lat",
+                "markerSize": 4,
+                "sea": "@colors.mapSea",
+                "land": "@colors.mapLand",
+                "nightColor": "@colors.nightShade",
+                "nightAlpha": 0.5,
+                "label": "World map"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": "@city",
+                "fontSize": 15,
+                "fontWeight": 600,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "timeInHr()",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "timeInMin() % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 15,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "padding": {
+                   "start": 8
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "@dayWordCap",
+              "id2": {
+               "type": "textMerge",
+               "id1": " here \u00b7 midnight over ",
+               "id2": "@nightRegion"
+              }
+             },
+             "fontSize": 12,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "spacedBy": 12
+           }
+          ],
+          "verticalArrangement": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "World map. Night over ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "@nightRegion",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ". Your city ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "@city",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " is in ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": "@dayWord",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ", local time ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textMerge",
+                         "id1": {
+                          "type": "textFromFloat",
+                          "value": "timeInHr()",
+                          "whole": 2,
+                          "decimal": 0,
+                          "flags": 5
+                         },
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": ":",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "timeInMin() % 60",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 13
+                          }
+                         }
+                        },
+                        "id2": "."
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             ],
+             "horizontalAlignment": "center",
+             "children": [
+              {
+               "WorldMap": {
+                "night": true,
+                "height": 170,
+                "markLon": "@lon",
+                "markLat": "@lat",
+                "markerSize": 4,
+                "sea": "@colors.mapSea",
+                "land": "@colors.mapLand",
+                "nightColor": "@colors.nightShade",
+                "nightAlpha": 0.5,
+                "label": "World map"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": "@city",
+                "fontSize": 20,
+                "fontWeight": 600,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "timeInHr()",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "timeInMin() % 60",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                },
+                "fontSize": 20,
+                "color": "@colors.onSurface",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "padding": {
+                   "start": 8
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "@dayWordCap",
+              "id2": {
+               "type": "textMerge",
+               "id1": " here \u00b7 midnight over ",
+               "id2": "@nightRegion"
+              }
+             },
+             "fontSize": 15,
+             "color": "@colors.muted",
+             "maxLines": 2,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

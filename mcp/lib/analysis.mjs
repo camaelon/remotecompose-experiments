@@ -140,7 +140,8 @@ export function analyze(report, { simulated = false, tapped = false, log = "" } 
             ". Check the image for cut words; give the text more room (a wider box, a weight, fewer fixed sizes), " +
             "fewer words, or maxLines with overflow \"ellipsis\".");
     } else if (tx && tx.ellipsized) {
-        add("info", "text_ellipsized", `${tx.ellipsized} text(s) end in an ellipsis: they do not fit their box at this size.`);
+        const cut = (tx.examples ?? []).filter((e) => e.kind === "ellipsized").slice(0, 4).map((e) => JSON.stringify(e.text));
+        add("info", "text_ellipsized", `${tx.ellipsized} text(s) end in an ellipsis: they do not fit their box at this size${cut.length ? `: ${cut.join(", ")}` : ""}.`);
     }
 
     // A round screen hides everything outside its inscribed circle.

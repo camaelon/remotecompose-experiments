@@ -1,0 +1,84 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 480,
+  "profiles": 513,
+  "contentDescription": "Walkthrough: why a² + b² = c², in four steps with Back, Next and autoplay; the squares on the sides of a 3-4-5 triangle grow in as the steps advance"
+ },
+ "resources": {
+  "variables": {
+   "step": {"value": 0, "export": true}
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": ["fillMaxSize", {"background": "@colors.background"}, {"padding": 16}],
+   "children": [
+    {"text": {"value": "Pythagoras in four steps", "fontSize": 20, "fontWeight": 600, "color": "@colors.onSurface", "maxLines": 1, "overflow": "ellipsis"}},
+    {"box": {"modifiers": ["fillMaxWidth", {"verticalWeight": 1}, {"padding": {"top": 8}}], "children": [
+     {"Walkthrough": {
+      "step": "@step",
+      "shown": "@stepNow",
+      "eased": "@stepEased",
+      "autoplay": true,
+      "interval": 3,
+      "captionHeight": 84,
+      "titles": ["A right triangle", "The square on a", "The square on b", "The square on c"],
+      "texts": [
+       "Its short sides a = 3 and b = 4 meet at a right angle. The long side, c = 5, is the hypotenuse.",
+       "Build a square on side a. Its area is 3 × 3 = 9.",
+       "Build a square on side b. Its area is 4 × 4 = 16.",
+       "The square on the hypotenuse has area 5 × 5 = 25 = 9 + 16. So a² + b² = c²."
+      ],
+      "slots": {"content": [
+       {"canvas": {
+        "modifiers": ["fillMaxSize"],
+        "commands": [
+         {"variable": {"name": "sc", "value": "min(componentWidth() / 120, componentHeight() / 110)"}},
+         {"variable": {"name": "ga", "value": "clamp(0, 1, @stepEased)"}},
+         {"variable": {"name": "gb", "value": "clamp(0, 1, @stepEased - 1)"}},
+         {"variable": {"name": "gc", "value": "clamp(0, 1, @stepEased - 2)"}},
+         {"translate": {"dx": "(componentWidth() - 110 * @sc) / 2", "dy": "(componentHeight() - 100 * @sc) / 2"}},
+         {"scale": {"sx": "@sc", "sy": "@sc"}},
+         {"paint": {"ops": [{"color": "@colors.primary"}, {"style": "fill"}, {"alpha": "0.3 * @ga"}]}},
+         {"drawRect": {"left": 40, "top": 70, "right": 70, "bottom": "70 + 30 * @ga"}},
+         {"paint": {"ops": [{"style": "stroke"}, {"strokeWidth": 1.5}, {"alpha": "@ga"}]}},
+         {"drawRect": {"left": 40, "top": 70, "right": 70, "bottom": "70 + 30 * @ga"}},
+         {"paint": {"ops": [{"color": "@colors.secondary"}, {"style": "fill"}, {"alpha": "0.3 * @gb"}]}},
+         {"drawRect": {"left": "40 - 40 * @gb", "top": 30, "right": 40, "bottom": 70}},
+         {"paint": {"ops": [{"style": "stroke"}, {"alpha": "@gb"}]}},
+         {"drawRect": {"left": "40 - 40 * @gb", "top": 30, "right": 40, "bottom": 70}},
+         {"save": [
+          {"rotate": {"angle": -36.87, "pivotX": 40, "pivotY": 30}},
+          {"paint": {"ops": [{"color": "@colors.success"}, {"style": "fill"}, {"alpha": "0.3 * @gc"}]}},
+          {"drawRect": {"left": 40, "top": 30, "right": "40 + 50 * @gc", "bottom": 80}},
+          {"paint": {"ops": [{"style": "stroke"}, {"alpha": "@gc"}]}},
+          {"drawRect": {"left": 40, "top": 30, "right": "40 + 50 * @gc", "bottom": 80}}
+         ]},
+         {"paint": {"ops": [{"color": "@colors.onSurface"}, {"style": "stroke"}, {"strokeWidth": 2}, {"strokeCap": "round"}, {"alpha": 1}]}},
+         {"drawLine": {"x1": 40, "y1": 70, "x2": 70, "y2": 70}},
+         {"drawLine": {"x1": 40, "y1": 70, "x2": 40, "y2": 30}},
+         {"drawLine": {"x1": 40, "y1": 30, "x2": 70, "y2": 70}},
+         {"paint": {"ops": [{"strokeWidth": 1}]}},
+         {"drawLine": {"x1": 40, "y1": 65, "x2": 45, "y2": 65}},
+         {"drawLine": {"x1": 45, "y1": 65, "x2": 45, "y2": 70}},
+         {"paint": {"ops": [{"style": "fill"}, {"textSize": 7}]}},
+         {"drawTextAnchored": {"text": "a", "x": 55, "y": 66, "panX": 0, "panY": 0}},
+         {"drawTextAnchored": {"text": "b", "x": 35, "y": 50, "panX": 0, "panY": 0}},
+         {"drawTextAnchored": {"text": "c", "x": 52, "y": 56, "panX": 0, "panY": 0}},
+         {"paint": {"ops": [{"textSize": 9}, {"alpha": "@ga"}]}},
+         {"drawTextAnchored": {"text": "9", "x": 55, "y": 85, "panX": 0, "panY": 0}},
+         {"paint": {"ops": [{"alpha": "@gb"}]}},
+         {"drawTextAnchored": {"text": "16", "x": 20, "y": 50, "panX": 0, "panY": 0}},
+         {"paint": {"ops": [{"alpha": "@gc"}]}},
+         {"drawTextAnchored": {"text": "25", "x": 75, "y": 35, "panX": 0, "panY": 0}}
+        ]
+       }}
+      ]}
+     }}
+    ]}}
+   ]
+  }
+ }
+}

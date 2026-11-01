@@ -1,0 +1,899 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Air quality widget: the AQI value, its category on a coloured scale, the main pollutant and a recommendation"
+ },
+ "components": {
+  "AqiScale": {
+   "summary": "The six AQI bands (Good to Hazardous) as a horizontal bar in the standard AQI colours, with a ring marker at the value; in mono the current band is filled and the others outlined",
+   "params": {
+    "value": {
+     "type": "float",
+     "required": true,
+     "doc": "The AQI, 0..500 (a number or a \"@variable\")"
+    },
+    "labels": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "Draw the band edges (0, 50, 100, 150, 200, 300, 500) under the bar; adds 12 dp of height"
+    },
+    "height": {
+     "type": "float",
+     "default": 14,
+     "static": true,
+     "doc": "Bar height in dp (the marker is a circle of this diameter)"
+    },
+    "label": {
+     "type": "string",
+     "default": "Air quality scale",
+     "doc": "Accessibility description of the drawing"
+    }
+   },
+   "locals": {
+    "band": {
+     "$if": "theme.mono",
+     "then": "step(@value, 50) + step(@value, 100) + step(@value, 150) + step(@value, 200) + step(@value, 300)",
+     "else": 0
+    },
+    "posA": "clamp(0, 1, @value / 50) + clamp(0, 1, (@value - 50) / 50) + clamp(0, 1, (@value - 100) / 50)",
+    "posB": "clamp(0, 1, (@value - 150) / 50) + clamp(0, 1, (@value - 200) / 100) + clamp(0, 1, (@value - 300) / 200)",
+    "pos": "(@posA + @posB) / 6",
+    "r": "@height / 2"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": {
+        "$if": "labels",
+        "then": "@height + 12",
+        "else": "@height"
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "w",
+        "value": "componentWidth()"
+       }
+      },
+      {
+       "variable": {
+        "name": "u",
+        "value": "@w / 6"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": "1 - min(1, abs(@band - 0))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": 0,
+          "top": 0,
+          "right": "@u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "1 - min(1, abs(@band - 1))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@u",
+          "top": 0,
+          "right": "2 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "1 - min(1, abs(@band - 2))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "2 * @u",
+          "top": 0,
+          "right": "3 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "1 - min(1, abs(@band - 3))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "3 * @u",
+          "top": 0,
+          "right": "4 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "1 - min(1, abs(@band - 4))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "4 * @u",
+          "top": 0,
+          "right": "5 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": "1 - min(1, abs(@band - 5))"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "5 * @u",
+          "top": 0,
+          "right": "@w",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "alpha": 1
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": 0.75,
+          "top": 0.75,
+          "right": "@w - 0.75",
+          "bottom": "@height - 0.75"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@u",
+          "y1": 0,
+          "x2": "@u",
+          "y2": "@height"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "2 * @u",
+          "y1": 0,
+          "x2": "2 * @u",
+          "y2": "@height"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "3 * @u",
+          "y1": 0,
+          "x2": "3 * @u",
+          "y2": "@height"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "4 * @u",
+          "y1": 0,
+          "x2": "4 * @u",
+          "y2": "@height"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "5 * @u",
+          "y1": 0,
+          "x2": "5 * @u",
+          "y2": "@height"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF00E400"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": 0,
+          "top": 0,
+          "right": "@u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFFFF00"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@u",
+          "top": 0,
+          "right": "2 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFF7E00"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "2 * @u",
+          "top": 0,
+          "right": "3 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FFFF0000"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "3 * @u",
+          "top": 0,
+          "right": "4 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF8F3F97"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "4 * @u",
+          "top": 0,
+          "right": "5 * @u",
+          "bottom": "@height"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "#FF7E0023"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "5 * @u",
+          "top": 0,
+          "right": "@w",
+          "bottom": "@height"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "clamp(@r, @w - @r, @pos * @w)",
+        "cy": "@r",
+        "radius": "@r"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.surface"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "clamp(@r, @w - @r, @pos * @w)",
+        "cy": "@r",
+        "radius": "@r - 2.5"
+       }
+      },
+      {
+       "$if": "labels",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "textSize": 9
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "0",
+          "x": 0,
+          "y": "@height + 7",
+          "panX": -1,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "50",
+          "x": "@u",
+          "y": "@height + 7",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "100",
+          "x": "2 * @u",
+          "y": "@height + 7",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "150",
+          "x": "3 * @u",
+          "y": "@height + 7",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "200",
+          "x": "4 * @u",
+          "y": "@height + 7",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "300",
+          "x": "5 * @u",
+          "y": "@height + 7",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "500",
+          "x": "@w",
+          "y": "@height + 7",
+          "panX": 1,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "call": {
+    "AqiScale": {
+     "value": "@aqi",
+     "labels": true
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "aqi": {
+    "value": 55,
+    "export": true
+   },
+   "band": "step(@aqi, 50) + step(@aqi, 100) + step(@aqi, 150) + step(@aqi, 200) + step(@aqi, 300)",
+   "tall": "step(windowHeight(), 120)",
+   "square": "step(windowHeight() * 1.3, windowWidth())",
+   "mode": "@tall * (1 + @square)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "pollutant",
+    "vtype": "string",
+    "value": "PM2.5",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "clip": {
+       "roundedRect": 16
+      }
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "indexId": "@mode",
+       "children": [
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textFromFloat",
+              "value": "@aqi",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "fontSize": 30,
+             "fontWeight": 700,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              {
+               "spacedBy": 4
+              }
+             ],
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth"
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ],
+                   "children": [
+                    {
+                     "TextChoice": {
+                      "items": [
+                       "Good",
+                       "Moderate",
+                       "Unhealthy for sensitive groups",
+                       "Unhealthy",
+                       "Very unhealthy",
+                       "Hazardous"
+                      ],
+                      "index": "@band",
+                      "fontSize": 14,
+                      "fontWeight": 600,
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "Main pollutant ",
+                    "id2": "@pollutant"
+                   },
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "AqiScale": {
+                "value": "@aqi",
+                "height": 12
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 "Air quality is good: enjoy outdoor activities.",
+                 "Unusually sensitive people should limit prolonged outdoor exertion.",
+                 "Sensitive groups should reduce prolonged or heavy outdoor exertion.",
+                 "Everyone should reduce prolonged outdoor exertion; sensitive groups avoid it.",
+                 "Everyone should avoid prolonged outdoor exertion; stay indoors if possible.",
+                 "Everyone should avoid all outdoor activity and keep windows closed."
+                ],
+                "index": "@band",
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalArrangement": "spaceBetween",
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "text": "Air quality",
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": "Main pollutant ",
+                 "id2": "@pollutant"
+                },
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textFromFloat",
+                 "value": "@aqi",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "fontSize": 36,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Good",
+                    "Moderate",
+                    "Unhealthy for sensitive groups",
+                    "Unhealthy",
+                    "Very unhealthy",
+                    "Hazardous"
+                   ],
+                   "index": "@band",
+                   "fontSize": 16,
+                   "fontWeight": 600,
+                   "maxLines": 2,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "AqiScale": {
+             "value": "@aqi",
+             "labels": true,
+             "height": 14
+            }
+           },
+           {
+            "TextChoice": {
+             "items": [
+              "Air quality is good: enjoy outdoor activities.",
+              "Unusually sensitive people should limit prolonged outdoor exertion.",
+              "Sensitive groups should reduce prolonged or heavy outdoor exertion.",
+              "Everyone should reduce prolonged outdoor exertion; sensitive groups avoid it.",
+              "Everyone should avoid prolonged outdoor exertion; stay indoors if possible.",
+              "Everyone should avoid all outdoor activity and keep windows closed."
+             ],
+             "index": "@band",
+             "fontSize": 12,
+             "color": "@colors.muted",
+             "maxLines": 2,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalArrangement": "spaceBetween",
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "Main pollutant ",
+              "id2": "@pollutant"
+             },
+             "fontSize": 11,
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textFromFloat",
+                 "value": "@aqi",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "fontSize": 32,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Good",
+                    "Moderate",
+                    "Unhealthy for sensitive groups",
+                    "Unhealthy",
+                    "Very unhealthy",
+                    "Hazardous"
+                   ],
+                   "index": "@band",
+                   "fontSize": 12,
+                   "fontWeight": 600,
+                   "maxLines": 3,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "AqiScale": {
+             "value": "@aqi",
+             "height": 12
+            }
+           },
+           {
+            "TextChoice": {
+             "items": [
+              "Air quality is good: enjoy outdoor activities.",
+              "Unusually sensitive people should limit prolonged outdoor exertion.",
+              "Sensitive groups should reduce prolonged or heavy outdoor exertion.",
+              "Everyone should reduce prolonged outdoor exertion; sensitive groups avoid it.",
+              "Everyone should avoid prolonged outdoor exertion; stay indoors if possible.",
+              "Everyone should avoid all outdoor activity and keep windows closed."
+             ],
+             "index": "@band",
+             "fontSize": 11,
+             "color": "@colors.muted",
+             "maxLines": 3,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

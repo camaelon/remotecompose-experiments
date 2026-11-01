@@ -1,0 +1,674 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Temperature converter: Celsius and Fahrenheit, adjust either one"
+ },
+ "components": {
+  "UnitAdjuster": {
+   "params": {
+    "unitName": {
+     "type": "string",
+     "required": true,
+     "doc": "Celsius or Fahrenheit"
+    },
+    "symbol": {
+     "type": "string",
+     "required": true,
+     "doc": "°C or °F"
+    },
+    "value": {
+     "type": "float",
+     "default": 0,
+     "doc": "the shown value"
+    },
+    "onMinus": {
+     "type": "action"
+    },
+    "onPlus": {
+     "type": "action"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "weight": 1
+      }
+     ],
+     "horizontalAlignment": "center",
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@value",
+          "whole": 3,
+          "decimal": 1,
+          "flags": 7
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": " ",
+          "id2": "@symbol"
+         }
+        },
+        "fontSize": 28,
+        "minFontSize": 14,
+        "maxFontSize": 28,
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "textAlign": "center",
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "semantics": {
+           "contentDescription": {
+            "type": "textMerge",
+            "id1": "@unitName",
+            "id2": {
+             "type": "textMerge",
+             "id1": ", ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@value",
+               "whole": 3,
+               "decimal": 1,
+               "flags": 7
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": " degrees ",
+               "id2": "@unitName"
+              }
+             }
+            }
+           }
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "IconButton": {
+           "label": {
+            "type": "textMerge",
+            "id1": "Decrease ",
+            "id2": "@unitName"
+           },
+           "onClick": "@onMinus",
+           "slots": {
+            "icon": [
+             {
+              "Icon": {
+               "name": "remove"
+              }
+             }
+            ]
+           }
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 16
+            }
+           ]
+          }
+         },
+         {
+          "IconButton": {
+           "label": {
+            "type": "textMerge",
+            "id1": "Increase ",
+            "id2": "@unitName"
+           },
+           "onClick": "@onPlus",
+           "slots": {
+            "icon": [
+             {
+              "Icon": {
+               "name": "add"
+              }
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Thermometer": {
+   "params": {
+    "value": {
+     "type": "float",
+     "default": 20,
+     "doc": "temperature in °C, drawn on a -40..100 scale"
+    }
+   },
+   "locals": {
+    "pos": "34 + (componentWidth() - 46) * (clamp(-40, 100, @value) + 40) / 140",
+    "t0": "34 + (componentWidth() - 46) * 40 / 140",
+    "t37": "34 + (componentWidth() - 46) * 77 / 140",
+    "t100": "componentWidth() - 12"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": 42
+      }
+     ],
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 14,
+        "top": 5,
+        "right": "componentWidth() - 6",
+        "bottom": 21,
+        "rx": 8,
+        "ry": 8
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": 18,
+        "cy": 13,
+        "radius": 13
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": 18,
+        "cy": 13,
+        "radius": 9.5
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 18,
+        "top": 9,
+        "right": "@pos",
+        "bottom": 17,
+        "rx": 4,
+        "ry": 4
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1.5
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 34,
+        "y1": 23,
+        "x2": 34,
+        "y2": 27
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@t0",
+        "y1": 23,
+        "x2": "@t0",
+        "y2": 27
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@t37",
+        "y1": 23,
+        "x2": "@t37",
+        "y2": 27
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "@t100",
+        "y1": 23,
+        "x2": "@t100",
+        "y2": 27
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "-40°",
+        "x": 34,
+        "y": 29,
+        "panX": 0,
+        "panY": 1
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "0°",
+        "x": "@t0",
+        "y": 29,
+        "panX": 0,
+        "panY": 1
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "37°",
+        "x": "@t37",
+        "y": 29,
+        "panX": 0,
+        "panY": 1
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "100°C",
+        "x": "@t100",
+        "y": 29,
+        "panX": 1,
+        "panY": 1
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "c": {
+    "value": 20,
+    "export": true
+   },
+   "f": {
+    "value": 68,
+    "export": true
+   },
+   "nearM40": "1 - step(abs(@c + 40), 0.05)",
+   "below": "1 - step(@c, -0.05)",
+   "zero": "1 - step(abs(@c), 0.05)",
+   "body": "1 - step(abs(@c - 37), 0.55)",
+   "boil": "step(@c, 99.95)",
+   "hint": "@below * (1 + 4 * @nearM40) + 2 * @zero + 3 * @body + 4 * @boil"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 8
+    }
+   ],
+   "children": [
+    {
+     "collapsibleColumn": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "horizontalAlignment": "start",
+      "verticalArrangement": "center",
+      "children": [
+       {
+        "text": {
+         "text": "Temperature converter",
+         "fontSize": "@theme.text_lg",
+         "fontWeight": 600,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "modifiers": [
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 1
+           }
+          },
+          {
+           "padding": {
+            "bottom": 8
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "UnitAdjuster": {
+            "unitName": "Celsius",
+            "symbol": "°C",
+            "value": "@c",
+            "onMinus": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@c",
+              "value": "clamp(-40, 100, @c - 1)"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@f",
+              "value": "round((@c * 1.8 + 32) * 10) / 10"
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "celsiusMinus",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ],
+            "onPlus": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@c",
+              "value": "clamp(-40, 100, @c + 1)"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@f",
+              "value": "round((@c * 1.8 + 32) * 10) / 10"
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "celsiusPlus",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 8
+             }
+            ]
+           }
+          },
+          {
+           "UnitAdjuster": {
+            "unitName": "Fahrenheit",
+            "symbol": "°F",
+            "value": "@f",
+            "onMinus": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@f",
+              "value": "clamp(-40, 212, @f - 1)"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@c",
+              "value": "round((@f - 32) / 1.8 * 10) / 10"
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "fahrenheitMinus",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ],
+            "onPlus": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@f",
+              "value": "clamp(-40, 212, @f + 1)"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@c",
+              "value": "round((@f - 32) / 1.8 * 10) / 10"
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "fahrenheitPlus",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 4
+           }
+          }
+         ],
+         "children": [
+          {
+           "Thermometer": {
+            "value": "@c"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 3
+           }
+          }
+         ],
+         "children": [
+          {
+           "TextChoice": {
+            "index": "@hint",
+            "items": [
+             "Tap − or + on either value to adjust it",
+             "Below freezing: water is ice",
+             "Freezing point of water (0 °C = 32 °F)",
+             "Around body temperature (37 °C = 98.6 °F)",
+             "Boiling point of water at sea level (100 °C = 212 °F)",
+             "−40: the one point where both scales agree"
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "flow": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 2
+           }
+          },
+          {
+           "padding": {
+            "top": 12
+           }
+          },
+          {
+           "spacedBy": 8
+          }
+         ],
+         "children": [
+          {
+           "Button": {
+            "label": "−40 °C",
+            "style": "outlined",
+            "onClick": [
+             {
+              "type": "valueFloatChange",
+              "target": "@c",
+              "value": -40
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@f",
+              "value": -40.0
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "presetMinus40",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          },
+          {
+           "Button": {
+            "label": "0 °C",
+            "style": "outlined",
+            "onClick": [
+             {
+              "type": "valueFloatChange",
+              "target": "@c",
+              "value": 0
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@f",
+              "value": 32.0
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "presetFreezing",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          },
+          {
+           "Button": {
+            "label": "37 °C",
+            "style": "outlined",
+            "onClick": [
+             {
+              "type": "valueFloatChange",
+              "target": "@c",
+              "value": 37
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@f",
+              "value": 98.6
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "presetBody",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          },
+          {
+           "Button": {
+            "label": "100 °C",
+            "style": "outlined",
+            "onClick": [
+             {
+              "type": "valueFloatChange",
+              "target": "@c",
+              "value": 100
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@f",
+              "value": 212.0
+             },
+             {
+              "type": "hostNamedAction",
+              "name": "presetBoiling",
+              "value": "@c",
+              "valueType": "float"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

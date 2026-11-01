@@ -22,6 +22,11 @@ import { definition as examples } from "./examples-server.mjs";
 import { serve, isMain } from "./lib/mcp-server.mjs";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolvePath } from "./lib/workspace.mjs";
+import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
+import { enginesTool } from "./lib/engines.mjs";
+import os from "node:os";
+import path from "node:path";
+import { randomBytes } from "node:crypto";
 import { designNotes, blockingFindings, readsClock } from "./lib/design-audit.mjs";
 
 const resolveIn = (p) => resolvePath(p, "json_path");
@@ -143,6 +148,10 @@ const EXPRESSIONS = `Expressions (a string anywhere a number goes: "componentWid
   dayOfYear() - 1. Days since = today - @day ("today" / "1 day ago" / "N days ago" by step on it), days until = @day -
   today; any distance, across years and leap days. Not epochSecond() (see below) and not a day-of-year (wrong
   across New Year).
+  Equinoxes and solstices (Meeus, mean, ±15 min, 2000-2050), as an epoch day with fractions (UTC), with Y =
+  (year() - 2000) / 1000: March 11036.30984 + 365242.37404 * Y; June 11129.06767 + 365241.62603 * Y; September
+  11222.71715 + 365242.01767 * Y; December 11312.55952 + 365242.74049 * Y (the quadratic terms are under a minute).
+  Days until = floor(event + offsetToUtc() / 86400) - today; past this year's December one, use year() + 1.
 - Component and host values: componentWidth() componentHeight() (the canvas's own box, inside a canvas's commands),
   windowWidth() windowHeight() density() fontSize() apiLevel(); batteryLevel() powerState() networkSignal() memoryFree()
   are json2rc extensions the Java parser rejects and Android does not define: a battery level is a host float the app
@@ -176,7 +185,9 @@ Structure
   size takes numbers only ({"size": 40} or [w, h]) — write width and height for a computed size.
 - Arrays: "resources": {"floatArrays": {"week": [6200, 8400, 7100, 10300, 5600, 12100, 9000]}} (or {"week":
   {"value": [...], "export": true}} for one the host sets); a chart component takes it as "@week"; in an expression
-  arrayGet(@week, 3), arrayMax(@week), arraySum(@week), arrayLength(@week) (EXP-08).
+  arrayGet(@week, 3), arrayMax(@week), arraySum(@week), arrayLength(@week) (EXP-08). There is no sum of PART of an
+  array ("total so far today"): have the app send a running-total array too (arrayGet(@cum, timeInHr()) is the total
+  up to now), rather than one variable per element.
 - Repaint: a document that reads the running clock (continuousSec(), animationTime(), a time-driven expression) repaints
   every frame for as long as it is shown — the format cannot drop the listener when the value stops changing (a stopped
   stopwatch still repaints). Keep clock reads to what must move; a document that reads only minutes repaints once a
@@ -189,8 +200,9 @@ Structure
   {"swatch": {"hsv": ["@hue", "@sat", "@val"], "alpha": 255}} with h, s, v in 0..1 (hue as a fraction of the turn), or
   {"argb": [a, r, g, b]} in 0..1 — numbers, "@variables" or expressions; "@colors.swatch" then follows the values at
   run time (a colour picker's preview). HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V) (0 when V = 0).
-  A library Slider writes its bound variable when the drag ENDS (onRelease), so a preview computed from it updates on
-  release, not during the drag. A literal text that starts with "#" is read as a colour, not a text (both parsers):
+  A library Slider: "@level" read AFTER the slider in the tree (a text, a canvas expression, a tree variable command
+  placed after it) is the live dragged value; resources.variables are computed before the tree and see the bound
+  variable, written only when the drag ENDS (with onRelease): compute a live preview after the slider. A literal text that starts with "#" is read as a colour, not a text (both parsers):
   join "#" through a text that does not start with it ("Hex " + "#…", or a textMerge whose first part is " #").
 - A colour the app sets (a document colour in resources.colors, set by name like any host variable) wins in every
   look, mono included: its "mono-dark"/"mono-light" values are only the starting value. For a mono look that ignores
@@ -227,6 +239,28 @@ Structure
 - Widget sizes (Android home screen, dp): a cell is ~70 dp less margins, so design 4x2 at 320×160 (hosts give
   250×110 up to 360×190), 4x1 at 320×80 (250×40 up), 2x2 at 160×160 (110×110 up); a watch tile 160–220 square;
   render variants covers narrow, short, small, tiny and square. Check the smallest you support.
+- Maps (Natural Earth, public domain; built when the document is built): the library WorldMap covers most maps:
+  {"WorldMap": {"region": "Europe", "borders": true, "highlight": ["FRA"], "cities": ["Paris"], "labels": true}};
+  at run time it also colours countries from a host array ("values": "@visited", "valueCountries": ["FRA", ...], one
+  value 0..1 each, in that order), draws points from host arrays ("pointsLon": "@lons", "pointsLat": "@lats"), a
+  great-circle route ("routeFrom": "Paris", "routeTo": "Singapore", "progress": "@p" for the flown part and a plane on
+  its heading), state/province borders ("states": ["AUS"]), the night side ("night": true) and one moving marker
+  ("markLon"/"markLat"). map_info {region} lists a region's countries (the valueCountries order), its height, its
+  cities and how coarse it is. Building blocks for your own canvas: {"$map": {"region": "world" | a continent | a
+  country (ISO "FRA" or name: its main landmass with nearby islands) | [lonMin, latMin, lonMax, latMax], "layer":
+  "land" | "countries" | "states" | "lakes" | "graticule", "detail": "low" | "medium" | "high", "countries": [...],
+  "outline": true}} is a path in a box 1000 units wide and {"$mapHeight": region} tall (scale it uniformly:
+  s = min(componentWidth() / 1000, componentHeight() / height), and clipRect the box; "outline": true for a STROKED
+  coast, without the straight edges where a fill is cut); {"$mapPoint": {"region": ..., "at": "Tokyo" | [lon, lat],
+  "axis": "x" | "y"}} is a point (a number), or with "lon": "@lon", "lat": "@lat" (any expression, "arrayGet(@lons,
+  i)" in a loop) an expression; {"$mapRoute": {"region": ..., "from": "Paris", "to": "Singapore"}} a great-circle
+  path, and with "axis": "x" | "y" | "angle" its samples as a float array (evenly spaced by distance, "wrap":
+  "arraySpline({}, @progress)" is the point at that fraction; angle is the heading in degrees, 0 = east, 90 = down).
+  Equirectangular: x ∝ longitude, y ∝ latitude, x scaled by cos of the region's middle latitude. Data is 1:50m (1:110m
+  for regions over 90° wide): fine for a continent or a country, too coarse for a city (map_info says). A world of
+  land at low detail is ~6 KB. Places at map coordinates in LAYOUT (a card beside a city): there is no offset
+  modifier: stack a box over the map whose column holds a spacer {"height": "y * s"} then a row of a spacer {"width":
+  "x * s"} and the card (x, y from $mapPoint, s the map's scale), or draw the label in the canvas.
 - Charts from data: pathExpression draws a SMOOTH curve through its samples (a spline: a jump between neighbours
   bows), so it suits a trend line, not steps or bars. A step chart (a hypnogram, a bar per slot) is a canvas loop
   {"loop": {"index": "i", "from": 0, "until": "arrayLength(@stages)", "commands": [{"drawRect": {... "arrayGet(@stages,
@@ -234,7 +268,9 @@ Structure
 - A "global" block declares shared values once, before everything: at the root, {"global": {"children": [{"variable":
   {"name": "goal", "value": 10000}}, ...]}} (STR-10); in a canvas, {"global": {"commands": [{"textSubtext": {...}},
   {"textTransform": {...}}]}} for named texts a layout text can then show (TIM-11) — the converter writes a global
-  block's declarations before the root so every component can read them.
+  block's declarations before the root, but a name is resolved where the JSON READS it: put the block before its
+  first reader (a canvas's commands come after its own modifiers, so the canvas holding the global cannot use it in
+  its own semantics; use a size-0 canvas placed earlier), or the reader gets the literal "@name".
 - Smaller sizes: a widget is resized by its host. Drop content by priority with a collapsibleColumn inside a padded
   box: {"box": {"modifiers": ["fillMaxSize", {"padding": 16}], "children": [{"collapsibleColumn": {"modifiers":
   ["fillMaxSize"], "horizontalAlignment": "start", "verticalArrangement": "top", "children": [...]}}]}}, with
@@ -257,9 +293,9 @@ Structure
   nothing fits the fitBox shows nothing (inspect layout reports fitbox_no_fit). The chosen child is measured in the
   box: fillMaxWidth fills it, an exact width is CENTRED at that width, an exact height stays, a wrap child wraps.
   Use exact HEIGHTS as the thresholds (fillMaxWidth + height N on each alternative); a width threshold via widthIn
-  min does not work (below the minimum the child is laid out 0 wide). width/height accept a "@variable", but
-  componentWidth()/componentHeight() inside a component's OWN width/height modifier read that component's box
-  (self-referential: it collapses to 0). A width relative to the PARENT is {"fillMaxWidth": 0.5} or {"fillMaxWidth":
+  min does not work (below the minimum the child is laid out 0 wide). width/height accept a "@variable" or an
+  expression; componentWidth()/componentHeight() in a width/height modifier read the PARENT's box: {"width":
+  "componentWidth() * 0.4"}. A width relative to the PARENT is also {"fillMaxWidth": 0.5} or {"fillMaxWidth":
   "@fraction"} (a fraction of the parent; same for fillMaxHeight), a weight in a row, or windowWidth() (the surface).
   collapsibleColumn ignores its own padding and centres by default. Or a StateLayout, or verticalScroll.
 - Text picked by a runtime index (a phase name, a weekday, "Rising"/"Falling"): the TextChoice component
@@ -268,14 +304,17 @@ Structure
   {"text": {"value": {"type": "textMerge", "id1": "Week ", "id2": {"type": "textFromFloat", "value": "@week",
   "whole": 2, "decimal": 0, "flags": 5}}}} (nest textMerge for more parts). whole/decimal are digit counts; flags
   is the padding: whole part 0 spaces | 4 none | 12 zeros, plus decimals 0 spaces | 1 none | 3 zeros, plus 16 for
-  thousands grouping — so 5 = no padding ("7"), 13 = zero-padded whole ("07"), 7 = forced decimals ("7.50", money),
+  thousands grouping — so 5 = no padding ("7"); 0 (the default when flags is left out) pads the whole part with
+  SPACES to "whole" digits (" 12 min", a leading space a screen reader reads): give flags 5 (or 4) unless you want
+  aligned columns; 13 = zero-padded whole ("07"), 7 = forced decimals ("7.50", money),
   23 = grouped money ("1,234.50" with whole 7, decimal 2), 15 = "07.50".
   "whole" is a maximum: a number with more digits loses the leading ones (whole 4 shows 12345 as "2345"), so size it
   for the largest value the app can send — and with grouping (16) the separators count too (260,840 needs whole 7:
   whole 6 shows "60,840").
   Money: compute in whole cents and round there, then divide — "round(@bill * @pct)" in cents, shown as "@cents / 100"
   with decimal 2: a float like 46.475 is stored as 46.47499… and prints "46.47" whatever the flags.
-  textTransform takes "operation" as a NUMBER: 1 lowercase, 2 UPPERCASE, 3 trim, 4 Capitalize Each Word, 5 Capitalize
+  textTransform needs {"text": "@name", "start": 0, "len": -1 (to the end), "operation": N, "varName": "out"} (all
+  required; it runs among canvas commands, like textSubtext {"text", "start", "len", "varName"}) and takes "operation" as a NUMBER: 1 lowercase, 2 UPPERCASE, 3 trim, 4 Capitalize Each Word, 5 Capitalize
   first. Do not use the names: the format's JSON parser maps "uppercase" to 1 (lowercase), "lowercase" to 2 and
   "capitalize" to 3 (trim) — json2rc writes the same bytes (U74).
 - Text keys: {"text": {"text" | "value": ..., "fontSize": 14, "fontWeight": 700 (a NUMBER 100-900: "bold" is an
@@ -319,6 +358,10 @@ Canvas (when you do draw)
   panX -1 = to the right of x (left-aligned), 0 = centred on x, 1 = to the left of x (right-aligned);
   panY -1 = above y, 0 = centred on y, 1 = below y.
 - Never SVG path strings: use pathExpression or the components (Java writes SVG strings as empty paths).
+- A fixed shape is a "path" resource written as ops: "resources": {"paths": {"tri": [{"type": "moveTo", "x": 8, "y": 5},
+  {"type": "lineTo", "x": 19, "y": 12}, {"type": "lineTo", "x": 8, "y": 19}, {"type": "close"}]}} drawn with {"drawPath":
+  {"path": "$paths.tri"}}. Avoid hand-written pathData arrays: their verbs carry the PREVIOUS point too (a LINE is
+  "path:LINE", x0, y0, x1, y1; a CUBIC eight numbers), and a LINE given only its end point draws nothing.
 
 Values
 - Colours: theme colours "@colors.onSurface" etc.; literal "#AARRGGBB" otherwise. Write each component call once:
@@ -368,6 +411,9 @@ async function smallSizeNote(args) {
         }
     } catch { /* no verdict */ }
     if (!over.length) return "";
+    // A scrolling screen is not a widget: what is cut is a text that does not wrap (the
+    // render's text_overflow says which), not content that should collapse.
+    if (json && /"verticalScroll"/.test(JSON.stringify(json))) return `size note: at ${over.join(" and ")} something no longer fits (the screen scrolls, so look at the render's text_overflow / component_overflow lines for what is cut).`;
     return `size warning: at ${over.join(" and ")} the content no longer fits (cut off or squeezed to nothing). A widget is resized by its host, ` +
         "often smaller than designed: drop the least important content first (a collapsibleColumn with collapsiblePriority " +
         "on the optional children, inside a box that carries the padding, horizontalAlignment \"start\", lowest priority " +
@@ -392,7 +438,10 @@ async function renderSamples(t, args, samples) {
     let i = 0;
     for (const vars of samples.slice(0, 12)) {
         i++;
-        const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
+        // An array is summarised (a 44-value array as a caption overlapped the sheet's cells).
+        const short = (v) => Array.isArray(v) ? (v.length > 6 ? `[${v.length} values: ${v.slice(0, 4).join(",")}…]` : JSON.stringify(v))
+            : typeof v === "string" && v.length > 24 ? JSON.stringify(v.slice(0, 22) + "…") : JSON.stringify(v);
+        const label = Object.entries(vars ?? {}).map(([k, v]) => `${k}=${short(v)}`).join(" ");
         // A sample may pin its own clock ("$clock": "2026-06-21T12:00"): a time-of-day scenario
         // is its data AND its hour.
         const { $clock, ...values } = vars ?? {};
@@ -400,8 +449,9 @@ async function renderSamples(t, args, samples) {
         if (stem) a.output_path = `${stem}-sample${i}.png`;
         try {
             const r = await t.handler(a);
-            const notes = r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text))
-                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning|info): /.test(l)).join("\n") }))
+            // Errors, warnings and the infos about what the image shows (a text cut with "…").
+            const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized)/.test(l)).join("\n") }))
                 .filter((c) => c.text);
             const file = a.output_path ? ` → ${a.output_path}` : "";
             content.push({ type: "text", text: `── sample ${i}: ${label}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
@@ -421,8 +471,9 @@ async function renderClocks(t, args, clocks) {
         try {
             const r = await t.handler(a);
             // Only the findings: the png_path / Success lines repeat what the caption says.
-            const notes = r.filter((c) => c.type === "text" && /^(error|warning): /m.test(c.text))
-                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning|info): /.test(l)).join("\n") }))
+            // Errors, warnings and the infos about what the image shows (a text cut with "…").
+            const notes = r.filter((c) => c.type === "text" && /^(error|warning|info): /m.test(c.text))
+                .map((c) => ({ type: "text", text: c.text.split("\n").filter((l) => /^(error|warning): /.test(l) || /^info: .*(ellipsis|text_ellipsized)/.test(l)).join("\n") }))
                 .filter((c) => c.text);
             const file = a.output_path ? ` → ${a.output_path}` : "";
             content.push({ type: "text", text: `── clock ${clock}${file}${notes.length ? "" : " · findings: none"}` }, ...r.filter((c) => c.type === "image"), ...notes);
@@ -474,7 +525,7 @@ async function renderVariants(t, args, sizes = [], onlySizes = false, samples = 
         ...(W <= 420 && H <= 260 && !(W === H && W <= 260 && isWatch) ? [["widget 4x2 320×160", { ...base, width: 320, height: 160 }], ["widget 4x1 320×80", { ...base, width: 320, height: 80 }]]
             .filter(([, a]) => !(a.width === W && a.height === H)) : []),
         // A phone screen is often asked to work as a widget too, and a tablet is the other end.
-        ...(H > W * 1.3 && H >= 400 ? [["as a 4x2 widget 320×160 (only if it must also work as a widget)", { ...base, width: 320, height: 160 }], [`tablet ${Math.round(W * 2.2)}×${Math.round(H * 1.4)}`, { ...base, width: Math.round(W * 2.2), height: Math.round(H * 1.4) }]] : []),
+        ...(H > W * 1.3 && H >= 400 ? [[`tall ${W}×${Math.round(H * 1.25)} (a long phone)`, { ...base, height: Math.round(H * 1.25) }], ["as a 4x2 widget 320×160 (only if it must also work as a widget)", { ...base, width: 320, height: 160 }], [`tablet ${Math.round(W * 2.2)}×${Math.round(H * 1.4)}`, { ...base, width: Math.round(W * 2.2), height: Math.round(H * 1.4) }]] : []),
         ...(json && readsClock(json) ? [[timeOfDay(json) ? "seven hours later" : "45 days later", { ...base, clock: clockShift(timeOfDay(json) ? 7 : 45 * 24) }]] : []),
     ];
     // sizes alone (no variants): just the caller's sizes.
@@ -487,15 +538,17 @@ async function renderVariants(t, args, sizes = [], onlySizes = false, samples = 
             c.type === "text" && c.text.startsWith("── clock") ? { ...c, text: c.text.replace("── clock", `── ${label.split(" (")[0]} · clock`) } : c));
         return more;
     }
-    // Samples with sizes: each sample at each size (a small grid; the first 4 samples).
+    // Samples with sizes: each sample at each size, up to 24 renders in all; what does not fit
+    // is said, not dropped quietly.
     if (Array.isArray(samples) && samples.length && onlySizes) {
-        const more = [];
-        for (const [label, a] of plan) more.push(...(await renderSamples(t, { ...a, ...(typeof args.output_path === "string" ? { output_path: args.output_path.replace(/\.png$/i, "") + `-${label.split(" (")[0].replace(/[^a-z0-9]+/gi, "-")}.png` } : {}) }, samples.slice(0, 4))).map((c) =>
+        const per = Math.max(1, Math.floor(24 / plan.length));
+        const more = samples.length > per ? [{ type: "text", text: `── ${samples.length} samples × ${plan.length} sizes: the first ${per} samples rendered at each size (24 renders at most); call again for samples ${per + 1}-${samples.length}.` }] : [];
+        for (const [label, a] of plan) more.push(...(await renderSamples(t, { ...a, ...(typeof args.output_path === "string" ? { output_path: args.output_path.replace(/\.png$/i, "") + `-${label.split(" (")[0].replace(/[^a-z0-9]+/gi, "-")}.png` } : {}) }, samples.slice(0, per))).map((c) =>
             c.type === "text" && c.text.startsWith("── sample") ? { ...c, text: c.text.replace("── sample", `── ${label.split(" (")[0]} · sample`) } : c));
         return more;
     }
     const content = [];
-    const saidInfo = new Set();
+    const saidInfo = new Set(), seenErr = new Set();
     // output_path names the set: <stem>-<variant>.png beside it (dark, light, mono-dark, narrow, ...).
     const stem = typeof args.output_path === "string" ? args.output_path.replace(/\.png$/i, "") : null;
     for (const [label, a] of plan) {
@@ -517,13 +570,43 @@ async function renderVariants(t, args, sizes = [], onlySizes = false, samples = 
             if (/json2rc failed|does not parse|Unknown token|not valid JSON/i.test(msg)) {
                 return [{ type: "text", text: `The document does not convert, so no variant was rendered:\n${msg}` }];
             }
-            content.push({ type: "text", text: `── ${label}: ${msg.split("\n")[0]}` });
+            const first = msg.split("\n")[0];
+            content.push({ type: "text", text: `── ${label}: ${seenErr.has(first) ? "the same error" : first}` });
+            seenErr.add(first);
         }
     }
+    if (!json && !onlySizes) content.unshift({ type: "text", text: "(An .rc has its components expanded already: the mono-dark and mono-light looks need the JSON document, json or json_path.)" });
     // (Asked sizes only: the caller chose them, a smaller-size guess is beside the point.)
     const small = onlySizes ? "" : await smallSizeNote(args);
     if (small) content.unshift({ type: "text", text: small });
     return withDesign(content, args, { first: true });
+}
+
+/**
+ * A render result with several images turned into one contact sheet: each image captioned
+ * with the "── label" line before it, drawn by rc2image --sheet. The text (findings) is kept.
+ */
+async function toSheet(content, args) {
+    const imgs = [];
+    let caption = "";
+    for (const c of content) {
+        if (c.type === "text" && c.text.startsWith("── ")) caption = c.text.slice(3).split(/ → | · /)[0].trim();
+        else if (c.type === "image") imgs.push({ data: c.data, caption });
+    }
+    if (imgs.length < 2) return content;
+    const dir = path.join(os.tmpdir(), `rc-sheet-${randomBytes(6).toString("hex")}`);
+    const { mkdirSync, rmSync } = await import("node:fs");
+    mkdirSync(dir, { recursive: true });
+    try {
+        const files = imgs.map((im, i) => { const f = path.join(dir, `${i}.png`); writeFileSync(f, Buffer.from(im.data, "base64")); return `${f}=${im.caption.replace(/=/g, ":")}`; });
+        const out = typeof args.output_path === "string" ? resolvePath(args.output_path.replace(/\.png$/i, "") + "-sheet.png", "output_path") : path.join(dir, "sheet.png");
+        const { err, stderr } = await runRc2image(["--sheet", out, "--cell", "360", ...files]);
+        if (err) return [...content, { type: "text", text: `(no contact sheet: ${String(stderr || err.message).split("\n")[0]})` }];
+        const sheetPng = readFileSync(out).toString("base64");
+        const texts = content.filter((c) => c.type !== "image");
+        return [{ type: "image", data: sheetPng, mimeType: "image/png" },
+                { type: "text", text: `contact sheet: ${imgs.length} renders${typeof args.output_path === "string" ? ` → ${args.output_path.replace(/\.png$/i, "")}-sheet.png` : ""}` }, ...texts];
+    } finally { try { rmSync(dir, { recursive: true, force: true }); } catch {} }
 }
 
 const tools = [
@@ -553,7 +636,7 @@ const tools = [
         name: "get",
         annotations: { title: "Get an example or a component", ...RO },
         description:
-            "Fetch one catalog entry: an example by id (\"TIM-10\") with its JSON, meta, pitfalls and " +
+            "Fetch one catalog entry: an example by id (\"TIM-10\"; or a generated document \"GEN-20\", parts meta, json, notes, render) with its JSON, meta, pitfalls and " +
             "renders (`parts` selects which), or a library component by name (\"Gauge\") with its call, " +
             "params and pitfalls (definition: true adds the full definition, to copy its structure).",
         inputSchema: {
@@ -570,6 +653,7 @@ const tools = [
         handler: async ({ id, name, ...rest } = {}) => {
             const key = id ?? name;
             if (!key) throw new Error("get: give an example id or a component name");
+            if (/^GEN-\d+$/i.test(key)) return getGenerated(key.toUpperCase(), rest);
             const out = await (/^[A-Z0-9]+-\d+/.test(key)
                 ? tool(examples, "get_example").handler({ id: key, ...rest })
                 : tool(examples, "get_component").handler({ name: key, ...rest }));
@@ -627,7 +711,7 @@ const tools = [
         return {
             ...t, name: "render",
             description: t.description + " The result ends with the document's design warnings, if any (a UI hand-drawn on a canvas, " +
-                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono\" or \"mono-light\") renders the monochrome look " +
+                "glyph icons, hard-coded dates or colours): fix them. componentTheme (\"mono-dark\" or \"mono-light\") renders the monochrome look " +
                 "of a JSON document (always-on displays, e-ink) without editing it: the same component calls, expanded with the components' mono " +
                 "implementation. By default the document follows the system's light or dark theme, and a single render " +
                 "is DARK unless theme: \"light\". Before publishing, " +
@@ -635,12 +719,25 @@ const tools = [
                 "clocks: [\"2026-12-31T23:59:59\", ...] (several pinned dates in one call); for a host-data document, " +
                 "samples: [{\"aqi\": 12}, {\"aqi\": 480}] (several sets of host variables in one call, each settled).",
             inputSchema: { ...t.inputSchema, properties: { ...t.inputSchema.properties,
-                samples: { type: "array", items: { type: "object A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call)." }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). With output_path, files are <stem>-sample1.png, -sample2…" },
+                samples: { type: "array", items: { type: "object" }, description: "Several sets of host variables in one call ({name: value} each, up to 12), one captioned image each, every eased value settled: check a host-data document at its edges ([{\"level\": 0}, {\"level\": 100, \"charging\": 1}]). A sample may add \"$clock\": \"2026-06-21T12:00\" to pin its own time (a night, a noon and an evening scenario in one call). With output_path, files are <stem>-sample1.png, -sample2…" },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "Several pinned clocks in one call (the same formats as clock; up to 12 per call), one captioned image each: check a date-driven document at its edges (\"2026-12-31T23:59:59\", \"2027-01-01T00:00:00\", a full-moon day) without a call per date. With output_path, files are <stem>-<clock>.png." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "Extra [width, height] sizes to render (up to 10): with variants, added to them; alone, only these sizes (with samples or clocks: each at each size) (the target device's own screens, e.g. [[800, 480], [600, 600]] for a car display), each captioned with its size." },
+                sheet: { type: "boolean", description: "With samples, clocks, sizes or variants: ONE contact-sheet image (every render in a captioned grid) instead of one image each; the findings are kept per render. Saves reading many images." },
                 variants: { type: "boolean", description: "Check every state in one call: dark, light, mono-dark and mono-light, narrow, wide, short, small (narrow and short) and tiny (half the width), and (when the document reads the clock) seven hours later, each image captioned with its size. Each render's findings follow its image. With output_path, the files are <stem>-<variant>.png named after each caption (-dark, -light, -mono-dark, -mono-light, -narrow-259x640, -widget-4x2-320x160, -seven-hours-later, ...) or -45.png (seven hours or 45 days later, by whether the document reads the time of day). Use it before publishing." },
                 componentTheme: { type: "string", enum: ["auto", "all", "light", "dark", "mono-dark", "mono-light"], description: "For JSON input: the look to expand the components for. auto (default): light and dark by the system theme; mono-dark (light on black) / mono-light (dark on white): the components' monochrome implementation; light / dark: that side only; all: every look in one larger document, mono switched by the host's theme.mono float." } } },
-            handler: async ({ componentTheme, variants, clocks, samples, sizes, ...args } = {}) => variants || (Array.isArray(sizes) && sizes.length) ? renderVariants(t, withLook(args, componentTheme), sizes, !variants, samples, clocks)
+            handler: async ({ sheet, ...all } = {}) => {
+                const r = await renderMany(all);
+                return sheet ? toSheet(r, all) : r;
+            } };
+        // The render itself (samples, clocks, sizes, variants or one image).
+        async function renderMany({ componentTheme, variants, clocks, samples, sizes, ...args } = {}) {
+            // Samples and clocks together: each sample at each clock (a sample's own $clock wins),
+            // rather than the clocks dropped without a word.
+            if (Array.isArray(samples) && samples.length && Array.isArray(clocks) && clocks.length) {
+                samples = samples.flatMap((smp) => smp && "$clock" in smp ? [smp] : clocks.map((c) => ({ ...(smp ?? {}), $clock: c })));
+                clocks = undefined;
+            }
+            return variants || (Array.isArray(sizes) && sizes.length) ? renderVariants(t, withLook(args, componentTheme), sizes, !variants, samples, clocks)
                 // (A mono look asked for with samples or clocks applies to every image: the JSON is expanded for it once.)
                 : Array.isArray(samples) && samples.length ? renderSamples(t, withLook(args, componentTheme), samples)
                 : Array.isArray(clocks) && clocks.length ? renderClocks(t, withLook(args, componentTheme), clocks) : withDesign(await (async () => {
@@ -657,8 +754,8 @@ const tools = [
                 if (!json) throw new Error("render: componentTheme needs a JSON document (json or json_path)");
                 const { json_path: _, ...rest } = args;
                 return t.handler({ ...rest, json: { ...(typeof json === "string" ? JSON.parse(json) : json), componentTheme } });
-            })(), args, { first: true }),
-        };
+            })(), args, { first: true });
+        }
     })(),
     tool(inspect, "audit"),
     dispatcher({
@@ -668,7 +765,8 @@ const tools = [
             "top findings), layout (the laid-out component tree with bounds), structure, variables, " +
             "theme, accessibility, interactions (click and touch targets), interact (run actions: taps, " +
             "variable changes, then report), runtime (repaint and per-frame cost), bytes (what the size " +
-            "is made of), operations (list, filterable) and operation (one, by index).",
+            "is made of), operations (list, filterable), operation (one, by index) and engines (do the C++ " +
+            "player render uses and the TypeScript one inspect uses lay it out alike? the components they disagree on).",
         choices: {
             summary: tool(inspect, "inspect_summary"),
             layout: tool(inspect, "inspect_layout"),
@@ -682,6 +780,7 @@ const tools = [
             bytes: tool(inspect, "inspect_bytes"),
             operations: tool(inspect, "list_operations"),
             operation: tool(inspect, "get_operation"),
+            engines: enginesTool,
         },
     }),
     (() => {
@@ -723,15 +822,18 @@ tools.push({
         "function, operator and clock/system value an expression can use, with the limits. topic " +
         "\"components\": the component authoring guide (syntax, light/dark/mono, animation, drawing " +
         "something the library lacks). topic \"tools\": every tool's full schema and options, or one " +
-        "with tool: <name>.",
+        "with tool: <name>. query: a few words instead of a topic returns just the matching paragraphs from all of them " +
+        "(\"step argument order\", \"visibility taps\"): use it to check one rule without rereading a topic.",
     inputSchema: {
         type: "object",
         properties: {
             topic: { type: "string", enum: ["workflow", "format", "components", "expressions", "tools"] },
             tool: { type: "string", description: "With topic \"tools\": one tool name." },
+            query: { type: "string", description: "Words to look up across every topic (\"step argument order\", \"visibility invisible taps\", \"map region\"): the best-matching paragraphs, each with its topic, instead of a whole topic." },
         },
     },
-    handler: async ({ topic = "workflow", tool: name } = {}) => {
+    handler: async ({ topic = "workflow", tool: name, query } = {}) => {
+        if (typeof query === "string" && query.trim()) return text(await searchReference(query));
         if (topic === "components") return tool(examples, "component_authoring_guide").handler({});
         if (topic === "format") return text(FORMAT);
         if (topic === "expressions") return text(EXPRESSIONS);
@@ -743,6 +845,85 @@ tools.push({
         return text(WORKFLOW + "\n\nTools: " + tools.map((t) => t.name).join(", "));
     },
 });
+
+tools.push({
+    name: "map_info",
+    annotations: { title: "What a map region holds", ...RO },
+    description:
+        "Before a map that colours, lists or labels places: a region's box, its height for width 1000 (the same as " +
+        "$mapHeight), the countries in it (ISO A3 and name, alphabetical, the ones too small to show at the detail flagged), " +
+        "the countries partly in it, those with state/province borders, its largest cities, and how coarse the outlines are " +
+        "at that size. The countries list is the order to use for WorldMap's values/valueCountries when nothing else fixes one.",
+    inputSchema: { type: "object", properties: {
+        region: { description: "As WorldMap's region: \"world\", a continent, a subregion, a country (ISO or name) or [lonMin, latMin, lonMax, latMax]." },
+        detail: { type: "string", enum: ["low", "medium", "high"], description: "The detail you will draw at (default low)." },
+    }, required: ["region"] },
+    handler: async ({ region, detail = "low" } = {}) => {
+        const { mapInfo } = await import("./lib/maps.mjs");
+        return text(JSON.stringify(mapInfo(region, { detail }), null, 1));
+    },
+});
+
+/** A generated-corpus document: its prompt, run, JSON and (with parts render) its looks. */
+async function getGenerated(id, { parts = ["meta", "json"] } = {}) {
+    const { loadGenerated, EXAMPLES_DIR } = await import("./lib/catalog.mjs");
+    const e = loadGenerated().find((x) => x.id === id);
+    if (!e) throw new Error(`no generated example ${id} (GEN-01 .. GEN-50; find with include_generated lists them)`);
+    const dir = path.join(EXAMPLES_DIR, e.folder);
+    const out = [];
+    if (parts.includes("meta")) out.push({ type: "text", text: JSON.stringify({ ...e, note: "Built by an assistant from the prompt with these tools in one eval run: a whole working document, not a minimal or Java-verified example. notes.md (parts: notes) is that run's account of what was hard." }) });
+    if (parts.includes("json")) out.push({ type: "text", text: readFileSync(path.join(dir, "doc.json"), "utf8") });
+    if (parts.includes("notes") && existsSync(path.join(dir, "notes.md"))) out.push({ type: "text", text: readFileSync(path.join(dir, "notes.md"), "utf8") });
+    if (parts.includes("render")) for (const look of e.renders ?? []) {
+        out.push({ type: "text", text: `render-${look}` }, { type: "image", data: readFileSync(path.join(dir, `render-${look}.png`)).toString("base64"), mimeType: "image/png" });
+    }
+    return out;
+}
+
+/** The reference's paragraphs that best match some words, across every topic. */
+async function searchReference(query) {
+    const guide = (await tool(examples, "component_authoring_guide").handler({})).map((c) => c.text ?? "").join("\n");
+    const topics = { format: FORMAT, expressions: EXPRESSIONS, workflow: WORKFLOW, components: guide,
+        tools: tools.map(describeTool).join("\n\n") };
+    const stem = (w) => w.toLowerCase().replace(/(ies)$/, "y").replace(/(es|s)$/, "");
+    const words = [...new Set(String(query).toLowerCase().split(/[^a-z0-9$@#.]+/).filter((w) => w.length > 1).map(stem))];
+    const paras = [];
+    for (const [t, body] of Object.entries(topics)) {
+        // A paragraph: a "- " bullet with its continuation lines, or a block between blank lines.
+        let cur = [];
+        const flush = () => { if (cur.length) paras.push({ topic: t, text: cur.join("\n") }); cur = []; };
+        for (const line of String(body).split("\n")) {
+            if (!line.trim() || /^(- |#{1,4} |\d+\. )/.test(line)) flush();
+            if (line.trim()) cur.push(line);
+        }
+        flush();
+    }
+    // Rare words count more (a paragraph about "step" beats one that merely uses "order").
+    const tokd = paras.map((p) => p.text.toLowerCase().split(/[^a-z0-9$@#.]+/).map(stem));
+    const has = (toks, w) => toks.includes(w) || (w.length > 3 && toks.some((t) => t.startsWith(w)));
+    const idf = Object.fromEntries(words.map((w) => [w, Math.log((paras.length + 1) / (1 + tokd.filter((t) => has(t, w)).length))]));
+    const scored = paras.map((p, i) => {
+        const toks = tokd[i];
+        const hits = words.filter((w) => has(toks, w));
+        const tf = hits.reduce((n, w) => n + idf[w] * (1 + Math.log(1 + toks.filter((t) => t === w).length)), 0);
+        // Prose topics first: a tool schema mentions every option name in passing.
+        return { ...p, hits: hits.length, score: (tf / Math.sqrt(1 + toks.length / 60)) * (p.topic === "tools" ? 0.6 : 1) };
+    });
+    // Two of the words when any paragraph has them, else any one.
+    const need = scored.some((p) => p.hits >= Math.min(words.length, 2)) ? Math.min(words.length, 2) : 1;
+    const best = scored.filter((p) => p.hits >= need).sort((a, b) => b.score - a.score).slice(0, 5);
+    if (!best.length) return `Nothing in the reference matches "${query}". Topics: format, expressions, components, workflow, tools.`;
+    // (A tool schema paragraph can be long: the matching lines and a little around them.)
+    // (A very long paragraph — a tool schema — is cut to a continuous window around its first
+    // match: lines picked one by one read as garbled sentences.)
+    const trim = (t) => {
+        if (t.length < 3000) return t;
+        const lines = t.split("\n");
+        const at = Math.max(0, lines.findIndex((l) => words.some((w) => l.toLowerCase().includes(w))));
+        return lines.slice(Math.max(0, at - 2), at + 22).join("\n") + "\n…";
+    };
+    return best.map((p) => `[${p.topic}]\n${trim(p.text)}`).join("\n\n");
+}
 
 export const definition = {
     name: "remotecompose",

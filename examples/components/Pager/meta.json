@@ -1,0 +1,443 @@
+{
+ "id": "Pager",
+ "name": "pager",
+ "version": 1,
+ "title": "Pager",
+ "prompt": "Make a three-page onboarding carousel: swipe left or right to change page, tap a dot to jump, the new page fades in, and a screen reader hears \"Onboarding, Page 2 of 3\".",
+ "level": 2,
+ "use_cases": [
+  "onboarding",
+  "card",
+  "widget"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "pager",
+  "carousel",
+  "swipe pages",
+  "horizontal pager",
+  "view pager",
+  "onboarding",
+  "slides",
+  "swipe",
+  "page indicator",
+  "pages with dots",
+  "walkthrough",
+  "paging"
+ ],
+ "teaches": [
+  "Call {\"Pager\": {\"page\": \"@page\", \"pages\": [PAGE1, PAGE2, PAGE3]}}: each page is any JSON node, shown alone; the dots, the swipe and \"Page N of M\" come with it",
+  "A swipe is onTouchDown storing touchX() into the call's own `start`, and onTouchUp setting page = clamp(0, n − 1, page + clamp(−1, 1, round((start − touchX()) / (0.5 × windowWidth()))))",
+  "Pages switch by visibility (only the current one is laid out and read) and fade in with graphicsLayer alpha over an animated copy of the page",
+  "Each dot sits in a 24 × 40 dp tap target that sets the page and is announced \"Go to page N\""
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/box/children/0",
+   "shows": "input.tap",
+   "note": "a dot tap sets page; the swipe is onTouchDown / onTouchUp on the pager"
+  },
+  {
+   "pointer": "/root/box/children/0",
+   "shows": "layout.state",
+   "note": "only the current page is visible"
+  },
+  {
+   "pointer": "/root/box/children/0",
+   "shows": "anim.value",
+   "note": "the new page fades in and the accent dot slides"
+  },
+  {
+   "pointer": "/root/box/children/0",
+   "shows": "a11y.labels",
+   "note": "Onboarding, Page N of 3; Go to page N on each dot"
+  },
+  {
+   "pointer": "/root/box/children/0",
+   "shows": "draw.shapes",
+   "note": "the dots"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "page": {
+    "type": "float",
+    "meaning": "the current page, 0-based",
+    "default": 0,
+    "min": 0,
+    "max": 2,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "Page 1, \"Welcome\" over \"Plan your week in a minute\", centred, with three dots at the bottom, the first blue. A swipe to the left shows \"Track your runs\" (fading in) and moves the blue dot to the second; a swipe to the right goes back; a swipe at the last page stays there; a tap on the third dot jumps to \"Share with friends\"; a tap on the page changes nothing. page 2 shows the third page. Mono: white (black) filled current dot, grey rings, no fade. A screen reader hears \"Onboarding, Page 1 of 3\", the page's two texts and the three dots \"Go to page 1\" to \"Go to page 3\".",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "page3",
+    "variables": {
+     "page": 2
+    }
+   },
+   {
+    "name": "swiped",
+    "touch_events": [
+     {
+      "t": 0.1,
+      "type": "down",
+      "x": 300,
+      "y": 300
+     },
+     {
+      "t": 0.15,
+      "type": "move",
+      "x": 180,
+      "y": 300
+     },
+     {
+      "t": 0.2,
+      "type": "up",
+      "x": 60,
+      "y": 300
+     }
+    ],
+    "duration": 0.8
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 360
+   },
+   {
+    "name": "wide",
+    "width": 520,
+    "height": 360
+   }
+  ]
+ },
+ "related": [
+  "INT-06",
+  "CMP-06",
+  "LAY-12"
+ ],
+ "derived": {
+  "components": [
+   "Pager"
+  ],
+  "component_instances": 1,
+  "component_modes": {
+   "Pager": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 2801,
+  "header": {
+   "width": 360,
+   "height": 360
+  },
+  "op_count": 177,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 4,
+   "ANIMATED_FLOAT": 8,
+   "COLOR_CONSTANT": 8,
+   "COLOR_EXPRESSIONS": 8,
+   "CanvasContent": 1,
+   "CoreText": 6,
+   "DATA_FLOAT": 2,
+   "DATA_TEXT": 10,
+   "DRAW_CIRCLE": 4,
+   "GraphicsLayerModifier": 3,
+   "HEADER": 1,
+   "IntegerExpression": 3,
+   "LAYOUT_BOX": 9,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 4,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 18,
+   "LoopOperation": 8,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_CLICK": 3,
+   "MODIFIER_HEIGHT": 15,
+   "MODIFIER_PADDING": 4,
+   "MODIFIER_TOUCH_DOWN": 1,
+   "MODIFIER_TOUCH_UP": 1,
+   "MODIFIER_VISIBILITY": 3,
+   "MODIFIER_WIDTH": 15,
+   "NAMED_VARIABLE": 5,
+   "PAINT_VALUES": 2,
+   "THEME": 12,
+   "TextFromFloat": 4,
+   "TextMerge": 6,
+   "ValueFloatExpressionChangeActionOperation": 5
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "page",
+    "type": "float",
+    "value": 0
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 1
+  },
+  "audit_findings": [
+   "info: layout_touch_target"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 3,
+   "click": 3,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 2388,
+    "component_modes": {
+     "Pager": "expand"
+    },
+    "op_count": 144,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "page",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 2388,
+    "component_modes": {
+     "Pager": "expand"
+    },
+    "op_count": 144,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "page",
+      "type": "float",
+      "value": 0
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "page3": {
+    "render": "render-page3.png",
+    "render_findings": []
+   },
+   "swiped": {
+    "render": "render-swiped.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_touch_target"
+    ]
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     520,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_touch_target"
+    ]
+   }
+  },
+  "json_keys": [
+   "Pager",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "box",
+   "canvas",
+   "children",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawCircle",
+   "export",
+   "flags",
+   "fontSize",
+   "graphicsLayer",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "id1",
+   "id2",
+   "label",
+   "light",
+   "modifiers",
+   "muted",
+   "name",
+   "onClick",
+   "onSurface",
+   "onTouchDown",
+   "onTouchUp",
+   "ops",
+   "padding",
+   "page",
+   "pager1_k",
+   "pager1_start",
+   "pages",
+   "paint",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "root",
+   "row",
+   "semantics",
+   "spacedBy",
+   "style",
+   "target",
+   "text",
+   "textAlign",
+   "type",
+   "value",
+   "variable",
+   "variables",
+   "verticalArrangement",
+   "verticalWeight",
+   "visibility",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "layout.state": [
+    "visibility"
+   ],
+   "anim.value": [
+    "anim"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "draw.shapes": [
+    "drawCircle"
+   ]
+  },
+  "built_at": "2026-11-01T05:35:18.579Z"
+ }
+}

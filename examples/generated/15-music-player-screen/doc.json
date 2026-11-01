@@ -1,0 +1,802 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 720,
+  "profiles": 513,
+  "contentDescription": "Music player: now playing, track position, playback controls"
+ },
+ "resources": {
+  "variables": {
+   "position": {
+    "value": 83,
+    "export": true
+   },
+   "duration": {
+    "value": 272,
+    "export": true
+   },
+   "playing": {
+    "value": 1,
+    "export": true
+   },
+   "shuffle": {
+    "value": 0,
+    "export": true
+   },
+   "repeat": {
+    "value": 0,
+    "export": true
+   },
+   "skip": {
+    "value": 0,
+    "export": true
+   },
+   "paused": "1 - @playing",
+   "shuffleOff": "1 - @shuffle",
+   "repeatOff": "1 - @repeat",
+   "art": "min(min(windowWidth(), 480) - 48, windowHeight() * 0.42)",
+   "durH": "floor(@duration / 3600)",
+   "durM": "floor(@duration / 60) % 60",
+   "durS": "floor(@duration) % 60",
+   "durLong": "step(@duration, 3599.5)",
+   "durShort": "1 - step(@duration, 3599.5)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "title",
+    "vtype": "string",
+    "value": "Midnight City",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "artist",
+    "vtype": "string",
+    "value": "M83",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "widthIn": [
+          0,
+          480
+         ]
+        },
+        "fillMaxWidth",
+        "fillMaxHeight",
+        {
+         "padding": 24
+        },
+        {
+         "spacedBy": 20
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalArrangement": "center",
+       "children": [
+        {
+         "ArtPlaceholder": {
+          "size": "@art"
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "spacedBy": 4
+           }
+          ],
+          "horizontalAlignment": "center",
+          "children": [
+           {
+            "text": {
+             "value": "@title",
+             "fontSize": 22,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "textAlign": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@artist",
+             "fontSize": 16,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "textAlign": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "Slider": {
+             "label": "Track position",
+             "value": "@position",
+             "min": 0,
+             "max": "@duration"
+            }
+           },
+           {
+            "variable": {
+             "name": "posH",
+             "value": "floor(@position / 3600)"
+            }
+           },
+           {
+            "variable": {
+             "name": "posM",
+             "value": "floor(@position / 60) % 60"
+            }
+           },
+           {
+            "variable": {
+             "name": "posS",
+             "value": "floor(@position) % 60"
+            }
+           },
+           {
+            "variable": {
+             "name": "posLong",
+             "value": "step(@position, 3599.5)"
+            }
+           },
+           {
+            "variable": {
+             "name": "posShort",
+             "value": "1 - step(@position, 3599.5)"
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "horizontalArrangement": "spaceBetween",
+             "children": [
+              {
+               "box": {
+                "children": [
+                 {
+                  "text": {
+                   "modifiers": [
+                    {
+                     "visibility": "@posShort"
+                    }
+                   ],
+                   "fontSize": 13,
+                   "color": "@colors.muted",
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@posM",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@posS",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "text": {
+                   "modifiers": [
+                    {
+                     "visibility": "@posLong"
+                    }
+                   ],
+                   "fontSize": 13,
+                   "color": "@colors.muted",
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@posH",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@posM",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 13
+                      },
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ":",
+                       "id2": {
+                        "type": "textFromFloat",
+                        "value": "@posS",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 13
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "children": [
+                 {
+                  "text": {
+                   "modifiers": [
+                    {
+                     "visibility": "@durShort"
+                    }
+                   ],
+                   "fontSize": 13,
+                   "color": "@colors.muted",
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@durM",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@durS",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   }
+                  }
+                 },
+                 {
+                  "text": {
+                   "modifiers": [
+                    {
+                     "visibility": "@durLong"
+                    }
+                   ],
+                   "fontSize": 13,
+                   "color": "@colors.muted",
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@durH",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@durM",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 13
+                      },
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": ":",
+                       "id2": {
+                        "type": "textFromFloat",
+                        "value": "@durS",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 13
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "horizontalArrangement": "spaceEvenly",
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@shuffleOff"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Shuffle, off",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@shuffle",
+                     "value": "1 - @shuffle"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "shuffle"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "shuffle",
+                       "color": "@colors.onSurface"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@shuffle"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Shuffle, on",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@shuffle",
+                     "value": "1 - @shuffle"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "shuffle"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "shuffle_on",
+                       "color": "@colors.primary"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "IconButton": {
+             "label": "Previous track",
+             "onClick": [
+              {
+               "type": "valueFloatExpressionChange",
+               "target": "@skip",
+               "value": "@skip - 1"
+              },
+              {
+               "type": "hostNamedAction",
+               "name": "previous"
+              }
+             ],
+             "slots": {
+              "icon": [
+               {
+                "Icon": {
+                 "name": "skip_previous",
+                 "color": "@colors.onSurface",
+                 "size": 28
+                }
+               }
+              ]
+             }
+            }
+           },
+           {
+            "box": {
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@paused"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Play",
+                   "style": "filled",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@playing",
+                     "value": "1 - @playing"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "playPause"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "play_arrow",
+                       "filled": true,
+                       "color": "@colors.onPrimary"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@playing"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Pause",
+                   "style": "filled",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@playing",
+                     "value": "1 - @playing"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "playPause"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "pause",
+                       "filled": true,
+                       "color": "@colors.onPrimary"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "IconButton": {
+             "label": "Next track",
+             "onClick": [
+              {
+               "type": "valueFloatExpressionChange",
+               "target": "@skip",
+               "value": "@skip + 1"
+              },
+              {
+               "type": "hostNamedAction",
+               "name": "next"
+              }
+             ],
+             "slots": {
+              "icon": [
+               {
+                "Icon": {
+                 "name": "skip_next",
+                 "color": "@colors.onSurface",
+                 "size": 28
+                }
+               }
+              ]
+             }
+            }
+           },
+           {
+            "box": {
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@repeatOff"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Repeat, off",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@repeat",
+                     "value": "1 - @repeat"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "repeat"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "repeat",
+                       "color": "@colors.onSurface"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@repeat"
+                 }
+                ],
+                "children": [
+                 {
+                  "IconButton": {
+                   "label": "Repeat, on",
+                   "onClick": [
+                    {
+                     "type": "valueFloatExpressionChange",
+                     "target": "@repeat",
+                     "value": "1 - @repeat"
+                    },
+                    {
+                     "type": "hostNamedAction",
+                     "name": "repeat"
+                    }
+                   ],
+                   "slots": {
+                    "icon": [
+                     {
+                      "Icon": {
+                       "name": "repeat_on",
+                       "color": "@colors.primary"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ],
+ "components": {
+  "ArtPlaceholder": {
+   "summary": "Album art placeholder: a rounded surface tile with a large album icon; in mono a thin outline ring instead of a fill",
+   "params": {
+    "size": {
+     "type": "float",
+     "required": true,
+     "doc": "Side in dp: a number, a @variable or an expression"
+    },
+    "label": {
+     "type": "string",
+     "default": "Album art",
+     "doc": "Accessibility label of the tile"
+    }
+   },
+   "body": {
+    "$if": "theme.mono",
+    "then": {
+     "box": {
+      "modifiers": [
+       {
+        "width": "@size"
+       },
+       {
+        "height": "@size"
+       },
+       {
+        "clip": {
+         "roundedRect": 24
+        }
+       },
+       {
+        "background": "@colors.outline"
+       },
+       {
+        "padding": 2
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label"
+        }
+       }
+      ],
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "clip": {
+            "roundedRect": 22
+           }
+          },
+          {
+           "background": "@colors.background"
+          }
+         ],
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "Icon": {
+            "name": "album",
+            "size": 96,
+            "color": "@colors.muted"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "box": {
+      "modifiers": [
+       {
+        "width": "@size"
+       },
+       {
+        "height": "@size"
+       },
+       {
+        "clip": {
+         "roundedRect": 24
+        }
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       },
+       {
+        "semantics": {
+         "contentDescription": "@label"
+        }
+       }
+      ],
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "Icon": {
+         "name": "album",
+         "size": 96,
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     }
+    }
+   },
+   "call": {
+    "ArtPlaceholder": {
+     "size": 200
+    }
+   }
+  }
+ }
+}

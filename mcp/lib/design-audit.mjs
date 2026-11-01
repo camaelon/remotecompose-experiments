@@ -708,48 +708,75 @@ function animOneFindings(doc) {
 }
 
 // A text field that is exactly "@name" where nothing declares `name`: the converter keeps it as
-// the literal text "@name" (a screen reader announced "@powerDesc").
+// the literal text "@name" (a screen reader announced "@powerDesc"). A name declared only LATER in
+// the document (a canvas's own commands come after its modifiers, so a description there cannot
+// read a text the canvas declares) is just as literal (a run's description read "@vn0@vn1").
 function undeclaredRefFindings(doc) {
-    const declared = new Set();
+    const declared = new Set(), later = new Set();
+    const declares = (k, v) => ["name", "varName", "localItem", "index", "as"].includes(k) && typeof v === "string";
     const collect = (x) => {
         if (Array.isArray(x)) { x.forEach(collect); return; }
         if (!isObj(x)) return;
         for (const [k, v] of Object.entries(x)) {
-            if (["name", "varName", "localItem", "index", "as"].includes(k) && typeof v === "string") declared.add(v);
-            // A pattern's parameters ({"definePattern": {"parameters": ["who"]}}) are names too.
-            if (k === "parameters" && Array.isArray(v)) for (const p of v) if (typeof p === "string") declared.add(p);
+            if (declares(k, v)) later.add(v);
+            if (k === "parameters" && Array.isArray(v)) for (const p of v) if (typeof p === "string") later.add(p);
             collect(v);
         }
     };
+    collect(doc.root); collect(doc.global);
     for (const sec of Object.values(doc.resources ?? {})) {
         if (isObj(sec)) for (const k of Object.keys(sec)) declared.add(k);
         else if (Array.isArray(sec)) for (const e of sec) if (isObj(e)) { if (typeof e.name === "string") declared.add(e.name); else for (const k of Object.keys(e)) declared.add(k); }
     }
-    collect(doc.root); collect(doc.global);
-    const bad = new Map();
-    const FIELDS = new Set(["contentDescription", "stateDescription", "text", "value", "label", "hint"]);
+    const bad = new Map(), early = new Map();
+    const FIELDS = new Set(["contentDescription", "stateDescription", "text", "value", "label", "hint", "id1", "id2"]);
+    const check = (v) => {
+        const m = /^@([A-Za-z_][\w]*)$/.exec(v);
+        if (!m || declared.has(m[1])) return;
+        const into = later.has(m[1]) ? early : bad;
+        into.set(m[1], (into.get(m[1]) ?? 0) + 1);
+    };
+    // Document order: a node's modifiers are written before its content.
+    const keysInOrder = (x) => Object.keys(x).sort((a, b) => (b === "modifiers") - (a === "modifiers"));
     const visit = (x, inCall) => {
         if (Array.isArray(x)) { x.forEach((y) => visit(y, inCall)); return; }
         if (!isObj(x)) return;
-        for (const [k, v] of Object.entries(x)) {
+        const after = [];
+        for (const k of keysInOrder(x)) {
+            const v = x[k];
             // A component call's arguments are its params; the expander resolves those.
             if (/^[A-Z]/.test(k) && isObj(v)) { visit(v, true); continue; }
-            if (!inCall && FIELDS.has(k) && typeof v === "string") {
-                const m = /^@([A-Za-z_][\w]*)$/.exec(v);
-                if (m && !declared.has(m[1])) bad.set(m[1], (bad.get(m[1]) ?? 0) + 1);
-            }
+            if (!inCall && FIELDS.has(k) && typeof v === "string") check(v);
+            // A text op's own varName is declared once its parts are read.
+            if (declares(k, v) && k === "varName") { after.push(v); continue; }
+            if (declares(k, v)) declared.add(v);
+            if (k === "parameters" && Array.isArray(v)) for (const p of v) if (typeof p === "string") declared.add(p);
             visit(v, inCall && !(NODE_KINDS.test(k)));
         }
+        for (const v of after) declared.add(v);
     };
+    visit(doc.global, false);
     visit(doc.root, false);
-    if (!bad.size) return [];
-    const names = [...bad.keys()];
-    return [{
-        severity: "warning", code: "undeclared_reference",
-        title: `${names.length} "@name" reference(s) to nothing declared: ${names.slice(0, 6).map((n) => "@" + n).join(", ")}`,
-        message: "A text or description that names no declared variable is kept as the literal text (a screen reader reads \"@" + names[0] + "\"). Declare it (resources.variables, a tree variable, a textMerge varName) or fix the name.",
-        count: names.length,
-    }];
+    const out = [];
+    if (bad.size) {
+        const names = [...bad.keys()];
+        out.push({
+            severity: "warning", code: "undeclared_reference",
+            title: `${names.length} "@name" reference(s) to nothing declared: ${names.slice(0, 6).map((n) => "@" + n).join(", ")}`,
+            message: "A text or description that names no declared variable is kept as the literal text (a screen reader reads \"@" + names[0] + "\"). Declare it (resources.variables, a tree variable, a textMerge varName) or fix the name.",
+            count: names.length,
+        });
+    }
+    if (early.size) {
+        const names = [...early.keys()];
+        out.push({
+            severity: "warning", code: "reference_before_declaration",
+            title: `${names.length} "@name" reference(s) read before their declaration: ${names.slice(0, 6).map((n) => "@" + n).join(", ")}`,
+            message: "The document is read in order, and a name not yet declared is kept as the literal text (\"@" + names[0] + "\" is what a screen reader hears). A canvas's commands come after its own modifiers, so a description on the canvas cannot read a text its commands declare. Declare it earlier: in an earlier sibling (a size-0 canvas with the text ops before it), or as a document-level text.",
+            count: names.length,
+        });
+    }
+    return out;
 }
 
 // A padding object reads only start/top/end/bottom: "left", "right", "horizontal" or
@@ -791,6 +818,91 @@ function integerInFloatFindings(doc) {
         title: `${used.size} integer variable(s) read where a number is expected: ${[...used].map((n) => "@" + n).join(", ")}`,
         message: "A float expression (an index, a size, a position, a component's number param) reads an `integers` resource as 0, so it never changes. Declare the host value as a float in resources.variables ({\"code\": {\"value\": 3, \"export\": true}}); integers are only for integer-typed ops.",
         count: used.size,
+    }] : [];
+}
+
+// A stateLayout whose panes (a phone, a widget, a tablet layout) repeat the same texts and
+// component calls: each copy is written in full (documents of 27-32 KB in the eval runs).
+function repeatedPaneFindings(doc) {
+    let repeated = 0, panes = 0;
+    const sigs = (x, out) => {
+        if (Array.isArray(x)) { x.forEach((y) => sigs(y, out)); return out; }
+        if (!isObj(x)) return out;
+        for (const [k, v] of Object.entries(x)) {
+            if (k === "text" && isObj(v) && !("type" in v)) out.add("text:" + JSON.stringify(v.text ?? v.value));
+            else if (/^[A-Z]/.test(k) && isObj(v)) out.add(k + ":" + JSON.stringify(v));
+            sigs(v, out);
+        }
+        return out;
+    };
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        for (const [k, v] of Object.entries(x)) {
+            if (/^statelayout$/i.test(k) && isObj(v) && Array.isArray(v.children) && v.children.length > 1) {
+                const each = v.children.map((c) => sigs(c, new Set()));
+                const count = new Map();
+                for (const s of each) for (const sig of s) count.set(sig, (count.get(sig) ?? 0) + 1);
+                const rep = [...count.values()].filter((n) => n > 1);
+                repeated += rep.reduce((a, n) => a + n - 1, 0);
+                panes = Math.max(panes, v.children.length);
+            }
+            visit(v);
+        }
+    };
+    visit(doc.root);
+    return repeated >= 6 ? [{
+        severity: "info", code: "repeated_panes",
+        title: `${repeated} texts and component calls are repeated across stateLayout panes (up to ${panes} panes)`,
+        message: "Each pane is written in full, so a phone/widget/tablet document carries its content once per layout. Put the shared parts in " +
+            "inline components (\"components\": {...}) called from each pane, and set \"componentMode\": \"pattern\": a component used " +
+            "several times is then written once as a template. Or keep one layout that adapts (weights, fitBox, collapsible) where the panes differ little.",
+        count: repeated,
+    }] : [];
+}
+
+// A variable named like an expression function ("step", "min", "time", "day"): both parsers look
+// the name up as a variable first, so "step(2.5, @cur)" becomes 2.5 * cur (U77).
+const EXPR_FUNCTIONS = new Set(["seed", "seed_2arg", "sin", "cos", "tan", "asin", "acos", "atan", "atan2", "sqrt", "abs", "pow", "min", "max", "floor", "ceil", "log", "ln", "sign", "round", "lerp", "step", "smooth_step", "clamp", "ifElse", "mad", "ping_pong", "fract", "exp", "hypot", "square", "rand", "arrayMin", "arrayMax", "arrayLength", "arraySum", "arraySumSqr", "arraySumXY", "arrayGet", "spline", "arraySpline", "splineLoop", "anim", "time", "continuousSec", "seconds", "timeInSec", "timeInMin", "timeInHr", "animationTime", "animTime", "deltaTime", "delta_time", "dt", "animationDeltaTime", "epochSecond", "calendarMonth", "month", "offsetToUtc", "utcOffset", "weekDay", "weekday", "dayOfWeek", "dayOfMonth", "day", "dayOfYear", "year", "windowWidth", "windowHeight", "density", "apiLevel", "fontSize", "touchX", "touchPosX", "touchPositionX", "touchY", "touchPosY", "touchPositionY", "touchVelX", "touchVelocityX", "touchVelY", "touchVelocityY", "touchTime", "touchEventTime", "accelX", "accelerationX", "accelY", "accelerationY", "accelZ", "accelerationZ", "gyroX", "gyroRotX", "gyroRotationX", "gyroY", "gyroRotY", "gyroRotationY", "gyroZ", "gyroRotZ", "gyroRotationZ", "magneticX", "magneticY", "magneticZ", "light", "lightLevel", "batteryLevel", "powerState", "memoryFree", "networkSignal", "rand", "u", "v"]);
+function shadowedFunctionFindings(doc) {
+    const names = new Set();
+    const vars = doc.resources?.variables;
+    if (isObj(vars)) for (const k of Object.keys(vars)) names.add(k);
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (isObj(x.variable) && typeof x.variable.name === "string") names.add(x.variable.name);
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root);
+    // Only a name the document also CALLS is a problem ("day" as a variable is fine until
+    // something writes day()).
+    const text = JSON.stringify(doc);
+    const bad = [...names].filter((n) => EXPR_FUNCTIONS.has(n) && new RegExp(`(^|[^@\\w.])${n}\\s*\\(`).test(text));
+    return bad.length ? [{
+        severity: "warning", code: "shadowed_function",
+        title: `${bad.length} variable(s) named like an expression function: ${bad.join(", ")}`,
+        message: `A variable named ${bad[0]} hides the function ${bad[0]}() in every expression of the document (the format's parser looks names up as variables first: "${bad[0]}(2.5, @x)" no longer calls it). Rename the variable (${bad[0]}Index, cur${bad[0][0].toUpperCase() + bad[0].slice(1)}).`,
+        count: bad.length,
+    }] : [];
+}
+
+// {"spacedBy": "@gap"}: the spacing is a row/column parameter the players read as a plain
+// number; a variable there (its NaN-boxed id) collapses the layout (every child 0 wide).
+function spacedByVariableFindings(doc) {
+    let n = 0;
+    const visit = (x) => {
+        if (Array.isArray(x)) { x.forEach(visit); return; }
+        if (!isObj(x)) return;
+        if (Array.isArray(x.modifiers)) for (const m of x.modifiers) if (isObj(m) && typeof m.spacedBy === "string" && !/^-?\d+(\.\d+)?$/.test(m.spacedBy)) n++;
+        for (const v of Object.values(x)) visit(v);
+    };
+    visit(doc.root); for (const c of Object.values(doc.components ?? {})) if (isObj(c)) visit(c.body);
+    return n ? [{
+        severity: "warning", code: "spaced_by_variable",
+        title: `${n} spacedBy given a variable or expression`,
+        message: "spacedBy is a plain number (dp): a \"@variable\" there is read as garbage and the row or column lays its children out 0 wide. Use a number, or fixed spacer boxes whose width is the variable.",
+        count: n,
     }] : [];
 }
 
@@ -845,6 +957,9 @@ export function designAudit(json) {
         ...undeclaredRefFindings(doc),
         ...paddingKeyFindings(doc),
         ...integerInFloatFindings(doc),
+        ...repeatedPaneFindings(doc),
+        ...shadowedFunctionFindings(doc),
+        ...spacedByVariableFindings(doc),
     ];
     // Literal colours are advice for a feature demo; in a document that is also hard-wired
     // otherwise (glyphs, copies, a fixed date), they are part of the same problem.

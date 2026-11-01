@@ -1,0 +1,897 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 160,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Clock and weather widget"
+ },
+ "components": {
+  "WeatherGlyph": {
+   "summary": "The weather condition icon chosen at run time from @iconIdx (day and night variants)",
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 36,
+     "static": true,
+     "doc": "icon size dp"
+    }
+   },
+   "body": {
+    "stateLayout": {
+     "indexId": "@iconIdx",
+     "children": [
+      {
+       "Icon": {
+        "name": "clear_day",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.warning",
+        "label": "Clear"
+       }
+      },
+      {
+       "Icon": {
+        "name": "partly_cloudy_day",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.warning",
+        "label": "Partly cloudy"
+       }
+      },
+      {
+       "Icon": {
+        "name": "cloud",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.muted",
+        "label": "Cloudy"
+       }
+      },
+      {
+       "Icon": {
+        "name": "rainy",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.primary",
+        "label": "Rain"
+       }
+      },
+      {
+       "Icon": {
+        "name": "weather_snowy",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.primary",
+        "label": "Snow"
+       }
+      },
+      {
+       "Icon": {
+        "name": "thunderstorm",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.warning",
+        "label": "Thunderstorm"
+       }
+      },
+      {
+       "Icon": {
+        "name": "foggy",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.muted",
+        "label": "Fog"
+       }
+      },
+      {
+       "Icon": {
+        "name": "clear_night",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.secondary",
+        "label": "Clear night"
+       }
+      },
+      {
+       "Icon": {
+        "name": "partly_cloudy_night",
+        "style": "rounded",
+        "filled": true,
+        "size": "@size",
+        "color": "@colors.secondary",
+        "label": "Partly cloudy night"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "WeatherGlyph": {}
+   }
+  },
+  "TimeText": {
+   "summary": "The device time, 24h zero-padded or 12h with AM/PM, picked by @use24h",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 36,
+     "static": true,
+     "doc": "digits size"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@hr",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 13
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@mn",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 13
+          }
+         }
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 500,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 12,
+        "maxFontSize": "@fontSize",
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "visibility": "@use24h"
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "visibility": "@show12"
+         }
+        ],
+        "children": [
+         {
+          "fitBox": {
+           "modifiers": [
+            "fillMaxWidth"
+           ],
+           "horizontalAlignment": "start",
+           "children": [
+            {
+             "row": {
+              "verticalAlignment": "bottom",
+              "children": [
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@h12",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 },
+                 "fontSize": "@fontSize * 1",
+                 "fontWeight": 500,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "padding": [
+                    3,
+                    0,
+                    0,
+                    5
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "TextChoice": {
+                    "items": [
+                     "AM",
+                     "PM"
+                    ],
+                    "index": "@pm",
+                    "fontSize": "@fontSize * 1 * 0.4",
+                    "color": "@colors.muted",
+                    "fontWeight": 500
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "row": {
+              "verticalAlignment": "bottom",
+              "children": [
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@h12",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 },
+                 "fontSize": "@fontSize * 0.8",
+                 "fontWeight": 500,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "padding": [
+                    3,
+                    0,
+                    0,
+                    5
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "TextChoice": {
+                    "items": [
+                     "AM",
+                     "PM"
+                    ],
+                    "index": "@pm",
+                    "fontSize": "@fontSize * 0.8 * 0.4",
+                    "color": "@colors.muted",
+                    "fontWeight": 500
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "row": {
+              "verticalAlignment": "bottom",
+              "children": [
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@h12",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 },
+                 "fontSize": "@fontSize * 0.62",
+                 "fontWeight": 500,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "padding": [
+                    3,
+                    0,
+                    0,
+                    5
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "TextChoice": {
+                    "items": [
+                     "AM",
+                     "PM"
+                    ],
+                    "index": "@pm",
+                    "fontSize": "@fontSize * 0.62 * 0.4",
+                    "color": "@colors.muted",
+                    "fontWeight": 500
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "row": {
+              "verticalAlignment": "bottom",
+              "children": [
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@h12",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   }
+                  }
+                 },
+                 "fontSize": "@fontSize * 0.42",
+                 "fontWeight": 500,
+                 "color": "@colors.onSurface",
+                 "maxLines": 1
+                }
+               },
+               {
+                "box": {
+                 "modifiers": [
+                  {
+                   "padding": [
+                    3,
+                    0,
+                    0,
+                    5
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "TextChoice": {
+                    "items": [
+                     "AM",
+                     "PM"
+                    ],
+                    "index": "@pm",
+                    "fontSize": "@fontSize * 0.42 * 0.4",
+                    "color": "@colors.muted",
+                    "fontWeight": 500
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "TimeText": {}
+   }
+  },
+  "Temp": {
+   "summary": "Temperature with unit",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 26,
+     "static": true,
+     "doc": "size"
+    },
+    "weighted": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "take the row's remaining width and shrink to fit"
+    }
+   },
+   "body": {
+    "text": {
+     "value": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "@tempR",
+       "whole": 3,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": "@unit"
+     },
+     "fontSize": "@fontSize",
+     "fontWeight": 500,
+     "color": "@colors.onSurface",
+     "maxLines": 1,
+     "autoSize": true,
+     "minFontSize": 12,
+     "maxFontSize": "@fontSize",
+     "modifiers": {
+      "$if": "weighted",
+      "then": [
+       {
+        "weight": 1
+       }
+      ],
+      "else": []
+     }
+    }
+   },
+   "call": {
+    "Temp": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "cond": {
+    "value": 1,
+    "export": true
+   },
+   "night": {
+    "value": 0,
+    "export": true
+   },
+   "temp": {
+    "value": 18,
+    "export": true
+   },
+   "use24h": {
+    "value": 1,
+    "export": true
+   },
+   "hr": "timeInHr()",
+   "mn": "timeInMin() % 60",
+   "h12": "(@hr + 11) % 12 + 1",
+   "pm": "step(@hr, 11.5)",
+   "show12": "1 - @use24h",
+   "tempR": "round(@temp)",
+   "iconIdx": "@cond + @night * 7 * (1 - step(@cond, 1.5))",
+   "wide": "step(windowWidth(), windowHeight() * 1.6) * step(windowWidth(), 230)",
+   "layoutIdx": "@wide + 2 * (1 - @wide) * (1 - step(windowHeight(), 120))"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "unit",
+    "vtype": "string",
+    "value": "°C",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "clip": {
+       "roundedRect": 22
+      }
+     },
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layoutIdx",
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 14
+           }
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "spaceBetween",
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "TimeText": {
+                   "fontSize": 36
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "collapsiblePriority": {
+                      "orientation": "vertical",
+                      "priority": 1
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "row": {
+                      "verticalAlignment": "center",
+                      "children": [
+                       {
+                        "TextChoice": {
+                         "items": [
+                          "Mon",
+                          "Tue",
+                          "Wed",
+                          "Thu",
+                          "Fri",
+                          "Sat",
+                          "Sun"
+                         ],
+                         "index": "weekDay() - 1",
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 1
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": " ",
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textFromFloat",
+                            "value": "dayOfMonth()",
+                            "whole": 2,
+                            "decimal": 0,
+                            "flags": 5
+                           },
+                           "id2": " "
+                          }
+                         },
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 1
+                        }
+                       },
+                       {
+                        "TextChoice": {
+                         "items": [
+                          "Jan",
+                          "Feb",
+                          "Mar",
+                          "Apr",
+                          "May",
+                          "Jun",
+                          "Jul",
+                          "Aug",
+                          "Sep",
+                          "Oct",
+                          "Nov",
+                          "Dec"
+                         ],
+                         "index": "calendarMonth() - 1",
+                         "fontSize": 14,
+                         "color": "@colors.muted",
+                         "maxLines": 1
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "spacedBy": 6
+                 },
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 2
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "WeatherGlyph": {
+                   "size": 34
+                  }
+                 },
+                 {
+                  "Temp": {
+                   "fontSize": 26,
+                   "weighted": true
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": [
+             16,
+             10
+            ]
+           }
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "TimeText": {
+                "fontSize": 38
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Monday",
+                    "Tuesday",
+                    "Wednesday",
+                    "Thursday",
+                    "Friday",
+                    "Saturday",
+                    "Sunday"
+                   ],
+                   "index": "weekDay() - 1",
+                   "fontSize": 14,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": ", ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "dayOfMonth()",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 5
+                     },
+                     "id2": " "
+                    }
+                   },
+                   "fontSize": 14,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec"
+                   ],
+                   "index": "calendarMonth() - 1",
+                   "fontSize": 14,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              {
+               "spacedBy": 6
+              }
+             ],
+             "children": [
+              {
+               "WeatherGlyph": {
+                "size": 40
+               }
+              },
+              {
+               "Temp": {
+                "fontSize": 30
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": [
+             12,
+             10
+            ]
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "verticalArrangement": "spaceBetween",
+             "children": [
+              {
+               "TimeText": {
+                "fontSize": 30
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "spacedBy": 4
+                 }
+                ],
+                "children": [
+                 {
+                  "WeatherGlyph": {
+                   "size": 24
+                  }
+                 },
+                 {
+                  "Temp": {
+                   "fontSize": 20,
+                   "weighted": true
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

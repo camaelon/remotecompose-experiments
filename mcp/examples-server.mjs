@@ -11,7 +11,7 @@ import path from "node:path";
 import { isMain, serve } from "./lib/mcp-server.mjs";
 import {
     EXAMPLES_DIR, buildKit, componentSummary, exampleDoc, findComponents, findExamples,
-    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly, examplesDefining } from "./lib/catalog.mjs";
+    listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly, examplesDefining, similarGenerated, loadGenerated } from "./lib/catalog.mjs";
 import { lintComponent, loadLibrary } from "./lib/components.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { definition as renderServer } from "./rc-render-server.mjs";
@@ -84,6 +84,7 @@ export const definition = {
                     goal: { type: "string", description: "What to build, in plain words." },
                     capabilities: { ...STR_LIST, description: "Capability ids (or prefixes such as \"input\") to cover as well." },
                     max_examples: { type: "number", description: "At most this many examples (default 4)." },
+                    include_generated: { type: "boolean", description: "Also list documents an assistant built from a similar prompt with these tools (the generated corpus, GEN-NN): whole, not minimal, not Java-verified. Off by default." },
                 },
             },
             examples: [{ goal: "a settings card with switches and a slider" }],
@@ -106,10 +107,18 @@ export const definition = {
                     family: { type: "string", description: "Only this family (LAY, TXT, DRW, CMP, ...)." },
                     max_level: { type: "number", description: "Only examples at this level (1–5) or simpler." },
                     limit: { type: "number", description: "Default 5." },
+                    include_generated: { type: "boolean", description: "Also search the generated corpus (GEN-NN: whole documents built from one prompt each by the eval runs) by query. Off by default." },
                 },
             },
             examples: [{ query: "donut progress ring" }, { capabilities: ["input.drag"], max_level: 3 }],
-            handler: async (a) => json(findExamples(a)),
+            handler: async (a) => {
+                const out = findExamples(a);
+                if (a.include_generated && a.query) {
+                    const sim = similarGenerated(a.query, a.limit ?? 5);
+                    out.generated = sim.map(({ entry: e, shared }) => ({ id: e.id, title: e.title, prompt: e.prompt, components: e.components, bytes: e.bytes, why: `shares ${shared.join(", ")}` }));
+                }
+                return json(out);
+            },
         },
         {
             name: "get_example",

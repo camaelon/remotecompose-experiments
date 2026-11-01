@@ -163,7 +163,7 @@ export const definition = {
             "literal colours that cannot follow light/dark/mono (hardcoded_colors, JSON input only). " +
             "Also float expressions longer than Android accepts (expression_too_long: over 32 entries, the document fails to load on a device although it renders here). " +
             "Re-run at other sizes (width/height) to find size-dependent problems.",
-            "audit", { frames: { type: "integer", description: "Frames simulated for execution coverage (default 30)." } },
+            "audit", { frames: { type: "integer", description: "Frames simulated for execution coverage and the repaint verdict (default 120)." } },
             { mapOptions: pick("frames"), examples: [{ what: "Audit at a phone size", arguments: { rc_path: "docs/card.rc", width: 360, height: 780 } }] }),
 
         tool("list_operations", "List a document's operations",
@@ -267,7 +267,7 @@ export const definition = {
             "simulated run (min/median/mean/max, by type, hottest operations); and execution coverage " +
             "(operations never executed).",
             "runtime", {
-                frames: { type: "integer", description: "Frames to simulate (default 60)." },
+                frames: { type: "integer", description: "Frames to simulate (default 180, 3 s: an ease at load must end inside it to read idle)." },
                 fps: { type: "number", description: "Simulated frame rate (default 60)." },
             }, { mapOptions: pick("frames", "fps") }),
 

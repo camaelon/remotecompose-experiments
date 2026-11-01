@@ -1,0 +1,383 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 170,
+  "profiles": 513,
+  "contentDescription": "How far through the day, the week, the month and the year we are, as four progress bars with percentages"
+ },
+ "componentTheme": "auto",
+ "resources": {
+  "variables": {
+   "dayFrac": "timeInMin() / 1440",
+   "leap": "(1 - min(1, abs(year() % 4))) * min(1, abs(year() % 100)) + (1 - min(1, abs(year() % 400)))",
+   "dim": "30 + (calendarMonth() + floor(calendarMonth() / 8)) % 2 - (1 - min(1, abs(calendarMonth() - 2))) * (2 - @leap)",
+   "weekFrac": "(weekDay() - 1 + @dayFrac) / 7",
+   "monthFrac": "(dayOfMonth() - 1 + @dayFrac) / @dim",
+   "yearFrac": "(dayOfYear() - 1 + @dayFrac) / (365 + @leap)"
+  }
+ },
+ "components": {
+  "PeriodRow": {
+   "summary": "A period name, its percentage elapsed and a progress bar underneath",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "The period name (Day, Week, ...)"
+    },
+    "progress": {
+     "type": "float",
+     "required": true,
+     "doc": "Fraction elapsed, 0..1"
+    }
+   },
+   "body": {
+    "type": "column",
+    "modifiers": [
+     "fillMaxWidth",
+     {
+      "spacedBy": 3
+     }
+    ],
+    "children": [
+     {
+      "type": "row",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": "@label",
+         "fontSize": "@theme.text_sm",
+         "fontWeight": 600,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "floor(@progress * 100)",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": "%"
+         },
+         "fontSize": "@theme.text_sm",
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     },
+     {
+      "ProgressBar": {
+       "progress": "@progress",
+       "height": 8
+      }
+     }
+    ]
+   },
+   "call": {
+    "PeriodRow": {
+     "label": "Day",
+     "progress": 0.42
+    }
+   }
+  },
+  "PeriodLine": {
+   "summary": "A compact one-line period: name, bar and percentage side by side",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "The period name"
+    },
+    "progress": {
+     "type": "float",
+     "required": true,
+     "doc": "Fraction elapsed, 0..1"
+    }
+   },
+   "body": {
+    "type": "row",
+    "modifiers": [
+     "fillMaxWidth"
+    ],
+    "verticalAlignment": "center",
+    "children": [
+     {
+      "text": {
+       "value": "@label",
+       "fontSize": "@theme.text_sm",
+       "fontWeight": 600,
+       "color": "@colors.onSurface",
+       "modifiers": [
+        {
+         "width": 46
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "weight": 1
+        }
+       ],
+       "children": [
+        {
+         "ProgressBar": {
+          "progress": "@progress",
+          "height": 8
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "width": 8
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "width": 34
+        }
+       ],
+       "horizontalAlignment": "end",
+       "children": [
+        {
+         "text": {
+          "value": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "floor(@progress * 100)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": "%"
+          },
+          "fontSize": "@theme.text_sm",
+          "color": "@colors.muted"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   },
+   "call": {
+    "PeriodLine": {
+     "label": "Day",
+     "progress": 0.42
+    }
+   }
+  },
+  "PeriodBar": {
+   "summary": "A bare labelled bar for the smallest sizes",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "The period name, read by screen readers"
+    },
+    "progress": {
+     "type": "float",
+     "required": true,
+     "doc": "Fraction elapsed, 0..1"
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "semantics": {
+        "contentDescription": "@label progress"
+       }
+      }
+     ],
+     "children": [
+      {
+       "ProgressBar": {
+        "progress": "@progress",
+        "height": 8
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "PeriodBar": {
+     "label": "Day",
+     "progress": 0.42
+    }
+   }
+  }
+ },
+ "root": {
+  "type": "box",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.surface"
+   },
+   {
+    "padding": 12
+   }
+  ],
+  "horizontalAlignment": "center",
+  "verticalAlignment": "center",
+  "children": [
+   {
+    "type": "fitBox",
+    "modifiers": [
+     "fillMaxSize"
+    ],
+    "children": [
+     {
+      "type": "column",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 132
+       },
+       {
+        "spacedBy": 8
+       }
+      ],
+      "verticalArrangement": "center",
+      "children": [
+       {
+        "PeriodRow": {
+         "label": "Day",
+         "progress": "@dayFrac"
+        }
+       },
+       {
+        "PeriodRow": {
+         "label": "Week",
+         "progress": "@weekFrac"
+        }
+       },
+       {
+        "PeriodRow": {
+         "label": "Month",
+         "progress": "@monthFrac"
+        }
+       },
+       {
+        "PeriodRow": {
+         "label": "Year",
+         "progress": "@yearFrac"
+        }
+       }
+      ]
+     },
+     {
+      "type": "column",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 72
+       },
+       {
+        "spacedBy": 4
+       }
+      ],
+      "verticalArrangement": "center",
+      "children": [
+       {
+        "PeriodLine": {
+         "label": "Day",
+         "progress": "@dayFrac"
+        }
+       },
+       {
+        "PeriodLine": {
+         "label": "Week",
+         "progress": "@weekFrac"
+        }
+       },
+       {
+        "PeriodLine": {
+         "label": "Month",
+         "progress": "@monthFrac"
+        }
+       },
+       {
+        "PeriodLine": {
+         "label": "Year",
+         "progress": "@yearFrac"
+        }
+       }
+      ]
+     },
+     {
+      "type": "column",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 50
+       },
+       {
+        "spacedBy": 6
+       }
+      ],
+      "verticalArrangement": "center",
+      "children": [
+       {
+        "PeriodBar": {
+         "label": "Day",
+         "progress": "@dayFrac"
+        }
+       },
+       {
+        "PeriodBar": {
+         "label": "Week",
+         "progress": "@weekFrac"
+        }
+       },
+       {
+        "PeriodBar": {
+         "label": "Month",
+         "progress": "@monthFrac"
+        }
+       },
+       {
+        "PeriodBar": {
+         "label": "Year",
+         "progress": "@yearFrac"
+        }
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

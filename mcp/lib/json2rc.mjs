@@ -36,6 +36,15 @@ export function jsonToRc(source, baseDir) {
     if (typeof doc === "string" && (/"[A-Z]\w*"/.test(doc) || /"@(colors|theme)\.|"\$icon"/.test(doc))) {
         try { doc = JSON.parse(doc); } catch { /* json2rc reports it */ }
     }
+    // A layout document needs the header's "profiles": 513 for any text; a missing one is the
+    // most common first-convert failure, so it is supplied (a value given is kept).
+    if (typeof doc === "string" && !/"profiles"\s*:/.test(doc) && /"header"\s*:/.test(doc)) {
+        try { doc = JSON.parse(doc); } catch { /* json2rc reports it */ }
+    }
+    if (doc && typeof doc === "object" && doc.header && typeof doc.header === "object" && doc.header.profiles === undefined && doc.root !== undefined) {
+        doc = { ...doc, header: { ...doc.header, profiles: 513 } };
+        source = doc;
+    }
     if (doc && typeof doc === "object") {
         try {
             if (usesComponents(doc)) source = compileComponents(doc, baseDir).doc;
@@ -56,6 +65,8 @@ export function jsonToRc(source, baseDir) {
 // variable declared AFTER the expression that reads it (they are written in order), and a
 // component local used where its declaration has not been written yet (the root's modifiers).
 function explainToken(message, source) {
+    const fn = /Unsupported integer function: (\w+)/.exec(message);
+    if (fn) return `${message} — this field takes an INTEGER expression (a visibility, an integer variable): only + - * / %, abs, min, max and clamp. Compute it as a float variable first and pass that: "resources": {"variables": {"shown": "${fn[1]}(...)"}}, then {"visibility": "@shown"} (exactly 1 shown, 0 hidden).`;
     const m = /Unknown token in expression: @?([A-Za-z_][\w.]*)/.exec(message);
     if (!m) return message;
     const name = m[1];

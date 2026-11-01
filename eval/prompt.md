@@ -1,6 +1,6 @@
 # Evaluation prompts
 
-Fifty requests a user could plausibly make of an assistant connected to the RemoteCompose MCP
+Requests a user could plausibly make of an assistant connected to the RemoteCompose MCP
 server. They cover widgets, phone screens, watch tiles and dashboards; data computed from the
 clock or public facts, data a host app would supply, and plain controls. Each is run blind
 (an assistant that only sees the `remotecompose` tools) and judged on: layout that adapts
@@ -68,3 +68,24 @@ typed in, theme colours, correctness, and the tool calls it took to get there.
 48. A boarding pass with gate, seat, boarding time, a countdown and a QR-code placeholder.
 49. A recipe card: title, cooking time, servings you can adjust (scaling ingredient amounts), and steps.
 50. An onboarding screen with 3 pages, page dots, and next/skip buttons.
+
+## Maps (Natural Earth outlines, built when the document is built)
+51. A world map showing where it is day and night right now, with my city marked.
+52. A map of Europe highlighting the countries I have visited, with a count in the corner.
+53. A delivery tracker: the courier's position on a city-region map moving between the depot and my address, with the ETA.
+54. A flight status card: the route from Paris to Singapore on a map, the plane's progress, departure and arrival times in each local time.
+55. A weather overview of Australia: each state capital on the map with its temperature and a condition icon.
+56. A time-zone planner: pick a meeting hour with a slider and see on a world map where it falls in working hours.
+
+## Visual explanations (step by step, animated, interactive)
+57. Explain how a four-stroke engine works: a drawing of the piston and valves, steps you can go through with next/previous, and an animation of each stroke.
+58. A visual explanation of the phases of the Moon: the Sun, the Earth and the Moon's orbit, a slider for the day of the cycle, and the Moon as seen from Earth.
+59. Show how compound interest grows: a chart of the balance over 30 years, with sliders for the rate and the yearly deposit, and the total explained in one sentence.
+60. Teach the Pythagorean theorem: a right triangle with squares on its sides, a step-by-step proof you can advance, and the areas animating into place.
+61. Explain how a binary search works on a sorted list of 15 numbers: pick the target, then step through each comparison with the range narrowing.
+62. A visual explanation of why we have seasons: the Earth's tilted orbit around the Sun, a month slider, and the day length and sun height at my latitude.
+63. How a heart pumps blood: the four chambers, the valves opening and closing in an animated cycle, with a play/pause and a step mode.
+64. Explain sorting with bubble sort: 8 bars that swap step by step, play/pause, speed control and the comparison count.
+65. A visual guide to reading a nutrition label: a sample label with each part highlighted in turn as you go through the steps, with a short explanation for each.
+66. Show how a sine wave comes from a rotating circle: the circle, the point going round, its height traced over time, with frequency and amplitude sliders.
+

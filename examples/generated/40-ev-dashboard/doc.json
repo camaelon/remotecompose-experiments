@@ -1,0 +1,758 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 1280,
+  "height": 480,
+  "profiles": 513,
+  "contentDescription": "EV dashboard: speed, battery and range, next navigation turn"
+ },
+ "components": {
+  "SpeedReadout": {
+   "summary": "The current speed as a large eased number with its unit",
+   "params": {
+    "speed": {
+     "type": "float",
+     "required": true,
+     "doc": "km/h"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 150,
+     "doc": "size of the number"
+    }
+   },
+   "locals": {
+    "s": {
+     "value": "@speed",
+     "anim": 0.8
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Speed ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@speed",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": " kilometres per hour"
+         }
+        }
+       }
+      }
+     ],
+     "horizontalAlignment": "center",
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "@s",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 5
+        },
+        "fontSize": "@fontSize",
+        "fontWeight": 700,
+        "color": "@colors.onSurface",
+        "maxLines": 1
+       }
+      },
+      {
+       "text": {
+        "text": "km/h",
+        "fontSize": 24,
+        "color": "@colors.muted"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "SpeedReadout": {
+     "speed": 88
+    }
+   }
+  },
+  "BatteryPanel": {
+   "summary": "Battery percent on a banded arc with the range in km and a low-battery warning",
+   "params": {
+    "pct": {
+     "type": "float",
+     "required": true,
+     "doc": "battery percent"
+    },
+    "range": {
+     "type": "float",
+     "required": true,
+     "doc": "estimated range km"
+    }
+   },
+   "locals": {
+    "b": {
+     "value": "@pct",
+     "anim": 0.8
+    },
+    "r": {
+     "value": "@range",
+     "anim": 0.8
+    },
+    "low": "1 - step(@pct, 19.999)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Battery ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@pct",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " percent, ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@range",
+             "whole": 4,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " kilometres range"
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "horizontalAlignment": "center",
+     "verticalArrangement": "center",
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "verticalWeight": 1
+         }
+        ],
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Gauge": {
+           "value": "@b",
+           "label": "Battery %",
+           "bandLo": 20,
+           "bandHi": 100,
+           "fill": true,
+           "size": 200,
+           "thickness": 16
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@r",
+          "whole": 4,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": " km range"
+        },
+        "fontSize": 24,
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      },
+      {
+       "row": {
+        "modifiers": [
+         {
+          "visibility": "@low"
+         },
+         {
+          "padding": [
+           0,
+           6,
+           0,
+           0
+          ]
+         },
+         {
+          "spacedBy": 6
+         }
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "battery_alert",
+           "size": 24,
+           "color": "@colors.error"
+          }
+         },
+         {
+          "text": {
+           "text": "Low battery",
+           "fontSize": 18,
+           "fontWeight": 600,
+           "color": "@colors.error",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "BatteryPanel": {
+     "pct": 64,
+     "range": 312
+    }
+   }
+  },
+  "NavPanel": {
+   "summary": "Next navigation turn: arrow icon per direction code, formatted distance, street",
+   "params": {
+    "turn": {
+     "type": "float",
+     "required": true,
+     "doc": "0 straight,1 left,2 right,3 slight left,4 slight right,5 U-turn,6 roundabout"
+    },
+    "dist": {
+     "type": "float",
+     "required": true,
+     "doc": "metres to the turn"
+    },
+    "street": {
+     "type": "string",
+     "required": true,
+     "doc": "street name (host string)"
+    },
+    "iconSize": {
+     "type": "float",
+     "default": 80,
+     "static": true,
+     "doc": "arrow size"
+    },
+    "distSize": {
+     "type": "float",
+     "default": 44,
+     "static": true,
+     "doc": "distance text size"
+    }
+   },
+   "locals": {
+    "now": "1 - step(@dist, 20)",
+    "inM": "step(@dist, 20) * (1 - step(@dist, 949))",
+    "inKm1": "step(@dist, 949) * (1 - step(@dist, 9949))",
+    "inKm": "step(@dist, 9949)",
+    "m": "round(@dist / 10) * 10",
+    "km1": "round(@dist / 100) / 10",
+    "km": "round(@dist / 1000)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "clip": {
+        "roundedRect": 24
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": 20
+      }
+     ],
+     "horizontalAlignment": "start",
+     "verticalArrangement": "center",
+     "children": [
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "horizontalAlignment": "start",
+        "children": [
+         {
+          "stateLayout": {
+           "indexId": "@turn",
+           "children": [
+            {
+             "Icon": {
+              "name": "straight",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "turn_left",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "turn_right",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "turn_slight_left",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "turn_slight_right",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "u_turn_left",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "Icon": {
+              "name": "roundabout_right",
+              "size": "@iconSize",
+              "color": "@colors.primary"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            "fillMaxWidth",
+            {
+             "padding": [
+              0,
+              4,
+              0,
+              0
+             ]
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "text": "Now",
+              "fontSize": "@distSize",
+              "fontWeight": 700,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@now"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@m",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": " m"
+              },
+              "fontSize": "@distSize",
+              "fontWeight": 700,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@inM"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@km1",
+                "whole": 1,
+                "decimal": 1,
+                "flags": 7
+               },
+               "id2": " km"
+              },
+              "fontSize": "@distSize",
+              "fontWeight": 700,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@inKm1"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@km",
+                "whole": 4,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": " km"
+              },
+              "fontSize": "@distSize",
+              "fontWeight": 700,
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@inKm"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "TextChoice": {
+        "items": [
+         "Continue straight",
+         "Turn left",
+         "Turn right",
+         "Slight left",
+         "Slight right",
+         "Make a U-turn",
+         "Roundabout exit"
+        ],
+        "index": "@turn",
+        "fontSize": 20,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      },
+      {
+       "text": {
+        "text": "@street",
+        "fontSize": 24,
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 2,
+        "overflow": "ellipsis"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "NavPanel": {
+     "turn": 1,
+     "dist": 800,
+     "street": "Main St"
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "speed": {
+    "value": 88,
+    "export": true
+   },
+   "battery": {
+    "value": 64,
+    "export": true
+   },
+   "range": {
+    "value": 312,
+    "export": true
+   },
+   "turn": {
+    "value": 1,
+    "export": true
+   },
+   "distance": {
+    "value": 800,
+    "export": true
+   },
+   "layout": "step(windowWidth(), windowHeight() * 1.3)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "street",
+    "vtype": "string",
+    "value": "Rue de Rivoli",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 20
+           }
+          ],
+          "horizontalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "horizontalAlignment": "center",
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "SpeedReadout": {
+                "speed": "@speed",
+                "fontSize": "min(150, windowWidth() * 0.2)"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 12
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1.2
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "BatteryPanel": {
+                   "pct": "@battery",
+                   "range": "@range"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 12
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1.2
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "NavPanel": {
+                   "turn": "@turn",
+                   "dist": "@distance",
+                   "street": "@street",
+                   "iconSize": 64,
+                   "distSize": 36
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 24
+           }
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "BatteryPanel": {
+                "pct": "@battery",
+                "range": "@range"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 16
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1.3
+              },
+              "fillMaxHeight"
+             ],
+             "horizontalAlignment": "center",
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "SpeedReadout": {
+                "speed": "@speed",
+                "fontSize": "min(180, windowWidth() * 0.13)"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 16
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1.2
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "NavPanel": {
+                "turn": "@turn",
+                "dist": "@distance",
+                "street": "@street"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

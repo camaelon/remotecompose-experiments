@@ -1,0 +1,1315 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "contentDescription": "Weather overview of Australia: temperature and conditions in the eight state and territory capitals"
+ },
+ "components": {
+  "AusMap": {
+   "summary": "Australia's land and state borders drawn in the map box, scaled to the canvas width",
+   "params": {},
+   "call": {
+    "AusMap": {}
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "k",
+        "value": "componentWidth() / 1000"
+       }
+      },
+      {
+       "save": {}
+      },
+      {
+       "scale": {
+        "sx": "@k",
+        "sy": "@k"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "paint": {
+         "color": "@colors.onSurface",
+         "style": "stroke",
+         "strokeWidth": "1.5 / @k"
+        }
+       },
+       "else": {
+        "paint": {
+         "color": "@colors.track",
+         "style": "fill"
+        }
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawPath": {
+         "path": {
+          "$map": {
+           "region": [
+            110,
+            -50,
+            165,
+            -9
+           ],
+           "layer": "land",
+           "detail": "medium",
+           "outline": true
+          }
+         }
+        }
+       },
+       "else": {
+        "drawPath": {
+         "path": {
+          "$map": {
+           "region": [
+            110,
+            -50,
+            165,
+            -9
+           ],
+           "layer": "land",
+           "detail": "medium"
+          }
+         }
+        }
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.outline",
+        "style": "stroke",
+        "strokeWidth": "1 / @k"
+       }
+      },
+      {
+       "drawPath": {
+        "path": {
+         "$map": {
+          "region": [
+           110,
+           -50,
+           165,
+           -9
+          ],
+          "layer": "states",
+          "countries": [
+           "AUS"
+          ],
+          "detail": "medium"
+         }
+        }
+       }
+      },
+      {
+       "restore": {}
+      }
+     ]
+    }
+   }
+  },
+  "CondIcon": {
+   "summary": "A WeatherIcon chosen at run time from a host code 0 sunny, 1 partly cloudy, 2 cloudy, 3 rain, 4 storm",
+   "params": {
+    "code": {
+     "type": "float",
+     "required": true,
+     "doc": "condition code 0..4"
+    },
+    "size": {
+     "type": "float",
+     "default": 20,
+     "static": true,
+     "doc": "dp"
+    },
+    "name": {
+     "type": "text",
+     "required": true,
+     "doc": "city name"
+    },
+    "temp": {
+     "type": "float",
+     "required": true,
+     "doc": "degC"
+    }
+   },
+   "call": {
+    "CondIcon": {
+     "code": 3,
+     "name": "Sydney",
+     "temp": 20
+    }
+   },
+   "body": {
+    "stateLayout": {
+     "indexId": "@code",
+     "children": [
+      {
+       "WeatherIcon": {
+        "condition": "sun",
+        "size": "@size",
+        "label": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@temp",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " degrees, sunny"
+          }
+         }
+        }
+       }
+      },
+      {
+       "WeatherIcon": {
+        "condition": "partly",
+        "size": "@size",
+        "label": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@temp",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " degrees, partly cloudy"
+          }
+         }
+        }
+       }
+      },
+      {
+       "WeatherIcon": {
+        "condition": "cloud",
+        "size": "@size",
+        "label": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@temp",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " degrees, cloudy"
+          }
+         }
+        }
+       }
+      },
+      {
+       "WeatherIcon": {
+        "condition": "rain",
+        "size": "@size",
+        "label": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@temp",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " degrees, rain"
+          }
+         }
+        }
+       }
+      },
+      {
+       "WeatherIcon": {
+        "condition": "storm",
+        "size": "@size",
+        "label": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@temp",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " degrees, thunderstorm"
+          }
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "PinDot": {
+   "summary": "A city's dot and the leader line to its chip",
+   "params": {
+    "lon": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "lon"
+    },
+    "lat": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "lat"
+    },
+    "ox": {
+     "type": "float",
+     "static": true,
+     "default": 8,
+     "doc": "chip left - dot, dp"
+    },
+    "oy": {
+     "type": "float",
+     "static": true,
+     "default": -20,
+     "doc": "chip top - dot, dp"
+    },
+    "r": {
+     "type": "float",
+     "static": true,
+     "default": 3.5,
+     "doc": "dot radius dp"
+    },
+    "leader": {
+     "type": "bool",
+     "static": true,
+     "default": true,
+     "doc": "draw the leader line"
+    }
+   },
+   "locals": {
+    "px": {
+     "$mapPoint": {
+      "region": [
+       110,
+       -50,
+       165,
+       -9
+      ],
+      "lon": "@lon",
+      "lat": "@lat",
+      "axis": "x"
+     }
+    },
+    "py": {
+     "$mapPoint": {
+      "region": [
+       110,
+       -50,
+       165,
+       -9
+      ],
+      "lon": "@lon",
+      "lat": "@lat",
+      "axis": "y"
+     }
+    }
+   },
+   "call": {
+    "PinDot": {
+     "lon": 151.21,
+     "lat": -33.87
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "k",
+        "value": "componentWidth() / 1000"
+       }
+      },
+      {
+       "variable": {
+        "name": "x",
+        "value": "@px * @k"
+       }
+      },
+      {
+       "variable": {
+        "name": "y",
+        "value": "@py * @k"
+       }
+      },
+      {
+       "$if": "leader",
+       "then": {
+        "paint": {
+         "color": "@colors.muted",
+         "style": "stroke",
+         "strokeWidth": 1
+        }
+       }
+      },
+      {
+       "$if": "leader",
+       "then": {
+        "drawLine": {
+         "x1": "@x",
+         "y1": "@y",
+         "x2": "@x + @ox + 35",
+         "y2": "@y + @oy + 20"
+        }
+       }
+      },
+      {
+       "paint": {
+        "color": "@colors.onSurface",
+        "style": "fill"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@x",
+        "cy": "@y",
+        "radius": "@r * step(componentWidth(), 40)"
+       }
+      }
+     ]
+    }
+   }
+  },
+  "CityChip": {
+   "summary": "A city's chip (condition icon, temperature, name) placed at its map point plus an offset",
+   "params": {
+    "name": {
+     "type": "text",
+     "required": true,
+     "doc": "city name"
+    },
+    "temp": {
+     "type": "float",
+     "required": true,
+     "doc": "degC"
+    },
+    "code": {
+     "type": "float",
+     "required": true,
+     "doc": "0..4"
+    },
+    "lon": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "lon"
+    },
+    "lat": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "lat"
+    },
+    "ox": {
+     "type": "float",
+     "static": true,
+     "default": 8,
+     "doc": "dp"
+    },
+    "oy": {
+     "type": "float",
+     "static": true,
+     "default": -20,
+     "doc": "dp"
+    },
+    "w": {
+     "type": "float",
+     "required": true,
+     "doc": "map width dp"
+    }
+   },
+   "locals": {
+    "px": {
+     "$mapPoint": {
+      "region": [
+       110,
+       -50,
+       165,
+       -9
+      ],
+      "lon": "@lon",
+      "lat": "@lat",
+      "axis": "x"
+     }
+    },
+    "py": {
+     "$mapPoint": {
+      "region": [
+       110,
+       -50,
+       165,
+       -9
+      ],
+      "lon": "@lon",
+      "lat": "@lat",
+      "axis": "y"
+     }
+    }
+   },
+   "call": {
+    "CityChip": {
+     "name": "Sydney",
+     "temp": 24,
+     "code": 0,
+     "lon": 151.21,
+     "lat": -33.87,
+     "w": 328
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "height": "max(0, @w * @py / 1000 + @oy)"
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": "max(0, @w * @px / 1000 + @ox)"
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "modifiers": [
+            {
+             "width": 70
+            },
+            {
+             "height": 40
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "background": "@colors.onSurface"
+             },
+             "else": {
+              "background": "@colors.surfaceHigh"
+             }
+            },
+            {
+             "clip": {
+              "roundedRect": 8
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "padding": 1
+             },
+             "else": {
+              "padding": 0
+             }
+            },
+            {
+             "background": {
+              "$if": "theme.mono",
+              "then": "@colors.background",
+              "else": "@colors.surfaceHigh"
+             }
+            },
+            {
+             "padding": [
+              6,
+              3
+             ]
+            }
+           ],
+           "children": [
+            {
+             "row": {
+              "verticalAlignment": "center",
+              "modifiers": [
+               {
+                "spacedBy": 4
+               }
+              ],
+              "children": [
+               {
+                "CondIcon": {
+                 "code": "@code",
+                 "size": 20,
+                 "name": "@name",
+                 "temp": "@temp"
+                }
+               },
+               {
+                "text": {
+                 "value": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@temp",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": "°"
+                 },
+                 "fontSize": 15,
+                 "fontWeight": 700,
+                 "color": "@colors.onSurface"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "@name",
+              "fontSize": 11,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "overflow": "ellipsis"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "CityTile": {
+   "summary": "Compact city cell for the widget: icon, temperature, name",
+   "params": {
+    "name": {
+     "type": "text",
+     "required": true,
+     "doc": "name"
+    },
+    "temp": {
+     "type": "float",
+     "required": true,
+     "doc": "degC"
+    },
+    "code": {
+     "type": "float",
+     "required": true,
+     "doc": "0..4"
+    }
+   },
+   "call": {
+    "CityTile": {
+     "name": "Sydney",
+     "temp": 24,
+     "code": 0
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "weight": 1
+      }
+     ],
+     "horizontalAlignment": "center",
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "spacedBy": 2
+         }
+        ],
+        "children": [
+         {
+          "CondIcon": {
+           "code": "@code",
+           "size": 18,
+           "name": "@name",
+           "temp": "@temp"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@temp",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": "°"
+           },
+           "fontSize": 14,
+           "fontWeight": 700,
+           "color": "@colors.onSurface"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "@name",
+        "fontSize": 10,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "t_darwin": {
+    "value": 33,
+    "export": true
+   },
+   "c_darwin": {
+    "value": 4,
+    "export": true
+   },
+   "t_perth": {
+    "value": 29,
+    "export": true
+   },
+   "c_perth": {
+    "value": 0,
+    "export": true
+   },
+   "t_brisbane": {
+    "value": 27,
+    "export": true
+   },
+   "c_brisbane": {
+    "value": 1,
+    "export": true
+   },
+   "t_sydney": {
+    "value": 24,
+    "export": true
+   },
+   "c_sydney": {
+    "value": 1,
+    "export": true
+   },
+   "t_canberra": {
+    "value": 17,
+    "export": true
+   },
+   "c_canberra": {
+    "value": 2,
+    "export": true
+   },
+   "t_melbourne": {
+    "value": 19,
+    "export": true
+   },
+   "c_melbourne": {
+    "value": 3,
+    "export": true
+   },
+   "t_adelaide": {
+    "value": 23,
+    "export": true
+   },
+   "c_adelaide": {
+    "value": 0,
+    "export": true
+   },
+   "t_hobart": {
+    "value": 13,
+    "export": true
+   },
+   "c_hobart": {
+    "value": 3,
+    "export": true
+   },
+   "mapW": "min(windowWidth() - 32, (windowHeight() - 96) * 1000 / 856.5)",
+   "mapH": "@mapW * 856.5 / 1000",
+   "layout": "step(windowHeight(), 300) * step(windowWidth(), 330)",
+   "miniW": "max(0, min(windowWidth() - 16, (windowHeight() - 150) * 1000 / 856.5)) * step(windowHeight(), 300)",
+   "miniH": "@miniW * 856.5 / 1000"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "n_darwin",
+    "vtype": "string",
+    "value": "Darwin",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_perth",
+    "vtype": "string",
+    "value": "Perth",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_brisbane",
+    "vtype": "string",
+    "value": "Brisbane",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_sydney",
+    "vtype": "string",
+    "value": "Sydney",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_canberra",
+    "vtype": "string",
+    "value": "Canberra",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_melbourne",
+    "vtype": "string",
+    "value": "Melbourne",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_adelaide",
+    "vtype": "string",
+    "value": "Adelaide",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "n_hobart",
+    "vtype": "string",
+    "value": "Hobart",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 8
+           }
+          ],
+          "horizontalAlignment": "center",
+          "children": [
+           {
+            "text": {
+             "text": "Australia today",
+             "fontSize": 15,
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": {
+                "bottom": 8
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": {
+                "bottom": 8
+               }
+              }
+             ],
+             "children": [
+              {
+               "CityTile": {
+                "name": "@n_darwin",
+                "temp": "@t_darwin",
+                "code": "@c_darwin"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_brisbane",
+                "temp": "@t_brisbane",
+                "code": "@c_brisbane"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_sydney",
+                "temp": "@t_sydney",
+                "code": "@c_sydney"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_canberra",
+                "temp": "@t_canberra",
+                "code": "@c_canberra"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "CityTile": {
+                "name": "@n_melbourne",
+                "temp": "@t_melbourne",
+                "code": "@c_melbourne"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_hobart",
+                "temp": "@t_hobart",
+                "code": "@c_hobart"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_adelaide",
+                "temp": "@t_adelaide",
+                "code": "@c_adelaide"
+               }
+              },
+              {
+               "CityTile": {
+                "name": "@n_perth",
+                "temp": "@t_perth",
+                "code": "@c_perth"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "horizontalAlignment": "center",
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@miniW"
+                 },
+                 {
+                  "height": "@miniH"
+                 }
+                ],
+                "children": [
+                 {
+                  "AusMap": {}
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 130.84,
+                   "lat": -12.46,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 115.86,
+                   "lat": -31.95,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 153.03,
+                   "lat": -27.47,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 151.21,
+                   "lat": -33.87,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 149.13,
+                   "lat": -35.28,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 144.96,
+                   "lat": -37.81,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 138.6,
+                   "lat": -34.93,
+                   "leader": false,
+                   "r": 3
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 147.33,
+                   "lat": -42.88,
+                   "leader": false,
+                   "r": 3
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 16
+           }
+          ],
+          "horizontalAlignment": "center",
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "text": {
+                "text": "Australia today",
+                "fontSize": 20,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "text": {
+                "text": "State and territory capitals",
+                "fontSize": 13,
+                "color": "@colors.muted"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              }
+             ],
+             "horizontalAlignment": "center",
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": "@mapW"
+                 },
+                 {
+                  "height": "@mapH"
+                 }
+                ],
+                "children": [
+                 {
+                  "AusMap": {}
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 130.84,
+                   "lat": -12.46,
+                   "ox": -32,
+                   "oy": 10
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 115.86,
+                   "lat": -31.95,
+                   "ox": -4,
+                   "oy": 10
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 153.03,
+                   "lat": -27.47,
+                   "ox": 4,
+                   "oy": -20
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 151.21,
+                   "lat": -33.87,
+                   "ox": 10,
+                   "oy": -14
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 149.13,
+                   "lat": -35.28,
+                   "ox": 8,
+                   "oy": 18
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 144.96,
+                   "lat": -37.81,
+                   "ox": -72,
+                   "oy": 6
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 138.6,
+                   "lat": -34.93,
+                   "ox": -64,
+                   "oy": -48
+                  }
+                 },
+                 {
+                  "PinDot": {
+                   "lon": 147.33,
+                   "lat": -42.88,
+                   "ox": 10,
+                   "oy": 8
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_darwin",
+                   "temp": "@t_darwin",
+                   "code": "@c_darwin",
+                   "lon": 130.84,
+                   "lat": -12.46,
+                   "ox": -32,
+                   "oy": 10,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_perth",
+                   "temp": "@t_perth",
+                   "code": "@c_perth",
+                   "lon": 115.86,
+                   "lat": -31.95,
+                   "ox": -4,
+                   "oy": 10,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_brisbane",
+                   "temp": "@t_brisbane",
+                   "code": "@c_brisbane",
+                   "lon": 153.03,
+                   "lat": -27.47,
+                   "ox": 4,
+                   "oy": -20,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_sydney",
+                   "temp": "@t_sydney",
+                   "code": "@c_sydney",
+                   "lon": 151.21,
+                   "lat": -33.87,
+                   "ox": 10,
+                   "oy": -14,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_canberra",
+                   "temp": "@t_canberra",
+                   "code": "@c_canberra",
+                   "lon": 149.13,
+                   "lat": -35.28,
+                   "ox": 8,
+                   "oy": 18,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_melbourne",
+                   "temp": "@t_melbourne",
+                   "code": "@c_melbourne",
+                   "lon": 144.96,
+                   "lat": -37.81,
+                   "ox": -72,
+                   "oy": 6,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_adelaide",
+                   "temp": "@t_adelaide",
+                   "code": "@c_adelaide",
+                   "lon": 138.6,
+                   "lat": -34.93,
+                   "ox": -64,
+                   "oy": -48,
+                   "w": "@mapW"
+                  }
+                 },
+                 {
+                  "CityChip": {
+                   "name": "@n_hobart",
+                   "temp": "@t_hobart",
+                   "code": "@c_hobart",
+                   "lon": 147.33,
+                   "lat": -42.88,
+                   "ox": 10,
+                   "oy": 8,
+                   "w": "@mapW"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

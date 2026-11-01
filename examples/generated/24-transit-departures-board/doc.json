@@ -1,0 +1,918 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Bus departures: the next buses at this stop with minutes until each leaves"
+ },
+ "components": {
+  "Departure": {
+   "summary": "One departure row: line badge, destination, live minutes until departure; hidden when gone or empty",
+   "params": {
+    "line": {
+     "type": "text",
+     "required": true,
+     "doc": "line number (text variable)"
+    },
+    "dest": {
+     "type": "text",
+     "required": true,
+     "doc": "destination (text variable)"
+    },
+    "mins": {
+     "type": "float",
+     "required": true,
+     "doc": "minutes until departure, computed in the document"
+    },
+    "shown": {
+     "type": "float",
+     "required": true,
+     "doc": "declared variable: 1 when the slot holds a departure not yet gone"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "badge colour"
+    },
+    "priority": {
+     "type": "float",
+     "default": 1,
+     "static": true,
+     "doc": "collapsible priority (lowest dropped first)"
+    },
+    "style": {
+     "type": "enum",
+     "values": [
+      "wide",
+      "compact"
+     ],
+     "default": "wide",
+     "doc": "wide: one line; compact: destination over minutes"
+    }
+   },
+   "locals": {
+    "isNow": "1 - step(@mins, 0.5)",
+    "isOne": "step(@mins, 0.5) - step(@mins, 1.5)",
+    "later": "step(@mins, 1.5)"
+   },
+   "body": {
+    "$if": "style == 'compact'",
+    "then": {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "visibility": "@shown"
+       },
+       {
+        "collapsiblePriority": {
+         "orientation": "vertical",
+         "priority": "@priority"
+        }
+       },
+       {
+        "padding": [
+         0,
+         2
+        ]
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 40
+          }
+         ],
+         "horizontalAlignment": "start",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": "@line",
+            "fontSize": 12,
+            "fontWeight": 700,
+            "maxLines": 1,
+            "color": {
+             "$if": "theme.mono",
+             "then": "@colors.onPrimary",
+             "else": "@colors.onLine"
+            },
+            "modifiers": [
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Line ",
+                "id2": "@line"
+               }
+              }
+             },
+             {
+              "clip": {
+               "roundedRect": 6
+              }
+             },
+             {
+              "background": {
+               "$if": "theme.mono",
+               "then": "@colors.primary",
+               "else": "@color"
+              }
+             },
+             {
+              "padding": [
+               5,
+               1
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "horizontalAlignment": "start",
+         "children": [
+          {
+           "text": {
+            "value": "@dest",
+            "fontSize": 12,
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "to ",
+                "id2": "@dest"
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "children": [
+             {
+              "text": {
+               "value": "now",
+               "fontSize": 12,
+               "fontWeight": 700,
+               "color": "@colors.primary",
+               "modifiers": [
+                {
+                 "visibility": "@isNow"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "departing now"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "1 min",
+               "fontSize": 12,
+               "fontWeight": 700,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "visibility": "@isOne"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "in 1 minute"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@mins",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": " min"
+               },
+               "fontSize": 12,
+               "fontWeight": 700,
+               "color": "@colors.muted",
+               "modifiers": [
+                {
+                 "visibility": "@later"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "in ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@mins",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " minutes"
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "visibility": "@shown"
+       },
+       {
+        "collapsiblePriority": {
+         "orientation": "vertical",
+         "priority": "@priority"
+        }
+       },
+       {
+        "padding": [
+         0,
+         3
+        ]
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 44
+          }
+         ],
+         "horizontalAlignment": "start",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": "@line",
+            "fontSize": 13,
+            "fontWeight": 700,
+            "maxLines": 1,
+            "color": {
+             "$if": "theme.mono",
+             "then": "@colors.onPrimary",
+             "else": "@colors.onLine"
+            },
+            "modifiers": [
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Line ",
+                "id2": "@line"
+               }
+              }
+             },
+             {
+              "clip": {
+               "roundedRect": 6
+              }
+             },
+             {
+              "background": {
+               "$if": "theme.mono",
+               "then": "@colors.primary",
+               "else": "@color"
+              }
+             },
+             {
+              "padding": [
+               5,
+               1
+              ]
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "@dest",
+         "fontSize": 14,
+         "maxLines": 1,
+         "overflow": "ellipsis",
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "to ",
+             "id2": "@dest"
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 52
+          }
+         ],
+         "horizontalAlignment": "end",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "text": {
+            "value": "now",
+            "fontSize": 14,
+            "fontWeight": 700,
+            "color": "@colors.primary",
+            "modifiers": [
+             {
+              "visibility": "@isNow"
+             },
+             {
+              "semantics": {
+               "contentDescription": "departing now"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "1 min",
+            "fontSize": 14,
+            "fontWeight": 700,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "visibility": "@isOne"
+             },
+             {
+              "semantics": {
+               "contentDescription": "in 1 minute"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@mins",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": " min"
+            },
+            "fontSize": 14,
+            "fontWeight": 700,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "visibility": "@later"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "in ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@mins",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " minutes"
+                }
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   },
+   "call": {
+    "Departure": {
+     "line": "42",
+     "dest": "Central",
+     "mins": 5,
+     "shown": 1
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "dep1": {
+    "value": 535,
+    "export": true
+   },
+   "dep2": {
+    "value": 538,
+    "export": true
+   },
+   "dep3": {
+    "value": 544,
+    "export": true
+   },
+   "dep4": {
+    "value": 551,
+    "export": true
+   },
+   "dep5": {
+    "value": 560,
+    "export": true
+   },
+   "m1": "(@dep1 - timeInMin() + 2160) % 1440 - 720",
+   "v1": "step(@dep1, -0.5) * step(@m1, -0.5)",
+   "m2": "(@dep2 - timeInMin() + 2160) % 1440 - 720",
+   "v2": "step(@dep2, -0.5) * step(@m2, -0.5)",
+   "m3": "(@dep3 - timeInMin() + 2160) % 1440 - 720",
+   "v3": "step(@dep3, -0.5) * step(@m3, -0.5)",
+   "m4": "(@dep4 - timeInMin() + 2160) % 1440 - 720",
+   "v4": "step(@dep4, -0.5) * step(@m4, -0.5)",
+   "m5": "(@dep5 - timeInMin() + 2160) % 1440 - 720",
+   "v5": "step(@dep5, -0.5) * step(@m5, -0.5)",
+   "noneLeft": "1 - min(1, @v1 + @v2 + @v3 + @v4 + @v5)",
+   "layout": "step(windowWidth(), 200)"
+  },
+  "colors": {
+   "line1Color": "#FF1565C0",
+   "line2Color": "#FFC62828",
+   "line3Color": "#FF2E7D32",
+   "line4Color": "#FF6A1B9A",
+   "line5Color": "#FFEF6C00",
+   "onLine": "#FFFFFFFF"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "stop",
+    "vtype": "string",
+    "value": "Elm St & 5th Ave",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "line1",
+    "vtype": "string",
+    "value": "42",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "dest1",
+    "vtype": "string",
+    "value": "Central Station",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "line2",
+    "vtype": "string",
+    "value": "7",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "dest2",
+    "vtype": "string",
+    "value": "Harbour via Market St",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "line3",
+    "vtype": "string",
+    "value": "N12",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "dest3",
+    "vtype": "string",
+    "value": "Airport",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "line4",
+    "vtype": "string",
+    "value": "118",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "dest4",
+    "vtype": "string",
+    "value": "Northgate Mall",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "line5",
+    "vtype": "string",
+    "value": "3",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "dest5",
+    "vtype": "string",
+    "value": "University",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": [
+             12,
+             6
+            ]
+           }
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "top",
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   3
+                  ]
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "Icon": {
+                   "name": "directions_bus",
+                   "size": 18,
+                   "color": "@colors.primary"
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 6
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@stop",
+                   "fontSize": 13,
+                   "fontWeight": 700,
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "color": "@colors.onSurface",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line1",
+                "dest": "@dest1",
+                "mins": "@m1",
+                "shown": "@v1",
+                "color": "@colors.line1Color",
+                "priority": 5,
+                "style": "compact"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line2",
+                "dest": "@dest2",
+                "mins": "@m2",
+                "shown": "@v2",
+                "color": "@colors.line2Color",
+                "priority": 4,
+                "style": "compact"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line3",
+                "dest": "@dest3",
+                "mins": "@m3",
+                "shown": "@v3",
+                "color": "@colors.line3Color",
+                "priority": 3,
+                "style": "compact"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line4",
+                "dest": "@dest4",
+                "mins": "@m4",
+                "shown": "@v4",
+                "color": "@colors.line4Color",
+                "priority": 2,
+                "style": "compact"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line5",
+                "dest": "@dest5",
+                "mins": "@m5",
+                "shown": "@v5",
+                "color": "@colors.line5Color",
+                "priority": 1,
+                "style": "compact"
+               }
+              },
+              {
+               "text": {
+                "value": "No more departures",
+                "fontSize": 13,
+                "color": "@colors.muted",
+                "modifiers": [
+                 {
+                  "visibility": "@noneLeft"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   6
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": [
+             12,
+             6
+            ]
+           }
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "top",
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": [
+                   0,
+                   0,
+                   0,
+                   3
+                  ]
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "Icon": {
+                   "name": "directions_bus",
+                   "size": 18,
+                   "color": "@colors.primary"
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "width": 6
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@stop",
+                   "fontSize": 14,
+                   "fontWeight": 700,
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "color": "@colors.onSurface",
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "Departures",
+                   "fontSize": 12,
+                   "color": "@colors.muted"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line1",
+                "dest": "@dest1",
+                "mins": "@m1",
+                "shown": "@v1",
+                "color": "@colors.line1Color",
+                "priority": 5,
+                "style": "wide"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line2",
+                "dest": "@dest2",
+                "mins": "@m2",
+                "shown": "@v2",
+                "color": "@colors.line2Color",
+                "priority": 4,
+                "style": "wide"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line3",
+                "dest": "@dest3",
+                "mins": "@m3",
+                "shown": "@v3",
+                "color": "@colors.line3Color",
+                "priority": 3,
+                "style": "wide"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line4",
+                "dest": "@dest4",
+                "mins": "@m4",
+                "shown": "@v4",
+                "color": "@colors.line4Color",
+                "priority": 2,
+                "style": "wide"
+               }
+              },
+              {
+               "Departure": {
+                "line": "@line5",
+                "dest": "@dest5",
+                "mins": "@m5",
+                "shown": "@v5",
+                "color": "@colors.line5Color",
+                "priority": 1,
+                "style": "wide"
+               }
+              },
+              {
+               "text": {
+                "value": "No more departures",
+                "fontSize": 13,
+                "color": "@colors.muted",
+                "modifiers": [
+                 {
+                  "visibility": "@noneLeft"
+                 },
+                 {
+                  "padding": [
+                   0,
+                   6
+                  ]
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

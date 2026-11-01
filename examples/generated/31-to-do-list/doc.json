@@ -1,0 +1,700 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "To-do list with 8 items and a count of what is left"
+ },
+ "components": {
+  "TodoRow": {
+   "params": {
+    "checked": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "0/1 done state"
+    },
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "item text (host string)"
+    },
+    "width": {
+     "type": "variable",
+     "initial": 300,
+     "doc": "row width"
+    },
+    "height": {
+     "type": "variable",
+     "initial": 44,
+     "doc": "row height"
+    },
+    "onClick": {
+     "type": "action",
+     "doc": "extra actions after the flip"
+    }
+   },
+   "locals": {
+    "p": {
+     "value": "@checked",
+     "anim": 0.15
+    }
+   },
+   "body": {
+    "box": {
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": [
+           0,
+           0
+          ]
+         }
+        ],
+        "commands": [
+         {
+          "global": {
+           "commands": [
+            {
+             "textSubtext": {
+              "text": "Not checkedChecked    ",
+              "start": "@checked * 11",
+              "len": 11,
+              "varName": "tdState11"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@tdState11",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "tdState"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxSize",
+         "ripple",
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "stateDescription": "@tdState",
+           "clickable": true
+          }
+         },
+         {
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@checked",
+            "value": "1 - @checked"
+           },
+           {
+            "$if": "onClick",
+            "then": "@onClick"
+           }
+          ]
+         }
+        ],
+        "children": [
+         {
+          "canvas": {
+           "modifiers": [
+            {
+             "width": 22
+            },
+            {
+             "height": 22
+            }
+           ],
+           "commands": [
+            {
+             "$if": "theme.mono",
+             "then": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.outline"
+                 },
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": "@theme.stroke"
+                 },
+                 {
+                  "alpha": 1
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 1,
+                "top": 1,
+                "right": 21,
+                "bottom": 21,
+                "rx": 5,
+                "ry": 5
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.primary"
+                 },
+                 {
+                  "alpha": "@checked"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 1,
+                "top": 1,
+                "right": 21,
+                "bottom": 21,
+                "rx": 5,
+                "ry": 5
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "strokeWidth": 2.5
+                 },
+                 {
+                  "strokeCap": "round"
+                 }
+                ]
+               }
+              },
+              {
+               "drawLine": {
+                "x1": 5.5,
+                "y1": 11.5,
+                "x2": 9.5,
+                "y2": 15.5
+               }
+              },
+              {
+               "drawLine": {
+                "x1": 9.5,
+                "y1": 15.5,
+                "x2": 16.5,
+                "y2": 7
+               }
+              }
+             ],
+             "else": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.outline"
+                 },
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": 2
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 1,
+                "top": 1,
+                "right": 21,
+                "bottom": 21,
+                "rx": 5,
+                "ry": 5
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.primary"
+                 },
+                 {
+                  "style": "fill"
+                 },
+                 {
+                  "alpha": "@p"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRoundRect": {
+                "left": 0,
+                "top": 0,
+                "right": 22,
+                "bottom": 22,
+                "rx": 6,
+                "ry": 6
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onPrimary"
+                 },
+                 {
+                  "style": "stroke"
+                 },
+                 {
+                  "strokeWidth": 2.5
+                 },
+                 {
+                  "strokeCap": "round"
+                 },
+                 {
+                  "alpha": "@p"
+                 }
+                ]
+               }
+              },
+              {
+               "drawLine": {
+                "x1": 5.5,
+                "y1": 11.5,
+                "x2": 9.5,
+                "y2": 15.5
+               }
+              },
+              {
+               "drawLine": {
+                "x1": 9.5,
+                "y1": 15.5,
+                "x2": 16.5,
+                "y2": 7
+               }
+              }
+             ]
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 12
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "value": "@label",
+              "fontSize": "@theme.text_md",
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "visibility": "1 - @checked"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "@label",
+              "fontSize": "@theme.text_md",
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "overflow": "ellipsis",
+              "modifiers": [
+               {
+                "visibility": "@checked"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 6
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "modifiers": [
+      {
+       "width": "@width"
+      },
+      {
+       "height": "@height"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "done1": {
+    "value": 0,
+    "export": true
+   },
+   "done2": {
+    "value": 0,
+    "export": true
+   },
+   "done3": {
+    "value": 0,
+    "export": true
+   },
+   "done4": {
+    "value": 0,
+    "export": true
+   },
+   "done5": {
+    "value": 0,
+    "export": true
+   },
+   "done6": {
+    "value": 0,
+    "export": true
+   },
+   "done7": {
+    "value": 0,
+    "export": true
+   },
+   "done8": {
+    "value": 0,
+    "export": true
+   },
+   "left": "8 - (@done1 + @done2 + @done3 + @done4 + @done5 + @done6 + @done7 + @done8)",
+   "anyLeft": "min(@left, 1)",
+   "noneLeft": "1 - @anyLeft",
+   "tall": "step(windowHeight(), 450)",
+   "cols": "1 + max((1 - @tall) * step(windowWidth(), 300), step(windowWidth(), 600))",
+   "pad": "8 + 8 * @tall",
+   "itemW": "(windowWidth() - 2 * @pad) / @cols - 0.5",
+   "rowH": "28 + 20 * @tall"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "item1",
+    "vtype": "string",
+    "value": "Buy groceries",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item2",
+    "vtype": "string",
+    "value": "Call the dentist",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item3",
+    "vtype": "string",
+    "value": "Pay electricity bill",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item4",
+    "vtype": "string",
+    "value": "Water the plants",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item5",
+    "vtype": "string",
+    "value": "Book train tickets",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item6",
+    "vtype": "string",
+    "value": "Reply to Sam's email",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item7",
+    "vtype": "string",
+    "value": "Pick up dry cleaning",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "item8",
+    "vtype": "string",
+    "value": "Renew library books",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": "@pad"
+     },
+     {
+      "spacedBy": 2
+     }
+    ],
+    "children": [
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "To-do",
+          "fontSize": "@theme.text_lg",
+          "fontWeight": 700,
+          "color": "@colors.onSurface",
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "children": [
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@left",
+               "whole": 1,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " left"
+             },
+             "fontSize": "@theme.text_md",
+             "fontWeight": 600,
+             "color": "@colors.primary",
+             "modifiers": [
+              {
+               "visibility": "@anyLeft"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "All done",
+             "fontSize": "@theme.text_md",
+             "fontWeight": 600,
+             "color": "@colors.success",
+             "modifiers": [
+              {
+               "visibility": "@noneLeft"
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "flow": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "TodoRow": {
+          "label": "@item1",
+          "checked": "@done1",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem1",
+            "value": "@done1",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item2",
+          "checked": "@done2",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem2",
+            "value": "@done2",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item3",
+          "checked": "@done3",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem3",
+            "value": "@done3",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item4",
+          "checked": "@done4",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem4",
+            "value": "@done4",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item5",
+          "checked": "@done5",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem5",
+            "value": "@done5",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item6",
+          "checked": "@done6",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem6",
+            "value": "@done6",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item7",
+          "checked": "@done7",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem7",
+            "value": "@done7",
+            "valueType": "float"
+           }
+          ]
+         }
+        },
+        {
+         "TodoRow": {
+          "label": "@item8",
+          "checked": "@done8",
+          "width": "@itemW",
+          "height": "@rowH",
+          "onClick": [
+           {
+            "type": "hostNamedAction",
+            "name": "toggleItem8",
+            "value": "@done8",
+            "valueType": "float"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

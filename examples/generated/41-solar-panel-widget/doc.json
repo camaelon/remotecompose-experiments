@@ -1,0 +1,795 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Solar panels: power produced now, today's production curve up to now, energy produced today and the money it saved"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "PowerNow": {
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 30,
+     "static": true
+    }
+   },
+   "body": {
+    "box": {
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "round(@powerKw * 1000)",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": " W"
+        },
+        "fontSize": "@size",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": "@size",
+        "overflow": "ellipsis",
+        "fontWeight": 600,
+        "modifiers": [
+         {
+          "visibility": "@isW"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@powerKw",
+          "whole": 1,
+          "decimal": 2,
+          "flags": 519
+         },
+         "id2": " kW"
+        },
+        "fontSize": "@size",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": "@size",
+        "overflow": "ellipsis",
+        "fontWeight": 600,
+        "modifiers": [
+         {
+          "visibility": "@isKw1"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@powerKw",
+          "whole": 3,
+          "decimal": 1,
+          "flags": 519
+         },
+         "id2": " kW"
+        },
+        "fontSize": "@size",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": "@size",
+        "overflow": "ellipsis",
+        "fontWeight": 600,
+        "modifiers": [
+         {
+          "visibility": "@isKw2"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@powerKw / 1000",
+          "whole": 6,
+          "decimal": 2,
+          "flags": 535
+         },
+         "id2": " MW"
+        },
+        "fontSize": "@size",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": "@size",
+        "overflow": "ellipsis",
+        "fontWeight": 600,
+        "modifiers": [
+         {
+          "visibility": "@isMw"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Status": {
+   "params": {},
+   "body": {
+    "box": {
+     "children": [
+      {
+       "text": {
+        "value": "Producing now",
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@producing"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Not producing",
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@idle"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Saved": {
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 16,
+     "static": true
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "spacedBy": 4
+      }
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "savings",
+        "size": 16,
+        "color": "@colors.success"
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": "@currency",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@cents / 100",
+           "whole": 9,
+           "decimal": 2,
+           "flags": 535
+          },
+          "id2": " saved"
+         }
+        },
+        "fontSize": "@size",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": "@size",
+        "overflow": "ellipsis",
+        "fontWeight": 500
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Energy": {
+   "params": {},
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "spacedBy": 4
+      }
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "bolt",
+        "size": 16,
+        "color": "@colors.muted"
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@energyKwh",
+          "whole": 7,
+          "decimal": 1,
+          "flags": 535
+         },
+         "id2": " kWh today"
+        },
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "autoSize": true,
+        "minFontSize": 10,
+        "maxFontSize": 12,
+        "overflow": "ellipsis"
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Header": {
+   "params": {},
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "spacedBy": 6
+      }
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "solar_power",
+        "size": 20,
+        "color": "@colors.warning"
+       }
+      },
+      {
+       "text": {
+        "value": "Solar",
+        "fontSize": 13,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "fontWeight": 500
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "prod": {
+    "value": [
+     0,
+     0,
+     0.16,
+     0.46,
+     0.82,
+     1.25,
+     1.7,
+     2.16,
+     2.63,
+     3.08,
+     3.49,
+     3.87,
+     4.19,
+     4.45,
+     4.64,
+     4.76,
+     4.8,
+     4.76,
+     4.64,
+     4.45,
+     4.19,
+     3.87,
+     3.49,
+     3.08,
+     2.63,
+     2.16,
+     1.7,
+     1.25,
+     0.82,
+     0.46,
+     0.16,
+     0,
+     0
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "powerKw": {
+    "value": 4.45,
+    "export": true
+   },
+   "energyKwh": {
+    "value": 26.9,
+    "export": true
+   },
+   "price": {
+    "value": 0.2516,
+    "export": true
+   },
+   "now": "timeInMin()",
+   "producing": "step(@powerKw, 0.0005)",
+   "idle": "1 - @producing",
+   "isW": "1 - step(@powerKw, 0.9995)",
+   "isMw": "step(@powerKw, 999.995)",
+   "isKw2": "step(@powerKw, 9.995) - @isMw",
+   "isKw1": "1 - @isW - @isKw2 - @isMw",
+   "cents": "round(@energyKwh * @price * 100)",
+   "yMax": "max(1, arrayMax(@prod) * 1.1)",
+   "hide": "@yMax * 4",
+   "nowP": "@now + 1",
+   "layout": "step(windowWidth(), 239) * (1 + step(130, windowHeight()))"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "currency",
+    "vtype": "string",
+    "value": "€",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "top",
+             "children": [
+              {
+               "Header": {}
+              },
+              {
+               "PowerNow": {
+                "size": 26
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 1
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "Status": {}
+                 }
+                ]
+               }
+              },
+              {
+               "Saved": {
+                "size": 14
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 2
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "Energy": {}
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": {
+                   "top": 4
+                  }
+                 },
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 3
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 36
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 2
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LineChart": {
+                      "fn": "arraySpline(@prod, clamp(0, 1, (u - 300) / 960)) - @hide * step(u, @nowP)",
+                      "x_min": 300,
+                      "area": false,
+                      "x_max": 1260,
+                      "y_min": 0,
+                      "y_max": "@yMax",
+                      "now": "@now",
+                      "label": "Production today from 5:00 to 21:00, drawn up to now",
+                      "height": 36
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              {
+               "width": 128
+              },
+              "fillMaxHeight"
+             ],
+             "verticalArrangement": "spaceBetween",
+             "children": [
+              {
+               "Header": {}
+              },
+              {
+               "column": {
+                "children": [
+                 {
+                  "PowerNow": {}
+                 },
+                 {
+                  "Status": {}
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "Saved": {}
+                 },
+                 {
+                  "Energy": {}
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 "fillMaxSize"
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "verticalWeight": 1
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 2
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LineChart": {
+                      "fn": "arraySpline(@prod, clamp(0, 1, (u - 300) / 960)) - @hide * step(u, @nowP)",
+                      "x_min": 300,
+                      "area": false,
+                      "x_max": 1260,
+                      "y_min": 0,
+                      "y_max": "@yMax",
+                      "now": "@now",
+                      "label": "Production today from 5:00 to 21:00, drawn up to now",
+                      "fill": true
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "padding": {
+                      "top": 2
+                     }
+                    }
+                   ],
+                   "horizontalArrangement": "spaceBetween",
+                   "children": [
+                    {
+                     "text": {
+                      "value": "5",
+                      "fontSize": 10,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "9",
+                      "fontSize": 10,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "13",
+                      "fontSize": 10,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "17",
+                      "fontSize": 10,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "21",
+                      "fontSize": 10,
+                      "color": "@colors.muted",
+                      "maxLines": 1
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "Icon": {
+             "name": "solar_power",
+             "size": 24,
+             "color": "@colors.warning"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "children": [
+              {
+               "PowerNow": {
+                "size": 22
+               }
+              },
+              {
+               "Saved": {
+                "size": 14
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 12
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 "fillMaxSize"
+                ],
+                "children": [
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "verticalWeight": 1
+                    },
+                    {
+                     "clip": {
+                      "roundedRect": 2
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LineChart": {
+                      "fn": "arraySpline(@prod, clamp(0, 1, (u - 300) / 960)) - @hide * step(u, @nowP)",
+                      "x_min": 300,
+                      "area": false,
+                      "x_max": 1260,
+                      "y_min": 0,
+                      "y_max": "@yMax",
+                      "now": "@now",
+                      "label": "Production today from 5:00 to 21:00, drawn up to now",
+                      "fill": true
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

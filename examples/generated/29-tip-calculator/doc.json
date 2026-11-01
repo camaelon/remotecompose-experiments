@@ -1,0 +1,713 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 720,
+  "profiles": 513,
+  "contentDescription": "Tip calculator"
+ },
+ "resources": {
+  "variables": {
+   "bill": {
+    "value": 0,
+    "export": true
+   },
+   "people": {
+    "value": 1,
+    "export": true
+   },
+   "tip10": {
+    "value": 0,
+    "export": true
+   },
+   "tip15": {
+    "value": 1,
+    "export": true
+   },
+   "tip20": {
+    "value": 0,
+    "export": true
+   },
+   "not10": "1 - @tip10",
+   "not15": "1 - @tip15",
+   "not20": "1 - @tip20",
+   "scroll": 0,
+   "contentW": "min(560, windowWidth() - 32)",
+   "pct": {
+    "value": "@tip10 * 10 + @tip15 * 15 + @tip20 * 20",
+    "export": true
+   },
+   "billC": "round(@bill * 100)",
+   "tipC": "round(@bill * @pct)",
+   "tipAmt": {
+    "value": "@tipC / 100",
+    "export": true
+   },
+   "total": {
+    "value": "(@billC + @tipC) / 100",
+    "export": true
+   },
+   "each": {
+    "value": "round((@billC + @tipC) / max(1, @people)) / 100",
+    "export": true
+   },
+   "billEmpty": "1 - step(@bill, 0.005)",
+   "billSet": "step(@bill, 0.005)"
+  }
+ },
+ "components": {
+  "ResultRow": {
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true
+    },
+    "amount": {
+     "type": "float",
+     "required": true
+    },
+    "size": {
+     "type": "float",
+     "default": 18
+    },
+    "weight": {
+     "type": "float",
+     "default": 500
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "padding": [
+        0,
+        6
+       ]
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "@label",
+          "id2": " "
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": "$",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@amount",
+           "whole": 9,
+           "decimal": 2,
+           "flags": 535
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "text": "@label",
+        "fontSize": 16,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": "$",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "@amount",
+          "whole": 9,
+          "decimal": 2,
+          "flags": 535
+         }
+        },
+        "fontSize": "@size",
+        "fontWeight": "@weight",
+        "color": "@colors.onSurface",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   }
+  },
+  "TipChip": {
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true
+    },
+    "selected": {
+     "type": "variable"
+    },
+    "unselected": {
+     "type": "variable"
+    },
+    "onClick": {
+     "type": "action"
+    }
+   },
+   "body": {
+    "box": {
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "height": 48
+         },
+         {
+          "visibility": "@selected"
+         },
+         {
+          "semantics": {
+           "stateDescription": "Selected"
+          }
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "height": 32
+            },
+            {
+             "clip": {
+              "roundedRect": 16
+             }
+            },
+            {
+             "background": "@colors.primary"
+            },
+            "ripple",
+            {
+             "padding": [
+              16,
+              0
+             ]
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "text": "@label",
+              "fontSize": 14,
+              "fontWeight": 600,
+              "color": "@colors.onPrimary",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "height": 48
+         },
+         {
+          "visibility": "@unselected"
+         },
+         {
+          "semantics": {
+           "stateDescription": "Not selected"
+          }
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "height": 32
+            },
+            {
+             "clip": {
+              "roundedRect": 16
+             }
+            },
+            {
+             "background": "@colors.outline"
+            },
+            {
+             "padding": 1
+            },
+            {
+             "clip": {
+              "roundedRect": 15
+             }
+            },
+            {
+             "background": "@colors.surfaceHigh"
+            },
+            "ripple",
+            {
+             "padding": [
+              15,
+              0
+             ]
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "text": "@label",
+              "fontSize": 14,
+              "fontWeight": 500,
+              "color": "@colors.onSurface",
+              "maxLines": 1
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ],
+     "modifiers": [
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@label",
+         "id2": " tip"
+        },
+        "clickable": true
+       }
+      },
+      {
+       "onClick": "@onClick"
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "verticalScroll": "@scroll"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "horizontalAlignment": "center",
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       {
+        "width": "@contentW"
+       },
+       {
+        "spacedBy": 16
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "text": "Tip calculator",
+         "fontSize": 24,
+         "fontWeight": 700,
+         "color": "@colors.onSurface",
+         "modifiers": [
+          "fillMaxWidth"
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "spacedBy": 8
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "text": "Bill amount",
+            "fontSize": 14,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 56
+             },
+             {
+              "clip": {
+               "roundedRect": 12
+              }
+             },
+             {
+              "background": "@colors.outline"
+             },
+             {
+              "padding": 1
+             },
+             {
+              "clip": {
+               "roundedRect": 11
+              }
+             },
+             {
+              "background": "@colors.surfaceHigh"
+             },
+             "ripple",
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Bill amount, $",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@bill",
+                 "whole": 9,
+                 "decimal": 2,
+                 "flags": 535
+                }
+               },
+               "clickable": true
+              }
+             },
+             {
+              "onClick": {
+               "type": "hostNamedAction",
+               "name": "editBill"
+              }
+             },
+             {
+              "padding": [
+               16,
+               0
+              ]
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@bill",
+                    "whole": 9,
+                    "decimal": 2,
+                    "flags": 535
+                   }
+                  },
+                  "fontSize": 22,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "modifiers": [
+                   {
+                    "visibility": "@billSet"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "text": "Tap to enter the bill",
+                  "fontSize": 18,
+                  "color": "@colors.muted",
+                  "maxLines": 1,
+                  "overflow": "ellipsis",
+                  "modifiers": [
+                   {
+                    "visibility": "@billEmpty"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "Icon": {
+               "name": "edit",
+               "size": 22,
+               "color": "@colors.primary"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "spacedBy": 8
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "text": "Tip",
+            "fontSize": 14,
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             {
+              "spacedBy": 8
+             }
+            ],
+            "children": [
+             {
+              "TipChip": {
+               "label": "10%",
+               "selected": "@tip10",
+               "unselected": "@not10",
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip10",
+                 "value": 1
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip15",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip20",
+                 "value": 0
+                },
+                {
+                 "type": "hostNamedAction",
+                 "name": "tip10"
+                }
+               ]
+              }
+             },
+             {
+              "TipChip": {
+               "label": "15%",
+               "selected": "@tip15",
+               "unselected": "@not15",
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip15",
+                 "value": 1
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip10",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip20",
+                 "value": 0
+                },
+                {
+                 "type": "hostNamedAction",
+                 "name": "tip15"
+                }
+               ]
+              }
+             },
+             {
+              "TipChip": {
+               "label": "20%",
+               "selected": "@tip20",
+               "unselected": "@not20",
+               "onClick": [
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip20",
+                 "value": 1
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip10",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@tip15",
+                 "value": 0
+                },
+                {
+                 "type": "hostNamedAction",
+                 "name": "tip20"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "text": {
+            "text": "Split between",
+            "fontSize": 16,
+            "color": "@colors.onSurface",
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Split between ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@people",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " people"
+                }
+               }
+              }
+             }
+            ]
+           }
+          },
+          {
+           "Stepper": {
+            "value": "@people",
+            "min": 1,
+            "max": 20,
+            "label": "people"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "clip": {
+            "roundedRect": 16
+           }
+          },
+          {
+           "background": "@colors.surface"
+          },
+          {
+           "padding": 16
+          }
+         ],
+         "children": [
+          {
+           "ResultRow": {
+            "label": "Tip",
+            "amount": "@tipAmt"
+           }
+          },
+          {
+           "ResultRow": {
+            "label": "Total",
+            "amount": "@total"
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 1
+             },
+             {
+              "background": "@colors.outline"
+             }
+            ]
+           }
+          },
+          {
+           "ResultRow": {
+            "label": "Each person pays",
+            "amount": "@each",
+            "size": 24,
+            "weight": 700
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

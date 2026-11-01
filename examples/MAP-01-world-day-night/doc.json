@@ -1,0 +1,102 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 220,
+  "profiles": 513,
+  "contentDescription": "Day and night around the world: a world map with the night side shaded from the clock, four cities and the time in UTC"
+ },
+ "resources": {
+  "variables": {
+   "utcMin": "(timeInMin() - offsetToUtc() / 60 + 1440) % 1440",
+   "utcH": "floor(@utcMin / 60)",
+   "utcM": "floor(@utcMin % 60)"
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 8
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": "Day and night",
+         "fontSize": 18,
+         "fontWeight": 600,
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@utcH",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 12
+            },
+            "id2": ":"
+           },
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@utcM",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          },
+          "id2": " UTC"
+         },
+         "fontSize": 14,
+         "color": "@colors.muted"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "WorldMap": {
+      "cities": [
+       "London",
+       "New York",
+       "Tokyo",
+       "Sydney"
+      ],
+      "labels": true,
+      "night": true,
+      "height": 150,
+      "label": "World map: the night side shaded, with London, New York, Tokyo and Sydney marked"
+     }
+    }
+   ]
+  }
+ }
+}

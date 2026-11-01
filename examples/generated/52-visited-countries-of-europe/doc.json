@@ -1,0 +1,489 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 340,
+  "profiles": 513,
+  "contentDescription": "Countries I have visited: a map of Europe with the visited countries filled and a count"
+ },
+ "components": {
+  "MicroStates": {
+   "summary": "Dots for the European countries too small to show at low detail, filled when visited, laid over WorldMap Europe with the same fit",
+   "params": {
+    "values": {
+     "type": "float",
+     "required": true,
+     "doc": "the visited array (all 44)"
+    },
+    "height": {
+     "type": "float",
+     "default": 400,
+     "static": true,
+     "doc": "same height as the WorldMap under it"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@height"
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth() / 1000, componentHeight() / 885)"
+       }
+      },
+      {
+       "variable": {
+        "name": "r",
+        "value": "max(2.5, min(4, 12 * @s))"
+       }
+      },
+      {
+       "loop": {
+        "index": "i",
+        "from": 0,
+        "until": 7,
+        "commands": [
+         {
+          "variable": {
+           "name": "cx",
+           "value": {
+            "$mapPoint": {
+             "region": "Europe",
+             "lon": "arrayGet(@microLon, i)",
+             "lat": "arrayGet(@microLat, i)",
+             "axis": "x",
+             "wrap": "(componentWidth() - 1000 * @s) / 2 + @s * {}"
+            }
+           }
+          }
+         },
+         {
+          "variable": {
+           "name": "cy",
+           "value": {
+            "$mapPoint": {
+             "region": "Europe",
+             "lon": "arrayGet(@microLon, i)",
+             "lat": "arrayGet(@microLat, i)",
+             "axis": "y",
+             "wrap": "(componentHeight() - 885 * @s) / 2 + @s * {}"
+            }
+           }
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": {
+              "$if": "theme.mono",
+              "then": "@colors.background",
+              "else": "@colors.track"
+             }
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@cx",
+           "cy": "@cy",
+           "radius": "@r"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "max(0, min(1, arrayGet(@values, arrayGet(@microIdx, i))))"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@cx",
+           "cy": "@cy",
+           "radius": "@r"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": {
+              "$if": "theme.mono",
+              "then": "@colors.onSurface",
+              "else": "@colors.muted"
+             }
+            },
+            {
+             "alpha": 1
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 1.2
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": "@cx",
+           "cy": "@cy",
+           "radius": "@r"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "MicroStates": {
+     "values": "@visited"
+    }
+   }
+  },
+  "VisitMap": {
+   "summary": "WorldMap Europe coloured from @visited, with the micro-states as dots",
+   "params": {},
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "WorldMap": {
+        "region": "Europe",
+        "detail": "low",
+        "borders": true,
+        "values": "@visited",
+        "valueCountries": [
+         "ALB",
+         "AND",
+         "AUT",
+         "BLR",
+         "BEL",
+         "BIH",
+         "BGR",
+         "HRV",
+         "CZE",
+         "DNK",
+         "EST",
+         "FIN",
+         "FRA",
+         "DEU",
+         "GRC",
+         "HUN",
+         "ISL",
+         "IRL",
+         "ITA",
+         "LVA",
+         "LIE",
+         "LTU",
+         "LUX",
+         "MLT",
+         "MDA",
+         "MCO",
+         "MNE",
+         "NLD",
+         "MKD",
+         "NOR",
+         "POL",
+         "PRT",
+         "ROU",
+         "RUS",
+         "SMR",
+         "SRB",
+         "SVK",
+         "SVN",
+         "ESP",
+         "SWE",
+         "CHE",
+         "UKR",
+         "GBR",
+         "VAT"
+        ],
+        "height": 400,
+        "label": "@visitedNames"
+       }
+      },
+      {
+       "MicroStates": {
+        "values": "@visited",
+        "height": 400
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "VisitMap": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "wide": "step(windowWidth(), windowHeight() * 1.6)"
+  },
+  "floatArrays": {
+   "visited": {
+    "value": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     1,
+     0
+    ],
+    "export": true
+   },
+   "microLon": [
+    1.52,
+    9.55,
+    6.13,
+    14.45,
+    7.42,
+    12.46,
+    12.45
+   ],
+   "microLat": [
+    42.51,
+    47.14,
+    49.61,
+    35.89,
+    43.74,
+    43.94,
+    41.9
+   ],
+   "microIdx": [
+    1,
+    20,
+    22,
+    23,
+    25,
+    34,
+    43
+   ]
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "visitedNames",
+    "vtype": "string",
+    "value": "Map of Europe. Visited: Czechia, France, Germany, Greece, Italy, Netherlands, Portugal, Spain, United Kingdom",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@wide",
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 12
+           }
+          ],
+          "horizontalAlignment": "start",
+          "verticalAlignment": "top",
+          "children": [
+           {
+            "VisitMap": {}
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "background": "@colors.surface"
+              },
+              {
+               "clip": {
+                "roundedRect": 12
+               }
+              },
+              {
+               "padding": [
+                10,
+                6
+               ]
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "arraySum(@visited)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " of 44 countries"
+                },
+                "fontSize": 13,
+                "fontWeight": 600,
+                "color": "@colors.onSurface"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 12
+           },
+           {
+            "spacedBy": 12
+           }
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "column": {
+             "modifiers": [
+              {
+               "width": 104
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textFromFloat",
+                 "value": "arraySum(@visited)",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "fontSize": 40,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "text": {
+                "value": "of 44 countries",
+                "fontSize": 13,
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "text": {
+                "value": "visited",
+                "fontSize": 13,
+                "color": "@colors.muted"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "VisitMap": {}
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

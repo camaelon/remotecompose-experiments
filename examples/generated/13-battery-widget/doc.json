@@ -1,0 +1,617 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 300,
+  "height": 146,
+  "profiles": 513,
+  "contentDescription": "Battery levels of the phone, the watch and the earbuds"
+ },
+ "resources": {
+  "variables": {
+   "phoneLevel": {
+    "value": 76,
+    "export": true
+   },
+   "phoneCharging": {
+    "value": 0,
+    "export": true
+   },
+   "watchLevel": {
+    "value": 54,
+    "export": true
+   },
+   "watchCharging": {
+    "value": 1,
+    "export": true
+   },
+   "budsLevel": {
+    "value": 18,
+    "export": true
+   },
+   "budsCharging": {
+    "value": 0,
+    "export": true
+   }
+  }
+ },
+ "components": {
+  "DeviceBattery": {
+   "summary": "One device's battery: the device icon, a battery drawing filled to the level (green, amber, red with a ! when low), a bolt over it while charging, and the percentage.",
+   "params": {
+    "level": {
+     "type": "float",
+     "required": true,
+     "doc": "Charge in percent, 0..100 (clamped); a host variable"
+    },
+    "charging": {
+     "type": "float",
+     "required": true,
+     "doc": "1 while charging, 0 otherwise; a host variable (integer 0/1)"
+    },
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material Symbols icon naming the device (smartphone, watch, earbuds)"
+    },
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "Device name, read by the screen reader and shown when showName is true"
+    },
+    "showName": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "Write the device name after the icon"
+    },
+    "size": {
+     "type": "float",
+     "default": 40,
+     "static": true,
+     "doc": "Battery drawing width in dp; it is half as tall"
+    },
+    "iconSize": {
+     "type": "float",
+     "default": 22,
+     "static": true,
+     "doc": "Device icon size in dp"
+    },
+    "boltSize": {
+     "type": "float",
+     "default": 17,
+     "static": true,
+     "doc": "Charging bolt size in dp"
+    },
+    "haloSize": {
+     "type": "float",
+     "default": 22,
+     "static": true,
+     "doc": "Size of the surface-coloured halo behind the bolt that keeps it readable over the fill"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 14,
+     "static": true,
+     "doc": "Percentage font size in sp"
+    },
+    "warnAt": {
+     "type": "float",
+     "default": 50,
+     "doc": "Below this the fill is @colors.warning"
+    },
+    "lowAt": {
+     "type": "float",
+     "default": 20,
+     "doc": "Below this the fill is @colors.error and a ! is drawn in the empty part (unless charging)"
+    }
+   },
+   "locals": {
+    "lv": "clamp(0, 100, @level)"
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@lv",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 4
+           },
+           "id2": "%"
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "Icon": {
+        "name": "@icon",
+        "size": "@iconSize",
+        "color": "@colors.onSurface"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 6
+         }
+        ]
+       }
+      },
+      {
+       "$if": "showName",
+       "then": {
+        "text": {
+         "value": "@name",
+         "fontSize": "@fontSize",
+         "color": "@colors.onSurface",
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       }
+      },
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "canvas": {
+           "modifiers": [
+            {
+             "width": "@size"
+            },
+            {
+             "height": "@size * 0.5"
+            }
+           ],
+           "commands": [
+            {
+             "variable": {
+              "name": "k",
+              "value": "min(componentWidth() / @size, componentHeight() / (@size * 0.5))"
+             }
+            },
+            {
+             "translate": {
+              "dx": "(componentWidth() - @size * @k) / 2",
+              "dy": "(componentHeight() - @size * 0.5 * @k) / 2"
+             }
+            },
+            {
+             "scale": {
+              "sx": "@k",
+              "sy": "@k"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": "@theme.stroke"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 1,
+              "top": 1,
+              "right": "@size * 0.88 - 1",
+              "bottom": "@size * 0.5 - 1",
+              "rx": "@size * 0.1",
+              "ry": "@size * 0.1"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": "@size * 0.88 + 1",
+              "top": "@size * 0.16",
+              "right": "@size",
+              "bottom": "@size * 0.34",
+              "rx": "@size * 0.04",
+              "ry": "@size * 0.04"
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.success"
+               }
+              ]
+             }
+            },
+            {
+             "conditionalOperations": {
+              "condition": "lt",
+              "v1": "@lv",
+              "v2": "@warnAt",
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.warning"
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "conditionalOperations": {
+              "condition": "lt",
+              "v1": "@lv",
+              "v2": "@lowAt",
+              "commands": [
+               {
+                "paint": {
+                 "ops": [
+                  {
+                   "color": "@colors.error"
+                  }
+                 ]
+                }
+               },
+               {
+                "conditionalOperations": {
+                 "condition": "lt",
+                 "v1": "@charging",
+                 "v2": 0.5,
+                 "commands": [
+                  {
+                   "drawRoundRect": {
+                    "left": "@size * 0.44 - 1.25",
+                    "top": "@size * 0.12",
+                    "right": "@size * 0.44 + 1.25",
+                    "bottom": "@size * 0.29",
+                    "rx": 1.25,
+                    "ry": 1.25
+                   }
+                  },
+                  {
+                   "drawCircle": {
+                    "cx": "@size * 0.44",
+                    "cy": "@size * 0.36",
+                    "radius": 1.4
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "drawRoundRect": {
+              "left": 4,
+              "top": 4,
+              "right": "4 + (@size * 0.88 - 8) * @lv / 100",
+              "bottom": "@size * 0.5 - 4",
+              "rx": "@size * 0.1 - 3",
+              "ry": "@size * 0.1 - 3"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "visibility": "@charging"
+            },
+            {
+             "padding": [
+              0,
+              0,
+              "@size * 0.12",
+              0
+             ]
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "bolt",
+              "filled": true,
+              "size": "@haloSize",
+              "color": "@colors.surface"
+             }
+            },
+            {
+             "Icon": {
+              "name": "bolt",
+              "filled": true,
+              "size": "@boltSize",
+              "color": "@colors.onSurface",
+              "label": "charging"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 6
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@lv",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 4
+         },
+         "id2": "%"
+        },
+        "fontSize": "@fontSize",
+        "color": "@colors.onSurface"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "DeviceBattery": {
+     "level": "@phoneLevel",
+     "charging": "@phoneCharging",
+     "icon": "smartphone",
+     "name": "Phone"
+    }
+   }
+  }
+ },
+ "root": {
+  "type": "box",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "clip": {
+     "roundedRect": 16
+    }
+   },
+   {
+    "background": "@colors.surface"
+   },
+   {
+    "padding": 12
+   }
+  ],
+  "children": [
+   {
+    "fitBox": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "children": [
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": 112
+         }
+        ],
+        "verticalArrangement": "spaceBetween",
+        "children": [
+         {
+          "DeviceBattery": {
+           "level": "@phoneLevel",
+           "charging": "@phoneCharging",
+           "icon": "smartphone",
+           "name": "Phone",
+           "showName": true
+          }
+         },
+         {
+          "DeviceBattery": {
+           "level": "@watchLevel",
+           "charging": "@watchCharging",
+           "icon": "watch",
+           "name": "Watch",
+           "showName": true
+          }
+         },
+         {
+          "DeviceBattery": {
+           "level": "@budsLevel",
+           "charging": "@budsCharging",
+           "icon": "earbuds",
+           "name": "Earbuds",
+           "showName": true
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "DeviceBattery": {
+              "level": "@phoneLevel",
+              "charging": "@phoneCharging",
+              "icon": "smartphone",
+              "name": "Phone",
+              "size": 30,
+              "iconSize": 16,
+              "boltSize": 13,
+              "haloSize": 17,
+              "fontSize": 12
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "DeviceBattery": {
+              "level": "@watchLevel",
+              "charging": "@watchCharging",
+              "icon": "watch",
+              "name": "Watch",
+              "size": 30,
+              "iconSize": 16,
+              "boltSize": 13,
+              "haloSize": 17,
+              "fontSize": 12
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "DeviceBattery": {
+              "level": "@budsLevel",
+              "charging": "@budsCharging",
+              "icon": "earbuds",
+              "name": "Earbuds",
+              "size": 30,
+              "iconSize": 16,
+              "boltSize": 13,
+              "haloSize": 17,
+              "fontSize": 12
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "spacedBy": 2
+         }
+        ],
+        "verticalArrangement": "spaceEvenly",
+        "children": [
+         {
+          "DeviceBattery": {
+           "level": "@phoneLevel",
+           "charging": "@phoneCharging",
+           "icon": "smartphone",
+           "name": "Phone",
+           "size": 36,
+           "iconSize": 20,
+           "boltSize": 16,
+           "haloSize": 20,
+           "fontSize": 13
+          }
+         },
+         {
+          "DeviceBattery": {
+           "level": "@watchLevel",
+           "charging": "@watchCharging",
+           "icon": "watch",
+           "name": "Watch",
+           "size": 36,
+           "iconSize": 20,
+           "boltSize": 16,
+           "haloSize": 20,
+           "fontSize": 13
+          }
+         },
+         {
+          "DeviceBattery": {
+           "level": "@budsLevel",
+           "charging": "@budsCharging",
+           "icon": "earbuds",
+           "name": "Earbuds",
+           "size": 36,
+           "iconSize": 20,
+           "boltSize": 16,
+           "haloSize": 20,
+           "fontSize": 13
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

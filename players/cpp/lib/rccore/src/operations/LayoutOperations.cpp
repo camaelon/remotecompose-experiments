@@ -2575,9 +2575,19 @@ static void storeMeasuredDimensions(Operation* op, RemoteContext& ctx, MeasurePa
                     // or fill given nothing, or a wrap around children that all went.
                     // (An exact size counts only when it asked for ~0: an exact 48 dp squeezed to 0
                     // by a column that ran out of room is content lost, not intended.)
+                    // A wrap whose children are all hidden on purpose (their visibility): nothing to
+                    // show, not starved (a row of state icons where none applies).
+                    auto allHidden = [&]() {
+                        if (cls.layoutChildren.empty()) return true;
+                        for (auto* gc : cls.layoutChildren) {
+                            int gid = getComponentId(gc);
+                            if (gid == -1 || !measure.contains(gid) || measure.get(gid).isVisible()) return false;
+                        }
+                        return true;
+                    };
                     auto intendedZero = [&](DimType t, float declared) {
                         return ((t == DimType::EXACT || t == DimType::EXACT_DP) && resolveVar(declared, ctx) <= 0.5f)
-                            || (t == DimType::WRAP && cls.layoutChildren.empty());
+                            || (t == DimType::WRAP && allHidden());
                     };
                     bool intended = (c.w > 0.5f || intendedZero(cls.widthType, cls.widthValue))
                                  && (c.h > 0.5f || intendedZero(cls.heightType, cls.heightValue));
@@ -2985,6 +2995,7 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
     float widest = 0.0f;   // the widest line as painted, for the overflow count below
     const bool clip = overflow != 2 && overflows;
     if (clip) { pc->matrixSave(); pc->clipRect(0, 0, contentW, contentH); }
+    bool anyCut = false;   // a line shortened with an ellipsis (counted even when it then fits)
     for (size_t li = 0; li < lines.size(); li++) {
         const auto& line = lines[li];
         if (line.start >= line.end) continue;
@@ -2993,6 +3004,7 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
         float lineW = lines.size() == 1
                 ? fullW : pc->measureTextWidth(lineStr, fsize) + lsPx * utf8Count(lineStr);
         bool cut = ellipsis && last && contentW > 0 && (truncated || lineW > contentW + 0.5f);
+        if (cut) anyCut = true;
         std::string drawn;
         if (cut) {
             // An end ellipsis runs on from this line through the rest of the text.
@@ -3032,7 +3044,7 @@ static void paintTextLines(PaintContext* pc, int tid, const std::string& text, f
     }
     // The count uses the lines as painted (fullW is the unwrapped width: a wrapped text is
     // not cut just because it wrapped).
-    if (truncated || widest > contentW + 0.5f || textH > contentH + 0.5f) {
+    if (anyCut || truncated || widest > contentW + 0.5f || textH > contentH + 0.5f) {
         const char* kind = ellipsis ? "ellipsized" : truncated ? "truncated" : "clipped";
         if (ellipsis) gTextOverflow.ellipsized++;
         else if (truncated) gTextOverflow.truncated++;

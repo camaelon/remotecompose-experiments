@@ -1,0 +1,689 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 120,
+  "profiles": 513,
+  "contentDescription": "Week at a glance: the seven days of this week with today highlighted, and the ISO week number"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Panel": {
+   "summary": "The widget surface: a rounded surface in light/dark, a 1 dp outline ring in mono",
+   "params": {},
+   "slots": {
+    "content": {
+     "doc": "Rows"
+    }
+   },
+   "body": {
+    "column": {
+     "verticalArrangement": "center",
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "clip": {
+        "roundedRect": 16
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 15
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  },
+  "DayCell": {
+   "summary": "One day of the week: a short weekday label over the day-of-month number; today is a filled primary disc (white on black in mono)",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Short weekday name, e.g. Mon"
+    },
+    "n": {
+     "type": "float",
+     "required": true,
+     "doc": "The day-of-month number to show (a variable)"
+    },
+    "today": {
+     "type": "float",
+     "required": true,
+     "doc": "1 when this cell is today, else 0 (an integer variable)"
+    },
+    "other": {
+     "type": "float",
+     "required": true,
+     "doc": "1 - today (an integer variable)"
+    },
+    "size": {
+     "type": "float",
+     "default": 28,
+     "static": true,
+     "doc": "Disc diameter in dp"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 13,
+     "static": true,
+     "doc": "Number size in sp"
+    },
+    "labelSize": {
+     "type": "float",
+     "default": 11,
+     "static": true,
+     "doc": "Weekday label size in sp"
+    }
+   },
+   "body": {
+    "column": {
+     "horizontalAlignment": "center",
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      {
+       "spacedBy": 2
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "@label",
+        "fontSize": "@labelSize",
+        "color": "@colors.muted",
+        "maxLines": 1
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": "@size"
+         },
+         {
+          "height": "@size"
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            "fillMaxSize",
+            {
+             "clip": {
+              "roundedRect": "@size / 2"
+             }
+            },
+            {
+             "background": "@colors.primary"
+            },
+            {
+             "semantics": {
+              "contentDescription": "Today"
+             }
+            },
+            {
+             "visibility": "@today"
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "horizontalAlignment": "center",
+           "verticalArrangement": "center",
+           "modifiers": [
+            "fillMaxSize"
+           ],
+           "children": [
+            {
+             "text": {
+              "value": {
+               "type": "textFromFloat",
+               "value": "@n",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 4
+              },
+              "fontSize": "@fontSize",
+              "color": "@colors.onPrimary",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@today"
+               }
+              ],
+              "fontWeight": 700
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textFromFloat",
+               "value": "@n",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 4
+              },
+              "fontSize": "@fontSize",
+              "color": "@colors.onSurface",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@other"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "DayCell": {
+     "label": "Mon",
+     "n": "@n0",
+     "today": "@t0",
+     "other": "@o0"
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "y": "year()",
+   "eq4": "1 - min(1, abs(@y % 4))",
+   "eq100": "1 - min(1, abs(@y % 100))",
+   "eq400": "1 - min(1, abs(@y % 400))",
+   "leap": "@eq4 * (1 - @eq100) + @eq400",
+   "m": "calendarMonth()",
+   "feb": "1 - min(1, abs(@m - 2))",
+   "s1": "(1 - min(1, abs(@m - 4))) + (1 - min(1, abs(@m - 6)))",
+   "s2": "(1 - min(1, abs(@m - 9))) + (1 - min(1, abs(@m - 11)))",
+   "dimCur": "31 - @feb * (3 - @leap) - @s1 - @s2",
+   "pm": "@m - 1",
+   "febP": "1 - min(1, abs(@pm - 2))",
+   "p1": "(1 - min(1, abs(@pm - 4))) + (1 - min(1, abs(@pm - 6)))",
+   "p2": "(1 - min(1, abs(@pm - 9))) + (1 - min(1, abs(@pm - 11)))",
+   "dimPrev": "31 - @febP * (3 - @leap) - @p1 - @p2",
+   "mon": "dayOfMonth() - weekDay() + 1",
+   "py": "(@y + floor(@y / 4) - floor(@y / 100) + floor(@y / 400)) % 7",
+   "y1": "@y - 1",
+   "py1": "(@y1 + floor(@y1 / 4) - floor(@y1 / 100) + floor(@y1 / 400)) % 7",
+   "y2": "@y - 2",
+   "py2": "(@y2 + floor(@y2 / 4) - floor(@y2 / 100) + floor(@y2 / 400)) % 7",
+   "weeksY": "52 + max(1 - min(1, abs(@py - 4)), 1 - min(1, abs(@py1 - 3)))",
+   "weeksY1": "52 + max(1 - min(1, abs(@py1 - 4)), 1 - min(1, abs(@py2 - 3)))",
+   "wk": "floor((dayOfYear() - weekDay() + 10) / 7)",
+   "week": "ifElse(ifElse(@wk, 1, step(@wk, @weeksY)), @weeksY1, step(1, @wk))",
+   "fullH": "max(70, windowHeight() - 24)",
+   "d0": "@mon + 0",
+   "n0": "@d0 + @dimPrev * step(0.5, @d0) - @dimCur * step(@d0, @dimCur)",
+   "t0": "1 - min(1, abs(weekDay() - 1))",
+   "o0": "1 - @t0",
+   "d1": "@mon + 1",
+   "n1": "@d1 + @dimPrev * step(0.5, @d1) - @dimCur * step(@d1, @dimCur)",
+   "t1": "1 - min(1, abs(weekDay() - 2))",
+   "o1": "1 - @t1",
+   "d2": "@mon + 2",
+   "n2": "@d2 + @dimPrev * step(0.5, @d2) - @dimCur * step(@d2, @dimCur)",
+   "t2": "1 - min(1, abs(weekDay() - 3))",
+   "o2": "1 - @t2",
+   "d3": "@mon + 3",
+   "n3": "@d3 + @dimPrev * step(0.5, @d3) - @dimCur * step(@d3, @dimCur)",
+   "t3": "1 - min(1, abs(weekDay() - 4))",
+   "o3": "1 - @t3",
+   "d4": "@mon + 4",
+   "n4": "@d4 + @dimPrev * step(0.5, @d4) - @dimCur * step(@d4, @dimCur)",
+   "t4": "1 - min(1, abs(weekDay() - 5))",
+   "o4": "1 - @t4",
+   "d5": "@mon + 5",
+   "n5": "@d5 + @dimPrev * step(0.5, @d5) - @dimCur * step(@d5, @dimCur)",
+   "t5": "1 - min(1, abs(weekDay() - 6))",
+   "o5": "1 - @t5",
+   "d6": "@mon + 6",
+   "n6": "@d6 + @dimPrev * step(0.5, @d6) - @dimCur * step(@d6, @dimCur)",
+   "t6": "1 - min(1, abs(weekDay() - 7))",
+   "o6": "1 - @t6"
+  }
+ },
+ "root": {
+  "Panel": {
+   "children": [
+    {
+     "fitBox": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "verticalArrangement": "center",
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": "@fullH"
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "calendar_today",
+               "size": 18,
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 6
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "Week ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "@week",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 4
+                }
+               },
+               "fontSize": 16,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "maxLines": 1
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "children": [
+                {
+                 "TextChoice": {
+                  "items": [
+                   "Jan",
+                   "Feb",
+                   "Mar",
+                   "Apr",
+                   "May",
+                   "Jun",
+                   "Jul",
+                   "Aug",
+                   "Sep",
+                   "Oct",
+                   "Nov",
+                   "Dec"
+                  ],
+                  "index": "calendarMonth() - 1",
+                  "fontSize": 13,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "year()",
+                    "whole": 4,
+                    "decimal": 0,
+                    "flags": 4
+                   }
+                  },
+                  "fontSize": 13,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 6
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "DayCell": {
+               "label": "Mon",
+               "n": "@n0",
+               "today": "@t0",
+               "other": "@o0"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Tue",
+               "n": "@n1",
+               "today": "@t1",
+               "other": "@o1"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Wed",
+               "n": "@n2",
+               "today": "@t2",
+               "other": "@o2"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Thu",
+               "n": "@n3",
+               "today": "@t3",
+               "other": "@o3"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Fri",
+               "n": "@n4",
+               "today": "@t4",
+               "other": "@o4"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Sat",
+               "n": "@n5",
+               "today": "@t5",
+               "other": "@o5"
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Sun",
+               "n": "@n6",
+               "today": "@t6",
+               "other": "@o6"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 40
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "Week ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@week",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 4
+             }
+            },
+            "fontSize": 14,
+            "fontWeight": 600,
+            "color": "@colors.onSurface",
+            "maxLines": 1
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 8
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ],
+            "children": [
+             {
+              "DayCell": {
+               "label": "Mon",
+               "n": "@n0",
+               "today": "@t0",
+               "other": "@o0",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Tue",
+               "n": "@n1",
+               "today": "@t1",
+               "other": "@o1",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Wed",
+               "n": "@n2",
+               "today": "@t2",
+               "other": "@o2",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Thu",
+               "n": "@n3",
+               "today": "@t3",
+               "other": "@o3",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Fri",
+               "n": "@n4",
+               "today": "@t4",
+               "other": "@o4",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Sat",
+               "n": "@n5",
+               "today": "@t5",
+               "other": "@o5",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             },
+             {
+              "DayCell": {
+               "label": "Sun",
+               "n": "@n6",
+               "today": "@t6",
+               "other": "@o6",
+               "size": 22,
+               "fontSize": 11,
+               "labelSize": 9
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "Week ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@week",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 4
+             }
+            },
+            "fontSize": 16,
+            "fontWeight": 600,
+            "color": "@colors.onSurface",
+            "maxLines": 1
+           }
+          },
+          {
+           "row": {
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "Mon",
+                "Tue",
+                "Wed",
+                "Thu",
+                "Fri",
+                "Sat",
+                "Sun"
+               ],
+               "index": "weekDay() - 1",
+               "fontSize": 13,
+               "color": "@colors.muted",
+               "maxLines": 1
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": " ",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "dayOfMonth()",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 4
+                }
+               },
+               "fontSize": 13,
+               "color": "@colors.muted",
+               "maxLines": 1
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

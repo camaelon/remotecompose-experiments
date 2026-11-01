@@ -1,0 +1,670 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Notification summary: unread mail, messages and calendar"
+ },
+ "components": {
+  "IconBadge": {
+   "component": "IconBadge",
+   "version": 1,
+   "summary": "An app icon with an unread-count badge: filled icon and a badge (capped 99+) when count > 0, outlined muted icon and no badge at 0.",
+   "params": {
+    "icon": {
+     "type": "string",
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "count": {
+     "type": "float",
+     "doc": "unread count"
+    }
+   },
+   "locals": {
+    "has": "step(@count, 0.5)",
+    "none": "1 - step(@count, 0.5)"
+   },
+   "call": {
+    "IconBadge": {
+     "icon": "mail",
+     "count": 3
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "size": [
+        44,
+        36
+       ]
+      }
+     ],
+     "horizontalAlignment": "start",
+     "verticalAlignment": "bottom",
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@has"
+         },
+         {
+          "padding": {
+           "start": 2,
+           "bottom": 2
+          }
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "filled": true,
+           "size": 28,
+           "color": "@colors.primary"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "visibility": "@none"
+         },
+         {
+          "padding": {
+           "start": 2,
+           "bottom": 2
+          }
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "filled": false,
+           "size": 28,
+           "color": "@colors.muted"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@has"
+         }
+        ],
+        "horizontalAlignment": "end",
+        "verticalAlignment": "top",
+        "children": [
+         {
+          "Badge": {
+           "count": "@count",
+           "max": 99
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "NotifRow": {
+   "component": "NotifRow",
+   "version": 1,
+   "summary": "A tappable row: icon with badge, app name, latest item (or 'No new'), sends a host action.",
+   "params": {
+    "icon": {
+     "type": "string",
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "label": {
+     "type": "string",
+     "doc": "app name"
+    },
+    "count": {
+     "type": "float",
+     "doc": "unread count"
+    },
+    "action": {
+     "type": "string",
+     "static": true,
+     "doc": "host action name sent on tap"
+    },
+    "detail": {
+     "type": "string",
+     "doc": "latest sender/subject/event (host string)"
+    }
+   },
+   "locals": {
+    "has": "step(@count, 0.5)",
+    "none": "1 - step(@count, 0.5)"
+   },
+   "call": {
+    "NotifRow": {
+     "icon": "mail",
+     "label": "Mail",
+     "count": 3,
+     "detail": "Ana: Lunch?",
+     "action": "openMail"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "verticalWeight": 1
+      },
+      {
+       "clip": {
+        "roundedRect": 12
+       }
+      },
+      {
+       "onClick": {
+        "type": "hostNamedAction",
+        "name": "@action"
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@label",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@count",
+            "whole": 4,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " unread"
+          }
+         }
+        },
+        "clickable": true
+       }
+      },
+      {
+       "padding": {
+        "start": 4,
+        "end": 8
+       }
+      },
+      {
+       "spacedBy": 8
+      }
+     ],
+     "children": [
+      {
+       "IconBadge": {
+        "icon": "@icon",
+        "count": "@count"
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@label",
+           "fontSize": "@theme.text_md",
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "text": {
+           "value": "@detail",
+           "fontSize": "@theme.text_sm",
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "visibility": "@has"
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "No new",
+           "fontSize": "@theme.text_sm",
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "visibility": "@none"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "NotifTile": {
+   "component": "NotifTile",
+   "version": 1,
+   "summary": "A compact tappable tile: icon with badge over the app name, sends a host action.",
+   "params": {
+    "icon": {
+     "type": "string",
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "label": {
+     "type": "string",
+     "doc": "app name"
+    },
+    "count": {
+     "type": "float",
+     "doc": "unread count"
+    },
+    "action": {
+     "type": "string",
+     "static": true,
+     "doc": "host action name sent on tap"
+    }
+   },
+   "call": {
+    "NotifTile": {
+     "icon": "mail",
+     "label": "Mail",
+     "count": 3,
+     "action": "openMail"
+    }
+   },
+   "body": {
+    "column": {
+     "horizontalAlignment": "center",
+     "verticalArrangement": "center",
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      "fillMaxHeight",
+      {
+       "clip": {
+        "roundedRect": 12
+       }
+      },
+      {
+       "onClick": {
+        "type": "hostNamedAction",
+        "name": "@action"
+       }
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@label",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@count",
+            "whole": 4,
+            "decimal": 0,
+            "flags": 5
+           },
+           "id2": " unread"
+          }
+         }
+        },
+        "clickable": true
+       }
+      }
+     ],
+     "children": [
+      {
+       "IconBadge": {
+        "icon": "@icon",
+        "count": "@count"
+       }
+      },
+      {
+       "text": {
+        "value": "@label",
+        "fontSize": "@theme.text_sm",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Summary": {
+   "component": "Summary",
+   "version": 1,
+   "summary": "Total unread, or a done icon and 'All caught up' when everything is zero.",
+   "params": {
+    "total": {
+     "type": "float",
+     "doc": "sum of the counts"
+    }
+   },
+   "locals": {
+    "any": "step(@total, 0.5)",
+    "clear": "1 - step(@total, 0.5)"
+   },
+   "call": {
+    "Summary": {
+     "total": 5
+    }
+   },
+   "body": {
+    "box": {
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@total",
+          "whole": 4,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": " unread"
+        },
+        "fontSize": "@theme.text_md",
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "visibility": "@any"
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "visibility": "@clear"
+         },
+         {
+          "spacedBy": 4
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "done_all",
+           "size": 20,
+           "color": "@colors.success"
+          }
+         },
+         {
+          "text": {
+           "value": "All caught up",
+           "fontSize": "@theme.text_md",
+           "color": "@colors.onSurface",
+           "maxLines": 2,
+           "overflow": "ellipsis"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "mail": {
+    "value": 3,
+    "export": true
+   },
+   "messages": {
+    "value": 27,
+    "export": true
+   },
+   "calendar": {
+    "value": 2,
+    "export": true
+   },
+   "total": "@mail + @messages + @calendar",
+   "wide": "max(step(windowWidth(), windowHeight() * 3), 1 - step(windowHeight(), 120))",
+   "sumWide": "step(windowWidth(), 260)",
+   "roomy": "step(windowWidth(), 200)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "mailFrom",
+    "vtype": "string",
+    "value": "Ana Ruiz: Lunch on Friday?",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "messageFrom",
+    "vtype": "string",
+    "value": "Sam: On my way",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "nextEvent",
+    "vtype": "string",
+    "value": "Design review, 2:30 PM",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@wide",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 12
+           },
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": {
+                "start": 4,
+                "end": 4,
+                "bottom": 2
+               }
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Notifications",
+                "fontSize": "@theme.text_sm",
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "visibility": "@roomy"
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              },
+              {
+               "Summary": {
+                "total": "@total"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "NotifRow": {
+             "icon": "mail",
+             "label": "Mail",
+             "count": "@mail",
+             "detail": "@mailFrom",
+             "action": "openMail"
+            }
+           },
+           {
+            "NotifRow": {
+             "icon": "chat",
+             "label": "Messages",
+             "count": "@messages",
+             "detail": "@messageFrom",
+             "action": "openMessages"
+            }
+           },
+           {
+            "NotifRow": {
+             "icon": "calendar_month",
+             "label": "Calendar",
+             "count": "@calendar",
+             "detail": "@nextEvent",
+             "action": "openCalendar"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": {
+             "start": 16,
+             "end": 8,
+             "top": 6,
+             "bottom": 6
+            }
+           },
+           {
+            "spacedBy": 4
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1.4
+              },
+              {
+               "visibility": "@sumWide"
+              }
+             ],
+             "children": [
+              {
+               "Summary": {
+                "total": "@total"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "NotifTile": {
+             "icon": "mail",
+             "label": "Mail",
+             "count": "@mail",
+             "action": "openMail"
+            }
+           },
+           {
+            "NotifTile": {
+             "icon": "chat",
+             "label": "Messages",
+             "count": "@messages",
+             "action": "openMessages"
+            }
+           },
+           {
+            "NotifTile": {
+             "icon": "calendar_month",
+             "label": "Calendar",
+             "count": "@calendar",
+             "action": "openCalendar"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

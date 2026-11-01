@@ -1,0 +1,1874 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Fitness dashboard: current heart rate and its zone, a chart of heart rate over the last hour with its lowest and highest readings, and progress of active minutes and calories against their daily goals"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Panel": {
+   "params": {},
+   "slots": {
+    "content": {
+     "doc": "rows"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "clip": {
+        "roundedRect": 16
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 15
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  },
+  "FillPanel": {
+   "params": {},
+   "slots": {
+    "content": {
+     "doc": "rows"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "clip": {
+        "roundedRect": 16
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "background": "@colors.outline"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "padding": 1
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "clip": {
+         "roundedRect": 15
+        }
+       }
+      },
+      {
+       "background": "@colors.surface"
+      },
+      {
+       "padding": {
+        "$if": "theme.mono",
+        "then": 11,
+        "else": 12
+       }
+      }
+     ],
+     "children": [
+      {
+       "$slot": "content"
+      }
+     ]
+    }
+   }
+  },
+  "ZoneTag": {
+   "params": {
+    "show": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "visibility var, 1 in this zone"
+    },
+    "name": {
+     "type": "string",
+     "required": true,
+     "static": true
+    },
+    "color": {
+     "type": "color",
+     "required": true
+    },
+    "size": {
+     "type": "float",
+     "default": 16,
+     "static": true
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "visibility": "@show"
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Heart rate ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@hr",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " beats per minute, ",
+           "id2": {
+            "type": "textMerge",
+            "id1": "@name",
+            "id2": " zone"
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "@name",
+        "fontSize": "@size",
+        "fontWeight": 600,
+        "color": "@color",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   }
+  },
+  "ZoneSeg": {
+   "params": {
+    "a": {
+     "type": "float",
+     "required": true,
+     "doc": "alpha var: 1 when this zone is reached"
+    },
+    "color": {
+     "type": "color",
+     "required": true
+    },
+    "w": {
+     "type": "float",
+     "default": 18,
+     "static": true
+    }
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "width": "@w"
+      },
+      {
+       "height": 6
+      },
+      {
+       "graphicsLayer": {
+        "alpha": "@a"
+       }
+      },
+      {
+       "clip": {
+        "roundedRect": 3
+       }
+      },
+      {
+       "background": {
+        "$if": "theme.mono",
+        "then": "@colors.onSurface",
+        "else": "@color"
+       }
+      }
+     ]
+    }
+   }
+  },
+  "ZoneMeter": {
+   "params": {
+    "w": {
+     "type": "float",
+     "default": 18,
+     "static": true
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "spacedBy": 3
+      }
+     ],
+     "children": [
+      {
+       "ZoneSeg": {
+        "a": "@seg0",
+        "color": "@colors.secondary",
+        "w": "@w"
+       }
+      },
+      {
+       "ZoneSeg": {
+        "a": "@seg1",
+        "color": "@colors.success",
+        "w": "@w"
+       }
+      },
+      {
+       "ZoneSeg": {
+        "a": "@seg2",
+        "color": "@colors.warning",
+        "w": "@w"
+       }
+      },
+      {
+       "ZoneSeg": {
+        "a": "@seg3",
+        "color": "@colors.error",
+        "w": "@w"
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Hero": {
+   "params": {
+    "big": {
+     "type": "float",
+     "default": 64,
+     "static": true
+    },
+    "icon": {
+     "type": "float",
+     "default": 40,
+     "static": true
+    },
+    "tag": {
+     "type": "float",
+     "default": 18,
+     "static": true
+    },
+    "seg": {
+     "type": "float",
+     "default": 22,
+     "static": true
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "spacedBy": 4
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "spacedBy": 8
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "favorite",
+           "filled": true,
+           "size": "@icon",
+           "color": "@colors.error"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textFromFloat",
+            "value": "@hr",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "fontSize": "@big",
+           "fontWeight": 700,
+           "color": "@colors.onSurface",
+           "maxLines": 1
+          }
+         },
+         {
+          "text": {
+           "value": "bpm",
+           "fontSize": "@tag",
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "spacedBy": 10
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "children": [
+            {
+             "ZoneTag": {
+              "show": "@z0",
+              "name": "Rest",
+              "color": "@colors.secondary",
+              "size": "@tag"
+             }
+            },
+            {
+             "ZoneTag": {
+              "show": "@z1",
+              "name": "Fat burn",
+              "color": "@colors.success",
+              "size": "@tag"
+             }
+            },
+            {
+             "ZoneTag": {
+              "show": "@z2",
+              "name": "Cardio",
+              "color": "@colors.warning",
+              "size": "@tag"
+             }
+            },
+            {
+             "ZoneTag": {
+              "show": "@z3",
+              "name": "Peak",
+              "color": "@colors.error",
+              "size": "@tag"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "ZoneMeter": {
+           "w": "@seg"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "GoalTile": {
+   "params": {
+    "title": {
+     "type": "string",
+     "required": true,
+     "static": true
+    },
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true
+    },
+    "value": {
+     "type": "float",
+     "required": true
+    },
+    "goal": {
+     "type": "float",
+     "required": true
+    },
+    "p": {
+     "type": "float",
+     "required": true,
+     "doc": "0..1 progress"
+    },
+    "done": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "visibility var: 1 when goal reached"
+    },
+    "unit": {
+     "type": "string",
+     "required": true,
+     "static": true
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary"
+    },
+    "ring": {
+     "type": "float",
+     "default": 52,
+     "static": true
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@title",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textFromFloat",
+            "value": "@value",
+            "whole": 5,
+            "decimal": 0,
+            "flags": 21
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": " of ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@goal",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 21
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "@unit"
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "ProgressRing": {
+           "progress": "@p",
+           "size": "@ring",
+           "thickness": 7,
+           "showLabel": false,
+           "color": "@color"
+          }
+         },
+         {
+          "Icon": {
+           "name": "@icon",
+           "size": 24,
+           "color": "@color"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 12
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         },
+         {
+          "spacedBy": 2
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@title",
+           "fontSize": 14,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textFromFloat",
+            "value": "@value",
+            "whole": 5,
+            "decimal": 0,
+            "flags": 21
+           },
+           "fontSize": 24,
+           "fontWeight": 700,
+           "color": "@colors.onSurface",
+           "maxLines": 1
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": "of ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@goal",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 21
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " ",
+              "id2": "@unit"
+             }
+            }
+           },
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "text": {
+           "value": "Goal reached",
+           "fontSize": 13,
+           "fontWeight": 600,
+           "color": "@color",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@done"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "HrLines": {
+   "params": {},
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@varied"
+         }
+        ],
+        "children": [
+         {
+          "LineChart": {
+           "values": "@hrHour",
+           "x_min": -60,
+           "x_max": 0,
+           "y_min": "@yLo",
+           "y_max": "@yHi",
+           "now": 0,
+           "fill": true,
+           "color": "@colors.error",
+           "label": "Heart rate chart, last 60 minutes up to now, lowest and highest readings marked",
+           "extremes": true,
+           "xLabels": [
+            "−60 min",
+            "−30 min",
+            "now"
+           ],
+           "yLabels": [
+            {
+             "type": "textFromFloat",
+             "value": "@yHi",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            {
+             "type": "textFromFloat",
+             "value": "@yMid",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            {
+             "type": "textFromFloat",
+             "value": "@yLo",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@flat"
+         }
+        ],
+        "children": [
+         {
+          "LineChart": {
+           "values": "@hrHour",
+           "x_min": -60,
+           "x_max": 0,
+           "y_min": "@yLo",
+           "y_max": "@yHi",
+           "now": 0,
+           "fill": true,
+           "color": "@colors.error",
+           "label": "Heart rate chart, last 60 minutes up to now, lowest and highest readings marked",
+           "xLabels": [
+            "−60 min",
+            "−30 min",
+            "now"
+           ],
+           "yLabels": [
+            {
+             "type": "textFromFloat",
+             "value": "@yHi",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            {
+             "type": "textFromFloat",
+             "value": "@yMid",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            {
+             "type": "textFromFloat",
+             "value": "@yLo",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "HrLinesMini": {
+   "params": {},
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Heart rate in the last hour ranged from ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@hMin",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " to ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@hMax",
+             "whole": 3,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " beats per minute"
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@varied"
+         }
+        ],
+        "children": [
+         {
+          "LineChart": {
+           "values": "@hrHour",
+           "x_min": -60,
+           "x_max": 0,
+           "y_min": "@yLo",
+           "y_max": "@yHi",
+           "now": 0,
+           "fill": true,
+           "color": "@colors.error",
+           "label": "Heart rate chart, last 60 minutes up to now, lowest and highest readings marked",
+           "extremes": true,
+           "xLabels": [
+            "−60 min",
+            "now"
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@flat"
+         }
+        ],
+        "children": [
+         {
+          "LineChart": {
+           "values": "@hrHour",
+           "x_min": -60,
+           "x_max": 0,
+           "y_min": "@yLo",
+           "y_max": "@yHi",
+           "now": 0,
+           "fill": true,
+           "color": "@colors.error",
+           "label": "Heart rate chart, last 60 minutes up to now, lowest and highest readings marked",
+           "xLabels": [
+            "−60 min",
+            "now"
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "HourChart": {
+   "params": {
+    "compact": {
+     "type": "bool",
+     "default": false,
+     "static": true
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "spacedBy": 6
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "Last hour",
+           "fontSize": 15,
+           "fontWeight": 600,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": "Min ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@hMin",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " · Max ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "@hMax",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": " bpm"
+              }
+             }
+            }
+           },
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "Heart rate in the last hour ranged from ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@hMin",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " to ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@hMax",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": " beats per minute"
+                 }
+                }
+               }
+              }
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "verticalWeight": 1
+         }
+        ],
+        "children": [
+         {
+          "HrLines": {}
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "hrHour": {
+    "value": [
+     67,
+     69,
+     69,
+     71,
+     71,
+     70,
+     70,
+     73,
+     71,
+     71,
+     74,
+     71,
+     72,
+     70,
+     70,
+     67,
+     68,
+     68,
+     66,
+     67,
+     66,
+     63,
+     65,
+     64,
+     63,
+     62,
+     66,
+     65,
+     66,
+     68,
+     68,
+     69,
+     75,
+     83,
+     88,
+     96,
+     100,
+     99,
+     100,
+     100,
+     101,
+     95,
+     91,
+     83,
+     77,
+     69,
+     68,
+     68,
+     68,
+     68,
+     67,
+     67,
+     66,
+     66,
+     65,
+     63,
+     66,
+     66,
+     66,
+     72
+    ],
+    "export": true
+   }
+  },
+  "variables": {
+   "hr": {
+    "value": 72,
+    "export": true
+   },
+   "activeMin": {
+    "value": 34,
+    "export": true
+   },
+   "activeGoal": {
+    "value": 60,
+    "export": true
+   },
+   "kcal": {
+    "value": 1460,
+    "export": true
+   },
+   "kcalGoal": {
+    "value": 2200,
+    "export": true
+   },
+   "z0": "1 - step(@hr, 99.5)",
+   "z1": "step(@hr, 99.5) - step(@hr, 129.5)",
+   "z2": "step(@hr, 129.5) - step(@hr, 159.5)",
+   "z3": "step(@hr, 159.5)",
+   "seg0": "1",
+   "seg1": "0.25 + 0.75 * step(@hr, 99.5)",
+   "seg2": "0.25 + 0.75 * step(@hr, 129.5)",
+   "seg3": "0.25 + 0.75 * step(@hr, 159.5)",
+   "hMin": "arrayMin(@hrHour)",
+   "hMax": "arrayMax(@hrHour)",
+   "varied": "step(@hMax - @hMin, 0.5)",
+   "flat": "1 - @varied",
+   "yLo": "max(0, floor((@hMin - 5) / 10) * 10)",
+   "yHi": "ceil((@hMax + 5) / 10) * 10",
+   "yMid": "(@yLo + @yHi) / 2",
+   "aP": "min(1, @activeMin / max(1, @activeGoal))",
+   "kP": "min(1, @kcal / max(1, @kcalGoal))",
+   "aDone": "step(@activeMin, @activeGoal - 0.5)",
+   "kDone": "step(@kcal, @kcalGoal - 0.5)",
+   "layout": "step(windowHeight(), 300) + step(windowHeight(), 560) + step(windowWidth(), 600) * step(windowHeight(), 560)"
+  }
+ },
+ "root": {
+  "stateLayout": {
+   "indexId": "@layout",
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 12
+       }
+      ],
+      "children": [
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxHeight"
+            ],
+            "verticalArrangement": "center",
+            "children": [
+             {
+              "Hero": {
+               "big": 34,
+               "icon": 22,
+               "tag": 13,
+               "seg": 12
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             "fillMaxHeight"
+            ],
+            "children": [
+             {
+              "HrLinesMini": {}
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 6
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "horizontalArrangement": "spaceBetween",
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Active minutes",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ", ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@activeMin",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " of ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@activeGoal",
+                     "whole": 5,
+                     "decimal": 0,
+                     "flags": 21
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " ",
+                     "id2": "min"
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "ProgressRing": {
+               "progress": "@aP",
+               "size": 22,
+               "thickness": 3,
+               "showLabel": false,
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@activeMin",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 21
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": "/",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@activeGoal",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "min"
+                  }
+                 }
+                }
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "overflow": "ellipsis"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "spacedBy": 6
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Calories",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ", ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@kcal",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " of ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@kcalGoal",
+                     "whole": 5,
+                     "decimal": 0,
+                     "flags": 21
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " ",
+                     "id2": "kcal"
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "ProgressRing": {
+               "progress": "@kP",
+               "size": 22,
+               "thickness": 3,
+               "showLabel": false,
+               "color": "@colors.warning"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@kcal",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 21
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": "/",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@kcalGoal",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " ",
+                   "id2": "kcal"
+                  }
+                 }
+                }
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "overflow": "ellipsis"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 16
+       }
+      ],
+      "children": [
+       {
+        "Hero": {
+         "big": 48,
+         "icon": 32,
+         "tag": 16,
+         "seg": 18
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 10
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "FillPanel": {
+            "children": [
+             {
+              "HourChart": {}
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 10
+          }
+         ]
+        }
+       },
+       {
+        "Panel": {
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "horizontalArrangement": "spaceBetween",
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 6
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Active minutes",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": ", ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@activeMin",
+                      "whole": 5,
+                      "decimal": 0,
+                      "flags": 21
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " of ",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@activeGoal",
+                        "whole": 5,
+                        "decimal": 0,
+                        "flags": 21
+                       },
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": " ",
+                        "id2": "min"
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "ProgressRing": {
+                  "progress": "@aP",
+                  "size": 22,
+                  "thickness": 3,
+                  "showLabel": false,
+                  "color": "@colors.primary"
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@activeMin",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "/",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@activeGoal",
+                      "whole": 5,
+                      "decimal": 0,
+                      "flags": 21
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " ",
+                      "id2": "min"
+                     }
+                    }
+                   }
+                  },
+                  "fontSize": 12,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "overflow": "ellipsis"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 6
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Calories",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": ", ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@kcal",
+                      "whole": 5,
+                      "decimal": 0,
+                      "flags": 21
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " of ",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@kcalGoal",
+                        "whole": 5,
+                        "decimal": 0,
+                        "flags": 21
+                       },
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": " ",
+                        "id2": "kcal"
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "ProgressRing": {
+                  "progress": "@kP",
+                  "size": 22,
+                  "thickness": 3,
+                  "showLabel": false,
+                  "color": "@colors.warning"
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@kcal",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "/",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@kcalGoal",
+                      "whole": 5,
+                      "decimal": 0,
+                      "flags": 21
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " ",
+                      "id2": "kcal"
+                     }
+                    }
+                   }
+                  },
+                  "fontSize": 12,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "overflow": "ellipsis"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 16
+       }
+      ],
+      "children": [
+       {
+        "Hero": {}
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 12
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          }
+         ],
+         "children": [
+          {
+           "FillPanel": {
+            "children": [
+             {
+              "HourChart": {}
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 12
+          }
+         ]
+        }
+       },
+       {
+        "Panel": {
+         "children": [
+          {
+           "GoalTile": {
+            "title": "Active minutes",
+            "icon": "directions_run",
+            "value": "@activeMin",
+            "goal": "@activeGoal",
+            "p": "@aP",
+            "done": "@aDone",
+            "unit": "min",
+            "color": "@colors.primary"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "height": 8
+          }
+         ]
+        }
+       },
+       {
+        "Panel": {
+         "children": [
+          {
+           "GoalTile": {
+            "title": "Calories",
+            "icon": "local_fire_department",
+            "value": "@kcal",
+            "goal": "@kcalGoal",
+            "p": "@kP",
+            "done": "@kDone",
+            "unit": "kcal",
+            "color": "@colors.warning"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 24
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          {
+           "width": 300
+          },
+          "fillMaxHeight",
+          {
+           "spacedBy": 16
+          }
+         ],
+         "children": [
+          {
+           "Hero": {
+            "big": 80,
+            "icon": 48,
+            "tag": 20,
+            "seg": 26
+           }
+          },
+          {
+           "Panel": {
+            "children": [
+             {
+              "GoalTile": {
+               "title": "Active minutes",
+               "icon": "directions_run",
+               "value": "@activeMin",
+               "goal": "@activeGoal",
+               "p": "@aP",
+               "done": "@aDone",
+               "unit": "min",
+               "color": "@colors.primary"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "Panel": {
+            "children": [
+             {
+              "GoalTile": {
+               "title": "Calories",
+               "icon": "local_fire_department",
+               "value": "@kcal",
+               "goal": "@kcalGoal",
+               "p": "@kP",
+               "done": "@kDone",
+               "unit": "kcal",
+               "color": "@colors.warning"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 20
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight"
+         ],
+         "children": [
+          {
+           "FillPanel": {
+            "children": [
+             {
+              "HourChart": {}
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

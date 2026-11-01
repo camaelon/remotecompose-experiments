@@ -1,0 +1,927 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "Seasons: the current season, the next solstice or equinox, its date and the days until it"
+ },
+ "components": {
+  "SeasonBadge": {
+   "summary": "The current season's icon inside a ring showing how far the season has run",
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 72,
+     "static": true,
+     "doc": "Ring diameter in dp"
+    },
+    "icon": {
+     "type": "float",
+     "default": 32,
+     "static": true,
+     "doc": "Icon size in dp"
+    },
+    "thickness": {
+     "type": "float",
+     "default": 6,
+     "static": true,
+     "doc": "Ring stroke"
+    }
+   },
+   "body": {
+    "type": "box",
+    "modifiers": [
+     {
+      "width": "@size"
+     },
+     {
+      "height": "@size"
+     },
+     {
+      "semantics": {
+       "contentDescription": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "floor(@progress * 100 + 0.5)",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": " percent of the season has passed"
+       }
+      }
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "children": [
+     {
+      "ProgressRing": {
+       "progress": "@progress",
+       "size": "@size",
+       "thickness": "@thickness",
+       "showLabel": false
+      }
+     },
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@v0"
+       }
+      ],
+      "children": [
+       {
+        "Icon": {
+         "name": "psychiatry",
+         "size": "@icon",
+         "color": "@colors.primary"
+        }
+       }
+      ]
+     },
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@v1"
+       }
+      ],
+      "children": [
+       {
+        "Icon": {
+         "name": "sunny",
+         "size": "@icon",
+         "color": "@colors.primary"
+        }
+       }
+      ]
+     },
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@v2"
+       }
+      ],
+      "children": [
+       {
+        "Icon": {
+         "name": "eco",
+         "size": "@icon",
+         "color": "@colors.primary"
+        }
+       }
+      ]
+     },
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@v3"
+       }
+      ],
+      "children": [
+       {
+        "Icon": {
+         "name": "ac_unit",
+         "size": "@icon",
+         "color": "@colors.primary"
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "call": {
+    "SeasonBadge": {
+     "size": 72
+    }
+   }
+  },
+  "EventDate": {
+   "summary": "The next event's date: weekday, day, month and year, abbreviated",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 13,
+     "static": true,
+     "doc": "Text size"
+    }
+   },
+   "body": {
+    "type": "row",
+    "children": [
+     {
+      "TextChoice": {
+       "items": [
+        "Mon ",
+        "Tue ",
+        "Wed ",
+        "Thu ",
+        "Fri ",
+        "Sat ",
+        "Sun "
+       ],
+       "index": "@wd",
+       "fontSize": "@fontSize",
+       "color": "@colors.muted",
+       "maxLines": 1
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "@dom",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 5
+       },
+       "fontSize": "@fontSize",
+       "color": "@colors.muted"
+      }
+     },
+     {
+      "TextChoice": {
+       "items": [
+        " March ",
+        " June ",
+        " September ",
+        " December "
+       ],
+       "index": "@k",
+       "fontSize": "@fontSize",
+       "color": "@colors.muted",
+       "maxLines": 1
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "@evYear",
+        "whole": 4,
+        "decimal": 0,
+        "flags": 5
+       },
+       "fontSize": "@fontSize",
+       "color": "@colors.muted"
+      }
+     }
+    ]
+   },
+   "call": {
+    "EventDate": {}
+   }
+  },
+  "EventDateShort": {
+   "summary": "The next event's date: weekday, day, month and year, abbreviated",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 13,
+     "static": true,
+     "doc": "Text size"
+    }
+   },
+   "body": {
+    "type": "row",
+    "children": [
+     {
+      "TextChoice": {
+       "items": [
+        "Mon ",
+        "Tue ",
+        "Wed ",
+        "Thu ",
+        "Fri ",
+        "Sat ",
+        "Sun "
+       ],
+       "index": "@wd",
+       "fontSize": "@fontSize",
+       "color": "@colors.muted",
+       "maxLines": 1
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "@dom",
+        "whole": 2,
+        "decimal": 0,
+        "flags": 5
+       },
+       "fontSize": "@fontSize",
+       "color": "@colors.muted"
+      }
+     },
+     {
+      "TextChoice": {
+       "items": [
+        " Mar ",
+        " Jun ",
+        " Sep ",
+        " Dec "
+       ],
+       "index": "@k",
+       "fontSize": "@fontSize",
+       "color": "@colors.muted",
+       "maxLines": 1
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "type": "textFromFloat",
+        "value": "@evYear",
+        "whole": 4,
+        "decimal": 0,
+        "flags": 5
+       },
+       "fontSize": "@fontSize",
+       "color": "@colors.muted"
+      }
+     }
+    ]
+   },
+   "call": {
+    "EventDateShort": {}
+   }
+  },
+  "DaysValue": {
+   "summary": "The days left as a big number, or Today on the day itself",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 30,
+     "static": true,
+     "doc": "Text size"
+    }
+   },
+   "body": {
+    "type": "box",
+    "children": [
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@showNum"
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textFromFloat",
+          "value": "@days",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "fontSize": "@fontSize",
+         "color": "@colors.primary",
+         "fontWeight": 700
+        }
+       }
+      ]
+     },
+     {
+      "type": "box",
+      "modifiers": [
+       {
+        "visibility": "@isToday"
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Today",
+         "fontSize": "@fontSize",
+         "fontWeight": 700,
+         "color": "@colors.primary",
+         "maxLines": 1
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "call": {
+    "DaysValue": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "south": {
+    "value": 0,
+    "export": true
+   },
+   "y": "year()",
+   "L": "(1 - min(1, abs(@y % 4))) * min(1, abs(@y % 100)) + (1 - min(1, abs(@y % 400)))",
+   "L1": "(1 - min(1, abs((@y + 1) % 4))) * min(1, abs((@y + 1) % 100)) + (1 - min(1, abs((@y + 1) % 400)))",
+   "today": "365 * (@y - 1970) + floor((@y - 1969) / 4) - floor((@y - 1901) / 100) + floor((@y - 1601) / 400) + dayOfYear() - 1",
+   "tz": "offsetToUtc() / 86400",
+   "dy": "@y - 2000",
+   "eP": "floor(11312.55952 + 365.24274 * (@dy - 1) + @tz)",
+   "e0": "floor(11036.30984 + 365.24237 * @dy + @tz)",
+   "e1": "floor(11129.06767 + 365.24163 * @dy + @tz)",
+   "e2": "floor(11222.71715 + 365.24202 * @dy + @tz)",
+   "e3": "floor(11312.55952 + 365.24274 * @dy + @tz)",
+   "e4": "floor(11036.30984 + 365.24237 * (@dy + 1) + @tz)",
+   "n": "step(@today, @e0) + step(@today, @e1) + step(@today, @e2) + step(@today, @e3)",
+   "nA": "@e0 + step(@n, 0.5) * (@e1 - @e0) + step(@n, 1.5) * (@e2 - @e1)",
+   "next": "@nA + step(@n, 2.5) * (@e3 - @e2) + step(@n, 3.5) * (@e4 - @e3)",
+   "pA": "@eP + step(@n, 0.5) * (@e0 - @eP) + step(@n, 1.5) * (@e1 - @e0)",
+   "prev": "@pA + step(@n, 2.5) * (@e2 - @e1) + step(@n, 3.5) * (@e3 - @e2)",
+   "days": "@next - @today",
+   "isToday": "1 - min(1, @days)",
+   "showNum": "min(1, @days)",
+   "k": "@n % 4",
+   "s": "(@n + @isToday + 3 + 2 * @south) % 4",
+   "progress": "(1 - @isToday) * (@today - @prev) / (@next - @prev)",
+   "jan1": "@today - dayOfYear() + 1",
+   "mA": "@jan1 + 59 + @L + step(@n, 0.5) * 92 + step(@n, 1.5) * 92",
+   "mS": "@mA + step(@n, 2.5) * 91 + step(@n, 3.5) * (90 + @L1)",
+   "dom": "@next - @mS + 1",
+   "wd": "(@next + 3) % 7",
+   "evYear": "@y + step(@n, 3.5)",
+   "v0": "1 - min(1, abs(@s))",
+   "v1": "1 - min(1, abs(@s - 1))",
+   "v2": "1 - min(1, abs(@s - 2))",
+   "v3": "1 - min(1, abs(@s - 3))",
+   "lW": "windowWidth()",
+   "lH": "windowHeight()",
+   "lSmall": "ifElse(4, 0, step(@lW, 119) * step(@lH, 59))",
+   "lMid": "ifElse(@lSmall, 2, step(@lW, 239) * step(@lH, 75))",
+   "lC": "ifElse(@lMid, 1, step(@lH, 149) * (1 - step(@lW, 299)))",
+   "lay": "ifElse(@lC, 3, step(@lH, 129) * step(@lW, 299))"
+  }
+ },
+ "root": {
+  "type": "box",
+  "modifiers": [
+   "fillMaxSize",
+   {
+    "background": "@colors.background"
+   }
+  ],
+  "children": [
+   {
+    "stateLayout": {
+     "indexId": "@lay",
+     "children": [
+      {
+       "type": "box",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": 6
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "type": "row",
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "SeasonBadge": {
+            "size": 40,
+            "icon": 20,
+            "thickness": 4
+           }
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "width": 8
+            }
+           ]
+          },
+          {
+           "type": "column",
+           "children": [
+            {
+             "TextChoice": {
+              "items": [
+               "Spring",
+               "Summer",
+               "Autumn",
+               "Winter"
+              ],
+              "index": "@s",
+              "fontSize": 13,
+              "fontWeight": 700,
+              "maxLines": 1
+             }
+            },
+            {
+             "DaysValue": {
+              "fontSize": 20
+             }
+            },
+            {
+             "type": "box",
+             "modifiers": [
+              {
+               "visibility": "@showNum"
+              }
+             ],
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "days",
+                 "day",
+                 "days"
+                ],
+                "index": "min(@days, 2)",
+                "fontSize": 10,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "box",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": 10
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "type": "column",
+         "horizontalAlignment": "center",
+         "children": [
+          {
+           "SeasonBadge": {
+            "size": 50,
+            "icon": 24,
+            "thickness": 4
+           }
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "height": 4
+            }
+           ]
+          },
+          {
+           "TextChoice": {
+            "items": [
+             "Spring",
+             "Summer",
+             "Autumn",
+             "Winter"
+            ],
+            "index": "@s",
+            "fontSize": 15,
+            "fontWeight": 700,
+            "maxLines": 1
+           }
+          },
+          {
+           "type": "row",
+           "verticalAlignment": "bottom",
+           "children": [
+            {
+             "DaysValue": {
+              "fontSize": 18
+             }
+            },
+            {
+             "type": "box",
+             "modifiers": [
+              {
+               "width": 4
+              }
+             ]
+            },
+            {
+             "type": "box",
+             "modifiers": [
+              {
+               "visibility": "@showNum"
+              }
+             ],
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "days to",
+                 "day to",
+                 "days to"
+                ],
+                "index": "min(@days, 2)",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "TextChoice": {
+            "items": [
+             "March equinox",
+             "June solstice",
+             "September equinox",
+             "December solstice"
+            ],
+            "index": "@k",
+            "fontSize": 11,
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "color": "@colors.muted"
+           }
+          },
+          {
+           "EventDateShort": {
+            "fontSize": 11
+           }
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "box",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": 12
+        }
+       ],
+       "horizontalAlignment": "start",
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "type": "row",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "SeasonBadge": {
+            "size": 48,
+            "icon": 24,
+            "thickness": 4
+           }
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "width": 12
+            }
+           ]
+          },
+          {
+           "type": "column",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "TextChoice": {
+              "items": [
+               "Spring",
+               "Summer",
+               "Autumn",
+               "Winter"
+              ],
+              "index": "@s",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "maxLines": 1
+             }
+            },
+            {
+             "TextChoice": {
+              "items": [
+               "March equinox",
+               "June solstice",
+               "September equinox",
+               "December solstice"
+              ],
+              "index": "@k",
+              "fontSize": 12,
+              "maxLines": 1,
+              "overflow": "ellipsis"
+             }
+            },
+            {
+             "EventDateShort": {
+              "fontSize": 11
+             }
+            }
+           ]
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "width": 8
+            }
+           ]
+          },
+          {
+           "type": "column",
+           "horizontalAlignment": "center",
+           "children": [
+            {
+             "DaysValue": {
+              "fontSize": 26
+             }
+            },
+            {
+             "type": "box",
+             "modifiers": [
+              {
+               "visibility": "@showNum"
+              }
+             ],
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "days",
+                 "day",
+                 "days"
+                ],
+                "index": "min(@days, 2)",
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "box",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": 16
+        }
+       ],
+       "horizontalAlignment": "start",
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "type": "row",
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "SeasonBadge": {
+            "size": 76,
+            "icon": 34,
+            "thickness": 6
+           }
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "width": 16
+            }
+           ]
+          },
+          {
+           "type": "column",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "TextChoice": {
+              "items": [
+               "Spring",
+               "Summer",
+               "Autumn",
+               "Winter"
+              ],
+              "index": "@s",
+              "fontSize": 22,
+              "fontWeight": 700,
+              "maxLines": 1
+             }
+            },
+            {
+             "type": "box",
+             "modifiers": [
+              {
+               "height": 2
+              }
+             ]
+            },
+            {
+             "type": "row",
+             "verticalAlignment": "bottom",
+             "children": [
+              {
+               "DaysValue": {
+                "fontSize": 30
+               }
+              },
+              {
+               "type": "box",
+               "modifiers": [
+                {
+                 "width": 6
+                }
+               ]
+              },
+              {
+               "type": "box",
+               "modifiers": [
+                {
+                 "visibility": "@showNum"
+                }
+               ],
+               "children": [
+                {
+                 "TextChoice": {
+                  "items": [
+                   "days until the",
+                   "day until the",
+                   "days until the"
+                  ],
+                  "index": "min(@days, 2)",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             ]
+            },
+            {
+             "TextChoice": {
+              "items": [
+               "March equinox",
+               "June solstice",
+               "September equinox",
+               "December solstice",
+               "March equinox is today",
+               "June solstice is today",
+               "September equinox is today",
+               "December solstice is today"
+              ],
+              "index": "@k + 4 * @isToday",
+              "fontSize": 14,
+              "maxLines": 1,
+              "overflow": "ellipsis"
+             }
+            },
+            {
+             "EventDate": {
+              "fontSize": 13
+             }
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "box",
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "padding": 6
+        }
+       ],
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "type": "row",
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@days",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": " days until the next solstice or equinox"
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "SeasonBadge": {
+            "size": 34,
+            "icon": 18,
+            "thickness": 3
+           }
+          },
+          {
+           "type": "box",
+           "modifiers": [
+            {
+             "width": 6
+            }
+           ]
+          },
+          {
+           "DaysValue": {
+            "fontSize": 16
+           }
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   }
+  ]
+ }
+}

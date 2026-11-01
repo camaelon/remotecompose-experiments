@@ -1,0 +1,1389 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "World clock: local time, day or night, and the difference from your time in London, New York, Tokyo and Sydney"
+ },
+ "components": {
+  "CityRow": {
+   "summary": "One city as a row: day/night icon, name, difference from the user's time, local time",
+   "params": {
+    "city": {
+     "type": "string",
+     "required": true,
+     "doc": "City name"
+    },
+    "rowHeight": {
+     "type": "float",
+     "default": 0,
+     "static": true,
+     "doc": "0: share the column's height (weight); else a fixed height in dp"
+    },
+    "hr": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_hr)"
+    },
+    "mn": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_mn)"
+    },
+    "night": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_night)"
+    },
+    "day": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_day)"
+    },
+    "dh": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_dh)"
+    },
+    "sgn": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_sgn)"
+    },
+    "same": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_same)"
+    },
+    "notSame": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_notSame)"
+    },
+    "tmr": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_tmr)"
+    },
+    "yst": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_yst)"
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "$if": "rowHeight",
+       "then": {
+        "height": "@rowHeight"
+       },
+       "else": {
+        "verticalWeight": 1
+       }
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         {
+          "size": 24
+         }
+        ],
+        "horizontalAlignment": "center",
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@day"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@city",
+               "id2": {
+                "type": "textMerge",
+                "id1": ", ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@hr",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 12
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 12
+                   }
+                  }
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ", day, ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@dh",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " hours from your time"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "light_mode",
+              "filled": true,
+              "size": 22,
+              "color": "@colors.warning"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@night"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "@city",
+               "id2": {
+                "type": "textMerge",
+                "id1": ", ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@hr",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 12
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ":",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@mn",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 12
+                   }
+                  }
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ", night, ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@dh",
+                    "whole": 3,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": " hours from your time"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "dark_mode",
+              "filled": true,
+              "size": 22,
+              "color": "@colors.primary"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 10
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@city",
+           "fontSize": 15,
+           "fontWeight": 600,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "row": {
+           "children": [
+            {
+             "text": {
+              "value": "same time",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@same"
+               }
+              ]
+             }
+            },
+            {
+             "row": {
+              "modifiers": [
+               {
+                "visibility": "@notSame"
+               }
+              ],
+              "children": [
+               {
+                "TextChoice": {
+                 "items": [
+                  "−",
+                  "+"
+                 ],
+                 "index": "@sgn",
+                 "fontSize": 12,
+                 "color": "@colors.muted"
+                }
+               },
+               {
+                "text": {
+                 "value": {
+                  "type": "textFromFloat",
+                  "value": "abs(@dh)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "fontSize": 12,
+                 "color": "@colors.muted",
+                 "maxLines": 1
+                }
+               },
+               {
+                "text": {
+                 "value": " h",
+                 "fontSize": 12,
+                 "color": "@colors.muted",
+                 "maxLines": 1
+                }
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": " · +1 day",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@tmr"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": " · yesterday",
+              "fontSize": 12,
+              "color": "@colors.muted",
+              "maxLines": 1,
+              "modifiers": [
+               {
+                "visibility": "@yst"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 8
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@hr",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 12
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@mn",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 12
+          }
+         }
+        },
+        "fontSize": 24,
+        "fontWeight": 500,
+        "color": "@colors.onSurface"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CityRow": {
+     "city": "Tokyo",
+     "hr": 18,
+     "mn": 5,
+     "night": 1,
+     "day": 0,
+     "dh": 9,
+     "sgn": 1,
+     "same": 0,
+     "notSame": 1,
+     "tmr": 0,
+     "yst": 0
+    }
+   }
+  },
+  "CityTile": {
+   "summary": "One city as a small tile: icon and name, local time, difference",
+   "params": {
+    "city": {
+     "type": "string",
+     "required": true,
+     "doc": "City name"
+    },
+    "rowHeight": {
+     "type": "float",
+     "default": 0,
+     "static": true,
+     "doc": "0: share the column's height (weight); else a fixed height in dp"
+    },
+    "hr": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_hr)"
+    },
+    "mn": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_mn)"
+    },
+    "night": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_night)"
+    },
+    "day": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_day)"
+    },
+    "dh": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_dh)"
+    },
+    "sgn": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_sgn)"
+    },
+    "same": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_same)"
+    },
+    "notSame": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_notSame)"
+    },
+    "tmr": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_tmr)"
+    },
+    "yst": {
+     "type": "float",
+     "required": true,
+     "doc": "per-city value from resources.variables (<key>_yst)"
+    },
+    "detail": {
+     "type": "bool",
+     "default": true,
+     "static": true,
+     "doc": "Show the difference and day lines"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      "fillMaxHeight",
+      {
+       "padding": [
+        2,
+        2
+       ]
+      }
+     ],
+     "verticalArrangement": "top",
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "size": 14
+            }
+           ],
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@day"
+               },
+               {
+                "semantics": {
+                 "contentDescription": {
+                  "type": "textMerge",
+                  "id1": "@city",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ", ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@hr",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 12
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ":",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@mn",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 12
+                      }
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", day, ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@dh",
+                       "whole": 3,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": " hours from your time"
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              ],
+              "children": [
+               {
+                "Icon": {
+                 "name": "light_mode",
+                 "filled": true,
+                 "size": 12,
+                 "color": "@colors.warning"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@night"
+               },
+               {
+                "semantics": {
+                 "contentDescription": {
+                  "type": "textMerge",
+                  "id1": "@city",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ", ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@hr",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 12
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": ":",
+                      "id2": {
+                       "type": "textFromFloat",
+                       "value": "@mn",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 12
+                      }
+                     }
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ", night, ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@dh",
+                       "whole": 3,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": " hours from your time"
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              ],
+              "children": [
+               {
+                "Icon": {
+                 "name": "dark_mode",
+                 "filled": true,
+                 "size": 12,
+                 "color": "@colors.primary"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 3
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "@city",
+           "fontSize": 11,
+           "fontWeight": 600,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@hr",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 12
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@mn",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 12
+          }
+         }
+        },
+        "fontSize": 20,
+        "fontWeight": 500,
+        "color": "@colors.onSurface"
+       }
+      },
+      {
+       "$if": "detail",
+       "then": {
+        "row": {
+         "children": [
+          {
+           "text": {
+            "value": "same time",
+            "fontSize": 10,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@same"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             {
+              "visibility": "@notSame"
+             }
+            ],
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "−",
+                "+"
+               ],
+               "index": "@sgn",
+               "fontSize": 10,
+               "color": "@colors.muted"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textFromFloat",
+                "value": "abs(@dh)",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               },
+               "fontSize": 10,
+               "color": "@colors.muted",
+               "maxLines": 1
+              }
+             },
+             {
+              "text": {
+               "value": " h",
+               "fontSize": 10,
+               "color": "@colors.muted",
+               "maxLines": 1
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      },
+      {
+       "$if": "detail",
+       "then": {
+        "row": {
+         "children": [
+          {
+           "text": {
+            "value": "+1 day",
+            "fontSize": 10,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@tmr"
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "yesterday",
+            "fontSize": 10,
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@yst"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CityTile": {
+     "city": "Tokyo",
+     "hr": 18,
+     "mn": 5,
+     "night": 1,
+     "day": 0,
+     "dh": 9,
+     "sgn": 1,
+     "same": 0,
+     "notSame": 1,
+     "tmr": 0,
+     "yst": 0
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "off_lon": {
+    "value": 0,
+    "export": true
+   },
+   "off_nyc": {
+    "value": -240,
+    "export": true
+   },
+   "off_tyo": {
+    "value": 540,
+    "export": true
+   },
+   "off_syd": {
+    "value": 660,
+    "export": true
+   },
+   "userOff": "offsetToUtc() / 60",
+   "lon_tot": "timeInMin() + @off_lon - @userOff + 2880",
+   "lon_loc": "@lon_tot % 1440",
+   "lon_dd": "floor(@lon_tot / 1440) - 2",
+   "lon_hr": "floor(@lon_loc / 60)",
+   "lon_mn": "@lon_loc % 60",
+   "lon_night": "1 - step(@lon_loc, 359.5) * (1 - step(@lon_loc, 1079.5))",
+   "lon_day": "1 - @lon_night",
+   "lon_dh": "(@off_lon - @userOff) / 60",
+   "lon_sgn": "step(@lon_dh, 0)",
+   "lon_notSame": "min(1, abs(@off_lon - @userOff))",
+   "lon_same": "1 - @lon_notSame",
+   "lon_tmr": "step(@lon_dd, 0.5)",
+   "lon_yst": "step(0 - @lon_dd, 0.5)",
+   "nyc_tot": "timeInMin() + @off_nyc - @userOff + 2880",
+   "nyc_loc": "@nyc_tot % 1440",
+   "nyc_dd": "floor(@nyc_tot / 1440) - 2",
+   "nyc_hr": "floor(@nyc_loc / 60)",
+   "nyc_mn": "@nyc_loc % 60",
+   "nyc_night": "1 - step(@nyc_loc, 359.5) * (1 - step(@nyc_loc, 1079.5))",
+   "nyc_day": "1 - @nyc_night",
+   "nyc_dh": "(@off_nyc - @userOff) / 60",
+   "nyc_sgn": "step(@nyc_dh, 0)",
+   "nyc_notSame": "min(1, abs(@off_nyc - @userOff))",
+   "nyc_same": "1 - @nyc_notSame",
+   "nyc_tmr": "step(@nyc_dd, 0.5)",
+   "nyc_yst": "step(0 - @nyc_dd, 0.5)",
+   "tyo_tot": "timeInMin() + @off_tyo - @userOff + 2880",
+   "tyo_loc": "@tyo_tot % 1440",
+   "tyo_dd": "floor(@tyo_tot / 1440) - 2",
+   "tyo_hr": "floor(@tyo_loc / 60)",
+   "tyo_mn": "@tyo_loc % 60",
+   "tyo_night": "1 - step(@tyo_loc, 359.5) * (1 - step(@tyo_loc, 1079.5))",
+   "tyo_day": "1 - @tyo_night",
+   "tyo_dh": "(@off_tyo - @userOff) / 60",
+   "tyo_sgn": "step(@tyo_dh, 0)",
+   "tyo_notSame": "min(1, abs(@off_tyo - @userOff))",
+   "tyo_same": "1 - @tyo_notSame",
+   "tyo_tmr": "step(@tyo_dd, 0.5)",
+   "tyo_yst": "step(0 - @tyo_dd, 0.5)",
+   "syd_tot": "timeInMin() + @off_syd - @userOff + 2880",
+   "syd_loc": "@syd_tot % 1440",
+   "syd_dd": "floor(@syd_tot / 1440) - 2",
+   "syd_hr": "floor(@syd_loc / 60)",
+   "syd_mn": "@syd_loc % 60",
+   "syd_night": "1 - step(@syd_loc, 359.5) * (1 - step(@syd_loc, 1079.5))",
+   "syd_day": "1 - @syd_night",
+   "syd_dh": "(@off_syd - @userOff) / 60",
+   "syd_sgn": "step(@syd_dh, 0)",
+   "syd_notSame": "min(1, abs(@off_syd - @userOff))",
+   "syd_same": "1 - @syd_notSame",
+   "syd_tmr": "step(@syd_dd, 0.5)",
+   "syd_yst": "step(0 - @syd_dd, 0.5)",
+   "phone": "step(windowHeight(), 300)",
+   "narrow": "1 - step(windowWidth(), 259)",
+   "short": "1 - step(windowHeight(), 139)",
+   "layout": "@phone * 3 + (1 - @phone) * (@narrow * (1 + 3 * @short) + (1 - @narrow) * @short * 2)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "stateLayout": {
+      "indexId": "@layout",
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": [
+            14,
+            8
+           ]
+          }
+         ],
+         "children": [
+          {
+           "CityRow": {
+            "city": "London",
+            "hr": "@lon_hr",
+            "mn": "@lon_mn",
+            "night": "@lon_night",
+            "day": "@lon_day",
+            "dh": "@lon_dh",
+            "sgn": "@lon_sgn",
+            "same": "@lon_same",
+            "notSame": "@lon_notSame",
+            "tmr": "@lon_tmr",
+            "yst": "@lon_yst"
+           }
+          },
+          {
+           "CityRow": {
+            "city": "New York",
+            "hr": "@nyc_hr",
+            "mn": "@nyc_mn",
+            "night": "@nyc_night",
+            "day": "@nyc_day",
+            "dh": "@nyc_dh",
+            "sgn": "@nyc_sgn",
+            "same": "@nyc_same",
+            "notSame": "@nyc_notSame",
+            "tmr": "@nyc_tmr",
+            "yst": "@nyc_yst"
+           }
+          },
+          {
+           "CityRow": {
+            "city": "Tokyo",
+            "hr": "@tyo_hr",
+            "mn": "@tyo_mn",
+            "night": "@tyo_night",
+            "day": "@tyo_day",
+            "dh": "@tyo_dh",
+            "sgn": "@tyo_sgn",
+            "same": "@tyo_same",
+            "notSame": "@tyo_notSame",
+            "tmr": "@tyo_tmr",
+            "yst": "@tyo_yst"
+           }
+          },
+          {
+           "CityRow": {
+            "city": "Sydney",
+            "hr": "@syd_hr",
+            "mn": "@syd_mn",
+            "night": "@syd_night",
+            "day": "@syd_day",
+            "dh": "@syd_dh",
+            "sgn": "@syd_sgn",
+            "same": "@syd_same",
+            "notSame": "@syd_notSame",
+            "tmr": "@syd_tmr",
+            "yst": "@syd_yst"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 6
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             }
+            ],
+            "children": [
+             {
+              "CityTile": {
+               "city": "London",
+               "hr": "@lon_hr",
+               "mn": "@lon_mn",
+               "night": "@lon_night",
+               "day": "@lon_day",
+               "dh": "@lon_dh",
+               "sgn": "@lon_sgn",
+               "same": "@lon_same",
+               "notSame": "@lon_notSame",
+               "tmr": "@lon_tmr",
+               "yst": "@lon_yst"
+              }
+             },
+             {
+              "CityTile": {
+               "city": "New York",
+               "hr": "@nyc_hr",
+               "mn": "@nyc_mn",
+               "night": "@nyc_night",
+               "day": "@nyc_day",
+               "dh": "@nyc_dh",
+               "sgn": "@nyc_sgn",
+               "same": "@nyc_same",
+               "notSame": "@nyc_notSame",
+               "tmr": "@nyc_tmr",
+               "yst": "@nyc_yst"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             }
+            ],
+            "children": [
+             {
+              "CityTile": {
+               "city": "Tokyo",
+               "hr": "@tyo_hr",
+               "mn": "@tyo_mn",
+               "night": "@tyo_night",
+               "day": "@tyo_day",
+               "dh": "@tyo_dh",
+               "sgn": "@tyo_sgn",
+               "same": "@tyo_same",
+               "notSame": "@tyo_notSame",
+               "tmr": "@tyo_tmr",
+               "yst": "@tyo_yst"
+              }
+             },
+             {
+              "CityTile": {
+               "city": "Sydney",
+               "hr": "@syd_hr",
+               "mn": "@syd_mn",
+               "night": "@syd_night",
+               "day": "@syd_day",
+               "dh": "@syd_dh",
+               "sgn": "@syd_sgn",
+               "same": "@syd_same",
+               "notSame": "@syd_notSame",
+               "tmr": "@syd_tmr",
+               "yst": "@syd_yst"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": [
+            8,
+            4
+           ]
+          }
+         ],
+         "children": [
+          {
+           "CityTile": {
+            "city": "London",
+            "hr": "@lon_hr",
+            "mn": "@lon_mn",
+            "night": "@lon_night",
+            "day": "@lon_day",
+            "dh": "@lon_dh",
+            "sgn": "@lon_sgn",
+            "same": "@lon_same",
+            "notSame": "@lon_notSame",
+            "tmr": "@lon_tmr",
+            "yst": "@lon_yst"
+           }
+          },
+          {
+           "CityTile": {
+            "city": "New York",
+            "hr": "@nyc_hr",
+            "mn": "@nyc_mn",
+            "night": "@nyc_night",
+            "day": "@nyc_day",
+            "dh": "@nyc_dh",
+            "sgn": "@nyc_sgn",
+            "same": "@nyc_same",
+            "notSame": "@nyc_notSame",
+            "tmr": "@nyc_tmr",
+            "yst": "@nyc_yst"
+           }
+          },
+          {
+           "CityTile": {
+            "city": "Tokyo",
+            "hr": "@tyo_hr",
+            "mn": "@tyo_mn",
+            "night": "@tyo_night",
+            "day": "@tyo_day",
+            "dh": "@tyo_dh",
+            "sgn": "@tyo_sgn",
+            "same": "@tyo_same",
+            "notSame": "@tyo_notSame",
+            "tmr": "@tyo_tmr",
+            "yst": "@tyo_yst"
+           }
+          },
+          {
+           "CityTile": {
+            "city": "Sydney",
+            "hr": "@syd_hr",
+            "mn": "@syd_mn",
+            "night": "@syd_night",
+            "day": "@syd_day",
+            "dh": "@syd_dh",
+            "sgn": "@syd_sgn",
+            "same": "@syd_same",
+            "notSame": "@syd_notSame",
+            "tmr": "@syd_tmr",
+            "yst": "@syd_yst"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 16
+          },
+          {
+           "spacedBy": 12
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "World clock",
+            "fontSize": 20,
+            "fontWeight": 600,
+            "color": "@colors.onSurface"
+           }
+          },
+          {
+           "WorldMap": {
+            "cities": [
+             "London",
+             "New York",
+             "Tokyo",
+             "Sydney"
+            ],
+            "labels": true,
+            "night": true,
+            "height": 150,
+            "label": "World map with the night side shaded and London, New York, Tokyo and Sydney marked"
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "CityRow": {
+               "city": "London",
+               "hr": "@lon_hr",
+               "mn": "@lon_mn",
+               "night": "@lon_night",
+               "day": "@lon_day",
+               "dh": "@lon_dh",
+               "sgn": "@lon_sgn",
+               "same": "@lon_same",
+               "notSame": "@lon_notSame",
+               "tmr": "@lon_tmr",
+               "yst": "@lon_yst",
+               "rowHeight": 56
+              }
+             },
+             {
+              "CityRow": {
+               "city": "New York",
+               "hr": "@nyc_hr",
+               "mn": "@nyc_mn",
+               "night": "@nyc_night",
+               "day": "@nyc_day",
+               "dh": "@nyc_dh",
+               "sgn": "@nyc_sgn",
+               "same": "@nyc_same",
+               "notSame": "@nyc_notSame",
+               "tmr": "@nyc_tmr",
+               "yst": "@nyc_yst",
+               "rowHeight": 56
+              }
+             },
+             {
+              "CityRow": {
+               "city": "Tokyo",
+               "hr": "@tyo_hr",
+               "mn": "@tyo_mn",
+               "night": "@tyo_night",
+               "day": "@tyo_day",
+               "dh": "@tyo_dh",
+               "sgn": "@tyo_sgn",
+               "same": "@tyo_same",
+               "notSame": "@tyo_notSame",
+               "tmr": "@tyo_tmr",
+               "yst": "@tyo_yst",
+               "rowHeight": 56
+              }
+             },
+             {
+              "CityRow": {
+               "city": "Sydney",
+               "hr": "@syd_hr",
+               "mn": "@syd_mn",
+               "night": "@syd_night",
+               "day": "@syd_day",
+               "dh": "@syd_dh",
+               "sgn": "@syd_sgn",
+               "same": "@syd_same",
+               "notSame": "@syd_notSame",
+               "tmr": "@syd_tmr",
+               "yst": "@syd_yst",
+               "rowHeight": 56
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 4
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             }
+            ],
+            "children": [
+             {
+              "CityTile": {
+               "city": "London",
+               "hr": "@lon_hr",
+               "mn": "@lon_mn",
+               "night": "@lon_night",
+               "day": "@lon_day",
+               "dh": "@lon_dh",
+               "sgn": "@lon_sgn",
+               "same": "@lon_same",
+               "notSame": "@lon_notSame",
+               "tmr": "@lon_tmr",
+               "yst": "@lon_yst",
+               "detail": false
+              }
+             },
+             {
+              "CityTile": {
+               "city": "New York",
+               "hr": "@nyc_hr",
+               "mn": "@nyc_mn",
+               "night": "@nyc_night",
+               "day": "@nyc_day",
+               "dh": "@nyc_dh",
+               "sgn": "@nyc_sgn",
+               "same": "@nyc_same",
+               "notSame": "@nyc_notSame",
+               "tmr": "@nyc_tmr",
+               "yst": "@nyc_yst",
+               "detail": false
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             }
+            ],
+            "children": [
+             {
+              "CityTile": {
+               "city": "Tokyo",
+               "hr": "@tyo_hr",
+               "mn": "@tyo_mn",
+               "night": "@tyo_night",
+               "day": "@tyo_day",
+               "dh": "@tyo_dh",
+               "sgn": "@tyo_sgn",
+               "same": "@tyo_same",
+               "notSame": "@tyo_notSame",
+               "tmr": "@tyo_tmr",
+               "yst": "@tyo_yst",
+               "detail": false
+              }
+             },
+             {
+              "CityTile": {
+               "city": "Sydney",
+               "hr": "@syd_hr",
+               "mn": "@syd_mn",
+               "night": "@syd_night",
+               "day": "@syd_day",
+               "dh": "@syd_dh",
+               "sgn": "@syd_sgn",
+               "same": "@syd_same",
+               "notSame": "@syd_notSame",
+               "tmr": "@syd_tmr",
+               "yst": "@syd_yst",
+               "detail": false
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

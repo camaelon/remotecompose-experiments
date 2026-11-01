@@ -1,0 +1,792 @@
+{
+ "component": "Walkthrough",
+ "version": 1,
+ "summary": "The frame of a step-by-step explanation: the caller draws the explanation (in the `content` slot) from the current step, and the walkthrough shows that step's title and text, \"Step N of M\" with dots, Back and Next (Done on the last step), and optionally a play / pause button that advances one step every `interval` seconds. It publishes the live step and an eased copy of it for the drawing.",
+ "params": {
+  "titles": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One title per step, in order, e.g. [\"Lift\", \"Release\", \"Swing\"]; fixed when the document is built. Shown above the step's text and announced as \"Step N of M: <title>\""
+  },
+  "texts": {
+   "type": "list",
+   "static": true,
+   "doc": "One explanation per step (same order as titles). Long texts wrap; give `captionHeight` so the drawing keeps its size from step to step. Omit it for titles only"
+  },
+  "count": {
+   "type": "float",
+   "static": true,
+   "doc": "Number of steps; by default the number of titles"
+  },
+  "step": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The step, 0-based, which Back, Next and Pause write. Bind a document variable (\"@step\") to set it from the host; unbound, the call keeps its own. While autoplay plays, this variable stays where play started: read `shown` for the step on screen"
+  },
+  "shown": {
+   "type": "variable",
+   "doc": "Publishes the step on screen (the step, or the timed one while playing) under the name of the variable you bind (\"@stepNow\"): a tree variable written at the walkthrough's head, so read it in the `content` slot, or anywhere after the walkthrough in the document. Do NOT also declare it in resources (an earlier reader would get that 0). Unbound: unused"
+  },
+  "eased": {
+   "type": "variable",
+   "doc": "Publishes `shown` eased over 0.6 s (the standard cubic curve) under the name you bind (\"@stepEased\"): it glides from 1 to 2 when the step changes, so a drawing can morph between steps with clamp or lerp over it. Same rules as `shown`. Mono: it is the step itself (no motion)"
+  },
+  "autoplay": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "true adds a play / pause button: playing advances one step every `interval` seconds from the step on screen and stops on the last one (then play starts over). Not in mono (no motion on e-ink and always-on displays)"
+  },
+  "interval": {
+   "type": "float",
+   "default": 3,
+   "static": true,
+   "doc": "Seconds per step while playing"
+  },
+  "playing": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "1 while playing. Bind a document variable to read it, or pass 1 to start playing when the document loads (\"playing\": 1); unbound, the call keeps its own"
+  },
+  "captionHeight": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Fixed height of the title and text area in dp; 0 sizes it to the current step's text, so the controls (and a `content` above them) move when the text length changes"
+  },
+  "doneLabel": {
+   "type": "string",
+   "doc": "Label of the button that replaces Next on the last step: \"Done\" when onDone is given, else \"Start over\""
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Next / Done and the current dot"
+  },
+  "onStep": {
+   "type": "action",
+   "doc": "Actions run after Back and after Next change the step (valueFloatChange, ...). For a hostNamedAction use onNext / onBack instead: a named action written in two click lists reaches the host by name from one of them only"
+  },
+  "onNext": {
+   "type": "action",
+   "doc": "Actions run on Next, after the step changes, e.g. [{\"type\": \"hostNamedAction\", \"name\": \"next\"}]"
+  },
+  "onBack": {
+   "type": "action",
+   "doc": "Actions run on Back, after the step changes"
+  },
+  "onDone": {
+   "type": "action",
+   "doc": "Actions run by the last step's button (a hostNamedAction closing the explanation, ...). Omitted: that button reads Start over and goes back to step 1"
+  },
+  "loop": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "With autoplay: after the last step play goes on from the first (a cycle: an engine, a heartbeat, the seasons) until paused, instead of stopping at the end"
+  }
+ },
+ "slots": {
+  "content": {
+   "optional": true,
+   "doc": "The explanation itself (a canvas, any layout), above the caption, filling the height the walkthrough leaves: it reads the variables bound to `shown` and `eased`. Without it the walkthrough is only its caption and controls"
+  }
+ },
+ "locals": {
+  "n": {
+   "$if": "count",
+   "then": "@count",
+   "else": {
+    "$count": "titles"
+   }
+  },
+  "last": "@n - 1",
+  "t0": 0,
+  "s0": 0,
+  "cur": {
+   "$if": "autoplay",
+   "then": {
+    "$if": "theme.mono",
+    "then": "clamp(0, @last, round(@step))",
+    "else": {
+     "$if": "loop",
+     "then": "clamp(0, @last, round(@step) + @playing * ((@s0 + floor((animationTime() - @t0) / @interval)) % @n - round(@step)))",
+     "else": "clamp(0, @last, round(@step) + @playing * (@s0 + floor((animationTime() - @t0) / @interval) - round(@step)))"
+    }
+   },
+   "else": "clamp(0, @last, round(@step))"
+  },
+  "run": {
+   "$if": "autoplay",
+   "then": {
+    "$if": "theme.mono",
+    "then": 0,
+    "else": {
+     "$if": "loop",
+     "then": "@playing",
+     "else": "@playing * min(1, @last - @cur)"
+    }
+   },
+   "else": 0
+  },
+  "tick": {
+   "$if": "autoplay",
+   "then": {
+    "$if": "theme.mono",
+    "then": 0,
+    "else": "@run * floor(animationTime() * 2)"
+   },
+   "else": 0
+  },
+  "drive": {
+   "value": "@tick",
+   "anim": 0.75
+  },
+  "more": "min(1, @last - @cur)",
+  "pos": {
+   "value": "@cur",
+   "anim": 0.6
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.state",
+  "anim.value",
+  "a11y.labels",
+  "text.dynamic",
+  "draw.shapes"
+ ],
+ "call": {
+  "Walkthrough": {
+   "step": "@step",
+   "titles": [
+    "Lift",
+    "Release",
+    "Swing"
+   ],
+   "texts": [
+    "Pull the bob to one side.",
+    "Let go: gravity pulls it down.",
+    "It swings past the middle and up the other side."
+   ],
+   "autoplay": true,
+   "interval": 2
+  }
+ },
+ "body": {
+  "column": {
+   "modifiers": [
+    {
+     "$if": "content",
+     "then": "fillMaxSize",
+     "else": "fillMaxWidth"
+    }
+   ],
+   "children": [
+    {
+     "variable": {
+      "name": {
+       "$name": "shown"
+      },
+      "value": "@cur + 0"
+     }
+    },
+    {
+     "variable": {
+      "name": {
+       "$name": "eased"
+      },
+      "value": "@pos + 0"
+     }
+    },
+    {
+     "$if": "content",
+     "then": {
+      "box": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "verticalWeight": 1
+        }
+       ],
+       "children": [
+        {
+         "$slot": "content"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "canvas": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 24
+       },
+       {
+        "$if": "content",
+        "then": {
+         "padding": {
+          "top": 8
+         }
+        }
+       }
+      ],
+      "commands": [
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@colors.muted"
+          },
+          {
+           "style": "fill"
+          },
+          {
+           "alpha": 1
+          },
+          {
+           "textSize": "@theme.text_sm"
+          }
+         ]
+        }
+       },
+       {
+        "drawTextAnchored": {
+         "text": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": "Step ",
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@cur + 1",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 5
+           }
+          },
+          "id2": " of @n"
+         },
+         "x": 0,
+         "y": "componentHeight() / 2 + 0 * @drive",
+         "panX": -1,
+         "panY": 0
+        }
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "style": {
+            "$if": "theme.mono",
+            "then": "stroke",
+            "else": "fill"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "strokeWidth": 1.5
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "count",
+        "then": [
+         {
+          "$each": "count",
+          "index": "i",
+          "do": {
+           "drawCircle": {
+            "cx": "componentWidth() - (@n - @i) * 14 + 7",
+            "cy": "componentHeight() / 2",
+            "radius": {
+             "$if": "theme.mono",
+             "then": 2.75,
+             "else": 3.5
+            }
+           }
+          }
+         }
+        ],
+        "else": [
+         {
+          "$each": "titles",
+          "index": "i",
+          "do": {
+           "drawCircle": {
+            "cx": "componentWidth() - (@n - @i) * 14 + 7",
+            "cy": "componentHeight() / 2",
+            "radius": {
+             "$if": "theme.mono",
+             "then": 2.75,
+             "else": 3.5
+            }
+           }
+          }
+         }
+        ]
+       },
+       {
+        "paint": {
+         "ops": [
+          {
+           "color": "@color"
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "style": "fill"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "drawCircle": {
+         "cx": "componentWidth() - (@n - @pos) * 14 + 7",
+         "cy": "componentHeight() / 2",
+         "radius": 3.5
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "$if": "captionHeight",
+        "then": {
+         "height": "@captionHeight"
+        }
+       },
+       {
+        "padding": {
+         "top": 4
+        }
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth"
+         ],
+         "children": [
+          {
+           "$each": "titles",
+           "as": "title",
+           "index": "i",
+           "do": {
+            "text": {
+             "value": "@title",
+             "fontSize": 18,
+             "fontWeight": 600,
+             "color": "@colors.onSurface",
+             "modifiers": [
+              {
+               "visibility": "1 - min(1, abs(@cur - @i))"
+              },
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "Step ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@cur + 1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "id2": " of @n"
+                 },
+                 "id2": ": @title"
+                }
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "texts",
+        "then": {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "padding": {
+             "top": 4
+            }
+           }
+          ],
+          "children": [
+           {
+            "$each": "texts",
+            "as": "text",
+            "index": "i",
+            "do": {
+             "text": {
+              "value": "@text",
+              "fontSize": "@theme.text_md",
+              "color": "@colors.onSurface",
+              "modifiers": [
+               "fillMaxWidth",
+               {
+                "visibility": "1 - min(1, abs(@cur - @i))"
+               }
+              ]
+             }
+            }
+           }
+          ]
+         }
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "padding": {
+         "top": 8
+        }
+       }
+      ],
+      "children": [
+       {
+        "Button": {
+         "label": "Back",
+         "style": "outlined",
+         "enabled": "min(1, @cur)",
+         "onClick": [
+          {
+           "type": "valueFloatExpressionChange",
+           "target": "@step",
+           "value": "max(0, @cur - 1)"
+          },
+          {
+           "$if": "autoplay",
+           "then": {
+            "type": "valueFloatChange",
+            "target": "@playing",
+            "value": 0
+           }
+          },
+          {
+           "$if": "onBack",
+           "then": "@onBack"
+          },
+          {
+           "$if": "onStep",
+           "then": "@onStep"
+          }
+         ]
+        }
+       },
+       {
+        "$if": "autoplay",
+        "then": {
+         "$if": "theme.mono",
+         "else": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": 0
+             }
+            ],
+            "commands": [
+             {
+              "global": {
+               "commands": [
+                {
+                 "textSubtext": {
+                  "text": "Play Pause",
+                  "start": "@run * 5",
+                  "len": 5,
+                  "varName": "playLabel5"
+                 }
+                },
+                {
+                 "textTransform": {
+                  "text": "@playLabel5",
+                  "start": 0,
+                  "len": -1,
+                  "operation": 3,
+                  "varName": "playLabel"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "IconButton": {
+            "label": "@playLabel",
+            "onClick": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@step",
+              "value": "@cur + 0"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@step",
+              "value": "@step * (1 - (1 - @run) * max(0, @step - @last + 1))"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@s0",
+              "value": "@step + 0"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@t0",
+              "value": "animationTime() + 0"
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@playing",
+              "value": "1 - @run"
+             }
+            ],
+            "slots": {
+             "icon": [
+              {
+               "canvas": {
+                "modifiers": [
+                 {
+                  "size": [
+                   24,
+                   24
+                  ]
+                 }
+                ],
+                "commands": [
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "color": "@colors.onSurface"
+                    },
+                    {
+                     "style": "stroke"
+                    },
+                    {
+                     "strokeWidth": 2
+                    },
+                    {
+                     "strokeCap": "round"
+                    },
+                    {
+                     "strokeJoin": "round"
+                    },
+                    {
+                     "alpha": "1 - @run"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 8,
+                   "y1": 6,
+                   "x2": 18,
+                   "y2": 12
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 18,
+                   "y1": 12,
+                   "x2": 8,
+                   "y2": 18
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 8,
+                   "y1": 18,
+                   "x2": 8,
+                   "y2": 6
+                  }
+                 },
+                 {
+                  "paint": {
+                   "ops": [
+                    {
+                     "strokeWidth": 3
+                    },
+                    {
+                     "alpha": "@run"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 9,
+                   "y1": 6.5,
+                   "x2": 9,
+                   "y2": 17.5
+                  }
+                 },
+                 {
+                  "drawLine": {
+                   "x1": 15,
+                   "y1": 6.5,
+                   "x2": 15,
+                   "y2": 17.5
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@more"
+          }
+         ],
+         "children": [
+          {
+           "Button": {
+            "label": "Next",
+            "color": "@color",
+            "onClick": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@step",
+              "value": "min(@last, @cur + 1)"
+             },
+             {
+              "$if": "autoplay",
+              "then": {
+               "type": "valueFloatChange",
+               "target": "@playing",
+               "value": 0
+              }
+             },
+             {
+              "$if": "onNext",
+              "then": "@onNext"
+             },
+             {
+              "$if": "onStep",
+              "then": "@onStep"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "1 - @more"
+          }
+         ],
+         "children": [
+          {
+           "Button": {
+            "label": {
+             "$if": "doneLabel",
+             "then": "@doneLabel",
+             "else": {
+              "$if": "onDone",
+              "then": "Done",
+              "else": "Start over"
+             }
+            },
+            "color": "@color",
+            "onClick": [
+             {
+              "$if": "autoplay",
+              "then": {
+               "type": "valueFloatChange",
+               "target": "@playing",
+               "value": 0
+              }
+             },
+             {
+              "$if": "onDone",
+              "then": "@onDone",
+              "else": {
+               "type": "valueFloatChange",
+               "target": "@step",
+               "value": 0
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "The drawing must read `shown` or `eased`, not `step`: while autoplay plays, `step` stays where play started and the step on screen is computed from the clock. Pause, Back and Next write the step on screen back into `step`, so a paused walkthrough has step = shown",
+  "`shown` and `eased` are published as tree variables named after the variables you bind ({\"$name\": ...}): read them in the `content` slot or anywhere after the call in the document. Never declare them in resources as well: the resources variable wins and reads 0 (check_component's demo declares every @name a call references, so a sweep of a call whose content reads @stepEased draws step 0; check the drawing with the document instead). A reader before the call fails to convert (Variable not found)",
+  "Grow the k-th element of a drawing with clamp(0, 1, @stepEased - (k - 1)) (0 before step k, 1 after, easing in between), and fade its labels with the same value as paint alpha. Keep the drawing's own canvas variables out of resources too",
+  "Autoplay reads animationTime() (seconds since the player started the document), not the wall clock: shown = clamp(0, last, step + playing × (s0 + floor((animationTime() − t0) / interval) − step)). Play runs five actions in order: step = shown, step = 0 if not running and on the last step (play there starts over), s0 = step, t0 = animationTime(), playing = 1 − running. Running is playing × (shown < last), so the button shows Play again on the last step",
+  "No clock listener: frames while playing come from an animated local whose target, running × floor(animationTime() × 2), changes every half second (each change restarts a 0.75 s ease), so a PLAYING walkthrough repaints every frame and a paused or finished one is idle (inspect runtime: idle). check_component's lint warning \"animationTime() alone never schedules a repaint\" is expected: that local is what schedules it. A continuousSec() clock would keep the document repainting even while paused (TIM-14)",
+  "Playing does not survive a reload: t0 is relative to the player's animationTime, so a document reloaded with playing 1 times its steps from the load. Pass \"playing\": 1 to start playing at load; the first step comes after `interval`. A timed step runs no action and tells the host nothing: onStep, onNext and onBack run on taps only",
+  "Mono (mono-dark, mono-light) has no play button and no autoplay (no motion on e-ink or always-on displays), and `eased` is `shown` itself: the drawing snaps",
+  "The step on screen is clamp(0, last, round(step)): a host value out of range shows the first or last step. The caption is one text per title and per text, each with an exact 0/1 visibility 1 − min(1, |shown − i|); the title is announced \"Step N of M: <title>\" and the text after it. The \"Step N of M\" line is drawn on the progress canvas, so a screen reader does not hear it twice",
+  "With a `content` slot the walkthrough fills its parent (fillMaxSize) and the content takes the height the caption and controls leave: give it a parent with a height. Without `captionHeight` the caption takes the current step's height and everything above and below moves when the text length changes; with it, a longer text is clipped",
+  "Back is a Button with a runtime enabled (min(1, shown)), dimmed and inert on step 1. Next and the last step's button are two Buttons switched by visibility; the last one runs onDone, or without it reads Start over and goes back to step 1. A tap on Back or Next while playing stops playing. Every target is 48 dp tall",
+  "Give a hostNamedAction to onNext / onBack / onDone, never to onStep: a named action written in two click lists reaches the host by name from one of them only (Stepper)",
+  "A document variable named `step` hides the step() function in your own expressions (json2rc resolves the bare token as the variable, so step(x, e) becomes nonsense); this component avoids step() for that reason. Use min/max arithmetic, or name the variable otherwise",
+  "The dots are 7 dp at a 14 dp pitch, right-aligned, decorative (not tappable); past about 12 steps they crowd the \"Step N of M\" line",
+  "inspect pins animationTime() to its clock (seconds since 2026-01-01, which loses sub-second precision as a float): pin clock \"2026-01-01T00:00:00\" when checking autoplay with inspect interact",
+  "Expanded, never a pattern: it contains texts (U7) and declares named values. Each instance costs about 3.7 KB with three short steps and autoplay (3.0 KB without autoplay; mono about 3.8 KB, no play button) plus about 350 B per further step and the length of its strings, mostly in the three Buttons (Back has two faces for its runtime enabled)",
+  "loop: the eased step (eased) runs back from the last step to the first when the cycle wraps; a drawing that must jump forward at the wrap reads shown (the whole step) and its own phase"
+ ]
+}

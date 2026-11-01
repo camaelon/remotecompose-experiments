@@ -1,0 +1,1120 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Habit tracker: five habits, this week's check-ins and streaks"
+ },
+ "components": {
+  "DayCell": {
+   "summary": "One day of a habit's week: a filled disc with a tick when done, an outline ring when missed, a primary ring for today, a small dot for a day still to come. Today's cell carries the tap.",
+   "params": {
+    "done": {
+     "type": "float",
+     "default": 0,
+     "doc": "1 when the habit was done that day"
+    },
+    "fut": {
+     "type": "float",
+     "default": 0,
+     "doc": "1 for a day after today"
+    },
+    "isT": {
+     "type": "float",
+     "default": 0,
+     "doc": "1 for today (an integer variable: it drives visibility)"
+    },
+    "rad": {
+     "type": "float",
+     "default": 46,
+     "doc": "disc radius in the 0..100 box (smaller on today, inside its ring)"
+    },
+    "size": {
+     "type": "float",
+     "default": 28,
+     "doc": "cell size in dp"
+    },
+    "scale": {
+     "type": "float",
+     "default": 0.28,
+     "doc": "size / 100"
+    },
+    "onTap": {
+     "type": "action",
+     "doc": "actions run when today's cell is tapped"
+    },
+    "label": {
+     "type": "text",
+     "default": "Today",
+     "doc": "screen-reader label of today's cell"
+    },
+    "state": {
+     "type": "text",
+     "default": "Not done",
+     "doc": "screen-reader state of today's cell"
+    }
+   },
+   "locals": {
+    "df": "@done * (1 - @fut)",
+    "ring": "(1 - @done) * (1 - @fut) * (1 - @isT)",
+    "tr": "(1 - @done) * @isT"
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      {
+       "width": "@size"
+      },
+      {
+       "height": "@size"
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         "fillMaxSize"
+        ],
+        "commands": [
+         {
+          "scale": {
+           "sx": "@scale",
+           "sy": "@scale"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@df"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": 50,
+           "cy": 50,
+           "radius": "@rad"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onPrimary"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 10
+            },
+            {
+             "strokeCap": "round"
+            },
+            {
+             "alpha": "@df"
+            }
+           ]
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 30,
+           "y1": 52,
+           "x2": 44,
+           "y2": 66
+          }
+         },
+         {
+          "drawLine": {
+           "x1": 44,
+           "y1": 66,
+           "x2": 71,
+           "y2": 37
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "strokeWidth": 5
+            },
+            {
+             "alpha": "@ring"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": 50,
+           "cy": 50,
+           "radius": 44
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "strokeWidth": 7
+            },
+            {
+             "alpha": "@isT"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": 50,
+           "cy": 50,
+           "radius": 45
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": "@fut"
+            }
+           ]
+          }
+         },
+         {
+          "drawCircle": {
+           "cx": 50,
+           "cy": 50,
+           "radius": 9
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxSize",
+         {
+          "visibility": "@isT"
+         },
+         {
+          "clip": {
+           "roundedRect": 999
+          }
+         },
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "stateDescription": "@state",
+           "clickable": true
+          }
+         },
+         {
+          "onClick": "@onTap"
+         }
+        ],
+        "children": []
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "DayCell": {
+     "done": 1
+    }
+   }
+  },
+  "DayLabel": {
+   "summary": "A weekday letter over a day column; today's letter sits in a primary pill.",
+   "params": {
+    "letter": {
+     "type": "string",
+     "required": true,
+     "doc": "the letter"
+    },
+    "size": {
+     "type": "float",
+     "default": 28,
+     "doc": "column width"
+    },
+    "isT": {
+     "type": "float",
+     "default": 0,
+     "doc": "1 for today"
+    },
+    "notT": {
+     "type": "float",
+     "default": 1,
+     "doc": "1 - isT"
+    }
+   },
+   "locals": {},
+   "body": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "width": "@size"
+      },
+      {
+       "height": 20
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "@letter",
+        "fontSize": 12,
+        "fontWeight": 700,
+        "color": "@colors.onPrimary",
+        "textAlign": "center",
+        "modifiers": [
+         {
+          "visibility": "@isT"
+         },
+         {
+          "width": 20
+         },
+         {
+          "clip": {
+           "roundedRect": 10
+          }
+         },
+         {
+          "background": "@colors.primary"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "@letter",
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "textAlign": "center",
+        "modifiers": [
+         {
+          "visibility": "@notT"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "DayLabel": {
+     "letter": "M",
+     "k": 0
+    }
+   }
+  },
+  "HabitRow": {
+   "summary": "One habit: its name, this week's seven days (today tappable) and its streak.",
+   "params": {
+    "name": {
+     "type": "text",
+     "required": true,
+     "doc": "habit name (host string)"
+    },
+    "mask": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "this week's days as a bitmask, bit 0 = Monday"
+    },
+    "streak": {
+     "type": "float",
+     "default": 0,
+     "doc": "streak in days up to yesterday; today's tick adds one"
+    },
+    "id": {
+     "type": "string",
+     "static": true,
+     "default": "0",
+     "doc": "suffix of the host action name"
+    }
+   },
+   "locals": {
+    "b0": "@mask % 2",
+    "b1": "floor(@mask / 2) % 2",
+    "b2": "floor(@mask / 4) % 2",
+    "b3": "floor(@mask / 8) % 2",
+    "b4": "floor(@mask / 16) % 2",
+    "b5": "floor(@mask / 32) % 2",
+    "b6": "floor(@mask / 64) % 2",
+    "bT": "floor(@mask / @p2t) % 2",
+    "c1": "@b0 + @b1 * @u1 + @b2 * @u2 + @b3 * @u3",
+    "c2": "@b4 * @u4 + @b5 * @u5 + @b6 * @u6",
+    "count": "@c1 + @c2",
+    "shown": "@streak + @bT"
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": [
+           0,
+           0
+          ]
+         }
+        ],
+        "commands": [
+         {
+          "global": {
+           "commands": [
+            {
+             "textSubtext": {
+              "text": "Not doneDone    ",
+              "start": "@bT * 8",
+              "len": 8,
+              "varName": "hs8_@id"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@hs8_@id",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "hs_@id"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": "@rowH"
+         },
+         {
+          "semantics": {
+           "contentDescription": {
+            "type": "textMerge",
+            "id1": "@name",
+            "id2": {
+             "type": "textMerge",
+             "id1": ": ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@count",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": " of ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@today + 1",
+                 "whole": 3,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " done this week so far, streak ",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "@shown",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": "@fs",
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "padding": [
+              6,
+              0,
+              0,
+              0
+             ]
+            },
+            {
+             "spacedBy": 3
+            }
+           ],
+           "children": [
+            {
+             "DayCell": {
+              "done": "@b0",
+              "fut": "@f0",
+              "isT": "@t0",
+              "rad": "@r0",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b1",
+              "fut": "@f1",
+              "isT": "@t1",
+              "rad": "@r1",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b2",
+              "fut": "@f2",
+              "isT": "@t2",
+              "rad": "@r2",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b3",
+              "fut": "@f3",
+              "isT": "@t3",
+              "rad": "@r3",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b4",
+              "fut": "@f4",
+              "isT": "@t4",
+              "rad": "@r4",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b5",
+              "fut": "@f5",
+              "isT": "@t5",
+              "rad": "@r5",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            },
+            {
+             "DayCell": {
+              "done": "@b6",
+              "fut": "@f6",
+              "isT": "@t6",
+              "rad": "@r6",
+              "size": "@cell",
+              "scale": "@cs",
+              "onTap": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@mask",
+                "value": "@mask + @p2t * (1 - 2 * @bT)"
+               },
+               {
+                "type": "hostNamedAction",
+                "name": "toggleToday@id",
+                "value": "@mask",
+                "valueType": "float"
+               }
+              ],
+              "label": {
+               "type": "textMerge",
+               "id1": "@name",
+               "id2": ", today"
+              },
+              "state": "@hs_@id"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "row": {
+           "verticalAlignment": "center",
+           "horizontalArrangement": "end",
+           "modifiers": [
+            {
+             "width": 46
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "local_fire_department",
+              "filled": true,
+              "size": 16,
+              "color": "@colors.warning"
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textFromFloat",
+               "value": "@shown",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "fontSize": "@fs",
+              "fontWeight": 700,
+              "color": "@colors.onSurface"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "HabitRow": {
+     "name": "Read",
+     "mask": 5,
+     "streak": 3
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "today": "weekDay() - 1",
+   "p2t": "pow(2, @today)",
+   "cell": "clamp(13, 34, min((windowWidth() - 170) / 9, (windowHeight() - 46) / 6.4))",
+   "cs": "@cell / 100",
+   "rowH": "@cell + 4 + clamp(0, 56, (windowHeight() - 360) / 8)",
+   "fs": "clamp(12, 17, @cell * 0.55)",
+   "t0": "1 - min(1, abs(@today - 0))",
+   "f0": "step(0, @today + 0.5)",
+   "r0": "46 - 10 * @t0",
+   "t1": "1 - min(1, abs(@today - 1))",
+   "f1": "step(1, @today + 0.5)",
+   "r1": "46 - 10 * @t1",
+   "u1": "1 - @f1",
+   "t2": "1 - min(1, abs(@today - 2))",
+   "f2": "step(2, @today + 0.5)",
+   "r2": "46 - 10 * @t2",
+   "u2": "1 - @f2",
+   "t3": "1 - min(1, abs(@today - 3))",
+   "f3": "step(3, @today + 0.5)",
+   "r3": "46 - 10 * @t3",
+   "u3": "1 - @f3",
+   "t4": "1 - min(1, abs(@today - 4))",
+   "f4": "step(4, @today + 0.5)",
+   "r4": "46 - 10 * @t4",
+   "u4": "1 - @f4",
+   "t5": "1 - min(1, abs(@today - 5))",
+   "f5": "step(5, @today + 0.5)",
+   "r5": "46 - 10 * @t5",
+   "u5": "1 - @f5",
+   "t6": "1 - min(1, abs(@today - 6))",
+   "f6": "step(6, @today + 0.5)",
+   "r6": "46 - 10 * @t6",
+   "u6": "1 - @f6",
+   "m0": {
+    "value": 31,
+    "export": true
+   },
+   "s0": {
+    "value": 12,
+    "export": true
+   },
+   "m1": {
+    "value": 45,
+    "export": true
+   },
+   "s1": {
+    "value": 0,
+    "export": true
+   },
+   "m2": {
+    "value": 63,
+    "export": true
+   },
+   "s2": {
+    "value": 20,
+    "export": true
+   },
+   "m3": {
+    "value": 19,
+    "export": true
+   },
+   "s3": {
+    "value": 1,
+    "export": true
+   },
+   "m4": {
+    "value": 0,
+    "export": true
+   },
+   "s4": {
+    "value": 0,
+    "export": true
+   },
+   "n0": "1 - @t0",
+   "n1": "1 - @t1",
+   "n2": "1 - @t2",
+   "n3": "1 - @t3",
+   "n4": "1 - @t4",
+   "n5": "1 - @t5",
+   "n6": "1 - @t6"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "h0",
+    "vtype": "string",
+    "value": "Drink water",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "h1",
+    "vtype": "string",
+    "value": "Read 20 minutes",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "h2",
+    "vtype": "string",
+    "value": "Meditate",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "h3",
+    "vtype": "string",
+    "value": "Exercise",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "h4",
+    "vtype": "string",
+    "value": "No sugar",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "collapsibleColumn": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "horizontalAlignment": "start",
+       "verticalArrangement": "top",
+       "children": [
+        {
+         "text": {
+          "value": "Habits",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "color": "@colors.onSurface",
+          "modifiers": [
+           {
+            "padding": [
+             0,
+             4,
+             0,
+             12
+            ]
+           },
+           {
+            "collapsiblePriority": {
+             "orientation": "vertical",
+             "priority": 1
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "This week",
+             "fontSize": "@fs",
+             "fontWeight": 700,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              {
+               "padding": [
+                6,
+                0,
+                0,
+                0
+               ]
+              },
+              {
+               "spacedBy": 3
+              }
+             ],
+             "children": [
+              {
+               "DayLabel": {
+                "letter": "M",
+                "isT": "@t0",
+                "notT": "@n0",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "T",
+                "isT": "@t1",
+                "notT": "@n1",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "W",
+                "isT": "@t2",
+                "notT": "@n2",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "T",
+                "isT": "@t3",
+                "notT": "@n3",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "F",
+                "isT": "@t4",
+                "notT": "@n4",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "S",
+                "isT": "@t5",
+                "notT": "@n5",
+                "size": "@cell"
+               }
+              },
+              {
+               "DayLabel": {
+                "letter": "S",
+                "isT": "@t6",
+                "notT": "@n6",
+                "size": "@cell"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "horizontalArrangement": "end",
+             "modifiers": [
+              {
+               "width": 46
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Streak",
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "HabitRow": {
+          "name": "@h0",
+          "mask": "@m0",
+          "streak": "@s0",
+          "id": "0"
+         }
+        },
+        {
+         "HabitRow": {
+          "name": "@h1",
+          "mask": "@m1",
+          "streak": "@s1",
+          "id": "1"
+         }
+        },
+        {
+         "HabitRow": {
+          "name": "@h2",
+          "mask": "@m2",
+          "streak": "@s2",
+          "id": "2"
+         }
+        },
+        {
+         "HabitRow": {
+          "name": "@h3",
+          "mask": "@m3",
+          "streak": "@s3",
+          "id": "3"
+         }
+        },
+        {
+         "HabitRow": {
+          "name": "@h4",
+          "mask": "@m4",
+          "streak": "@s4",
+          "id": "4"
+         }
+        },
+        {
+         "text": {
+          "value": "Tap today's circle to check a habit off",
+          "fontSize": 14,
+          "color": "@colors.muted",
+          "modifiers": [
+           {
+            "padding": [
+             0,
+             16,
+             0,
+             0
+            ]
+           },
+           {
+            "collapsiblePriority": {
+             "orientation": "vertical",
+             "priority": 1
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

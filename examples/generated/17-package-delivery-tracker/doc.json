@@ -1,0 +1,625 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 180,
+  "profiles": 513,
+  "contentDescription": "Package delivery tracker: the four steps Ordered, Shipped, Out for delivery and Delivered with the current one highlighted, the estimated arrival and the tracking number"
+ },
+ "resources": {
+  "variables": {
+   "stage": {
+    "value": 2,
+    "export": true
+   },
+   "etaDay": {
+    "value": 306,
+    "export": true
+   },
+   "etaMin": {
+    "value": 870,
+    "export": true
+   },
+   "y4": "1 - min(1, abs(year() % 4))",
+   "y100": "1 - min(1, abs(year() % 100))",
+   "y400": "1 - min(1, abs(year() % 400))",
+   "leap": "@y4 * (1 - @y100) + @y400",
+   "c1": "step(@etaDay, 31) + step(@etaDay, 59 + @leap) + step(@etaDay, 90 + @leap) + step(@etaDay, 120 + @leap)",
+   "c2": "step(@etaDay, 151 + @leap) + step(@etaDay, 181 + @leap) + step(@etaDay, 212 + @leap) + step(@etaDay, 243 + @leap)",
+   "c3": "step(@etaDay, 273 + @leap) + step(@etaDay, 304 + @leap) + step(@etaDay, 334 + @leap)",
+   "etaMonth": "1 + @c1 + @c2 + @c3",
+   "etaBefore": "ifElse(floor(30.6 * @etaMonth - 32.3) + @leap * step(@etaMonth, 2), 31 * (@etaMonth - 1), step(3, @etaMonth))",
+   "etaDom": "@etaDay - @etaBefore",
+   "dayDelta": "@etaDay - dayOfYear()",
+   "isToday": "1 - min(1, abs(@dayDelta))",
+   "isTomorrow": "1 - min(1, abs(@dayDelta - 1))",
+   "isOther": "1 - @isToday - @isTomorrow",
+   "etaH": "floor(@etaMin / 60)",
+   "etaM": "@etaMin % 60",
+   "wide": "step(windowWidth(), 239)",
+   "short": "1 - step(windowHeight(), 119)",
+   "layoutIdx": "@wide * (1 + @short)"
+  }
+ },
+ "components": {
+  "EtaText": {
+   "summary": "The ETA as one readable text: 'today, 14:30', 'tomorrow, 14:30' or '2 Nov, 14:30', from etaDay / etaMin and the clock",
+   "params": {
+    "fontSize": {
+     "type": "float",
+     "default": 13,
+     "doc": "Text size in sp"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.onSurface",
+     "doc": "Text colour"
+    }
+   },
+   "body": {
+    "box": {
+     "children": [
+      {
+       "text": {
+        "fontSize": "@fontSize",
+        "color": "@color",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "visibility": "@isToday"
+         }
+        ],
+        "value": {
+         "type": "textMerge",
+         "id1": "today, ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@etaH",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 12
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": ":",
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@etaM",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          }
+         }
+        }
+       }
+      },
+      {
+       "text": {
+        "fontSize": "@fontSize",
+        "color": "@color",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "visibility": "@isTomorrow"
+         }
+        ],
+        "value": {
+         "type": "textMerge",
+         "id1": "tomorrow, ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@etaH",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 12
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": ":",
+           "id2": {
+            "type": "textFromFloat",
+            "value": "@etaM",
+            "whole": 2,
+            "decimal": 0,
+            "flags": 12
+           }
+          }
+         }
+        }
+       }
+      },
+      {
+       "text": {
+        "fontSize": "@fontSize",
+        "color": "@color",
+        "maxLines": 1,
+        "overflow": "ellipsis",
+        "modifiers": [
+         {
+          "visibility": "@isOther"
+         }
+        ],
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@etaDom",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": " ",
+          "id2": {
+           "type": "textMerge",
+           "id1": "@etaMon",
+           "id2": {
+            "type": "textMerge",
+            "id1": ", ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@etaH",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 12
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ":",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "@etaM",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 12
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "EtaText": {}
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "tracking",
+    "vtype": "string",
+    "value": "1Z 999 AA1 0123 4567",
+    "export": true
+   }
+  },
+  {
+   "canvas": {
+    "modifiers": [
+     {
+      "size": 0
+     }
+    ],
+    "commands": [
+     {
+      "global": {
+       "commands": [
+        {
+         "textSubtext": {
+          "text": "JanFebMarAprMayJunJulAugSepOctNovDec",
+          "start": "(@etaMonth - 1) * 3",
+          "len": 3,
+          "varName": "etaMon"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "clip": {
+       "roundedRect": 16
+      }
+     },
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layoutIdx",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "horizontalAlignment": "start",
+          "verticalArrangement": "spaceBetween",
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "spacedBy": 6
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "Icon": {
+                "name": "package_2",
+                "size": 18,
+                "color": "@colors.primary"
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 "Ordered",
+                 "Shipped",
+                 "Out for delivery",
+                 "Delivered"
+                ],
+                "index": "@stage",
+                "fontSize": 14,
+                "fontWeight": 700,
+                "maxLines": 2,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "Steps": {
+             "steps": [
+              "Ordered",
+              "Shipped",
+              "Out for delivery",
+              "Delivered"
+             ],
+             "current": "@stage",
+             "size": 14,
+             "showLabels": false
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "spacedBy": 4
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "Expected",
+                 "Expected",
+                 "Arriving",
+                 "Delivered"
+                ],
+                "index": "@stage",
+                "fontSize": 12,
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "EtaText": {
+                "fontSize": 12
+               }
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@tracking",
+             "fontSize": 11,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "overflow": "ellipsis"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "center",
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "spacedBy": 8
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "Icon": {
+                   "name": "package_2",
+                   "size": 20,
+                   "color": "@colors.primary"
+                  }
+                 },
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Ordered",
+                    "Shipped",
+                    "Out for delivery",
+                    "Delivered"
+                   ],
+                   "index": "@stage",
+                   "fontSize": 16,
+                   "fontWeight": 700,
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "Steps": {
+                "steps": [
+                 "Ordered",
+                 "Shipped",
+                 "Out for delivery",
+                 "Delivered"
+                ],
+                "current": "@stage",
+                "size": 16
+               }
+              },
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "spacedBy": 4
+                 },
+                 {
+                  "padding": {
+                   "top": 6
+                  }
+                 }
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Expected",
+                    "Expected",
+                    "Arriving",
+                    "Delivered"
+                   ],
+                   "index": "@stage",
+                   "fontSize": 13,
+                   "color": "@colors.muted"
+                  }
+                 },
+                 {
+                  "EtaText": {
+                   "fontSize": 13
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "@tracking",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 1
+                  }
+                 },
+                 {
+                  "padding": {
+                   "top": 4
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "collapsibleColumn": {
+             "modifiers": [
+              "fillMaxSize"
+             ],
+             "horizontalAlignment": "start",
+             "verticalArrangement": "center",
+             "children": [
+              {
+               "row": {
+                "modifiers": [
+                 "fillMaxWidth"
+                ],
+                "verticalAlignment": "center",
+                "children": [
+                 {
+                  "row": {
+                   "modifiers": [
+                    {
+                     "weight": 1
+                    },
+                    {
+                     "spacedBy": 8
+                    }
+                   ],
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "package_2",
+                      "size": 20,
+                      "color": "@colors.primary"
+                     }
+                    },
+                    {
+                     "TextChoice": {
+                      "items": [
+                       "Ordered",
+                       "Shipped",
+                       "Out for delivery",
+                       "Delivered"
+                      ],
+                      "index": "@stage",
+                      "fontSize": 16,
+                      "fontWeight": 700,
+                      "maxLines": 1,
+                      "overflow": "ellipsis"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    {
+                     "padding": {
+                      "start": 8
+                     }
+                    },
+                    {
+                     "spacedBy": 4
+                    }
+                   ],
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "TextChoice": {
+                      "items": [
+                       "Expected",
+                       "Expected",
+                       "Arriving",
+                       "Delivered"
+                      ],
+                      "index": "@stage",
+                      "fontSize": 13,
+                      "color": "@colors.muted"
+                     }
+                    },
+                    {
+                     "EtaText": {
+                      "fontSize": 13
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "Steps": {
+                "steps": [
+                 "Ordered",
+                 "Shipped",
+                 "Out for delivery",
+                 "Delivered"
+                ],
+                "current": "@stage",
+                "size": 16,
+                "showLabels": false
+               }
+              },
+              {
+               "text": {
+                "value": "@tracking",
+                "fontSize": 11,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "collapsiblePriority": {
+                   "orientation": "vertical",
+                   "priority": 1
+                  }
+                 },
+                 {
+                  "padding": {
+                   "top": 4
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

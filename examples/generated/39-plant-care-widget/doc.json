@@ -1,0 +1,1097 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Plant care: soil moisture, light level and days since last watered"
+ },
+ "components": {
+  "MoistureGauge": {
+   "summary": "A 240 degree soil-moisture dial: the plant's ideal band marked on the track, a marker at the value, the percent in the centre.",
+   "params": {
+    "value": {
+     "type": "float",
+     "required": true,
+     "doc": "Moisture 0..100"
+    },
+    "lo": {
+     "type": "float",
+     "default": 40,
+     "doc": "Start of the ideal band, 0..100"
+    },
+    "hi": {
+     "type": "float",
+     "default": 70,
+     "doc": "End of the ideal band, 0..100"
+    },
+    "size": {
+     "type": "float",
+     "default": 100,
+     "static": true,
+     "doc": "Design size in dp"
+    },
+    "thickness": {
+     "type": "float",
+     "default": 10,
+     "static": true,
+     "doc": "Track thickness in dp"
+    }
+   },
+   "locals": {
+    "ang": "(150 + clamp(0, 100, @value) * 2.4) * 0.0174533",
+    "loA": "150 + clamp(0, 100, @lo) * 2.4",
+    "bandSweep": "clamp(0, 100, @hi - @lo) * 2.4"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth(), componentHeight())"
+       }
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - @s) / 2",
+        "dy": "(componentHeight() - @s) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@s / @size",
+        "sy": "@s / @size"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "alpha": 1
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": 1.5,
+           "else": "@thickness"
+          }
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawArc": {
+        "left": "@thickness",
+        "top": "@thickness",
+        "right": "@size - @thickness",
+        "bottom": "@size - @thickness",
+        "startAngle": 150,
+        "sweepAngle": 240
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "strokeWidth": "@thickness / 2"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": "@loA",
+          "sweepAngle": "@bandSweep"
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.success"
+           },
+           {
+            "strokeCap": "butt"
+           }
+          ]
+         }
+        },
+        {
+         "drawArc": {
+          "left": "@thickness",
+          "top": "@thickness",
+          "right": "@size - @thickness",
+          "bottom": "@size - @thickness",
+          "startAngle": "@loA",
+          "sweepAngle": "@bandSweep"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "strokeWidth": "@theme.stroke"
+         },
+         {
+          "strokeCap": "butt"
+         }
+        ]
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "@loA",
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size - @thickness * 1.5 - 3",
+           "y1": "@size / 2",
+           "x2": "@size - @thickness / 2 + 3",
+           "y2": "@size / 2"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "rotate": {
+           "angle": "@loA + @bandSweep",
+           "pivotX": "@size / 2",
+           "pivotY": "@size / 2"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "@size - @thickness * 1.5 - 3",
+           "y1": "@size / 2",
+           "x2": "@size - @thickness / 2 + 3",
+           "y2": "@size / 2"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.surface"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@size / 2 + (@size / 2 - @thickness) * cos(@ang)",
+        "cy": "@size / 2 + (@size / 2 - @thickness) * sin(@ang)",
+        "radius": "@thickness * 0.95"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@size / 2 + (@size / 2 - @thickness) * cos(@ang)",
+        "cy": "@size / 2 + (@size / 2 - @thickness) * sin(@ang)",
+        "radius": "@thickness * 0.6"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "textSize": "@size * 0.24"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@value",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": "%"
+        },
+        "x": "@size / 2",
+        "y": "@size / 2",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "textSize": "@size * 0.11"
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": "soil",
+        "x": "@size / 2",
+        "y": "@size * 0.7",
+        "panX": 0,
+        "panY": 0
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "MoistureGauge": {
+     "value": "@moisture",
+     "lo": "@moistLo",
+     "hi": "@moistHi"
+    }
+   }
+  },
+  "MoistureDial": {
+   "summary": "The moisture gauge with its status word under it, labelled for screen readers",
+   "params": {},
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Soil moisture ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@moisture",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " percent, ideal ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@moistLo",
+             "whole": 4,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": " to ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@moistHi",
+              "whole": 4,
+              "decimal": 0,
+              "flags": 5
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "horizontalAlignment": "center",
+     "children": [
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "verticalWeight": 1
+         }
+        ],
+        "children": [
+         {
+          "MoistureGauge": {
+           "value": "@moisture",
+           "lo": "@moistLo",
+           "hi": "@moistHi"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "TextChoice": {
+        "items": [
+         "Too dry",
+         "OK",
+         "Too wet"
+        ],
+        "index": "@statusIdx",
+        "fontSize": 14,
+        "fontWeight": 600
+       }
+      }
+     ]
+    }
+   }
+  },
+  "LightInfo": {
+   "summary": "Light level: word, lux and a log-scale bar",
+   "params": {
+    "bar": {
+     "type": "bool",
+     "default": true,
+     "static": true,
+     "doc": "show the bar"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "spacedBy": 3
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "spacedBy": 6
+         }
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "light_mode",
+           "size": 18,
+           "color": "@colors.muted"
+          }
+         },
+         {
+          "TextChoice": {
+           "items": [
+            "Very dark",
+            "Low light",
+            "Medium light",
+            "Bright",
+            "Full sun"
+           ],
+           "index": "@lightIdx",
+           "fontSize": 14,
+           "fontWeight": 600,
+           "maxLines": 1
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@lux",
+             "whole": 7,
+             "decimal": 0,
+             "flags": 21
+            },
+            "id2": " lx"
+           },
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "bar",
+       "then": {
+        "ProgressBar": {
+         "progress": "@lightFrac",
+         "height": 6
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "WateredText": {
+   "summary": "Watered today / 1 day ago / N days ago",
+   "params": {
+    "short": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "drop the word Watered"
+    },
+    "icon": {
+     "type": "bool",
+     "default": true,
+     "static": true
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      {
+       "spacedBy": 6
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "$if": "icon",
+       "then": {
+        "Icon": {
+         "name": "water_drop",
+         "size": 18,
+         "color": "@colors.muted"
+        }
+       }
+      },
+      {
+       "box": {
+        "children": [
+         {
+          "text": {
+           "value": {
+            "$if": "short",
+            "then": "Today",
+            "else": "Watered today"
+           },
+           "fontSize": 14,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@isToday"
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "$if": "short",
+            "then": "1 day ago",
+            "else": "Watered 1 day ago"
+           },
+           "fontSize": 14,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@isOne"
+            }
+           ]
+          }
+         },
+         {
+          "$if": "short",
+          "then": {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@days",
+              "whole": 4,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": " days ago"
+            },
+            "fontSize": 14,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "modifiers": [
+             {
+              "visibility": "@isManyOk"
+             }
+            ]
+           }
+          },
+          "else": {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "Watered ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@days",
+               "whole": 4,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " days ago"
+             }
+            },
+            "fontSize": 14,
+            "color": "@colors.onSurface",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "visibility": "@isMany"
+             }
+            ]
+           }
+          }
+         },
+         {
+          "$if": "short",
+          "then": {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@days",
+              "whole": 4,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": " days, water"
+            },
+            "fontSize": 14,
+            "fontWeight": 700,
+            "color": "@colors.primary",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "modifiers": [
+             {
+              "visibility": "@isManyNeeds"
+             }
+            ]
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Hint": {
+   "summary": "Needs water pill / too wet / next watering",
+   "params": {},
+   "body": {
+    "box": {
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         {
+          "visibility": "@needs"
+         },
+         {
+          "clip": {
+           "roundedRect": 12
+          }
+         },
+         {
+          "background": "@colors.primary"
+         },
+         {
+          "padding": [
+           10,
+           3
+          ]
+         },
+         {
+          "spacedBy": 4
+         }
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "water_drop",
+           "filled": true,
+           "size": 16,
+           "color": "@colors.onPrimary"
+          }
+         },
+         {
+          "text": {
+           "value": "Needs water",
+           "fontSize": 13,
+           "fontWeight": 700,
+           "color": "@colors.onPrimary",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Too wet: skip watering",
+        "fontSize": 13,
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@wetv"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Water again tomorrow",
+        "fontSize": 13,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@okHint1"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": "Water again in ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@nextIn",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": " days"
+         }
+        },
+        "fontSize": 13,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "visibility": "@okHintN"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "PlantName": {
+   "summary": "Plant icon and host name",
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 16,
+     "static": true
+    },
+    "icon": {
+     "type": "bool",
+     "default": true,
+     "static": true
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "spacedBy": 6
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "$if": "icon",
+       "then": {
+        "Icon": {
+         "name": "potted_plant",
+         "size": 20,
+         "color": "@colors.primary"
+        }
+       }
+      },
+      {
+       "text": {
+        "value": "@plantName",
+        "fontSize": "@size",
+        "fontWeight": 700,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "moisture": {
+    "value": 52,
+    "export": true
+   },
+   "moistLo": {
+    "value": 40,
+    "export": true
+   },
+   "moistHi": {
+    "value": 70,
+    "export": true
+   },
+   "lux": {
+    "value": 8500,
+    "export": true
+   },
+   "wateredDay": {
+    "value": 20754,
+    "export": true
+   },
+   "waterEvery": {
+    "value": 7,
+    "export": true
+   },
+   "yr": "year()",
+   "ep1": "365 * (@yr - 1970) + floor((@yr - 1969) / 4)",
+   "today": "@ep1 - floor((@yr - 1901) / 100) + floor((@yr - 1601) / 400) + dayOfYear() - 1",
+   "days": "max(0, @today - @wateredDay)",
+   "isToday": "1 - step(@days, 0.5)",
+   "isOne": "step(@days, 0.5) - step(@days, 1.5)",
+   "isMany": "step(@days, 1.5)",
+   "dry": "step(@moistLo, @moisture)",
+   "wetv": "step(@moisture, @moistHi)",
+   "overdue": "step(@days, @waterEvery - 0.5)",
+   "needs": "max(@dry, @overdue * (1 - @wetv))",
+   "nextIn": "max(1, @waterEvery - @days)",
+   "isManyNeeds": "@isMany * @needs",
+   "isManyOk": "@isMany * (1 - @needs)",
+   "okHint": "(1 - @needs) * (1 - @wetv)",
+   "okHint1": "@okHint * (1 - step(@nextIn, 1.5))",
+   "okHintN": "@okHint * step(@nextIn, 1.5)",
+   "statusIdx": "1 - @dry + @wetv",
+   "lightIdx": "step(@lux, 50) + step(@lux, 500) + step(@lux, 2500) + step(@lux, 15000)",
+   "lightFrac": "clamp(0, 1, log(max(@lux, 1)) / 5)",
+   "wideL": "step(windowWidth(), 239)",
+   "layout": "2 * @wideL + (1 - @wideL) * step(windowHeight(), 119)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "plantName",
+    "vtype": "string",
+    "value": "Monstera deliciosa",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "padding": 12
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layout",
+       "children": [
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 56
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "MoistureDial": {}
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              {
+               "spacedBy": 4
+              }
+             ],
+             "verticalArrangement": "center",
+             "children": [
+              {
+               "PlantName": {
+                "size": 14,
+                "icon": false
+               }
+              },
+              {
+               "WateredText": {
+                "short": true,
+                "icon": false
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "verticalArrangement": "spaceBetween",
+          "children": [
+           {
+            "PlantName": {
+             "size": 14
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 78
+              }
+             ],
+             "children": [
+              {
+               "MoistureDial": {}
+              }
+             ]
+            }
+           },
+           {
+            "LightInfo": {
+             "bar": false
+            }
+           },
+           {
+            "WateredText": {
+             "short": true
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 112
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "MoistureDial": {}
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 12
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "collapsibleColumn": {
+                "modifiers": [
+                 "fillMaxSize"
+                ],
+                "horizontalAlignment": "start",
+                "verticalArrangement": "spaceBetween",
+                "children": [
+                 {
+                  "PlantName": {}
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "collapsiblePriority": {
+                      "orientation": "vertical",
+                      "priority": 2
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "LightInfo": {}
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "collapsiblePriority": {
+                      "orientation": "vertical",
+                      "priority": 3
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "WateredText": {}
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    {
+                     "collapsiblePriority": {
+                      "orientation": "vertical",
+                      "priority": 1
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "Hint": {}
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

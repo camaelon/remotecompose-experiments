@@ -1,0 +1,1531 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 380,
+  "height": 840,
+  "profiles": 513,
+  "contentDescription": "Recipe card: title, prep and cook times, ingredients that rescale with the number of servings, and steps you can check off"
+ },
+ "components": {
+  "IngredientRow": {
+   "summary": "One ingredient line: the amount scaled and written like a cook (eighths/thirds for volumes and counts, grams rounded, a pinch unscaled), the unit singular or plural, and the name.",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "Ingredient name (host string)"
+    },
+    "unit": {
+     "type": "string",
+     "default": "",
+     "doc": "Unit for counts and volumes, singular (weights print g, a pinch prints itself)"
+    },
+    "units": {
+     "type": "string",
+     "doc": "Plural unit for counts and volumes; omitted, the unit is used for every amount (tbsp, tsp)"
+    },
+    "amount": {
+     "type": "float",
+     "required": true,
+     "doc": "Base amount (host float)"
+    },
+    "kind": {
+     "type": "float",
+     "default": 1,
+     "doc": "0 count, 1 volume, 2 weight (grams), 3 a pinch (never scaled)"
+    },
+    "scale": {
+     "type": "float",
+     "default": 1,
+     "doc": "servings / base servings"
+    }
+   },
+   "locals": {
+    "a": "@amount * @scale",
+    "w": "floor(@a + 0.0625)",
+    "f": "@a - @w",
+    "hasW": "step(@w, 0.5)",
+    "i8": "max(1 - @hasW, round(@f * 8))",
+    "t3": "round(@f * 3)",
+    "u3": "step(@t3, 0.5) - step(@t3, 2.5)",
+    "u": "@u3 * step(abs(@f - @i8 / 8) - abs(@f - @t3 / 3), 0.004)",
+    "idx": "@i8 + @u * (7 + @t3 - @i8)",
+    "isP": "step(@kind, 2.5)",
+    "isG": "step(@kind, 1.5) - @isP",
+    "isF": "1 - step(@kind, 1.5)",
+    "showW": "@isF * @hasW",
+    "g": "round(@a) + step(@a, 20) * (round(@a / 5) * 5 - round(@a))",
+    "pl": "step(@w + @i8 / 8, 1.01)",
+    "sg": "@isF * (1 - @pl)",
+    "plF": "@isF * @pl"
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "heightIn": [
+        40,
+        400
+       ]
+      },
+      {
+       "padding": {
+        "top": 6,
+        "bottom": 6
+       }
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "width": 96
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": {
+            "type": "textFromFloat",
+            "value": "@w",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "fontSize": 16,
+           "fontWeight": 700,
+           "color": "@colors.primary",
+           "modifiers": [
+            {
+             "visibility": "@showW"
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@isF"
+            }
+           ],
+           "children": [
+            {
+             "TextChoice": {
+              "items": [
+               "",
+               "⅛",
+               "¼",
+               "⅜",
+               "½",
+               "⅝",
+               "¾",
+               "⅞",
+               "⅓",
+               "⅔"
+              ],
+              "index": "@idx",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "color": "@colors.primary"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@g",
+             "whole": 5,
+             "decimal": 0,
+             "flags": 21
+            },
+            "id2": " g"
+           },
+           "fontSize": 16,
+           "fontWeight": 700,
+           "color": "@colors.primary",
+           "modifiers": [
+            {
+             "visibility": "@isG"
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 4
+            },
+            {
+             "visibility": "@isF"
+            }
+           ]
+          }
+         },
+         {
+          "$if": "units",
+          "then": [
+           {
+            "text": {
+             "value": "@unit",
+             "fontSize": 15,
+             "color": "@colors.primary",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@sg"
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@units",
+             "fontSize": 15,
+             "color": "@colors.primary",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@plF"
+              }
+             ]
+            }
+           }
+          ],
+          "else": [
+           {
+            "text": {
+             "value": "@unit",
+             "fontSize": 15,
+             "color": "@colors.primary",
+             "maxLines": 1,
+             "modifiers": [
+              {
+               "visibility": "@isF"
+              }
+             ]
+            }
+           }
+          ]
+         },
+         {
+          "text": {
+           "value": "a pinch",
+           "fontSize": 15,
+           "color": "@colors.primary",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@isP"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "@name",
+        "fontSize": 16,
+        "color": "@colors.onSurface",
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "IngredientRow": {
+     "name": "Buttermilk",
+     "unit": "cup",
+     "units": "cups",
+     "amount": 1.5,
+     "kind": 1
+    }
+   }
+  },
+  "StepRow": {
+   "summary": "A numbered recipe step you tap to check off: the number becomes a tick and the text is struck through and muted; a screen reader hears Step N, the text, and Done or Not done.",
+   "params": {
+    "n": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "Step number"
+    },
+    "text": {
+     "type": "string",
+     "required": true,
+     "doc": "Step text (host string)"
+    },
+    "done": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "0/1 done state"
+    }
+   },
+   "locals": {
+    "nd": "1 - @done"
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": [
+           0,
+           0
+          ]
+         }
+        ],
+        "commands": [
+         {
+          "global": {
+           "commands": [
+            {
+             "textSubtext": {
+              "text": "Not doneDone    ",
+              "start": "@done * 8",
+              "len": 8,
+              "varName": "stepState8"
+             }
+            },
+            {
+             "textTransform": {
+              "text": "@stepState8",
+              "start": 0,
+              "len": -1,
+              "operation": 3,
+              "varName": "stepState"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "top",
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "heightIn": [
+           48,
+           800
+          ]
+         },
+         {
+          "semantics": {
+           "contentDescription": {
+            "type": "textMerge",
+            "id1": "Step ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@n",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": ". ",
+              "id2": "@text"
+             }
+            }
+           },
+           "stateDescription": "@stepState",
+           "clickable": true
+          }
+         },
+         {
+          "onClick": [
+           {
+            "type": "valueFloatExpressionChange",
+            "target": "@done",
+            "value": "1 - @done"
+           }
+          ]
+         },
+         {
+          "padding": {
+           "top": 8,
+           "bottom": 8
+          }
+         }
+        ],
+        "children": [
+         {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "size": 32
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "horizontalAlignment": "center",
+              "verticalAlignment": "center",
+              "modifiers": [
+               {
+                "visibility": "@nd"
+               },
+               {
+                "size": 32
+               },
+               {
+                "clip": 16
+               },
+               {
+                "background": "@colors.outline"
+               },
+               {
+                "padding": 1.5
+               },
+               {
+                "clip": 15
+               },
+               {
+                "background": "@colors.surface"
+               }
+              ],
+              "children": [
+               {
+                "text": {
+                 "value": {
+                  "type": "textFromFloat",
+                  "value": "@n",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "fontSize": 14,
+                 "fontWeight": 700,
+                 "color": "@colors.onSurface"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "horizontalAlignment": "center",
+              "verticalAlignment": "center",
+              "modifiers": [
+               {
+                "visibility": "@done"
+               },
+               {
+                "size": 32
+               },
+               {
+                "clip": 16
+               },
+               {
+                "background": "@colors.primary"
+               }
+              ],
+              "children": [
+               {
+                "Icon": {
+                 "name": "check",
+                 "size": 20,
+                 "color": "@colors.onPrimary"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 12
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "modifiers": [
+            {
+             "weight": 1
+            },
+            {
+             "padding": {
+              "top": 5
+             }
+            }
+           ],
+           "children": [
+            {
+             "text": {
+              "value": "@text",
+              "fontSize": 16,
+              "color": "@colors.onSurface",
+              "modifiers": [
+               {
+                "visibility": "@nd"
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": "@text",
+              "fontSize": 16,
+              "color": "@colors.muted",
+              "strikethrough": true,
+              "modifiers": [
+               {
+                "visibility": "@done"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "StepRow": {
+     "n": 1,
+     "text": "Whisk the flour, sugar, baking powder and salt in a large bowl.",
+     "done": "@d1"
+    }
+   }
+  },
+  "TimeChip": {
+   "summary": "A recipe time: an icon, a caption and the duration as '1 h 15 min'.",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Caption (Prep, Cook, Total)"
+    },
+    "minutes": {
+     "type": "float",
+     "required": true,
+     "doc": "Minutes (host float or expression)"
+    },
+    "icon": {
+     "type": "string",
+     "default": "schedule",
+     "static": true,
+     "doc": "Material Symbols icon name"
+    }
+   },
+   "locals": {
+    "h": "floor(@minutes / 60)",
+    "m": "@minutes - @h * 60",
+    "hasH": "step(@h, 0.5)",
+    "showM": "1 - @hasH * (1 - step(@m, 0.5))"
+   },
+   "body": {
+    "column": {
+     "modifiers": {
+      "$if": "theme.mono",
+      "then": [
+       "fillMaxWidth",
+       {
+        "clip": 14
+       },
+       {
+        "background": "@colors.outline"
+       },
+       {
+        "padding": 1
+       },
+       {
+        "clip": 13
+       },
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 9
+       },
+       {
+        "spacedBy": 4
+       }
+      ],
+      "else": [
+       "fillMaxWidth",
+       {
+        "clip": 14
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       },
+       {
+        "padding": 10
+       },
+       {
+        "spacedBy": 4
+       }
+      ]
+     },
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "spacedBy": 6
+         }
+        ],
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "size": 18,
+           "color": "@colors.primary"
+          }
+         },
+         {
+          "text": {
+           "value": "@label",
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         {
+          "spacedBy": 4
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@h",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " h"
+           },
+           "fontSize": 16,
+           "fontWeight": 700,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@hasH"
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@m",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " min"
+           },
+           "fontSize": 16,
+           "fontWeight": 700,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "modifiers": [
+            {
+             "visibility": "@showM"
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "TimeChip": {
+     "label": "Cook",
+     "minutes": 75,
+     "icon": "cooking"
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "prepMin": {
+    "value": 10,
+    "export": true
+   },
+   "cookMin": {
+    "value": 20,
+    "export": true
+   },
+   "baseServings": {
+    "value": 4,
+    "export": true
+   },
+   "servings": {
+    "value": 4,
+    "export": true
+   },
+   "scroll": 0,
+   "amt1": {
+    "value": 250,
+    "export": true
+   },
+   "kind1": {
+    "value": 2,
+    "export": true
+   },
+   "amt2": {
+    "value": 2,
+    "export": true
+   },
+   "kind2": {
+    "value": 1,
+    "export": true
+   },
+   "amt3": {
+    "value": 2,
+    "export": true
+   },
+   "kind3": {
+    "value": 1,
+    "export": true
+   },
+   "amt4": {
+    "value": 1,
+    "export": true
+   },
+   "kind4": {
+    "value": 3,
+    "export": true
+   },
+   "amt5": {
+    "value": 1.5,
+    "export": true
+   },
+   "kind5": {
+    "value": 1,
+    "export": true
+   },
+   "amt6": {
+    "value": 2,
+    "export": true
+   },
+   "kind6": {
+    "value": 0,
+    "export": true
+   },
+   "amt7": {
+    "value": 50,
+    "export": true
+   },
+   "kind7": {
+    "value": 2,
+    "export": true
+   },
+   "amt8": {
+    "value": 150,
+    "export": true
+   },
+   "kind8": {
+    "value": 2,
+    "export": true
+   },
+   "done1": {
+    "value": 1,
+    "export": true
+   },
+   "done2": {
+    "value": 1,
+    "export": true
+   },
+   "done3": {
+    "value": 0,
+    "export": true
+   },
+   "done4": {
+    "value": 0,
+    "export": true
+   },
+   "done5": {
+    "value": 0,
+    "export": true
+   },
+   "done6": {
+    "value": 0,
+    "export": true
+   },
+   "scale": "@servings / max(1, @baseServings)",
+   "totalMin": "@prepMin + @cookMin",
+   "doneCount": "@done1 + @done2 + @done3 + @done4 + @done5 + @done6",
+   "doneFrac": "@doneCount / 6",
+   "scaled": "1 - min(1, abs(@servings - @baseServings))",
+   "notBase": "1 - @scaled",
+   "allDone": "step(@doneCount, 5.5)",
+   "notAllDone": "1 - @allDone",
+   "wide": "step(windowWidth(), 599)",
+   "panelW": "windowWidth() - 32 - @wide * ((windowWidth() - 16) / 2)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "title",
+    "vtype": "string",
+    "value": "Blueberry Buttermilk Pancakes",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "description",
+    "vtype": "string",
+    "value": "Fluffy, golden pancakes studded with blueberries — a relaxed weekend breakfast ready in half an hour.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing1",
+    "vtype": "string",
+    "value": "Plain flour",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing2",
+    "vtype": "string",
+    "value": "Caster sugar",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "unit2",
+    "vtype": "string",
+    "value": "tbsp",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing3",
+    "vtype": "string",
+    "value": "Baking powder",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "unit3",
+    "vtype": "string",
+    "value": "tsp",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing4",
+    "vtype": "string",
+    "value": "Fine salt",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing5",
+    "vtype": "string",
+    "value": "Buttermilk",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "unit5",
+    "vtype": "string",
+    "value": "cup",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "units5",
+    "vtype": "string",
+    "value": "cups",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing6",
+    "vtype": "string",
+    "value": "Eggs, large, lightly beaten",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "unit6",
+    "vtype": "string",
+    "value": "egg",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "units6",
+    "vtype": "string",
+    "value": "eggs",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing7",
+    "vtype": "string",
+    "value": "Unsalted butter, melted and cooled slightly, plus extra for greasing the pan",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "ing8",
+    "vtype": "string",
+    "value": "Fresh blueberries",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step1",
+    "vtype": "string",
+    "value": "Whisk the flour, sugar, baking powder and salt together in a large bowl.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step2",
+    "vtype": "string",
+    "value": "In a jug, whisk the buttermilk, eggs and melted butter until smooth.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step3",
+    "vtype": "string",
+    "value": "Pour the wet mix into the dry and stir until just combined; a few lumps are fine.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step4",
+    "vtype": "string",
+    "value": "Rest the batter for 5 minutes while a non-stick pan heats over medium.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step5",
+    "vtype": "string",
+    "value": "Pour ¼ cup of batter per pancake, scatter with blueberries and cook until bubbles form, about 2 minutes.",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "step6",
+    "vtype": "string",
+    "value": "Flip and cook 1 more minute until golden. Serve warm with butter and maple syrup.",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "verticalScroll": "@scroll"
+     }
+    ],
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "padding": {
+          "start": 16,
+          "end": 16,
+          "top": 20,
+          "bottom": 8
+         }
+        },
+        {
+         "spacedBy": 12
+        }
+       ],
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           {
+            "spacedBy": 8
+           }
+          ],
+          "children": [
+           {
+            "Icon": {
+             "name": "skillet",
+             "size": 20,
+             "color": "@colors.primary"
+            }
+           },
+           {
+            "text": {
+             "value": "BREAKFAST · RECIPE",
+             "fontSize": 12,
+             "fontWeight": 700,
+             "letterSpacing": 0.1,
+             "color": "@colors.primary"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "text": {
+          "value": "@title",
+          "fontSize": 28,
+          "fontWeight": 700,
+          "color": "@colors.onSurface"
+         }
+        },
+        {
+         "text": {
+          "value": "@description",
+          "fontSize": 15,
+          "color": "@colors.muted"
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "padding": {
+             "top": 4
+            }
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "TimeChip": {
+                "label": "Prep",
+                "minutes": "@prepMin",
+                "icon": "timer"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "TimeChip": {
+                "label": "Cook",
+                "minutes": "@cookMin",
+                "icon": "cooking"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 8
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "TimeChip": {
+                "label": "Total",
+                "minutes": "@totalMin",
+                "icon": "schedule"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "flow": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "padding": {
+          "start": 16,
+          "end": 16,
+          "top": 8
+         }
+        }
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "@panelW + @wide * 16"
+           },
+           {
+            "padding": {
+             "bottom": 16
+            }
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@panelW"
+              }
+             ],
+             "children": [
+              {
+               "Card": {
+                "title": "Ingredients",
+                "children": [
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "clip": 12
+                    },
+                    {
+                     "background": "@colors.surfaceHigh"
+                    },
+                    {
+                     "padding": {
+                      "start": 12,
+                      "end": 0,
+                      "top": 4,
+                      "bottom": 4
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "column": {
+                      "modifiers": [
+                       {
+                        "weight": 1
+                       },
+                       {
+                        "semantics": {
+                         "contentDescription": {
+                          "type": "textMerge",
+                          "id1": "Servings, ",
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textFromFloat",
+                            "value": "@servings",
+                            "whole": 2,
+                            "decimal": 0,
+                            "flags": 5
+                           },
+                           "id2": {
+                            "type": "textMerge",
+                            "id1": ", recipe is for ",
+                            "id2": {
+                             "type": "textFromFloat",
+                             "value": "@baseServings",
+                             "whole": 2,
+                             "decimal": 0,
+                             "flags": 5
+                            }
+                           }
+                          }
+                         }
+                        }
+                       }
+                      ],
+                      "children": [
+                       {
+                        "text": {
+                         "value": "Servings",
+                         "fontSize": 16,
+                         "fontWeight": 700,
+                         "color": "@colors.onSurface",
+                         "maxLines": 1,
+                         "overflow": "ellipsis"
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "Recipe makes ",
+                          "id2": {
+                           "type": "textFromFloat",
+                           "value": "@baseServings",
+                           "whole": 2,
+                           "decimal": 0,
+                           "flags": 5
+                          }
+                         },
+                         "fontSize": 13,
+                         "color": "@colors.muted",
+                         "modifiers": [
+                          {
+                           "visibility": "@scaled"
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": "Scaled from ",
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textFromFloat",
+                            "value": "@baseServings",
+                            "whole": 2,
+                            "decimal": 0,
+                            "flags": 5
+                           },
+                           "id2": " servings"
+                          }
+                         },
+                         "fontSize": 13,
+                         "color": "@colors.primary",
+                         "modifiers": [
+                          {
+                           "visibility": "@notBase"
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "Stepper": {
+                      "value": "@servings",
+                      "min": 1,
+                      "max": 12,
+                      "label": "servings"
+                     }
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing1",
+                   "amount": "@amt1",
+                   "kind": "@kind1",
+                   "scale": "@scale"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing2",
+                   "amount": "@amt2",
+                   "kind": "@kind2",
+                   "scale": "@scale",
+                   "unit": "@unit2"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing3",
+                   "amount": "@amt3",
+                   "kind": "@kind3",
+                   "scale": "@scale",
+                   "unit": "@unit3"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing4",
+                   "amount": "@amt4",
+                   "kind": "@kind4",
+                   "scale": "@scale"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing5",
+                   "amount": "@amt5",
+                   "kind": "@kind5",
+                   "scale": "@scale",
+                   "unit": "@unit5",
+                   "units": "@units5"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing6",
+                   "amount": "@amt6",
+                   "kind": "@kind6",
+                   "scale": "@scale",
+                   "unit": "@unit6",
+                   "units": "@units6"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing7",
+                   "amount": "@amt7",
+                   "kind": "@kind7",
+                   "scale": "@scale"
+                  }
+                 },
+                 {
+                  "IngredientRow": {
+                   "name": "@ing8",
+                   "amount": "@amt8",
+                   "kind": "@kind8",
+                   "scale": "@scale"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": "@panelW"
+           },
+           {
+            "padding": {
+             "bottom": 16
+            }
+           }
+          ],
+          "children": [
+           {
+            "Card": {
+             "title": "Method",
+             "children": [
+              {
+               "row": {
+                "verticalAlignment": "center",
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "spacedBy": 8
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@doneCount",
+                     "whole": 1,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " of 6 steps done"
+                   },
+                   "fontSize": 13,
+                   "color": "@colors.muted",
+                   "modifiers": [
+                    {
+                     "visibility": "@notAllDone"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "All done — enjoy!",
+                   "fontSize": 13,
+                   "fontWeight": 700,
+                   "color": "@colors.success",
+                   "modifiers": [
+                    {
+                     "visibility": "@allDone"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "ProgressBar": {
+                "progress": "@doneFrac"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 1,
+                "text": "@step1",
+                "done": "@done1"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 2,
+                "text": "@step2",
+                "done": "@done2"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 3,
+                "text": "@step3",
+                "done": "@done3"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 4,
+                "text": "@step4",
+                "done": "@done4"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 5,
+                "text": "@step5",
+                "done": "@done5"
+               }
+              },
+              {
+               "StepRow": {
+                "n": 6,
+                "text": "@step6",
+                "done": "@done6"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

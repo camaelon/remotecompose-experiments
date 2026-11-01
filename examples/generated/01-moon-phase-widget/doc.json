@@ -1,0 +1,257 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 150,
+  "profiles": 513,
+  "contentDescription": "Tonight's moon: its phase name, how much of it is lit, and the days until the next full moon"
+ },
+ "componentTheme": "auto",
+ "resources": {
+  "variables": {
+   "d0": "365 * (year() - 2000) + floor((year() - 1997) / 4) + dayOfYear() - 1 - offsetToUtc() / 86400",
+   "d1": "@d0 + 1",
+   "la0": "0.8104301 + 0.033863192 * @d0 + 0.017469 * sin(2.241546 + 0.2280275 * @d0) + 0.003539 * sin(7.942619 + 0.19750992 * @d0)",
+   "la": "@la0 + 0.001828 * sin(10.184165 + 0.42553742 * @d0) - 0.005836 * sin(6.231459 + 0.01720197 * @d0) + 0.000593 * sin(4.483093 + 0.456055 * @d0)",
+   "lb0": "0.8104301 + 0.033863192 * @d1 + 0.017469 * sin(2.241546 + 0.2280275 * @d1) + 0.003539 * sin(7.942619 + 0.19750992 * @d1)",
+   "lb": "@lb0 + 0.001828 * sin(10.184165 + 0.42553742 * @d1) - 0.005836 * sin(6.231459 + 0.01720197 * @d1) + 0.000593 * sin(4.483093 + 0.456055 * @d1)",
+   "ln": "@la + (@lb - @la) * timeInMin() / 1440",
+   "f": "@ln - floor(@ln)",
+   "lit": "50 * (1 - cos(6.2831853 * @f))",
+   "qa": "floor(4 * @la)",
+   "qb": "floor(4 * @lb)",
+   "ni": "(@qb - @qa) * 2 * (@qb % 4) + (1 - @qb + @qa) * (2 * (@qa % 4) + 1)",
+   "NF": "floor(@la - 0.5) + 1.5",
+   "tF1": "@d0 + (@NF - @la) * 29.530589",
+   "lF1a": "0.8104301 + 0.033863192 * @tF1 + 0.017469 * sin(2.241546 + 0.2280275 * @tF1) + 0.003539 * sin(7.942619 + 0.19750992 * @tF1)",
+   "lF1": "@lF1a + 0.001828 * sin(10.184165 + 0.42553742 * @tF1) - 0.005836 * sin(6.231459 + 0.01720197 * @tF1) + 0.000593 * sin(4.483093 + 0.456055 * @tF1)",
+   "tF2": "@tF1 - (@lF1 - @NF) * 29.530589",
+   "lF2a": "0.8104301 + 0.033863192 * @tF2 + 0.017469 * sin(2.241546 + 0.2280275 * @tF2) + 0.003539 * sin(7.942619 + 0.19750992 * @tF2)",
+   "lF2": "@lF2a + 0.001828 * sin(10.184165 + 0.42553742 * @tF2) - 0.005836 * sin(6.231459 + 0.01720197 * @tF2) + 0.000593 * sin(4.483093 + 0.456055 * @tF2)",
+   "tF3": "@tF2 - (@lF2 - @NF) * 29.530589",
+   "toFull": "floor(@tF3 - @d0)",
+   "fullIn": "step(@toFull, 1.5)",
+   "fullTomorrow": "step(@toFull, 0.5) * step(1.5, @toFull)",
+   "fullToday": "step(0.5, @toFull)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": 0
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "New moon       Waxing crescentFirst quarter  Waxing gibbous Full moon      Waning gibbous Last quarter   Waning crescent",
+            "start": "@ni * 15",
+            "len": 15,
+            "varName": "pn15"
+           }
+          },
+          {
+           "textTransform": {
+            "text": "@pn15",
+            "start": 0,
+            "len": -1,
+            "operation": 3,
+            "varName": "phaseName"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "MoonPhase": {
+         "phase": "@f",
+         "size": 72,
+         "label": "Tonight's moon"
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          "fillMaxHeight",
+          {
+           "padding": {
+            "start": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "collapsibleColumn": {
+            "horizontalAlignment": "start",
+            "verticalArrangement": "center",
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "TONIGHT",
+               "fontSize": 11,
+               "fontWeight": 600,
+               "color": "@colors.muted",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "collapsiblePriority": {
+                  "orientation": "vertical",
+                  "priority": 1
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "@phaseName",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ", ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@lit",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": "% lit"
+                 }
+                }
+               },
+               "fontSize": 15,
+               "fontWeight": 500,
+               "color": "@colors.onSurface",
+               "maxLines": 2,
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "padding": {
+                  "top": 2
+                 }
+                }
+               ],
+               "overflow": "ellipsis"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "padding": {
+                  "top": 8
+                 }
+                },
+                {
+                 "collapsiblePriority": {
+                  "orientation": "vertical",
+                  "priority": 2
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Full moon in ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@toFull",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": " days"
+                   }
+                  },
+                  "fontSize": 14,
+                  "color": "@colors.primary",
+                  "maxLines": 2,
+                  "modifiers": [
+                   {
+                    "visibility": "@fullIn"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Full moon tomorrow",
+                  "fontSize": 14,
+                  "color": "@colors.primary",
+                  "maxLines": 2,
+                  "modifiers": [
+                   {
+                    "visibility": "@fullTomorrow"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Full moon tonight",
+                  "fontSize": 14,
+                  "color": "@colors.primary",
+                  "maxLines": 2,
+                  "modifiers": [
+                   {
+                    "visibility": "@fullToday"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

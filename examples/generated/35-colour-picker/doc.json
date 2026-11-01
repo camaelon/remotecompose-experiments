@@ -1,0 +1,950 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 760,
+  "profiles": 513,
+  "contentDescription": "Colour picker: hue, saturation and lightness sliders with a live preview"
+ },
+ "resources": {
+  "variables": {
+   "hue": {
+    "value": 210,
+    "export": true
+   },
+   "sat": {
+    "value": 70,
+    "export": true
+   },
+   "lit": {
+    "value": 50,
+    "export": true
+   },
+   "s": "@sat / 100",
+   "l": "@lit / 100",
+   "a": "@s * min(@l, 1 - @l)",
+   "kr": "(0 + @hue / 30) % 12",
+   "kg": "(8 + @hue / 30) % 12",
+   "kb": "(4 + @hue / 30) % 12",
+   "fr": "max(-1, min(min(@kr - 3, 9 - @kr), 1))",
+   "fg": "max(-1, min(min(@kg - 3, 9 - @kg), 1))",
+   "fb": "max(-1, min(min(@kb - 3, 9 - @kb), 1))",
+   "r": "@l - @a * @fr",
+   "g": "@l - @a * @fg",
+   "b": "@l - @a * @fb",
+   "a1": "min(@l, 1 - @l)",
+   "r1": "@l - @a1 * @fr",
+   "g1": "@l - @a1 * @fg",
+   "b1": "@l - @a1 * @fb",
+   "r2": "0.5 - 0.5 * @s * @fr",
+   "g2": "0.5 - 0.5 * @s * @fg",
+   "b2": "0.5 - 0.5 * @s * @fb",
+   "R": "round(@r * 255)",
+   "G": "round(@g * 255)",
+   "B": "round(@b * 255)",
+   "rh": "floor(@R / 16)",
+   "rl": "@R % 16",
+   "gh": "floor(@G / 16)",
+   "gl": "@G % 16",
+   "bh": "floor(@B / 16)",
+   "bl": "@B % 16",
+   "scroll": 0
+  },
+  "colors": {
+   "preview": {
+    "argb": [
+     1,
+     "@r",
+     "@g",
+     "@b"
+    ]
+   },
+   "satLo": {
+    "argb": [
+     1,
+     "@l",
+     "@l",
+     "@l"
+    ]
+   },
+   "satHi": {
+    "argb": [
+     1,
+     "@r1",
+     "@g1",
+     "@b1"
+    ]
+   },
+   "litMid": {
+    "argb": [
+     1,
+     "@r2",
+     "@g2",
+     "@b2"
+    ]
+   }
+  }
+ },
+ "components": {
+  "Swatch": {
+   "params": {},
+   "body": {
+    "$if": "theme.mono",
+    "then": {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 120
+       },
+       {
+        "clip": {
+         "roundedRect": 16
+        }
+       },
+       {
+        "background": "@colors.surfaceHigh"
+       }
+      ],
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "text": "Colour preview off in monochrome: read the values below",
+         "color": "@colors.onSurface",
+         "fontSize": "@theme.text_sm",
+         "textAlign": "center"
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "clip": {
+         "roundedRect": 16
+        }
+       },
+       {
+        "background": "@colors.outline"
+       },
+       {
+        "padding": 1
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 160
+          },
+          {
+           "clip": {
+            "roundedRect": 15
+           }
+          },
+          {
+           "background": "@colors.preview"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "Ramp": {
+   "params": {
+    "rainbow": {
+     "type": "bool",
+     "default": false,
+     "static": true
+    },
+    "three": {
+     "type": "bool",
+     "default": false,
+     "static": true
+    },
+    "c1": {
+     "type": "color",
+     "default": "@colors.track"
+    },
+    "c2": {
+     "type": "color",
+     "default": "@colors.track"
+    },
+    "c3": {
+     "type": "color",
+     "default": "@colors.track"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": 12
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "w",
+        "value": "componentWidth()"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [],
+       "else": [
+        {
+         "$if": "rainbow",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "linearGradient": {
+               "x1": 12,
+               "y1": 0,
+               "x2": "@w - 60",
+               "y2": 0,
+               "colors": [
+                "#FFFF0000",
+                "#FFFFFF00",
+                "#FF00FF00",
+                "#FF00FFFF",
+                "#FF0000FF",
+                "#FFFF00FF",
+                "#FFFF0000"
+               ]
+              }
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          }
+         ],
+         "else": [
+          {
+           "$if": "three",
+           "then": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "linearGradient": {
+                 "x1": 12,
+                 "y1": 0,
+                 "x2": "@w - 60",
+                 "y2": 0,
+                 "colors": [
+                  "@c1",
+                  "@c2",
+                  "@c3"
+                 ]
+                }
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            }
+           ],
+           "else": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "linearGradient": {
+                 "x1": 12,
+                 "y1": 0,
+                 "x2": "@w - 60",
+                 "y2": 0,
+                 "colors": [
+                  "@c1",
+                  "@c2"
+                 ]
+                }
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "drawRoundRect": {
+          "left": 12,
+          "top": 2,
+          "right": "@w - 60",
+          "bottom": 10,
+          "rx": 4,
+          "ry": 4
+         }
+        },
+        {
+         "paint": {
+          "shader": 0
+         }
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "ChannelSlider": {
+   "params": {
+    "value": {
+     "type": "variable",
+     "initial": 0
+    },
+    "max": {
+     "type": "float",
+     "default": 100
+    },
+    "label": {
+     "type": "string",
+     "required": true
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary"
+    },
+    "onRelease": {
+     "type": "action"
+    }
+   },
+   "locals": {
+    "x0": 0,
+    "y0": 0,
+    "trk": 72,
+    "tx": "12 + (componentWidth() - @trk) * @value / @max"
+   },
+   "body": {
+    "box": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@theme.control_height"
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": "@theme.control_height"
+         },
+         {
+          "onTouchUp": {
+           "type": "valueFloatExpressionChange",
+           "target": "@value",
+           "value": "ifElse(@value, clamp(0, @max, (touchX() - @x0 - 12) / (componentWidth() - @trk) * @max), step(touchY() - @y0, 0) * step(@y0 + 40, touchY()))"
+          }
+         },
+         {
+          "onTouchUp": "@onRelease"
+         }
+        ],
+        "commands": [
+         {
+          "componentValue": {
+           "id": "@x0",
+           "valueType": 4
+          }
+         },
+         {
+          "componentValue": {
+           "id": "@y0",
+           "valueType": 5
+          }
+         },
+         {
+          "touchExpression": {
+           "name": {
+            "$name": "value"
+           },
+           "defaultValue": "@value",
+           "min": 0,
+           "max": "@max",
+           "expression": [
+            "(touchX() - @x0 - 12) / (componentWidth() - @trk) * @max"
+           ],
+           "touchMode": 6
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1.5
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 12,
+             "y1": 20,
+             "x2": "componentWidth() - 60",
+             "y2": 20
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "strokeWidth": 3
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 12,
+             "y1": 20,
+             "x2": "@tx",
+             "y2": 20
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@tx",
+             "cy": 20,
+             "radius": 7
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 4
+              },
+              {
+               "strokeCap": "round"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 12,
+             "y1": 20,
+             "x2": "componentWidth() - 60",
+             "y2": 20
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              }
+             ]
+            }
+           },
+           {
+            "drawLine": {
+             "x1": 12,
+             "y1": 20,
+             "x2": "@tx",
+             "y2": 20
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "@tx",
+             "cy": 20,
+             "radius": 10
+            }
+           }
+          ]
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "textSize": "@theme.text_md"
+            }
+           ]
+          }
+         },
+         {
+          "drawTextAnchored": {
+           "text": {
+            "type": "textFromFloat",
+            "value": "round(@value)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           },
+           "x": "componentWidth()",
+           "y": 20,
+           "panX": 1,
+           "panY": 0
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "height": "@theme.control_height"
+         },
+         {
+          "semantics": {
+           "contentDescription": "@label",
+           "stateDescription": {
+            "type": "textFromFloat",
+            "value": "round(@value)",
+            "whole": 3,
+            "decimal": 0,
+            "flags": 5
+           }
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "verticalScroll": "@scroll"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 16
+    }
+   ],
+   "children": [
+    {
+     "canvas": {
+      "modifiers": [
+       {
+        "size": 0
+       }
+      ],
+      "commands": [
+       {
+        "global": {
+         "commands": [
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@rh",
+            "len": 1,
+            "varName": "xrh"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@rl",
+            "len": 1,
+            "varName": "xrl"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@gh",
+            "len": 1,
+            "varName": "xgh"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@gl",
+            "len": 1,
+            "varName": "xgl"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@bh",
+            "len": 1,
+            "varName": "xbh"
+           }
+          },
+          {
+           "textSubtext": {
+            "text": "0123456789ABCDEF",
+            "start": "@bl",
+            "len": 1,
+            "varName": "xbl"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "text": {
+      "text": "Colour picker",
+      "fontSize": "@theme.text_xl",
+      "fontWeight": 700,
+      "color": "@colors.onSurface"
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "semantics": {
+         "contentDescription": {
+          "type": "textMerge",
+          "id1": "Colour preview, hex ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": "@xrh",
+            "id2": {
+             "type": "textMerge",
+             "id1": "@xrl",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@xgh",
+              "id2": {
+               "type": "textMerge",
+               "id1": "@xgl",
+               "id2": {
+                "type": "textMerge",
+                "id1": "@xbh",
+                "id2": "@xbl"
+               }
+              }
+             }
+            }
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ", hue ",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "round(@hue)",
+              "whole": 3,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": {
+              "type": "textMerge",
+              "id1": " degrees, saturation ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textFromFloat",
+                "value": "round(@sat)",
+                "whole": 3,
+                "decimal": 0,
+                "flags": 5
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " percent, lightness ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "round(@lit)",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " percent"
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      ],
+      "children": [
+       {
+        "Swatch": {}
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "spacedBy": 8
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "text": "Hex",
+         "fontSize": "@theme.text_md",
+         "color": "@colors.muted"
+        }
+       },
+       {
+        "row": {
+         "children": [
+          {
+           "text": {
+            "text": "#",
+            "fontSize": "@theme.text_lg",
+            "fontWeight": 700,
+            "fontFamily": "monospace",
+            "color": "@colors.onSurface"
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "@xrh",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@xrl",
+              "id2": {
+               "type": "textMerge",
+               "id1": "@xgh",
+               "id2": {
+                "type": "textMerge",
+                "id1": "@xgl",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": "@xbh",
+                 "id2": "@xbl"
+                }
+               }
+              }
+             }
+            },
+            "fontSize": "@theme.text_lg",
+            "fontWeight": 700,
+            "fontFamily": "monospace",
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "spacedBy": 2
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "text": "Hue (degrees)",
+         "fontSize": "@theme.text_md",
+         "fontWeight": 600,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "ChannelSlider": {
+         "label": "Hue (degrees)",
+         "value": "@hue",
+         "max": 360,
+         "onRelease": [
+          {
+           "type": "hostNamedAction",
+           "name": "hueReleased",
+           "value": "@hue",
+           "valueType": "float"
+          }
+         ]
+        }
+       },
+       {
+        "Ramp": {
+         "rainbow": true
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "spacedBy": 2
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "text": "Saturation (%)",
+         "fontSize": "@theme.text_md",
+         "fontWeight": 600,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "ChannelSlider": {
+         "label": "Saturation (%)",
+         "value": "@sat",
+         "max": 100,
+         "onRelease": [
+          {
+           "type": "hostNamedAction",
+           "name": "saturationReleased",
+           "value": "@sat",
+           "valueType": "float"
+          }
+         ]
+        }
+       },
+       {
+        "Ramp": {
+         "c1": "@colors.satLo",
+         "c2": "@colors.satHi"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "spacedBy": 2
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "text": "Lightness (%)",
+         "fontSize": "@theme.text_md",
+         "fontWeight": 600,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "ChannelSlider": {
+         "label": "Lightness (%)",
+         "value": "@lit",
+         "max": 100,
+         "onRelease": [
+          {
+           "type": "hostNamedAction",
+           "name": "lightnessReleased",
+           "value": "@lit",
+           "valueType": "float"
+          }
+         ]
+        }
+       },
+       {
+        "Ramp": {
+         "three": true,
+         "c1": "#FF000000",
+         "c2": "@colors.litMid",
+         "c3": "#FFFFFFFF"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

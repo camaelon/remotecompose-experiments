@@ -1,0 +1,1388 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 760,
+  "profiles": 513,
+  "contentDescription": "Monthly budget: spending per category against limits"
+ },
+ "components": {
+  "CategoryRow": {
+   "summary": "One budget category: icon, name, spent / limit, an overshoot bar and a left/over line",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "category name (host string)"
+    },
+    "icon": {
+     "type": "string",
+     "static": true,
+     "default": "category",
+     "doc": "Material Symbols name"
+    },
+    "spent": {
+     "type": "float",
+     "required": true,
+     "doc": "amount spent"
+    },
+    "limit": {
+     "type": "float",
+     "required": true,
+     "doc": "monthly limit"
+    }
+   },
+   "locals": {
+    "ratio": "@spent / max(@limit, 0.01)",
+    "over": "step(@spent, @limit)",
+    "under": "1 - step(@spent, @limit)",
+    "diff": "abs(@limit - @spent)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "padding": [
+        0,
+        6
+       ]
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", spent ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": "$",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "round(@spent)",
+             "whole": 11,
+             "decimal": 0,
+             "flags": 21
+            }
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": " of ",
+            "id2": {
+             "type": "textMerge",
+             "id1": "$",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "round(@limit)",
+              "whole": 11,
+              "decimal": 0,
+              "flags": 21
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "size": 20,
+           "color": "@colors.primary"
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 10
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 15,
+           "fontWeight": 500,
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "color": "@colors.onSurface",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 8
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "$",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "round(@spent)",
+              "whole": 11,
+              "decimal": 0,
+              "flags": 21
+             }
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": " / ",
+             "id2": {
+              "type": "textMerge",
+              "id1": "$",
+              "id2": {
+               "type": "textFromFloat",
+               "value": "round(@limit)",
+               "whole": 11,
+               "decimal": 0,
+               "flags": 21
+              }
+             }
+            }
+           },
+           "fontSize": 14,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "padding": [
+           0,
+           6
+          ]
+         }
+        ],
+        "children": [
+         {
+          "ProgressBar": {
+           "progress": "@ratio",
+           "overshoot": true,
+           "height": 8
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "$",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "round(@diff)",
+              "whole": 11,
+              "decimal": 0,
+              "flags": 21
+             }
+            },
+            "id2": " left"
+           },
+           "fontSize": 13,
+           "color": "@colors.muted",
+           "modifiers": [
+            {
+             "visibility": "@under"
+            },
+            {
+             "semantics": {
+              "contentDescription": {
+               "type": "textMerge",
+               "id1": "Within limit, ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": "$",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "round(@diff)",
+                  "whole": 11,
+                  "decimal": 0,
+                  "flags": 21
+                 }
+                },
+                "id2": " left"
+               }
+              }
+             }
+            }
+           ]
+          }
+         },
+         {
+          "row": {
+           "modifiers": [
+            {
+             "visibility": "@over"
+            }
+           ],
+           "verticalAlignment": "center",
+           "children": [
+            {
+             "Icon": {
+              "name": "warning",
+              "size": 16,
+              "color": "@colors.error"
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "width": 4
+               }
+              ]
+             }
+            },
+            {
+             "text": {
+              "value": {
+               "type": "textMerge",
+               "id1": "Over by ",
+               "id2": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@diff)",
+                 "whole": 11,
+                 "decimal": 0,
+                 "flags": 21
+                }
+               }
+              },
+              "fontSize": 13,
+              "fontWeight": 700,
+              "color": "@colors.error",
+              "modifiers": [
+               {
+                "semantics": {
+                 "contentDescription": {
+                  "type": "textMerge",
+                  "id1": "Over limit by ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(@diff)",
+                    "whole": 11,
+                    "decimal": 0,
+                    "flags": 21
+                   }
+                  }
+                 }
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CategoryRow": {
+     "name": "Groceries",
+     "icon": "shopping_cart",
+     "spent": 312,
+     "limit": 400
+    }
+   }
+  },
+  "CategoryMini": {
+   "summary": "Compact category cell for the widget: icon, name, a warning when over, a thin overshoot bar",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "category name (host string)"
+    },
+    "icon": {
+     "type": "string",
+     "static": true,
+     "default": "category",
+     "doc": "Material Symbols name"
+    },
+    "spent": {
+     "type": "float",
+     "required": true,
+     "doc": "amount spent"
+    },
+    "limit": {
+     "type": "float",
+     "required": true,
+     "doc": "monthly limit"
+    }
+   },
+   "locals": {
+    "ratio": "@spent / max(@limit, 0.01)",
+    "over": "step(@spent, @limit)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@name",
+         "id2": {
+          "type": "textMerge",
+          "id1": ", spent ",
+          "id2": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": "$",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "round(@spent)",
+             "whole": 11,
+             "decimal": 0,
+             "flags": 21
+            }
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": " of ",
+            "id2": {
+             "type": "textMerge",
+             "id1": "$",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "round(@limit)",
+              "whole": 11,
+              "decimal": 0,
+              "flags": 21
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "Icon": {
+           "name": "@icon",
+           "size": 14,
+           "color": "@colors.primary"
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 4
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 11,
+           "maxLines": 1,
+           "overflow": "ellipsis",
+           "color": "@colors.onSurface",
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@over"
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "warning",
+              "size": 14,
+              "color": "@colors.error",
+              "label": "over limit"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "padding": [
+           0,
+           4
+          ]
+         }
+        ],
+        "children": [
+         {
+          "ProgressBar": {
+           "progress": "@ratio",
+           "overshoot": true,
+           "height": 6
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CategoryMini": {
+     "name": "Groceries",
+     "icon": "shopping_cart",
+     "spent": 312,
+     "limit": 400
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "budget": {
+    "value": 2200,
+    "export": true
+   },
+   "spent1": {
+    "value": 312,
+    "export": true
+   },
+   "limit1": {
+    "value": 400,
+    "export": true
+   },
+   "spent2": {
+    "value": 1200,
+    "export": true
+   },
+   "limit2": {
+    "value": 1200,
+    "export": true
+   },
+   "spent3": {
+    "value": 186,
+    "export": true
+   },
+   "limit3": {
+    "value": 150,
+    "export": true
+   },
+   "spent4": {
+    "value": 74,
+    "export": true
+   },
+   "limit4": {
+    "value": 120,
+    "export": true
+   },
+   "spent5": {
+    "value": 45,
+    "export": true
+   },
+   "limit5": {
+    "value": 80,
+    "export": true
+   },
+   "spent6": {
+    "value": 96,
+    "export": true
+   },
+   "limit6": {
+    "value": 140,
+    "export": true
+   },
+   "total": "@spent1 + @spent2 + @spent3 + @spent4 + @spent5 + @spent6",
+   "tRatio": "@total / max(@budget, 0.01)",
+   "tOver": "step(@total, @budget)",
+   "tUnder": "1 - step(@total, @budget)",
+   "tDiff": "abs(@budget - @total)",
+   "layout": "step(windowHeight(), 260)",
+   "scroll": 0
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "name1",
+    "vtype": "string",
+    "value": "Groceries",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name2",
+    "vtype": "string",
+    "value": "Rent",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name3",
+    "vtype": "string",
+    "value": "Dining out",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name4",
+    "vtype": "string",
+    "value": "Transport",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name5",
+    "vtype": "string",
+    "value": "Entertainment",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "name6",
+    "vtype": "string",
+    "value": "Utilities",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "indexId": "@layout",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": [
+             14,
+             12
+            ]
+           },
+           {
+            "semantics": {
+             "contentDescription": {
+              "type": "textMerge",
+              "id1": "Budget: spent ",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "$",
+                "id2": {
+                 "type": "textFromFloat",
+                 "value": "round(@total)",
+                 "whole": 11,
+                 "decimal": 0,
+                 "flags": 21
+                }
+               },
+               "id2": {
+                "type": "textMerge",
+                "id1": " of ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": "$",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "round(@budget)",
+                  "whole": 11,
+                  "decimal": 0,
+                  "flags": 21
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": "$",
+                 "id2": {
+                  "type": "textFromFloat",
+                  "value": "round(@total)",
+                  "whole": 11,
+                  "decimal": 0,
+                  "flags": 21
+                 }
+                },
+                "fontSize": 18,
+                "fontWeight": 700,
+                "color": "@colors.onSurface"
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": " / ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": "$",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "round(@budget)",
+                   "whole": 11,
+                   "decimal": 0,
+                   "flags": 21
+                  }
+                 }
+                },
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "horizontalAlignment": "end",
+                "children": [
+                 {
+                  "box": {
+                   "children": [
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": "$",
+                        "id2": {
+                         "type": "textFromFloat",
+                         "value": "round(@tDiff)",
+                         "whole": 11,
+                         "decimal": 0,
+                         "flags": 21
+                        }
+                       },
+                       "id2": " left"
+                      },
+                      "fontSize": 12,
+                      "fontWeight": 600,
+                      "color": "@colors.success",
+                      "modifiers": [
+                       {
+                        "visibility": "@tUnder"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "row": {
+                      "modifiers": [
+                       {
+                        "visibility": "@tOver"
+                       }
+                      ],
+                      "verticalAlignment": "center",
+                      "children": [
+                       {
+                        "Icon": {
+                         "name": "warning",
+                         "size": 14,
+                         "color": "@colors.error"
+                        }
+                       },
+                       {
+                        "box": {
+                         "modifiers": [
+                          {
+                           "width": 4
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "text": {
+                         "value": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textMerge",
+                           "id1": "$",
+                           "id2": {
+                            "type": "textFromFloat",
+                            "value": "round(@tDiff)",
+                            "whole": 11,
+                            "decimal": 0,
+                            "flags": 21
+                           }
+                          },
+                          "id2": " over budget"
+                         },
+                         "fontSize": 12,
+                         "fontWeight": 700,
+                         "color": "@colors.error"
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": [
+                0,
+                6
+               ]
+              }
+             ],
+             "children": [
+              {
+               "ProgressBar": {
+                "progress": "@tRatio",
+                "overshoot": true,
+                "height": 8
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 6
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name1",
+                   "icon": "shopping_cart",
+                   "spent": "@spent1",
+                   "limit": "@limit1"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name2",
+                   "icon": "home",
+                   "spent": "@spent2",
+                   "limit": "@limit2"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name3",
+                   "icon": "restaurant",
+                   "spent": "@spent3",
+                   "limit": "@limit3"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name4",
+                   "icon": "directions_car",
+                   "spent": "@spent4",
+                   "limit": "@limit4"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name5",
+                   "icon": "movie",
+                   "spent": "@spent5",
+                   "limit": "@limit5"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "CategoryMini": {
+                   "name": "@name6",
+                   "icon": "bolt",
+                   "spent": "@spent6",
+                   "limit": "@limit6"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "verticalScroll": "@scroll"
+           },
+           {
+            "padding": 16
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Budget",
+             "fontSize": 22,
+             "fontWeight": 700,
+             "color": "@colors.onSurface"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 12
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "clip": {
+                "roundedRect": 16
+               }
+              },
+              {
+               "background": "@colors.surfaceHigh"
+              },
+              {
+               "padding": 16
+              },
+              {
+               "semantics": {
+                "contentDescription": {
+                 "type": "textMerge",
+                 "id1": "Spent ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "$",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "round(@total)",
+                    "whole": 11,
+                    "decimal": 0,
+                    "flags": 21
+                   }
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " of ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "$",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@budget)",
+                      "whole": 11,
+                      "decimal": 0,
+                      "flags": 21
+                     }
+                    },
+                    "id2": " budget"
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             ],
+             "children": [
+              {
+               "text": {
+                "value": "Spent this month",
+                "fontSize": 13,
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "row": {
+                "verticalAlignment": "bottom",
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "$",
+                    "id2": {
+                     "type": "textFromFloat",
+                     "value": "round(@total)",
+                     "whole": 11,
+                     "decimal": 0,
+                     "flags": 21
+                    }
+                   },
+                   "fontSize": 30,
+                   "fontWeight": 700,
+                   "color": "@colors.onSurface"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": " of ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": "$",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@budget)",
+                      "whole": 11,
+                      "decimal": 0,
+                      "flags": 21
+                     }
+                    }
+                   },
+                   "fontSize": 15,
+                   "color": "@colors.muted",
+                   "modifiers": [
+                    {
+                     "padding": [
+                      0,
+                      0,
+                      0,
+                      5
+                     ]
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 "fillMaxWidth",
+                 {
+                  "padding": [
+                   0,
+                   10
+                  ]
+                 }
+                ],
+                "children": [
+                 {
+                  "ProgressBar": {
+                   "progress": "@tRatio",
+                   "overshoot": true,
+                   "height": 12
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": "$",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "round(@tDiff)",
+                      "whole": 11,
+                      "decimal": 0,
+                      "flags": 21
+                     }
+                    },
+                    "id2": " left"
+                   },
+                   "fontSize": 15,
+                   "fontWeight": 600,
+                   "color": "@colors.success",
+                   "modifiers": [
+                    {
+                     "visibility": "@tUnder"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "row": {
+                   "modifiers": [
+                    {
+                     "visibility": "@tOver"
+                    }
+                   ],
+                   "verticalAlignment": "center",
+                   "children": [
+                    {
+                     "Icon": {
+                      "name": "warning",
+                      "size": 17,
+                      "color": "@colors.error"
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 4
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textMerge",
+                        "id1": "$",
+                        "id2": {
+                         "type": "textFromFloat",
+                         "value": "round(@tDiff)",
+                         "whole": 11,
+                         "decimal": 0,
+                         "flags": 21
+                        }
+                       },
+                       "id2": " over budget"
+                      },
+                      "fontSize": 15,
+                      "fontWeight": 700,
+                      "color": "@colors.error"
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 16
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Categories",
+             "fontSize": 15,
+             "fontWeight": 600,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name1",
+             "icon": "shopping_cart",
+             "spent": "@spent1",
+             "limit": "@limit1"
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name2",
+             "icon": "home",
+             "spent": "@spent2",
+             "limit": "@limit2"
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name3",
+             "icon": "restaurant",
+             "spent": "@spent3",
+             "limit": "@limit3"
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name4",
+             "icon": "directions_car",
+             "spent": "@spent4",
+             "limit": "@limit4"
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name5",
+             "icon": "movie",
+             "spent": "@spent5",
+             "limit": "@limit5"
+            }
+           },
+           {
+            "CategoryRow": {
+             "name": "@name6",
+             "icon": "bolt",
+             "spent": "@spent6",
+             "limit": "@limit6"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

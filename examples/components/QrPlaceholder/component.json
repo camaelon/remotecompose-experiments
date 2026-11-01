@@ -1,0 +1,513 @@
+{
+ "component": "QrPlaceholder",
+ "version": 1,
+ "summary": "A believable QR code picture for a ticket, a boarding pass or a pairing screen: a 21 × 21 module grid with the three 7 × 7 finder patterns and the timing lanes, data modules from a deterministic pseudo-random seed, black on white in every look inside a 4-module quiet zone, scaled to the square its box allows. It is a placeholder, not a scannable code.",
+ "params": {
+  "seed": {
+   "type": "float",
+   "default": 1,
+   "doc": "Picks the module pattern: the same seed always draws the same code, another seed another one (a whole number; a \"@variable\" works too)"
+  },
+  "size": {
+   "type": "float",
+   "default": 160,
+   "static": true,
+   "doc": "Side in dp it asks the layout for; the drawing scales to the square the box really gets (min of width and height), centred"
+  },
+  "contentDescription": {
+   "type": "string",
+   "default": "QR code",
+   "doc": "What a screen reader says: what the code is for, e.g. \"Boarding pass QR code for flight AF 1234\""
+  },
+  "ink": {
+   "type": "color",
+   "default": "#FF000000",
+   "doc": "Module colour: black in every look, because scanners expect dark modules on a light ground. Change it only to another very dark colour"
+  },
+  "paper": {
+   "type": "color",
+   "default": "#FFFFFFFF",
+   "doc": "Ground and quiet-zone colour: white in every look, dark and mono included"
+  }
+ },
+ "capabilities": [
+  "data.loop",
+  "draw.shapes",
+  "draw.transform",
+  "a11y.labels"
+ ],
+ "call": {
+  "QrPlaceholder": {
+   "seed": 7,
+   "contentDescription": "Boarding pass QR code"
+  }
+ },
+ "pitfalls": [
+  "Black on white in every look, on purpose: ink and paper default to literal #FF000000 and #FFFFFFFF, not theme colours, because a code inverted for dark or mono-dark would not scan (and would not look like one). In mono-dark that is a lit white square: keep it the size the task needs. Only the 1 dp frame round the quiet zone is a theme colour (outline), so the white square still has an edge on a white page",
+  "Not a real QR code: there is no encoder in the format. The 441 modules come from two nested canvas loops (r, c), each module's paint alpha step((7c² + 13r² + 5cr + 3c + 11r + 17 seed) mod 23, 11), an integer hash every player computes exactly, so the pattern is the same in Java, C++ and TypeScript. For a scannable code, render it on the server and send a bitmap",
+  "The finder corners and the row and column 6 timing lanes are cleared with paper and redrawn over the data, so they are always clean: 7 × 7 rings at three corners, alternating modules between them",
+  "Drawn in a 29-module unit square (21 + 2 × 4 quiet zone) under one scale of min(width, height) / 29, centred: an 88 dp code in a 56 dp row is a 56 dp code, never cut. Modules overlap by 0.02 so no hairline shows between them at fractional scales, and the clearing rectangles reach 0.02 further so no sliver of a neighbour shows along them",
+  "One accessibility node, the canvas, with contentDescription: say what the code is for"
+ ],
+ "body": {
+  "canvas": {
+   "modifiers": [
+    {
+     "size": "@size"
+    },
+    {
+     "semantics": {
+      "contentDescription": "@contentDescription"
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": "s",
+      "value": "min(componentWidth(), componentHeight())"
+     }
+    },
+    {
+     "translate": {
+      "dx": "(componentWidth() - @s) / 2",
+      "dy": "(componentHeight() - @s) / 2"
+     }
+    },
+    {
+     "scale": {
+      "sx": "@s / 29",
+      "sy": "@s / 29"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@colors.outline"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": 0,
+      "top": 0,
+      "right": 29,
+      "bottom": 29,
+      "rx": 1.5,
+      "ry": 1.5
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@paper"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRoundRect": {
+      "left": "29 / @s",
+      "top": "29 / @s",
+      "right": "29 - 29 / @s",
+      "bottom": "29 - 29 / @s",
+      "rx": 1.4,
+      "ry": 1.4
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       }
+      ]
+     }
+    },
+    {
+     "loop": {
+      "index": "r",
+      "from": 0,
+      "until": 21,
+      "commands": [
+       {
+        "loop": {
+         "index": "c",
+         "from": 0,
+         "until": 21,
+         "commands": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "step((c * (c * 7 + r * 5 + 3) + r * (r * 13 + 11) + @seed * 17) % 23, 11)"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "3.98 + c",
+            "top": "3.98 + r",
+            "right": "5.02 + c",
+            "bottom": "5.02 + r"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@paper"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 3.98,
+      "top": 3.98,
+      "right": 12.02,
+      "bottom": 12.02
+     }
+    },
+    {
+     "drawRect": {
+      "left": 16.98,
+      "top": 3.98,
+      "right": 25.02,
+      "bottom": 12.02
+     }
+    },
+    {
+     "drawRect": {
+      "left": 3.98,
+      "top": 16.98,
+      "right": 12.02,
+      "bottom": 25.02
+     }
+    },
+    {
+     "drawRect": {
+      "left": 11.98,
+      "top": 9.98,
+      "right": 17.02,
+      "bottom": 11.02
+     }
+    },
+    {
+     "drawRect": {
+      "left": 9.98,
+      "top": 11.98,
+      "right": 11.02,
+      "bottom": 17.02
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 4,
+      "top": 4,
+      "right": 11,
+      "bottom": 11
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@paper"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 5,
+      "top": 5,
+      "right": 10,
+      "bottom": 10
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 6,
+      "top": 6,
+      "right": 9,
+      "bottom": 9
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 18,
+      "top": 4,
+      "right": 25,
+      "bottom": 11
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@paper"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 19,
+      "top": 5,
+      "right": 24,
+      "bottom": 10
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 20,
+      "top": 6,
+      "right": 23,
+      "bottom": 9
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 4,
+      "top": 18,
+      "right": 11,
+      "bottom": 25
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@paper"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 5,
+      "top": 19,
+      "right": 10,
+      "bottom": 24
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 6,
+      "top": 20,
+      "right": 9,
+      "bottom": 23
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@ink"
+       },
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": 1
+       }
+      ]
+     }
+    },
+    {
+     "drawRect": {
+      "left": 12,
+      "top": 10,
+      "right": 13,
+      "bottom": 11
+     }
+    },
+    {
+     "drawRect": {
+      "left": 14,
+      "top": 10,
+      "right": 15,
+      "bottom": 11
+     }
+    },
+    {
+     "drawRect": {
+      "left": 16,
+      "top": 10,
+      "right": 17,
+      "bottom": 11
+     }
+    },
+    {
+     "drawRect": {
+      "left": 10,
+      "top": 12,
+      "right": 11,
+      "bottom": 13
+     }
+    },
+    {
+     "drawRect": {
+      "left": 10,
+      "top": 14,
+      "right": 11,
+      "bottom": 15
+     }
+    },
+    {
+     "drawRect": {
+      "left": 10,
+      "top": 16,
+      "right": 11,
+      "bottom": 17
+     }
+    },
+    {
+     "drawRect": {
+      "left": 12,
+      "top": 17,
+      "right": 13,
+      "bottom": 18
+     }
+    }
+   ]
+  }
+ }
+}

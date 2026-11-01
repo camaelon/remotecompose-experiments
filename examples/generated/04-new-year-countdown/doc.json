@@ -1,0 +1,418 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Countdown to New Year's Day in days, hours, minutes and seconds"
+ },
+ "componentMode": "expand",
+ "components": {
+  "Unit": {
+   "summary": "One countdown field: a zero-padded number over a small muted label, centred, filling its width",
+   "params": {
+    "value": {
+     "type": "float",
+     "required": true,
+     "doc": "The number to show (an expression or @variable)"
+    },
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Unit name under the number (DAYS, HOURS...)"
+    },
+    "digits": {
+     "type": "float",
+     "default": 2,
+     "static": true,
+     "doc": "Digits kept, zero padded"
+    },
+    "size": {
+     "type": "float",
+     "default": 36,
+     "static": true,
+     "doc": "Font size of the number"
+    },
+    "labelSize": {
+     "type": "float",
+     "default": 11,
+     "static": true,
+     "doc": "Font size of the label"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "horizontalAlignment": "center",
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textFromFloat",
+         "value": "@value",
+         "whole": "@digits",
+         "decimal": 0,
+         "flags": 12
+        },
+        "fontSize": "@size",
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 1
+       }
+      },
+      {
+       "text": {
+        "value": "@label",
+        "fontSize": "@labelSize",
+        "fontWeight": 500,
+        "color": "@colors.muted",
+        "maxLines": 1
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Unit": {
+     "value": 7,
+     "label": "DAYS"
+    }
+   }
+  },
+  "Fields": {
+   "summary": "The four countdown fields in a row of equal weights",
+   "params": {
+    "size": {
+     "type": "float",
+     "default": 36,
+     "static": true,
+     "doc": "Number font size"
+    },
+    "width": {
+     "type": "float",
+     "default": 0,
+     "static": true,
+     "doc": "Fixed width of the row, 0 to fill the parent"
+    },
+    "labelSize": {
+     "type": "float",
+     "default": 11,
+     "static": true,
+     "doc": "Label font size"
+    }
+   },
+   "body": {
+    "$if": "width",
+    "then": {
+     "row": {
+      "modifiers": [
+       {
+        "width": "@width"
+       }
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@days",
+            "label": "DAYS",
+            "digits": 3,
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@hrs",
+            "label": "HOURS",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@mins",
+            "label": "MINUTES",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@sec",
+            "label": "SECONDS",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "row": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@days",
+            "label": "DAYS",
+            "digits": 3,
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@hrs",
+            "label": "HOURS",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@mins",
+            "label": "MINUTES",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "Unit": {
+            "value": "@sec",
+            "label": "SECONDS",
+            "size": "@size",
+            "labelSize": "@labelSize"
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   },
+   "call": {
+    "Fields": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "sod": "timeInMin() * 60 + timeInSec() % 60",
+   "div4": "1 - min(1, abs(year() % 4))",
+   "div100": "1 - min(1, abs(year() % 100))",
+   "div400": "1 - min(1, abs(year() % 400))",
+   "leap": "@div4 * (1 - @div100) + @div400",
+   "days": "365 + @leap - dayOfYear() + 1 - min(1, @sod)",
+   "secs": "(86400 - @sod) % 86400",
+   "hrs": "floor(@secs / 3600)",
+   "mins": "floor(@secs / 60) % 60",
+   "sec": "@secs % 60",
+   "isNewYear": "1 - min(1, abs(dayOfYear() - 1))"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 12
+    }
+   ],
+   "children": [
+    {
+     "collapsibleColumn": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "horizontalAlignment": "center",
+      "verticalArrangement": "center",
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "NEW YEAR'S DAY ",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "year() + 1",
+           "whole": 4,
+           "decimal": 0,
+           "flags": 5
+          }
+         },
+         "fontSize": 12,
+         "fontWeight": 700,
+         "color": "@colors.secondary",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 2
+           }
+          },
+          {
+           "padding": [
+            0,
+            0,
+            0,
+            6
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "fitBox": {
+         "children": [
+          {
+           "Fields": {
+            "size": 40,
+            "width": 480
+           }
+          },
+          {
+           "Fields": {
+            "size": 36,
+            "width": 290
+           }
+          },
+          {
+           "Fields": {
+            "size": 24,
+            "labelSize": 9
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": "Happy New Year!",
+         "fontSize": 14,
+         "fontWeight": 600,
+         "color": "@colors.primary",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "visibility": "@isNewYear"
+          },
+          {
+           "collapsiblePriority": {
+            "orientation": "vertical",
+            "priority": 1
+           }
+          },
+          {
+           "padding": [
+            0,
+            6,
+            0,
+            0
+           ]
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

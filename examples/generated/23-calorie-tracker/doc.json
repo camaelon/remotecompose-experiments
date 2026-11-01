@@ -1,0 +1,1486 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Calorie tracker"
+ },
+ "components": {
+  "CalorieRing": {
+   "summary": "A calorie ring: a track, an arc of min(progress,1) x 360 deg in color, and the part past the target as a second lap in overColor (in mono a thinner inner lap).",
+   "params": {
+    "progress": {
+     "type": "float",
+     "required": true,
+     "doc": "eaten / target, may exceed 1"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Arc colour"
+    },
+    "overColor": {
+     "type": "color",
+     "default": "@colors.error",
+     "doc": "Colour of the lap past the target"
+    },
+    "size": {
+     "type": "float",
+     "default": 120,
+     "static": true,
+     "doc": "Diameter in dp"
+    },
+    "thickness": {
+     "type": "float",
+     "default": 10,
+     "static": true,
+     "doc": "Stroke width in dp"
+    }
+   },
+   "locals": {
+    "pa": {
+     "value": "@progress",
+     "anim": 0.3
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      {
+       "size": "@size"
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth(), componentHeight())"
+       }
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - @s) / 2",
+        "dy": "(componentHeight() - @s) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@s / @size",
+        "sy": "@s / @size"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         },
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": 1.5,
+           "else": "@thickness"
+          }
+         },
+         {
+          "strokeCap": "round"
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@size / 2",
+        "cy": "@size / 2",
+        "radius": "@size / 2 - @thickness / 2"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": "@thickness / 2",
+           "else": "@thickness"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawArc": {
+        "left": "@thickness / 2",
+        "top": "@thickness / 2",
+        "right": "@size - @thickness / 2",
+        "bottom": "@size - @thickness / 2",
+        "startAngle": -90,
+        "sweepAngle": "min(@pa, 1) * 360"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@overColor"
+         },
+         {
+          "strokeWidth": {
+           "$if": "theme.mono",
+           "then": 2,
+           "else": "@thickness"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": {
+        "drawArc": {
+         "left": "@thickness * 1.6",
+         "top": "@thickness * 1.6",
+         "right": "@size - @thickness * 1.6",
+         "bottom": "@size - @thickness * 1.6",
+         "startAngle": -90,
+         "sweepAngle": "clamp(0, 1, @pa - 1) * 360"
+        }
+       },
+       "else": {
+        "drawArc": {
+         "left": "@thickness / 2",
+         "top": "@thickness / 2",
+         "right": "@size - @thickness / 2",
+         "bottom": "@size - @thickness / 2",
+         "startAngle": -90,
+         "sweepAngle": "clamp(0, 1, @pa - 1) * 360"
+        }
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "CalorieRing": {
+     "progress": 0.72
+    }
+   }
+  },
+  "MacroBar": {
+   "summary": "A horizontal bar of eaten against target: scaled to max(eaten, target); the part up to the target in color, the part past it in overColor (in mono an outlined segment).",
+   "params": {
+    "eaten": {
+     "type": "float",
+     "required": true,
+     "doc": "grams eaten"
+    },
+    "target": {
+     "type": "float",
+     "required": true,
+     "doc": "target grams"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Fill colour"
+    },
+    "overColor": {
+     "type": "color",
+     "default": "@colors.error",
+     "doc": "Colour of the part past the target"
+    },
+    "height": {
+     "type": "float",
+     "default": 8,
+     "static": true,
+     "doc": "Bar height in dp"
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@height"
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "w",
+        "value": "componentWidth()"
+       }
+      },
+      {
+       "variable": {
+        "name": "m",
+        "value": "max(1, max(@eaten, @target))"
+       }
+      },
+      {
+       "variable": {
+        "name": "ft",
+        "value": "@target / @m * @w"
+       }
+      },
+      {
+       "variable": {
+        "name": "fe",
+        "value": "@eaten / @m * @w"
+       }
+      },
+      {
+       "variable": {
+        "name": "ol",
+        "value": "@ft + 1 + (1 - step(@eaten, @target)) * 2 * @w"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "alpha": 1
+         },
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0.5,
+        "top": 0.5,
+        "right": "@w - 0.5",
+        "bottom": "@height - 0.5",
+        "rx": "@height / 2",
+        "ry": "@height / 2"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0,
+        "top": 0,
+        "right": "min(@fe, @ft)",
+        "bottom": "@height",
+        "rx": "@height / 2",
+        "ry": "@height / 2"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@overColor"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@ol",
+        "top": 0.75,
+        "right": "max(@fe - 0.75, @ol)",
+        "bottom": "@height - 0.75",
+        "rx": "@height / 2",
+        "ry": "@height / 2"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "MacroBar": {
+     "eaten": 92,
+     "target": 120
+    }
+   }
+  },
+  "MacroRow": {
+   "summary": "One macro: its name and grams against target over a MacroBar, with the overshoot in error colour when over.",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Macro name"
+    },
+    "eaten": {
+     "type": "float",
+     "required": true,
+     "doc": "grams eaten"
+    },
+    "target": {
+     "type": "float",
+     "required": true,
+     "doc": "target grams"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Bar colour"
+    }
+   },
+   "locals": {
+    "over": "step(@eaten, @target)",
+    "overBy": "max(0, @eaten - @target)"
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "spacedBy": 3
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@label, ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@eaten",
+           "whole": 5,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " of ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@target",
+             "whole": 5,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " grams"
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "row": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "verticalAlignment": "center",
+        "children": [
+         {
+          "text": {
+           "value": "@label",
+           "fontSize": 12,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "fontWeight": 500
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": "+",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textFromFloat",
+              "value": "@overBy",
+              "whole": 5,
+              "decimal": 0,
+              "flags": 5
+             },
+             "id2": " over  "
+            }
+           },
+           "fontSize": 11,
+           "color": "@colors.error",
+           "maxLines": 1,
+           "fontWeight": 600,
+           "modifiers": [
+            {
+             "visibility": "@over"
+            }
+           ]
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@eaten",
+             "whole": 5,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": " / ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@target",
+               "whole": 5,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " g"
+             }
+            }
+           },
+           "fontSize": 12,
+           "color": "@colors.muted",
+           "maxLines": 1
+          }
+         }
+        ]
+       }
+      },
+      {
+       "MacroBar": {
+        "eaten": "@eaten",
+        "target": "@target",
+        "color": "@color",
+        "height": 7
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "MacroRow": {
+     "label": "Protein",
+     "eaten": 92,
+     "target": 120
+    }
+   }
+  },
+  "MacroMini": {
+   "summary": "A compact macro: a short label with grams and a thin MacroBar.",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Short name"
+    },
+    "eaten": {
+     "type": "float",
+     "required": true,
+     "doc": "grams eaten"
+    },
+    "target": {
+     "type": "float",
+     "required": true,
+     "doc": "target grams"
+    },
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "Full name for accessibility"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Bar colour"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "weight": 1
+      },
+      {
+       "spacedBy": 2
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "@name, ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@eaten",
+           "whole": 5,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " of ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@target",
+             "whole": 5,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": " grams"
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": "@label ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@eaten",
+           "whole": 5,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": "g"
+         }
+        },
+        "fontSize": 10,
+        "color": "@colors.muted",
+        "maxLines": 1
+       }
+      },
+      {
+       "MacroBar": {
+        "eaten": "@eaten",
+        "target": "@target",
+        "color": "@color",
+        "height": 4
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "MacroMini": {
+     "label": "P",
+     "name": "Protein",
+     "eaten": 92,
+     "target": 120
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "kcal": {
+    "value": 1450,
+    "export": true
+   },
+   "kcalTarget": {
+    "value": 2000,
+    "export": true
+   },
+   "protein": {
+    "value": 92,
+    "export": true
+   },
+   "proteinTarget": {
+    "value": 120,
+    "export": true
+   },
+   "carbs": {
+    "value": 160,
+    "export": true
+   },
+   "carbsTarget": {
+    "value": 250,
+    "export": true
+   },
+   "fat": {
+    "value": 48,
+    "export": true
+   },
+   "fatTarget": {
+    "value": 65,
+    "export": true
+   },
+   "ratio": "@kcal / max(1, @kcalTarget)",
+   "isOver": "step(@kcal, @kcalTarget)",
+   "notOver": "1 - @isOver",
+   "remaining": "max(0, @kcalTarget - @kcal)",
+   "overBy": "max(0, @kcal - @kcalTarget)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 12
+    }
+   ],
+   "children": [
+    {
+     "fitBox": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 130
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "size": 122
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Calories ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@kcal",
+                  "whole": 5,
+                  "decimal": 0,
+                  "flags": 21
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": " of ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@kcalTarget",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " kcal"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "CalorieRing": {
+               "progress": "@ratio",
+               "size": 122,
+               "thickness": 11
+              }
+             },
+             {
+              "column": {
+               "horizontalAlignment": "center",
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "@kcal",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "fontSize": 24,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "fontWeight": 700
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "of ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@kcalTarget",
+                     "whole": 5,
+                     "decimal": 0,
+                     "flags": 21
+                    },
+                    "id2": " kcal"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted",
+                  "maxLines": 1
+                 }
+                },
+                {
+                 "box": {
+                  "children": [
+                   {
+                    "text": {
+                     "value": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@remaining",
+                       "whole": 5,
+                       "decimal": 0,
+                       "flags": 21
+                      },
+                      "id2": " left"
+                     },
+                     "fontSize": 12,
+                     "color": "@colors.primary",
+                     "maxLines": 1,
+                     "fontWeight": 600,
+                     "modifiers": [
+                      {
+                       "visibility": "@notOver"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@overBy",
+                       "whole": 5,
+                       "decimal": 0,
+                       "flags": 21
+                      },
+                      "id2": " over"
+                     },
+                     "fontSize": 12,
+                     "color": "@colors.error",
+                     "maxLines": 1,
+                     "fontWeight": 700,
+                     "modifiers": [
+                      {
+                       "visibility": "@isOver"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 14
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             {
+              "weight": 1
+             },
+             {
+              "spacedBy": 10
+             }
+            ],
+            "verticalArrangement": "center",
+            "children": [
+             {
+              "MacroRow": {
+               "label": "Protein",
+               "eaten": "@protein",
+               "target": "@proteinTarget",
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "MacroRow": {
+               "label": "Carbs",
+               "eaten": "@carbs",
+               "target": "@carbsTarget",
+               "color": "@colors.secondary"
+              }
+             },
+             {
+              "MacroRow": {
+               "label": "Fat",
+               "eaten": "@fat",
+               "target": "@fatTarget",
+               "color": "@colors.success"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 134
+          }
+         ],
+         "horizontalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "size": 94
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Calories ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@kcal",
+                  "whole": 5,
+                  "decimal": 0,
+                  "flags": 21
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": " of ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@kcalTarget",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " kcal"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "horizontalAlignment": "center",
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "CalorieRing": {
+               "progress": "@ratio",
+               "size": 94,
+               "thickness": 8
+              }
+             },
+             {
+              "column": {
+               "horizontalAlignment": "center",
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textFromFloat",
+                   "value": "@kcal",
+                   "whole": 5,
+                   "decimal": 0,
+                   "flags": 21
+                  },
+                  "fontSize": 18,
+                  "color": "@colors.onSurface",
+                  "maxLines": 1,
+                  "fontWeight": 700
+                 }
+                },
+                {
+                 "box": {
+                  "children": [
+                   {
+                    "text": {
+                     "value": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@remaining",
+                       "whole": 5,
+                       "decimal": 0,
+                       "flags": 21
+                      },
+                      "id2": " left"
+                     },
+                     "fontSize": 10,
+                     "color": "@colors.primary",
+                     "maxLines": 1,
+                     "fontWeight": 600,
+                     "modifiers": [
+                      {
+                       "visibility": "@notOver"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@overBy",
+                       "whole": 5,
+                       "decimal": 0,
+                       "flags": 21
+                      },
+                      "id2": " over"
+                     },
+                     "fontSize": 10,
+                     "color": "@colors.error",
+                     "maxLines": 1,
+                     "fontWeight": 700,
+                     "modifiers": [
+                      {
+                       "visibility": "@isOver"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 8
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "MacroMini": {
+               "label": "P",
+               "name": "Protein",
+               "eaten": "@protein",
+               "target": "@proteinTarget",
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "MacroMini": {
+               "label": "C",
+               "name": "Carbs",
+               "eaten": "@carbs",
+               "target": "@carbsTarget",
+               "color": "@colors.secondary"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "MacroMini": {
+               "label": "F",
+               "name": "Fat",
+               "eaten": "@fat",
+               "target": "@fatTarget",
+               "color": "@colors.success"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 56
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "size": 52
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Calories ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@kcal",
+                  "whole": 5,
+                  "decimal": 0,
+                  "flags": 21
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": " of ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@kcalTarget",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " kcal"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "CalorieRing": {
+               "progress": "@ratio",
+               "size": 52,
+               "thickness": 6
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@kcal",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 21
+                },
+                "id2": " kcal"
+               },
+               "fontSize": 14,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "fontWeight": 700
+              }
+             },
+             {
+              "box": {
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@remaining",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " left"
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.primary",
+                  "maxLines": 1,
+                  "fontWeight": 600,
+                  "modifiers": [
+                   {
+                    "visibility": "@notOver"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@overBy",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " over"
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.error",
+                  "maxLines": 1,
+                  "fontWeight": 700,
+                  "modifiers": [
+                   {
+                    "visibility": "@isOver"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 12
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             {
+              "weight": 1
+             }
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "MacroMini": {
+               "label": "P",
+               "name": "Protein",
+               "eaten": "@protein",
+               "target": "@proteinTarget",
+               "color": "@colors.primary"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "MacroMini": {
+               "label": "C",
+               "name": "Carbs",
+               "eaten": "@carbs",
+               "target": "@carbsTarget",
+               "color": "@colors.secondary"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "MacroMini": {
+               "label": "F",
+               "name": "Fat",
+               "eaten": "@fat",
+               "target": "@fatTarget",
+               "color": "@colors.success"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 48
+          }
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "size": 44
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "Calories ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@kcal",
+                  "whole": 5,
+                  "decimal": 0,
+                  "flags": 21
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": " of ",
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@kcalTarget",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " kcal"
+                  }
+                 }
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "CalorieRing": {
+               "progress": "@ratio",
+               "size": 44,
+               "thickness": 5
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "column": {
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@kcal",
+                 "whole": 5,
+                 "decimal": 0,
+                 "flags": 21
+                },
+                "id2": " kcal"
+               },
+               "fontSize": 13,
+               "color": "@colors.onSurface",
+               "maxLines": 1,
+               "fontWeight": 700
+              }
+             },
+             {
+              "box": {
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@remaining",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " left"
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.primary",
+                  "maxLines": 1,
+                  "fontWeight": 600,
+                  "modifiers": [
+                   {
+                    "visibility": "@notOver"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@overBy",
+                    "whole": 5,
+                    "decimal": 0,
+                    "flags": 21
+                   },
+                   "id2": " over"
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.error",
+                  "maxLines": 1,
+                  "fontWeight": 700,
+                  "modifiers": [
+                   {
+                    "visibility": "@isOver"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,1510 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Sleep summary: hours slept, a hypnogram of the night's sleep stages and a quality score"
+ },
+ "components": {
+  "Hypnogram": {
+   "summary": "A hypnogram: a step chart of sleep stages over the night from a float array of stage codes per slot (0 deep, 1 light, 100 REM, 10000 awake), one bar per slot at its stage's level (deep lowest, awake highest) in its stage's colour; mono draws the step line only, over faint level guides",
+   "params": {
+    "stages": {
+     "type": "float",
+     "required": true,
+     "doc": "\"@name\" of a resources.floatArrays entry: one stage code per slot, 0 = deep, 1 = light, 100 = REM, 10000 = awake (powers of 100, so arraySum gives every count); up to maxSlots entries"
+    },
+    "maxSlots": {
+     "type": "float",
+     "default": 96,
+     "static": true,
+     "doc": "Most slots drawn (96 = 24 h of 15-minute slots); the loop runs this many times, slots past the array's end draw nothing"
+    },
+    "awakeColor": {
+     "type": "color",
+     "default": "@colors.warning",
+     "doc": "Fill of the awake slots (top level)"
+    },
+    "remColor": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Fill of the REM slots"
+    },
+    "lightColor": {
+     "type": "color",
+     "default": "@colors.secondary",
+     "doc": "Fill of the light-sleep slots"
+    },
+    "deepColor": {
+     "type": "color",
+     "default": "@colors.success",
+     "doc": "Fill of the deep-sleep slots (bottom level)"
+    },
+    "label": {
+     "type": "string",
+     "default": "Sleep stages over the night",
+     "doc": "Accessibility label"
+    }
+   },
+   "locals": {
+    "n": "arrayLength(@stages)",
+    "n1": "arrayLength(@stages) - 1"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": "@label"
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "w",
+        "value": "componentWidth()"
+       }
+      },
+      {
+       "variable": {
+        "name": "h",
+        "value": "componentHeight()"
+       }
+      },
+      {
+       "variable": {
+        "name": "hu",
+        "value": "(componentHeight() - 2) / 4"
+       }
+      },
+      {
+       "variable": {
+        "name": "base",
+        "value": "componentHeight() - 1"
+       }
+      },
+      {
+       "variable": {
+        "name": "h2",
+        "value": "@hu * 2"
+       }
+      },
+      {
+       "variable": {
+        "name": "h3",
+        "value": "@hu * 3"
+       }
+      },
+      {
+       "variable": {
+        "name": "h4",
+        "value": "@hu * 4"
+       }
+      },
+      {
+       "$if": "theme.mono",
+       "then": [
+        {
+         "paint": {
+          "color": "@colors.muted",
+          "style": "stroke",
+          "strokeWidth": 1
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 0,
+          "y1": "@base - @hu",
+          "x2": "@w",
+          "y2": "@base - @hu"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 0,
+          "y1": "@base - @h2",
+          "x2": "@w",
+          "y2": "@base - @h2"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 0,
+          "y1": "@base - @h3",
+          "x2": "@w",
+          "y2": "@base - @h3"
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 0,
+          "y1": "@base - @h4",
+          "x2": "@w",
+          "y2": "@base - @h4"
+         }
+        },
+        {
+         "paint": {
+          "color": "@colors.onSurface",
+          "style": "stroke",
+          "strokeWidth": 2,
+          "strokeCap": "square"
+         }
+        },
+        {
+         "loop": {
+          "index": "i",
+          "from": 0,
+          "until": "@maxSlots",
+          "commands": [
+           {
+            "drawLine": {
+             "x1": "@w * min(@i, @n) / @n",
+             "y1": "@base - @hu * (2 + log(max(arrayGet(@stages, min(@i, @n1)), 0.01)) / log(100))",
+             "x2": "@w * min(@i + 1, @n) / @n",
+             "y2": "@base - @hu * (2 + log(max(arrayGet(@stages, min(@i, @n1)), 0.01)) / log(100))"
+            }
+           },
+           {
+            "drawLine": {
+             "x1": "@w * min(@i + 1, @n) / @n",
+             "y1": "@base - @hu * (2 + log(max(arrayGet(@stages, min(@i, @n1)), 0.01)) / log(100))",
+             "x2": "@w * min(@i + 1, @n) / @n",
+             "y2": "@base - @hu * (2 + log(max(arrayGet(@stages, min(@i + 1, @n1)), 0.01)) / log(100))"
+            }
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "color": "@colors.outline",
+          "style": "stroke",
+          "strokeWidth": 1
+         }
+        },
+        {
+         "drawLine": {
+          "x1": 0,
+          "y1": "@base",
+          "x2": "@w",
+          "y2": "@base"
+         }
+        },
+        {
+         "loop": {
+          "index": "i",
+          "from": 0,
+          "until": "@maxSlots",
+          "commands": [
+           {
+            "paint": {
+             "color": "@deepColor",
+             "style": "fill"
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@w * min(@i, @n) / @n",
+             "top": "@base - @hu * (1 - min(1, abs(arrayGet(@stages, min(@i, @n1)) - 0)))",
+             "right": "@w * min(@i + 1, @n) / @n + 0.5",
+             "bottom": "@base"
+            }
+           },
+           {
+            "paint": {
+             "color": "@lightColor",
+             "style": "fill"
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@w * min(@i, @n) / @n",
+             "top": "@base - @h2 * (1 - min(1, abs(arrayGet(@stages, min(@i, @n1)) - 1)))",
+             "right": "@w * min(@i + 1, @n) / @n + 0.5",
+             "bottom": "@base"
+            }
+           },
+           {
+            "paint": {
+             "color": "@remColor",
+             "style": "fill"
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@w * min(@i, @n) / @n",
+             "top": "@base - @h3 * (1 - min(1, abs(arrayGet(@stages, min(@i, @n1)) - 100)))",
+             "right": "@w * min(@i + 1, @n) / @n + 0.5",
+             "bottom": "@base"
+            }
+           },
+           {
+            "paint": {
+             "color": "@awakeColor",
+             "style": "fill"
+            }
+           },
+           {
+            "drawRect": {
+             "left": "@w * min(@i, @n) / @n",
+             "top": "@base - @h4 * (1 - min(1, abs(arrayGet(@stages, min(@i, @n1)) - 10000)))",
+             "right": "@w * min(@i + 1, @n) / @n + 0.5",
+             "bottom": "@base"
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     ]
+    }
+   },
+   "call": {
+    "Hypnogram": {
+     "stages": "@stages"
+    }
+   }
+  }
+ },
+ "resources": {
+  "floatArrays": {
+   "stages": {
+    "value": [
+     10000,
+     1,
+     1,
+     0,
+     0,
+     0,
+     0,
+     1,
+     1,
+     100,
+     100,
+     1,
+     1,
+     0,
+     0,
+     0,
+     1,
+     1,
+     100,
+     100,
+     100,
+     1,
+     1,
+     0,
+     1,
+     1,
+     100,
+     100,
+     100,
+     10000
+    ],
+    "export": true
+   }
+  },
+  "colors": {
+   "stageAwake": {
+    "light": "#FFE65100",
+    "dark": "#FFFFAB40",
+    "mono": "#FFFFFFFF",
+    "mono-inverted": "#FF000000"
+   },
+   "stageRem": {
+    "light": "#FF7B1FA2",
+    "dark": "#FFCE93D8",
+    "mono": "#FFFFFFFF",
+    "mono-inverted": "#FF000000"
+   },
+   "stageLight": {
+    "light": "#FF1E88E5",
+    "dark": "#FF64B5F6",
+    "mono": "#FFFFFFFF",
+    "mono-inverted": "#FF000000"
+   },
+   "stageDeep": {
+    "light": "#FF1A237E",
+    "dark": "#FF7986CB",
+    "mono": "#FFFFFFFF",
+    "mono-inverted": "#FF000000"
+   }
+  },
+  "variables": {
+   "score": {
+    "value": 82,
+    "export": true
+   },
+   "sleepStart": {
+    "value": 1390,
+    "export": true
+   },
+   "sleepEnd": {
+    "value": 400,
+    "export": true
+   },
+   "slotMin": {
+    "value": 15,
+    "export": true
+   },
+   "n": "max(1, arrayLength(@stages))",
+   "S": "arraySum(@stages)",
+   "awakeN": "floor(@S / 10000)",
+   "remN": "floor(@S / 100) % 100",
+   "lightN": "@S % 100",
+   "deepN": "@n - @awakeN - @remN - @lightN",
+   "asleepMin": "(@n - @awakeN) * @slotMin",
+   "asleepH": "floor(@asleepMin / 60)",
+   "asleepM": "@asleepMin % 60",
+   "awakePct": "floor(100 * @awakeN / @n + 0.5)",
+   "remPct": "floor(100 * @remN / @n + 0.5)",
+   "lightPct": "floor(100 * @lightN / @n + 0.5)",
+   "deepPct": "floor(100 * @deepN / @n + 0.5)",
+   "startH": "floor(@sleepStart / 60)",
+   "startM": "@sleepStart % 60",
+   "endH": "floor(@sleepEnd / 60)",
+   "endM": "@sleepEnd % 60",
+   "scoreFrac": "clamp(0, 1, @score / 100)",
+   "scoreR": "floor(clamp(0, 100, @score) + 0.5)",
+   "legendShown": "step(windowWidth(), 239) * step(windowHeight(), 139)",
+   "layoutIdx": "(1 - step(windowHeight(), 100)) + 2 * step(windowHeight(), 100) * (1 - step(windowWidth(), 200))",
+   "a11y_asleepH": "@asleepH + 0",
+   "a11y_asleepM": "@asleepM + 0",
+   "a11y_startH": "@startH + 0",
+   "a11y_startM": "@startM + 0",
+   "a11y_endH": "@endH + 0",
+   "a11y_endM": "@endM + 0",
+   "a11y_scoreR": "@scoreR + 0",
+   "a11y_deepPct": "@deepPct + 0",
+   "a11y_lightPct": "@lightPct + 0",
+   "a11y_remPct": "@remPct + 0",
+   "a11y_awakePct": "@awakePct + 0",
+   "chartShownShort": "step(windowWidth(), 199)"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "clip": {
+      "roundedRect": 16
+     }
+    },
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 12
+    },
+    {
+     "semantics": {
+      "contentDescription": {
+       "type": "textMerge",
+       "id1": "Slept ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "@a11y_asleepH",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": {
+         "type": "textMerge",
+         "id1": " hours ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "@a11y_asleepM",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": " minutes, in bed from ",
+           "id2": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "@a11y_startH",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ":",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@a11y_startM",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 13
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": " to ",
+               "id2": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@a11y_endH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@a11y_endM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": ". Sleep quality score ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@a11y_scoreR",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": " of 100. Deep ",
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@a11y_deepPct",
+                       "whole": 3,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": "%, light ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": "@a11y_lightPct",
+                         "whole": 3,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "id2": {
+                         "type": "textMerge",
+                         "id1": "%, REM ",
+                         "id2": {
+                          "type": "textMerge",
+                          "id1": {
+                           "type": "textFromFloat",
+                           "value": "@a11y_remPct",
+                           "whole": 3,
+                           "decimal": 0,
+                           "flags": 5
+                          },
+                          "id2": {
+                           "type": "textMerge",
+                           "id1": "%, awake ",
+                           "id2": {
+                            "type": "textMerge",
+                            "id1": {
+                             "type": "textFromFloat",
+                             "value": "@a11y_awakePct",
+                             "whole": 3,
+                             "decimal": 0,
+                             "flags": 5
+                            },
+                            "id2": "%."
+                           }
+                          }
+                         }
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               }
+              }
+             }
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   ],
+   "children": [
+    {
+     "stateLayout": {
+      "indexId": "@layoutIdx",
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   {
+                    "spacedBy": 4
+                   }
+                  ],
+                  "children": [
+                   {
+                    "Icon": {
+                     "name": "bedtime",
+                     "size": 14,
+                     "color": "@colors.muted"
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": "Sleep",
+                     "fontSize": 12,
+                     "color": "@colors.muted"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@asleepH",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "h ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@asleepM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     },
+                     "id2": "m"
+                    }
+                   }
+                  },
+                  "fontSize": 24,
+                  "fontWeight": 700,
+                  "color": "@colors.onSurface"
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@startH",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": ":",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@startM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " \u2013 ",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@endH",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 13
+                       },
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": ":",
+                        "id2": {
+                         "type": "textFromFloat",
+                         "value": "@endM",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 13
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "fontSize": 12,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "ProgressRing": {
+               "progress": "@scoreFrac",
+               "size": 56,
+               "thickness": 6
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             },
+             {
+              "padding": [
+               0,
+               6
+              ]
+             }
+            ],
+            "children": [
+             {
+              "Hypnogram": {
+               "stages": "@stages",
+               "awakeColor": "@colors.stageAwake",
+               "remColor": "@colors.stageRem",
+               "lightColor": "@colors.stageLight",
+               "deepColor": "@colors.stageDeep",
+               "label": "Sleep stages over the night, awake at the top, deep at the bottom"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "visibility": "@legendShown"
+             }
+            ],
+            "horizontalArrangement": "spaceBetween",
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageAwake"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Awake ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@awakePct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageRem"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "REM ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@remPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageLight"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Light ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@lightPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageDeep"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Deep ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@deepPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "column": {
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@asleepH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": "h ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@asleepM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": "m"
+                 }
+                }
+               },
+               "fontSize": 20,
+               "fontWeight": 700,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@startH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 13
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": ":",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@startM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": {
+                   "type": "textMerge",
+                   "id1": " \u2013 ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@endH",
+                     "whole": 2,
+                     "decimal": 0,
+                     "flags": 13
+                    },
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": ":",
+                     "id2": {
+                      "type": "textFromFloat",
+                      "value": "@endM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     }
+                    }
+                   }
+                  }
+                 }
+                }
+               },
+               "fontSize": 11,
+               "color": "@colors.muted"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxHeight",
+             {
+              "weight": 1
+             },
+             {
+              "visibility": "@chartShownShort"
+             }
+            ],
+            "children": [
+             {
+              "Hypnogram": {
+               "stages": "@stages",
+               "awakeColor": "@colors.stageAwake",
+               "remColor": "@colors.stageRem",
+               "lightColor": "@colors.stageLight",
+               "deepColor": "@colors.stageDeep",
+               "label": "Sleep stages over the night, awake at the top, deep at the bottom"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "width": 10
+             }
+            ]
+           }
+          },
+          {
+           "ProgressRing": {
+            "progress": "@scoreFrac",
+            "size": 44,
+            "thickness": 5
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@asleepH",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": "h ",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@asleepM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     },
+                     "id2": "m"
+                    }
+                   }
+                  },
+                  "fontSize": 20,
+                  "fontWeight": 700,
+                  "color": "@colors.onSurface"
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textFromFloat",
+                    "value": "@startH",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 13
+                   },
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": ":",
+                    "id2": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textFromFloat",
+                      "value": "@startM",
+                      "whole": 2,
+                      "decimal": 0,
+                      "flags": 13
+                     },
+                     "id2": {
+                      "type": "textMerge",
+                      "id1": " \u2013 ",
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": {
+                        "type": "textFromFloat",
+                        "value": "@endH",
+                        "whole": 2,
+                        "decimal": 0,
+                        "flags": 13
+                       },
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": ":",
+                        "id2": {
+                         "type": "textFromFloat",
+                         "value": "@endM",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 13
+                        }
+                       }
+                      }
+                     }
+                    }
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 8
+                }
+               ]
+              }
+             },
+             {
+              "ProgressRing": {
+               "progress": "@scoreFrac",
+               "size": 44,
+               "thickness": 5
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "verticalWeight": 1
+             },
+             {
+              "padding": [
+               0,
+               6
+              ]
+             }
+            ],
+            "children": [
+             {
+              "Hypnogram": {
+               "stages": "@stages",
+               "awakeColor": "@colors.stageAwake",
+               "remColor": "@colors.stageRem",
+               "lightColor": "@colors.stageLight",
+               "deepColor": "@colors.stageDeep",
+               "label": "Sleep stages over the night, awake at the top, deep at the bottom"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "visibility": "@legendShown"
+             }
+            ],
+            "horizontalArrangement": "spaceBetween",
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageAwake"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Awake ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@awakePct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageRem"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "REM ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@remPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageLight"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Light ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@lightPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                {
+                 "spacedBy": 4
+                }
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "size": 8
+                   },
+                   {
+                    "clip": {
+                     "roundedRect": 4
+                    }
+                   },
+                   {
+                    "background": "@colors.stageDeep"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": {
+                   "type": "textMerge",
+                   "id1": "Deep ",
+                   "id2": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textFromFloat",
+                     "value": "@deepPct",
+                     "whole": 3,
+                     "decimal": 0,
+                     "flags": 5
+                    },
+                    "id2": "%"
+                   }
+                  },
+                  "fontSize": 11,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

@@ -1,0 +1,90 @@
+{
+ "componentMode": "expand",
+ "header": {"apiLevel": 7, "width": 360, "height": 760, "profiles": 513,
+  "contentDescription": "Sign-in screen: email and password fields, a Remember me checkbox and a Sign in button"},
+ "components": {
+  "FieldDisplay": {
+   "summary": "A read-only text field the app fills: a label over an outlined box with a leading icon, a muted placeholder while empty, the app-supplied text when filled; a tap sends the app an action so it can open its own input",
+   "params": {
+    "label": {"type": "string", "required": true, "doc": "Label shown above the field"},
+    "value": {"type": "string", "required": true, "doc": "The text to show (a host string variable)"},
+    "placeholder": {"type": "string", "required": true, "doc": "Shown while empty"},
+    "filled": {"type": "float", "required": true, "doc": "1 when the field has content, 0 when empty (a declared variable)"},
+    "empty": {"type": "float", "required": true, "doc": "1 - filled (a declared variable)"},
+    "icon": {"type": "string", "required": true, "static": true, "doc": "Leading Material Symbols icon"},
+    "description": {"type": "text", "required": true, "doc": "What a screen reader says for the filled value (the email itself; the password as its length)"},
+    "onClick": {"type": "action", "doc": "What a tap does (hostNamedAction)"}
+   },
+   "body": {"column": {"modifiers": ["fillMaxWidth", {"spacedBy": 6}], "children": [
+     {"text": {"value": "@label", "fontSize": 14, "fontWeight": 500, "color": "@colors.onSurface"}},
+     {"row": {"modifiers": ["fillMaxWidth",
+        {"semantics": {"contentDescription": "@label", "clickable": true}},
+        {"onClick": "@onClick"},
+        {"height": 52}, {"clip": {"roundedRect": 12}}, {"background": "@colors.outline"},
+        {"padding": 1}, {"clip": {"roundedRect": 11}}, {"background": "@colors.surface"},
+        {"padding": [12, 0]}],
+       "verticalAlignment": "center",
+       "children": [
+        {"Icon": {"name": "@icon", "size": 20, "color": "@colors.muted"}},
+        {"box": {"modifiers": [{"width": 12}]}},
+        {"box": {"modifiers": [{"weight": 1}], "children": [
+          {"text": {"value": "@placeholder", "fontSize": 16, "color": "@colors.muted", "maxLines": 1, "overflow": "ellipsis",
+                    "modifiers": [{"visibility": "@empty"}, {"semantics": {"contentDescription": "Empty, @placeholder"}}]}},
+          {"text": {"value": "@value", "fontSize": 16, "color": "@colors.onSurface", "maxLines": 1, "overflow": "ellipsis",
+                    "modifiers": [{"visibility": "@filled"}, {"semantics": {"contentDescription": "@description"}}]}}
+        ]}}
+       ]}}
+   ]}},
+   "call": {"FieldDisplay": {"label": "Email", "value": "@email", "placeholder": "you@example.com", "filled": "@emailFilled", "empty": "@emailEmpty", "icon": "mail",
+            "description": "@email"}}
+  }
+ },
+ "resources": {
+  "variables": {
+   "scroll": 0,
+   "emailLength": {"value": 0, "export": true},
+   "passwordLength": {"value": 0, "export": true},
+   "showError": {"value": 0, "export": true},
+   "remember": {"value": 0, "export": true},
+   "emailFilled": "min(1, @emailLength)",
+   "emailEmpty": "1 - @emailFilled",
+   "passwordFilled": "min(1, @passwordLength)",
+   "passwordEmpty": "1 - @passwordFilled",
+   "canSignIn": "@emailFilled * @passwordFilled",
+   "cannotSignIn": "1 - @canSignIn"
+  }
+ },
+ "root": [
+  {"variable": {"name": "email", "vtype": "string", "value": "name@example.com", "export": true}},
+  {"variable": {"name": "passwordMasked", "vtype": "string", "value": "••••••••", "export": true}},
+  {"variable": {"name": "errorMessage", "vtype": "string", "value": "Wrong password", "export": true}},
+  {"column": {"modifiers": ["fillMaxSize", {"background": "@colors.background"}, {"verticalScroll": "@scroll"}, {"padding": 24}],
+   "horizontalAlignment": "center", "verticalArrangement": "center",
+   "children": [
+    {"column": {"modifiers": ["fillMaxWidth", {"widthIn": [0, 420]}, {"spacedBy": 16}], "children": [
+      {"box": {"modifiers": [{"height": 24}]}},
+      {"Icon": {"name": "login", "size": 40, "color": "@colors.primary"}},
+      {"text": {"value": "Sign in", "fontSize": 28, "fontWeight": 700, "color": "@colors.onSurface"}},
+      {"text": {"value": "Welcome back. Sign in to continue.", "fontSize": 15, "color": "@colors.muted"}},
+      {"FieldDisplay": {"label": "Email", "value": "@email", "placeholder": "you@example.com",
+        "filled": "@emailFilled", "empty": "@emailEmpty", "icon": "mail",
+        "description": "@email",
+        "onClick": {"type": "hostNamedAction", "name": "editEmail"}}},
+      {"FieldDisplay": {"label": "Password", "value": "@passwordMasked", "placeholder": "Enter your password",
+        "filled": "@passwordFilled", "empty": "@passwordEmpty", "icon": "lock",
+        "description": {"type": "textMerge", "id1": {"type": "textFromFloat", "value": "@passwordLength", "whole": 3, "decimal": 0, "flags": 5}, "id2": " characters, hidden"},
+        "onClick": {"type": "hostNamedAction", "name": "editPassword"}}},
+      {"row": {"modifiers": ["fillMaxWidth", {"visibility": "@showError"}], "verticalAlignment": "center", "children": [
+        {"Icon": {"name": "error", "size": 18, "color": "@colors.error"}},
+        {"box": {"modifiers": [{"width": 8}]}},
+        {"text": {"value": "@errorMessage", "fontSize": 14, "color": "@colors.error", "modifiers": [{"weight": 1}]}}
+      ]}},
+      {"Checkbox": {"label": "Remember me", "checked": "@remember", "onClick": [{"type": "hostNamedAction", "name": "rememberMe"}]}},
+      {"box": {"modifiers": ["fillMaxWidth"], "children": [
+        {"box": {"modifiers": ["fillMaxWidth", {"visibility": "@cannotSignIn"}], "horizontalAlignment": "center", "children": [{"Button": {"label": "Sign in", "enabled": false}}]}},
+        {"box": {"modifiers": ["fillMaxWidth", {"visibility": "@canSignIn"}], "horizontalAlignment": "center", "children": [{"Button": {"label": "Sign in", "onClick": [{"type": "hostNamedAction", "name": "signIn"}]}}]}}
+      ]}}
+    ]}}
+   ]}}
+ ]
+}

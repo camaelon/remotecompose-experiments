@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadLibrary, loadIconCatalog } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
+import { loadMaps } from "./maps.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -40,6 +41,31 @@ function singular(w) {
 }
 
 /** The catalog, vocabulary, component library and phrase index, reloaded when a file changes. */
+// ---- the generated corpus (examples/generated, built by its build.mjs) --------------------
+// Documents the eval runs built from one prompt each: shown only when asked (include_generated).
+let genCache = null;
+export function loadGenerated() {
+    const p = path.join(EXAMPLES_DIR, "generated", "index.json");
+    const stamp = existsSync(p) ? statSync(p).mtimeMs : 0;
+    if (genCache && genCache.stamp === stamp) return genCache.list;
+    // RC_HIDE_GENERATED="55,GEN-52": entries an evaluation run must not see (its own prompt's).
+    const hide = new Set(String(process.env.RC_HIDE_GENERATED ?? "").split(",").map((x) => x.trim()).filter(Boolean).map((x) => /^\d+$/.test(x) ? `GEN-${x.padStart(2, "0")}` : x));
+    const list = (stamp ? JSON.parse(readFileSync(p, "utf8")).examples ?? [] : []).filter((e) => !hide.has(e.id));
+    genCache = { stamp, list };
+    return list;
+}
+/** Generated documents whose prompt is closest to a goal: [{entry, score, shared}]. */
+export function similarGenerated(goal, limit = 3) {
+    const FILLER = new Set(["with", "for", "and", "the", "that", "this", "from", "into", "your", "you", "can", "its", "each", "all", "show", "showing", "make", "build", "want", "need", "some", "per", "one", "two", "three"]);
+    const words = new Set(normalizeWords(goal).filter((w) => w.length > 2 && !GENERIC.has(w) && !FILLER.has(w)));
+    if (!words.size) return [];
+    return loadGenerated().map((e) => {
+        const kw = new Set(normalizeWords(`${e.prompt} ${e.title} ${(e.components ?? []).join(" ")}`));
+        const shared = [...words].filter((w) => kw.has(w));
+        return { entry: e, shared, score: shared.length / Math.sqrt(words.size * Math.max(1, kw.size) / 8) };
+    }).filter((x) => x.shared.length >= 2).sort((a, b) => b.score - a.score).slice(0, limit);
+}
+
 export function loadCatalog() {
     const catPath = path.join(EXAMPLES_DIR, "catalog.json");
     const stamp = [catPath, VOCAB_PATH].map((p) => (existsSync(p) ? statSync(p).mtimeMs : 0)).join(":");
@@ -347,7 +373,17 @@ function wordDocFreq(C) {
     return m;
 }
 
-export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}) {
+export function buildKit({ goal = "", capabilities = [], max_examples = 4, include_generated = false } = {}) {
+    const kit = buildKitCore({ goal, capabilities, max_examples });
+    if (include_generated) {
+        const sim = similarGenerated(goal);
+        if (sim.length) kit.generated = sim.map(({ entry: e, shared }) => ({ id: e.id, title: e.title, prompt: e.prompt, components: e.components,
+            bytes: e.bytes, why: `shares ${shared.join(", ")}`, note: "a whole document an assistant built from that prompt with these tools (not minimal, not Java-verified): get it for its JSON" }));
+    }
+    return kit;
+}
+
+function buildKitCore({ goal = "", capabilities = [], max_examples = 4 } = {}) {
     const C = loadCatalog();
     const r = resolveTerms(goal);
     const needed = new Set([...r.capabilities, ...expandCapIds(capabilities, C)]);
@@ -364,7 +400,8 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     for (const cap of byComponent) if (!byOthers.has(cap)) needed.delete(cap);
     const kit = [];
     const remaining = new Set(needed);
-    const pool = [...C.examples];
+    // (Diagnostics, DX-*, are deliberately broken documents: never offered for a goal.)
+    const pool = C.examples.filter((e) => !/^DX-/.test(e.id));
     while (remaining.size && kit.length < max_examples) {
         let best = null;
         for (const e of pool) {
@@ -470,7 +507,10 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
     // things the library lacks.
     const covered = new Set(byText.slice(0, 2).flatMap((x) => x.hits));
     // ...and they are not unmatched either: the vocabulary has no entry, but an example does.
-    r.unmatched_terms = r.unmatched_terms.filter((w) => !covered.has(w));
+    // Place names (a city or a country the maps know) are the goal's data, not missing features.
+    let places = null;
+    try { const m = loadMaps(); places = new Set([...m.cities.flatMap((c) => c.name.toLowerCase().split(/\s+/)), ...m.countries110.flatMap((c) => c.name.toLowerCase().split(/\s+/))]); } catch {}
+    r.unmatched_terms = r.unmatched_terms.filter((w) => !covered.has(w) && !(places && places.has(w)));
     const proper = new Set(String(goal).split(/\s+/).slice(1).filter((w) => /^[A-Z][a-z]/.test(w)).flatMap((w) => normalizeWords(w)));
     // The layout model is an example too, ahead of the capability picks (models fetch what the
     // kit lists); max_examples still holds, the weakest capability picks go first.
@@ -562,7 +602,7 @@ export function buildKit({ goal = "", capabilities = [], max_examples = 4 } = {}
  */
 // Words about the document's qualities, not things on screen: an icon for them is noise (a
 // wheelchair for "accessible", a lamp for the "light" theme).
-const NOT_ICON_TERMS = /^(home screen|home screen widget|widget|widgets|compact|accessible|accessibility|mono|monochrome|theme|themes?d?|light|dark|open|opens|zero|cap|capped|large|small|count|counts|unread|summary|state)$/i;
+const NOT_ICON_TERMS = /^(local|local time|difference|home screen|home screen widget|widget|widgets|compact|accessible|accessibility|mono|monochrome|theme|themes?d?|light|dark|open|opens|zero|cap|capped|large|small|count|counts|unread|summary|state)$/i;
 function suggestIcons(goal, r, skip) {
     let out = [];
     // Content words only (not filler, not stopwords), and an icon whose NAME has the word: a
@@ -671,9 +711,14 @@ function designRules(goal, r, needed) {
         rule: "Compute the colour",
         how: "A colour that follows values (a picker's preview, a tint) is a computed colour in resources.colors: {\"preview\": {\"hsv\": [\"@hue\", \"@sat\", \"@val\"]}} (h, s, v in 0..1; or {\"argb\": [a, r, g, b]}), used as \"@colors.preview\"; it re-evaluates when the variables change. HSL is not native: V = L + S·min(L, 1 − L), S_v = 2·(1 − L / V). Slider tracks can show the range as a gradient drawn on a canvas. In mono the preview has no colour: show the values as text too.",
     });
+    // A list of rows from host values (departures, appointments, a queue).
+    if (/\b(departures?|arrivals?|bus(es)?|trains?|transit|schedule|timetable|upcoming|queue|next \d+|agenda|appointments?|rows? of)\b/.test(g)) rules.push({
+        rule: "Rows from the app",
+        how: "N rows the app fills: per slot host values (a host string per text, a float per number), a slot marked empty by a sentinel (-1) and hidden by visibility on a declared 0/1 variable, \"No more …\" when all are hidden; minutes until a time later today are computed from timeInMin() with a midnight wrap ((t - timeInMin() + 1440) % 1440); an instant that can be days away or in another zone (a flight, a deadline) is sent as an epoch-day number plus UTC minute of the day, and the time left is (@day - epochDay) * 1440 + @utcMin - utcNow, with utcNow = timeInMin() - offsetToUtc() / 60 (reference query: epoch day). Make each row ONE spoken item: a LabelValue (or a canvas with one contentDescription) instead of separate texts. A colour the app sends (a line badge) needs its text colour sent too (onLine): onPrimary is the theme's and may not contrast with it.",
+    });
     rules.push({
         rule: "Sample values show the design",
-        how: "The document's default values are what every preview, gallery and first render shows: pick values that show the design populated and typical — a bill already entered, two laps recorded, three of eight items done, a mid-range level — not the empty or zero state. Check the empty state too (render samples), but do not ship it as the default.",
+        how: "(Values relative to the clock — departures at 08:55 — are populated only near that time: pin the clock in your checks, and expect render variants' \"seven hours later\" to show the empty state.) The document's default values are what every preview, gallery and first render shows: pick values that show the design populated and typical — a bill already entered, two laps recorded, three of eight items done, a mid-range level — not the empty or zero state. Check the empty state too (render samples), but do not ship it as the default.",
     });
     if (LIVE_WORDS.test(g)) rules.push({
         rule: "Compute what depends on now",
@@ -698,10 +743,25 @@ function designRules(goal, r, needed) {
         rule: "Amounts read like a cook writes them",
         how: "A scaled amount = base × servings / baseServings, formatted by kind (a host number per ingredient: 0 count, 1 volume, 2 weight, 3 \"a pinch\"): volumes snap to eighths — whole = floor(a + 1/16), the fraction index round((a - whole) × 8) picks \"\" ⅛ ¼ ⅜ ½ ⅝ ¾ ⅞ with a TextChoice (⅓/⅔ from thirds when closer); grams round to 5 above 20; \"a pinch\" never scales; the unit is a host string per ingredient (singular/plural by step(a, 1)). Steps that can be checked off are Checkbox rows (the label wraps); a struck-through done step is two texts switched by visibility.",
     });
+    // Time zones: the format knows UTC, not a city's offset.
+    if (/\b(world ?clock|time ?zones?|timezones?|utc|gmt|local time in|time difference)\b/.test(g)) rules.push({
+        rule: "Time zones come from the app",
+        how: "The document knows UTC: utcMin = timeInMin() - offsetToUtc() / 60 (minutes of the day, offsetToUtc() in seconds). It has no time-zone database, so each city's offset is a host float the app sends in minutes, daylight saving included (London 0 or 60, New York -300 or -240, Sydney 600 or 660): local = (utcMin + @offLondon + 1440) % 1440, hour = floor(local / 60), minute = local % 60; the day differs when utcMin + offset leaves 0..1440 (\"+1 day\"). offsetToUtc() is the device's own offset (local minus UTC, in seconds: +32400 in Tokyo), so the difference from the user's time is (@offCity - offsetToUtc() / 60) / 60 hours (London seen from Tokyo: -9). A half-hour zone (India, +330) needs the minutes too. Day or night by the local hour (sunrise ~6-18) or a WorldMap night shade.",
+    });
+    // Maps: the WorldMap component and the $map building blocks.
+    if (/\b(maps?|world|countr(y|ies)|continent|europe|asia|africa|america|lat(itude)?|lon(gitude)?|time ?zones?|geograph\w*|where in the world|flight|route)\b/.test(g) && /\b(maps?|world|time ?zones?|countr(y|ies)|where|flight|route|clock)\b/.test(g)) rules.push({
+        rule: "Maps are built in",
+        how: "A map is the WorldMap component: {\"WorldMap\": {\"region\": \"world\" | \"Europe\" | \"FRA\" | [lonMin, latMin, lonMax, latMax], \"detail\": \"low\", \"borders\": true, \"highlight\": [\"FRA\"], \"cities\": [\"Tokyo\"], \"labels\": true}}. What changes at run time: countries coloured from a host array (\"values\": \"@visited\", \"valueCountries\": [...] in the array's order, MAP-04), any number of points from host arrays (\"pointsLon\"/\"pointsLat\", MAP-05), a great-circle route with a plane at a progress (\"routeFrom\": \"Paris\", \"routeTo\": \"Singapore\", \"progress\": \"@p\"), state borders (\"states\": [\"AUS\"]), the night side (\"night\": true) and one marker (\"markLon\"/\"markLat\"). map_info {region} lists the countries (the values order), the height and how coarse the outlines are: the data suits a continent or a country, not a city. Your own canvas: {\"$map\"} (\"outline\": true for a stroked coast), {\"$mapHeight\"}, {\"$mapPoint\"}, {\"$mapRoute\"} (MAP-03), scaled by ONE factor and clipped (reference: Maps). Keep detail low on widgets (a world of land is ~6 KB).",
+    });
     // Pages of laid-out content (onboarding, a carousel): a page variable, buttons and a swipe.
     if (/\b(onboarding|pager|pages?|carousel|walkthrough|tutorial|swipe|slides?)\b/.test(g)) rules.push({
         rule: "Pages are a page variable",
         how: "Laid-out pages are a float @page (resources.variables, exported so the app can read it) and one box per page shown by visibility on on0 = \"1 - min(1, abs(@page - 0))\" (declared variables, exactly 0/1), with a stateLayout or animated visibility for the fade. Next / Skip are onClick valueFloatExpressionChange on @page (plus a hostNamedAction to tell the app). A swipe on laid-out content: on the page's container {\"onTouchDown\": [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@pxStart\", \"value\": \"touchX()\"}]} and {\"onTouchUp\": [{\"type\": \"valueFloatExpressionChange\", \"target\": \"@page\", \"value\": \"clamp(0, N - 1, @page + clamp(-1, 1, round((@pxStart - touchX()) / (0.5 * windowWidth()))))\"}]} — it changes on release; a touch-tracking (TouchExpression) variable cannot drive a layout's visibility. PagerDots shows the position; announce \"Page 2 of 3\". Check with inspect interact: {\"drag\": [300, 300, 60, 300]}.",
+    });
+    // A visual explanation: a drawing that changes per step, with captions and controls.
+    if (/\b(explain\w*|teach\w*|lesson|tutorial|how (it|an?|the) \w+ works?|step[- ]by[- ]step|visual(ly)? (guide|explanation)|proof|demonstrat\w*)\b/.test(g)) rules.push({
+        rule: "An explanation is a drawing driven by a step",
+        how: "Use the Walkthrough component for the frame: {\"Walkthrough\": {\"titles\": [...], \"texts\": [...], \"step\": \"@step\", \"shown\": \"@stepNow\", \"eased\": \"@stepEased\", \"autoplay\": true, \"slots\": {\"content\": [your canvas]}}} — Back/Next (48 dp), play/pause, \"Step 2 of 5\" announced with the caption. Draw the explanation yourself in the content slot reading @stepEased (it eases 0.6 s between steps): part k appears with clamp(0, 1, @stepEased - k), moves with lerp(a, b, that), fades by paint alpha. A continuous animation inside a step reads animationTime() (repaints every frame while shown: keep it to the step that needs it). Interactive parameters are Sliders writing variables the drawing reads. Do not declare stepNow/stepEased in resources (the component writes them).",
     });
     // A QR or barcode: no generator in the format; a placeholder is a drawn pattern.
     if (/\b(qr|barcode|bar code|scan code)\b/.test(g)) rules.push({

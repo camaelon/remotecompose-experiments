@@ -1,0 +1,812 @@
+{
+ "id": "MAP-03",
+ "name": "flight-tracker",
+ "version": 1,
+ "title": "A flight on a map",
+ "summary": "The map building blocks in a canvas of their own: the North Atlantic from {\"$map\"} scaled uniformly and clipped, the airports from {\"$mapPoint\"}, the great-circle route from {\"$mapRoute\"}, the flown part as a pathExpression ending at the progress the app sends, and the plane at that fraction of the distance.",
+ "prompt": "A flight tracker card: London to New York on a map, the plane along the route at the flight's progress, and the time left.",
+ "level": 3,
+ "family": "MAP",
+ "capabilities": {
+  "primary": [
+   "map.marker",
+   "map.region",
+   "map.route"
+  ],
+  "secondary": [
+   "draw.path",
+   "host.variables",
+   "text.dynamic",
+   "data.expression"
+  ]
+ },
+ "use_cases": [
+  "map",
+  "travel",
+  "card"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "delivery tracker map",
+  "flight map",
+  "flight path",
+  "flight tracker",
+  "great circle",
+  "path between cities",
+  "plane",
+  "plane heading",
+  "progress on a map",
+  "route",
+  "route on a map",
+  "tracker map"
+ ],
+ "teaches": [
+  "{\"$mapRoute\": {region, from, to}} is the great-circle path between two places; with \"axis\": \"x\" | \"y\" | \"angle\" it is the route's samples as a float array the document declares, and \"wrap\": \"arraySpline({}, @progress)\" the point at that fraction of the distance",
+  "The flown part is a pathExpression over the same samples (arraySpline(..., a[0])) whose end is the host progress",
+  "{\"$map\"} with a [lonMin, latMin, lonMax, latMax] region is a box 1000 wide and {\"$mapHeight\"} tall: scale it by ONE factor, min(componentWidth() / 1000, componentHeight() / height), centre it and clipRect it, or it stretches",
+  "{\"$mapPoint\"} in resources.variables gives a city's x and y as numbers when the document is built"
+ ],
+ "inputs": {
+  "variables": {
+   "progress": {
+    "type": "float",
+    "meaning": "Flight progress 0..1",
+    "default": 0.42,
+    "min": 0,
+    "max": 1,
+    "step": 0.01
+   },
+   "minutesLeft": {
+    "type": "float",
+    "meaning": "Minutes to arrival",
+    "default": 238,
+    "min": 0,
+    "max": 600,
+    "step": 1
+   }
+  },
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "The North Atlantic from 100°W to 20°E, not stretched; London and New York marked, the great-circle route arching north between them, the part flown in the primary colour up to the plane 42 % of the way; variables {progress: 0.9} puts it near New York; the header reads 03 h 58 left.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "arrival",
+    "variables": {
+     "progress": 0.95,
+     "minutesLeft": 12
+    }
+   },
+   {
+    "name": "wide",
+    "width": 520,
+    "height": 240
+   }
+  ]
+ },
+ "related": [
+  "MAP-01",
+  "MAP-02"
+ ],
+ "derived": {
+  "components": [],
+  "component_instances": 0,
+  "component_modes": {},
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 14726,
+  "header": {
+   "width": 360,
+   "height": 240
+  },
+  "op_count": 123,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 1,
+   "ANIMATED_FLOAT": 9,
+   "CLIP_RECT": 1,
+   "COLOR_CONSTANT": 10,
+   "COLOR_EXPRESSIONS": 10,
+   "COMPONENT_VALUE": 2,
+   "CanvasContent": 1,
+   "CoreText": 2,
+   "DATA_FLOAT": 7,
+   "DATA_TEXT": 4,
+   "DRAW_CIRCLE": 3,
+   "DRAW_PATH": 3,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 1,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 1,
+   "LayoutComponentContent": 5,
+   "LoopOperation": 10,
+   "MATRIX_RESTORE": 1,
+   "MATRIX_SAVE": 1,
+   "MATRIX_SCALE": 1,
+   "MATRIX_TRANSLATE": 1,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 2,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 4,
+   "NAMED_VARIABLE": 9,
+   "PAINT_VALUES": 4,
+   "PATH_DATA": 2,
+   "PathExpression": 1,
+   "THEME": 15,
+   "TextFromFloat": 2,
+   "TextMerge": 3
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "minutesLeft",
+    "type": "float",
+    "value": 238
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "progress",
+    "type": "float",
+    "value": 0.419999987
+   },
+   {
+    "name": "route_1_x",
+    "type": "float_array",
+    "value": [
+     832.299988,
+     819,
+     805.5,
+     791.700012,
+     777.900024,
+     763.799988,
+     749.700012,
+     735.400024,
+     721,
+     706.5,
+     691.900024,
+     677.299988,
+     662.599976,
+     647.900024,
+     633.200012,
+     618.5,
+     603.799988,
+     589.099976,
+     574.599976,
+     560.099976,
+     545.700012,
+     531.400024,
+     517.299988,
+     503.200012,
+     489.399994,
+     475.700012,
+     462.100006,
+     448.799988,
+     435.700012,
+     422.700012,
+     410,
+     397.399994,
+     385.100006,
+     373,
+     361.100006,
+     349.399994,
+     338,
+     326.700012,
+     315.700012,
+     304.899994,
+     294.299988,
+     283.899994,
+     273.700012,
+     263.700012,
+     253.899994,
+     244.300003,
+     234.899994,
+     225.699997,
+     216.699997
+    ]
+   },
+   {
+    "name": "route_1_y",
+    "type": "float_array",
+    "value": [
+     152.600006,
+     149,
+     145.600006,
+     142.600006,
+     139.699997,
+     137.199997,
+     134.899994,
+     132.899994,
+     131.199997,
+     129.699997,
+     128.600006,
+     127.699997,
+     127.099998,
+     126.800003,
+     126.800003,
+     127.099998,
+     127.699997,
+     128.600006,
+     129.800003,
+     131.300003,
+     133,
+     135,
+     137.300003,
+     139.899994,
+     142.800003,
+     145.899994,
+     149.199997,
+     152.800003,
+     156.699997,
+     160.699997,
+     165.100006,
+     169.600006,
+     174.399994,
+     179.300003,
+     184.5,
+     189.800003,
+     195.399994,
+     201.100006,
+     207,
+     213.100006,
+     219.399994,
+     225.699997,
+     232.300003,
+     239,
+     245.800003,
+     252.800003,
+     259.899994,
+     267.100006,
+     274.399994
+    ]
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 14216,
+    "component_modes": {},
+    "op_count": 83,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "minutesLeft",
+      "type": "float",
+      "value": 238
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "progress",
+      "type": "float",
+      "value": 0.419999987
+     },
+     {
+      "name": "route_1_x",
+      "type": "float_array",
+      "value": [
+       832.299988,
+       819,
+       805.5,
+       791.700012,
+       777.900024,
+       763.799988,
+       749.700012,
+       735.400024,
+       721,
+       706.5,
+       691.900024,
+       677.299988,
+       662.599976,
+       647.900024,
+       633.200012,
+       618.5,
+       603.799988,
+       589.099976,
+       574.599976,
+       560.099976,
+       545.700012,
+       531.400024,
+       517.299988,
+       503.200012,
+       489.399994,
+       475.700012,
+       462.100006,
+       448.799988,
+       435.700012,
+       422.700012,
+       410,
+       397.399994,
+       385.100006,
+       373,
+       361.100006,
+       349.399994,
+       338,
+       326.700012,
+       315.700012,
+       304.899994,
+       294.299988,
+       283.899994,
+       273.700012,
+       263.700012,
+       253.899994,
+       244.300003,
+       234.899994,
+       225.699997,
+       216.699997
+      ]
+     },
+     {
+      "name": "route_1_y",
+      "type": "float_array",
+      "value": [
+       152.600006,
+       149,
+       145.600006,
+       142.600006,
+       139.699997,
+       137.199997,
+       134.899994,
+       132.899994,
+       131.199997,
+       129.699997,
+       128.600006,
+       127.699997,
+       127.099998,
+       126.800003,
+       126.800003,
+       127.099998,
+       127.699997,
+       128.600006,
+       129.800003,
+       131.300003,
+       133,
+       135,
+       137.300003,
+       139.899994,
+       142.800003,
+       145.899994,
+       149.199997,
+       152.800003,
+       156.699997,
+       160.699997,
+       165.100006,
+       169.600006,
+       174.399994,
+       179.300003,
+       184.5,
+       189.800003,
+       195.399994,
+       201.100006,
+       207,
+       213.100006,
+       219.399994,
+       225.699997,
+       232.300003,
+       239,
+       245.800003,
+       252.800003,
+       259.899994,
+       267.100006,
+       274.399994
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 14216,
+    "component_modes": {},
+    "op_count": 83,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "minutesLeft",
+      "type": "float",
+      "value": 238
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "progress",
+      "type": "float",
+      "value": 0.419999987
+     },
+     {
+      "name": "route_1_x",
+      "type": "float_array",
+      "value": [
+       832.299988,
+       819,
+       805.5,
+       791.700012,
+       777.900024,
+       763.799988,
+       749.700012,
+       735.400024,
+       721,
+       706.5,
+       691.900024,
+       677.299988,
+       662.599976,
+       647.900024,
+       633.200012,
+       618.5,
+       603.799988,
+       589.099976,
+       574.599976,
+       560.099976,
+       545.700012,
+       531.400024,
+       517.299988,
+       503.200012,
+       489.399994,
+       475.700012,
+       462.100006,
+       448.799988,
+       435.700012,
+       422.700012,
+       410,
+       397.399994,
+       385.100006,
+       373,
+       361.100006,
+       349.399994,
+       338,
+       326.700012,
+       315.700012,
+       304.899994,
+       294.299988,
+       283.899994,
+       273.700012,
+       263.700012,
+       253.899994,
+       244.300003,
+       234.899994,
+       225.699997,
+       216.699997
+      ]
+     },
+     {
+      "name": "route_1_y",
+      "type": "float_array",
+      "value": [
+       152.600006,
+       149,
+       145.600006,
+       142.600006,
+       139.699997,
+       137.199997,
+       134.899994,
+       132.899994,
+       131.199997,
+       129.699997,
+       128.600006,
+       127.699997,
+       127.099998,
+       126.800003,
+       126.800003,
+       127.099998,
+       127.699997,
+       128.600006,
+       129.800003,
+       131.300003,
+       133,
+       135,
+       137.300003,
+       139.899994,
+       142.800003,
+       145.899994,
+       149.199997,
+       152.800003,
+       156.699997,
+       160.699997,
+       165.100006,
+       169.600006,
+       174.399994,
+       179.300003,
+       184.5,
+       189.800003,
+       195.399994,
+       201.100006,
+       207,
+       213.100006,
+       219.399994,
+       225.699997,
+       232.300003,
+       239,
+       245.800003,
+       252.800003,
+       259.899994,
+       267.100006,
+       274.399994
+      ]
+     },
+     {
+      "name": "track",
+      "type": "color",
+      "value": "#FF616161"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "arrival": {
+    "render": "render-arrival.png",
+    "render_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     520,
+     240
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "$map",
+   "$mapHeight",
+   "$mapPoint",
+   "$mapRoute",
+   "apiLevel",
+   "at",
+   "axis",
+   "background",
+   "bottom",
+   "canvas",
+   "children",
+   "clipRect",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "count",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "detail",
+   "drawCircle",
+   "drawPath",
+   "dx",
+   "dy",
+   "end",
+   "export",
+   "expressionX",
+   "expressionY",
+   "flags",
+   "floatArrays",
+   "fontSize",
+   "fontWeight",
+   "from",
+   "hLeft",
+   "header",
+   "height",
+   "id",
+   "id1",
+   "id2",
+   "layer",
+   "left",
+   "light",
+   "mLeft",
+   "map_box_land_medium",
+   "mh",
+   "minutesLeft",
+   "modifiers",
+   "muted",
+   "onSurface",
+   "ops",
+   "padding",
+   "paint",
+   "path",
+   "pathExpression",
+   "paths",
+   "primary",
+   "profiles",
+   "progress",
+   "px",
+   "py",
+   "radius",
+   "region",
+   "resources",
+   "right",
+   "root",
+   "route_1_path",
+   "route_1_x",
+   "route_1_y",
+   "row",
+   "save",
+   "scale",
+   "semantics",
+   "spacedBy",
+   "start",
+   "strokeCap",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "to",
+   "top",
+   "track",
+   "translate",
+   "type",
+   "value",
+   "variables",
+   "verticalAlignment",
+   "weight",
+   "whole",
+   "width",
+   "wrap",
+   "x",
+   "x0",
+   "x1",
+   "y",
+   "y0",
+   "y1"
+  ],
+  "evidence": {
+   "map.marker": [
+    "$mapPoint"
+   ],
+   "map.region": [
+    "region"
+   ],
+   "map.route": [
+    "$mapRoute"
+   ],
+   "draw.path": [
+    "drawPath"
+   ],
+   "host.variables": [
+    "export",
+    "colors"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "data.expression": [
+    "pathExpression",
+    "<arithmetic>"
+   ]
+  },
+  "built_at": "2026-11-01T05:34:28.299Z"
+ },
+ "snippets": [
+  {
+   "pointer": "/resources/variables/x0",
+   "shows": "map.marker",
+   "note": "a city's x from {\"$mapPoint\"}, a number fixed when the document is built"
+  },
+  {
+   "pointer": "/root/column/children/1/canvas/commands/0/save/2",
+   "shows": "map.region",
+   "note": "the North Atlantic from a lon/lat box with {\"$map\"}"
+  },
+  {
+   "pointer": "/resources/variables/px",
+   "shows": "map.marker",
+   "note": "the plane at the progress: arraySpline over the route's x samples from {\"$mapRoute\"}"
+  },
+  {
+   "pointer": "/resources/variables/px",
+   "shows": "map.route",
+   "note": "the plane at the progress along the great circle: {\"$mapRoute\"} x samples through arraySpline"
+  }
+ ]
+}

@@ -1,0 +1,1203 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Crypto portfolio: total value, 24 hour change and each coin's share of the portfolio as a donut chart with a legend"
+ },
+ "resources": {
+  "variables": {
+   "total": {
+    "value": 85213.57,
+    "export": true
+   },
+   "change": {
+    "value": 3.42,
+    "export": true
+   },
+   "up": "step(@change, -0.00001)",
+   "down": "1 - @up",
+   "show0": "step(arrayLength(@coins), 0.5)",
+   "show1": "step(arrayLength(@coins), 1.5)",
+   "show2": "step(arrayLength(@coins), 2.5)",
+   "show3": "step(arrayLength(@coins), 3.5)",
+   "show4": "step(arrayLength(@coins), 4.5)",
+   "wide": "step(windowWidth(), windowHeight() * 1.3)",
+   "short": "1 - step(windowHeight(), 145)",
+   "strip": "1 - step(windowHeight(), 55)",
+   "shortIdx": "ifElse(0, 1 + 2 * @strip, @short)",
+   "layoutIdx": "ifElse(2, @shortIdx, @wide)",
+   "dside": "min(windowHeight() - 16, 100)",
+   "dstrip": "windowHeight() - 8",
+   "legendRow": "step(windowWidth() - @dside, 215)",
+   "legendSq": "step(windowWidth(), 149)"
+  },
+  "floatArrays": {
+   "coins": {
+    "value": [
+     52000,
+     18000,
+     9000,
+     4000,
+     2000
+    ],
+    "export": true
+   }
+  }
+ },
+ "components": {
+  "CoinRow": {
+   "component": "CoinRow",
+   "version": 1,
+   "summary": "One legend line of a DonutChart: a swatch in the slice's tone (thick/thin ring in mono), the coin's symbol and its share in percent; hidden when the array has no value at that index.",
+   "params": {
+    "values": {
+     "type": "float",
+     "required": true,
+     "doc": "The same float array the DonutChart draws (\"@coins\")"
+    },
+    "index": {
+     "type": "float",
+     "required": true,
+     "doc": "Slice index, 0-based"
+    },
+    "symbol": {
+     "type": "string",
+     "required": true,
+     "doc": "The coin's symbol (a host string \"@sym0\")"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "The donut's colour"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 12,
+     "static": true,
+     "doc": "Text size in dp"
+    },
+    "shown": {
+     "type": "float",
+     "required": true,
+     "doc": "A declared variable that is 1 when the row has a value (\"@show0\": step(arrayLength(@coins), 0.5))"
+    }
+   },
+   "locals": {
+    "n": "arrayLength(@values)"
+   },
+   "call": {
+    "CoinRow": {
+     "values": "@coins",
+     "index": 0,
+     "symbol": "BTC",
+     "shown": "@show0"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "visibility": "@shown"
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": "@symbol",
+          "id2": ", "
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "round(100 * arrayGet(@values, @index) / max(arraySum(@values), 0.001))",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": " percent"
+         }
+        }
+       }
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": 12
+         }
+        ],
+        "commands": [
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.onSurface"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "1.5 + (1 - @index % 2) * 3"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 6,
+             "cy": 6,
+             "radius": 3.5
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "1 - 0.7 * @index / @n"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": 6,
+             "cy": 6,
+             "radius": 5
+            }
+           }
+          ]
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "@symbol",
+        "fontSize": "@fontSize",
+        "fontWeight": 600,
+        "color": "@colors.onSurface",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "weight": 1
+         },
+         {
+          "padding": {
+           "start": 6
+          }
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "round(100 * arrayGet(@values, @index) / max(arraySum(@values), 0.001))",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": "%"
+        },
+        "fontSize": "@fontSize",
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "modifiers": [
+         {
+          "padding": {
+           "start": 4
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  },
+  "Headline": {
+   "component": "Headline",
+   "version": 1,
+   "summary": "The portfolio total with thousands grouping and the signed, coloured 24 h change with an up/down arrow.",
+   "params": {
+    "total": {
+     "type": "float",
+     "required": true,
+     "doc": "Total value (host number)"
+    },
+    "change": {
+     "type": "float",
+     "required": true,
+     "doc": "24 h change in percent, signed (host number)"
+    },
+    "up": {
+     "type": "float",
+     "required": true,
+     "doc": "Declared variable: 1 when change >= 0"
+    },
+    "down": {
+     "type": "float",
+     "required": true,
+     "doc": "Declared variable: 1 - up"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 24,
+     "static": true,
+     "doc": "Total text size"
+    },
+    "minFontSize": {
+     "type": "float",
+     "default": 14,
+     "static": true,
+     "doc": "Smallest size the total shrinks to"
+    },
+    "changeSize": {
+     "type": "float",
+     "default": 13,
+     "static": true,
+     "doc": "Change text size"
+    },
+    "iconSize": {
+     "type": "float",
+     "default": 16,
+     "static": true,
+     "doc": "Arrow size"
+    },
+    "inline": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "One line: total then change side by side (for a strip under 56 dp high)"
+    }
+   },
+   "call": {
+    "Headline": {
+     "total": "@total",
+     "change": "@change",
+     "up": "@up",
+     "down": "@down"
+    }
+   },
+   "body": {
+    "$if": "inline",
+    "then": {
+     "row": {
+      "verticalAlignment": "center",
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "$",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@total",
+           "whole": 9,
+           "decimal": 2,
+           "flags": 23
+          }
+         },
+         "fontSize": "@fontSize",
+         "minFontSize": "@minFontSize",
+         "maxFontSize": "@fontSize",
+         "fontWeight": 700,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Total value ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@total",
+               "whole": 9,
+               "decimal": 2,
+               "flags": 23
+              },
+              "id2": " dollars"
+             }
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@up"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "24 hour change, up ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": " percent"
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "arrow_upward",
+               "size": "@iconSize",
+               "color": "@colors.success"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": "%"
+                }
+               },
+               "fontSize": "@changeSize",
+               "fontWeight": 600,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "padding": {
+                  "start": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@down"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "24 hour change, down ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": " percent"
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "arrow_downward",
+               "size": "@iconSize",
+               "color": "@colors.error"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "-",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": "%"
+                }
+               },
+               "fontSize": "@changeSize",
+               "fontWeight": 600,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "padding": {
+                  "start": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "24h",
+            "fontSize": "@changeSize",
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "padding": {
+               "start": 5
+              }
+             }
+            ]
+           }
+          }
+         ],
+         "modifiers": [
+          {
+           "padding": {
+            "start": 8
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "column": {
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "$",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@total",
+           "whole": 9,
+           "decimal": 2,
+           "flags": 23
+          }
+         },
+         "fontSize": "@fontSize",
+         "minFontSize": "@minFontSize",
+         "maxFontSize": "@fontSize",
+         "fontWeight": 700,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Total value ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@total",
+               "whole": 9,
+               "decimal": 2,
+               "flags": 23
+              },
+              "id2": " dollars"
+             }
+            }
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "children": [
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@up"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "24 hour change, up ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": " percent"
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "arrow_upward",
+               "size": "@iconSize",
+               "color": "@colors.success"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "+",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": "%"
+                }
+               },
+               "fontSize": "@changeSize",
+               "fontWeight": 600,
+               "color": "@colors.success",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "padding": {
+                  "start": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "modifiers": [
+             {
+              "visibility": "@down"
+             },
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "24 hour change, down ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": " percent"
+                }
+               }
+              }
+             }
+            ],
+            "children": [
+             {
+              "Icon": {
+               "name": "arrow_downward",
+               "size": "@iconSize",
+               "color": "@colors.error"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "-",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@change)",
+                  "whole": 3,
+                  "decimal": 2,
+                  "flags": 7
+                 },
+                 "id2": "%"
+                }
+               },
+               "fontSize": "@changeSize",
+               "fontWeight": 600,
+               "color": "@colors.error",
+               "maxLines": 1,
+               "modifiers": [
+                {
+                 "padding": {
+                  "start": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": "24h",
+            "fontSize": "@changeSize",
+            "color": "@colors.muted",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "padding": {
+               "start": 5
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  },
+  "Legend": {
+   "component": "Legend",
+   "version": 1,
+   "summary": "Up to five CoinRow lines for the five host symbols; rows past the array length are hidden.",
+   "params": {
+    "values": {
+     "type": "float",
+     "required": true,
+     "doc": "The coins float array"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 12,
+     "static": true,
+     "doc": "Row text size"
+    },
+    "gap": {
+     "type": "float",
+     "default": 2,
+     "static": true,
+     "doc": "Space between rows"
+    }
+   },
+   "call": {
+    "Legend": {
+     "values": "@coins"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "spacedBy": "@gap"
+      }
+     ],
+     "children": [
+      {
+       "CoinRow": {
+        "values": "@values",
+        "index": 0,
+        "symbol": "@sym0",
+        "shown": "@show0",
+        "fontSize": "@fontSize"
+       }
+      },
+      {
+       "CoinRow": {
+        "values": "@values",
+        "index": 1,
+        "symbol": "@sym1",
+        "shown": "@show1",
+        "fontSize": "@fontSize"
+       }
+      },
+      {
+       "CoinRow": {
+        "values": "@values",
+        "index": 2,
+        "symbol": "@sym2",
+        "shown": "@show2",
+        "fontSize": "@fontSize"
+       }
+      },
+      {
+       "CoinRow": {
+        "values": "@values",
+        "index": 3,
+        "symbol": "@sym3",
+        "shown": "@show3",
+        "fontSize": "@fontSize"
+       }
+      },
+      {
+       "CoinRow": {
+        "values": "@values",
+        "index": 4,
+        "symbol": "@sym4",
+        "shown": "@show4",
+        "fontSize": "@fontSize"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "sym0",
+    "vtype": "string",
+    "value": "BTC",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "sym1",
+    "vtype": "string",
+    "value": "ETH",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "sym2",
+    "vtype": "string",
+    "value": "SOL",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "sym3",
+    "vtype": "string",
+    "value": "ADA",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "sym4",
+    "vtype": "string",
+    "value": "DOT",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.surface"
+     },
+     {
+      "clip": {
+       "roundedRect": 20
+      }
+     }
+    ],
+    "children": [
+     {
+      "stateLayout": {
+       "indexId": "@layoutIdx",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 12
+           }
+          ],
+          "children": [
+           {
+            "Headline": {
+             "total": "@total",
+             "change": "@change",
+             "up": "@up",
+             "down": "@down",
+             "fontSize": 24,
+             "changeSize": 13
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              },
+              {
+               "padding": {
+                "top": 6
+               }
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "DonutChart": {
+                   "values": "@coins",
+                   "fill": true,
+                   "showTotal": false,
+                   "thickness": 16
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 112
+                 }
+                ],
+                "children": [
+                 {
+                  "Legend": {
+                   "values": "@coins",
+                   "fontSize": 12,
+                   "gap": 2
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 8
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "Headline": {
+                "total": "@total",
+                "change": "@change",
+                "up": "@up",
+                "down": "@down",
+                "fontSize": 20,
+                "changeSize": 12,
+                "iconSize": 14,
+                "minFontSize": 10
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@dside"
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "DonutChart": {
+                "values": "@coins",
+                "fill": true,
+                "showTotal": false,
+                "thickness": 14
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 92
+              },
+              {
+               "visibility": "@legendRow"
+              },
+              {
+               "padding": {
+                "start": 8
+               }
+              }
+             ],
+             "children": [
+              {
+               "Legend": {
+                "values": "@coins",
+                "fontSize": 9,
+                "gap": 1
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 10
+           }
+          ],
+          "children": [
+           {
+            "Headline": {
+             "total": "@total",
+             "change": "@change",
+             "up": "@up",
+             "down": "@down",
+             "fontSize": 18,
+             "minFontSize": 12,
+             "changeSize": 11,
+             "iconSize": 14
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "verticalWeight": 1
+              },
+              {
+               "padding": {
+                "top": 4
+               }
+              }
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 "fillMaxHeight"
+                ],
+                "children": [
+                 {
+                  "DonutChart": {
+                   "values": "@coins",
+                   "fill": true,
+                   "showTotal": false,
+                   "thickness": 16
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 72
+                 },
+                 {
+                  "visibility": "@legendSq"
+                 },
+                 {
+                  "padding": {
+                   "start": 6
+                  }
+                 }
+                ],
+                "children": [
+                 {
+                  "Legend": {
+                   "values": "@coins",
+                   "fontSize": 10,
+                   "gap": 1
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "padding": 4
+           },
+           {
+            "padding": {
+             "start": 8
+            }
+           }
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "Headline": {
+                "total": "@total",
+                "change": "@change",
+                "up": "@up",
+                "down": "@down",
+                "fontSize": 18,
+                "minFontSize": 10,
+                "changeSize": 11,
+                "iconSize": 12,
+                "inline": true
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": "@dstrip"
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "DonutChart": {
+                "values": "@coins",
+                "fill": true,
+                "showTotal": false,
+                "thickness": 10
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

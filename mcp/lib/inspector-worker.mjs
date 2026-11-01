@@ -133,7 +133,7 @@ async function createSession() {
     S.flags = [];   // per frame: did an operation ask for an immediate repaint during it?
     S.paint = () => {
         const t = S.frame / fps;
-        RC.pinClock(player, clock0 + t);
+        RC.pinClock(player, clock0 + t, t);
         player.renderFrame(t * 1000);
         try { S.flags.push(!!player.paintContext?.doesNeedsRepaint?.()); } catch { S.flags.push(null); }
         S.frame++;
@@ -176,7 +176,7 @@ async function createSession() {
     // Raw ids, as rc2image's --var-id: an override sticks (offsetToUtc pinned to 0 stays 0).
     S.setSystemVariables = (sv) => { for (const [id, v] of Object.entries(sv ?? {})) ctx.overrideFloat(+id, +v); };
     S.setSystemVariables(O.system_variables);
-    RC.pinClock(player, clock0);
+    RC.pinClock(player, clock0, 0);
     // Texts computed from the clock or a system value (a countdown, a UTC offset) were made at
     // load, before these pins: run the data pass again so they read the pinned values.
     try { doc.applyDataOperations(ctx); } catch {}
@@ -346,7 +346,10 @@ function accessibility() {
     // A screen reader never reaches a hidden component (a stateLayout's other panes, a
     // fitBox's rejected alternatives): they hold stale values (an AQI pane said 55 for 480).
     const hidden = hiddenComponentIds();
-    const shown = a.nodes.filter((n) => !(typeof n.componentId === "number" && hidden.has(n.componentId)));
+    // (A node with no area — a GONE text the layout left with a negative or zero box — is not
+    // reachable either.)
+    const shown = a.nodes.filter((n) => !(typeof n.componentId === "number" && hidden.has(n.componentId))
+        && !(n.bounds && ((n.bounds.width ?? n.bounds.w ?? 1) <= 0 || (n.bounds.height ?? n.bounds.h ?? 1) <= 0)));
     // The tree's own bounds add a parent's padding again (as interactions did, U67): take each
     // component's box from the layout.
     try {
@@ -661,7 +664,7 @@ function audit() {
     const top = [...ops].map((op, i) => ({ i, s: sizeOf(op) })).sort((a, b) => b.s - a.s)[0];
     if (top && bc.total > 20000 && top.s / bc.total > 0.25) {
         add("info", "size_single_op", `One operation is ${Math.round((top.s / bc.total) * 100)}% of the file`,
-            `#${top.i} ${nameOf(ops[top.i])}, ${top.s} bytes — usually an embedded bitmap or font.`, { op: { index: top.i, op: nameOf(ops[top.i]) } });
+            `#${top.i} ${nameOf(ops[top.i])}, ${top.s} bytes — ` + (/path/i.test(nameOf(ops[top.i])) ? "a path: a map or drawing outline (a lower detail, land instead of countries, or fewer points makes it smaller)." : "usually an embedded bitmap or font."), { op: { index: top.i, op: nameOf(ops[top.i]) } });
     }
 
     // Design: valid, but built in a way that makes it worse (design-audit.mjs). From the JSON
@@ -704,7 +707,7 @@ function audit() {
     } catch {}
 
     // Execution coverage over a short run.
-    const cov = runCoverage(O.frames ?? 30);
+    const cov = runCoverage(O.frames ?? 120);
     if (cov.never.length) {
         add("info", "never_executed", `${cov.never.length} of ${cov.total} operation(s) never executed in ${cov.frames} frames`,
             "Unreached branches (an inactive state, a false condition, a component never shown) or dead code. Interact or set variables to reach them.",
@@ -1049,10 +1052,16 @@ const TASKS = {
                 if (t.kind === "area") { handled = doc.performClick?.(ctx, t.areaId, "") === true; main.paint(); }
                 else if (t.bounds) handled = main.tap(t.bounds.cx, t.bounds.cy) === true;
                 else throw new Error(`actions[${k}]: target ${a.target} is a ${t.kind} target; drag across it instead`);
-                log.push({ step: k, target: a.target, kind: t.kind, component: t.componentName ?? null, label: t.contentDescription ?? null,
+                // (The label: the target's own description, else the accessibility label of its component.)
+                let label = t.contentDescription ?? null;
+                if (!label && typeof t.componentId === "number") { try { label = accessibility().nodes.find((n) => n.id === t.componentId)?.content_description ?? null; } catch {} }
+                log.push({ step: k, target: a.target, kind: t.kind, component: t.componentName ?? null, label,
                            at: t.bounds ? [round(t.bounds.cx), round(t.bounds.cy)] : null, handled: Boolean(handled) });
             } else if (a.tap) {
-                log.push({ step: k, tap: a.tap, handled: Boolean(main.tap(a.tap[0], a.tap[1])) });
+                // {"tap": {"x": .., "y": ..}} was read as [undefined, undefined]: a miss, silently.
+                const xy = Array.isArray(a.tap) ? a.tap : (a.tap && typeof a.tap === "object" ? [a.tap.x, a.tap.y] : null);
+                if (!xy || xy.length !== 2 || !xy.every(Number.isFinite)) throw new Error(`actions[${k}].tap is [x, y] in dp (got ${JSON.stringify(a.tap)})`);
+                log.push({ step: k, tap: xy, handled: Boolean(main.tap(xy[0], xy[1])) });
             } else if (a.drag) {
                 if (a.drag.length !== 4) throw new Error(`actions[${k}].drag is [x0, y0, x1, y1]`);
                 main.drag(...a.drag, a.steps ?? 8);
@@ -1101,8 +1110,10 @@ const TASKS = {
 
         const result = {
             layout_size: [width, height], steps: log, seconds: round((main.frame - 1) / fps, 3),
-            effect: changed.length || hostChanged.length || hostActions.length || layoutChanges.structure_changed || layoutChanges.changed
-                ? "the input changed the document" : "no difference from the same timeline without input",
+            effect: changed.length || hostChanged.length || layoutChanges.structure_changed || layoutChanges.changed
+                ? "the input changed the document"
+                : hostActions.length ? `the input sent ${hostActions.length} host action(s) to the app; the document itself did not change`
+                : "no difference from the same timeline without input",
             changed_host_variables: hostChanged,
             host_actions: hostActions,
             changed_variables: changed.slice(0, O.limit ?? 40), changed_variables_total: changed.length,
@@ -1117,7 +1128,7 @@ const TASKS = {
     runtime() {
         // The frames first: the verdict reads the state after them, and the per-frame samples
         // tell a burst (an animation that ended) from a repaint every frame.
-        const prof = runProfile(O.frames ?? 60);
+        const prof = runProfile(O.frames ?? 180);   // 3 s: an ease at load (a 1.6 s entrance) ends inside it
         const rp = repaint();
         const flags = main.flags ?? [];
         if (flags.length >= 20) {

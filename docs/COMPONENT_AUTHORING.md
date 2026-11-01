@@ -131,6 +131,22 @@ Locals:
   among the top container's children), so read it only inside the body, not in the top
   node's own modifiers. It keeps a call out of pattern mode (except in mono, where it is the
   plain value). See "Animating state".
+- **A map value** (`"mh": {"$mapHeight": "@region"}`, `"x": {"$mapPoint": {"region": "@region",
+  "lon": "@lon", "lat": "@lat"}}`) is fixed when the document is built: a number for a literal
+  place, an expression for host lon/lat. Maps are geometry from Natural Earth: in a body,
+  `{"drawPath": {"path": {"$map": {"region": ..., "layer": "land" | "countries", "detail": ...}}}}`
+  draws a region in a box 1000 units wide and `$mapHeight` tall; `$mapPoint` places a city or a
+  lon/lat in it (`"wrap": "ifElse(-1, 1, step({}, 800))"` puts the coordinate into an
+  expression). `"outline": true` gives a stroked coast without the straight edges where a fill is
+  cut. `{"$mapRoute": {"region": ..., "from": "Paris", "to": "Singapore"}}` is a great-circle
+  path; with `"axis": "x" | "y" | "angle"` it is the route's samples as a float array the document
+  declares (`"wrap": "arraySpline({}, @progress)"` is the point at that fraction of the distance;
+  a pathExpression over `arraySpline(..., a[0])` ending at the progress is the flown part).
+  Runtime data goes through arrays the app sets: a `$each` over the countries with
+  `arrayGet(@values, @i)` as the paint alpha colours them, a canvas `loop` over
+  `arrayLength(@lons)` with `$mapPoint` of `arrayGet(@lons, i)` draws points. WorldMap is the
+  worked example. Like `$icon`, a map keeps a call out of pattern mode: each region and layer is
+  one shared path resource per document.
 
 ## Light, dark and monochrome
 
@@ -331,7 +347,12 @@ Traps the library hit (the linter catches the first four):
   outline as a background inside a slightly larger background.
 - An SVG path string in `drawPath` costs about 4 KB in Java, because it is padded to 1024
   floats. Use primitives, `drawLine`, or the op-list path form.
-- `animationTime()` alone never schedules a repaint; use `continuousSec()` for motion.
+- `animationTime()` alone never schedules a repaint, and `continuousSec()` repaints every frame
+  for as long as the document is shown, moving or not. For motion that starts and stops (a
+  step's animation, a play button), drive it with an animated value instead: a local
+  `{"value": "@target", "anim": 0.75}` whose target changes (Walkthrough's play ticks
+  `floor(animationTime() * 2)` only while playing) — it repaints while it eases and goes idle
+  when it settles. Keep `continuousSec()` for what never stops (a seconds hand).
 - Weights ignore `spacedBy`, in a row and in a column alike: with weighted children, use fixed spacer boxes between them.
 - `border` rounds only with `"shape": 2`; a `cornerRadius` alone draws a square border.
 - There are no colour expressions. To show a state colour, overlay two copies and fade one

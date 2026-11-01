@@ -202,6 +202,7 @@ time with no dead end: on to prompt 10.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 30 | 2 | right: a panel with a ProgressRing of the season's progress around the season's Material icon, the season name, "N days until the" event and its local date; event instants from Meeus' mean series converted with offsetToUtc(), a `south` host variable flips the hemisphere; verified at 20+ pinned clocks (year boundary, 29 Feb 2028, the September equinox at −7 h and the December solstice at +10 h); three fitBox layouts, six sizes × four looks clean, audit clean; 16.7 KB (icons 41%) | convert refused a json_path outside the server workspace (the eval ran the CLI from the repo, not from its folder); `{"visibility": "step(@days, 0.5)"}` on a text hid the day count and nothing said so (an inline visibility is an integer expression — abs/min/max/clamp only — and anything else becomes a text id, U54); render clocks cut 14 clocks to 12 silently; the kit's layout model was a 565-op phone screen (TIM-12) for a widget; no recipe for formatting a computed date (day-of-year → "21 December") |
+| 2 | 34 | 2 | right on every pinned date (both sides of all four 2026 events, midnights, New Year, 29 Feb 2028, UTC-7 and UTC+13, both hemispheres): a progress ring with the season's icon, days until the next event from Meeus' mean formulas, five layouts by size; 23.6 KB | paths outside the workspace rejected without saying where it is (now named); no equinox formulas (now in the calendar recipes, checked against 2026); fitBox vs stateLayout advice |
 
 Fixed after run 1: the eval CLI runs from the agent's folder (its outputs land there);
 designAudit warns on an inline visibility that is not an integer expression
@@ -356,6 +357,7 @@ Right first time: on to prompt 20.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 29 | 3 | right: a header with the real weekday letters (today in primary), five rows (host-string name, seven cells — ring / filled tick, today's ring heavier — flame + streak); host bitmask per habit and streak floats, all exported; only today's cell tappable (flips the bit, sends done-/undo-habitN; verified by interact at phone and 4x2, undo proven); a phone-only "N of 35" ProgressBar; four looks and sizes clean; rows and the tap box announce; 21 KB | `fontWeight: "bold"` refused as "Unknown token in expression: bold" (the reference listed no text keys; the Java parser also takes a number); interact with a pinned variable said "no difference" while listing the host action it sent; render variants never include the 4x2/4x1 sizes the reference says to design for; the kit left "streak" unmatched and offered a water tracker, a contacts list and a date card; a flame icon "rendered orange in mono" — not reproduced (the call has no colour; the Icon's default is white in mono) |
+| 2 | 26 | 3 | right: five rows of week circles (done, missed, today ringed, future dotted) and a streak flame, today's circle tappable (sends the new mask); four looks; 16.2 KB | {"spacedBy": "@gap"} collapsed every row to 0 wide with only a text_overflow finding (spacing is a plain number: now an audit warning); per-instance expressions made the first version 50 KB; "tracker" matched map markers (removed) |
 
 Fixed after run 1: the reference lists the text keys (fontWeight is a number 100–900); interact
 counts a sent host action as an effect; render variants add "widget 4x2 320×160" and "4x1
@@ -421,6 +423,7 @@ prompt 24.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 35 | 4 (~10 calls) | right: host stop name, lines and destinations (strings) and departure minutes of the day (-1 = empty); minutes computed live as (t − timeInMin() + 2160) % 1440 − 720 (midnight-safe), repainting each minute; "now" in the departure minute, gone rows disappear and the rest move up, "No more departures" when empty; primary badges; three layouts by width/priority; four looks clean, a11y per row; 10.9 KB | two exported host strings with the same initial value ("42") shared one id (U65, as the reference parser); the render showed "0 min" instead of "now" with `variables`/`samples` while the TS inspector was right — the render tool's 1 s settle let a visibility enter/exit play unfinished (U64); every render flagged the unselected stateLayout pane as a "visible" zero-size collapsible; "buses" became "buse" in the kit; no list-of-rows or host-string example in the kit |
+| 2 | 24 | 2 | right: line badges in the app's colours, destinations and minutes ("now", midnight wrap), empty slots hidden, "No more departures"; 4x2, 4x1 and compact layouts; 11.8 KB | build_kit offered sunrise and fps examples and nothing on rows (a "Rows from the app" rule, ListItem/LabelValue for transit words); onPrimary on an app colour; clock-relative samples look empty at other hours (said in the samples rule) |
 
 Fixed after run 1: the settle for host values runs forward from the pinned clock with layout
 animations off (rc2image `--no-layout-anim`); a stateLayout's hidden panes are not reported as
@@ -544,6 +547,7 @@ per-star labels and a documented single rate action (delegated). On to prompt 33
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 29 | 4 | right: an "Activity" title, a 48 dp pill segmented control (Day/Week/Month, the selection a filled pill that slides; announced "Week, Selected"), a card with the period ("Today · Saturday 31 October", "This week", "October 2026" from the clock), total steps and bars — 24 hourly with the current hour highlighted, 7 daily with M–S and today highlighted, one per day of the real month (checked at 31, 30, 28 and 29-day months); host step arrays; an exported `sel` and an action per option carrying the index; four looks, five sizes, audit clean, idle; 11.7 KB | 260,840 printed "60,840" with whole 6 and grouping (the separators count against whole, as in the reference) and nothing said so; the library Tabs is an underline bar that announces no selection and (before the json2rc fix) repeated one action name on every tab; INT-07's pitfalls said visibility takes no expression and only an integer variable (both wrong); the authoring guide stated "weights ignore spacedBy" for rows only; white text on the dark theme's primary is 2.6:1 |
+| 2 | 17 | 2 | right: segmented Tabs (Day/Week/Month) sending the index, three panels with clock-derived labels, totals and bar charts (current hour/day highlighted, 28-31 month bars); 13.2 KB | textTransform's required fields undocumented (now listed); no partial array sum (the reference says to have the app send a running total); BarChart cannot highlight or stop at now |
 
 Fixed after run 1: the flags doc says separators count against whole; INT-07's pitfalls corrected;
 the guide says weights ignore spacedBy in columns too; the theme's onPrimary is dark on the dark
@@ -594,6 +598,7 @@ On to prompt 37.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 17 | 3 | right: the total as arraySum of 24 hourly values with grouped money ("$1,152,100"), the signed change against yesterday with an arrow (mono-safe), an hourly bar chart with the current hour highlighted, a ranked top three with units and revenue; a compact widget layout by stateLayout; four looks clean, a11y labels for total, change, chart and each product; 10 KB | minFontSize alone did not shrink the big number and C++ ignored autoSize anyway (U71); check_component's sweep and mono looks drew no bars for a float-array chart and said "findings: none" (U72); the canvas loop index "i" listed as accessibility text; a scroll-only document called "interactive"; publish lists no float array as editable; StatTile's 6-digit limit unflagged |
+| 2 | 20 | 4 | right, with the new BigNumber (total and signed change) and its own hour chart and product rows; four looks; 19.7 KB | RankedList rows shared their measuring variables (one long name shrank every row: fixed, per-row names); a missing header "profiles" and $each needing a list cost two converts (profiles now supplied); the change compares a partial day with yesterday's whole day (noted) |
 
 Fixed after run 1: C++ autoSize (U71) and the reference names `"autoSize": true`; check_component
 sweeps and looks carry the doc's data and their own host colour, and report sweep findings (U72);
@@ -608,6 +613,7 @@ mono-inverted mono-light (the old names still accepted). On to prompt 38.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 18 | 2 | right: a summary card (total of budget, a bar, left or over) and six category rows (icon, name, bar against the limit, "$N left" / "⚠ $N over", spent / limit); a bar over its limit rescales, ticks the limit and shows the excess in red (outlined in mono); a 4x2 widget grid by height; four looks, eleven sizes and six sample sets clean; each row announced with amounts and over/under; 30 KB | ProgressBar clamps, though the overshoot rule said it did not, so it wrote its own bar; `$if` with `"else": null` crashed json2rc with a raw TypeError; the audit called expressions read as paint alpha "unused"; the sweep's `themes` option was not obvious |
+| 2 | 16 | 1 | right, with ProgressBar overshoot (hatched excess in mono), a widget grid by height, amounts to $250,000; 29.9 KB | samples × sizes dropped a sample silently (now up to 24 renders, the rest said); the contact sheet overlapped tall cells (rows sized per image now) |
 
 Fixed after run 1: ProgressBar gained `overshoot` (the bar rescales, a tick marks the limit, the
 excess is an overColor segment, hatched with oblique lines in mono) and the rule points at it; a
@@ -635,6 +641,7 @@ the reference gives the epoch-day recipe for app dates; variants report a conver
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 30 | 3 (8 calls) | right: a big eased speed with a 0–200 bar, a battery arc with percent and km (red, an alert icon and "Low battery" at 15 % or less), a next-turn card with a Material arrow per direction code, the distance as "Now / 50 m / 1.2 km / 25 km" and the street on two lines; a row layout for wide screens, a column for square ones; four looks; 11.8 KB | `"anim": 1` silently did not animate (U73: the reference parser writes a 1 s duration as no animation; json2rc matches it); build_kit sent the battery arc to Gauge, whose alarm rises with the value, and offered nothing for navigation; render variants could not take the car's sizes; interact said "repaint: continuous" while runtime said idle |
+| 2 | 20 | 1 | right: speed scaled to the window, Gauge with the 20-100 % band for the battery, turn icons per code, eased values; row or stacked layout by shape; 13.9 KB | Gauge's band has no critical state and a static spoken label; a hidden text listed in accessibility with a negative size (filtered now); clipping by a card's bounds unreported |
 
 Fixed after run 1: the audit flags `"anim": 1` and the expander writes 0.999 for a component's
 animated local (U73); "Low is the alarm" (Gauge with a band for battery/fuel) and "Turn arrows
@@ -706,6 +713,7 @@ clock; the audit flags padding keys other than start/top/end/bottom. On to promp
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 25 | 3 | right: three items with an icon and a count badge (filled icon, badge and latest sender when unread; an outlined muted icon and "No new mail" when zero), "99+" from 100, "All caught up" when all are zero, each opening its app; rows for 2x2, tiles for 4x1/4x2 by a stateLayout; screen readers hear "Mail, 150 unread"; four looks, idle; 16 KB | variants called an 80×80 square "a 2x2 cell" (the reference says 160×160); build_kit resolved "light" to 3D lighting, offered the deliberately broken DX-02 and icons for "accessible" and "open"; the sweep warned about its own sheet's captions; shared_action_name fired across stateLayout alternatives; Badge had no cap; C++ and TS dropped different collapsible children (open, as U66) |
+| 2 | 17 | 1 | right: Badge with max ("99+"), outlined muted icon at zero, "All caught up", taps sending openMail/openMessages/openCalendar, each item read with its count; 15.4 KB | the same samples × sizes drop; interact called a tap that only sent a host action a document change (now said as a host action) |
 
 Fixed after run 1: variants check a widget's 2x2 cell at 160×160; quality words (accessible, mono,
 light, open...) give no icon, diagnostics never answer a goal, "lights" left 3D; mono and
@@ -749,6 +757,7 @@ resize guess. On to prompt 48.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 19 | 0 (~3 iterations) | showcase quality: a ticket card (flight strip, big airport codes with cities, passenger, gate/seat/group, boarding and departure times), a countdown pill from the clock ("Boarding in 1 h 25 min / now / Gate closed / Departed"), a perforated tear line and a framed QR-like drawing; a gate change as a filled "NEW GATE" tile and a banner, a delay as a red chip; widget, phone and tablet layouts; four looks; 28 KB | inspect accessibility read the countdown as "0 h 0 min" (texts computed at load, before the clock and system values were pinned); build_kit had nothing for the QR and matched "placeholder" to loading/pattern examples; the reference showed letterSpacing 0.5 without its unit (em); the audit called a host variable's sample date a hard-coded date |
+| 2 | 18 | 1 | right: route, gate/seat/boards, a status pill per state, a gate-change banner, LabelValue pairs read as one item, the QrPlaceholder; 24.1 KB | the reference query returned the fitBox paragraph garbled (lines picked one by one: now whole paragraphs or a continuous window) and tool schemas ahead of prose (ranked lower now); LAY-12 uses literal colours and integers |
 
 Fixed after run 1: inspect reruns the data pass after pinning the clock and system values (the
 announced countdown matches the render); an "A QR code is a drawing" rule; "placeholder" no
@@ -762,6 +771,7 @@ host variables are not hard-coded dates. On to prompt 49.
 | run | calls | dead ends | result | what it stumbled on |
 | :-- | --: | --: | :-- | :-- |
 | 1 | 21 | 2 | showcase quality: a header (title, description, prep/cook/total with icons), an ingredients card with a −/+ servings control (1-12) rescaling eight amounts live (eighths and thirds as ½ ⅓ ¾, grams to 5, "a pinch" fixed, singular/plural units), a steps card with a progress bar, "N of M done" and steps that tick and strike through; side by side from 600 dp; four looks; servings and steps announced with value and state; 32 KB | the library Checkbox claimed to wrap its label but had a fixed 40 dp row (multi-line steps were cut) and a literal white tick; build_kit sent "cooking time" to the clock and the tide example and "steps" to a delivery tracker, with nothing on fraction formatting or a checklist; shared_string_value's advice did not say only the starting values must differ; variants gave a phone screen widget sizes |
+| 2 | 25 | 2 | right: the servings Stepper rescaling eighths/thirds, grams and "a pinch", plural units, steps that tick and strike through, side by side from 600 dp; 34.8 KB | interact accepted {"tap": {"x", "y"}} silently (now an error, or read as x/y) and gave null labels (filled from accessibility); "Step @n. " in a component text never filled (a lint now: numbers are not spliced into text) |
 
 Fixed after run 1: Checkbox's row grows with its label (heightIn from the control height, the label
 weighted) and its tick is onPrimary (CMP-02, CMP-13 rebuilt, Java-identical); an "Amounts read
@@ -782,4 +792,95 @@ with the swipe handlers; tree_variable_visibility only flags reads before the de
 design header no longer says NOT DONE YET; the reference says visibility 2 still takes taps;
 phone screens get no tiny size and the widget check says it is optional.
 
-All 50 prompts have had a first run (prompt 2 parked until maps exist).
+All 50 prompts have had a first run.
+
+## Prompt 2: world clock (run after maps)
+
+"A world clock widget for London, New York, Tokyo and Sydney: local time, day or night, and the difference from my time."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 30 | 4 | right at every clock checked (London morning, midnight crossings, New Year, a user in Tokyo, DST samples): each city's local time from a host offset in minutes (DST included) and offsetToUtc(), a sun or moon icon (06-18 rule), "+9 h" / "same time" / "· +1 day"; layouts for 4x2, 2x2, 4x1, small and a phone screen with a WorldMap night shade; four looks; once a minute; 38 KB | the kit's time-zone rule gave the difference with the wrong sign; false "no longer fits" notes and a zero_size for a row whose children were all hidden on purpose; inspect engines reported hidden texts as disagreements; "difference" resolved to path ops and "local time" suggested local_shipping; no tall phone size |
+
+Fixed after run 1: the rule's difference is (@offCity - offsetToUtc() / 60) / 60 (offsetToUtc() is local
+minus UTC); a wrap whose children are all hidden is not zero_size (C++ report; conformance unchanged);
+the TS layout dump marks GONE (and fitBox alternatives) and engines compares only what TS shows;
+"difference"/"local" no longer misfire; variants add a tall phone. Added to the generated corpus.
+
+## Prompt 51: world day and night map
+
+"A world map showing where it is day and night right now, with my city marked."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 26 | 2 | right: WorldMap with the night shade from the clock and season, the app's city (name, lat, lon) marked, the local time and "Daylight here · midnight over Asia and Australia" from the sun's height; compact 4x1, 4x2 and phone layouts; once a minute; 12.4 KB | render's clock is the server's local time (undocumented: Lyon at 14:30 rendered as night until offsetToUtc was pinned); WorldMap's default night colour lightened the dark theme and a custom colour dropped the mono shade; MAP-01 padded minutes wrongly ("10:5"); the fitBox reference paragraph came back garbled |
+
+Fixed after run 1: the render clock's time zone and system variable 10 documented; WorldMap's night
+is black at 0.32 in light/dark and always onSurface in mono, and its pitfalls say it fills the width;
+MAP-01 pads with flags 12; reference search returns whole paragraphs.
+
+## Prompt 57: four-stroke engine explanation
+
+"Explain how a four-stroke engine works: a drawing of the piston and valves, steps you can go through with next/previous, and an animation of each stroke."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 28 | 3 | right: a labelled cylinder cross-section (valves, plug and spark, piston from crank-rod geometry), gases told apart by marks (dots, stars, rings), four steps with captions, previous/next that play each stroke once, a play mode cycling at 2.5 s a stroke, side by side on landscape tablets; idle when paused; 25.8 KB | Walkthrough's autoplay could not loop (an engine is a cycle: it rebuilt the frame); runtime and audit said "continuous" over 60 frames for a document idle after a 1.6 s ease at load; the guide still advised continuousSec() for motion; render ignored animation_time when host values were set; the header's profiles again |
+
+Fixed after run 1: Walkthrough takes loop (bytes unchanged without it); runtime judges over 180 frames
+and the audit over 120; the guide says to drive start/stop motion with an animated value; render keeps
+an explicit animation_time; the converter supplies "profiles": 513 when the header has none.
+
+## Prompt 52: visited countries of Europe
+
+"A map of Europe highlighting the countries I have visited, with a count in the corner."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 26 | 5 | right: 44 European countries each filled from one host 0/1 array (an inline component of per-country `$map` paths), microstates as dots, "9 of 44 countries" computed from the array, a live screen-reader sentence listing the visited names; mono looks fill visited solid on an outline; 33.6 KB | text references inside a component were renamed in their declarations but not in their uses ("@vn0" read literally) and nothing warned; nothing said countries can be coloured at run time (WorldMap's highlight is build-time, its pitfall read as "impossible"); no way to list a region's countries; the audit called the land path "usually an embedded bitmap or font"; samples captions printed the whole array; used the json2rc server once |
+| 2 | 31 | 5 | right: the 44 UN states from one host array (WorldMap values; the 7 microstates as dots of its own, filled when visited), count from arraySum, a host names string as the map's label, a stateLayout for the widget (big "9" beside the map); 44.3 KB | 3 dead ends were the server failing to load (a quoting error in catalog.mjs, mine, mid-run); WorldMap drew nothing for microstates in valueCountries without a word; three different Europes (pitfall 44, MAP-04 37, map_info 54 with Syria and Turkey); MAP-04's label static |
+
+Fixed after run 1: WorldMap colours countries from a host array (values + valueCountries, MAP-04); map_info lists a region's countries and which are too small; the audit flags a name read before its declaration (reference_before_declaration) and undeclared names in textMerge parts; the guide says where a global block must sit; the size audit no longer calls a path "an embedded bitmap or font"; samples captions summarise arrays.
+
+## Prompt 53: delivery tracker
+
+"A delivery tracker: the courier's position on a city-region map moving between the depot and my address, with the ETA."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 26 | 2 | right but coarse: San Francisco Bay (a coastline to show), route depot→address with the travelled part in the primary colour, the courier easing to each new position, ETA "N min"/"Arriving"/"Delivered", a step row, a 4x2 widget layout; 15.0 KB | MAP-03 scales x and y separately (stretches outside 1000:508); no warning that the map data is far too coarse for a city; no help to fit the view around two host points; in mono the region's clip edges draw as stray lines; `whole: 3` without flags gives " 12 min" (a leading space read aloud); render clipped "12 min" on a tablet while inspect said it fits |
+| 2 | 28 | 5 | right, schematic: map_info said a city box is too coarse, so a hand-drawn London schematic (Thames, parks) with depot, address and courier from host lon/lat, the view fitted to the two points, the covered part up to the courier's projection, easing 1.2 s, live description; 12.4 KB | fillMaxWidth before weight gave width 0 with a misleading warning; componentHeight() in a height modifier read 0 in TS (U79 only half fixed); map_info listed USA/Russia/NLD as partly in a London box; WorldMap's route ends are build-time; the audit said "repaints every frame" while runtime said idle |
+
+Fixed after run 1: MAP-03 rewritten with one uniform scale, a clip and a real route; map_info reports how coarse a region is and says a city-sized box needs a schematic; {"$map": {..., "outline": true}} strokes a coast without the cut edges; flags 0's leading spaces documented.
+
+## Prompt 54: flight status
+
+"A flight status card: the route from Paris to Singapore on a map, the plane's progress, departure and arrival…"
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 23 | 2 | right: a real great circle (48 points, computed by hand), the flight icon placed by distance along it and turned to its heading, flown part in the primary colour, local departure/arrival times and "next day" from host offsets, "6 h 27 left"/"Arrived", fitBox phone / 4x2 / minimal; repaint once a minute; 22.2 KB | MAP-03 teaches a decorative sin arc and a linear plane; no route helper; the cos-latitude scale's axis unclear; textFromFloat flags contradict across docs (MAP-03 vs BigNumber vs EXP-13); `step()` in a visibility fails to convert with an error naming neither node nor fix; samples cannot carry a clock each; the map is written once per fitBox child |
+| 2 | 19 | 2 | right: WorldMap's great-circle route with the plane on its heading and the flown part from the host progress, local times, weekday and UTC offset from host offsets, Departs in / Arrives in / Landed from the clock, four layouts by size; 22.4 KB | render dropped clocks when samples were given; build_kit had no time-zone guidance ("Rows from the app" gave a same-day formula); WorldMap's label was a fixed string (no progress) |
+
+Fixed after run 1: {"$mapRoute"} (great-circle path, or x/y/angle samples for arraySpline), WorldMap routeFrom/routeTo/progress with a plane on its heading; MAP-03 teaches the great circle; step() in a visibility now explains integer expressions and the float-variable fix.
+
+## Prompt 55: Australia weather
+
+"A weather overview of Australia: each state capital on the map with its temperature and a condition icon."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 24 | 6 | right, hand-tuned: Australia with the 8 capitals, a dot, leader and card (icon, temperature, name) each, condition and temperature from the host, a compact grid without the map below 320×260; 52.4 KB | asking for Australia by country dropped Tasmania (and mono lost its outline); no way to put layout content at map coordinates (no offset modifier, the guides contradicted each other on componentWidth() in a modifier); $mapHeight not found; overlapping cards rendered with no findings; no state borders offered; a host-chosen WeatherIcon needs all 5 drawings per place (80 icons) with no cost stated |
+| 2 | 25 | 4 | right: own canvas map of Australia with Tasmania and the state borders, the 8 capitals each a dot, leader and chip (icon, temperature, name) placed with expression-sized spacers, a grid below 330×300; 60.7 KB | reused GEN-55 (run 1) from include_generated; ellipsised names not reported in samples; overlapping chips not checked; map_info listed only 5 Australian cities (the 110m places lack the state capitals); repeated_panes advised pattern mode for no gain; render variants on an .rc skipped the mono looks silently |
+
+Fixed after run 1: a country region keeps islands across narrow straits (Tasmania) and drops far ones (Macquarie, Alaska, Svalbard); WorldMap states and pointsLon/pointsLat (MAP-05); the reference says how to put layout content at map coordinates; componentWidth() in a width modifier is the parent's box in all three players (the TS player read 0, U79) and the guide's contradiction is gone. (Tasmania's missing outline in mono was the Hobart card covering it.)
+
+## Prompt 56: time-zone planner
+
+"A time-zone planner: pick a meeting hour with a slider and see on a world map where it falls in working hours."
+
+| run | calls | dead ends | result | what it stumbled on |
+| :-- | --: | --: | :-- | :-- |
+| 1 | 22 | 0 | right: slider for the meeting hour, the 09:00–18:00 band shaded by longitude (solar, not real zones), five city dots from host arrays filled when in working hours, a team list with local times, "+1 day" and Working/Late/Night/Early | slider guidance contradicts itself on live vs release; slider a11y formatting and no steps; WorldMap's byte claim (3.5 KB vs 5.7 KB measured); the slider gallery's "drops trailing zeros" claim is wrong; a widget warning on a scrolling phone screen; no guidance for shading a band on a map |
+
+Fixed after run 1: Slider step and stateText; the guide says live derived values go after the slider in the tree; the map byte figure corrected (~6 KB); CMP-03's trailing-zero claim corrected; the size warning on a scrolling screen is a note.

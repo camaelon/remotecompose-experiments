@@ -1,0 +1,898 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 760,
+  "profiles": 513,
+  "contentDescription": "Settings"
+ },
+ "components": {
+  "SettingToggle": {
+   "summary": "A settings row: icon, title, On/Off state line, and a Switch that tells the app",
+   "params": {
+    "title": {
+     "type": "string",
+     "required": true,
+     "doc": "Row title, also the switch label"
+    },
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "checked": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "0/1 state"
+    },
+    "action": {
+     "type": "string",
+     "required": true,
+     "doc": "hostNamedAction name"
+    }
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "padding": [
+        16,
+        8
+       ]
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "Icon": {
+        "name": "@icon",
+        "color": "@colors.muted"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 16
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@title",
+           "fontSize": 16,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "TextChoice": {
+           "items": [
+            "Off",
+            "On"
+           ],
+           "index": "@checked",
+           "fontSize": 13,
+           "color": "@colors.muted"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 12
+         }
+        ]
+       }
+      },
+      {
+       "Switch": {
+        "label": "@title",
+        "checked": "@checked",
+        "onClick": [
+         {
+          "type": "hostNamedAction",
+          "name": "@action"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "SettingToggle": {
+     "title": "Push notifications",
+     "icon": "notifications",
+     "checked": "@push",
+     "action": "pushChanged"
+    }
+   }
+  },
+  "ThemeOption": {
+   "summary": "A radio row for one theme choice",
+   "params": {
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Option name"
+    },
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material Symbols name"
+    },
+    "index": {
+     "type": "float",
+     "required": true,
+     "static": true,
+     "doc": "This option's index"
+    },
+    "current": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "Selected index"
+    },
+    "action": {
+     "type": "string",
+     "required": true,
+     "doc": "hostNamedAction name"
+    }
+   },
+   "locals": {
+    "sel": "1 - min(1, abs(@current - @index))",
+    "unsel": "min(1, abs(@current - @index))"
+   },
+   "body": {
+    "row": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": 56
+      },
+      {
+       "onClick": [
+        {
+         "type": "valueFloatChange",
+         "target": "@current",
+         "value": "@index"
+        },
+        {
+         "type": "hostNamedAction",
+         "name": "@action"
+        }
+       ]
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label theme",
+        "clickable": true
+       }
+      },
+      {
+       "padding": [
+        16,
+        0
+       ]
+      }
+     ],
+     "verticalAlignment": "center",
+     "children": [
+      {
+       "Icon": {
+        "name": "@icon",
+        "color": "@colors.muted"
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 16
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "@label",
+        "fontSize": 16,
+        "color": "@colors.onSurface",
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "size": 24
+         }
+        ],
+        "children": [
+         {
+          "canvas": {
+           "modifiers": [
+            "fillMaxSize",
+            {
+             "visibility": "@sel"
+            },
+            {
+             "semantics": {
+              "contentDescription": "selected"
+             }
+            }
+           ],
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.primary"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 2
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 12,
+              "cy": 12,
+              "radius": 10
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 12,
+              "cy": 12,
+              "radius": 5
+             }
+            }
+           ]
+          }
+         },
+         {
+          "canvas": {
+           "modifiers": [
+            "fillMaxSize",
+            {
+             "visibility": "@unsel"
+            },
+            {
+             "semantics": {
+              "contentDescription": "not selected"
+             }
+            }
+           ],
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.muted"
+               },
+               {
+                "style": "stroke"
+               },
+               {
+                "strokeWidth": 2
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 12,
+              "cy": 12,
+              "radius": 10
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "ThemeOption": {
+     "label": "Dark",
+     "icon": "dark_mode",
+     "index": 1,
+     "current": "@theme",
+     "action": "themeDark"
+    }
+   }
+  },
+  "Section": {
+   "summary": "A titled group on a rounded surface",
+   "params": {
+    "title": {
+     "type": "string",
+     "required": true,
+     "doc": "Section title"
+    }
+   },
+   "slots": {
+    "content": {
+     "doc": "The rows"
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "padding": [
+        0,
+        8
+       ]
+      }
+     ],
+     "children": [
+      {
+       "text": {
+        "value": "@title",
+        "fontSize": 14,
+        "fontWeight": 600,
+        "color": "@colors.primary",
+        "modifiers": [
+         {
+          "padding": [
+           16,
+           8
+          ]
+         },
+         {
+          "semantics": {
+           "contentDescription": "@title section"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxWidth",
+         {
+          "clip": {
+           "roundedRect": 16
+          }
+         },
+         {
+          "background": "@colors.surface"
+         },
+         {
+          "padding": [
+           0,
+           4
+          ]
+         }
+        ],
+        "children": [
+         {
+          "$slot": "content"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "Section": {
+     "title": "Display",
+     "children": [
+      {
+       "text": {
+        "value": "row"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "scroll": 0,
+   "contentW": "min(windowWidth(), 600)",
+   "push": {
+    "value": 1,
+    "export": true
+   },
+   "emailNotif": {
+    "value": 1,
+    "export": true
+   },
+   "sounds": {
+    "value": 0,
+    "export": true
+   },
+   "weekly": {
+    "value": 1,
+    "export": true
+   },
+   "brightness": {
+    "value": 70,
+    "export": true
+   },
+   "theme": {
+    "value": 2,
+    "export": true
+   },
+   "brightnessOut": {
+    "value": 70,
+    "export": true
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "userName",
+    "vtype": "string",
+    "value": "Ada Lovelace",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "userEmail",
+    "vtype": "string",
+    "value": "ada@example.com",
+    "export": true
+   }
+  },
+  {
+   "column": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "verticalScroll": "@scroll"
+     }
+    ],
+    "horizontalAlignment": "center",
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        {
+         "width": "@contentW"
+        },
+        {
+         "padding": [
+          16,
+          16
+         ]
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "Settings",
+          "fontSize": 28,
+          "fontWeight": 600,
+          "color": "@colors.onSurface",
+          "modifiers": [
+           {
+            "padding": [
+             16,
+             8
+            ]
+           }
+          ]
+         }
+        },
+        {
+         "Section": {
+          "title": "Notifications",
+          "children": [
+           {
+            "SettingToggle": {
+             "title": "Push notifications",
+             "icon": "notifications",
+             "checked": "@push",
+             "action": "pushChanged"
+            }
+           },
+           {
+            "Divider": {
+             "inset": 56
+            }
+           },
+           {
+            "SettingToggle": {
+             "title": "Email updates",
+             "icon": "mail",
+             "checked": "@emailNotif",
+             "action": "emailChanged"
+            }
+           },
+           {
+            "Divider": {
+             "inset": 56
+            }
+           },
+           {
+            "SettingToggle": {
+             "title": "Sounds",
+             "icon": "volume_up",
+             "checked": "@sounds",
+             "action": "soundsChanged"
+            }
+           },
+           {
+            "Divider": {
+             "inset": 56
+            }
+           },
+           {
+            "SettingToggle": {
+             "title": "Weekly summary",
+             "icon": "calendar_month",
+             "checked": "@weekly",
+             "action": "weeklyChanged"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Section": {
+          "title": "Display",
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": [
+                16,
+                12,
+                16,
+                0
+               ]
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "Icon": {
+                "name": "brightness_medium",
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Brightness",
+                "fontSize": 16,
+                "color": "@colors.onSurface"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "padding": [
+                16,
+                0,
+                16,
+                4
+               ]
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "Slider": {
+                   "label": "Brightness",
+                   "value": "@brightness",
+                   "min": 0,
+                   "max": 100
+                  }
+                 },
+                 {
+                  "box": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 40
+                    },
+                    {
+                     "semantics": {
+                      "contentDescription": {
+                       "type": "textMerge",
+                       "id1": "Brightness ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": "@brightness",
+                         "whole": 3,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "id2": " percent"
+                       }
+                      },
+                      "clickable": true
+                     }
+                    },
+                    {
+                     "onClick": [
+                      {
+                       "type": "valueFloatExpressionChange",
+                       "target": "@brightnessOut",
+                       "value": "@brightness"
+                      },
+                      {
+                       "type": "hostNamedAction",
+                       "name": "brightnessChanged"
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@brightness",
+                  "whole": 3,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": "%"
+                },
+                "fontSize": 14,
+                "color": "@colors.onSurface",
+                "textAlign": "end",
+                "modifiers": [
+                 {
+                  "width": 48
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "Divider": {
+             "inset": 16
+            }
+           },
+           {
+            "text": {
+             "value": "Theme",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "modifiers": [
+              {
+               "padding": [
+                16,
+                12,
+                16,
+                4
+               ]
+              }
+             ]
+            }
+           },
+           {
+            "ThemeOption": {
+             "label": "Light",
+             "icon": "light_mode",
+             "index": 0,
+             "current": "@theme",
+             "action": "themeLight"
+            }
+           },
+           {
+            "ThemeOption": {
+             "label": "Dark",
+             "icon": "dark_mode",
+             "index": 1,
+             "current": "@theme",
+             "action": "themeDark"
+            }
+           },
+           {
+            "ThemeOption": {
+             "label": "System",
+             "icon": "brightness_auto",
+             "index": 2,
+             "current": "@theme",
+             "action": "themeSystem"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Section": {
+          "title": "Account",
+          "children": [
+           {
+            "ListItem": {
+             "title": "@userName",
+             "subtitle": "@userEmail",
+             "slots": {
+              "leading": [
+               {
+                "Icon": {
+                 "name": "account_circle",
+                 "size": 40,
+                 "color": "@colors.primary"
+                }
+               }
+              ]
+             }
+            }
+           },
+           {
+            "Divider": {
+             "inset": 16
+            }
+           },
+           {
+            "ListItem": {
+             "title": "Change password",
+             "chevron": true,
+             "onClick": [
+              {
+               "type": "hostNamedAction",
+               "name": "changePassword"
+              }
+             ],
+             "slots": {
+              "leading": [
+               {
+                "Icon": {
+                 "name": "lock",
+                 "color": "@colors.muted"
+                }
+               }
+              ]
+             }
+            }
+           },
+           {
+            "Divider": {
+             "inset": 16
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 56
+              },
+              {
+               "onClick": [
+                {
+                 "type": "hostNamedAction",
+                 "name": "signOut"
+                }
+               ]
+              },
+              {
+               "semantics": {
+                "contentDescription": "Sign out",
+                "clickable": true
+               }
+              },
+              {
+               "padding": [
+                16,
+                0
+               ]
+              }
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "Icon": {
+                "name": "logout",
+                "color": "@colors.error"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 16
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Sign out",
+                "fontSize": 16,
+                "fontWeight": 600,
+                "color": "@colors.error"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

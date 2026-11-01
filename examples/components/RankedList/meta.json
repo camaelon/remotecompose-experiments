@@ -1,0 +1,509 @@
+{
+ "id": "RankedList",
+ "name": "ranked-list",
+ "version": 1,
+ "title": "RankedList",
+ "prompt": "Show a café's five best sellers this week as a leaderboard, with rank badges, unit counts and share bars, and the top three baristas by orders under it; one item per row for a screen reader.",
+ "level": 2,
+ "use_cases": [
+  "list",
+  "dashboard",
+  "chart"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "ranked list",
+  "leaderboard",
+  "top list",
+  "top 5",
+  "top products",
+  "best sellers",
+  "ranking",
+  "rank badge",
+  "share bar",
+  "bar list",
+  "scoreboard",
+  "top performers"
+ ],
+ "teaches": [
+  "Call {\"RankedList\": {\"names\": [\"Espresso beans\", \"@special\", ...], \"values\": \"@sales\", \"unit\": \" units\"}}: names is a static JSON list (an entry may be a host string variable), values a float array read with arrayGet(values, i)",
+  "Each row is one canvas with its own semantics, so a screen reader hears \"Number 1, Espresso beans, 412 units\" once per row, not the rank, name and value as three items",
+  "The bars are value / max(arrayMax(values)), so the leader's bar is full; showBars false gives a compact list",
+  "Rank 1 is a filled disc, the others rings: the leader stands out without colour, in mono too"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/1/column/children/0",
+   "shows": "data.array",
+   "note": "five rows over an exported float array; the second name is a string variable"
+  },
+  {
+   "pointer": "/root/1/column/children/0",
+   "shows": "a11y.labels",
+   "note": "one description per row: Number N, name, value unit"
+  },
+  {
+   "pointer": "/root/1/column/children/0",
+   "shows": "draw.shapes",
+   "note": "rank discs and share bars"
+  },
+  {
+   "pointer": "/root/1/column/children/0",
+   "shows": "draw.clip",
+   "note": "a long name is clipped before the value"
+  },
+  {
+   "pointer": "/root/1/column/children/1",
+   "shows": "text.dynamic",
+   "note": "no bars, grouped numbers with a unit, secondary colour"
+  }
+ ],
+ "inputs": {
+  "variables": {},
+  "clock": null,
+  "touch": false
+ },
+ "check": {
+  "describe": "Five rows: a filled blue 1 and Espresso beans 412 units with a full bar, then rings 2 to 5 for Pumpkin spice latte 288, Oat milk flat white 231, Butter croissant 154 and Cinnamon bun 97, bars shrinking with the value; then a compact list, a violet 1 Ana 1,284 orders, 2 Bilal 1,102 orders, 3 Chloé 876 orders. A screen reader hears eight items, \"Number 1, Espresso beans, 412 units\" … \"Number 3, Chloé, 876 orders\". Mono: white (black) filled first disc, rings, white bars over 1 dp outlined tracks. At 240 dp the long names shrink and are clipped before the value; at 480 dp the rows widen.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "narrow",
+    "width": 240,
+    "height": 376
+   },
+   {
+    "name": "wide",
+    "width": 480,
+    "height": 376
+   }
+  ]
+ },
+ "related": [
+  "CMP-09",
+  "VAR-06",
+  "EXP-08"
+ ],
+ "derived": {
+  "components": [
+   "RankedList"
+  ],
+  "component_instances": 2,
+  "component_modes": {
+   "RankedList": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 7792,
+  "header": {
+   "width": 360,
+   "height": 376
+  },
+  "op_count": 462,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 8,
+   "ANIMATED_FLOAT": 88,
+   "CLIP_RECT": 8,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "COMPONENT_VALUE": 8,
+   "CanvasContent": 8,
+   "DATA_TEXT": 12,
+   "DRAW_CIRCLE": 8,
+   "DRAW_ROUND_RECT": 10,
+   "DRAW_TEXT_ANCHOR": 24,
+   "DataListFloat": 2,
+   "HEADER": 1,
+   "LAYOUT_CANVAS": 8,
+   "LAYOUT_COLUMN": 3,
+   "LAYOUT_ROOT": 1,
+   "LayoutComponentContent": 11,
+   "LoopOperation": 14,
+   "MATRIX_RESTORE": 8,
+   "MATRIX_SAVE": 8,
+   "MATRIX_SCALE": 8,
+   "MODIFIER_BACKGROUND": 1,
+   "MODIFIER_HEIGHT": 9,
+   "MODIFIER_PADDING": 1,
+   "MODIFIER_WIDTH": 11,
+   "NAMED_VARIABLE": 10,
+   "PAINT_VALUES": 34,
+   "THEME": 21,
+   "TextFromFloat": 29,
+   "TextMeasure": 16,
+   "TextMerge": 64
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "orders",
+    "type": "float_array",
+    "value": [
+     1284,
+     1102,
+     876
+    ]
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "sales",
+    "type": "float_array",
+    "value": [
+     412,
+     288,
+     231,
+     154,
+     97
+    ]
+   },
+   {
+    "name": "secondary",
+    "type": "color",
+    "value": "#FF7C4DFF"
+   },
+   {
+    "name": "special",
+    "type": "string",
+    "value": "Pumpkin spice latte"
+   },
+   {
+    "name": "track",
+    "type": "color",
+    "value": "#FF2A3342"
+   }
+  ],
+  "render_findings": [],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 0
+  },
+  "audit_findings": [],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 0,
+   "click": 0,
+   "area": 0,
+   "touch": 0
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": []
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": []
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 7120,
+    "component_modes": {
+     "RankedList": "expand"
+    },
+    "op_count": 406,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "orders",
+      "type": "float_array",
+      "value": [
+       1284,
+       1102,
+       876
+      ]
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "sales",
+      "type": "float_array",
+      "value": [
+       412,
+       288,
+       231,
+       154,
+       97
+      ]
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "special",
+      "type": "string",
+      "value": "Pumpkin spice latte"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": []
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 7120,
+    "component_modes": {
+     "RankedList": "expand"
+    },
+    "op_count": 406,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "orders",
+      "type": "float_array",
+      "value": [
+       1284,
+       1102,
+       876
+      ]
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "sales",
+      "type": "float_array",
+      "value": [
+       412,
+       288,
+       231,
+       154,
+       97
+      ]
+     },
+     {
+      "name": "secondary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "special",
+      "type": "string",
+      "value": "Pumpkin spice latte"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": []
+   },
+   "narrow": {
+    "render": "render-narrow.png",
+    "render_findings": [],
+    "size": [
+     240,
+     376
+    ],
+    "audit_findings": []
+   },
+   "wide": {
+    "render": "render-wide.png",
+    "render_findings": [],
+    "size": [
+     480,
+     376
+    ],
+    "audit_findings": []
+   }
+  },
+  "json_keys": [
+   "RankedList",
+   "alpha",
+   "apiLevel",
+   "background",
+   "bottom",
+   "canvas",
+   "children",
+   "clipRect",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "cx",
+   "cy",
+   "dark",
+   "decimal",
+   "drawCircle",
+   "drawRoundRect",
+   "drawTextAnchored",
+   "export",
+   "flags",
+   "floatArrays",
+   "header",
+   "height",
+   "id1",
+   "id2",
+   "left",
+   "light",
+   "mode",
+   "modifiers",
+   "muted",
+   "name",
+   "names",
+   "onPrimary",
+   "onSurface",
+   "ops",
+   "orders",
+   "padding",
+   "paint",
+   "panX",
+   "panY",
+   "pivotX",
+   "pivotY",
+   "primary",
+   "profiles",
+   "radius",
+   "resources",
+   "right",
+   "root",
+   "rx",
+   "ry",
+   "sales",
+   "save",
+   "scale",
+   "secondary",
+   "semantics",
+   "showBars",
+   "spacedBy",
+   "strokeWidth",
+   "style",
+   "sx",
+   "sy",
+   "text",
+   "textMeasure",
+   "textSize",
+   "top",
+   "track",
+   "type",
+   "unit",
+   "value",
+   "values",
+   "variable",
+   "vtype",
+   "whole",
+   "width",
+   "x",
+   "y"
+  ],
+  "evidence": {
+   "data.array": [
+    "floatArrays",
+    "arrayGet"
+   ],
+   "text.dynamic": [
+    "textFromFloat",
+    "textMerge"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ],
+   "draw.shapes": [
+    "drawRoundRect",
+    "drawCircle"
+   ],
+   "draw.clip": [
+    "clipRect"
+   ]
+  },
+  "built_at": "2026-11-01T05:35:28.615Z"
+ }
+}

@@ -1,0 +1,435 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 360,
+  "profiles": 513,
+  "contentDescription": "Pager: three onboarding pages, swipe left or right or tap a dot; a screen reader hears Onboarding, Page N of 3"
+ },
+ "resources": {
+  "variables": {
+   "page": {
+    "value": 0,
+    "export": true
+   },
+   "pager1_k": "clamp(0, 3 - 1, round(@page))",
+   "pager1_start": 0
+  },
+  "colors": {
+   "background": "#FF000000",
+   "muted": "#FF9E9E9E",
+   "onSurface": "#FFFFFFFF",
+   "primary": "#FFFFFFFF"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 8
+    }
+   ],
+   "children": [
+    {
+     "column": {
+      "horizontalAlignment": "center",
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "onTouchDown": {
+         "type": "valueFloatExpressionChange",
+         "target": "@pager1_start",
+         "value": "touchX()"
+        }
+       },
+       {
+        "onTouchUp": {
+         "type": "valueFloatExpressionChange",
+         "target": "@page",
+         "value": "clamp(0, 3 - 1, @page + clamp(-1, 1, round((@pager1_start - touchX()) / (0.5 * windowWidth()))))"
+        }
+       }
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          },
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "Onboarding, ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "Page ",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@pager1_k + 1",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 5
+               }
+              },
+              "id2": " of 3"
+             }
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "visibility": "1 - min(1, abs(@pager1_k - 0))"
+             },
+             {
+              "graphicsLayer": {
+               "alpha": "1 - min(1, abs(@page - 0))"
+              }
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "horizontalAlignment": "center",
+               "verticalArrangement": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": 24
+                },
+                {
+                 "spacedBy": 8
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Welcome",
+                  "fontSize": 24,
+                  "color": "@colors.onSurface",
+                  "textAlign": "center"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Plan your week in a minute",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "textAlign": "center"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "visibility": "1 - min(1, abs(@pager1_k - 1))"
+             },
+             {
+              "graphicsLayer": {
+               "alpha": "1 - min(1, abs(@page - 1))"
+              }
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "horizontalAlignment": "center",
+               "verticalArrangement": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": 24
+                },
+                {
+                 "spacedBy": 8
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Track your runs",
+                  "fontSize": 24,
+                  "color": "@colors.onSurface",
+                  "textAlign": "center"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Distance, pace and heart rate, live on your wrist",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "textAlign": "center"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "visibility": "1 - min(1, abs(@pager1_k - 2))"
+             },
+             {
+              "graphicsLayer": {
+               "alpha": "1 - min(1, abs(@page - 2))"
+              }
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "horizontalAlignment": "center",
+               "verticalArrangement": "center",
+               "modifiers": [
+                "fillMaxSize",
+                {
+                 "padding": 24
+                },
+                {
+                 "spacedBy": 8
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Share with friends",
+                  "fontSize": 24,
+                  "color": "@colors.onSurface",
+                  "textAlign": "center"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Send a route or a finish photo in one tap",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "textAlign": "center"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 72
+          },
+          {
+           "height": 40
+          }
+         ],
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "commands": [
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.muted"
+                },
+                {
+                 "style": "stroke"
+                },
+                {
+                 "strokeWidth": 1.5
+                },
+                {
+                 "alpha": 1
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 12,
+               "cy": 20,
+               "radius": 3.25
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 36,
+               "cy": 20,
+               "radius": 3.25
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": 60,
+               "cy": 20,
+               "radius": 3.25
+              }
+             },
+             {
+              "paint": {
+               "ops": [
+                {
+                 "color": "@colors.primary"
+                },
+                {
+                 "style": "fill"
+                }
+               ]
+              }
+             },
+             {
+              "drawCircle": {
+               "cx": "12 + @page * 24",
+               "cy": 20,
+               "radius": 4
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxSize"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 24
+                },
+                "fillMaxHeight",
+                {
+                 "onClick": {
+                  "type": "valueFloatChange",
+                  "target": "@page",
+                  "value": 0
+                 }
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Go to page ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": 1,
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 24
+                },
+                "fillMaxHeight",
+                {
+                 "onClick": {
+                  "type": "valueFloatChange",
+                  "target": "@page",
+                  "value": 1
+                 }
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Go to page ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": 2,
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": 24
+                },
+                "fillMaxHeight",
+                {
+                 "onClick": {
+                  "type": "valueFloatChange",
+                  "target": "@page",
+                  "value": 2
+                 }
+                },
+                {
+                 "semantics": {
+                  "contentDescription": {
+                   "type": "textMerge",
+                   "id1": "Go to page ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": 3,
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

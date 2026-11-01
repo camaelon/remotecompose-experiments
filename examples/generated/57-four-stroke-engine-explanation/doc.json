@@ -1,0 +1,4019 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "profiles": 513,
+  "width": 400,
+  "height": 820,
+  "contentDescription": "How a four-stroke engine works: an animated cylinder cross-section with four steps, intake, compression, power and exhaust, and previous, next and play controls."
+ },
+ "components": {
+  "EngineScreen": {
+   "summary": "A four-stroke engine walkthrough: cylinder drawing, steps, caption and controls",
+   "params": {
+    "wide": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "side by side layout"
+    },
+    "stage": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "step 0..3"
+    },
+    "playing": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "1 while playing"
+    },
+    "t0": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "animationTime when play started"
+    },
+    "taps": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "counts step changes, eased to animate a stroke"
+    }
+   },
+   "locals": {
+    "cur": {
+     "$if": "theme.mono",
+     "then": "round(@stage)",
+     "else": "(round(@stage) + @playing * floor((animationTime() - @t0) / 2.5)) % 4"
+    },
+    "prog": {
+     "$if": "theme.mono",
+     "then": 0,
+     "else": "fract((animationTime() - @t0) / 2.5)"
+    },
+    "tick": {
+     "$if": "theme.mono",
+     "then": 0,
+     "else": "@playing * floor(animationTime() * 4)"
+    },
+    "drive": {
+     "value": "@tick",
+     "anim": 0.4
+    },
+    "pend": {
+     "value": "@taps",
+     "anim": 1.6
+    }
+   },
+   "body": {
+    "$if": "wide",
+    "then": {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 24
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxHeight",
+          {
+           "weight": 1
+          },
+          {
+           "semantics": {
+            "contentDescription": "Cross-section of one engine cylinder. The piston slides in the cylinder and is joined by a connecting rod to the crankshaft below. The intake valve is on the left, the exhaust valve on the right and the spark plug at the top. Gas in the cylinder is drawn as filled dots for the fresh fuel and air mixture, star marks for burning gas and rings for exhaust gas, and is labelled beside the cylinder."
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sc",
+            "value": "min(componentWidth() / 240, componentHeight() / 268)"
+           }
+          },
+          {
+           "variable": {
+            "name": "ox",
+            "value": "(componentWidth() - 240 * @sc) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "oy",
+            "value": "(componentHeight() - 268 * @sc) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "fp",
+            "value": "clamp(0, 1, @pend - @taps + 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "f",
+            "value": {
+             "$if": "theme.mono",
+             "then": "1",
+             "else": "@playing * @prog + (1 - @playing) * @fp + 0 * @drive"
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "ang",
+            "value": "(@cur + @f) * 3.14159"
+           }
+          },
+          {
+           "variable": {
+            "name": "sn",
+            "value": "sin(@ang)"
+           }
+          },
+          {
+           "variable": {
+            "name": "px",
+            "value": "120 + 28 * @sn"
+           }
+          },
+          {
+           "variable": {
+            "name": "py",
+            "value": "222 - 28 * cos(@ang)"
+           }
+          },
+          {
+           "variable": {
+            "name": "wy",
+            "value": "@py - sqrt(6400 - 784 * @sn * @sn)"
+           }
+          },
+          {
+           "variable": {
+            "name": "pt",
+            "value": "@wy - 22"
+           }
+          },
+          {
+           "variable": {
+            "name": "e0",
+            "value": "1 - min(1, abs(@cur))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e1",
+            "value": "1 - min(1, abs(@cur - 1))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e2",
+            "value": "1 - min(1, abs(@cur - 2))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e3",
+            "value": "1 - min(1, abs(@cur - 3))"
+           }
+          },
+          {
+           "variable": {
+            "name": "li",
+            "value": "9 * (@e0 * min(1, 4 * @f) + @e1 * max(0, 1 - 6 * @f))"
+           }
+          },
+          {
+           "variable": {
+            "name": "le",
+            "value": "9 * (@e3 * min(1, 4 * @f) + @e0 * max(0, 1 - 6 * @f))"
+           }
+          },
+          {
+           "variable": {
+            "name": "sp",
+            "value": "@e2 * (1 - step(@f, 0.3))"
+           }
+          },
+          {
+           "variable": {
+            "name": "gm",
+            "value": "@e0 + @e1"
+           }
+          },
+          {
+           "save": {}
+          },
+          {
+           "translate": {
+            "dx": "@ox",
+            "dy": "@oy"
+           }
+          },
+          {
+           "scale": {
+            "sx": "@sc",
+            "sy": "@sc"
+           }
+          },
+          {
+           "save": {}
+          },
+          {
+           "clipRect": {
+            "left": 80,
+            "top": 70,
+            "right": 160,
+            "bottom": "@pt"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 0
+              }
+             ]
+            }
+           },
+           "else": {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.16 * @gm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.22 * @e2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.18 * @e3"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.primary"
+              }
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@gm"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 8,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 8,
+               "commands": [
+                {
+                 "drawCircle": {
+                  "cx": "85 + 10 * i + 5 * (j % 2)",
+                  "cy": "74 + 10 * j",
+                  "radius": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.error"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.3
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": "@e2"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 6,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 6,
+               "commands": [
+                {
+                 "drawLine": {
+                  "x1": "84 + 14 * i",
+                  "y1": "73 + 14 * j",
+                  "x2": "92 + 14 * i",
+                  "y2": "81 + 14 * j"
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "84 + 14 * i",
+                  "y1": "81 + 14 * j",
+                  "x2": "92 + 14 * i",
+                  "y2": "73 + 14 * j"
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "88 + 14 * i",
+                  "y1": "72 + 14 * j",
+                  "x2": "88 + 14 * i",
+                  "y2": "82 + 14 * j"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.muted"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.3
+             },
+             {
+              "alpha": "@e3"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 6,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 6,
+               "commands": [
+                {
+                 "drawCircle": {
+                  "cx": "88 + 14 * i + 7 * (j % 2)",
+                  "cy": "78 + 14 * j",
+                  "radius": 3.5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "restore": {}
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 70,
+            "top": 70,
+            "right": 80,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 160,
+            "top": 70,
+            "right": 170,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 40,
+            "top": 36,
+            "right": 200,
+            "bottom": 70
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 70,
+            "top": 70,
+            "right": 80,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 160,
+            "top": 70,
+            "right": 170,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 40,
+            "top": 36,
+            "right": 200,
+            "bottom": 70
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.inPort"
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.exPort"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.inPort"
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.exPort"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "98",
+            "top": "24 + @li",
+            "right": "102",
+            "bottom": "66 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "93",
+            "top": "22 + @li",
+            "right": "107",
+            "bottom": "26 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "88",
+            "top": "64 + @li",
+            "right": "112",
+            "bottom": "70 + @li"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "98",
+            "top": "24 + @li",
+            "right": "102",
+            "bottom": "66 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "93",
+            "top": "22 + @li",
+            "right": "107",
+            "bottom": "26 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "88",
+            "top": "64 + @li",
+            "right": "112",
+            "bottom": "70 + @li"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "138",
+            "top": "24 + @le",
+            "right": "142",
+            "bottom": "66 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "133",
+            "top": "22 + @le",
+            "right": "147",
+            "bottom": "26 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "128",
+            "top": "64 + @le",
+            "right": "152",
+            "bottom": "70 + @le"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "138",
+            "top": "24 + @le",
+            "right": "142",
+            "bottom": "66 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "133",
+            "top": "22 + @le",
+            "right": "147",
+            "bottom": "26 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "128",
+            "top": "64 + @le",
+            "right": "152",
+            "bottom": "70 + @le"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 112,
+            "top": 12,
+            "right": 128,
+            "bottom": 24
+           }
+          },
+          {
+           "drawRect": {
+            "left": 116,
+            "top": 24,
+            "right": 124,
+            "bottom": 36
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 112,
+            "top": 12,
+            "right": 128,
+            "bottom": 24
+           }
+          },
+          {
+           "drawRect": {
+            "left": 116,
+            "top": 24,
+            "right": 124,
+            "bottom": 36
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": 70,
+            "x2": 120,
+            "y2": 75
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 125,
+            "y1": 70,
+            "x2": 125,
+            "y2": 78
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 125,
+            "y1": 78,
+            "x2": 121,
+            "y2": 78
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.warning"
+              }
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "alpha": "@sp"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": 82,
+            "x2": 120,
+            "y2": 92
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 112,
+            "y1": 80,
+            "x2": 106,
+            "y2": 74
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 128,
+            "y1": 80,
+            "x2": 134,
+            "y2": 74
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 110,
+            "y1": 86,
+            "x2": 102,
+            "y2": 88
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 130,
+            "y1": 86,
+            "x2": 138,
+            "y2": 88
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 114,
+            "y1": 90,
+            "x2": 108,
+            "y2": 96
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 126,
+            "y1": 90,
+            "x2": 132,
+            "y2": 96
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 32
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 32
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 9
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": "@wy",
+            "x2": "@px",
+            "y2": "@py"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "strokeWidth": 5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": "@wy",
+            "x2": "@px",
+            "y2": "@py"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 8
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@px",
+            "cy": "@py",
+            "radius": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 8
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@px",
+            "cy": "@py",
+            "radius": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 82,
+            "top": "@pt",
+            "right": 158,
+            "bottom": "@wy + 18",
+            "rx": 3,
+            "ry": 3
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 82,
+            "top": "@pt",
+            "right": 158,
+            "bottom": "@wy + 18",
+            "rx": 3,
+            "ry": 3
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 82,
+            "y1": "@pt + 6",
+            "x2": 158,
+            "y2": "@pt + 6"
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 82,
+            "y1": "@pt + 11",
+            "x2": 158,
+            "y2": "@pt + 11"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": "@wy",
+            "radius": 5
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": "@wy",
+            "radius": 5
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.primary"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": "min(1, @li / 3)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 44,
+            "y1": 49,
+            "x2": 70,
+            "y2": 49
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 49,
+            "x2": 64,
+            "y2": 44
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 49,
+            "x2": 64,
+            "y2": 54
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "min(1, @le / 3)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 172,
+            "y1": 49,
+            "x2": 198,
+            "y2": 49
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 198,
+            "y1": 49,
+            "x2": 192,
+            "y2": 44
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 198,
+            "y1": 49,
+            "x2": 192,
+            "y2": 54
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "textSize": 9
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Intake valve",
+            "x": 4,
+            "y": 26,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Exhaust valve",
+            "x": 236,
+            "y": 26,
+            "panX": 1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Spark plug",
+            "x": 120,
+            "y": 6,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Piston",
+            "x": 4,
+            "y": "@pt + 20",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Connecting rod",
+            "x": 4,
+            "y": 204,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Crankshaft",
+            "x": 4,
+            "y": 250,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 34,
+            "y1": "@pt + 20",
+            "x2": 86,
+            "y2": "@pt + 20"
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 204,
+            "x2": 112,
+            "y2": 204
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 52,
+            "y1": 250,
+            "x2": 98,
+            "y2": 238
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 150,
+            "y1": "(70 + @pt) / 2",
+            "x2": 175,
+            "y2": "(70 + @pt) / 2"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 10
+             },
+             {
+              "alpha": "@e0"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fuel + air",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e1"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Compressed",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e2"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Burning gas",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e3"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Exhaust gas",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "restore": {}
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "width": 24
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          {
+           "weight": 1
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "How a four-stroke engine works",
+            "fontSize": 22,
+            "fontWeight": 700,
+            "color": "@colors.onSurface"
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": 16
+             }
+            ]
+           }
+          },
+          {
+           "Steps": {
+            "steps": [
+             "Intake",
+             "Compression",
+             "Power",
+             "Exhaust"
+            ],
+            "current": "@cur",
+            "size": 20
+           }
+          },
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": 132
+             },
+             {
+              "padding": {
+               "top": 8
+              }
+             }
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Intake",
+                  "fontSize": 20,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 0))"
+                   },
+                   {
+                    "semantics": {
+                     "contentDescription": "Step 1 of 4: Intake stroke"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Compression",
+                  "fontSize": 20,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 1))"
+                   },
+                   {
+                    "semantics": {
+                     "contentDescription": "Step 2 of 4: Compression stroke"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Power",
+                  "fontSize": 20,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 2))"
+                   },
+                   {
+                    "semantics": {
+                     "contentDescription": "Step 3 of 4: Power stroke"
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Exhaust",
+                  "fontSize": 20,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 3))"
+                   },
+                   {
+                    "semantics": {
+                     "contentDescription": "Step 4 of 4: Exhaust stroke"
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "padding": {
+                  "top": 4
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "The intake valve opens and the piston moves down, drawing a fresh mixture of fuel and air into the cylinder. The exhaust valve stays closed.",
+                  "fontSize": "@theme.text_md",
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 0))"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "Both valves close. The piston moves back up and squeezes the mixture into the small space under the spark plug, which makes it hot.",
+                  "fontSize": "@theme.text_md",
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 1))"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "The spark plug fires and the mixture burns. The hot gas expands and pushes the piston down, turning the crankshaft: the only stroke that makes power.",
+                  "fontSize": "@theme.text_md",
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 2))"
+                   }
+                  ]
+                 }
+                },
+                {
+                 "text": {
+                  "value": "The exhaust valve opens and the piston moves up again, pushing the burnt gas out. Then the intake valve opens and the cycle starts over.",
+                  "fontSize": "@theme.text_md",
+                  "color": "@colors.onSurface",
+                  "modifiers": [
+                   "fillMaxWidth",
+                   {
+                    "visibility": "1 - min(1, abs(@cur - 3))"
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "horizontalArrangement": "center",
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "padding": {
+               "top": 8
+              }
+             },
+             {
+              "spacedBy": 24
+             }
+            ],
+            "children": [
+             {
+              "IconButton": {
+               "label": "Previous stroke",
+               "style": "outlined",
+               "size": 48,
+               "onClick": [
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@stage",
+                 "value": "(@cur + 3) % 4"
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@playing",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@taps",
+                 "value": "@taps + 1"
+                }
+               ],
+               "slots": {
+                "icon": [
+                 {
+                  "Icon": {
+                   "name": "chevron_left",
+                   "color": "@colors.onSurface"
+                  }
+                 }
+                ]
+               }
+              }
+             },
+             {
+              "$if": "theme.mono",
+              "then": [],
+              "else": [
+               {
+                "canvas": {
+                 "modifiers": [
+                  {
+                   "size": 0
+                  }
+                 ],
+                 "commands": [
+                  {
+                   "global": {
+                    "commands": [
+                     {
+                      "textSubtext": {
+                       "text": "Play Pause",
+                       "start": "@playing * 5",
+                       "len": 5,
+                       "varName": "playLabel5"
+                      }
+                     },
+                     {
+                      "textTransform": {
+                       "text": "@playLabel5",
+                       "start": 0,
+                       "len": -1,
+                       "operation": 3,
+                       "varName": "playLabel"
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "IconButton": {
+                 "label": "@playLabel",
+                 "style": "filled",
+                 "size": 56,
+                 "onClick": [
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@stage",
+                   "value": "@cur + 0"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@t0",
+                   "value": "animationTime() + 0"
+                  },
+                  {
+                   "type": "valueFloatExpressionChange",
+                   "target": "@playing",
+                   "value": "1 - @playing"
+                  }
+                 ],
+                 "slots": {
+                  "icon": [
+                   {
+                    "canvas": {
+                     "modifiers": [
+                      {
+                       "size": [
+                        24,
+                        24
+                       ]
+                      }
+                     ],
+                     "commands": [
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "color": "@colors.onPrimary"
+                         },
+                         {
+                          "style": "fill"
+                         },
+                         {
+                          "alpha": "1 - @playing"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawPath": {
+                        "path": "$paths.tri"
+                       }
+                      },
+                      {
+                       "paint": {
+                        "ops": [
+                         {
+                          "alpha": "@playing"
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": 7,
+                        "top": 6,
+                        "right": 10.5,
+                        "bottom": 18
+                       }
+                      },
+                      {
+                       "drawRect": {
+                        "left": 13.5,
+                        "top": 6,
+                        "right": 17,
+                        "bottom": 18
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               }
+              ]
+             },
+             {
+              "IconButton": {
+               "label": "Next stroke",
+               "style": "outlined",
+               "size": 48,
+               "onClick": [
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@stage",
+                 "value": "(@cur + 1) % 4"
+                },
+                {
+                 "type": "valueFloatChange",
+                 "target": "@playing",
+                 "value": 0
+                },
+                {
+                 "type": "valueFloatExpressionChange",
+                 "target": "@taps",
+                 "value": "@taps + 1"
+                }
+               ],
+               "slots": {
+                "icon": [
+                 {
+                  "Icon": {
+                   "name": "chevron_right",
+                   "color": "@colors.onSurface"
+                  }
+                 }
+                ]
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    "else": {
+     "column": {
+      "modifiers": [
+       "fillMaxSize",
+       {
+        "background": "@colors.background"
+       },
+       {
+        "padding": 16
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "How a four-stroke engine works",
+         "fontSize": 22,
+         "fontWeight": 700,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "canvas": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "verticalWeight": 1
+          },
+          {
+           "padding": {
+            "top": 8,
+            "bottom": 8
+           }
+          },
+          {
+           "semantics": {
+            "contentDescription": "Cross-section of one engine cylinder. The piston slides in the cylinder and is joined by a connecting rod to the crankshaft below. The intake valve is on the left, the exhaust valve on the right and the spark plug at the top. Gas in the cylinder is drawn as filled dots for the fresh fuel and air mixture, star marks for burning gas and rings for exhaust gas, and is labelled beside the cylinder."
+           }
+          }
+         ],
+         "commands": [
+          {
+           "variable": {
+            "name": "sc",
+            "value": "min(componentWidth() / 240, componentHeight() / 268)"
+           }
+          },
+          {
+           "variable": {
+            "name": "ox",
+            "value": "(componentWidth() - 240 * @sc) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "oy",
+            "value": "(componentHeight() - 268 * @sc) / 2"
+           }
+          },
+          {
+           "variable": {
+            "name": "fp",
+            "value": "clamp(0, 1, @pend - @taps + 1)"
+           }
+          },
+          {
+           "variable": {
+            "name": "f",
+            "value": {
+             "$if": "theme.mono",
+             "then": "1",
+             "else": "@playing * @prog + (1 - @playing) * @fp + 0 * @drive"
+            }
+           }
+          },
+          {
+           "variable": {
+            "name": "ang",
+            "value": "(@cur + @f) * 3.14159"
+           }
+          },
+          {
+           "variable": {
+            "name": "sn",
+            "value": "sin(@ang)"
+           }
+          },
+          {
+           "variable": {
+            "name": "px",
+            "value": "120 + 28 * @sn"
+           }
+          },
+          {
+           "variable": {
+            "name": "py",
+            "value": "222 - 28 * cos(@ang)"
+           }
+          },
+          {
+           "variable": {
+            "name": "wy",
+            "value": "@py - sqrt(6400 - 784 * @sn * @sn)"
+           }
+          },
+          {
+           "variable": {
+            "name": "pt",
+            "value": "@wy - 22"
+           }
+          },
+          {
+           "variable": {
+            "name": "e0",
+            "value": "1 - min(1, abs(@cur))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e1",
+            "value": "1 - min(1, abs(@cur - 1))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e2",
+            "value": "1 - min(1, abs(@cur - 2))"
+           }
+          },
+          {
+           "variable": {
+            "name": "e3",
+            "value": "1 - min(1, abs(@cur - 3))"
+           }
+          },
+          {
+           "variable": {
+            "name": "li",
+            "value": "9 * (@e0 * min(1, 4 * @f) + @e1 * max(0, 1 - 6 * @f))"
+           }
+          },
+          {
+           "variable": {
+            "name": "le",
+            "value": "9 * (@e3 * min(1, 4 * @f) + @e0 * max(0, 1 - 6 * @f))"
+           }
+          },
+          {
+           "variable": {
+            "name": "sp",
+            "value": "@e2 * (1 - step(@f, 0.3))"
+           }
+          },
+          {
+           "variable": {
+            "name": "gm",
+            "value": "@e0 + @e1"
+           }
+          },
+          {
+           "save": {}
+          },
+          {
+           "translate": {
+            "dx": "@ox",
+            "dy": "@oy"
+           }
+          },
+          {
+           "scale": {
+            "sx": "@sc",
+            "sy": "@sc"
+           }
+          },
+          {
+           "save": {}
+          },
+          {
+           "clipRect": {
+            "left": 80,
+            "top": 70,
+            "right": 160,
+            "bottom": "@pt"
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 0
+              }
+             ]
+            }
+           },
+           "else": {
+            "paint": {
+             "ops": [
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.primary"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.16 * @gm"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.warning"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.22 * @e2"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "alpha": {
+               "$if": "theme.mono",
+               "then": 0,
+               "else": "0.18 * @e3"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 80,
+            "top": 60,
+            "right": 160,
+            "bottom": 150
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.primary"
+              }
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": "@gm"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 8,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 8,
+               "commands": [
+                {
+                 "drawCircle": {
+                  "cx": "85 + 10 * i + 5 * (j % 2)",
+                  "cy": "74 + 10 * j",
+                  "radius": 2
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.error"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.3
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": "@e2"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 6,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 6,
+               "commands": [
+                {
+                 "drawLine": {
+                  "x1": "84 + 14 * i",
+                  "y1": "73 + 14 * j",
+                  "x2": "92 + 14 * i",
+                  "y2": "81 + 14 * j"
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "84 + 14 * i",
+                  "y1": "81 + 14 * j",
+                  "x2": "92 + 14 * i",
+                  "y2": "73 + 14 * j"
+                 }
+                },
+                {
+                 "drawLine": {
+                  "x1": "88 + 14 * i",
+                  "y1": "72 + 14 * j",
+                  "x2": "88 + 14 * i",
+                  "y2": "82 + 14 * j"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.muted"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.3
+             },
+             {
+              "alpha": "@e3"
+             }
+            ]
+           }
+          },
+          {
+           "loop": {
+            "index": "i",
+            "from": 0,
+            "until": 6,
+            "commands": [
+             {
+              "loop": {
+               "index": "j",
+               "from": 0,
+               "until": 6,
+               "commands": [
+                {
+                 "drawCircle": {
+                  "cx": "88 + 14 * i + 7 * (j % 2)",
+                  "cy": "78 + 14 * j",
+                  "radius": 3.5
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "restore": {}
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 70,
+            "top": 70,
+            "right": 80,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 160,
+            "top": 70,
+            "right": 170,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 40,
+            "top": 36,
+            "right": 200,
+            "bottom": 70
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 70,
+            "top": 70,
+            "right": 80,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 160,
+            "top": 70,
+            "right": 170,
+            "bottom": 196
+           }
+          },
+          {
+           "drawRect": {
+            "left": 40,
+            "top": 36,
+            "right": 200,
+            "bottom": 70
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.background"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.inPort"
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.exPort"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.inPort"
+           }
+          },
+          {
+           "drawPath": {
+            "path": "$paths.exPort"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "98",
+            "top": "24 + @li",
+            "right": "102",
+            "bottom": "66 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "93",
+            "top": "22 + @li",
+            "right": "107",
+            "bottom": "26 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "88",
+            "top": "64 + @li",
+            "right": "112",
+            "bottom": "70 + @li"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "98",
+            "top": "24 + @li",
+            "right": "102",
+            "bottom": "66 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "93",
+            "top": "22 + @li",
+            "right": "107",
+            "bottom": "26 + @li"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "88",
+            "top": "64 + @li",
+            "right": "112",
+            "bottom": "70 + @li"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "138",
+            "top": "24 + @le",
+            "right": "142",
+            "bottom": "66 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "133",
+            "top": "22 + @le",
+            "right": "147",
+            "bottom": "26 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "128",
+            "top": "64 + @le",
+            "right": "152",
+            "bottom": "70 + @le"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": "138",
+            "top": "24 + @le",
+            "right": "142",
+            "bottom": "66 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "133",
+            "top": "22 + @le",
+            "right": "147",
+            "bottom": "26 + @le"
+           }
+          },
+          {
+           "drawRect": {
+            "left": "128",
+            "top": "64 + @le",
+            "right": "152",
+            "bottom": "70 + @le"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 112,
+            "top": 12,
+            "right": 128,
+            "bottom": 24
+           }
+          },
+          {
+           "drawRect": {
+            "left": 116,
+            "top": 24,
+            "right": 124,
+            "bottom": 36
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRect": {
+            "left": 112,
+            "top": 12,
+            "right": 128,
+            "bottom": 24
+           }
+          },
+          {
+           "drawRect": {
+            "left": 116,
+            "top": 24,
+            "right": 124,
+            "bottom": 36
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "strokeCap": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": 70,
+            "x2": 120,
+            "y2": 75
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 125,
+            "y1": 70,
+            "x2": 125,
+            "y2": 78
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 125,
+            "y1": 78,
+            "x2": 121,
+            "y2": 78
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.warning"
+              }
+             },
+             {
+              "strokeWidth": 2
+             },
+             {
+              "alpha": "@sp"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": 82,
+            "x2": 120,
+            "y2": 92
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 112,
+            "y1": 80,
+            "x2": 106,
+            "y2": 74
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 128,
+            "y1": 80,
+            "x2": 134,
+            "y2": 74
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 110,
+            "y1": 86,
+            "x2": 102,
+            "y2": 88
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 130,
+            "y1": 86,
+            "x2": 138,
+            "y2": 88
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 114,
+            "y1": 90,
+            "x2": 108,
+            "y2": 96
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 126,
+            "y1": 90,
+            "x2": 132,
+            "y2": 96
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 32
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 32
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 9
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": "@wy",
+            "x2": "@px",
+            "y2": "@py"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "strokeWidth": 5
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 120,
+            "y1": "@wy",
+            "x2": "@px",
+            "y2": "@py"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 8
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@px",
+            "cy": "@py",
+            "radius": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": 222,
+            "radius": 8
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": "@px",
+            "cy": "@py",
+            "radius": 6
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 82,
+            "top": "@pt",
+            "right": 158,
+            "bottom": "@wy + 18",
+            "rx": 3,
+            "ry": 3
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": 82,
+            "top": "@pt",
+            "right": 158,
+            "bottom": "@wy + 18",
+            "rx": 3,
+            "ry": 3
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 82,
+            "y1": "@pt + 6",
+            "x2": 158,
+            "y2": "@pt + 6"
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 82,
+            "y1": "@pt + 11",
+            "x2": 158,
+            "y2": "@pt + 11"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.surfaceHigh"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": "@wy",
+            "radius": 5
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1.5
+             },
+             {
+              "strokeJoin": "round"
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 120,
+            "cy": "@wy",
+            "radius": 5
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": {
+               "$if": "theme.mono",
+               "then": "@colors.onSurface",
+               "else": "@colors.primary"
+              }
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 2.5
+             },
+             {
+              "strokeCap": "round"
+             },
+             {
+              "alpha": "min(1, @li / 3)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 44,
+            "y1": 49,
+            "x2": 70,
+            "y2": 49
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 49,
+            "x2": 64,
+            "y2": 44
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 49,
+            "x2": 64,
+            "y2": 54
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "alpha": "min(1, @le / 3)"
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 172,
+            "y1": 49,
+            "x2": 198,
+            "y2": 49
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 198,
+            "y1": 49,
+            "x2": 192,
+            "y2": 44
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 198,
+            "y1": 49,
+            "x2": 192,
+            "y2": 54
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             },
+             {
+              "textSize": 9
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Intake valve",
+            "x": 4,
+            "y": 26,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Exhaust valve",
+            "x": 236,
+            "y": 26,
+            "panX": 1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Spark plug",
+            "x": 120,
+            "y": 6,
+            "panX": 0,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Piston",
+            "x": 4,
+            "y": "@pt + 20",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Connecting rod",
+            "x": 4,
+            "y": 204,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Crankshaft",
+            "x": 4,
+            "y": 250,
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 34,
+            "y1": "@pt + 20",
+            "x2": 86,
+            "y2": "@pt + 20"
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 70,
+            "y1": 204,
+            "x2": 112,
+            "y2": 204
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 52,
+            "y1": 250,
+            "x2": 98,
+            "y2": 238
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawLine": {
+            "x1": 150,
+            "y1": "(70 + @pt) / 2",
+            "x2": 175,
+            "y2": "(70 + @pt) / 2"
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": 10
+             },
+             {
+              "alpha": "@e0"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Fuel + air",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e1"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Compressed",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e2"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Burning gas",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "alpha": "@e3"
+             }
+            ]
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "Exhaust gas",
+            "x": 178,
+            "y": "(70 + @pt) / 2",
+            "panX": -1,
+            "panY": 0
+           }
+          },
+          {
+           "restore": {}
+          }
+         ]
+        }
+       },
+       {
+        "Steps": {
+         "steps": [
+          "Intake",
+          "Compression",
+          "Power",
+          "Exhaust"
+         ],
+         "current": "@cur",
+         "size": 20
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "height": 132
+          },
+          {
+           "padding": {
+            "top": 8
+           }
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "Intake",
+               "fontSize": 20,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@cur - 0))"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Step 1 of 4: Intake stroke"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Compression",
+               "fontSize": 20,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@cur - 1))"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Step 2 of 4: Compression stroke"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Power",
+               "fontSize": 20,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@cur - 2))"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Step 3 of 4: Power stroke"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Exhaust",
+               "fontSize": 20,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "1 - min(1, abs(@cur - 3))"
+                },
+                {
+                 "semantics": {
+                  "contentDescription": "Step 4 of 4: Exhaust stroke"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "padding": {
+               "top": 4
+              }
+             }
+            ],
+            "children": [
+             {
+              "text": {
+               "value": "The intake valve opens and the piston moves down, drawing a fresh mixture of fuel and air into the cylinder. The exhaust valve stays closed.",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.onSurface",
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "1 - min(1, abs(@cur - 0))"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "Both valves close. The piston moves back up and squeezes the mixture into the small space under the spark plug, which makes it hot.",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.onSurface",
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "1 - min(1, abs(@cur - 1))"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "The spark plug fires and the mixture burns. The hot gas expands and pushes the piston down, turning the crankshaft: the only stroke that makes power.",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.onSurface",
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "1 - min(1, abs(@cur - 2))"
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": "The exhaust valve opens and the piston moves up again, pushing the burnt gas out. Then the intake valve opens and the cycle starts over.",
+               "fontSize": "@theme.text_md",
+               "color": "@colors.onSurface",
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "visibility": "1 - min(1, abs(@cur - 3))"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "row": {
+         "verticalAlignment": "center",
+         "horizontalArrangement": "center",
+         "modifiers": [
+          "fillMaxWidth",
+          {
+           "padding": {
+            "top": 8
+           }
+          },
+          {
+           "spacedBy": 24
+          }
+         ],
+         "children": [
+          {
+           "IconButton": {
+            "label": "Previous stroke",
+            "style": "outlined",
+            "size": 48,
+            "onClick": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@stage",
+              "value": "(@cur + 3) % 4"
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@playing",
+              "value": 0
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@taps",
+              "value": "@taps + 1"
+             }
+            ],
+            "slots": {
+             "icon": [
+              {
+               "Icon": {
+                "name": "chevron_left",
+                "color": "@colors.onSurface"
+               }
+              }
+             ]
+            }
+           }
+          },
+          {
+           "$if": "theme.mono",
+           "then": [],
+           "else": [
+            {
+             "canvas": {
+              "modifiers": [
+               {
+                "size": 0
+               }
+              ],
+              "commands": [
+               {
+                "global": {
+                 "commands": [
+                  {
+                   "textSubtext": {
+                    "text": "Play Pause",
+                    "start": "@playing * 5",
+                    "len": 5,
+                    "varName": "playLabel5"
+                   }
+                  },
+                  {
+                   "textTransform": {
+                    "text": "@playLabel5",
+                    "start": 0,
+                    "len": -1,
+                    "operation": 3,
+                    "varName": "playLabel"
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "IconButton": {
+              "label": "@playLabel",
+              "style": "filled",
+              "size": 56,
+              "onClick": [
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@stage",
+                "value": "@cur + 0"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@t0",
+                "value": "animationTime() + 0"
+               },
+               {
+                "type": "valueFloatExpressionChange",
+                "target": "@playing",
+                "value": "1 - @playing"
+               }
+              ],
+              "slots": {
+               "icon": [
+                {
+                 "canvas": {
+                  "modifiers": [
+                   {
+                    "size": [
+                     24,
+                     24
+                    ]
+                   }
+                  ],
+                  "commands": [
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "color": "@colors.onPrimary"
+                      },
+                      {
+                       "style": "fill"
+                      },
+                      {
+                       "alpha": "1 - @playing"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawPath": {
+                     "path": "$paths.tri"
+                    }
+                   },
+                   {
+                    "paint": {
+                     "ops": [
+                      {
+                       "alpha": "@playing"
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "drawRect": {
+                     "left": 7,
+                     "top": 6,
+                     "right": 10.5,
+                     "bottom": 18
+                    }
+                   },
+                   {
+                    "drawRect": {
+                     "left": 13.5,
+                     "top": 6,
+                     "right": 17,
+                     "bottom": 18
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            }
+           ]
+          },
+          {
+           "IconButton": {
+            "label": "Next stroke",
+            "style": "outlined",
+            "size": 48,
+            "onClick": [
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@stage",
+              "value": "(@cur + 1) % 4"
+             },
+             {
+              "type": "valueFloatChange",
+              "target": "@playing",
+              "value": 0
+             },
+             {
+              "type": "valueFloatExpressionChange",
+              "target": "@taps",
+              "value": "@taps + 1"
+             }
+            ],
+            "slots": {
+             "icon": [
+              {
+               "Icon": {
+                "name": "chevron_right",
+                "color": "@colors.onSurface"
+               }
+              }
+             ]
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "stage": {
+    "value": 0,
+    "export": true
+   },
+   "playing": {
+    "value": 0,
+    "export": true
+   },
+   "t0": {
+    "value": 0,
+    "export": true
+   },
+   "taps": 0,
+   "wide": "step(windowWidth(), 599) * step(windowWidth(), windowHeight() * 0.75)"
+  },
+  "paths": {
+   "inPort": [
+    {
+     "type": "moveTo",
+     "x": 40,
+     "y": 42
+    },
+    {
+     "type": "lineTo",
+     "x": 84,
+     "y": 42
+    },
+    {
+     "type": "lineTo",
+     "x": 112,
+     "y": 70
+    },
+    {
+     "type": "lineTo",
+     "x": 88,
+     "y": 70
+    },
+    {
+     "type": "lineTo",
+     "x": 74,
+     "y": 56
+    },
+    {
+     "type": "lineTo",
+     "x": 40,
+     "y": 56
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "exPort": [
+    {
+     "type": "moveTo",
+     "x": 200,
+     "y": 42
+    },
+    {
+     "type": "lineTo",
+     "x": 156,
+     "y": 42
+    },
+    {
+     "type": "lineTo",
+     "x": 128,
+     "y": 70
+    },
+    {
+     "type": "lineTo",
+     "x": 152,
+     "y": 70
+    },
+    {
+     "type": "lineTo",
+     "x": 166,
+     "y": 56
+    },
+    {
+     "type": "lineTo",
+     "x": 200,
+     "y": 56
+    },
+    {
+     "type": "close"
+    }
+   ],
+   "tri": [
+    {
+     "type": "moveTo",
+     "x": 8,
+     "y": 5
+    },
+    {
+     "type": "lineTo",
+     "x": 19,
+     "y": 12
+    },
+    {
+     "type": "lineTo",
+     "x": 8,
+     "y": 19
+    },
+    {
+     "type": "close"
+    }
+   ]
+  }
+ },
+ "root": {
+  "stateLayout": {
+   "indexId": "@wide",
+   "modifiers": [
+    "fillMaxSize"
+   ],
+   "children": [
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "EngineScreen": {
+         "stage": "@stage",
+         "playing": "@playing",
+         "t0": "@t0",
+         "taps": "@taps"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       "fillMaxSize"
+      ],
+      "children": [
+       {
+        "EngineScreen": {
+         "wide": true,
+         "stage": "@stage",
+         "playing": "@playing",
+         "t0": "@t0",
+         "taps": "@taps"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

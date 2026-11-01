@@ -24,7 +24,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import path from "node:path";
-import { EXAMPLES_DIR, loadCatalog } from "./catalog.mjs";
+import { EXAMPLES_DIR, loadCatalog, loadGenerated } from "./catalog.mjs";
 import { buildPage, escapeHtml as esc, formatBytes } from "./web-page.mjs";
 import { playerBundle } from "./web-player.mjs";
 import { MONO_VAR, monoPalettes, usesComponents } from "./components.mjs";
@@ -40,7 +40,8 @@ const HEADERS = {
 /** An example (by id, "INT-04") or a component demo (by name, "Gauge"). */
 function entry(id) {
     const C = loadCatalog();
-    return C.byId.get(id) ?? C.demos.get(id) ?? null;
+    const g = /^GEN-\d+$/.test(id) ? loadGenerated().find((x) => x.id === id) : null;
+    return C.byId.get(id) ?? C.demos.get(id) ?? (g ? { ...g, family: "GEN", summary: g.prompt } : null);
 }
 
 // Compressed bodies (brotli or gzip, as the browser accepts), cached by content hash: the
@@ -213,6 +214,7 @@ main { max-width:1280px; margin:0 auto; padding:8px 16px 48px; display:grid; gap
 .title { font-weight:600; }
 .desc { color:var(--muted); font-size:13px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 .tags { display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
+.bar label.gen { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--muted); }
 .tags span { background:var(--chip); border-radius:6px; padding:1px 6px; font-size:11px; color:var(--muted); }
 .links { display:flex; gap:12px; font-size:12px; margin-top:6px; }
 .links a { color:var(--accent); text-decoration:none; }
@@ -226,15 +228,21 @@ main { max-width:1280px; margin:0 auto; padding:8px 16px 48px; display:grid; gap
 const SCRIPT = `
 const q = document.getElementById("q"), cards = [...document.querySelectorAll(".card")];
 const chips = [...document.querySelectorAll(".bar button")]; let fam = "";
+// The generated corpus (documents the eval runs built from one prompt each) is off by default.
+const genOn = document.getElementById("gen") || { checked: false };
+try { genOn.checked = localStorage.getItem("rc-gen") === "1"; } catch (e) {}
+if (genOn.addEventListener) genOn.addEventListener("change", () => { try { localStorage.setItem("rc-gen", genOn.checked ? "1" : "0"); } catch (e) {} apply(); });
 function apply() {
   const words = q.value.toLowerCase().split(/\\s+/).filter(Boolean); let n = 0;
   for (const c of cards) {
-    const show = (!fam || c.dataset.family === fam) && words.every((w) => c.dataset.text.includes(w));
+    const gen = c.dataset.family === "GEN";
+    const show = (!gen || genOn.checked) && (!fam || c.dataset.family === fam) && words.every((w) => c.dataset.text.includes(w));
     c.hidden = !show; if (show) n++;
   }
   document.getElementById("none").hidden = n > 0;
 }
 q.addEventListener("input", apply);
+apply();
 // The light / dark / mono strip under a thumbnail: show that render in the card, and open the
 // playground in that mode. The page-wide toggle does it for every card.
 function show(card, mode) {
@@ -262,7 +270,7 @@ for (const b of chips) b.addEventListener("click", () => {
 });
 `;
 
-function page({ title, sub, current, families, cards, modes = false }) {
+function page({ title, sub, current, families, cards, modes = false, generated = 0 }) {
     return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${esc(title)}</title><style>${CSS}</style></head>
@@ -273,7 +281,8 @@ function page({ title, sub, current, families, cards, modes = false }) {
 <p class="sub">${sub}</p>
 <div class="bar"><input id="q" type="search" placeholder="Filter by name, tag or keyword" aria-label="Filter">
 ${families.map((f) => `<button type="button" data-family="${esc(f)}" aria-pressed="false">${esc(f)}</button>`).join("")}
-${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono">Mono (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
+${generated ? `<label class="gen"><input id="gen" type="checkbox"> ${generated} generated (eval runs)</label>` : ""}
+${modes ? `<select id="mode" aria-label="Render"><option value="">Default render</option><option value="light">Light</option><option value="dark">Dark</option><option value="mono-dark">Mono dark (always-on, OLED)</option><option value="mono-light">Mono light (e-ink)</option></select>` : ""}</div>
 </header>
 <main>${cards.join("\n")}<p id="none" class="empty" hidden>Nothing matches.</p></main>
 <script>${SCRIPT}</script>
@@ -310,8 +319,18 @@ function examplesPage() {
         tags: [...(e.capabilities?.primary ?? []), ...(e.derived?.components ?? [])],
         links: `<span>${formatBytes(e.derived?.bytes ?? 0)}</span>`,
     }));
+    // The generated corpus, behind its toggle: one document per eval prompt, built with the tools.
+    const gen = loadGenerated().filter((g) => existsSync(path.join(EXAMPLES_DIR, g.folder, "doc.json")));
+    for (const g of gen) cards.push(card({
+        e: { ...g, family: "GEN" }, base: "",
+        text: [g.id, g.title, g.prompt, ...(g.keywords ?? []), ...(g.components ?? []), "generated"].join(" "),
+        desc: g.prompt,
+        tags: ["generated", ...(g.components ?? []).slice(0, 4)],
+        links: `<span>${formatBytes(g.bytes ?? 0)}</span>${g.run ? `<span>${g.run.calls} calls</span>` : ""}`,
+    }));
+    if (gen.length && !families.includes("GEN")) families.push("GEN");
     return page({
-        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders),
+        title: "RemoteCompose examples", current: "examples", families, cards, modes: list.some((e) => e.derived?.renders), generated: gen.length,
         sub: `${list.length} verified examples, each byte-identical to the Java parser's output. Click one to open it in the playground.`,
     });
 }

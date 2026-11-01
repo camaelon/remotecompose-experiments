@@ -1,0 +1,767 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 760,
+  "profiles": 513,
+  "contentDescription": "Smart home: four room lights with their switches, the thermostat temperature and the front door lock"
+ },
+ "resources": {
+  "variables": {
+   "living": {
+    "value": 1,
+    "export": true
+   },
+   "kitchen": {
+    "value": 0,
+    "export": true
+   },
+   "bedroom": {
+    "value": 1,
+    "export": true
+   },
+   "bathroom": {
+    "value": 0,
+    "export": true
+   },
+   "temperature": {
+    "value": 21.5,
+    "export": true
+   },
+   "locked": {
+    "value": 1,
+    "export": true
+   },
+   "tempWord": "step(@temperature, 18) + step(@temperature, 24) + step(@temperature, 27)",
+   "scroll": 0
+  }
+ },
+ "components": {
+  "LightSwitch": {
+   "summary": "An on/off light switch: a tap flips its variable (0 or 1) and sends the app a named action, so the app learns about every tap",
+   "params": {
+    "checked": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "The 0/1 state; bind the room's exported light variable"
+    },
+    "label": {
+     "type": "string",
+     "required": true,
+     "doc": "Accessibility label, e.g. \"Kitchen light\""
+    },
+    "action": {
+     "type": "string",
+     "required": true,
+     "doc": "The hostNamedAction name sent on each tap, e.g. \"kitchenLight\""
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.primary",
+     "doc": "Track colour when on"
+    }
+   },
+   "locals": {
+    "p": {
+     "value": "@checked",
+     "anim": 0.3
+    },
+    "x": {
+     "$if": "theme.mono",
+     "then": "20 * @checked",
+     "else": "20 * (@p + 0.5 * sin(3.14159 * @p) * (2 * @checked - 1))"
+    }
+   },
+   "body": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "size": [
+        52,
+        48
+       ]
+      },
+      {
+       "semantics": {
+        "contentDescription": "@label",
+        "clickable": true
+       }
+      },
+      {
+       "onClick": [
+        {
+         "type": "valueFloatExpressionChange",
+         "target": "@checked",
+         "value": "1 - @checked"
+        },
+        {
+         "type": "hostNamedAction",
+         "name": "@action"
+        }
+       ]
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "size": [
+           52,
+           32
+          ]
+         }
+        ],
+        "commands": [
+         {
+          "$if": "theme.mono",
+          "then": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": "@theme.stroke"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 1,
+             "top": 1,
+             "right": 51,
+             "bottom": 31,
+             "rx": 15,
+             "ry": 15
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "alpha": "@p"
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 1,
+             "top": 1,
+             "right": 51,
+             "bottom": 31,
+             "rx": 15,
+             "ry": 15
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "alpha": "1 - @p"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "16 + @x",
+             "cy": 16,
+             "radius": 8
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": "@p"
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "16 + @x",
+             "cy": 16,
+             "radius": 10
+            }
+           }
+          ],
+          "else": [
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 0,
+             "top": 0,
+             "right": 52,
+             "bottom": 32,
+             "rx": 16,
+             "ry": 16
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "@color"
+              },
+              {
+               "alpha": "@p"
+              }
+             ]
+            }
+           },
+           {
+            "drawRoundRect": {
+             "left": 0,
+             "top": 0,
+             "right": 52,
+             "bottom": 32,
+             "rx": 16,
+             "ry": 16
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": "#FFFFFFFF"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawCircle": {
+             "cx": "16 + @x",
+             "cy": 16,
+             "radius": 12
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "LightSwitch": {
+     "label": "Kitchen light",
+     "checked": "@kitchen",
+     "action": "kitchenLight"
+    }
+   }
+  },
+  "RoomRow": {
+   "summary": "One room's light row: a room icon, the room name with its On/Off state word, and a LightSwitch that tells the app",
+   "params": {
+    "name": {
+     "type": "string",
+     "required": true,
+     "doc": "Room name, e.g. Kitchen"
+    },
+    "icon": {
+     "type": "string",
+     "required": true,
+     "static": true,
+     "doc": "Material icon name for the room"
+    },
+    "on": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "The exported 0/1 light variable of this room"
+    },
+    "action": {
+     "type": "string",
+     "required": true,
+     "doc": "hostNamedAction name sent on each tap"
+    }
+   },
+   "body": {
+    "row": {
+     "verticalAlignment": "center",
+     "modifiers": [
+      "fillMaxWidth"
+     ],
+     "children": [
+      {
+       "box": {
+        "children": [
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "1 - @on"
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "@icon",
+              "color": "@colors.muted"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@on"
+            }
+           ],
+           "children": [
+            {
+             "Icon": {
+              "name": "@icon",
+              "filled": true,
+              "color": "@colors.primary"
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 16
+         }
+        ]
+       }
+      },
+      {
+       "column": {
+        "modifiers": [
+         {
+          "weight": 1
+         }
+        ],
+        "children": [
+         {
+          "text": {
+           "value": "@name",
+           "fontSize": 16,
+           "color": "@colors.onSurface",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         },
+         {
+          "TextChoice": {
+           "items": [
+            "Off",
+            "On"
+           ],
+           "index": "@on",
+           "fontSize": 12,
+           "color": "@colors.muted"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "box": {
+        "modifiers": [
+         {
+          "width": 12
+         }
+        ]
+       }
+      },
+      {
+       "LightSwitch": {
+        "label": "@name light",
+        "checked": "@on",
+        "action": "@action"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "RoomRow": {
+     "name": "Kitchen",
+     "icon": "cooking",
+     "on": "@kitchen",
+     "action": "kitchenLight"
+    }
+   }
+  },
+  "LightsCard": {
+   "summary": "The four rooms' light rows in a card",
+   "params": {},
+   "body": {
+    "Card": {
+     "title": "Lights",
+     "children": [
+      {
+       "RoomRow": {
+        "name": "Living room",
+        "icon": "weekend",
+        "on": "@living",
+        "action": "livingLight"
+       }
+      },
+      {
+       "Divider": {}
+      },
+      {
+       "RoomRow": {
+        "name": "Kitchen",
+        "icon": "cooking",
+        "on": "@kitchen",
+        "action": "kitchenLight"
+       }
+      },
+      {
+       "Divider": {}
+      },
+      {
+       "RoomRow": {
+        "name": "Bedroom",
+        "icon": "bed",
+        "on": "@bedroom",
+        "action": "bedroomLight"
+       }
+      },
+      {
+       "Divider": {}
+      },
+      {
+       "RoomRow": {
+        "name": "Bathroom",
+        "icon": "bathtub",
+        "on": "@bathroom",
+        "action": "bathroomLight"
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "LightsCard": {}
+   }
+  },
+  "ClimateCard": {
+   "summary": "The thermostat temperature as a gauge with a comfort word",
+   "params": {},
+   "body": {
+    "Card": {
+     "title": "Thermostat",
+     "children": [
+      {
+       "column": {
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "horizontalAlignment": "center",
+        "children": [
+         {
+          "Gauge": {
+           "value": "@temperature",
+           "min": 10,
+           "max": 30,
+           "label": "Indoor \u00b0C",
+           "decimals": 1,
+           "warnAt": 0.6,
+           "alertAt": 0.8,
+           "size": 150
+          }
+         },
+         {
+          "TextChoice": {
+           "items": [
+            "Cold",
+            "Comfortable",
+            "Warm",
+            "Hot"
+           ],
+           "index": "@tempWord",
+           "fontSize": 22,
+           "fontWeight": 600,
+           "textAlign": "center"
+          }
+         },
+         {
+          "text": {
+           "value": "Indoor temperature",
+           "fontSize": 13,
+           "color": "@colors.muted"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "ClimateCard": {}
+   }
+  },
+  "LockCard": {
+   "summary": "The front door lock state with an icon, a word and a Lock / Unlock button",
+   "params": {},
+   "body": {
+    "Card": {
+     "title": "Front door",
+     "children": [
+      {
+       "row": {
+        "verticalAlignment": "center",
+        "modifiers": [
+         "fillMaxWidth"
+        ],
+        "children": [
+         {
+          "box": {
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@locked"
+               }
+              ],
+              "children": [
+               {
+                "Icon": {
+                 "name": "lock",
+                 "filled": true,
+                 "size": 32,
+                 "color": "@colors.success"
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "1 - @locked"
+               }
+              ],
+              "children": [
+               {
+                "Icon": {
+                 "name": "lock_open",
+                 "size": 32,
+                 "color": "@colors.warning"
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "modifiers": [
+            {
+             "width": 12
+            }
+           ]
+          }
+         },
+         {
+          "column": {
+           "modifiers": [
+            {
+             "weight": 1
+            }
+           ],
+           "children": [
+            {
+             "TextChoice": {
+              "items": [
+               "Unlocked",
+               "Locked"
+              ],
+              "index": "@locked",
+              "fontSize": 18,
+              "fontWeight": 600
+             }
+            },
+            {
+             "text": {
+              "value": "Main entrance",
+              "fontSize": 13,
+              "color": "@colors.muted"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "box": {
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "@locked"
+               }
+              ],
+              "children": [
+               {
+                "Button": {
+                 "label": "Unlock",
+                 "style": "outlined",
+                 "surface": "@colors.surface",
+                 "onClick": [
+                  {
+                   "type": "valueFloatChange",
+                   "target": "@locked",
+                   "value": 0
+                  },
+                  {
+                   "type": "hostNamedAction",
+                   "name": "unlockDoor"
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            },
+            {
+             "box": {
+              "modifiers": [
+               {
+                "visibility": "1 - @locked"
+               }
+              ],
+              "children": [
+               {
+                "Button": {
+                 "label": "Lock",
+                 "onClick": [
+                  {
+                   "type": "valueFloatChange",
+                   "target": "@locked",
+                   "value": 1
+                  },
+                  {
+                   "type": "hostNamedAction",
+                   "name": "lockDoor"
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "LockCard": {}
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "horizontalAlignment": "center",
+   "children": [
+    {
+     "column": {
+      "modifiers": [
+       {
+        "width": "min(windowWidth(), 560)"
+       },
+       {
+        "verticalWeight": 1
+       },
+       {
+        "verticalScroll": "@scroll"
+       },
+       {
+        "padding": 16
+       },
+       {
+        "spacedBy": 12
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "My home",
+         "fontSize": 24,
+         "fontWeight": 700,
+         "color": "@colors.onSurface"
+        }
+       },
+       {
+        "LightsCard": {}
+       },
+       {
+        "ClimateCard": {}
+       },
+       {
+        "LockCard": {}
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

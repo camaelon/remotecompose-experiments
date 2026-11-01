@@ -1,0 +1,1102 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 440,
+  "contentDescription": "Flight status from Paris to Singapore: route on a map, the plane's progress, departure and arrival in local time, and the time left"
+ },
+ "components": {
+  "TimeBlock": {
+   "params": {
+    "caption": {
+     "type": "string",
+     "required": true
+    },
+    "hh": {
+     "type": "float",
+     "required": true
+    },
+    "mm": {
+     "type": "float",
+     "required": true
+    },
+    "wd": {
+     "type": "float",
+     "required": true
+    },
+    "off": {
+     "type": "float",
+     "required": true
+    },
+    "size": {
+     "type": "float",
+     "default": 28,
+     "static": true
+    }
+   },
+   "body": {
+    "column": {
+     "modifiers": [
+      {
+       "spacedBy": 2
+      }
+     ],
+     "horizontalAlignment": "start",
+     "children": [
+      {
+       "text": {
+        "value": "@caption",
+        "fontSize": 12,
+        "color": "@colors.muted",
+        "maxLines": 1,
+        "overflow": "ellipsis"
+       }
+      },
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "@hh",
+          "whole": 2,
+          "decimal": 0,
+          "flags": 13
+         },
+         "id2": {
+          "type": "textMerge",
+          "id1": ":",
+          "id2": {
+           "type": "textFromFloat",
+           "value": "@mm",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 13
+          }
+         }
+        },
+        "fontSize": "@size",
+        "fontWeight": 600,
+        "color": "@colors.onSurface"
+       }
+      },
+      {
+       "row": {
+        "children": [
+         {
+          "TextChoice": {
+           "items": [
+            "Mon",
+            "Tue",
+            "Wed",
+            "Thu",
+            "Fri",
+            "Sat",
+            "Sun"
+           ],
+           "index": "@wd",
+           "fontSize": 12,
+           "color": "@colors.muted"
+          }
+         },
+         {
+          "text": {
+           "value": {
+            "type": "textMerge",
+            "id1": " \u00b7 UTC+",
+            "id2": {
+             "type": "textFromFloat",
+             "value": "@off / 60",
+             "whole": 2,
+             "decimal": 0,
+             "flags": 5
+            }
+           },
+           "fontSize": 12,
+           "color": "@colors.muted",
+           "maxLines": 1,
+           "overflow": "ellipsis"
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "depDay": {
+    "value": 20757,
+    "export": true
+   },
+   "depMin": {
+    "value": 1235,
+    "export": true
+   },
+   "arrDay": {
+    "value": 20758,
+    "export": true
+   },
+   "arrMin": {
+    "value": 570,
+    "export": true
+   },
+   "depOff": {
+    "value": 60,
+    "export": true
+   },
+   "arrOff": {
+    "value": 480,
+    "export": true
+   },
+   "progress": {
+    "value": 0.42,
+    "export": true
+   },
+   "status": {
+    "value": 2,
+    "export": true
+   },
+   "delayMin": {
+    "value": 0,
+    "export": true
+   },
+   "yr": "year()",
+   "today": "365 * (@yr - 1970) + floor((@yr - 1969) / 4) - floor((@yr - 1901) / 100) + floor((@yr - 1601) / 400) + dayOfYear() - 1",
+   "nowRaw": "timeInMin() - floor(offsetToUtc() / 60)",
+   "nowDay": "@today + floor(@nowRaw / 1440)",
+   "nowMin": "@nowRaw - 1440 * floor(@nowRaw / 1440)",
+   "toDep": "(@depDay - @nowDay) * 1440 + @depMin - @nowMin",
+   "toArr": "(@arrDay - @nowDay) * 1440 + @arrMin - @nowMin",
+   "started": "1 - step(@toDep, 1)",
+   "landed": "1 - step(@toArr, 1)",
+   "phase": "@started + @landed",
+   "notLanded": "step(@toArr, 1)",
+   "dur": "max(0, @toDep * (1 - @started) + @toArr * @started)",
+   "durH": "floor(@dur / 60)",
+   "durM": "floor(@dur % 60)",
+   "depLoc": "@depMin + @depOff",
+   "arrLoc": "@arrMin + @arrOff",
+   "depLocDay": "@depDay + floor(@depLoc / 1440)",
+   "arrLocDay": "@arrDay + floor(@arrLoc / 1440)",
+   "depM": "@depLoc - 1440 * floor(@depLoc / 1440)",
+   "arrM": "@arrLoc - 1440 * floor(@arrLoc / 1440)",
+   "depH": "floor(@depM / 60)",
+   "depMm": "@depM % 60",
+   "arrH": "floor(@arrM / 60)",
+   "arrMm": "@arrM % 60",
+   "depWd": "(@depLocDay + 3) % 7",
+   "arrWd": "(@arrLocDay + 3) % 7",
+   "isDelayed": "step(@delayMin, 1)",
+   "layoutIdx": "max(2 - step(windowHeight(), 300) - step(windowHeight(), 140), 3 - 3 * step(windowWidth(), 240))"
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    }
+   ],
+   "children": [
+    {
+     "stateLayout": {
+      "indexId": "@layoutIdx",
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 16
+          },
+          {
+           "spacedBy": 12
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Paris to Singapore",
+                  "fontSize": 18,
+                  "fontWeight": 600,
+                  "color": "@colors.onSurface"
+                 }
+                },
+                {
+                 "text": {
+                  "value": "CDG \u2013 SIN \u00b7 Flight 256",
+                  "fontSize": 13,
+                  "color": "@colors.muted"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "horizontalAlignment": "center",
+               "modifiers": [
+                {
+                 "width": 96
+                },
+                {
+                 "background": "@colors.surfaceHigh"
+                },
+                {
+                 "clip": 12
+                },
+                {
+                 "padding": {
+                  "start": 10,
+                  "end": 10,
+                  "top": 4,
+                  "bottom": 4
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "TextChoice": {
+                  "items": [
+                   "Scheduled",
+                   "Boarding",
+                   "In flight",
+                   "Delayed",
+                   "Landed",
+                   "Cancelled"
+                  ],
+                  "index": "@status",
+                  "fontSize": 13,
+                  "fontWeight": 600,
+                  "color": "@colors.primary",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "WorldMap": {
+            "region": [
+             -10,
+             -8,
+             112,
+             58
+            ],
+            "routeFrom": "Paris",
+            "routeTo": "Singapore",
+            "progress": "@progress",
+            "height": 180,
+            "label": "Map of the great-circle route from Paris to Singapore, with the plane at the flight's progress"
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "Departs in ",
+                "Arrives in ",
+                "Landed"
+               ],
+               "index": "@phase",
+               "fontSize": 15,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@durH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " h ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@durM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": " min"
+                 }
+                }
+               },
+               "fontSize": 15,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "@notLanded"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "ProgressBar": {
+            "progress": "@progress"
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "TimeBlock": {
+                  "caption": "Departs Paris (CDG)",
+                  "hh": "@depH",
+                  "mm": "@depMm",
+                  "wd": "@depWd",
+                  "off": "@depOff",
+                  "size": 28
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "TimeBlock": {
+                  "caption": "Arrives Singapore (SIN)",
+                  "hh": "@arrH",
+                  "mm": "@arrMm",
+                  "wd": "@arrWd",
+                  "off": "@arrOff",
+                  "size": 28
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "Departure delayed by ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@delayMin",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "id2": " min"
+             }
+            },
+            "fontSize": 12,
+            "color": "@colors.error",
+            "modifiers": [
+             {
+              "visibility": "@isDelayed"
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 12
+          },
+          {
+           "spacedBy": 6
+          }
+         ],
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "text": {
+               "value": "Paris CDG \u2013 Singapore SIN",
+               "fontSize": 15,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "horizontalAlignment": "center",
+               "modifiers": [
+                {
+                 "width": 96
+                },
+                {
+                 "background": "@colors.surfaceHigh"
+                },
+                {
+                 "clip": 12
+                },
+                {
+                 "padding": {
+                  "start": 10,
+                  "end": 10,
+                  "top": 4,
+                  "bottom": 4
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "TextChoice": {
+                  "items": [
+                   "Scheduled",
+                   "Boarding",
+                   "In flight",
+                   "Delayed",
+                   "Landed",
+                   "Cancelled"
+                  ],
+                  "index": "@status",
+                  "fontSize": 13,
+                  "fontWeight": 600,
+                  "color": "@colors.primary",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "TimeBlock": {
+                  "caption": "Paris",
+                  "hh": "@depH",
+                  "mm": "@depMm",
+                  "wd": "@depWd",
+                  "off": "@depOff",
+                  "size": 20
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1.4
+                }
+               ],
+               "children": [
+                {
+                 "WorldMap": {
+                  "region": [
+                   -10,
+                   -8,
+                   112,
+                   58
+                  ],
+                  "routeFrom": "Paris",
+                  "routeTo": "Singapore",
+                  "progress": "@progress",
+                  "height": 76,
+                  "label": "Map of the great-circle route from Paris to Singapore, with the plane at the flight's progress"
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "TimeBlock": {
+                  "caption": "Singapore",
+                  "hh": "@arrH",
+                  "mm": "@arrMm",
+                  "wd": "@arrWd",
+                  "off": "@arrOff",
+                  "size": 20
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "ProgressBar": {
+            "progress": "@progress",
+            "height": 6
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "Departs in ",
+                "Arrives in ",
+                "Landed"
+               ],
+               "index": "@phase",
+               "fontSize": 13,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@durH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " h ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@durM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": " min"
+                 }
+                }
+               },
+               "fontSize": 13,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "@notLanded"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 10
+          },
+          {
+           "spacedBy": 6
+          }
+         ],
+         "verticalArrangement": "center",
+         "children": [
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "CDG ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@depH",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@depMm",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                }
+               },
+               "fontSize": 15,
+               "fontWeight": 600,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                },
+                {
+                 "padding": [
+                  10,
+                  0
+                 ]
+                }
+               ],
+               "children": [
+                {
+                 "ProgressBar": {
+                  "progress": "@progress",
+                  "height": 6
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": "SIN ",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "@arrH",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 13
+                 },
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": ":",
+                  "id2": {
+                   "type": "textFromFloat",
+                   "value": "@arrMm",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  }
+                 }
+                }
+               },
+               "fontSize": 15,
+               "fontWeight": 600,
+               "color": "@colors.onSurface"
+              }
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "weight": 1
+                }
+               ],
+               "children": [
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "children": [
+                   {
+                    "TextChoice": {
+                     "items": [
+                      "Departs in ",
+                      "Arrives in ",
+                      "Landed"
+                     ],
+                     "index": "@phase",
+                     "fontSize": 13,
+                     "color": "@colors.onSurface"
+                    }
+                   },
+                   {
+                    "text": {
+                     "value": {
+                      "type": "textMerge",
+                      "id1": {
+                       "type": "textFromFloat",
+                       "value": "@durH",
+                       "whole": 2,
+                       "decimal": 0,
+                       "flags": 5
+                      },
+                      "id2": {
+                       "type": "textMerge",
+                       "id1": " h ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": "@durM",
+                         "whole": 2,
+                         "decimal": 0,
+                         "flags": 13
+                        },
+                        "id2": " min"
+                       }
+                      }
+                     },
+                     "fontSize": 13,
+                     "fontWeight": 600,
+                     "color": "@colors.onSurface",
+                     "modifiers": [
+                      {
+                       "visibility": "@notLanded"
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "box": {
+               "horizontalAlignment": "center",
+               "modifiers": [
+                {
+                 "width": 96
+                },
+                {
+                 "background": "@colors.surfaceHigh"
+                },
+                {
+                 "clip": 12
+                },
+                {
+                 "padding": {
+                  "start": 10,
+                  "end": 10,
+                  "top": 4,
+                  "bottom": 4
+                 }
+                }
+               ],
+               "children": [
+                {
+                 "TextChoice": {
+                  "items": [
+                   "Scheduled",
+                   "Boarding",
+                   "In flight",
+                   "Delayed",
+                   "Landed",
+                   "Cancelled"
+                  ],
+                  "index": "@status",
+                  "fontSize": 13,
+                  "fontWeight": 600,
+                  "color": "@colors.primary",
+                  "maxLines": 1
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize",
+          {
+           "padding": 10
+          },
+          {
+           "spacedBy": 4
+          }
+         ],
+         "verticalArrangement": "center",
+         "children": [
+          {
+           "box": {
+            "horizontalAlignment": "center",
+            "modifiers": [
+             {
+              "width": 96
+             },
+             {
+              "background": "@colors.surfaceHigh"
+             },
+             {
+              "clip": 12
+             },
+             {
+              "padding": {
+               "start": 10,
+               "end": 10,
+               "top": 4,
+               "bottom": 4
+              }
+             }
+            ],
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "Scheduled",
+                "Boarding",
+                "In flight",
+                "Delayed",
+                "Landed",
+                "Cancelled"
+               ],
+               "index": "@status",
+               "fontSize": 13,
+               "fontWeight": 600,
+               "color": "@colors.primary",
+               "maxLines": 1
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "CDG ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@depH",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 13
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": ":",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@depMm",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               }
+              }
+             }
+            },
+            "fontSize": 15,
+            "fontWeight": 600,
+            "color": "@colors.onSurface"
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": "SIN ",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "@arrH",
+               "whole": 2,
+               "decimal": 0,
+               "flags": 13
+              },
+              "id2": {
+               "type": "textMerge",
+               "id1": ":",
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@arrMm",
+                "whole": 2,
+                "decimal": 0,
+                "flags": 13
+               }
+              }
+             }
+            },
+            "fontSize": 15,
+            "fontWeight": 600,
+            "color": "@colors.onSurface"
+           }
+          },
+          {
+           "ProgressBar": {
+            "progress": "@progress",
+            "height": 6
+           }
+          },
+          {
+           "row": {
+            "verticalAlignment": "center",
+            "children": [
+             {
+              "TextChoice": {
+               "items": [
+                "Departs in ",
+                "Arrives in ",
+                "Landed"
+               ],
+               "index": "@phase",
+               "fontSize": 12,
+               "color": "@colors.onSurface"
+              }
+             },
+             {
+              "text": {
+               "value": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textFromFloat",
+                 "value": "@durH",
+                 "whole": 2,
+                 "decimal": 0,
+                 "flags": 5
+                },
+                "id2": {
+                 "type": "textMerge",
+                 "id1": " h ",
+                 "id2": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@durM",
+                   "whole": 2,
+                   "decimal": 0,
+                   "flags": 13
+                  },
+                  "id2": " min"
+                 }
+                }
+               },
+               "fontSize": 12,
+               "fontWeight": 600,
+               "color": "@colors.onSurface",
+               "modifiers": [
+                {
+                 "visibility": "@notLanded"
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

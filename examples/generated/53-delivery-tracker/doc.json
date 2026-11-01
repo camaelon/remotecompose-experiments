@@ -1,0 +1,1020 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 720,
+  "profiles": 513,
+  "contentDescription": "Delivery tracker: the courier moving on a map of London between the depot and the delivery address, with the ETA and the delivery status"
+ },
+ "components": {
+  "DeliveryMap": {
+   "summary": "Schematic London map fitted to the depot and address, the route line, the done part to the courier and the courier eased to its position",
+   "params": {},
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "clip": 16
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": "Map: courier ",
+         "id2": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textFromFloat",
+           "value": "round(@tRaw * 100)",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": "% of the way from ",
+           "id2": {
+            "type": "textMerge",
+            "id1": "@depotLabel",
+            "id2": {
+             "type": "textMerge",
+             "id1": " to ",
+             "id2": "@addrLabel"
+            }
+           }
+          }
+         }
+        }
+       }
+      }
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "cx",
+        "value": {
+         "value": "@cxRaw",
+         "anim": 1.2
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "cy",
+        "value": {
+         "value": "@cyRaw",
+         "anim": 1.2
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "hw",
+        "value": "abs(@ax - @dx) / 2 + 70"
+       }
+      },
+      {
+       "variable": {
+        "name": "hh",
+        "value": "abs(@ay - @dy) / 2 + 70"
+       }
+      },
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth() / (2 * @hw), componentHeight() / (2 * @hh))"
+       }
+      },
+      {
+       "variable": {
+        "name": "t",
+        "value": "max(0, min(1, ((@cx - @dx) * @vx + (@cy - @dy) * @vy) / @len2))"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.surface"
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRect": {
+        "left": 0,
+        "top": 0,
+        "right": "componentWidth()",
+        "bottom": "componentHeight()"
+       }
+      },
+      {
+       "save": [
+        {
+         "translate": {
+          "dx": "componentWidth() / 2 - @s * (@dx + @ax) / 2",
+          "dy": "componentHeight() / 2 - @s * (@dy + @ay) / 2"
+         }
+        },
+        {
+         "scale": {
+          "sx": "@s",
+          "sy": "@s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surfaceHigh"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 324,
+          "top": 344,
+          "right": 396,
+          "bottom": 376,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 374,
+          "top": 276,
+          "right": 410,
+          "bottom": 312,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 600,
+          "top": 257,
+          "right": 640,
+          "bottom": 280,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 690,
+          "top": 443,
+          "right": 710,
+          "bottom": 469,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 370,
+          "top": 443,
+          "right": 400,
+          "bottom": 463,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 80,
+          "top": 530,
+          "right": 200,
+          "bottom": 627,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "drawRoundRect": {
+          "left": 340,
+          "top": 161,
+          "right": 400,
+          "bottom": 209,
+          "rx": 8,
+          "ry": 8
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.outline"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": "max(7, 7 / @s)"
+           },
+           {
+            "strokeCap": "round"
+           },
+           {
+            "strokeJoin": "round"
+           }
+          ]
+         }
+        },
+        {
+         "drawPath": {
+          "path": "M -20 482 L 60 482 L 100 508 L 140 466 L 200 434 L 250 488 L 300 440 L 350 440 L 380 443 L 420 440 L 450 427 L 456 386 L 464 363 L 494 357 L 530 360 L 550 370 L 590 370 L 630 360 L 650 379 L 656 418 L 684 437 L 706 418 L 714 379 L 740 370 L 770 395 L 830 395 L 880 370 L 940 360 L 1020 370"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "strokeWidth": "4 / @s"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@dx",
+          "y1": "@dy",
+          "x2": "@ax",
+          "y2": "@ay"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           },
+           {
+            "strokeWidth": "5 / @s"
+           }
+          ]
+         }
+        },
+        {
+         "drawLine": {
+          "x1": "@dx",
+          "y1": "@dy",
+          "x2": "@dx + @t * (@ax - @dx)",
+          "y2": "@dy + @t * (@ay - @dy)"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@dx - 8 / @s",
+          "top": "@dy - 8 / @s",
+          "right": "@dx + 8 / @s",
+          "bottom": "@dy + 8 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surface"
+           }
+          ]
+         }
+        },
+        {
+         "drawRect": {
+          "left": "@dx - 4 / @s",
+          "top": "@dy - 4 / @s",
+          "right": "@dx + 4 / @s",
+          "bottom": "@dy + 4 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@ax",
+          "cy": "@ay",
+          "radius": "10 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surface"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@ax",
+          "cy": "@ay",
+          "radius": "7 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@ax",
+          "cy": "@ay",
+          "radius": "3.5 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.surface"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx",
+          "cy": "@cy",
+          "radius": "14 / @s"
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.primary"
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": "@cx",
+          "cy": "@cy",
+          "radius": "10 / @s"
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 0.5,
+        "top": 0.5,
+        "right": "componentWidth() - 0.5",
+        "bottom": "componentHeight() - 0.5",
+        "rx": 16,
+        "ry": 16
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "DeliveryMap": {}
+   }
+  },
+  "EtaBlock": {
+   "summary": "The ETA: N min, Arriving or Delivered",
+   "params": {},
+   "body": {
+    "box": {
+     "modifiers": [],
+     "children": [
+      {
+       "text": {
+        "value": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "max(1, round(@eta))",
+          "whole": 3,
+          "decimal": 0,
+          "flags": 5
+         },
+         "id2": " min"
+        },
+        "fontSize": 28,
+        "fontWeight": 700,
+        "color": "@colors.onSurface",
+        "modifiers": [
+         {
+          "visibility": "@showMin"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Arriving",
+        "fontSize": 28,
+        "fontWeight": 700,
+        "color": "@colors.primary",
+        "modifiers": [
+         {
+          "visibility": "@arriving"
+         }
+        ]
+       }
+      },
+      {
+       "text": {
+        "value": "Delivered",
+        "fontSize": 28,
+        "fontWeight": 700,
+        "color": "@colors.success",
+        "modifiers": [
+         {
+          "visibility": "@delivered"
+         }
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "call": {
+    "EtaBlock": {}
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "depotLon": {
+    "value": -0.145,
+    "export": true
+   },
+   "depotLat": {
+    "value": 51.479,
+    "export": true
+   },
+   "addrLon": {
+    "value": -0.078,
+    "export": true
+   },
+   "addrLat": {
+    "value": 51.526,
+    "export": true
+   },
+   "courierLon": {
+    "value": -0.112,
+    "export": true
+   },
+   "courierLat": {
+    "value": 51.5025,
+    "export": true
+   },
+   "eta": {
+    "value": 12,
+    "export": true
+   },
+   "status": {
+    "value": 1,
+    "export": true
+   },
+   "dx": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@depotLon",
+     "lat": "@depotLat"
+    }
+   },
+   "dy": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@depotLon",
+     "lat": "@depotLat",
+     "axis": "y"
+    }
+   },
+   "ax": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@addrLon",
+     "lat": "@addrLat"
+    }
+   },
+   "ay": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@addrLon",
+     "lat": "@addrLat",
+     "axis": "y"
+    }
+   },
+   "cxRaw": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@courierLon",
+     "lat": "@courierLat"
+    }
+   },
+   "cyRaw": {
+    "$mapPoint": {
+     "region": [
+      -0.35,
+      51.4,
+      0.15,
+      51.62
+     ],
+     "lon": "@courierLon",
+     "lat": "@courierLat",
+     "axis": "y"
+    }
+   },
+   "vx": "@ax - @dx",
+   "vy": "@ay - @dy",
+   "len2": "max(0.0001, @vx * @vx + @vy * @vy)",
+   "tRaw": "max(0, min(1, ((@cxRaw - @dx) * @vx + (@cyRaw - @dy) * @vy) / @len2))",
+   "delivered": "step(@status, 2.5)",
+   "arriving": "(1 - @delivered) * (1 - step(@eta, 1))",
+   "showMin": "(1 - @delivered) * (1 - @arriving)",
+   "layout": "step(windowWidth(), windowHeight() * 1.2)"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "depotLabel",
+    "vtype": "string",
+    "value": "Battersea depot",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "addrLabel",
+    "vtype": "string",
+    "value": "12 Curtain Rd, Shoreditch",
+    "export": true
+   }
+  },
+  {
+   "stateLayout": {
+    "indexId": "@layout",
+    "children": [
+     {
+      "column": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "background": "@colors.background"
+        },
+        {
+         "padding": 16
+        },
+        {
+         "spacedBy": 12
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "Your delivery",
+          "fontSize": 14,
+          "color": "@colors.muted"
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "EtaBlock": {}
+              }
+             ]
+            }
+           },
+           {
+            "TextChoice": {
+             "items": [
+              "Picked up",
+              "On the way",
+              "Nearby",
+              "Delivered"
+             ],
+             "index": "@status"
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "windowHeight() - 268"
+           }
+          ],
+          "children": [
+           {
+            "DeliveryMap": {}
+           }
+          ]
+         }
+        },
+        {
+         "Steps": {
+          "steps": [
+           "Picked up",
+           "On the way",
+           "Nearby",
+           "Delivered"
+          ],
+          "current": "@status",
+          "size": 18
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "width": 16
+              },
+              {
+               "height": 16
+              }
+             ],
+             "commands": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onSurface"
+                 },
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRect": {
+                "left": 1,
+                "top": 1,
+                "right": 15,
+                "bottom": 15
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.surface"
+                 }
+                ]
+               }
+              },
+              {
+               "drawRect": {
+                "left": 5,
+                "top": 5,
+                "right": 11,
+                "bottom": 11
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              },
+              {
+               "height": 1
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "From",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "modifiers": [
+              {
+               "width": 40
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@depotLabel",
+             "fontSize": 15,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "verticalAlignment": "center",
+          "children": [
+           {
+            "canvas": {
+             "modifiers": [
+              {
+               "width": 16
+              },
+              {
+               "height": 16
+              }
+             ],
+             "commands": [
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onSurface"
+                 },
+                 {
+                  "style": "fill"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 8,
+                "cy": 8,
+                "radius": 8
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.surface"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 8,
+                "cy": 8,
+                "radius": 5.5
+               }
+              },
+              {
+               "paint": {
+                "ops": [
+                 {
+                  "color": "@colors.onSurface"
+                 }
+                ]
+               }
+              },
+              {
+               "drawCircle": {
+                "cx": 8,
+                "cy": 8,
+                "radius": 2.5
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 10
+              },
+              {
+               "height": 1
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "To",
+             "fontSize": 14,
+             "color": "@colors.muted",
+             "modifiers": [
+              {
+               "width": 40
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "@addrLabel",
+             "fontSize": 15,
+             "color": "@colors.onSurface",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "modifiers": [
+        "fillMaxSize",
+        {
+         "background": "@colors.background"
+        },
+        {
+         "padding": 12
+        },
+        {
+         "spacedBy": 12
+        }
+       ],
+       "verticalAlignment": "center",
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxHeight",
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "DeliveryMap": {}
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "spacedBy": 4
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "Your delivery",
+             "fontSize": 12,
+             "color": "@colors.muted"
+            }
+           },
+           {
+            "EtaBlock": {}
+           },
+           {
+            "TextChoice": {
+             "items": [
+              "Picked up",
+              "On the way",
+              "Nearby",
+              "Delivered"
+             ],
+             "index": "@status"
+            }
+           },
+           {
+            "text": {
+             "value": {
+              "type": "textMerge",
+              "id1": "To ",
+              "id2": "@addrLabel"
+             },
+             "fontSize": 13,
+             "color": "@colors.muted",
+             "maxLines": 1,
+             "overflow": "ellipsis",
+             "modifiers": [
+              "fillMaxWidth"
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

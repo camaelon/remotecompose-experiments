@@ -1,0 +1,1275 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "Sales dashboard"
+ },
+ "resources": {
+  "variables": {
+   "yesterdayTotal": {
+    "value": 29800,
+    "export": true
+   },
+   "total": "arraySum(@hourly)",
+   "change": "(@total - @yesterdayTotal) * 100 / max(@yesterdayTotal, 1)"
+  },
+  "floatArrays": {
+   "hourly": {
+    "value": [
+     120,
+     40,
+     0,
+     0,
+     0,
+     0,
+     310,
+     980,
+     2150,
+     3420,
+     4100,
+     4870,
+     6230,
+     5980,
+     3150,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    "export": true
+   },
+   "units": {
+    "value": [
+     312,
+     540,
+     268
+    ],
+    "export": true
+   },
+   "productRevenue": {
+    "value": [
+     9720,
+     6180,
+     4360
+    ],
+    "export": true
+   }
+  }
+ },
+ "components": {
+  "HourChart": {
+   "params": {
+    "values": {
+     "type": "float",
+     "required": true,
+     "doc": "24 hourly values, @name of an exported float array"
+    },
+    "hour": {
+     "type": "float",
+     "default": 12,
+     "doc": "current hour 0..23, highlighted"
+    },
+    "prefix": {
+     "type": "string",
+     "default": "$",
+     "doc": "currency prefix for the peak label"
+    },
+    "label": {
+     "type": "string",
+     "default": "Revenue by hour",
+     "doc": "accessibility label start"
+    },
+    "ticks": {
+     "type": "list",
+     "default": [
+      "0",
+      "6",
+      "12",
+      "18"
+     ],
+     "static": true,
+     "doc": "hour labels, every 6 hours"
+    }
+   },
+   "locals": {
+    "n": "arrayLength(@values)",
+    "max": "max(arrayMax(@values), 1)",
+    "base": 18,
+    "top": 16
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize",
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": "@label",
+                 "id2": ", from 0 to "
+                },
+                "id2": "@prefix"
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "@max",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "id2": " per hour, current hour "
+             },
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@hour",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": ":00, "
+           },
+           "id2": "@prefix"
+          },
+          "id2": {
+           "type": "textFromFloat",
+           "value": "arrayGet(@values, @hour)",
+           "whole": 9,
+           "decimal": 0,
+           "flags": 23
+          }
+         },
+         "id2": " so far"
+        }
+       }
+      }
+     ],
+     "commands": [
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textMerge",
+         "id1": "@prefix",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "@max",
+          "whole": 9,
+          "decimal": 0,
+          "flags": 23
+         }
+        },
+        "x": 0,
+        "y": 6,
+        "panX": -1,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 0.5
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 0,
+        "y1": "@top",
+        "x2": "componentWidth()",
+        "y2": "@top"
+       }
+      },
+      {
+       "translate": {
+        "dx": 0,
+        "dy": "componentHeight() - @base"
+       }
+      },
+      {
+       "save": {
+        "commands": [
+         {
+          "clipRect": {
+           "left": 0,
+           "top": "-componentHeight()",
+           "right": "componentWidth()",
+           "bottom": 0
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "$if": "theme.mono",
+             "then": {
+              "color": "@colors.onSurface"
+             },
+             "else": {
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "style": "stroke"
+             },
+             "else": {
+              "style": "fill"
+             }
+            },
+            {
+             "strokeWidth": 1
+            },
+            {
+             "$if": "theme.mono",
+             "then": {
+              "alpha": 1
+             },
+             "else": {
+              "alpha": 0.4
+             }
+            }
+           ]
+          }
+         },
+         {
+          "loop": {
+           "index": "i",
+           "from": 0,
+           "until": "@n",
+           "commands": [
+            {
+             "drawRoundRect": {
+              "left": "(i + 0.15) * componentWidth() / @n",
+              "top": "-arrayGet(@values, i) * (componentHeight() - @base - @top) / @max",
+              "right": "(i + 0.85) * componentWidth() / @n",
+              "bottom": 3,
+              "rx": 2,
+              "ry": 2
+             }
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "$if": "theme.mono",
+             "then": {
+              "color": "@colors.onSurface"
+             },
+             "else": {
+              "color": "@colors.primary"
+             }
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "(@hour + 0.05) * componentWidth() / @n",
+           "top": "-max(3, arrayGet(@values, @hour) * (componentHeight() - @base - @top) / @max)",
+           "right": "(@hour + 0.95) * componentWidth() / @n",
+           "bottom": 3,
+           "rx": 2,
+           "ry": 2
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 0,
+        "y1": 0,
+        "x2": "componentWidth()",
+        "y2": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "$each": "ticks",
+       "as": "t",
+       "index": "k",
+       "do": {
+        "drawTextAnchored": {
+         "text": "@t",
+         "x": "(@k * 6 + 0.5) * componentWidth() / @n",
+         "y": 11,
+         "panX": 0,
+         "panY": 0
+        }
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "$if": "theme.mono",
+          "then": {
+           "color": "@colors.onSurface"
+          },
+          "else": {
+           "color": "@colors.primary"
+          }
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": 11
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "(@hour + 0.5) * componentWidth() / @n",
+        "cy": 17,
+        "radius": 2
+       }
+      }
+     ]
+    }
+   }
+  },
+  "ProductRow": {
+   "params": {
+    "nm": {
+     "type": "string",
+     "required": true,
+     "doc": "product name (a host string)"
+    },
+    "i": {
+     "type": "float",
+     "required": true,
+     "doc": "0-based rank index"
+    },
+    "first": {
+     "type": "bool",
+     "default": false,
+     "static": true,
+     "doc": "rank 1: filled disc"
+    },
+    "units": {
+     "type": "float",
+     "required": true,
+     "doc": "units array"
+    },
+    "revenue": {
+     "type": "float",
+     "required": true,
+     "doc": "revenue array"
+    },
+    "total": {
+     "type": "float",
+     "required": true,
+     "doc": "today's total"
+    },
+    "prefix": {
+     "type": "string",
+     "default": "$",
+     "doc": "currency"
+    }
+   },
+   "locals": {
+    "h": 52,
+    "tot": "max(@total, 1)"
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxWidth",
+      {
+       "height": "@h"
+      },
+      {
+       "semantics": {
+        "contentDescription": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "Number ",
+                   "id2": {
+                    "type": "textFromFloat",
+                    "value": "@i + 1",
+                    "whole": 2,
+                    "decimal": 0,
+                    "flags": 5
+                   }
+                  },
+                  "id2": ", "
+                 },
+                 "id2": "@nm"
+                },
+                "id2": ", "
+               },
+               "id2": {
+                "type": "textFromFloat",
+                "value": "arrayGet(@units, @i)",
+                "whole": 9,
+                "decimal": 0,
+                "flags": 23
+               }
+              },
+              "id2": " units, "
+             },
+             "id2": "@prefix"
+            },
+            "id2": {
+             "type": "textFromFloat",
+             "value": "arrayGet(@revenue, @i)",
+             "whole": 9,
+             "decimal": 0,
+             "flags": 23
+            }
+           },
+           "id2": ", "
+          },
+          "id2": {
+           "type": "textFromFloat",
+           "value": "100 * arrayGet(@revenue, @i) / @tot",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          }
+         },
+         "id2": " percent of today"
+        }
+       }
+      }
+     ],
+     "commands": [
+      {
+       "$if": "first",
+       "then": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "$if": "theme.mono",
+            "then": {
+             "color": "@colors.onSurface"
+            },
+            "else": {
+             "color": "@colors.primary"
+            }
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 12,
+          "cy": "@h / 2",
+          "radius": 12
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "$if": "theme.mono",
+            "then": {
+             "color": "@colors.background"
+            },
+            "else": {
+             "color": "@colors.onPrimary"
+            }
+           },
+           {
+            "textSize": "@theme.text_sm"
+           }
+          ]
+         }
+        }
+       ],
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.muted"
+           },
+           {
+            "style": "stroke"
+           },
+           {
+            "strokeWidth": 1.5
+           },
+           {
+            "alpha": 1
+           }
+          ]
+         }
+        },
+        {
+         "drawCircle": {
+          "cx": 12,
+          "cy": "@h / 2",
+          "radius": 11
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "style": "fill"
+           },
+           {
+            "textSize": "@theme.text_sm"
+           }
+          ]
+         }
+        }
+       ]
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "@i + 1",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 5
+        },
+        "x": 12,
+        "y": "@h / 2",
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": "@theme.text_md"
+         }
+        ]
+       }
+      },
+      {
+       "textMeasure": {
+        "text": {
+         "type": "textMerge",
+         "id1": "@prefix",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "arrayGet(@revenue, @i)",
+          "whole": 9,
+          "decimal": 0,
+          "flags": 23
+         }
+        },
+        "mode": 0,
+        "name": "vw"
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textMerge",
+         "id1": "@prefix",
+         "id2": {
+          "type": "textFromFloat",
+          "value": "arrayGet(@revenue, @i)",
+          "whole": 9,
+          "decimal": 0,
+          "flags": 23
+         }
+        },
+        "x": "componentWidth()",
+        "y": 16,
+        "panX": 1,
+        "panY": 0
+       }
+      },
+      {
+       "textMeasure": {
+        "text": "@nm",
+        "mode": 0,
+        "name": "nw"
+       }
+      },
+      {
+       "variable": {
+        "name": "room",
+        "value": "max(1, componentWidth() - 36 - @vw - 12)"
+       }
+      },
+      {
+       "variable": {
+        "name": "ns",
+        "value": "clamp(0.8, 1, @room / max(@nw, 1))"
+       }
+      },
+      {
+       "save": [
+        {
+         "clipRect": {
+          "left": 36,
+          "top": 0,
+          "right": "36 + @room",
+          "bottom": "@h"
+         }
+        },
+        {
+         "scale": {
+          "sx": "@ns",
+          "sy": "@ns",
+          "pivotX": 36,
+          "pivotY": 16
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": "@nm",
+          "x": 36,
+          "y": 16,
+          "panX": -1,
+          "panY": 0
+         }
+        }
+       ]
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": "@theme.text_sm"
+         }
+        ]
+       }
+      },
+      {
+       "textMeasure": {
+        "text": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "arrayGet(@units, @i)",
+          "whole": 9,
+          "decimal": 0,
+          "flags": 23
+         },
+         "id2": " units"
+        },
+        "mode": 0,
+        "name": "uw"
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textMerge",
+         "id1": {
+          "type": "textFromFloat",
+          "value": "arrayGet(@units, @i)",
+          "whole": 9,
+          "decimal": 0,
+          "flags": 23
+         },
+         "id2": " units"
+        },
+        "x": "componentWidth()",
+        "y": 38,
+        "panX": 1,
+        "panY": 0
+       }
+      },
+      {
+       "variable": {
+        "name": "bw",
+        "value": "max(20, componentWidth() - 36 - @uw - 12)"
+       }
+      },
+      {
+       "paint": {
+        "ops": {
+         "$if": "theme.mono",
+         "then": [
+          {
+           "color": "@colors.outline"
+          },
+          {
+           "style": "stroke"
+          },
+          {
+           "strokeWidth": 1
+          }
+         ],
+         "else": [
+          {
+           "color": "@colors.track"
+          },
+          {
+           "style": "fill"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 36,
+        "top": 35,
+        "right": "36 + @bw",
+        "bottom": 41,
+        "rx": 3,
+        "ry": 3
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "$if": "theme.mono",
+          "then": {
+           "color": "@colors.onSurface"
+          },
+          "else": {
+           "color": "@colors.primary"
+          }
+         },
+         {
+          "style": "fill"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 36,
+        "top": 35,
+        "right": "36 + max(6, @bw * clamp(0, 1, arrayGet(@revenue, @i) / @tot))",
+        "bottom": 41,
+        "rx": 3,
+        "ry": 3
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "p1",
+    "vtype": "string",
+    "value": "Wireless earbuds",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "p2",
+    "vtype": "string",
+    "value": "Phone case",
+    "export": true
+   }
+  },
+  {
+   "variable": {
+    "name": "p3",
+    "vtype": "string",
+    "value": "USB-C charger",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "fitBox": {
+       "modifiers": [
+        "fillMaxSize"
+       ],
+       "verticalAlignment": "top",
+       "horizontalAlignment": "start",
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "verticalAlignment": "center",
+             "children": [
+              {
+               "Icon": {
+                "name": "storefront",
+                "size": 20,
+                "color": "@colors.primary"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "Sales today",
+                "fontSize": "@theme.text_md",
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 12
+              }
+             ]
+            }
+           },
+           {
+            "BigNumber": {
+             "caption": "Today's revenue",
+             "value": "@total",
+             "prefix": "$",
+             "change": "@change",
+             "fontSize": 44
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 16
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Revenue by hour",
+             "fontSize": "@theme.text_sm",
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 150
+              }
+             ],
+             "children": [
+              {
+               "HourChart": {
+                "values": "@hourly",
+                "hour": "timeInHr()",
+                "label": "Revenue by hour today"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 16
+              }
+             ]
+            }
+           },
+           {
+            "text": {
+             "value": "Top products",
+             "fontSize": "@theme.text_sm",
+             "color": "@colors.muted",
+             "maxLines": 1
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "ProductRow": {
+                "nm": "@p1",
+                "i": 0,
+                "first": true,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              },
+              {
+               "ProductRow": {
+                "nm": "@p2",
+                "i": 1,
+                "first": false,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              },
+              {
+               "ProductRow": {
+                "nm": "@p3",
+                "i": 2,
+                "first": false,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "BigNumber": {
+             "caption": "Today's revenue",
+             "value": "@total",
+             "prefix": "$",
+             "change": "@change",
+             "fontSize": 32
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              "fillMaxWidth",
+              {
+               "height": 96
+              }
+             ],
+             "children": [
+              {
+               "HourChart": {
+                "values": "@hourly",
+                "hour": "timeInHr()",
+                "label": "Revenue by hour today"
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "ProductRow": {
+                "nm": "@p1",
+                "i": 0,
+                "first": true,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              },
+              {
+               "ProductRow": {
+                "nm": "@p2",
+                "i": 1,
+                "first": false,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              },
+              {
+               "ProductRow": {
+                "nm": "@p3",
+                "i": 2,
+                "first": false,
+                "units": "@units",
+                "revenue": "@productRevenue",
+                "total": "@total"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "row": {
+          "modifiers": [
+           "fillMaxSize"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "BigNumber": {
+                "caption": "Today's revenue",
+                "value": "@total",
+                "prefix": "$",
+                "change": "@change",
+                "fontSize": 32
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "width": 12
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1.3
+              },
+              "fillMaxHeight"
+             ],
+             "children": [
+              {
+               "HourChart": {
+                "values": "@hourly",
+                "hour": "timeInHr()",
+                "label": "Revenue by hour today"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "BigNumber": {
+             "caption": "Today's revenue",
+             "value": "@total",
+             "prefix": "$",
+             "change": "@change",
+             "fontSize": 28
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

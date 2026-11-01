@@ -1,0 +1,671 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 350,
+  "profiles": 513,
+  "contentDescription": "How the length of the day changes over the year in Oslo: a curve of daylight hours from January to December with a marker on today, today's day length, how much it changed since yesterday, and the longest and shortest days"
+ },
+ "componentTheme": "auto",
+ "components": {
+  "Duration": {
+   "params": {
+    "minutes": {
+     "type": "float",
+     "required": true,
+     "doc": "A duration in whole minutes"
+    },
+    "fontSize": {
+     "type": "float",
+     "default": 14,
+     "static": true,
+     "doc": "Text size"
+    },
+    "color": {
+     "type": "color",
+     "default": "@colors.onSurface",
+     "doc": "Text colour"
+    }
+   },
+   "body": {
+    "text": {
+     "value": {
+      "type": "textMerge",
+      "id1": {
+       "type": "textFromFloat",
+       "value": "floor(@minutes / 60)",
+       "whole": 2,
+       "decimal": 0,
+       "flags": 5
+      },
+      "id2": {
+       "type": "textMerge",
+       "id1": " h ",
+       "id2": {
+        "type": "textMerge",
+        "id1": {
+         "type": "textFromFloat",
+         "value": "@minutes % 60",
+         "whole": 2,
+         "decimal": 0,
+         "flags": 5
+        },
+        "id2": " min"
+       }
+      }
+     },
+     "fontSize": "@fontSize",
+     "color": "@color",
+     "maxLines": 1
+    }
+   }
+  }
+ },
+ "resources": {
+  "variables": {
+   "latitude": {
+    "value": 59.9139,
+    "export": true
+   },
+   "phi": "@latitude * 0.0174533",
+   "tp": "tan(@phi)",
+   "k2": "-0.014538 / cos(@phi)",
+   "dA": 0.40928,
+   "w": 0.0172024,
+   "u0": "dayOfYear()",
+   "dl": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * (@u0 - 81)))))",
+   "dlY": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * (@u0 - 82)))))",
+   "dlMax": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * 91))))",
+   "dlMin": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * 274))))",
+   "m": "floor(@dl * 60 + 0.5)",
+   "mMax": "floor(@dlMax * 60 + 0.5)",
+   "mMin": "floor(@dlMin * 60 + 0.5)",
+   "diff": "floor((@dl - @dlY) * 60 + 0.5)",
+   "shorter": "step(0 - @diff, 0.5)",
+   "longer": "1 - @shorter"
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "place",
+    "vtype": "string",
+    "value": "Oslo",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 16
+     }
+    ],
+    "children": [
+     {
+      "fitBox": {
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 318
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Icon": {
+                "name": "wb_sunny",
+                "size": 28,
+                "color": "@colors.warning"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "Day length · ",
+                    "id2": "@place"
+                   },
+                   "fontSize": 20,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 },
+                 {
+                  "DateLabel": {
+                   "format": "long",
+                   "fontSize": 13,
+                   "color": "@colors.muted"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "bottom",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Duration": {
+                "minutes": "@m",
+                "fontSize": 28,
+                "color": "@colors.primary"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "today",
+                "fontSize": 14,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "padding": {
+                   "bottom": 4
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textFromFloat",
+                  "value": "abs(@diff)",
+                  "whole": 2,
+                  "decimal": 0,
+                  "flags": 5
+                 },
+                 "id2": " min"
+                },
+                "fontSize": 14,
+                "color": "@colors.onSurface",
+                "maxLines": 1
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 " less",
+                 " more"
+                ],
+                "index": "@longer",
+                "fontSize": 14,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              },
+              {
+               "text": {
+                "value": " than yesterday",
+                "fontSize": 14,
+                "color": "@colors.muted",
+                "maxLines": 1
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "LineChart": {
+             "fn": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * (u - 81)))))",
+             "x_min": 0,
+             "x_max": 365,
+             "y_min": 0,
+             "y_max": 24,
+             "now": "dayOfYear()",
+             "samples": 74,
+             "xLabels": [
+              "J",
+              "F",
+              "M",
+              "A",
+              "M",
+              "J",
+              "J",
+              "A",
+              "S",
+              "O",
+              "N",
+              "D",
+              "J"
+             ],
+             "label": "Hours of daylight in Oslo for every day of the year, January to December, with a marker on today",
+             "height": 130,
+             "yLabels": [
+              "24 h",
+              "18 h",
+              "12 h",
+              "6 h",
+              "0 h"
+             ],
+             "yLabelWidth": 34
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 8
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "spacedBy": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Longest · Jun 21",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "Duration": {
+                   "minutes": "@mMax",
+                   "fontSize": 13,
+                   "color": "@colors.onSurface"
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "spacedBy": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "Shortest · Dec 21",
+                   "fontSize": 11,
+                   "color": "@colors.muted",
+                   "maxLines": 1
+                  }
+                 },
+                 {
+                  "Duration": {
+                   "minutes": "@mMin",
+                   "fontSize": 13,
+                   "color": "@colors.onSurface"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 152
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Icon": {
+                "name": "wb_sunny",
+                "size": 18,
+                "color": "@colors.warning"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 6
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": {
+                 "type": "textMerge",
+                 "id1": "Day length · ",
+                 "id2": "@place"
+                },
+                "fontSize": 14,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "overflow": "ellipsis",
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 2
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "bottom",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Duration": {
+                "minutes": "@m",
+                "fontSize": 20,
+                "color": "@colors.primary"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 6
+                 }
+                ]
+               }
+              },
+              {
+               "text": {
+                "value": "today",
+                "fontSize": 12,
+                "color": "@colors.muted",
+                "maxLines": 1,
+                "modifiers": [
+                 {
+                  "padding": {
+                   "bottom": 2
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "height": 4
+              }
+             ]
+            }
+           },
+           {
+            "LineChart": {
+             "fn": "7.63944 * acos(clamp(-1, 1, @k2 - @tp * tan(@dA * sin(@w * (u - 81)))))",
+             "x_min": 0,
+             "x_max": 365,
+             "y_min": 0,
+             "y_max": 24,
+             "now": "dayOfYear()",
+             "samples": 74,
+             "xLabels": [
+              "J",
+              "F",
+              "M",
+              "A",
+              "M",
+              "J",
+              "J",
+              "A",
+              "S",
+              "O",
+              "N",
+              "D",
+              "J"
+             ],
+             "label": "Hours of daylight in Oslo for every day of the year, January to December, with a marker on today",
+             "height": 84,
+             "yLabels": [
+              "24 h",
+              "12 h",
+              "0 h"
+             ],
+             "yLabelWidth": 34
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": 52
+           }
+          ],
+          "verticalArrangement": "center",
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "Icon": {
+                "name": "wb_sunny",
+                "size": 24,
+                "color": "@colors.warning"
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 10
+                 }
+                ]
+               }
+              },
+              {
+               "column": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 },
+                 {
+                  "spacedBy": 2
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textMerge",
+                    "id1": "Day length · ",
+                    "id2": "@place"
+                   },
+                   "fontSize": 14,
+                   "color": "@colors.muted",
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 },
+                 {
+                  "row": {
+                   "verticalAlignment": "bottom",
+                   "children": [
+                    {
+                     "Duration": {
+                      "minutes": "@m",
+                      "fontSize": 20,
+                      "color": "@colors.primary"
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       {
+                        "width": 6
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "text": {
+                      "value": "today",
+                      "fontSize": 12,
+                      "color": "@colors.muted",
+                      "maxLines": 1,
+                      "modifiers": [
+                       {
+                        "padding": {
+                         "bottom": 2
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

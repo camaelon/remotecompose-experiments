@@ -1,0 +1,436 @@
+{
+ "component": "RankedList",
+ "version": 1,
+ "summary": "A leaderboard of a few rows (top products, longest runs, busiest stations): each row a rank badge, a name, its value with a unit at the end and a share bar of value / the largest value, read by a screen reader as one item per row: \"Number 1, Espresso beans, 412 units\".",
+ "params": {
+  "names": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One name per row in rank order, e.g. [\"Espresso beans\", \"Oat milk\", \"Croissants\"]; fixed when the document is built (3 to 10 rows). An entry may be \"@name\" of a root-level string variable the host sets"
+  },
+  "values": {
+   "type": "float",
+   "required": true,
+   "doc": "A float array, \"@name\" of resources.floatArrays (export it so the host can update it), one value per name in the same order, highest first: the bars are each value over the largest"
+  },
+  "unit": {
+   "type": "string",
+   "default": "",
+   "doc": "After every value, as written: \" units\", \" km\", \" €\" (spoken too)"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "Digits after the point in the values"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The bars and the first rank's disc"
+  },
+  "showBars": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false drops the share bars: a compact 32 dp list"
+  }
+ },
+ "locals": {
+  "mx": "max(arrayMax(@values), 0.0001)",
+  "h": {
+   "$if": "showBars",
+   "then": 48,
+   "else": 32
+  },
+  "ty": {
+   "$if": "showBars",
+   "then": 17,
+   "else": 16
+  }
+ },
+ "capabilities": [
+  "data.array",
+  "text.dynamic",
+  "a11y.labels",
+  "draw.shapes",
+  "draw.clip"
+ ],
+ "call": {
+  "RankedList": {
+   "names": [
+    "Espresso beans",
+    "Oat milk",
+    "Croissants"
+   ],
+   "values": "@sales",
+   "unit": " units"
+  }
+ },
+ "pitfalls": [
+  "One canvas per row, with its own semantics (\"Number N, name, value unit\" from textMerge): the rank, the name and the value are drawn, not layout texts, so a screen reader stops once per row instead of three times. The JSON semantics has no merge mode",
+  "names is a JSON list written into the document ($each); values is the name of a float array (\"@sales\" in resources.floatArrays), read with arrayGet(values, i): a host can change the numbers (and the names, through string variables) but not the number of rows. Give one value per name, sorted, highest first: the list does not sort",
+  "The bar is (width − 36) × value / max(arrayMax(values), 0.0001), at least 6 dp so a tiny share still shows; the track is the full width (mono: a 1 dp outline instead of a track fill)",
+  "A long name shrinks to 80 % to fit before the value and is then clipped (drawn text has no ellipsis); the value never shrinks. Numbers are grouped by thousands (textFromFloat flags 23)",
+  "The rank is textFromFloat(i + 1), a constant per row; rank 1 is a filled disc in `color`, the others a ring, so the leader stands out in mono too",
+  "It fills its parent's width, 48 dp per row (32 without bars): in a row, give it a weighted box",
+  "Each row measures its own name and value (per-row names nw_@i, vw_@i...): a long name shrinks only its own row"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "$each": "names",
+     "as": "nm",
+     "index": "i",
+     "do": {
+      "canvas": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "height": "@h"
+        },
+        {
+         "semantics": {
+          "contentDescription": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "Number ",
+             "id2": {
+              "type": "textFromFloat",
+              "value": "@i + 1",
+              "whole": 2,
+              "decimal": 0,
+              "flags": 5
+             }
+            },
+            "id2": {
+             "type": "textMerge",
+             "id1": ", ",
+             "id2": "@nm"
+            }
+           },
+           "id2": {
+            "type": "textMerge",
+            "id1": ", ",
+            "id2": {
+             "$if": "unit",
+             "then": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textFromFloat",
+               "value": "arrayGet(@values, @i)",
+               "whole": 9,
+               "decimal": "@decimals",
+               "flags": 23
+              },
+              "id2": "@unit"
+             },
+             "else": {
+              "type": "textFromFloat",
+              "value": "arrayGet(@values, @i)",
+              "whole": 9,
+              "decimal": "@decimals",
+              "flags": 23
+             }
+            }
+           }
+          }
+         }
+        }
+       ],
+       "commands": [
+        {
+         "$if": "i == '0'",
+         "then": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@color"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 12,
+            "cy": "@h / 2",
+            "radius": 12
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onPrimary"
+             },
+             {
+              "textSize": "@theme.text_sm"
+             }
+            ]
+           }
+          }
+         ],
+         "else": [
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.muted"
+             },
+             {
+              "style": "stroke"
+             },
+             {
+              "strokeWidth": {
+               "$if": "theme.mono",
+               "then": 1.5,
+               "else": 2
+              }
+             },
+             {
+              "alpha": 1
+             }
+            ]
+           }
+          },
+          {
+           "drawCircle": {
+            "cx": 12,
+            "cy": "@h / 2",
+            "radius": 11
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@colors.onSurface"
+             },
+             {
+              "style": "fill"
+             },
+             {
+              "textSize": "@theme.text_sm"
+             }
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@i + 1",
+           "whole": 2,
+           "decimal": 0,
+           "flags": 5
+          },
+          "x": 12,
+          "y": "@h / 2",
+          "panX": 0,
+          "panY": 0
+         }
+        },
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onSurface"
+           },
+           {
+            "textSize": "@theme.text_md"
+           }
+          ]
+         }
+        },
+        {
+         "textMeasure": {
+          "text": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "arrayGet(@values, @i)",
+             "whole": 9,
+             "decimal": "@decimals",
+             "flags": 23
+            },
+            "id2": "@unit"
+           },
+           "else": {
+            "type": "textFromFloat",
+            "value": "arrayGet(@values, @i)",
+            "whole": 9,
+            "decimal": "@decimals",
+            "flags": 23
+           }
+          },
+          "mode": 0,
+          "name": "vw_@i"
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textFromFloat",
+             "value": "arrayGet(@values, @i)",
+             "whole": 9,
+             "decimal": "@decimals",
+             "flags": 23
+            },
+            "id2": "@unit"
+           },
+           "else": {
+            "type": "textFromFloat",
+            "value": "arrayGet(@values, @i)",
+            "whole": 9,
+            "decimal": "@decimals",
+            "flags": 23
+           }
+          },
+          "x": "componentWidth()",
+          "y": "@ty",
+          "panX": 1,
+          "panY": 0
+         }
+        },
+        {
+         "textMeasure": {
+          "text": "@nm",
+          "mode": 0,
+          "name": "nw_@i"
+         }
+        },
+        {
+         "variable": {
+          "name": "room_@i",
+          "value": "max(1, componentWidth() - 36 - @vw_@i - 12)"
+         }
+        },
+        {
+         "variable": {
+          "name": "ns_@i",
+          "value": "clamp(0.8, 1, @room_@i / @nw_@i)"
+         }
+        },
+        {
+         "save": [
+          {
+           "clipRect": {
+            "left": "36",
+            "top": 0,
+            "right": "36 + @room_@i",
+            "bottom": "@h"
+           }
+          },
+          {
+           "scale": {
+            "sx": "@ns_@i",
+            "sy": "@ns_@i",
+            "pivotX": "36",
+            "pivotY": "@ty"
+           }
+          },
+          {
+           "drawTextAnchored": {
+            "text": "@nm",
+            "x": "36",
+            "y": "@ty",
+            "panX": -1,
+            "panY": 0
+           }
+          }
+         ]
+        },
+        {
+         "$if": "showBars",
+         "then": [
+          {
+           "paint": {
+            "ops": {
+             "$if": "theme.mono",
+             "then": [
+              {
+               "color": "@colors.outline"
+              },
+              {
+               "style": "stroke"
+              },
+              {
+               "strokeWidth": 1
+              }
+             ],
+             "else": [
+              {
+               "color": "@colors.track"
+              },
+              {
+               "style": "fill"
+              }
+             ]
+            }
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "36",
+            "top": 35,
+            "right": "componentWidth()",
+            "bottom": 41,
+            "rx": 3,
+            "ry": 3
+           }
+          },
+          {
+           "paint": {
+            "ops": [
+             {
+              "color": "@color"
+             },
+             {
+              "style": "fill"
+             }
+            ]
+           }
+          },
+          {
+           "drawRoundRect": {
+            "left": "36",
+            "top": 35,
+            "right": "36 + max(6, (componentWidth() - 36) * arrayGet(@values, @i) / @mx)",
+            "bottom": 41,
+            "rx": 3,
+            "ry": 3
+           }
+          }
+         ]
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

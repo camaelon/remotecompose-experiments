@@ -61,7 +61,7 @@ export class LayoutComponent extends Component {
     protected mComponentModifiers: Operation[] = [];
 
     // Content operations (paint ops from LayoutComponentContent/CanvasContent)
-    private mContentOps: Operation[] = [];
+    protected mContentOps: Operation[] = [];
 
     // Has CanvasLayout-style content
     mHasCanvasLayoutContent = false;
@@ -199,6 +199,9 @@ export class LayoutComponent extends Component {
                 // Content container — extract its children.
                 // IMPORTANT: this check must come BEFORE `instanceof Component`
                 // because LCC and CC extend Component.
+                // A LayoutComponentContent id is what componentWidth() in a child's modifier
+                // names: ComponentValue resolves it to this component's box (as C++ and Java).
+                if (op instanceof LayoutComponentContent) op.setParent(this);
                 for (const contentOp of (op as any).getList()) {
                     if (contentOp instanceof Component) {
                         contentOp.setParent(this);

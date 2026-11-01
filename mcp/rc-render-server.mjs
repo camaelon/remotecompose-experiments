@@ -153,7 +153,9 @@ const RENDER_PROPS = {
     clock: {
         description:
             "Pin the clock. A string \"HH:MM[:SS]\" (today, local), \"YYYY-MM-DD\", " +
-            "\"YYYY-MM-DDTHH:MM[:SS]\", or a number of epoch milliseconds.",
+            "\"YYYY-MM-DDTHH:MM[:SS]\", or a number of epoch milliseconds. A date-time string is the SERVER's local time " +
+            "and offsetToUtc() is the server's offset: to render as a device elsewhere, give the instant (epoch ms) and pin the " +
+            "device's offset with system_variables {\"10\": seconds east of UTC} (Lyon in October: 3600; in July: 7200).",
         anyOf: [{ type: "string" }, { type: "number" }],
     },
     animation_time: {
@@ -332,7 +334,8 @@ export const definition = {
             // 10:29:59 and the minute changed on its last frames, leaving a visibility's enter/exit
             // half-played (a departure board showed "0 min" instead of "now"). The second shown is
             // the pinned one.
-            if (a.variables && Object.keys(a.variables).length && a.duration === undefined && !a.touch_events?.length) {
+            // (An explicit animation_time is a time of the caller's own: no settle.)
+            if (a.variables && Object.keys(a.variables).length && a.duration === undefined && a.animation_time === undefined && !a.touch_events?.length) {
                 // (Layout animations off: a visibility switched by the new values otherwise plays
                 // an enter/exit that this player does not finish within the run — U64.)
                 a = { ...a, duration: 0.999, no_layout_anim: true };

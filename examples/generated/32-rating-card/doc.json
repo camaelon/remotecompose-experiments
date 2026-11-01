@@ -1,0 +1,495 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 160,
+  "profiles": 513,
+  "contentDescription": "Rating card"
+ },
+ "resources": {
+  "variables": {
+   "rating": {
+    "value": 0,
+    "export": true
+   },
+   "canSubmit": "step(@rating, 0.5)",
+   "regular": "step(windowHeight(), 140)",
+   "compact": "1 - step(windowHeight(), 140)",
+   "starBox": "min(48, (windowWidth() - 120) / 5)"
+  }
+ },
+ "components": {
+  "RateStar": {
+   "params": {
+    "value": {
+     "type": "variable",
+     "initial": 0,
+     "doc": "current rating"
+    },
+    "n": {
+     "type": "float",
+     "default": 1,
+     "static": true,
+     "doc": "this star's rating, 1-based"
+    },
+    "box": {
+     "type": "float",
+     "default": 44,
+     "doc": "touch box side in dp (variable allowed)"
+    },
+    "label": {
+     "type": "string",
+     "default": "1 star"
+    },
+    "onClick": {
+     "type": "action"
+    }
+   },
+   "call": {
+    "RateStar": {
+     "value": "@rating",
+     "n": 1,
+     "label": "1 star"
+    }
+   },
+   "body": {
+    "box": {
+     "horizontalAlignment": "center",
+     "verticalAlignment": "center",
+     "modifiers": [
+      {
+       "width": "@box"
+      },
+      {
+       "height": "@box"
+      },
+      {
+       "clip": 24
+      },
+      "ripple",
+      {
+       "semantics": {
+        "clickable": true,
+        "contentDescription": "@label"
+       }
+      },
+      {
+       "onClick": [
+        {
+         "type": "valueFloatChange",
+         "target": "@value",
+         "value": "@n"
+        },
+        {
+         "$if": "onClick",
+         "then": "@onClick"
+        }
+       ]
+      }
+     ],
+     "children": [
+      {
+       "canvas": {
+        "modifiers": [
+         {
+          "width": "@box * 0.8"
+         },
+         {
+          "height": "@box * 0.8"
+         }
+        ],
+        "commands": [
+         {
+          "save": [
+           {
+            "scale": {
+             "sx": "componentWidth() / 960",
+             "sy": "componentHeight() / 960"
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.outline",
+                "else": "@colors.muted"
+               }
+              },
+              {
+               "style": "fill"
+              },
+              {
+               "alpha": 1
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": {
+              "$icon": {
+               "name": "star"
+              }
+             }
+            }
+           },
+           {
+            "paint": {
+             "ops": [
+              {
+               "color": {
+                "$if": "theme.mono",
+                "then": "@colors.onSurface",
+                "else": "@colors.highlight"
+               }
+              },
+              {
+               "alpha": "step(@value - @n + 1, 0.75)"
+              }
+             ]
+            }
+           },
+           {
+            "drawPath": {
+             "path": {
+              "$icon": {
+               "name": "star",
+               "filled": true
+              }
+             }
+            }
+           }
+          ]
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": [
+  {
+   "variable": {
+    "name": "question",
+    "vtype": "string",
+    "value": "How was your delivery?",
+    "export": true
+   }
+  },
+  {
+   "box": {
+    "modifiers": [
+     "fillMaxSize",
+     {
+      "background": "@colors.background"
+     },
+     {
+      "padding": 4
+     }
+    ],
+    "horizontalAlignment": "center",
+    "verticalAlignment": "center",
+    "children": [
+     {
+      "box": {
+       "modifiers": [
+        "fillMaxWidth",
+        {
+         "clip": 16
+        },
+        {
+         "background": "@colors.surface"
+        },
+        {
+         "padding": 12
+        }
+       ],
+       "children": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "spacedBy": 2
+           }
+          ],
+          "children": [
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "text": {
+                   "value": "@question",
+                   "fontSize": 15,
+                   "fontWeight": 500,
+                   "color": "@colors.onSurface",
+                   "maxLines": 1,
+                   "overflow": "ellipsis",
+                   "modifiers": [
+                    {
+                     "visibility": "@compact"
+                    }
+                   ]
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": "@question",
+                   "fontSize": 17,
+                   "fontWeight": 500,
+                   "color": "@colors.onSurface",
+                   "maxLines": 2,
+                   "overflow": "ellipsis",
+                   "modifiers": [
+                    {
+                     "visibility": "@regular"
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "width": 8
+                 },
+                 {
+                  "visibility": "@compact"
+                 }
+                ]
+               }
+              },
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "visibility": "@compact"
+                 }
+                ],
+                "children": [
+                 {
+                  "TextChoice": {
+                   "items": [
+                    "Tap a star",
+                    "Poor",
+                    "Fair",
+                    "Good",
+                    "Very good",
+                    "Excellent"
+                   ],
+                   "index": "@rating",
+                   "fontSize": 15,
+                   "fontWeight": 600,
+                   "maxLines": 1,
+                   "overflow": "ellipsis"
+                  }
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "row": {
+             "verticalAlignment": "center",
+             "modifiers": [
+              "fillMaxWidth"
+             ],
+             "children": [
+              {
+               "box": {
+                "modifiers": [
+                 {
+                  "weight": 1
+                 }
+                ],
+                "children": [
+                 {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "modifiers": [
+                    {
+                     "semantics": {
+                      "contentDescription": {
+                       "type": "textMerge",
+                       "id1": "Rating, ",
+                       "id2": {
+                        "type": "textMerge",
+                        "id1": {
+                         "type": "textFromFloat",
+                         "value": "@rating",
+                         "whole": 1,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "id2": " of 5 stars"
+                       }
+                      }
+                     }
+                    }
+                   ],
+                   "children": [
+                    {
+                     "RateStar": {
+                      "value": "@rating",
+                      "n": 1,
+                      "label": "1 star",
+                      "box": "@starBox",
+                      "onClick": [
+                       {
+                        "type": "hostNamedAction",
+                        "name": "rate1",
+                        "value": "@rating",
+                        "valueType": "float"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "RateStar": {
+                      "value": "@rating",
+                      "n": 2,
+                      "label": "2 stars",
+                      "box": "@starBox",
+                      "onClick": [
+                       {
+                        "type": "hostNamedAction",
+                        "name": "rate2",
+                        "value": "@rating",
+                        "valueType": "float"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "RateStar": {
+                      "value": "@rating",
+                      "n": 3,
+                      "label": "3 stars",
+                      "box": "@starBox",
+                      "onClick": [
+                       {
+                        "type": "hostNamedAction",
+                        "name": "rate3",
+                        "value": "@rating",
+                        "valueType": "float"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "RateStar": {
+                      "value": "@rating",
+                      "n": 4,
+                      "label": "4 stars",
+                      "box": "@starBox",
+                      "onClick": [
+                       {
+                        "type": "hostNamedAction",
+                        "name": "rate4",
+                        "value": "@rating",
+                        "valueType": "float"
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "RateStar": {
+                      "value": "@rating",
+                      "n": 5,
+                      "label": "5 stars",
+                      "box": "@starBox",
+                      "onClick": [
+                       {
+                        "type": "hostNamedAction",
+                        "name": "rate5",
+                        "value": "@rating",
+                        "valueType": "float"
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                ]
+               }
+              },
+              {
+               "Button": {
+                "label": "Submit",
+                "enabled": "@canSubmit",
+                "surface": "@colors.surface",
+                "onClick": {
+                 "type": "hostNamedAction",
+                 "name": "submitRating",
+                 "value": "@rating",
+                 "valueType": "float"
+                }
+               }
+              }
+             ]
+            }
+           },
+           {
+            "box": {
+             "modifiers": [
+              {
+               "visibility": "@regular"
+              },
+              {
+               "padding": 4
+              }
+             ],
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "Tap a star",
+                 "Poor",
+                 "Fair",
+                 "Good",
+                 "Very good",
+                 "Excellent"
+                ],
+                "index": "@rating",
+                "fontSize": 18,
+                "fontWeight": 600,
+                "maxLines": 1,
+                "overflow": "ellipsis"
+               }
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ ]
+}
