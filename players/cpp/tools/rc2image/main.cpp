@@ -857,6 +857,7 @@ static int run(int argc, char* argv[]) {
                 }
             }
             rccore::resetTextOverflowCounts();
+            canvas->clear(bg);   // a frame replaces the last one: no ghosts where nothing paints a background
             doc.paint(context, theme);
         }
     } else if (sweep > 1 && animTimeSec >= 0.0f) {
@@ -872,11 +873,13 @@ static int run(int argc, char* argv[]) {
                 nextClick++;
             }
             rccore::resetTextOverflowCounts();
+            canvas->clear(bg);   // a frame replaces the last one: no ghosts where nothing paints a background
             doc.paint(context, theme);
         }
     } else {
         for (int i = 0; i < frames; i++) {
             rccore::resetTextOverflowCounts();
+            canvas->clear(bg);   // a frame replaces the last one: no ghosts where nothing paints a background
             doc.paint(context, theme);
         }
     }
