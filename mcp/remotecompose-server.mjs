@@ -24,8 +24,9 @@ import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { outputFile, displayPath, resolvePath, workspaceRoot } from "./lib/workspace.mjs";
 import { compileComponents } from "./lib/json2rc.mjs";
 import { loadLibrary } from "./lib/components.mjs";
+import { NO_MENU, structureLines } from "./lib/structures.mjs";
 import { loadCatalog, exampleDoc } from "./lib/catalog.mjs";
-import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, tapEvents, dragEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
+import { changedCells, fitsSize, imageHash, loadPlan, planPathOf, savePlan, splitSample, layoutFaults, visibleLeaves, tapEvents, dragEvents, tapSettle, setVariables, compareExpected, findTapTarget, summarizeInspection, targetWords } from "./lib/checks.mjs";
 import { RC2IMAGE, runRc2image } from "./lib/rc2image.mjs";
 import { enginesTool } from "./lib/engines.mjs";
 import os from "node:os";
@@ -486,15 +487,16 @@ async function inspectJson(name, args) {
 /** Where the document is, for the inspect tools. */
 const docSource = (args) => (args.json !== undefined ? { json: args.json } : args.json_path ? { json_path: args.json_path } : { rc_path: args.rc_path });
 /** The tap targets at a size and the words on them. */
-async function targetsAt(src, width, height, variables) {
-    const size = { ...src, ...(width ? { width, height } : {}), ...(variables && Object.keys(variables).length ? { variables } : {}) };
+async function targetsAt(src, width, height, variables, clock) {
+    const size = { ...src, ...(width ? { width, height } : {}), ...(variables && Object.keys(variables).length ? { variables } : {}), ...(clock !== undefined ? { clock } : {}) };
     const [{ targets = [] }, { nodes = [] }] = await Promise.all([inspectJson("list_interactions", size), inspectJson("inspect_accessibility", size)]);
-    return { targets: targets.filter((t) => t.center && t.dispatchable !== false), nodes };
+    // (A disabled button is still a target for the caller to know about; a tap on it does nothing.)
+    return { targets: targets.filter((t) => t.center), nodes };
 }
 /** Taps as positions: the words of a tappable thing become its centre at this size. */
-async function resolveTaps(src, width, height, variables, taps) {
+async function resolveTaps(src, width, height, variables, taps, clock) {
     if (!taps.some((t) => typeof t === "string")) return taps;
-    const { targets, nodes } = await targetsAt(src, width, height, variables);
+    const { targets, nodes } = await targetsAt(src, width, height, variables, clock);
     return taps.map((t) => {
         if (typeof t !== "string") return t;
         const hit = findTapTarget(t, targets, nodes);
@@ -514,6 +516,9 @@ async function checkExpect(src, width, height, variables, clock, points, wait, e
     }
     const results = compareExpected(expect, actual);
     const bad = results.filter((x) => !x.ok);
+    // A tap that reached nothing proves nothing, even when the value happens to match.
+    const missed = (r?.steps ?? []).filter((x) => x.tap && x.handled === false);
+    if (missed.length) return [`warning: [expect_tap_missed] the tap at ${missed.map((x) => x.tap.join(",")).join("; ")} reached nothing, so $expect shows nothing${bad.length ? `; ${bad.map((x) => `${x.name} is ${JSON.stringify(x.actual ?? null)}, expected ${JSON.stringify(x.expected)}`).join("; ")}` : ""}`];
     return bad.length ? bad.map((x) => `warning: [expect_failed] ${x.name} is ${JSON.stringify(x.actual ?? null)}, expected ${JSON.stringify(x.expected)}`)
         : [`ok: ${results.map((x) => `${x.name} = ${JSON.stringify(x.expected)}`).join(", ")}`];
 }
@@ -536,7 +541,7 @@ async function renderSamples(t, args, samples) {
         const a = { ...args, ...(Array.isArray($size) ? { width: $size[0], height: $size[1] } : {}), variables: { ...(args.variables ?? {}), ...values }, ...($clock !== undefined ? { clock: $clock } : {}) };
         if (stem) a.output_path = `${stem}-sample${i}.png`;
         try {
-            const points = await resolveTaps(docSource(args), a.width, a.height, a.variables, taps);
+            const points = await resolveTaps(docSource(args), a.width, a.height, a.variables, taps, a.clock);
             if (points.length || drag) { a.touch_events = [...tapEvents(points), ...(drag ? dragEvents(drag, 0.1 + points.length * 0.7) : [])]; a.duration = tapSettle(points, wait) + (drag ? 0.4 : 0); }
             const r = await t.handler(a);
             if (expect) content.push({ type: "text", text: (await checkExpect(docSource(args), a.width, a.height, a.variables, $clock, points, wait, expect, drag)).join("\n") });
@@ -725,7 +730,7 @@ async function renderMatrix(t, args, looks, sizes, samples, everyLook = false, s
         const label = [`${c.w}×${c.h}`, c.look, ...Object.entries(c.vars ?? {}).filter(([k]) => !["$size", "$expect"].includes(k)).map(([k, v]) => `${k.replace(/^\$/, "")}=${short(v)}`)].join(" ");
         try {
             const src = args.json !== undefined ? { json: args.json } : json_path ? { json_path } : { rc_path };
-            const points = await resolveTaps(src, c.w, c.h, a.variables, taps);
+            const points = await resolveTaps(src, c.w, c.h, a.variables, taps, a.clock);
             if (points.length || drag) { a.touch_events = [...tapEvents(points), ...(drag ? dragEvents(drag, 0.1 + points.length * 0.7) : [])]; a.duration = tapSettle(points, wait) + (drag ? 0.4 : 0); }
             const r = await t.handler(a);
             const lines = r.filter((x) => x.type === "text" && /^(error|warning|info): /m.test(x.text))
@@ -816,7 +821,7 @@ async function toSheet(content, args) {
 }
 
 /** What the inspector says about the document, once: unchanged notes are not repeated. */
-async function inspectionNotes(kept, sizes) {
+async function inspectionNotes(kept, sizes, faultLines = []) {
     try {
         const src = { json_path: kept };
         const [first] = sizes;
@@ -834,6 +839,15 @@ async function inspectionNotes(kept, sizes) {
         }
         const repaint = (await inspectJson("inspect_runtime", { ...src, ...at })).repaint?.verdict;
         const lines = summarizeInspection({ nodes, targetsBySize, engines, repaint });
+        // What otherwise only looking at the pictures shows.
+        const perSize = [];
+        for (const s of targetsBySize) {
+            const l = await inspectJson("inspect_layout", { ...src, width: s.size[0], height: s.size[1], format: "json" });
+            perSize.push({ size: s.size, leaves: visibleLeaves(l.tree ?? []), targets: s.targets });
+        }
+        const faults = layoutFaults(perSize);
+        if (faults.dropped.length) lines.push(`dropped compared with the largest size (intended?): ${faults.dropped.join("; ")}`);
+        faultLines.push(...faults.warnings);
         const planFile = resolveIn(planPathOf(kept));
         const plan = loadPlan(planFile) ?? {};
         const said = plan.said ?? [];
@@ -849,14 +863,14 @@ async function finishNote(kept) {
     const line = rendered.find((c) => c.type === "text" && c.text.startsWith("contact sheet:"))?.text ?? "";
     const files = (/→ (.+)$/.exec(line)?.[1] ?? "").split(", ").filter(Boolean);
     const links = workspaceRoot() && process.env.MCP_PUBLIC_URL ? files.map((f) => { try { return publishImage(resolveIn(f)); } catch { return null; } }).filter(Boolean) : [];
-    return [{ type: "text", text: `READY: every size, look and sample in the check passes with no warnings. If you have looked at the pictures and nothing needs changing, you are done. Full contact sheet: ${files.join(", ")}${links.length ? ` (${links.join(", ")})` : ""}.` }];
+    return [{ type: "text", text: `NO FAULTS FOUND at any size, look or sample. That is not proof: look at the pictures too. If nothing needs changing you are done. Full contact sheet: ${files.join(", ")}${links.length ? ` (${links.join(", ")})` : ""}.` }];
 }
 
 const tools = [
     {
         ...tool(examples, "build_kit"),
         description: "START HERE for a new document. Pass the user's request as they wrote it (not a rewritten or " +
-            "embellished version: extra adjectives only add noise). " + tool(examples, "build_kit").description,
+            "embellished version: extra adjectives only add noise)" + (NO_MENU ? ". " : `, and pass as structure the screen structure you judge it needs, chosen before this first call: one id (a list only if the screen really combines them, main one first; \"none\" if none fits). These are starting points, not the only options. ${structureLines()}. `) + tool(examples, "build_kit").description,
     },
     dispatcher({
         name: "find", title: "Search examples, components, icons, capabilities", selector: "kind", fallback: "examples", annotations: RO,
@@ -934,7 +948,7 @@ const tools = [
                 expanded: { type: "boolean", description: "Return the expanded JSON instead of converting." },
                 edits: { type: "array", items: { type: "object", properties: { old: { type: "string" }, new: { type: "string" }, all: { type: "boolean" } }, required: ["old", "new"] },
                     description: "With json_path: change the stored document instead of sending it all again, then convert it. Each {\"old\": text, \"new\": text}; old must occur once (or \"all\": true). The file is updated in place. All or nothing: on any failure nothing changes." },
-                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict, for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves. When nothing is wrong it says READY and writes the full contact sheet. Prefer this to separate render, audit and inspect calls." },
+                looks: { type: "array", items: { type: "string", enum: ["light", "dark", "mono-dark", "mono-light"] }, description: "Convert and check in ONE call: also returns the contact sheets, render findings, audit warnings, what a screen reader announces, the tap targets, whether the players agree and the repaint verdict, for these looks, with sizes, samples and every_look as in render. Remembered: later edits of this document repeat the check by themselves. When nothing is wrong it says NO FAULTS FOUND and writes the full contact sheet. Prefer this to separate render, audit and inspect calls." },
                 sizes: { type: "array", items: { type: "array", items: { type: "number" } }, description: "With looks: the [width, height] sizes to check." },
                 samples: { type: "array", items: { type: "object" }, description: "With looks: data cases and taps, as in render: host values, \"$tap\", \"$wait\", \"$expect\", \"$clock\", and \"$size\": [w, h] to run a case at one size only (a tap on something only that size shows)." },
                 clocks: { type: "array", items: { anyOf: [{ type: "string" }, { type: "number" }] }, description: "With looks: pinned clocks, each one a data case; with samples, each sample at each clock." },
@@ -1011,10 +1025,12 @@ const tools = [
                     } catch (e) { findings.set("audit_failed", { severity: "warning", code: "audit_failed", title: errorLine(e) }); }
                 }
                 const audit = findings.size ? `audit:\n${[...findings.values()].map((f) => `${f.severity}: [${f.code}] ${f.title}`).join("\n")}` : "audit: no errors or warnings.";
-                const inspected = await inspectionNotes(kept, auditSizes);
+                const faultLines = [];
+                const inspected = await inspectionNotes(kept, auditSizes, faultLines);
+                if (faultLines.length) inspected.push({ type: "text", text: faultLines.join("\n") });
                 // Finished? Then the deliverable is ready too, with no further call.
                 const summary = shown.find((c) => c.type === "text" && c.text.startsWith("Checked "))?.text ?? "";
-                const clean = /, 0 warning\(s\)/.test(summary) && !findings.size;
+                const clean = /, 0 warning\(s\)/.test(summary) && !findings.size && !faultLines.length;
                 const finish = clean ? await finishNote(kept) : [];
                 // (The design warnings are already in json2rc's result.)
                 return [...out, ...hint, ...shown.filter((c) => !(c.type === "text" && c.text.startsWith("Design warnings"))), { type: "text", text: audit }, ...inspected, ...finish];
@@ -1064,6 +1080,8 @@ const tools = [
                 if (Array.isArray(looks) && looks.length) {
                     const { componentTheme: _c, variants: _v, clocks, samples: given, sizes, every_look, ...args } = all;
                     // Clocks are data cases too: each sample at each clock, or each clock alone.
+                    // (The plain looks show the first clock, not whatever time it is now.)
+                    if (Array.isArray(clocks) && clocks.length && args.clock === undefined) args.clock = clocks[0];
                     const samples = Array.isArray(clocks) && clocks.length
                         ? (given?.length ? given : [{}]).flatMap((smp) => smp && "$clock" in smp ? [smp] : clocks.map((c) => ({ ...(smp ?? {}), $clock: c })))
                         : given;

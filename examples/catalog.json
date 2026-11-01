@@ -1,7 +1,7 @@
 {
  "version": 1,
  "vocabulary": "docs/examples-vocabulary.json",
- "built_at": "2026-11-01T21:01:15.048Z",
+ "built_at": "2026-11-01T22:51:46.479Z",
  "examples": [
   {
    "id": "A11Y-01",
@@ -10673,8 +10673,8 @@
    ],
    "folder": "CMP-16-step-explainer",
    "derived": {
-    "bytes": 16744,
-    "op_count": 719,
+    "bytes": 16528,
+    "op_count": 696,
     "header": {
      "width": 360,
      "height": 480
@@ -10756,7 +10756,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 14593,
+      "bytes": 14377,
       "host_variables": [
        {
         "name": "background",
@@ -10818,7 +10818,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 14593,
+      "bytes": 14377,
       "host_variables": [
        {
         "name": "background",
@@ -43601,7 +43601,7 @@
     "The outlined ring is two stacked backgrounds, not a border: `border` cannot take a theme colour (json2rc and the Java parser write the @colors id as a literal, transparent, colour). So the inside is painted with `surface`: set it to whatever the button sits on (@colors.surface in a Card), or the ring shows a background-coloured fill",
     "The height is fixed: a 40 dp pill (control_height) with 4 dp (space_1) of transparent padding above and below, so the button is 48 dp tall and all of it is clickable; the clip and ripple stay on the pill. Leave no extra vertical space between stacked buttons or rows of buttons (the padding is 8 dp of the gap). The width wraps the label, so give a row of buttons room or they overflow; a label under about 16 dp (one or two letters) leaves the target under 48 dp wide",
     "The label is one line with an ellipsis (maxLines 1): in a slot narrower than the label it ends in … instead of wrapping and being clipped by the pill",
-    "A runtime enabled (\"@var\" or an expression) writes the button twice, a disabled face and an enabled one, each shown by a visibility variable (enabled and 1 - enabled, computed from resources): only the enabled face has the click, ripple and onClick, so at 0 a tap runs nothing and sends no host action. It costs about 490 B more per call than a literal (plus the icon slot, written twice), so use a literal true/false when the state is fixed. The value must be exactly 0 or 1 and must read only resources variables (a host variable, an exported one), not a tree variable",
+    "A runtime enabled (\"@var\" or an expression) writes the button twice, a disabled face and an enabled one, each shown by a visibility variable (enabled and 1 - enabled, computed from resources): only the enabled face has the click, ripple and onClick, so at 0 a tap runs nothing and sends no host action. It costs about 490 B more per call than a literal (plus the icon slot, written twice), so use a literal true/false when the state is fixed. The value must be exactly 0 or 1 and must read only resources variables (a host variable, an exported one), not a tree variable. A disabled face has no click to merge its text, so its label is on the text alone, marked disabled: one item for a screen reader, in both states. Its focus box is the text, not the pill",
     "fill: true spans the width the parent gives (fillMaxWidth) with the label centred; in a row give it a weight instead or it takes the whole row"
    ],
    "folder": "components/Button",
@@ -47402,15 +47402,15 @@
     "The icon is the caller's: draw it in a colour that reads on the face (onPrimary on a filled button, which is black in mono and white otherwise; onSurface or the button colour on the others)",
     "The face is `size` dp (40) round and the touch target at least 48 dp: below 48 the face sits in transparent padding of (48 - size) / 2 (4 dp at 40) that is part of the click, so neighbours can sit with no spacedBy and still show a gap of 8 dp",
     "The outlined ring is two stacked backgrounds, not a border (border can't take a theme colour): set surface to whatever the button sits on, or the inside shows the background colour",
-    "In mono a disabled filled button becomes a grey ring (a grey disc would hide its grey icon); every other face keeps its shape",
+    "In mono a disabled filled button is a grey disc with the icon undimmed: the onPrimary icon reads on it (black on grey, white on dark grey). A ring would show an onPrimary icon on the surface colour, where it vanishes. Every other face keeps its shape. So a filled button's icon must be onPrimary even when disabled: an icon drawn in onDisabled is grey on the grey disc in mono",
     "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face",
-    "A runtime enabled (\"@var\" or an expression, exactly 0 or 1, reading resources variables only) writes the button twice, a disabled face and an enabled one switched by visibility; only the enabled face has the onClick, so at 0 a tap does nothing. The icon slot is written in both faces, so it roughly doubles the call: a literal true/false is cheaper when the state is fixed",
+    "A runtime enabled (\"@var\" or an expression, exactly 0 or 1, reading resources variables only) stacks a disabled face, an enabled face and the icon: the faces are switched by visibility and only the enabled one has the onClick, so at 0 a tap does nothing. The icon slot is written once, above the faces, dimmed by the state, so it costs about 250 B more than a literal, not a second icon. The icon is therefore outside the click: label the button, not the icon, or a screen reader reads the icon's label as a second item",
     "`size` scales the icon slot with a graphicsLayer (size / 40, about the centre, at paint time): draw the icon at 24 dp as for a 40 dp button. Its layout size stays 24 dp, so a size under 24 is not a good idea. At 48 or more the button writes a padding of 0"
    ],
    "folder": "components/IconButton",
    "derived": {
-    "bytes": 2813,
-    "op_count": 190,
+    "bytes": 2679,
+    "op_count": 180,
     "header": {
      "width": 300,
      "height": 132
@@ -47428,11 +47428,6 @@
      },
      {
       "name": "muted",
-      "type": "color",
-      "value": "#FF8A94A6"
-     },
-     {
-      "name": "onDisabled",
       "type": "color",
       "value": "#FF8A94A6"
      },
@@ -47468,7 +47463,7 @@
      "mono-dark": {
       "render": "render-mono-dark.png",
       "componentTheme": "mono-dark",
-      "bytes": 2212,
+      "bytes": 2030,
       "host_variables": [
        {
         "name": "background",
@@ -47482,11 +47477,6 @@
        },
        {
         "name": "muted",
-        "type": "color",
-        "value": "#FF9E9E9E"
-       },
-       {
-        "name": "onDisabled",
         "type": "color",
         "value": "#FF9E9E9E"
        },
@@ -47510,7 +47500,7 @@
      "mono-light": {
       "render": "render-mono-light.png",
       "componentTheme": "mono-light",
-      "bytes": 2212,
+      "bytes": 2030,
       "host_variables": [
        {
         "name": "background",
@@ -47524,11 +47514,6 @@
        },
        {
         "name": "muted",
-        "type": "color",
-        "value": "#FF616161"
-       },
-       {
-        "name": "onDisabled",
         "type": "color",
         "value": "#FF616161"
        },
@@ -47617,7 +47602,6 @@
      "modifiers",
      "muted",
      "onClick",
-     "onDisabled",
      "onPrimary",
      "onSurface",
      "ops",

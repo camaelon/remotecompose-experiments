@@ -1389,6 +1389,7 @@ function localText(l, whole) {
     return whole ? l.inline : `(${l.inline})`;
 }
 
+const slotsWritten = new WeakMap();
 function substitute(node, env, state, name) {
     if (Array.isArray(node)) {
         const out = [];
@@ -1397,7 +1398,16 @@ function substitute(node, env, state, name) {
                 const content = env.slots[x.$slot];
                 if (content === undefined) continue;
                 // In a template the slot is the patternArgument the call's patternBlock fills.
-                if (env.slotIndex) { out.push({ patternArgument: { parameterIndex: env.slotIndex[x.$slot] } }); continue; }
+                if (env.slotIndex) {
+                    // One block inflated in two places shares its component ids, and the second
+                    // is drawn at the first's offset (a shifted, clipped icon): such a body expands.
+                    const seen = slotsWritten.get(env.slotIndex) ?? new Set();
+                    slotsWritten.set(env.slotIndex, seen);
+                    if (seen.has(x.$slot)) throw new PatternUnfit(`slot '${x.$slot}' is written more than once`);
+                    seen.add(x.$slot);
+                    out.push({ patternArgument: { parameterIndex: env.slotIndex[x.$slot] } });
+                    continue;
+                }
                 // Slot content belongs to the caller: it is expanded with the caller's
                 // names, not substituted with this component's params.
                 out.push(...(Array.isArray(content) ? content : [content]));

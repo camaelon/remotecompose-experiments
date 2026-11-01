@@ -1,6 +1,6 @@
 {
  "component": "IconButton",
- "version": 3,
+ "version": 4,
  "summary": "A round button holding only an icon (40 dp, or `size`): standard (icon alone), filled or outlined, in a touch target of at least 48 dp. Labelled for accessibility from its label; enabled (true/false, or a 0/1 variable or expression read at run time) dims it and drops the click.",
  "params": {
   "label": {
@@ -277,6 +277,8 @@
      "$if": "theme.mono",
      "then": {
       "box": {
+       "horizontalAlignment": "center",
+       "verticalAlignment": "center",
        "modifiers": [
         {
          "padding": "max(0, (48 - @size) / 2)"
@@ -291,13 +293,6 @@
          "background": "@colors.disabled"
         },
         {
-         "padding": {
-          "$if": "theme.mono",
-          "then": 1,
-          "else": 1.5
-         }
-        },
-        {
          "semantics": {
           "contentDescription": "@label",
           "enabled": false,
@@ -307,56 +302,26 @@
        ],
        "children": [
         {
-         "box": {
-          "horizontalAlignment": "center",
-          "verticalAlignment": "center",
-          "modifiers": [
-           "fillMaxSize",
-           {
-            "clip": "@size / 2 - 1"
-           },
-           {
-            "background": "@surface"
-           }
-          ],
-          "children": [
-           {
-            "box": {
-             "modifiers": [
-              {
-               "graphicsLayer": {
-                "alpha": 0.38
-               }
-              }
-             ],
-             "children": [
-              {
-               "$if": "size != '40'",
-               "then": {
-                "box": {
-                 "modifiers": [
-                  {
-                   "graphicsLayer": {
-                    "scaleX": "@size / 40",
-                    "scaleY": "@size / 40"
-                   }
-                  }
-                 ],
-                 "children": [
-                  {
-                   "$slot": "icon"
-                  }
-                 ]
-                }
-               },
-               "else": {
-                "$slot": "icon"
-               }
-              }
-             ]
+         "$if": "size != '40'",
+         "then": {
+          "box": {
+           "modifiers": [
+            {
+             "graphicsLayer": {
+              "scaleX": "@size / 40",
+              "scaleY": "@size / 40"
+             }
             }
-           }
-          ]
+           ],
+           "children": [
+            {
+             "$slot": "icon"
+            }
+           ]
+          }
+         },
+         "else": {
+          "$slot": "icon"
          }
         }
        ]
@@ -816,14 +781,14 @@
     },
     "else": {
      "box": {
+      "horizontalAlignment": "center",
+      "verticalAlignment": "center",
       "modifiers": [],
       "children": [
        {
         "$if": "style == 'standard'",
         "then": {
          "box": {
-          "horizontalAlignment": "center",
-          "verticalAlignment": "center",
           "modifiers": [
            {
             "visibility": "@enOff"
@@ -835,51 +800,10 @@
             "size": "@size"
            },
            {
-            "clip": "@size / 2"
-           },
-           {
             "semantics": {
              "contentDescription": "@label",
              "enabled": false,
              "clickable": false
-            }
-           }
-          ],
-          "children": [
-           {
-            "box": {
-             "modifiers": [
-              {
-               "graphicsLayer": {
-                "alpha": 0.38
-               }
-              }
-             ],
-             "children": [
-              {
-               "$if": "size != '40'",
-               "then": {
-                "box": {
-                 "modifiers": [
-                  {
-                   "graphicsLayer": {
-                    "scaleX": "@size / 40",
-                    "scaleY": "@size / 40"
-                   }
-                  }
-                 ],
-                 "children": [
-                  {
-                   "$slot": "icon"
-                  }
-                 ]
-                }
-               },
-               "else": {
-                "$slot": "icon"
-               }
-              }
-             ]
             }
            }
           ]
@@ -913,229 +837,47 @@
              }
             },
             {
+             "clip": "@size / 2 - 1"
+            },
+            {
+             "background": "@surface"
+            },
+            {
              "semantics": {
               "contentDescription": "@label",
               "enabled": false,
               "clickable": false
              }
             }
-           ],
-           "children": [
-            {
-             "box": {
-              "horizontalAlignment": "center",
-              "verticalAlignment": "center",
-              "modifiers": [
-               "fillMaxSize",
-               {
-                "clip": "@size / 2 - 1"
-               },
-               {
-                "background": "@surface"
-               }
-              ],
-              "children": [
-               {
-                "box": {
-                 "modifiers": [
-                  {
-                   "graphicsLayer": {
-                    "alpha": 0.38
-                   }
-                  }
-                 ],
-                 "children": [
-                  {
-                   "$if": "size != '40'",
-                   "then": {
-                    "box": {
-                     "modifiers": [
-                      {
-                       "graphicsLayer": {
-                        "scaleX": "@size / 40",
-                        "scaleY": "@size / 40"
-                       }
-                      }
-                     ],
-                     "children": [
-                      {
-                       "$slot": "icon"
-                      }
-                     ]
-                    }
-                   },
-                   "else": {
-                    "$slot": "icon"
-                   }
-                  }
-                 ]
-                }
-               }
-              ]
-             }
-            }
            ]
           }
          },
          "else": {
-          "$if": "theme.mono",
-          "then": {
-           "box": {
-            "modifiers": [
-             {
-              "visibility": "@enOff"
-             },
-             {
-              "padding": "max(0, (48 - @size) / 2)"
-             },
-             {
-              "size": "@size"
-             },
-             {
-              "clip": "@size / 2"
-             },
-             {
-              "background": "@colors.disabled"
-             },
-             {
-              "padding": {
-               "$if": "theme.mono",
-               "then": 1,
-               "else": 1.5
-              }
-             },
-             {
-              "semantics": {
-               "contentDescription": "@label",
-               "enabled": false,
-               "clickable": false
-              }
+          "box": {
+           "modifiers": [
+            {
+             "visibility": "@enOff"
+            },
+            {
+             "padding": "max(0, (48 - @size) / 2)"
+            },
+            {
+             "size": "@size"
+            },
+            {
+             "clip": "@size / 2"
+            },
+            {
+             "background": "@colors.disabled"
+            },
+            {
+             "semantics": {
+              "contentDescription": "@label",
+              "enabled": false,
+              "clickable": false
              }
-            ],
-            "children": [
-             {
-              "box": {
-               "horizontalAlignment": "center",
-               "verticalAlignment": "center",
-               "modifiers": [
-                "fillMaxSize",
-                {
-                 "clip": "@size / 2 - 1"
-                },
-                {
-                 "background": "@surface"
-                }
-               ],
-               "children": [
-                {
-                 "box": {
-                  "modifiers": [
-                   {
-                    "graphicsLayer": {
-                     "alpha": 0.38
-                    }
-                   }
-                  ],
-                  "children": [
-                   {
-                    "$if": "size != '40'",
-                    "then": {
-                     "box": {
-                      "modifiers": [
-                       {
-                        "graphicsLayer": {
-                         "scaleX": "@size / 40",
-                         "scaleY": "@size / 40"
-                        }
-                       }
-                      ],
-                      "children": [
-                       {
-                        "$slot": "icon"
-                       }
-                      ]
-                     }
-                    },
-                    "else": {
-                     "$slot": "icon"
-                    }
-                   }
-                  ]
-                 }
-                }
-               ]
-              }
-             }
-            ]
-           }
-          },
-          "else": {
-           "box": {
-            "horizontalAlignment": "center",
-            "verticalAlignment": "center",
-            "modifiers": [
-             {
-              "visibility": "@enOff"
-             },
-             {
-              "padding": "max(0, (48 - @size) / 2)"
-             },
-             {
-              "size": "@size"
-             },
-             {
-              "clip": "@size / 2"
-             },
-             {
-              "background": "@colors.disabled"
-             },
-             {
-              "semantics": {
-               "contentDescription": "@label",
-               "enabled": false,
-               "clickable": false
-              }
-             }
-            ],
-            "children": [
-             {
-              "box": {
-               "modifiers": [
-                {
-                 "graphicsLayer": {
-                  "alpha": 0.38
-                 }
-                }
-               ],
-               "children": [
-                {
-                 "$if": "size != '40'",
-                 "then": {
-                  "box": {
-                   "modifiers": [
-                    {
-                     "graphicsLayer": {
-                      "scaleX": "@size / 40",
-                      "scaleY": "@size / 40"
-                     }
-                    }
-                   ],
-                   "children": [
-                    {
-                     "$slot": "icon"
-                    }
-                   ]
-                  }
-                 },
-                 "else": {
-                  "$slot": "icon"
-                 }
-                }
-               ]
-              }
-             }
-            ]
-           }
+            }
+           ]
           }
          }
         }
@@ -1144,8 +886,6 @@
         "$if": "style == 'standard'",
         "then": {
          "box": {
-          "horizontalAlignment": "center",
-          "verticalAlignment": "center",
           "modifiers": [
            {
             "visibility": "@enOn"
@@ -1168,31 +908,6 @@
            },
            {
             "onClick": "@onClick"
-           }
-          ],
-          "children": [
-           {
-            "$if": "size != '40'",
-            "then": {
-             "box": {
-              "modifiers": [
-               {
-                "graphicsLayer": {
-                 "scaleX": "@size / 40",
-                 "scaleY": "@size / 40"
-                }
-               }
-              ],
-              "children": [
-               {
-                "$slot": "icon"
-               }
-              ]
-             }
-            },
-            "else": {
-             "$slot": "icon"
-            }
            }
           ]
          }
@@ -1225,6 +940,12 @@
              }
             },
             {
+             "clip": "@size / 2 - 1"
+            },
+            {
+             "background": "@surface"
+            },
+            {
              "semantics": {
               "contentDescription": "@label",
               "enabled": true,
@@ -1234,55 +955,11 @@
             {
              "onClick": "@onClick"
             }
-           ],
-           "children": [
-            {
-             "box": {
-              "horizontalAlignment": "center",
-              "verticalAlignment": "center",
-              "modifiers": [
-               "fillMaxSize",
-               {
-                "clip": "@size / 2 - 1"
-               },
-               {
-                "background": "@surface"
-               }
-              ],
-              "children": [
-               {
-                "$if": "size != '40'",
-                "then": {
-                 "box": {
-                  "modifiers": [
-                   {
-                    "graphicsLayer": {
-                     "scaleX": "@size / 40",
-                     "scaleY": "@size / 40"
-                    }
-                   }
-                  ],
-                  "children": [
-                   {
-                    "$slot": "icon"
-                   }
-                  ]
-                 }
-                },
-                "else": {
-                 "$slot": "icon"
-                }
-               }
-              ]
-             }
-            }
            ]
           }
          },
          "else": {
           "box": {
-           "horizontalAlignment": "center",
-           "verticalAlignment": "center",
            "modifiers": [
             {
              "visibility": "@enOn"
@@ -1308,6 +985,46 @@
             },
             {
              "onClick": "@onClick"
+            }
+           ]
+          }
+         }
+        }
+       },
+       {
+        "$if": "style == 'filled'",
+        "then": {
+         "$if": "theme.mono",
+         "then": {
+          "$if": "size != '40'",
+          "then": {
+           "box": {
+            "modifiers": [
+             {
+              "graphicsLayer": {
+               "scaleX": "@size / 40",
+               "scaleY": "@size / 40"
+              }
+             }
+            ],
+            "children": [
+             {
+              "$slot": "icon"
+             }
+            ]
+           }
+          },
+          "else": {
+           "$slot": "icon"
+          }
+         },
+         "else": {
+          "box": {
+           "modifiers": [
+            {
+             "graphicsLayer": {
+              "alpha": "0.38 + 0.62 * @enOn"
+             }
             }
            ],
            "children": [
@@ -1337,6 +1054,42 @@
            ]
           }
          }
+        },
+        "else": {
+         "box": {
+          "modifiers": [
+           {
+            "graphicsLayer": {
+             "alpha": "0.38 + 0.62 * @enOn"
+            }
+           }
+          ],
+          "children": [
+           {
+            "$if": "size != '40'",
+            "then": {
+             "box": {
+              "modifiers": [
+               {
+                "graphicsLayer": {
+                 "scaleX": "@size / 40",
+                 "scaleY": "@size / 40"
+                }
+               }
+              ],
+              "children": [
+               {
+                "$slot": "icon"
+               }
+              ]
+             }
+            },
+            "else": {
+             "$slot": "icon"
+            }
+           }
+          ]
+         }
         }
        }
       ]
@@ -1349,9 +1102,9 @@
   "The icon is the caller's: draw it in a colour that reads on the face (onPrimary on a filled button, which is black in mono and white otherwise; onSurface or the button colour on the others)",
   "The face is `size` dp (40) round and the touch target at least 48 dp: below 48 the face sits in transparent padding of (48 - size) / 2 (4 dp at 40) that is part of the click, so neighbours can sit with no spacedBy and still show a gap of 8 dp",
   "The outlined ring is two stacked backgrounds, not a border (border can't take a theme colour): set surface to whatever the button sits on, or the inside shows the background colour",
-  "In mono a disabled filled button becomes a grey ring (a grey disc would hide its grey icon); every other face keeps its shape",
+  "In mono a disabled filled button is a grey disc with the icon undimmed: the onPrimary icon reads on it (black on grey, white on dark grey). A ring would show an onPrimary icon on the surface colour, where it vanishes. Every other face keeps its shape. So a filled button's icon must be onPrimary even when disabled: an icon drawn in onDisabled is grey on the grey disc in mono",
   "Press feedback is the onClick ripple Java draws on every click (no ripple modifier, or Java draws two); it is clipped to the round face",
-  "A runtime enabled (\"@var\" or an expression, exactly 0 or 1, reading resources variables only) writes the button twice, a disabled face and an enabled one switched by visibility; only the enabled face has the onClick, so at 0 a tap does nothing. The icon slot is written in both faces, so it roughly doubles the call: a literal true/false is cheaper when the state is fixed",
+  "A runtime enabled (\"@var\" or an expression, exactly 0 or 1, reading resources variables only) stacks a disabled face, an enabled face and the icon: the faces are switched by visibility and only the enabled one has the onClick, so at 0 a tap does nothing. The icon slot is written once, above the faces, dimmed by the state, so it costs about 250 B more than a literal, not a second icon. The icon is therefore outside the click: label the button, not the icon, or a screen reader reads the icon's label as a second item",
   "`size` scales the icon slot with a graphicsLayer (size / 40, about the centre, at paint time): draw the icon at 24 dp as for a 40 dp button. Its layout size stays 24 dp, so a size under 24 is not a good idea. At 48 or more the button writes a padding of 0"
  ],
  "locals": {

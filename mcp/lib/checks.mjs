@@ -128,6 +128,78 @@ export function setVariables(doc, set) {
     return out;
 }
 
+/** The visible leaves of an inspect layout tree: texts and drawings, with their boxes. */
+export function visibleLeaves(tree) {
+    const out = [];
+    // (Under a graphics layer a text may be faded out: pager pages stack in one place.)
+    const walk = (n, layered = false) => {
+        if (n.hidden) return;
+        const kids = n.children ?? [];
+        const under = layered || (n.modifiers ?? []).some((m) => /graphicslayer/i.test(m));
+        const drawing = /canvas/i.test(n.component ?? "") && !/content/i.test(n.component ?? "");
+        if (n.text !== undefined && n.text !== null && n.text !== "") out.push({ id: n.id, text: String(n.text), box: n.bounds, layered: under });
+        else if (drawing && n.bounds.w > 0 && n.bounds.h > 0) out.push({ id: n.id, drawing: true, box: n.bounds });
+        kids.forEach((k) => walk(k, under));
+    };
+    tree.forEach((n) => walk(n));
+    return out;
+}
+
+const overlapShare = (a, b) => {
+    const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+    if (w <= 0 || h <= 0) return 0;
+    return (w * h) / Math.min(a.w * a.h, b.w * b.h);
+};
+
+/**
+ * What looking at the pictures would find, compared across sizes ([{size, leaves, targets}]):
+ * content the largest size shows and a smaller one drops (a fact to judge), a drawing shrunk to
+ * almost nothing, texts on top of each other, and tap targets on top of each other (faults).
+ */
+export function layoutFaults(perSize) {
+    if (!perSize.length) return { warnings: [], dropped: [] };
+    const area = ({ size }) => size[0] * size[1];
+    const big = [...perSize].sort((a, b) => area(b) - area(a))[0];
+    const name = (l) => (l.text !== undefined ? JSON.stringify(l.text.length > 24 ? l.text.slice(0, 23) + "…" : l.text) : "a drawing");
+    const warnings = [], dropped = [];
+    for (const s of perSize) {
+        const here = `${s.size[0]}×${s.size[1]}`;
+        const byId = new Map(s.leaves.map((l) => [l.id, l]));
+        if (s !== big) {
+            // (By its words as well: a layout may show the same text from another copy.)
+            const words = new Set(s.leaves.map((l) => l.text).filter(Boolean));
+            const gone = big.leaves.filter((l) => !byId.has(l.id) && !(l.text !== undefined && words.has(l.text)));
+            if (gone.length) dropped.push(`at ${here}: ${gone.slice(0, 6).map(name).join(", ")}${gone.length > 6 ? ` and ${gone.length - 6} more` : ""}`);
+            for (const l of big.leaves) {
+                const small = byId.get(l.id);
+                if (!l.drawing || !small) continue;
+                const was = Math.min(l.box.w, l.box.h), now = Math.min(small.box.w, small.box.h);
+                // (A bar or a line is thin on purpose: it has to be small both ways.)
+                if (now < 24 && Math.max(small.box.w, small.box.h) < 48 && was >= now * 3) warnings.push(`warning: [shrunk_content] at ${here} a drawing is ${Math.round(small.box.w)}×${Math.round(small.box.h)} dp (${Math.round(l.box.w)}×${Math.round(l.box.h)} at ${big.size.join("×")}): too small to read. Hide it at this size or give it room.`);
+            }
+        }
+        const texts = s.leaves.filter((l) => l.text !== undefined && !l.layered);
+        const hit = [];
+        for (let i = 0; i < texts.length; i++) for (let j = i + 1; j < texts.length; j++) {
+            // (Starting at exactly one point they are alternatives stacked on purpose: two faces of a
+            // chip, the pages of a pager. An accident does not line up that well.)
+            const stacked = texts[i].box.x === texts[j].box.x && texts[i].box.y === texts[j].box.y;
+            if (!stacked && overlapShare(texts[i].box, texts[j].box) > 0.3) hit.push(`${name(texts[i])} and ${name(texts[j])}`);
+        }
+        if (hit.length) warnings.push(`warning: [overlapping_text] at ${here}: ${hit.slice(0, 3).join("; ")}.`);
+        const t = s.targets ?? [];
+        const tap = [];
+        for (let i = 0; i < t.length; i++) for (let j = i + 1; j < t.length; j++) {
+            const a = t[i].bounds, b = t[j].bounds;
+            // (One box twice is one component with several gestures.)
+            const same = a && b && a.x === b.x && a.y === b.y && a.w === b.w && a.h === b.h;
+            if (a && b && !same && overlapShare(a, b) > 0.25) tap.push(`${Math.round(a.x)},${Math.round(a.y)} and ${Math.round(b.x)},${Math.round(b.y)}`);
+        }
+        if (tap.length) warnings.push(`warning: [overlapping_targets] at ${here}: tap targets at ${tap.slice(0, 3).join("; ")} overlap, so a tap can reach the wrong one.`);
+    }
+    return { warnings: [...new Set(warnings)], dropped };
+}
+
 /** An interact action in the forms callers guess: {"type": "tap", "x", "y"}, {"$tap": [x, y]}, {"type": "wait", "seconds"}. */
 export function normalizeAction(a) {
     if (!a || typeof a !== "object") return a;

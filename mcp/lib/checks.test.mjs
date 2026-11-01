@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { dragEvents, changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
+import { layoutFaults, visibleLeaves, dragEvents, changedCells, compareExpected, findTapTarget, fitsSize, imageHash, loadPlan, normalizeAction, planPathOf, setVariables, savePlan, splitSample, summarizeInspection, tapEvents, targetWords } from "./checks.mjs";
 
 test("planPathOf: one plan for a document's json and rc", () => {
     assert.equal(planPathOf("out/a.json"), "out/a.checks.json");
@@ -95,3 +95,27 @@ test("changedCells: same hash is unchanged; new, failed and show-all are not", (
     assert.deepEqual(changedCells(cells, { a: h }, true).unchanged, []);
     assert.deepEqual(changedCells(cells, null).unchanged, []);
 });
+
+test("visibleLeaves skips hidden subtrees and keeps texts and drawings", () => {
+    const b = { x: 0, y: 0, w: 10, h: 10 };
+    const tree = [{ component: "Column", id: 1, bounds: b, children: [
+        { component: "CoreText", id: 2, text: "A", bounds: b },
+        { component: "CanvasLayout", id: 3, bounds: b },
+        { component: "CanvasContent", id: 4, bounds: b },
+        { component: "Row", id: 5, hidden: true, bounds: b, children: [{ component: "CoreText", id: 6, text: "gone", bounds: b }] },
+    ] }];
+    assert.deepEqual(visibleLeaves(tree).map((l) => l.id), [2, 3]);
+});
+
+test("layoutFaults reports what would need looking at", () => {
+    const box = (x, y, w, h) => ({ x, y, w, h });
+    const big = { size: [360, 480], leaves: [{ id: 1, text: "Title", box: box(0, 0, 100, 20) }, { id: 2, drawing: true, box: box(0, 30, 200, 200) }], targets: [] };
+    const small = { size: [160, 100], leaves: [{ id: 2, drawing: true, box: box(0, 0, 12, 12) }, { id: 7, text: "a", box: box(0, 0, 50, 20) }, { id: 8, text: "b", box: box(5, 2, 50, 20) }],
+        targets: [{ bounds: box(0, 0, 48, 48) }, { bounds: box(0, 10, 48, 48) }] };
+    const r = layoutFaults([big, small]);
+    assert.deepEqual(r.dropped, ['at 160×100: "Title"']);
+    const codes = r.warnings.map((w) => /\[(\w+)\]/.exec(w)[1]).sort();
+    assert.deepEqual(codes, ["overlapping_targets", "overlapping_text", "shrunk_content"]);
+    assert.deepEqual(layoutFaults([big]).warnings, []);
+});
+

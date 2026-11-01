@@ -631,3 +631,11 @@ test("$if takes a || b, and an empty list is false", () => {
     assert.match(flat({ l: [1] }), /listed/);
 });
 
+test("a body that writes a slot twice is never a pattern", () => {
+    const Two = { params: { on: { type: "float", default: 1 } }, slots: { icon: {} },
+        body: { column: { children: [{ box: { children: [{ $slot: "icon" }] } }, { box: { children: [{ $slot: "icon" }] } }, { box: { modifiers: [{ width: 300 }, { height: 300 }, { background: "#FFFF0000" }] } }] } } };
+    const call = { Two: { on: "@x", slots: { icon: [{ text: { value: "a" } }] } } };
+    const r = expandComponents({ header: { width: 10, height: 10 }, resources: { variables: { x: 1 } }, components: { Two }, componentMode: "pattern", root: [call, call, call] });
+    assert.doesNotMatch(JSON.stringify(r.doc), /definePattern|patternArgument/);
+});
+

@@ -14,7 +14,7 @@ export const STRUCTURES = [
       adapts: "controls move beside the preview when wide", examples: ["CMP-03"],
       signals: [[/\bsliders?\b/, 4], [/\b(picker|playground|simulator|explorer|try different|what if|adjust the)\b/, 3], [/\bshow how\b/, 1]] },
     { id: "journey-card", is: "an ordered trip or process: stages or two endpoints with a progress line, the current one highlighted, and key facts",
-      adapts: "secondary facts drop when short, the line stays", examples: [],
+      adapts: "secondary facts drop when short, the line stays", examples: [], components: ["Steps", "LabelValue"],
       signals: [[/\b(flight|boarding|itinerary|journey|trip|shipment)\b/, 3], [/\b(package|parcel|delivery|order) (delivery )?(tracker|status)\b/, 4], [/\bprogress line\b/, 3], [/\bthe steps\b.*\bcurrent\b/, 4]] },
     { id: "form-result", is: "labelled inputs, choices and a main action, with a result where there is one",
       adapts: "scrolls when short; the result stays visible", examples: ["CMP-12", "EXP-15"],
@@ -54,6 +54,14 @@ export function classifyStructure(goal) {
         if (score > 0 && (!best || score > best.score)) best = { structure: s, score };
     }
     return best;
+}
+
+// For measuring what the menu saves: RC_NO_STRUCTURE_MENU=1 leaves it out of the description.
+export const NO_MENU = Boolean(process.env.RC_NO_STRUCTURE_MENU);
+
+/** The structures, one line each, for a tool's description: read before any call is made. */
+export function structureLines() {
+    return STRUCTURES.map((s) => `${s.id}: ${s.is}`).join("; ");
 }
 
 /** The structure menu a kit carries, so the caller can correct the guess. */

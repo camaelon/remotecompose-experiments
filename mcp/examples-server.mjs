@@ -12,6 +12,7 @@ import { isMain, serve } from "./lib/mcp-server.mjs";
 import {
     EXAMPLES_DIR, buildKit, componentSummary, exampleDoc, findComponents, findExamples,
     listCapabilities, loadCatalog, resolveTerms, summarizeExample, findIcons, canvasOnly, examplesDefining, similarGenerated, loadGenerated } from "./lib/catalog.mjs";
+import { NO_MENU, structureLines } from "./lib/structures.mjs";
 import { lintComponent, loadLibrary } from "./lib/components.mjs";
 import { compileComponents, jsonToRc } from "./lib/json2rc.mjs";
 import { definition as renderServer } from "./rc-render-server.mjs";
@@ -84,7 +85,9 @@ export const definition = {
                     goal: { type: "string", description: "What to build, in plain words." },
                     capabilities: { ...STR_LIST, description: "Capability ids (or prefixes such as \"input\") to cover as well." },
                     max_examples: { type: "number", description: "At most this many examples (default 4)." },
-                    structure: { type: "string", description: "The screen structure you judge the request needs (ids in the structures list of a kit): picks the starting example and any template. Without it the kit guesses from the words." },
+                    structure: { anyOf: [{ type: "string" }, { type: "array", items: { type: "string" } }], description: NO_MENU
+                        ? "The screen structure you judge the request needs (ids in the structures list of a kit): picks the starting example and any template. Without it the kit guesses from the words."
+                        : `The screen structure this request needs, your own reading of it, chosen before calling: one id, a list if the screen combines them (main one first), or "none". ${structureLines()}.` },
                     include_generated: { type: "boolean", description: "Also list documents an assistant built from a similar prompt with these tools (the generated corpus, GEN-NN): whole, not minimal, not Java-verified. Off by default." },
                 },
             },

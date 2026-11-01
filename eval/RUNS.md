@@ -976,3 +976,5 @@ After the slider fix: prompt 28 mixer, 12 calls, 2 dead ends, 13.4 KB. RowList w
 
 Classifier on 36 fresh prompts written without sight of it (docs/structures/fresh-labels.json): 25 right, 27 before the last tuning. Keyword rules have reached their limit at about 70%, so build_kit now takes the structure the caller chooses.
 
+Structure list in the build_kit description (fresh prompts, one run each; output tokens with / without): stock 11.0K / 12.5K, morning 26.4K / 21.3K, meditation 26.9K / 11.4K (the run with the list built four layouts, 14.6 KB against 3.6 KB), parcel 9.5K / 8.7K. A repeat of the "without" condition, where the list was present but unseen, gave 11.6K, 22.6K, 12.6K and 10.1K, so noise is about 10%. Every run with the list still made a first build_kit call without structure and repeated it. Offline, a model's main pick was right on 54 of 63 shuffled eval prompts (86%), and on all 36 fresh prompts, though those are listed in structure order and written from the same definitions.
+
