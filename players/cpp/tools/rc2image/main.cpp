@@ -303,7 +303,20 @@ static int runSheet(int argc, char* argv[]) {
         const int ch = rowH[i / cols];
         SkRect dst = SkRect::MakeXYWH(x, y, imgs[i]->width() * s, imgs[i]->height() * s);
         c->drawImageRect(imgs[i], dst, SkSamplingOptions(SkFilterMode::kLinear, SkMipmapMode::kLinear));
-        if (!items[i].second.empty()) c->drawString(items[i].second.c_str(), x, y + ch + 13, font, ink);
+        if (!items[i].second.empty()) {
+            // A long caption stops at its cell, with an ellipsis, rather than run into the next.
+            std::string cap_ = items[i].second;
+            auto width = [&](const std::string& t) { return font.measureText(t.c_str(), t.size(), SkTextEncoding::kUTF8); };
+            if (width(cap_) > cw) {
+                while (!cap_.empty() && width(cap_ + "\xE2\x80\xA6") > cw) {
+                    // One whole UTF-8 character: its continuation bytes, then its first.
+                    while (!cap_.empty() && ((unsigned char) cap_.back() & 0xC0) == 0x80) cap_.pop_back();
+                    if (!cap_.empty()) cap_.pop_back();
+                }
+                cap_ += "\xE2\x80\xA6";
+            }
+            c->drawString(cap_.c_str(), x, y + ch + 13, font, ink);
+        }
     }
     SkPixmap pm; if (!surf->peekPixels(&pm)) return 1;
     SkFILEWStream stream(out);
