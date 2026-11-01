@@ -373,10 +373,8 @@ export class TouchExpression extends Operation implements TouchListener {
     }
 
     touchDown(context: RemoteContext, x: number, y: number): void {
-        // Only check bounds when inside a component (bounds are set by updateBounds).
-        // For canvas-level touch expressions (mComponent === null), accept all events.
-        if (this.mComponent !== null &&
-            !(x >= this.mScrLeft && x <= this.mScrRight && y >= this.mScrTop && y <= this.mScrBottom)) {
+        // As the reference: outside a component updateBounds never runs and the bounds stay 0.
+        if (!(x >= this.mScrLeft && x <= this.mScrRight && y >= this.mScrTop && y <= this.mScrBottom)) {
             return;
         }
         this.mEasingToStop = false;

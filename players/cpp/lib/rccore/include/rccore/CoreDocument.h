@@ -106,6 +106,9 @@ private:
     // Scroll modifiers with a constant position that took the current touch down: they
     // scroll themselves under drag (ScrollModifierOperation.onTouchDrag).
     std::vector<class ModifierScroll*> mScrollCaptures;
+    static constexpr float kTouchSlop = 8.0f;   // as the web player
+    float mTouchStartX = 0, mTouchStartY = 0;
+    bool mTouchMoved = false;
     // Components that took the touch-down (the reference's mAppliedTouchOperations): their
     // onTouchUp / onTouchCancel actions run when the touch ends.
     std::vector<Operation*> mTouchTargets;
