@@ -980,13 +980,15 @@ static int run(int argc, char* argv[]) {
             "],\"zeroSize\":" + std::to_string(lo.zeroSize) + ",\"zeroSizeExamples\":[" +
             [&]() { std::string e; for (size_t k = 0; k < lo.zeroSizeExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.zeroSizeExamples[k]); return e; }() +
             "],\"collapsed\":" + std::to_string(lo.collapsed) + ",\"collapsedExamples\":[" +
-            [&]() { std::string e; for (size_t k = 0; k < lo.collapsedExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.collapsedExamples[k]); return e; }() + "]}"});
+            [&]() { std::string e; for (size_t k = 0; k < lo.collapsedExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.collapsedExamples[k]); return e; }() +
+            "],\"hidden\":" + std::to_string(lo.hidden) + ",\"hiddenExamples\":[" +
+            [&]() { std::string e; for (size_t k = 0; k < lo.hiddenExamples.size(); k++) e += (k ? "," : "") + jsonStr(lo.hiddenExamples[k]); return e; }() + "]}"});
         auto tc = rccore::textOverflowCounts();
         report.push_back({"text", "{\"truncated\":" + std::to_string(tc.truncated) +
             ",\"clipped\":" + std::to_string(tc.clipped) +
             ",\"ellipsized\":" + std::to_string(tc.ellipsized) + ",\"examples\":[" +
             [&]() { std::string e; for (size_t k = 0; k < tc.examples.size(); k++)
-                e += (k ? "," : "") + std::string("{\"kind\":") + jsonStr(tc.examples[k].first) + ",\"text\":" + jsonStr(tc.examples[k].second) + "}";
+                e += (k ? "," : "") + std::string("{\"kind\":") + jsonStr(tc.examples[k].first) + ",\"text\":" + jsonStr(tc.examples[k].second) + (k < tc.shown.size() && tc.shown[k] >= 0 ? ",\"shown\":" + std::to_string(tc.shown[k]) : std::string()) + "}";
                 return e; }() + "]}"});
         report.push_back({"render", "{\"width\":" + std::to_string(surfW) +
             ",\"height\":" + std::to_string(surfH) +
