@@ -26,7 +26,10 @@ const PIN_EPOCH = new Date(2026, 0, 1, 0, 0, 0, 0).getTime();
  * Pin a player's clock to `seconds` of document time. Returns true if any clock was reached;
  * false means the frame is still live and a caller reporting a pinned time would be wrong.
  */
-export function pinClock(player: any, seconds: number): boolean {
+// `elapsed`: animationTime(), the seconds since the document loaded. It defaults to `seconds`,
+// but a caller pinning a date (seconds since the epoch: ~26 million) passes the session's own
+// elapsed time, or animationTime loses its fractions to float precision.
+export function pinClock(player: any, seconds: number, elapsed: number = seconds): boolean {
     const doc = player && player.document;
     const tv = doc && doc.mTimeVariables;
     const millis = PIN_EPOCH + Math.round(seconds * 1000);
@@ -46,7 +49,7 @@ export function pinClock(player: any, seconds: number): boolean {
     }
 
     // Pinned separately: this one is wall-clock elapsed, not calendar time.
-    if (tv) tv.getElapsedSeconds = () => seconds;
+    if (tv) tv.getElapsedSeconds = () => elapsed;
 
     return pinned;
 }

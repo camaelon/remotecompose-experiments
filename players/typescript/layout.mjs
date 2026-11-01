@@ -165,20 +165,25 @@ const found = new Map();     // id -> {kind, depth, x, y, w, h}
 // keyed by id keeps only the last; conformance/compare.mjs uses this form.
 const ALL = process.argv.includes('--all');
 const inOrder = [];
-function walk(op, depth) {
+function walk(op, depth, goneAbove = false, parentKind = '') {
     if (!op || seen.has(op) || depth > 24) return;
     seen.add(op);
     const kind = op.constructor?.name ?? '?';
     const isComponent = typeof op.getComponentId === 'function'
         && typeof op.getWidth === 'function' && typeof op.getX === 'function';
     if (isComponent) {
-        const entry = { id: op.getComponentId(), kind, depth, x: op.getX(), y: op.getY(), w: op.getWidth(), h: op.getHeight() };
+        // GONE (itself or under a GONE ancestor): the TS layout keeps its last box, C++ zeroes it.
+        let gone = goneAbove;
+        try { if (typeof op.isVisible === 'function' && !op.isVisible()) gone = true; } catch { /* keep */ }
+        goneAbove = gone;
+        const entry = { id: op.getComponentId(), kind, depth, x: op.getX(), y: op.getY(), w: op.getWidth(), h: op.getHeight(), gone, parentKind };
+        parentKind = kind;
         found.set(entry.id, entry);
         inOrder.push(entry);
         depth++;
     }
-    if (typeof op.getList === 'function') for (const c of op.getList() || []) walk(c, depth);
-    else if (Array.isArray(op.mList)) for (const c of op.mList) walk(c, depth);
+    if (typeof op.getList === 'function') for (const c of op.getList() || []) walk(c, depth, goneAbove, parentKind);
+    else if (Array.isArray(op.mList)) for (const c of op.mList) walk(c, depth, goneAbove, parentKind);
 }
 for (const op of doc.mOperations || []) walk(op, 0);
 
@@ -186,7 +191,7 @@ for (const op of doc.mOperations || []) walk(op, 0);
 // engines. The readable tree goes to stderr so a human can see structure without the
 // diff having to care about it.
 if (ALL) {
-    console.log(inOrder.map((c) => `LAYOUT id=${c.id} x=${num(c.x)} y=${num(c.y)} w=${num(c.w)} h=${num(c.h)} ${c.kind.replace(/^_/, '')}`).join('\n'));
+    console.log(inOrder.map((c) => `LAYOUT id=${c.id} x=${num(c.x)} y=${num(c.y)} w=${num(c.w)} h=${num(c.h)} ${c.kind.replace(/^_/, '')}${c.gone ? ' GONE' : ''}${c.gone && /FitBox/.test(c.parentKind ?? '') ? ' INFITBOX' : ''}`).join('\n'));
     process.exit(0);
 }
 const ids = [...found.keys()].sort((a, b) => a - b);

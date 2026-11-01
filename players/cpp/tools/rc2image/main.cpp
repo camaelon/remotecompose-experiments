@@ -13,6 +13,16 @@
 #include "include/core/SkPixmap.h"
 #include "include/encode/SkPngEncoder.h"
 #include "include/core/SkStream.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontMgr.h"
+#include "include/core/SkImage.h"
+#include "include/codec/SkCodec.h"
+#if defined(__APPLE__)
+#include "include/ports/SkFontMgr_mac_ct.h"
+#else
+#include "include/ports/SkFontMgr_fontconfig.h"
+#include "include/ports/SkFontScanner_FreeType.h"
+#endif
 
 #include <array>
 #include <algorithm>
@@ -236,7 +246,74 @@ static bool parseClockSpec(const char* spec, int64_t& outMs) {
 
 static int run(int argc, char* argv[]);
 
+// --sheet OUT.png [--cols N] [--cell W] [--title TEXT] IMAGE[=CAPTION] ...
+// A contact sheet: the images in a grid, each scaled to the cell width (never up), with its
+// caption under it. For render tools that produce several images in one call.
+static int runSheet(int argc, char* argv[]) {
+    const char* out = nullptr; int cols = 0; int cellW = 0; std::string title;
+    std::vector<std::pair<std::string, std::string>> items;
+    for (int i = 2; i < argc; i++) {
+        std::string a = argv[i];
+        if (a == "--cols" && i + 1 < argc) cols = std::atoi(argv[++i]);
+        else if (a == "--cell" && i + 1 < argc) cellW = std::atoi(argv[++i]);
+        else if (a == "--title" && i + 1 < argc) title = argv[++i];
+        else if (!out) out = argv[i];
+        else { auto eq = a.find('='); items.push_back(eq == std::string::npos ? std::make_pair(a, std::string()) : std::make_pair(a.substr(0, eq), a.substr(eq + 1))); }
+    }
+    if (!out || items.empty()) { std::cerr << "Error: --sheet OUT.png [--cols N] [--cell W] [--title T] IMAGE[=CAPTION] ...\n"; return 1; }
+    std::vector<sk_sp<SkImage>> imgs;
+    int maxW = 1, maxH = 1;
+    for (auto& it : items) {
+        auto data = SkData::MakeFromFileName(it.first.c_str());
+        std::unique_ptr<SkCodec> codec = data ? SkCodec::MakeFromData(data) : nullptr;
+        sk_sp<SkImage> img;
+        if (codec) img = std::get<0>(codec->getImage());
+        if (!img) { std::cerr << "Error: cannot read " << it.first << "\n"; return 1; }
+        maxW = std::max(maxW, img->width()); maxH = std::max(maxH, img->height());
+        imgs.push_back(img);
+    }
+    const int n = (int) imgs.size();
+    if (cols <= 0) cols = std::min(n, maxW > maxH * 1.6 ? 2 : 4);
+    const int cw = cellW > 0 ? std::min(cellW, maxW) : maxW;
+    const int pad = 12, cap = 18, head = title.empty() ? 0 : 26;
+    const int rows = (n + cols - 1) / cols;
+    // Each image keeps its aspect at the cell width (never scaled up); a row is as tall as its
+    // tallest image, so a tall render never runs into the next row.
+    auto scaled = [&](int i) { return std::min(1.0f, (float) cw / imgs[i]->width()); };
+    std::vector<int> rowH(rows, 0);
+    for (int i = 0; i < n; i++) rowH[i / cols] = std::max(rowH[i / cols], (int) std::ceil(imgs[i]->height() * scaled(i)));
+    std::vector<int> rowY(rows, head + pad);
+    for (int r = 1; r < rows; r++) rowY[r] = rowY[r - 1] + rowH[r - 1] + cap + pad;
+    const int W = pad + cols * (cw + pad), H = rowY[rows - 1] + rowH[rows - 1] + cap + pad;
+    auto surf = SkSurfaces::Raster(SkImageInfo::MakeN32Premul(W, H));
+    SkCanvas* c = surf->getCanvas();
+    c->clear(SkColorSetRGB(0xD8, 0xDB, 0xE0));
+#if defined(__APPLE__)
+    sk_sp<SkFontMgr> mgr = SkFontMgr_New_CoreText(nullptr);
+#else
+    sk_sp<SkFontMgr> mgr = SkFontMgr_New_FontConfig(nullptr, SkFontScanner_Make_FreeType());
+#endif
+    sk_sp<SkTypeface> tf = mgr ? mgr->legacyMakeTypeface(nullptr, SkFontStyle()) : nullptr;
+    SkFont font(tf, 12); font.setEdging(SkFont::Edging::kAntiAlias);
+    SkPaint ink; ink.setColor(SkColorSetRGB(0x22, 0x26, 0x2E)); ink.setAntiAlias(true);
+    if (!title.empty()) { SkFont tfont(tf, 15); c->drawString(title.c_str(), pad, 20, tfont, ink); }
+    for (int i = 0; i < n; i++) {
+        const int x = pad + (i % cols) * (cw + pad), y = rowY[i / cols];
+        const float s = scaled(i);
+        const int ch = rowH[i / cols];
+        SkRect dst = SkRect::MakeXYWH(x, y, imgs[i]->width() * s, imgs[i]->height() * s);
+        c->drawImageRect(imgs[i], dst, SkSamplingOptions(SkFilterMode::kLinear, SkMipmapMode::kLinear));
+        if (!items[i].second.empty()) c->drawString(items[i].second.c_str(), x, y + ch + 13, font, ink);
+    }
+    SkPixmap pm; if (!surf->peekPixels(&pm)) return 1;
+    SkFILEWStream stream(out);
+    if (!stream.isValid() || !SkPngEncoder::Encode(&stream, pm, {})) { std::cerr << "Error: cannot write " << out << "\n"; return 1; }
+    std::cout << "sheet: " << out << " (" << W << "x" << H << ", " << n << " images)\n";
+    return 0;
+}
+
 int main(int argc, char* argv[]) {
+    if (argc > 1 && std::strcmp(argv[1], "--sheet") == 0) return runSheet(argc, argv);
     // The wire reader throws on a truncated buffer; uncaught, that is an abort with no
     // message, which reads as a renderer crash rather than a bad file.
     try {

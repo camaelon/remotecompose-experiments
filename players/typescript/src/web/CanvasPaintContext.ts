@@ -1341,7 +1341,9 @@ export class CanvasPaintContext extends PaintContext {
         const w = right - left;
         const h = bottom - top;
         this.ctx.beginPath();
-        this.ctx.roundRect(left, top, w, h, [Math.min(rx, ry)]);
+        // A negative radius (an expression that went below 0) is a square corner, as in Skia;
+        // the canvas API throws RangeError for it, which stopped the whole paint.
+        this.ctx.roundRect(left, top, w, h, [Math.max(0, Math.min(rx, ry))]);
         this.fillOrStroke(
             () => { this.ctx.fill(); },
             () => { this.ctx.stroke(); }
@@ -2150,7 +2152,7 @@ export class CanvasPaintContext extends PaintContext {
     roundedClipRect(width: number, height: number, topStart: number, topEnd: number,
                     bottomStart: number, bottomEnd: number): void {
         this.ctx.beginPath();
-        this.ctx.roundRect(0, 0, width, height, [topStart, topEnd, bottomEnd, bottomStart]);
+        this.ctx.roundRect(0, 0, width, height, [topStart, topEnd, bottomEnd, bottomStart].map((r) => Math.max(0, r)));
         this.ctx.clip();
     }
 
@@ -2240,7 +2242,7 @@ export class CanvasPaintContext extends PaintContext {
                 this.ctx.arc(layer.width / 2, layer.height / 2, r, 0, Math.PI * 2);
             } else if (shape === 1 && shapeRadius > 0) {
                 // Round rect
-                this.ctx.roundRect(0, 0, layer.width, layer.height, [shapeRadius]);
+                this.ctx.roundRect(0, 0, layer.width, layer.height, [Math.max(0, shapeRadius)]);
             } else {
                 // Rect
                 this.ctx.rect(0, 0, layer.width, layer.height);

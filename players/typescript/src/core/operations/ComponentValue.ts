@@ -44,7 +44,14 @@ export class ComponentValue extends Operation {
             }
             return;
         }
-        const lc = component as any;
+        // A LayoutComponentContent has no box of its own: its id names the enclosing
+        // component's (the reference reads the parent's measured size for
+        // componentWidth() in a child's width/height modifier).
+        let lc = component as any;
+        if (lc.constructor?.OP_CODE === 201 /* LayoutComponentContent */) {
+            const parent = lc.getParent?.();
+            if (parent) lc = parent;
+        }
         // From now on the component refreshes this value at every layout (U49).
         if (typeof lc.addComponentValue === 'function') lc.addComponentValue(this);
         switch (this.mType) {

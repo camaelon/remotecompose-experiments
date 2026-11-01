@@ -8,6 +8,7 @@ import type { MeasurePass } from '../measure/MeasurePass';
 import { Size } from '../measure/Size';
 import { WidthModifier, HeightModifier, ScrollModifier, DimensionConstraintsModifier } from '../modifiers/ModifierOperations';
 import { isNaNBits, idFromBits } from '../../Utils';
+import { PaintOperation } from '../../../PaintOperation';
 
 export abstract class LayoutManager extends LayoutComponent {
     protected mCachedWrapSize = new Size();
@@ -40,6 +41,16 @@ export abstract class LayoutManager extends LayoutComponent {
 
         const wMod = this.getWidthModifier();
         const hMod = this.getHeightModifier();
+        // A width/height bound to an expression its parent just re-evaluated (componentWidth()
+        // in this component's modifier, re-evaluated in the parent's measure below) resolves before it is
+        // read, so the first layout already has it (as C++, which re-runs the data ops and
+        // measures again); otherwise the value only lands at paint, a layout late.
+        for (const mod of [wMod, hMod]) {
+            if (mod && mod.isDirty()) {
+                mod.markNotDirty();
+                mod.updateVariables(context.getContext());
+            }
+        }
 
         // widthIn / heightIn tighten the incoming constraints before anything is sized,
         // as BaseModernMeasurePolicy does (minWidth = max(minWidth, widthIn.min),
@@ -207,6 +218,18 @@ export abstract class LayoutManager extends LayoutComponent {
         // so LAYOUT_COMPUTE expressions can reference parent width/height.
         // Java does this via ComponentData.updateComponentData in LayoutComponent.
         this.updateComponentValues(context.getContext(), w, h);
+        // Java LayoutManager.updateComponentValues(PaintContext, ...): then the operations
+        // reading those values (a FloatExpression of componentHeight()) re-evaluate at once,
+        // before the children measure against them.
+        const ctx = context.getContext();
+        for (const op of this.mContentOps) {
+            if (op instanceof PaintOperation) continue;
+            if (op.isDirty() && typeof (op as any).updateVariables === 'function') {
+                op.markNotDirty();
+                (op as any).updateVariables(ctx);
+                op.apply(ctx);
+            }
+        }
 
         // Measure children with fill sizing (skip if already done in scroll path)
         if (!scrollMod && !(horizontalWrap || verticalWrap)) {
