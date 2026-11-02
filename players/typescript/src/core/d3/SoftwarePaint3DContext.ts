@@ -170,6 +170,14 @@ export class SoftwarePaint3DContext {
         }
     }
 
+    /**
+     * Supersampling: the buffers are this many times the window per axis (the caller
+     * composites them scaled down). Wireframe lines are drawn this many pixels thick so they
+     * keep their weight after the downscale.
+     */
+    private mSuper = 1;
+    setSupersample(k: number): void { this.mSuper = Math.max(1, Math.trunc(k)); }
+
     getWidth(): number { return this.mWidth; }
     getHeight(): number { return this.mHeight; }
 
@@ -550,17 +558,21 @@ export class SoftwarePaint3DContext {
             const ax = ts[0], ay = ts[1], az = ts[2];
             const bx = ts[3], by = ts[4], bz = ts[5];
             const cx = ts[6], cy = ts[7], cz = ts[8];
-            if (e0) {
-                drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
-                    ax, ay, az, bx, by, bz, WIRE_DEPTH_BIAS);
-            }
-            if (e1) {
-                drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
-                    bx, by, bz, cx, cy, cz, WIRE_DEPTH_BIAS);
-            }
-            if (e2) {
-                drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
-                    cx, cy, cz, ax, ay, az, WIRE_DEPTH_BIAS);
+            for (let oy = 0; oy < this.mSuper; oy++) {
+                for (let ox = 0; ox < this.mSuper; ox++) {
+                    if (e0) {
+                        drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
+                            ax + ox, ay + oy, az, bx + ox, by + oy, bz, WIRE_DEPTH_BIAS);
+                    }
+                    if (e1) {
+                        drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
+                            bx + ox, by + oy, bz, cx + ox, cy + oy, cz, WIRE_DEPTH_BIAS);
+                    }
+                    if (e2) {
+                        drawLineDepthTested(this.mZbuf!, pixels, lineColor, w, h,
+                            cx + ox, cy + oy, cz, ax + ox, ay + oy, az, WIRE_DEPTH_BIAS);
+                    }
+                }
             }
         }
     }
