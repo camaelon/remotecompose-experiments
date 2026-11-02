@@ -1,0 +1,149 @@
+{
+ "component": "InputsResult",
+ "version": 1,
+ "summary": "A whole-screen template for a calculator or form with a live answer: the result stays on screen and the inputs scroll in the space left. Stacked (result on top) when narrow, side by side (result on the left) from sideAt. Decided by window width, never by content.",
+ "params": {
+  "resultHeight": {
+   "type": "float",
+   "required": true,
+   "doc": "The result's height when stacked: its content's whole height, Card padding included. The layout cannot measure it, and what doesn't fit is cut off; look at the smallest size"
+  },
+  "sideAt": {
+   "type": "float",
+   "default": 480,
+   "static": true,
+   "doc": "Width in dp from which the parts sit side by side"
+  },
+  "ratio": {
+   "type": "float",
+   "default": 0.42,
+   "doc": "The result's share of the width when side by side"
+  },
+  "gap": {
+   "type": "float",
+   "default": 12,
+   "static": true,
+   "doc": "Space between the two parts, and between the inputs"
+  },
+  "padding": {
+   "type": "float",
+   "default": 16,
+   "static": true,
+   "doc": "Space around the whole screen"
+  }
+ },
+ "slots": {
+  "result": {
+   "doc": "What must stay visible: usually a Card. It gets a box of exact size"
+  },
+  "inputs": {
+   "doc": "The controls, top to bottom: they sit in a scrolling column, so a short window scrolls them and never the result"
+  }
+ },
+ "locals": {
+  "scroll": 0,
+  "h": "windowHeight() - 2 * @padding",
+  "side": "step(windowWidth(), @sideAt - 0.5)"
+ },
+ "capabilities": [
+  "layout.scroll",
+  "layout.flow"
+ ],
+ "call": {
+  "InputsResult": {
+   "resultHeight": 80,
+   "slots": {
+    "result": [
+     {
+      "Card": {
+       "title": "Result"
+      }
+     }
+    ],
+    "inputs": [
+     {
+      "ChoiceChips": {
+       "label": "Tip",
+       "items": [
+        "10%",
+        "15%"
+       ],
+       "selected": "@tip"
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "Use it as the document's root: it fills the window, paints the background and pads itself, and its sizes come from the window. Inside something smaller it is wrong; there use AdaptiveSplit with your own width and height",
+  "resultHeight is a number you must get right: the format has no way to size the inputs from a measured result, and too small clips the result (text cut this way gives a text_overflow warning; anything drawn gets no finding). Sum it (Card padding 32 + 2 plus the content) and look at the smallest size",
+  "The inputs scroll, so nothing in them should be weighted or fill the height, and no onRelease control (a Slider's) inside a scroll: it fires for the last one wherever the finger was",
+  "Result first is deliberate: above the hand when stacked, and on tall windows the empty space is at the bottom, not between input and answer. Reading order is result, then inputs",
+  "Always expanded (it calls AdaptiveSplit and declares a scroll), one call per document: the cost is once, about 700 B over a bare column"
+ ],
+ "body": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": "@padding"
+    }
+   ],
+   "children": [
+    {
+     "AdaptiveSplit": {
+      "side": "@side",
+      "width": "windowWidth() - 2 * @padding",
+      "height": "@h",
+      "ratio": "@ratio",
+      "gap": "@gap",
+      "firstHeight": "@resultHeight + @gap",
+      "slots": {
+       "first": [
+        {
+         "box": {
+          "modifiers": [
+           "fillMaxWidth",
+           {
+            "height": "ifElse(@resultHeight, @h, @side)"
+           }
+          ],
+          "children": [
+           {
+            "$slot": "result"
+           }
+          ]
+         }
+        }
+       ],
+       "second": [
+        {
+         "column": {
+          "modifiers": [
+           "fillMaxSize",
+           {
+            "verticalScroll": "@scroll"
+           },
+           {
+            "spacedBy": "@gap"
+           }
+          ],
+          "children": [
+           {
+            "$slot": "inputs"
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

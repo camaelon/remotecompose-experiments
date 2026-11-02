@@ -1,0 +1,274 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A BMI calculator: height and weight steppers, a metric or imperial choice, and the result with its band"
+ },
+ "resources": {
+  "variables": {
+   "unit": 0,
+   "was": 0,
+   "h": 170,
+   "w": 70,
+   "hMin": "ifElse(100, 39, @unit)",
+   "hMax": "ifElse(220, 87, @unit)",
+   "wMin": "ifElse(30, 66, @unit)",
+   "wMax": "ifElse(200, 441, @unit)",
+   "bmi": "round(10 * ifElse(10000 * @w / (@h * @h), 703 * @w / (@h * @h), @unit)) / 10",
+   "band": "step(@bmi, 18.45) + step(@bmi, 24.95) + step(@bmi, 29.95)"
+  }
+ },
+ "root": {
+  "InputsResult": {
+   "resultHeight": 88,
+   "slots": {
+    "result": [
+     {
+      "Card": {
+       "children": [
+        {
+         "row": {
+          "verticalAlignment": "center",
+          "modifiers": [
+           "fillMaxWidth"
+          ],
+          "children": [
+           {
+            "box": {
+             "modifiers": [
+              {
+               "weight": 1
+              }
+             ],
+             "children": [
+              {
+               "column": {
+                "children": [
+                 {
+                  "text": {
+                   "value": "BMI",
+                   "fontSize": "@theme.text_sm",
+                   "color": "@colors.muted"
+                  }
+                 },
+                 {
+                  "text": {
+                   "value": {
+                    "type": "textFromFloat",
+                    "value": "@bmi",
+                    "whole": 3,
+                    "decimal": 1,
+                    "flags": 5
+                   },
+                   "fontSize": 30,
+                   "fontWeight": 600,
+                   "color": "@colors.onSurface"
+                  }
+                 }
+                ],
+                "modifiers": [
+                 {
+                  "spacedBy": 2
+                 }
+                ]
+               }
+              }
+             ]
+            }
+           },
+           {
+            "column": {
+             "horizontalAlignment": "end",
+             "children": [
+              {
+               "TextChoice": {
+                "items": [
+                 "Underweight",
+                 "Healthy",
+                 "Overweight",
+                 "Obesity"
+                ],
+                "index": "@band",
+                "fontSize": "@theme.text_md",
+                "fontWeight": 600
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 "Under 18.5",
+                 "18.5 to 24.9",
+                 "25 to 29.9",
+                 "30 or more"
+                ],
+                "index": "@band",
+                "fontSize": "@theme.text_sm",
+                "color": "@colors.muted"
+               }
+              }
+             ],
+             "modifiers": [
+              {
+               "spacedBy": 2
+              }
+             ]
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    ],
+    "inputs": [
+     {
+      "ChoiceChips": {
+       "label": "Units",
+       "items": [
+        "Metric",
+        "Imperial"
+       ],
+       "selected": "@unit",
+       "onClick": [
+        {
+         "type": "valueFloatExpressionChange",
+         "target": "@h",
+         "value": "clamp(ifElse(100, 39, @unit), ifElse(220, 87, @unit), round(@h * ifElse(1, ifElse(2.54, 1 / 2.54, @unit), abs(@unit - @was))))"
+        },
+        {
+         "type": "valueFloatExpressionChange",
+         "target": "@w",
+         "value": "clamp(ifElse(30, 66, @unit), ifElse(200, 441, @unit), round(@w * ifElse(1, ifElse(1 / 2.20462, 2.20462, @unit), abs(@unit - @was))))"
+        },
+        {
+         "type": "valueFloatExpressionChange",
+         "target": "@was",
+         "value": "@unit"
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "children": [
+              {
+               "text": {
+                "value": "Height",
+                "fontSize": "@theme.text_md",
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 "cm",
+                 "in"
+                ],
+                "index": "@unit",
+                "fontSize": "@theme.text_sm",
+                "color": "@colors.muted"
+               }
+              }
+             ],
+             "modifiers": [
+              {
+               "spacedBy": 2
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Stepper": {
+          "value": "@h",
+          "min": "@hMin",
+          "max": "@hMax",
+          "label": "height"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "row": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "box": {
+          "modifiers": [
+           {
+            "weight": 1
+           }
+          ],
+          "children": [
+           {
+            "column": {
+             "children": [
+              {
+               "text": {
+                "value": "Weight",
+                "fontSize": "@theme.text_md",
+                "color": "@colors.muted"
+               }
+              },
+              {
+               "TextChoice": {
+                "items": [
+                 "kg",
+                 "lb"
+                ],
+                "index": "@unit",
+                "fontSize": "@theme.text_sm",
+                "color": "@colors.muted"
+               }
+              }
+             ],
+             "modifiers": [
+              {
+               "spacedBy": 2
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "Stepper": {
+          "value": "@w",
+          "min": "@wMin",
+          "max": "@wMax",
+          "label": "weight"
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ }
+}

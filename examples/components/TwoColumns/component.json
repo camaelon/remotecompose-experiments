@@ -1,0 +1,36 @@
+{
+ "component": "TwoColumns",
+ "version": 1,
+ "summary": "Two columns of sections, side by side when the window is wide and one under the other when it is not. Each is as tall as its content, so it belongs on a scrolling screen; each part is written once, not once per layout. For two parts that fill a fixed window, use AdaptiveSplit.",
+ "params": {
+  "sideAt": {"type": "float", "default": 560, "static": true, "doc": "Window width in dp from which they sit side by side"},
+  "inset": {"type": "float", "default": 32, "doc": "The horizontal padding around the call, both sides together: the columns share the window minus this"},
+  "maxWidth": {"type": "float", "default": 1000, "doc": "The widest the two may get together; beyond it they stay centred"},
+  "gap": {"type": "float", "default": 12, "static": true, "doc": "Space between the columns, across or down"},
+  "ratio": {"type": "float", "default": 0.5, "doc": "The first column's share of the width when side by side"}
+ },
+ "slots": {
+  "first": {"doc": "The first column, left or on top: a list of sections, stacked with the gap"},
+  "second": {"doc": "The second column, right or below"}
+ },
+ "locals": {
+  "w": "min(windowWidth() - @inset, @maxWidth)",
+  "s": "step(windowWidth(), @sideAt - 0.5)",
+  "sw": "floor(@w * @ratio - @gap / 2)"
+ },
+ "capabilities": ["layout.flow"],
+ "call": {"TwoColumns": {"slots": {"first": [{"Card": {"title": "First"}}], "second": [{"Card": {"title": "Second"}}]}}},
+ "body": {"box": {"horizontalAlignment": "center", "modifiers": ["fillMaxWidth"], "children": [
+  {"flow": {"horizontalArrangement": "spaceBetween", "modifiers": [{"width": "@w"}], "children": [
+   {"column": {"modifiers": [{"width": "ifElse(@w, @sw, @s)"}, {"spacedBy": "@gap"}], "children": [{"$slot": "first"}]}},
+   {"column": {"modifiers": [{"width": "ifElse(@w, @w - @sw - @gap, @s)"}, {"spacedBy": "@gap"}], "children": [
+    {"box": {"modifiers": [{"visibility": "1 - @s"}, {"height": 0}]}},
+    {"$slot": "second"}]}}
+  ]}}
+ ]}},
+ "pitfalls": [
+  "inset must match the padding around the call: flow wraps as soon as the two widths exceed the real space, and the columns stack on a wide screen",
+  "Decided by the window, not by content: a tall first column stays tall, with empty space under the shorter one",
+  "The slots cannot read s: to change content by layout, compute the same flag in the document"
+ ]
+}

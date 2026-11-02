@@ -1,12 +1,11 @@
 {
  "component": "Card",
- "version": 2,
- "summary": "A rounded surface with a title, an optional subtitle, a content slot and an actions row.",
+ "version": 3,
+ "summary": "A rounded surface with an optional title, an optional subtitle, a content slot and an actions row.",
  "params": {
   "title": {
    "type": "string",
-   "required": true,
-   "doc": "Header text, 17 sp, onSurface"
+   "doc": "Optional header text, 17 sp, onSurface; left out, the content starts at the top of the card"
   },
   "subtitle": {
    "type": "string",
@@ -107,10 +106,13 @@
    ],
    "children": [
     {
-     "text": {
-      "value": "@title",
-      "fontSize": 17,
-      "color": "@colors.onSurface"
+     "$if": "title",
+     "then": {
+      "text": {
+       "value": "@title",
+       "fontSize": 17,
+       "color": "@colors.onSurface"
+      }
      }
     },
     {
@@ -152,6 +154,7 @@
   }
  },
  "pitfalls": [
+  "`title` is optional: left out, no text node is written and the content starts at the top. A card with no title should still have something that says what it is, for a screen reader",
   "The card fills its width and pads its content by 16 dp with 8 dp spacedBy: components inside that pad themselves (ListItem) should pass padding 0, and an outlined Button inside should pass surface: \"@colors.surface\"",
   "The content slot is a column: a row of things side by side needs its own row (with weighted boxes, not spacedBy, if anything in it is weighted)"
  ]

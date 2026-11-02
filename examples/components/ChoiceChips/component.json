@@ -1,0 +1,329 @@
+{
+ "component": "ChoiceChips",
+ "version": 1,
+ "summary": "A labelled single choice: one short call makes a heading and a wrapping group of pills, a tap selects that item (a repeat tap keeps it, the others clear), and a screen reader hears the group with each item (\"Tip: 15%\", Selected). `selected` holds the 0-based index. style segmented uses Tabs' sliding pill instead of pills.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The choices, e.g. [\"10%\", \"15%\", \"20%\"]; fixed when the document is built"
+  },
+  "label": {
+   "type": "string",
+   "required": true,
+   "doc": "What is being chosen (\"Tip\"): the visible heading and, in style chips, the start of each pill's accessibility label. A literal, not a text variable"
+  },
+  "selected": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The selected index, 0-based. Declare it in resources.variables and bind it to read or preset it (\"@tip\"); turn the index into what it means in an expression (\"10 + 5 * @tip\") or show text for it with TextChoice"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "chips",
+    "segmented"
+   ],
+   "default": "chips",
+   "static": true,
+   "doc": "chips: pills that wrap to more lines when narrow. segmented: a Tabs track of equal widths, one line, never wraps; for two to four short items"
+  },
+  "showLabel": {
+   "type": "bool",
+   "default": true,
+   "static": true,
+   "doc": "false hides the heading when the screen already shows it. In style chips the pills still say the label; in style segmented nothing does, so keep it"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The selected face; its label is onPrimary"
+  },
+  "onClick": {
+   "type": "action",
+   "doc": "Extra actions run on every tap, a repeat tap too, after `selected` is set: they read the NEW index, if they read @selected itself (not a variable derived from it). An action that must run once per change has to compare it with a copy of the old one (CMP-25)"
+  }
+ },
+ "capabilities": [
+  "input.tap",
+  "layout.decoration",
+  "a11y.labels"
+ ],
+ "call": {
+  "ChoiceChips": {
+   "label": "Tip",
+   "items": [
+    "10%",
+    "15%",
+    "20%"
+   ],
+   "selected": "@tip"
+  }
+ },
+ "pitfalls": [
+  "`selected` is the index, not a value: compute the value from it in the document (\"10 + 5 * @tip\"). A preset outside the list selects nothing until the next tap",
+  "In `onClick`, read @selected directly in the action's own expression. A variable derived from it in resources (\"changed\": \"abs(@unit - @was)\") still holds last frame's value during the tap, so it silently gives the old answer; CMP-25 hit this",
+  "Not for several independent on/off filters (use Chip) or a tab bar over panels (use Tabs). TextChoice only shows a word for an index: it takes no input, and pairs well with this for the result",
+  "Style chips wraps by itself (a `flow`): give it width and let its height grow; every line is 48 dp, all clickable, so don't put it in a box of fixed height. A label wider than the whole line ends in …",
+  "Style segmented is Tabs: it never wraps, and its tabs announce only their item (\"Metric\", Selected), after the heading in reading order. The chips style says the group in each item (\"Tip: 15%\")",
+  "Always expanded, never a pattern (its text and state ops): about 570 B per item and 850 B once per call (a three-item group is 2.6 KB alone, 1.8 KB as a second group in the same document; three plain Chips are 2.2 KB). A long list of choices belongs in a list, not pills",
+  "Mono: the selected pill is filled and the others are rings, so the state is a shape; no motion",
+  "`label` is required on purpose: without it a screen reader hears \"10%\" and no question"
+ ],
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth"
+   ],
+   "children": [
+    {
+     "$if": "showLabel",
+     "then": {
+      "text": {
+       "value": "@label",
+       "fontSize": "@theme.text_md",
+       "color": "@colors.muted",
+       "modifiers": [
+        {
+         "$if": "style == 'segmented'",
+         "then": {
+          "padding": {
+           "bottom": 4
+          }
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "$if": "style == 'segmented'",
+     "then": {
+      "Tabs": {
+       "labels": "@items",
+       "style": "segmented",
+       "selected": "@selected",
+       "color": "@color",
+       "onClick": "@onClick"
+      }
+     },
+     "else": {
+      "flow": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "canvas": {
+          "modifiers": [
+           {
+            "size": [
+             0,
+             0
+            ]
+           }
+          ],
+          "commands": [
+           {
+            "global": {
+             "commands": [
+              {
+               "$each": "items",
+               "index": "i",
+               "do": [
+                {
+                 "textSubtext": {
+                  "text": "Not selectedSelected    ",
+                  "start": "(1 - min(1, abs(@selected - @i))) * 12",
+                  "len": 12,
+                  "varName": "ccState12_@i"
+                 }
+                },
+                {
+                 "textTransform": {
+                  "text": "@ccState12_@i",
+                  "start": 0,
+                  "len": -1,
+                  "operation": 3,
+                  "varName": "ccState_@i"
+                 }
+                }
+               ]
+              }
+             ]
+            }
+           }
+          ]
+         }
+        },
+        {
+         "$each": "items",
+         "as": "item",
+         "index": "i",
+         "do": {
+          "box": {
+           "modifiers": [
+            {
+             "padding": {
+              "end": 8
+             }
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "padding": [
+                 0,
+                 8
+                ]
+               },
+               {
+                "clip": 16
+               },
+               {
+                "semantics": {
+                 "contentDescription": "@label: @item",
+                 "stateDescription": "@ccState_@i",
+                 "clickable": true
+                }
+               },
+               {
+                "onClick": [
+                 {
+                  "type": "valueFloatChange",
+                  "target": "@selected",
+                  "value": "@i"
+                 },
+                 {
+                  "$if": "onClick",
+                  "then": "@onClick"
+                 }
+                ]
+               }
+              ],
+              "children": [
+               {
+                "box": {
+                 "horizontalAlignment": "center",
+                 "verticalAlignment": "center",
+                 "modifiers": [
+                  {
+                   "height": 32
+                  },
+                  {
+                   "$if": "theme.mono",
+                   "then": {
+                    "background": "@colors.outline"
+                   },
+                   "auto": [
+                    {
+                     "background": "@colors.surfaceHigh"
+                    },
+                    {
+                     "background": "@colors.monoOutline"
+                    }
+                   ]
+                  },
+                  {
+                   "$if": "theme.mono",
+                   "then": {
+                    "padding": 1
+                   },
+                   "auto": {
+                    "padding": 1
+                   }
+                  },
+                  {
+                   "$if": "theme.mono",
+                   "then": {
+                    "clip": 15
+                   },
+                   "auto": {
+                    "clip": 15
+                   }
+                  },
+                  {
+                   "background": "@colors.surfaceHigh"
+                  },
+                  {
+                   "padding": [
+                    {
+                     "$if": "theme.mono",
+                     "then": 13,
+                     "else": 14,
+                     "auto": 13
+                    },
+                    0
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "text": {
+                    "value": "@item",
+                    "maxLines": 1,
+                    "overflow": "ellipsis",
+                    "fontSize": 14,
+                    "color": "@colors.onSurface"
+                   }
+                  }
+                 ]
+                }
+               },
+               {
+                "box": {
+                 "horizontalAlignment": "center",
+                 "verticalAlignment": "center",
+                 "modifiers": [
+                  {
+                   "graphicsLayer": {
+                    "alpha": {
+                     "value": "1 - min(1, abs(@selected - @i))",
+                     "anim": 0.2
+                    }
+                   }
+                  },
+                  {
+                   "height": 32
+                  },
+                  {
+                   "background": "@color"
+                  },
+                  {
+                   "padding": [
+                    14,
+                    0
+                   ]
+                  }
+                 ],
+                 "children": [
+                  {
+                   "text": {
+                    "value": "@item",
+                    "maxLines": 1,
+                    "overflow": "ellipsis",
+                    "fontSize": 14,
+                    "color": "@colors.onPrimary"
+                   }
+                  }
+                 ]
+                }
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ }
+}

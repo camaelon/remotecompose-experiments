@@ -1,0 +1,529 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "How a pin tumbler lock opens: drag along the track to slide the key in; its ridges lift each pin stack until every gap meets the shear line and the plug can turn"
+ },
+ "resources": {
+  "variables": {
+   "stage": {
+    "value": 0,
+    "export": true
+   }
+  },
+  "floatArrays": {
+   "cut": {
+    "value": [
+     6,
+     16,
+     4,
+     20,
+     10
+    ]
+   },
+   "len": {
+    "value": [
+     34,
+     24,
+     36,
+     20,
+     30
+    ]
+   }
+  }
+ },
+ "components": {
+  "PinLock": {
+   "summary": "A pin tumbler lock in cross-section, drawn from one number",
+   "params": {
+    "pos": {
+     "type": "float",
+     "required": true,
+     "doc": "0 no key, 1 key part way, 2 key home, 3 plug turned; moves continuously"
+    },
+    "background": {
+     "type": "color",
+     "default": "@colors.surface",
+     "doc": "Keyway colour"
+    }
+   },
+   "call": {
+    "PinLock": {
+     "pos": 1
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth() / 300, componentHeight() / 170)"
+       }
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - 300 * @s) / 2",
+        "dy": "(componentHeight() - 170 * @s) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@s",
+        "sy": "@s"
+       }
+      },
+      {
+       "variable": {
+        "name": "ins",
+        "value": "clamp(0, 1, @pos / 2)"
+       }
+      },
+      {
+       "variable": {
+        "name": "turn",
+        "value": "clamp(0, 1, @pos - 2)"
+       }
+      },
+      {
+       "variable": {
+        "name": "kx",
+        "value": "-210 * (1 - @ins)"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.outline"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": 0.45
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 36,
+        "top": 12,
+        "right": 240,
+        "bottom": 158,
+        "rx": 10,
+        "ry": 10
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.track"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 44,
+        "top": 84,
+        "right": 232,
+        "bottom": 152,
+        "rx": 8,
+        "ry": 8
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.error"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 36,
+        "y1": 84,
+        "x2": 240,
+        "y2": 84
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@background"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": 44,
+        "top": 124,
+        "right": 232,
+        "bottom": 146,
+        "rx": 3,
+        "ry": 3
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "fill",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@kx + 16",
+        "top": 124,
+        "right": "@kx + 232",
+        "bottom": "146",
+        "rx": 2,
+        "ry": 2
+       }
+      },
+      {
+       "drawRect": {
+        "left": "-60 + @kx",
+        "top": 122,
+        "right": "@kx + 30",
+        "bottom": 148
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 5,
+        "commands": [
+         {
+          "drawRect": {
+           "left": "@kx + 60 + k * 32 - 12",
+           "top": "124 - arrayGet(@cut, k)",
+           "right": "@kx + 60 + k * 32 + 12",
+           "bottom": 126
+          }
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 5,
+        "commands": [
+         {
+          "variable": {
+           "name": "px",
+           "value": "60 + k * 32 - @kx"
+          }
+         },
+         {
+          "variable": {
+           "name": "j",
+           "value": "clamp(0, 4, round((@px - 60) / 32))"
+          }
+         },
+         {
+          "variable": {
+           "name": "near",
+           "value": "clamp(0, 1, (14 - abs(@px - 60 - @j * 32)) / 6)"
+          }
+         },
+         {
+          "variable": {
+           "name": "on",
+           "value": "step(@px, 16) * step(250, @px)"
+          }
+         },
+         {
+          "variable": {
+           "name": "pb",
+           "value": "124 - arrayGet(@cut, @j) * @near * @on"
+          }
+         },
+         {
+          "variable": {
+           "name": "pt",
+           "value": "@pb - arrayGet(@len, k)"
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.muted"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 1.5
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "loop": {
+           "index": "m",
+           "from": 0,
+           "until": 4,
+           "commands": [
+            {
+             "drawLine": {
+              "x1": "60 + k * 32 - 7 + 14 * (m % 2)",
+              "y1": "16 + m * (@pt - 34 - 16) / 4",
+              "x2": "60 + k * 32 + 7 - 14 * (m % 2)",
+              "y2": "16 + (m + 1) * (@pt - 34 - 16) / 4"
+             }
+            }
+           ]
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.primary"
+            },
+            {
+             "style": "fill"
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "60 + k * 32 - 9",
+           "top": "@pt - 34",
+           "right": "60 + k * 32 + 9",
+           "bottom": "@pt - 1",
+           "rx": 2,
+           "ry": 2
+          }
+         },
+         {
+          "paint": {
+           "ops": [
+            {
+             "color": "@colors.onSurface"
+            },
+            {
+             "style": "stroke"
+            },
+            {
+             "strokeWidth": 2
+            },
+            {
+             "alpha": 1
+            }
+           ]
+          }
+         },
+         {
+          "drawRoundRect": {
+           "left": "60 + k * 32 - 8",
+           "top": "@pt + 1",
+           "right": "60 + k * 32 + 8",
+           "bottom": "@pb - 1",
+           "rx": 2,
+           "ry": 2
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "262 - 24 * @turn",
+        "top": 96,
+        "right": "300 - 24 * @turn",
+        "bottom": 130,
+        "rx": 4,
+        "ry": 4
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "alpha": 1
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": 270,
+        "cy": 48,
+        "radius": 18
+       }
+      },
+      {
+       "drawLine": {
+        "x1": "270 - 11 * sin(1.5708 * @turn)",
+        "y1": "48 + 11 * cos(1.5708 * @turn)",
+        "x2": "270 + 11 * sin(1.5708 * @turn)",
+        "y2": "48 - 11 * cos(1.5708 * @turn)"
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "StepExplainer": {
+   "title": "How a lock opens",
+   "step": "@stage",
+   "eased": "@keyAt",
+   "progress": "scrub",
+   "frame": "panel",
+   "visualLabel": "Cross-section of a lock: a plug in a housing, five pin stacks held down by springs, a key entering from the left",
+   "steps": [
+    {
+     "title": "Locked",
+     "text": "Springs push five pin stacks down. The upper, driver pins cross the shear line, where plug meets housing, and stop the plug turning.",
+     "short": "Driver pins cross the shear line."
+    },
+    {
+     "title": "Key enters",
+     "text": "Ridges on the key push each stack up as it passes, then let it fall back. Only a key this shape will do.",
+     "short": "Ridges lift the pins as it goes."
+    },
+    {
+     "title": "Key home",
+     "text": "Each ridge lifts its stack exactly so the gap between the pins sits on the shear line.",
+     "short": "Every gap is on the shear line."
+    },
+    {
+     "title": "Plug turns",
+     "text": "Nothing crosses the shear line now, so the plug turns with the key and pulls the bolt back.",
+     "short": "The plug turns; the bolt retracts."
+    }
+   ],
+   "slots": {
+    "visual": [
+     {
+      "PinLock": {
+       "pos": "@keyAt"
+      }
+     }
+    ]
+   }
+  }
+ }
+}

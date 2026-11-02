@@ -367,6 +367,9 @@ Traps the library hit (the linter catches the first four):
   Start each branch that later fades with `{"alpha": 1}` in its first paint (Switch and
   Checkbox mono).
 - A paint `color` op resets alpha to 1: write `alpha` after `color` in the same paint.
+- During a tap, a variable derived from another one still holds last frame's value: spell the expression out in the action.
+- `step(x, edge)` is strict at the edge as compared after rounding: test a shown band against a value just below it (24.95, not 25), and check the boundaries.
+- A document variable named `step` hides the `step()` function.
 - A host action can carry a variable: `{"type":"hostAction", ... "value":"@pos","valueType":"float","actionType":0}`
   sends its current value (json2rc and the Java parser write identical bytes). See SeekBar.
 - Java runs `onTouchUp` only if the canvas also has `onTouchDown` (an empty list will do), and

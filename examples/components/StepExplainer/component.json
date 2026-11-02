@@ -1,0 +1,2845 @@
+{
+ "component": "StepExplainer",
+ "version": 1,
+ "summary": "A complete step-by-step explainer screen: you give the steps' captions and a drawing, it brings the background, the visual above or beside the caption, the progress (dots, segmented bar, numbers, vertical timeline or a scrubbed track), Back / Next / play, and shortens itself to fit any size. The step count and captions may be computed at run time, so it can end early.",
+ "params": {
+  "steps": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One entry per step: {\"title\", \"text\", \"short\"}. title is always shown; text is the full caption; short is used when there is little room (omitted: text cut to 2 lines). Each may be a plain string or a text object over live values (textMerge, textFromFloat). With `captionIndex`, the entries are caption STATES, and need not match the step count"
+  },
+  "title": {
+   "type": "string",
+   "doc": "The subject, a heading above everything (hidden under 170 dp tall)"
+  },
+  "count": {
+   "type": "float",
+   "doc": "Number of steps, when it is computed at run time: an expression or a \"@variable\" (a resources one). Back, Next and the progress follow it, so the explainer can end early. Default: the number of `steps`"
+  },
+  "captionIndex": {
+   "type": "float",
+   "doc": "Which entry of `steps` is shown, at run time. Default: the current step. Use with `count` for computed steps: [start, swapped, kept, finished] picked by an expression"
+  },
+  "step": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "The step, 0-based, which every control writes. Bind a resources variable (\"@at\", not \"@step\": a variable named step hides the step() function) to compute things from it in resources. Unbound: the call keeps its own. While autoplay plays it stays where play started; read `shown`"
+  },
+  "shown": {
+   "type": "variable",
+   "doc": "Publishes the whole step on screen under this name (\"@stepNow\"), for the `visual` slot. A tree variable: read it inside the slot, do not declare it in resources"
+  },
+  "eased": {
+   "type": "variable",
+   "doc": "Publishes the step as a moving value under this name (\"@stepEased\"): it glides between steps over 0.5 s, and follows the finger with progress scrub. For morphing the visual. Same rules as `shown`"
+  },
+  "progress": {
+   "type": "enum",
+   "values": [
+    "dots",
+    "bar",
+    "numbers",
+    "timeline",
+    "scrub",
+    "none"
+   ],
+   "default": "dots",
+   "static": true,
+   "doc": "How progress is shown. dots: small dots and \"Step N of M\". bar: a segmented bar and the same text. numbers: numbered circles on a line. timeline: a vertical list of all titles, the current one expanded, each row tappable (needs a static step list). scrub: a track with stops that the finger drags, the visual follows live and the caption updates on release (static list)"
+  },
+  "tappable": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "dots, bar, numbers: tapping a stop jumps to that step, each with a label for a screen reader; no \"Step N of M\" text (static step list only). timeline and scrub always are"
+  },
+  "controls": {
+   "type": "enum",
+   "values": [
+    "buttons",
+    "play",
+    "none"
+   ],
+   "default": "buttons",
+   "static": true,
+   "doc": "buttons: Back and Next. play: also play / pause, which advances every `interval` s (no play in mono). none: for tappable, timeline or scrub"
+  },
+  "buttons": {
+   "type": "enum",
+   "values": [
+    "icons",
+    "labels"
+   ],
+   "default": "icons",
+   "static": true,
+   "doc": "icons: round arrows, down to 160 dp. labels: text Back / Next, about 200 dp at least, 300 B more"
+  },
+  "layout": {
+   "type": "enum",
+   "values": [
+    "auto",
+    "above",
+    "beside"
+   ],
+   "default": "auto",
+   "static": true,
+   "doc": "Where the visual goes. auto: beside the caption from 280 dp wide and 1.2 x the height, above otherwise"
+  },
+  "frame": {
+   "type": "enum",
+   "values": [
+    "plain",
+    "panel"
+   ],
+   "default": "plain",
+   "static": true,
+   "doc": "panel: the visual sits in a rounded surface (a ring in mono)"
+  },
+  "background": {
+   "type": "color",
+   "default": "@colors.background",
+   "doc": "The explainer's own background, so dark and mono looks are right on any host"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "Next, the active progress"
+  },
+  "interval": {
+   "type": "float",
+   "default": 3,
+   "static": true,
+   "doc": "Seconds per step while playing"
+  },
+  "playing": {
+   "type": "variable",
+   "initial": 0,
+   "doc": "1 while playing; pass 1 to start playing when the document loads"
+  },
+  "loop": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "A cycle: Next and play go from the last step to the first, and there is no end face"
+  },
+  "atEnd": {
+   "type": "enum",
+   "values": [
+    "restart",
+    "stop"
+   ],
+   "default": "restart",
+   "static": true,
+   "doc": "The last step's button: restart (Start over, or onDone's) or a dimmed Next"
+  },
+  "doneLabel": {
+   "type": "string",
+   "doc": "Label of the last step's button"
+  },
+  "onDone": {
+   "type": "action",
+   "doc": "Runs on the last step's button instead of going back to step 1"
+  },
+  "captionLines": {
+   "type": "float",
+   "default": 3,
+   "static": true,
+   "doc": "Lines to keep free for `text`: the longest caption at the narrowest phone width. Below that much room the short form shows"
+  },
+  "inputWhen": {
+   "type": "enum",
+   "values": [
+    "start",
+    "always"
+   ],
+   "default": "start",
+   "static": true,
+   "doc": "start: the input slot shows on step 1 only (pick, then step; Start over returns to it). always: on every step, and your input must set the step back to 0 itself"
+  },
+  "inputHeight": {
+   "type": "float",
+   "default": 48,
+   "static": true,
+   "doc": "Height of the input slot"
+  },
+  "visualLabel": {
+   "type": "string",
+   "doc": "What a screen reader says for the visual"
+  },
+  "width": {
+   "type": "float",
+   "default": "windowWidth()",
+   "doc": "The width it has, when it is not the whole window"
+  },
+  "height": {
+   "type": "float",
+   "default": "windowHeight()",
+   "doc": "The height it has"
+  }
+ },
+ "slots": {
+  "visual": {
+   "doc": "The drawing. It gets a box of exact size: a canvas with fillMaxSize, scaled from componentWidth() / componentHeight(). It reads @stepNow / @stepEased (the names you bound), or a resources variable bound to `step`"
+  },
+  "input": {
+   "optional": true,
+   "doc": "Something to pick before stepping, e.g. Tabs bound to a resources variable. Hidden when there is no room: the default value is then used"
+  }
+ },
+ "locals": {
+  "n": {
+   "$if": "count",
+   "then": "@count",
+   "else": {
+    "$count": "steps"
+   }
+  },
+  "last": "@n - 1",
+  "t0": 0,
+  "s0": 0,
+  "cur": {
+   "$if": "controls == 'play'",
+   "then": {
+    "$if": "theme.mono",
+    "then": "clamp(0, @last, round(@step))",
+    "else": {
+     "$if": "loop",
+     "then": "clamp(0, @last, round(@step) + @playing * ((@s0 + floor((animationTime() - @t0) / @interval)) % @n - round(@step)))",
+     "else": "clamp(0, @last, round(@step) + @playing * (@s0 + floor((animationTime() - @t0) / @interval) - round(@step)))"
+    }
+   },
+   "else": "clamp(0, @last, round(@step))"
+  },
+  "run": {
+   "$if": "controls == 'play'",
+   "then": {
+    "$if": "theme.mono",
+    "then": 0,
+    "else": {
+     "$if": "loop",
+     "then": "@playing",
+     "else": "@playing * min(1, @last - @cur)"
+    }
+   },
+   "else": 0
+  },
+  "tick": {
+   "$if": "controls == 'play'",
+   "then": {
+    "$if": "theme.mono",
+    "then": 0,
+    "else": "@run * floor(animationTime() * 2)"
+   },
+   "else": 0
+  },
+  "drive": {
+   "value": "@tick",
+   "anim": 0.75
+  },
+  "more": {
+   "$if": "loop",
+   "then": 1,
+   "else": "min(1, @last - @cur)"
+  },
+  "pos": {
+   "value": "@cur",
+   "anim": 0.5
+  },
+  "cap": {
+   "$if": "captionIndex",
+   "then": "@captionIndex",
+   "else": "@cur"
+  },
+  "touch": 0,
+  "drag": 0,
+  "x0": 0,
+  "m": "min(@width, @height)",
+  "big": "min(1, max(0, @m - 599))",
+  "pad": "ifElse(ifElse(8, 12, step(@m, 199)), ifElse(16, 28, @big), step(@m, 279))",
+  "hasHd": {
+   "$if": "title",
+   "then": "step(@height, 169)",
+   "else": 0
+  },
+  "hd": {
+   "$if": "title",
+   "then": "@hasHd * ifElse(ifElse(26, 34, step(@height, 299)), 44, @big)",
+   "else": 0
+  },
+  "hdFs": "ifElse(ifElse(15, 20, step(@height, 299)), 28, @big)",
+  "iw": "@width - 2 * @pad",
+  "ih": "@height - 2 * @pad - @hd",
+  "side": {
+   "$if": "layout == 'beside'",
+   "then": 1,
+   "else": {
+    "$if": "layout == 'above'",
+    "then": 0,
+    "else": "step(@width, @height * 1.2) * step(@width, 279)"
+   }
+  },
+  "capFs": "ifElse(15, 19, @big)",
+  "titleFs": "ifElse(16, 21, @big)",
+  "titleH": {
+   "$if": "progress == 'scrub'",
+   "then": 0,
+   "else": {
+    "$if": "progress == 'timeline'",
+    "then": 0,
+    "else": "ifElse(24, 32, @big)"
+   }
+  },
+  "pr0": {
+   "$if": "progress == 'none'",
+   "then": 0,
+   "else": {
+    "$if": "progress == 'dots'",
+    "then": 18,
+    "else": {
+     "$if": "progress == 'bar'",
+     "then": 24,
+     "else": {
+      "$if": "progress == 'numbers'",
+      "then": 32,
+      "else": {
+       "$if": "progress == 'scrub'",
+       "then": 54,
+       "else": 0
+      }
+     }
+    }
+   }
+  },
+  "ctrl": {
+   "$if": "controls == 'none'",
+   "then": 0,
+   "else": 48
+  },
+  "lineH": "ifElse(20, 26, @big)",
+  "inH": {
+   "$if": "input",
+   "then": "@inputHeight",
+   "else": 0
+  },
+  "fullH": {
+   "$if": "progress == 'timeline'",
+   "then": "@n * 28 + @captionLines * @lineH",
+   "else": "@captionLines * @lineH + @inH + 4"
+  },
+  "lowH": {
+   "$if": "progress == 'timeline'",
+   "then": 66,
+   "else": {
+    "$if": "input",
+    "then": "max(38, @inH)",
+    "else": 38
+   }
+  },
+  "vw": "ifElse(@iw, floor(min(@ih, @iw * 0.48)), @side)",
+  "free": "@ih - @ctrl - @pr0 - @titleH",
+  "long": "ifElse(step(@free - @fullH, 89.5), step(@free, @fullH - 0.5), @side)",
+  "short": "(1 - @long) * ifElse(step(@free - @lowH, 49.5), step(@free, @lowH - 0.5), @side)",
+  "capH": {
+   "$if": "progress == 'timeline'",
+   "then": "max(28, ifElse(ifElse(@short * @lowH, @fullH, @long), max(0, @free), @side))",
+   "else": "ifElse(ifElse(@short * @lowH, @fullH, @long), max(0, @free), @side)"
+  },
+  "capOn": "max(@long, @short)",
+  "vh": "ifElse(@free - @capH - 6, @ih, @side)",
+  "tw": "ifElse(@iw, @iw - @vw - 14, @side)",
+  "tx": "@side * (@vw + 14)",
+  "ty": "(1 - @side) * (@vh + 6)",
+  "inputOn": {
+   "$if": "input",
+   "then": {
+    "$if": "inputWhen == 'start'",
+    "then": "@capOn * (1 - min(1, @cur))",
+    "else": "@capOn"
+   },
+   "else": 0
+  },
+  "textOn": {
+   "$if": "input",
+   "then": "1 - @short * @inputOn",
+   "else": {
+    "$if": "progress == 'scrub'",
+    "then": "1 - @drag",
+    "else": 1
+   }
+  }
+ },
+ "capabilities": [
+  "layout.state",
+  "input.tap",
+  "a11y.labels"
+ ],
+ "call": {
+  "StepExplainer": {
+   "steps": [
+    {
+     "title": "One",
+     "text": "First"
+    },
+    {
+     "title": "Two",
+     "text": "Second"
+    }
+   ],
+   "shown": "@stepNow",
+   "eased": "@stepEased",
+   "slots": {
+    "visual": [
+     {
+      "box": {
+       "modifiers": [
+        "fillMaxSize"
+       ]
+      }
+     }
+    ]
+   }
+  }
+ },
+ "body": {
+  "column": {
+   "horizontalAlignment": "center",
+   "verticalAlignment": "center",
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@background"
+    }
+   ],
+   "children": [
+    {
+     "$if": "title",
+     "then": {
+      "box": {
+       "verticalAlignment": "center",
+       "modifiers": [
+        {
+         "visibility": "@hasHd"
+        },
+        {
+         "width": "@iw"
+        },
+        {
+         "height": "@hd"
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "@title",
+          "fontSize": "@hdFs",
+          "fontWeight": 700,
+          "color": "@colors.onSurface",
+          "maxLines": 1,
+          "overflow": "ellipsis"
+         }
+        }
+       ]
+      }
+     }
+    },
+    {
+     "box": {
+      "modifiers": [
+       {
+        "width": "@iw"
+       },
+       {
+        "height": "@ih"
+       }
+      ],
+      "children": [
+       {
+        "column": {
+         "modifiers": [
+          "fillMaxSize"
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             {
+              "height": "@ty"
+             }
+            ]
+           }
+          },
+          {
+           "row": {
+            "modifiers": [
+             "fillMaxWidth"
+            ],
+            "children": [
+             {
+              "box": {
+               "modifiers": [
+                {
+                 "width": "@tx"
+                }
+               ]
+              }
+             },
+             {
+              "column": {
+               "modifiers": [
+                {
+                 "width": "@tw"
+                }
+               ],
+               "children": [
+                {
+                 "$if": "progress == 'none'",
+                 "else": {
+                  "$if": "progress == 'timeline'",
+                  "else": {
+                   "box": {
+                    "modifiers": [
+                     "fillMaxWidth",
+                     {
+                      "height": "@pr0"
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$if": "progress == 'dots'",
+                      "then": {
+                       "canvas": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "commands": [
+                         {
+                          "variable": {
+                           "name": "sxP",
+                           "value": {
+                            "$if": "tappable",
+                            "then": "componentWidth() / @n",
+                            "else": "min(14, (componentWidth() - 92) / @n)"
+                           }
+                          }
+                         },
+                         {
+                          "variable": {
+                           "name": "sxO",
+                           "value": {
+                            "$if": "tappable",
+                            "then": "0",
+                            "else": "componentWidth() - @n * @sxP"
+                           }
+                          }
+                         },
+                         {
+                          "$if": "tappable",
+                          "else": [
+                           {
+                            "paint": {
+                             "ops": [
+                              {
+                               "color": "@colors.muted"
+                              },
+                              {
+                               "style": "fill"
+                              },
+                              {
+                               "alpha": 1
+                              },
+                              {
+                               "textSize": "@theme.text_sm"
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "drawTextAnchored": {
+                             "text": {
+                              "type": "textMerge",
+                              "id1": {
+                               "type": "textMerge",
+                               "id1": "Step ",
+                               "id2": {
+                                "type": "textFromFloat",
+                                "value": "@cur + 1",
+                                "whole": 3,
+                                "decimal": 0,
+                                "flags": 5
+                               }
+                              },
+                              "id2": {
+                               "type": "textMerge",
+                               "id1": " of ",
+                               "id2": {
+                                "type": "textFromFloat",
+                                "value": "@n",
+                                "whole": 3,
+                                "decimal": 0,
+                                "flags": 5
+                               }
+                              }
+                             },
+                             "x": 0,
+                             "y": "componentHeight() / 2",
+                             "panX": -1,
+                             "panY": 0
+                            }
+                           }
+                          ]
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.outline"
+                            },
+                            {
+                             "style": {
+                              "$if": "theme.mono",
+                              "then": "stroke",
+                              "else": "fill"
+                             }
+                            },
+                            {
+                             "$if": "theme.mono",
+                             "then": {
+                              "strokeWidth": 1.5
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "loop": {
+                           "index": "k",
+                           "from": 0,
+                           "until": "@n",
+                           "commands": [
+                            {
+                             "drawCircle": {
+                              "cx": "@sxO + (k + 0.5) * @sxP",
+                              "cy": "componentHeight() / 2",
+                              "radius": "min(3.5, @sxP * 0.32)"
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@color"
+                            },
+                            {
+                             "$if": "theme.mono",
+                             "then": {
+                              "style": "fill"
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawCircle": {
+                           "cx": "@sxO + (@pos + 0.5) * @sxP",
+                           "cy": "componentHeight() / 2",
+                           "radius": "min(4, @sxP * 0.36)"
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "$if": "progress == 'bar'",
+                      "then": {
+                       "canvas": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "commands": [
+                         {
+                          "variable": {
+                           "name": "bxP",
+                           "value": "componentWidth() / @n"
+                          }
+                         },
+                         {
+                          "$if": "tappable",
+                          "else": [
+                           {
+                            "paint": {
+                             "ops": [
+                              {
+                               "color": "@colors.muted"
+                              },
+                              {
+                               "style": "fill"
+                              },
+                              {
+                               "alpha": 1
+                              },
+                              {
+                               "textSize": "@theme.text_sm"
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "drawTextAnchored": {
+                             "text": {
+                              "type": "textMerge",
+                              "id1": {
+                               "type": "textMerge",
+                               "id1": "Step ",
+                               "id2": {
+                                "type": "textFromFloat",
+                                "value": "@cur + 1",
+                                "whole": 3,
+                                "decimal": 0,
+                                "flags": 5
+                               }
+                              },
+                              "id2": {
+                               "type": "textMerge",
+                               "id1": " of ",
+                               "id2": {
+                                "type": "textFromFloat",
+                                "value": "@n",
+                                "whole": 3,
+                                "decimal": 0,
+                                "flags": 5
+                               }
+                              }
+                             },
+                             "x": 0,
+                             "y": 8,
+                             "panX": -1,
+                             "panY": 0
+                            }
+                           }
+                          ]
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.track"
+                            },
+                            {
+                             "style": {
+                              "$if": "theme.mono",
+                              "then": "stroke",
+                              "else": "fill"
+                             }
+                            },
+                            {
+                             "$if": "theme.mono",
+                             "then": {
+                              "strokeWidth": 1.5
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "loop": {
+                           "index": "k",
+                           "from": 0,
+                           "until": "@n",
+                           "commands": [
+                            {
+                             "drawRoundRect": {
+                              "left": "k * @bxP + 1",
+                              "top": "componentHeight() - 7",
+                              "right": "(k + 1) * @bxP - 1",
+                              "bottom": "componentHeight() - 1",
+                              "rx": 3,
+                              "ry": 3
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@color"
+                            },
+                            {
+                             "$if": "theme.mono",
+                             "then": {
+                              "style": "fill"
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "loop": {
+                           "index": "k",
+                           "from": 0,
+                           "until": "@n",
+                           "commands": [
+                            {
+                             "drawRoundRect": {
+                              "left": "k * @bxP + 1",
+                              "top": "componentHeight() - 7",
+                              "right": "k * @bxP + 1 + (@bxP - 2) * clamp(0, 1, @pos + 1 - k)",
+                              "bottom": "componentHeight() - 1",
+                              "rx": 3,
+                              "ry": 3
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "$if": "progress == 'numbers'",
+                      "then": {
+                       "canvas": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "commands": [
+                         {
+                          "variable": {
+                           "name": "nxP",
+                           "value": "componentWidth() / @n"
+                          }
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@colors.track"
+                            },
+                            {
+                             "style": "stroke"
+                            },
+                            {
+                             "strokeWidth": {
+                              "$if": "theme.mono",
+                              "then": 1.5,
+                              "else": 3
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": "@nxP / 2",
+                           "y1": 14,
+                           "x2": "componentWidth() - @nxP / 2",
+                           "y2": 14
+                          }
+                         },
+                         {
+                          "paint": {
+                           "ops": [
+                            {
+                             "color": "@color"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "drawLine": {
+                           "x1": "@nxP / 2",
+                           "y1": 14,
+                           "x2": "(@pos + 0.5) * @nxP",
+                           "y2": 14
+                          }
+                         },
+                         {
+                          "loop": {
+                           "index": "k",
+                           "from": 0,
+                           "until": "@n",
+                           "commands": [
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "color": "@background"
+                               },
+                               {
+                                "style": "fill"
+                               },
+                               {
+                                "alpha": 1
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawCircle": {
+                              "cx": "(k + 0.5) * @nxP",
+                              "cy": 14,
+                              "radius": 12
+                             }
+                            },
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "color": "@colors.outline"
+                               },
+                               {
+                                "style": "stroke"
+                               },
+                               {
+                                "strokeWidth": 1.5
+                               },
+                               {
+                                "alpha": 1
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawCircle": {
+                              "cx": "(k + 0.5) * @nxP",
+                              "cy": 14,
+                              "radius": 11
+                             }
+                            },
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "color": "@color"
+                               },
+                               {
+                                "style": "fill"
+                               },
+                               {
+                                "alpha": "clamp(0, 1, @pos + 1 - k)"
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawCircle": {
+                              "cx": "(k + 0.5) * @nxP",
+                              "cy": 14,
+                              "radius": 12
+                             }
+                            },
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "color": "@colors.onSurface"
+                               },
+                               {
+                                "style": "fill"
+                               },
+                               {
+                                "textSize": "@theme.text_sm"
+                               },
+                               {
+                                "alpha": "1 - clamp(0, 1, @pos + 1 - k)"
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawTextAnchored": {
+                              "text": {
+                               "type": "textFromFloat",
+                               "value": "k + 1",
+                               "whole": 2,
+                               "decimal": 0,
+                               "flags": 5
+                              },
+                              "x": "(k + 0.5) * @nxP",
+                              "y": 14,
+                              "panX": 0,
+                              "panY": 0
+                             }
+                            },
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "color": "@colors.onPrimary"
+                               },
+                               {
+                                "alpha": "clamp(0, 1, @pos + 1 - k)"
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawTextAnchored": {
+                              "text": {
+                               "type": "textFromFloat",
+                               "value": "k + 1",
+                               "whole": 2,
+                               "decimal": 0,
+                               "flags": 5
+                              },
+                              "x": "(k + 0.5) * @nxP",
+                              "y": 14,
+                              "panX": 0,
+                              "panY": 0
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     },
+                     {
+                      "$if": "progress == 'scrub'",
+                      "then": [
+                       {
+                        "canvas": {
+                         "modifiers": [
+                          "fillMaxSize",
+                          {
+                           "onTouchDown": {
+                            "type": "valueFloatChange",
+                            "target": "@drag",
+                            "value": 1
+                           }
+                          },
+                          {
+                           "onTouchUp": [
+                            {
+                             "type": "valueFloatExpressionChange",
+                             "target": "@step",
+                             "value": "clamp(0, @last, round((touchX() - @x0 - 14) / (componentWidth() - 28) * @last))"
+                            },
+                            {
+                             "type": "valueFloatChange",
+                             "target": "@drag",
+                             "value": 0
+                            }
+                           ]
+                          },
+                          {
+                           "onTouchCancel": {
+                            "type": "valueFloatChange",
+                            "target": "@drag",
+                            "value": 0
+                           }
+                          }
+                         ],
+                         "commands": [
+                          {
+                           "componentValue": {
+                            "id": "@x0",
+                            "valueType": 4
+                           }
+                          },
+                          {
+                           "touchExpression": {
+                            "name": {
+                             "$name": "touch"
+                            },
+                            "defaultValue": "@cur",
+                            "min": 0,
+                            "max": "@last",
+                            "expression": [
+                             "(touchX() - @x0 - 14) / (componentWidth() - 28) * @last"
+                            ],
+                            "touchMode": 6
+                           }
+                          },
+                          {
+                           "variable": {
+                            "name": {
+                             "$name": "eased"
+                            },
+                            "value": {
+                             "value": "ifElse(@cur, @touch, @drag)",
+                             "anim": 0.2
+                            }
+                           }
+                          },
+                          {
+                           "variable": {
+                            "name": "scX",
+                            "value": "14 + (componentWidth() - 28) * @eased / @last"
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "color": "@colors.onSurface"
+                             },
+                             {
+                              "style": "fill"
+                             },
+                             {
+                              "textSize": "@titleFs"
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "$each": "steps",
+                           "as": "s",
+                           "index": "i",
+                           "fields": [
+                            "title",
+                            "text",
+                            "short"
+                           ],
+                           "do": [
+                            {
+                             "paint": {
+                              "ops": [
+                               {
+                                "alpha": "1 - min(1, abs(round(@eased) - @i))"
+                               }
+                              ]
+                             }
+                            },
+                            {
+                             "drawTextAnchored": {
+                              "text": "@s_title",
+                              "x": 0,
+                              "y": 11,
+                              "panX": -1,
+                              "panY": 0
+                             }
+                            }
+                           ]
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "color": "@colors.track"
+                             },
+                             {
+                              "style": "stroke"
+                             },
+                             {
+                              "alpha": 1
+                             },
+                             {
+                              "strokeWidth": {
+                               "$if": "theme.mono",
+                               "then": 1.5,
+                               "else": 4
+                              }
+                             },
+                             {
+                              "strokeCap": "round"
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "drawLine": {
+                            "x1": 14,
+                            "y1": 38,
+                            "x2": "componentWidth() - 14",
+                            "y2": 38
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "color": "@colors.outline"
+                             },
+                             {
+                              "style": "fill"
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "loop": {
+                            "index": "k",
+                            "from": 0,
+                            "until": "@n",
+                            "commands": [
+                             {
+                              "drawCircle": {
+                               "cx": "14 + k * (componentWidth() - 28) / @last",
+                               "cy": 38,
+                               "radius": 4
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "color": "@color"
+                             },
+                             {
+                              "style": "stroke"
+                             },
+                             {
+                              "strokeWidth": {
+                               "$if": "theme.mono",
+                               "then": 3,
+                               "else": 4
+                              }
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "drawLine": {
+                            "x1": 14,
+                            "y1": 38,
+                            "x2": "@scX",
+                            "y2": 38
+                           }
+                          },
+                          {
+                           "paint": {
+                            "ops": [
+                             {
+                              "style": "fill"
+                             }
+                            ]
+                           }
+                          },
+                          {
+                           "drawCircle": {
+                            "cx": "@scX",
+                            "cy": 38,
+                            "radius": 10
+                           }
+                          }
+                         ]
+                        }
+                       },
+                       {
+                        "box": {
+                         "modifiers": [
+                          "fillMaxWidth",
+                          {
+                           "height": 22
+                          }
+                         ],
+                         "children": [
+                          {
+                           "$each": "steps",
+                           "as": "s",
+                           "index": "i",
+                           "fields": [
+                            "title",
+                            "text",
+                            "short"
+                           ],
+                           "do": {
+                            "box": {
+                             "modifiers": [
+                              "fillMaxSize",
+                              {
+                               "visibility": "1 - min(1, abs(@cur - @i))"
+                              },
+                              {
+                               "semantics": {
+                                "contentDescription": {
+                                 "type": "textMerge",
+                                 "id1": {
+                                  "type": "textMerge",
+                                  "id1": {
+                                   "type": "textMerge",
+                                   "id1": "Step ",
+                                   "id2": {
+                                    "type": "textFromFloat",
+                                    "value": "@cur + 1",
+                                    "whole": 3,
+                                    "decimal": 0,
+                                    "flags": 5
+                                   }
+                                  },
+                                  "id2": {
+                                   "type": "textMerge",
+                                   "id1": " of ",
+                                   "id2": {
+                                    "type": "textFromFloat",
+                                    "value": "@n",
+                                    "whole": 3,
+                                    "decimal": 0,
+                                    "flags": 5
+                                   }
+                                  }
+                                 },
+                                 "id2": {
+                                  "type": "textMerge",
+                                  "id1": ": ",
+                                  "id2": "@s_title"
+                                 }
+                                },
+                                "stateDescription": "Drag to move through the steps, or tap a stop"
+                               }
+                              }
+                             ]
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     },
+                     {
+                      "$if": "tappable",
+                      "then": {
+                       "row": {
+                        "modifiers": [
+                         "fillMaxSize"
+                        ],
+                        "children": [
+                         {
+                          "$each": "steps",
+                          "as": "s",
+                          "index": "i",
+                          "fields": [
+                           "title",
+                           "text",
+                           "short"
+                          ],
+                          "do": {
+                           "box": {
+                            "modifiers": [
+                             {
+                              "weight": 1
+                             },
+                             "fillMaxHeight",
+                             {
+                              "semantics": {
+                               "contentDescription": {
+                                "type": "textMerge",
+                                "id1": {
+                                 "type": "textMerge",
+                                 "id1": "Go to step ",
+                                 "id2": {
+                                  "type": "textFromFloat",
+                                  "value": "@i + 1",
+                                  "whole": 2,
+                                  "decimal": 0,
+                                  "flags": 5
+                                 }
+                                },
+                                "id2": {
+                                 "type": "textMerge",
+                                 "id1": ": ",
+                                 "id2": "@s_title"
+                                }
+                               },
+                               "clickable": true
+                              }
+                             },
+                             {
+                              "onClick": [
+                               {
+                                "type": "valueFloatChange",
+                                "target": "@step",
+                                "value": "@i"
+                               },
+                               {
+                                "$if": "controls == 'play'",
+                                "then": {
+                                 "$if": "!theme.mono",
+                                 "then": {
+                                  "type": "valueFloatChange",
+                                  "target": "@playing",
+                                  "value": 0
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                },
+                {
+                 "$if": "progress == 'scrub'",
+                 "else": {
+                  "$if": "progress == 'timeline'",
+                  "else": {
+                   "box": {
+                    "verticalAlignment": "center",
+                    "modifiers": [
+                     "fillMaxWidth",
+                     {
+                      "height": "@titleH"
+                     }
+                    ],
+                    "children": [
+                     {
+                      "$each": "steps",
+                      "as": "s",
+                      "index": "i",
+                      "fields": [
+                       "title",
+                       "text",
+                       "short"
+                      ],
+                      "do": {
+                       "text": {
+                        "value": "@s_title",
+                        "fontSize": "@titleFs",
+                        "fontWeight": 600,
+                        "color": "@colors.onSurface",
+                        "maxLines": 1,
+                        "overflow": "ellipsis",
+                        "modifiers": [
+                         {
+                          "visibility": "1 - min(1, abs(@cap - @i))"
+                         },
+                         {
+                          "semantics": {
+                           "contentDescription": {
+                            "type": "textMerge",
+                            "id1": {
+                             "type": "textMerge",
+                             "id1": {
+                              "type": "textMerge",
+                              "id1": "Step ",
+                              "id2": {
+                               "type": "textFromFloat",
+                               "value": "@cur + 1",
+                               "whole": 3,
+                               "decimal": 0,
+                               "flags": 5
+                              }
+                             },
+                             "id2": {
+                              "type": "textMerge",
+                              "id1": " of ",
+                              "id2": {
+                               "type": "textFromFloat",
+                               "value": "@n",
+                               "whole": 3,
+                               "decimal": 0,
+                               "flags": 5
+                              }
+                             }
+                            },
+                            "id2": {
+                             "type": "textMerge",
+                             "id1": ": ",
+                             "id2": "@s_title"
+                            }
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     }
+                    ]
+                   }
+                  }
+                 }
+                },
+                {
+                 "$if": "progress == 'timeline'",
+                 "else": {
+                  "column": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@capH"
+                    },
+                    {
+                     "visibility": "@capOn"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$if": "input",
+                     "then": {
+                      "box": {
+                       "modifiers": [
+                        {
+                         "visibility": "@inputOn"
+                        },
+                        "fillMaxWidth",
+                        {
+                         "height": "@inputHeight"
+                        }
+                       ],
+                       "children": [
+                        {
+                         "$slot": "input"
+                        }
+                       ]
+                      }
+                     }
+                    },
+                    {
+                     "box": {
+                      "modifiers": [
+                       "fillMaxWidth",
+                       {
+                        "visibility": "@textOn"
+                       }
+                      ],
+                      "children": [
+                       {
+                        "$each": "steps",
+                        "as": "s",
+                        "index": "i",
+                        "fields": [
+                         "title",
+                         "text",
+                         "short"
+                        ],
+                        "do": {
+                         "text": {
+                          "value": "@s_text",
+                          "fontSize": "@capFs",
+                          "color": "@colors.onSurface",
+                          "modifiers": [
+                           "fillMaxWidth",
+                           {
+                            "visibility": "@long * (1 - min(1, abs(@cap - @i)))"
+                           }
+                          ]
+                         }
+                        }
+                       },
+                       {
+                        "$each": "steps",
+                        "as": "s",
+                        "index": "i",
+                        "fields": [
+                         "title",
+                         "text",
+                         "short"
+                        ],
+                        "do": {
+                         "$if": "s_short",
+                         "then": {
+                          "text": {
+                           "value": "@s_short",
+                           "fontSize": 13,
+                           "color": "@colors.onSurface",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "visibility": "@short * (1 - min(1, abs(@cap - @i)))"
+                            }
+                           ]
+                          }
+                         },
+                         "else": {
+                          "text": {
+                           "value": "@s_text",
+                           "fontSize": 13,
+                           "color": "@colors.onSurface",
+                           "maxLines": 2,
+                           "overflow": "ellipsis",
+                           "modifiers": [
+                            "fillMaxWidth",
+                            {
+                             "visibility": "@short * (1 - min(1, abs(@cap - @i)))"
+                            }
+                           ]
+                          }
+                         }
+                        }
+                       }
+                      ]
+                     }
+                    }
+                   ]
+                  }
+                 }
+                },
+                {
+                 "$if": "progress == 'timeline'",
+                 "then": {
+                  "column": {
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": "@capH"
+                    }
+                   ],
+                   "children": [
+                    {
+                     "canvas": {
+                      "modifiers": [
+                       {
+                        "size": 0
+                       }
+                      ],
+                      "commands": [
+                       {
+                        "global": {
+                         "commands": [
+                          {
+                           "$each": "steps",
+                           "index": "i",
+                           "do": [
+                            {
+                             "textSubtext": {
+                              "text": "Not currentCurrent    ",
+                              "start": "(1 - min(1, abs(@cur - @i))) * 11",
+                              "len": 11,
+                              "varName": "tlState11_@i"
+                             }
+                            },
+                            {
+                             "textTransform": {
+                              "text": "@tlState11_@i",
+                              "start": 0,
+                              "len": -1,
+                              "operation": 3,
+                              "varName": "tlState_@i"
+                             }
+                            }
+                           ]
+                          }
+                         ]
+                        }
+                       }
+                      ]
+                     }
+                    },
+                    {
+                     "$each": "steps",
+                     "as": "s",
+                     "index": "i",
+                     "fields": [
+                      "title",
+                      "text",
+                      "short"
+                     ],
+                     "do": {
+                      "row": {
+                       "modifiers": [
+                        "fillMaxWidth",
+                        {
+                         "visibility": "max(@long, 1 - min(1, abs(@cap - @i)))"
+                        },
+                        {
+                         "semantics": {
+                          "contentDescription": {
+                           "type": "textMerge",
+                           "id1": {
+                            "type": "textMerge",
+                            "id1": "Step ",
+                            "id2": {
+                             "type": "textFromFloat",
+                             "value": "@i + 1",
+                             "whole": 2,
+                             "decimal": 0,
+                             "flags": 5
+                            }
+                           },
+                           "id2": {
+                            "type": "textMerge",
+                            "id1": ": ",
+                            "id2": "@s_title"
+                           }
+                          },
+                          "stateDescription": "@tlState_@i",
+                          "clickable": true
+                         }
+                        },
+                        {
+                         "onClick": [
+                          {
+                           "type": "valueFloatChange",
+                           "target": "@step",
+                           "value": "@i"
+                          },
+                          {
+                           "$if": "controls == 'play'",
+                           "then": {
+                            "$if": "!theme.mono",
+                            "then": {
+                             "type": "valueFloatChange",
+                             "target": "@playing",
+                             "value": 0
+                            }
+                           }
+                          }
+                         ]
+                        }
+                       ],
+                       "children": [
+                        {
+                         "canvas": {
+                          "modifiers": [
+                           {
+                            "width": 24
+                           },
+                           {
+                            "height": "28 + @long * (1 - min(1, abs(@cap - @i))) * @captionLines * @lineH"
+                           }
+                          ],
+                          "commands": [
+                           {
+                            "paint": {
+                             "ops": [
+                              {
+                               "color": "@colors.track"
+                              },
+                              {
+                               "style": "stroke"
+                              },
+                              {
+                               "alpha": "@long * min(1, @last - @i)"
+                              },
+                              {
+                               "strokeWidth": {
+                                "$if": "theme.mono",
+                                "then": 1.5,
+                                "else": 2
+                               }
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "drawLine": {
+                             "x1": 12,
+                             "y1": 14,
+                             "x2": 12,
+                             "y2": "componentHeight()"
+                            }
+                           },
+                           {
+                            "paint": {
+                             "ops": [
+                              {
+                               "color": "@colors.outline"
+                              },
+                              {
+                               "style": {
+                                "$if": "theme.mono",
+                                "then": "stroke",
+                                "else": "fill"
+                               }
+                              },
+                              {
+                               "alpha": 1
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "drawCircle": {
+                             "cx": 12,
+                             "cy": 14,
+                             "radius": 5
+                            }
+                           },
+                           {
+                            "paint": {
+                             "ops": [
+                              {
+                               "color": "@color"
+                              },
+                              {
+                               "style": "fill"
+                              },
+                              {
+                               "alpha": "clamp(0, 1, @pos + 1 - @i)"
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "drawCircle": {
+                             "cx": 12,
+                             "cy": 14,
+                             "radius": "5 + 1.5 * max(0, 1 - abs(@pos - @i))"
+                            }
+                           }
+                          ]
+                         }
+                        },
+                        {
+                         "column": {
+                          "modifiers": [
+                           {
+                            "weight": 1
+                           }
+                          ],
+                          "children": [
+                           {
+                            "box": {
+                             "verticalAlignment": "center",
+                             "modifiers": [
+                              "fillMaxWidth",
+                              {
+                               "height": 28
+                              }
+                             ],
+                             "children": [
+                              {
+                               "text": {
+                                "value": "@s_title",
+                                "fontSize": "@capFs",
+                                "fontWeight": {
+                                 "$if": "theme.mono",
+                                 "then": 700,
+                                 "else": 600
+                                },
+                                "color": "@colors.onSurface",
+                                "maxLines": 1,
+                                "overflow": "ellipsis"
+                               }
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "$if": "s_text",
+                            "then": {
+                             "text": {
+                              "value": "@s_text",
+                              "fontSize": "@capFs",
+                              "color": "@colors.muted",
+                              "modifiers": [
+                               "fillMaxWidth",
+                               {
+                                "visibility": "@long * (1 - min(1, abs(@cap - @i)))"
+                               },
+                               {
+                                "padding": {
+                                 "bottom": 6
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           },
+                           {
+                            "$if": "s_short",
+                            "then": {
+                             "text": {
+                              "value": "@s_short",
+                              "fontSize": 13,
+                              "color": "@colors.muted",
+                              "modifiers": [
+                               "fillMaxWidth",
+                               {
+                                "visibility": "@short * (1 - min(1, abs(@cap - @i)))"
+                               }
+                              ]
+                             }
+                            },
+                            "else": {
+                             "$if": "s_text",
+                             "then": {
+                              "text": {
+                               "value": "@s_text",
+                               "fontSize": 13,
+                               "color": "@colors.muted",
+                               "maxLines": 2,
+                               "overflow": "ellipsis",
+                               "modifiers": [
+                                "fillMaxWidth",
+                                {
+                                 "visibility": "@short * (1 - min(1, abs(@cap - @i)))"
+                                }
+                               ]
+                              }
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       ]
+                      }
+                     }
+                    }
+                   ]
+                  }
+                 }
+                },
+                {
+                 "$if": "controls == 'none'",
+                 "else": {
+                  "row": {
+                   "verticalAlignment": "center",
+                   "horizontalArrangement": "spaceBetween",
+                   "modifiers": [
+                    "fillMaxWidth",
+                    {
+                     "height": 48
+                    }
+                   ],
+                   "children": [
+                    {
+                     "$if": "buttons == 'labels'",
+                     "then": [
+                      {
+                       "Button": {
+                        "label": "Back",
+                        "style": "outlined",
+                        "surface": "@background",
+                        "enabled": "min(1, @cur)",
+                        "onClick": [
+                         {
+                          "type": "valueFloatExpressionChange",
+                          "target": "@step",
+                          "value": "max(0, @cur - 1)"
+                         },
+                         {
+                          "$if": "controls == 'play'",
+                          "then": {
+                           "$if": "!theme.mono",
+                           "then": {
+                            "type": "valueFloatChange",
+                            "target": "@playing",
+                            "value": 0
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "$if": "controls == 'play'",
+                       "then": {
+                        "$if": "theme.mono",
+                        "else": {
+                         "box": {
+                          "children": [
+                           {
+                            "canvas": {
+                             "modifiers": [
+                              {
+                               "size": 0
+                              }
+                             ],
+                             "commands": [
+                              {
+                               "global": {
+                                "commands": [
+                                 {
+                                  "textSubtext": {
+                                   "text": "Play Pause",
+                                   "start": "@run * 5",
+                                   "len": 5,
+                                   "varName": "playLabel5"
+                                  }
+                                 },
+                                 {
+                                  "textTransform": {
+                                   "text": "@playLabel5",
+                                   "start": 0,
+                                   "len": -1,
+                                   "operation": 3,
+                                   "varName": "playLabel"
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "IconButton": {
+                             "label": "@playLabel",
+                             "onClick": [
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@step",
+                               "value": "@cur + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@step",
+                               "value": "@step * (1 - (1 - @run) * max(0, @step - @last + 1))"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@s0",
+                               "value": "@step + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@t0",
+                               "value": "animationTime() + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@playing",
+                               "value": "1 - @run"
+                              }
+                             ],
+                             "slots": {
+                              "icon": [
+                               {
+                                "canvas": {
+                                 "modifiers": [
+                                  {
+                                   "size": [
+                                    24,
+                                    24
+                                   ]
+                                  }
+                                 ],
+                                 "commands": [
+                                  {
+                                   "paint": {
+                                    "ops": [
+                                     {
+                                      "color": "@colors.onSurface"
+                                     },
+                                     {
+                                      "style": "stroke"
+                                     },
+                                     {
+                                      "strokeWidth": 2.2
+                                     },
+                                     {
+                                      "strokeCap": "round"
+                                     },
+                                     {
+                                      "strokeJoin": "round"
+                                     },
+                                     {
+                                      "alpha": "(1 - @run) + 0 * @drive"
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 8,
+                                    "y1": 6,
+                                    "x2": 18,
+                                    "y2": 12
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 18,
+                                    "y1": 12,
+                                    "x2": 8,
+                                    "y2": 18
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 8,
+                                    "y1": 18,
+                                    "x2": 8,
+                                    "y2": 6
+                                   }
+                                  },
+                                  {
+                                   "paint": {
+                                    "ops": [
+                                     {
+                                      "strokeWidth": 3
+                                     },
+                                     {
+                                      "alpha": "@run"
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 9,
+                                    "y1": 6.5,
+                                    "x2": 9,
+                                    "y2": 17.5
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 15,
+                                    "y1": 6.5,
+                                    "x2": 15,
+                                    "y2": 17.5
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      },
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "@more"
+                            }
+                           ],
+                           "children": [
+                            {
+                             "Button": {
+                              "label": "Next",
+                              "color": "@color",
+                              "onClick": [
+                               {
+                                "type": "valueFloatExpressionChange",
+                                "target": "@step",
+                                "value": {
+                                 "$if": "loop",
+                                 "then": "(@cur + 1) % @n",
+                                 "else": "min(@last, @cur + 1)"
+                                }
+                               },
+                               {
+                                "$if": "controls == 'play'",
+                                "then": {
+                                 "$if": "!theme.mono",
+                                 "then": {
+                                  "type": "valueFloatChange",
+                                  "target": "@playing",
+                                  "value": 0
+                                 }
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "$if": "!loop",
+                          "then": {
+                           "box": {
+                            "modifiers": [
+                             {
+                              "visibility": "1 - @more"
+                             }
+                            ],
+                            "children": [
+                             {
+                              "$if": "atEnd == 'stop'",
+                              "then": {
+                               "Button": {
+                                "label": "Next",
+                                "style": "outlined",
+                                "surface": "@background",
+                                "enabled": false
+                               }
+                              },
+                              "else": {
+                               "Button": {
+                                "label": {
+                                 "$if": "doneLabel",
+                                 "then": "@doneLabel",
+                                 "else": {
+                                  "$if": "onDone",
+                                  "then": "Done",
+                                  "else": "Start over"
+                                 }
+                                },
+                                "color": "@color",
+                                "onClick": [
+                                 {
+                                  "$if": "controls == 'play'",
+                                  "then": {
+                                   "$if": "!theme.mono",
+                                   "then": {
+                                    "type": "valueFloatChange",
+                                    "target": "@playing",
+                                    "value": 0
+                                   }
+                                  }
+                                 },
+                                 {
+                                  "$if": "onDone",
+                                  "then": "@onDone",
+                                  "else": {
+                                   "type": "valueFloatChange",
+                                   "target": "@step",
+                                   "value": 0
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ],
+                     "else": [
+                      {
+                       "IconButton": {
+                        "label": "Back",
+                        "style": "outlined",
+                        "surface": "@background",
+                        "enabled": "min(1, @cur)",
+                        "onClick": [
+                         {
+                          "type": "valueFloatExpressionChange",
+                          "target": "@step",
+                          "value": "max(0, @cur - 1)"
+                         },
+                         {
+                          "$if": "controls == 'play'",
+                          "then": {
+                           "$if": "!theme.mono",
+                           "then": {
+                            "type": "valueFloatChange",
+                            "target": "@playing",
+                            "value": 0
+                           }
+                          }
+                         }
+                        ],
+                        "slots": {
+                         "icon": [
+                          {
+                           "canvas": {
+                            "modifiers": [
+                             {
+                              "size": [
+                               24,
+                               24
+                              ]
+                             }
+                            ],
+                            "commands": [
+                             {
+                              "paint": {
+                               "ops": [
+                                {
+                                 "color": "@colors.onSurface"
+                                },
+                                {
+                                 "style": "stroke"
+                                },
+                                {
+                                 "strokeWidth": 2.5
+                                },
+                                {
+                                 "strokeCap": "round"
+                                }
+                               ]
+                              }
+                             },
+                             {
+                              "drawLine": {
+                               "x1": 15,
+                               "y1": 6,
+                               "x2": 9,
+                               "y2": 12
+                              }
+                             },
+                             {
+                              "drawLine": {
+                               "x1": 9,
+                               "y1": 12,
+                               "x2": 15,
+                               "y2": 18
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         ]
+                        }
+                       }
+                      },
+                      {
+                       "$if": "controls == 'play'",
+                       "then": {
+                        "$if": "theme.mono",
+                        "else": {
+                         "box": {
+                          "children": [
+                           {
+                            "canvas": {
+                             "modifiers": [
+                              {
+                               "size": 0
+                              }
+                             ],
+                             "commands": [
+                              {
+                               "global": {
+                                "commands": [
+                                 {
+                                  "textSubtext": {
+                                   "text": "Play Pause",
+                                   "start": "@run * 5",
+                                   "len": 5,
+                                   "varName": "playLabel5"
+                                  }
+                                 },
+                                 {
+                                  "textTransform": {
+                                   "text": "@playLabel5",
+                                   "start": 0,
+                                   "len": -1,
+                                   "operation": 3,
+                                   "varName": "playLabel"
+                                  }
+                                 }
+                                ]
+                               }
+                              }
+                             ]
+                            }
+                           },
+                           {
+                            "IconButton": {
+                             "label": "@playLabel",
+                             "onClick": [
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@step",
+                               "value": "@cur + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@step",
+                               "value": "@step * (1 - (1 - @run) * max(0, @step - @last + 1))"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@s0",
+                               "value": "@step + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@t0",
+                               "value": "animationTime() + 0"
+                              },
+                              {
+                               "type": "valueFloatExpressionChange",
+                               "target": "@playing",
+                               "value": "1 - @run"
+                              }
+                             ],
+                             "slots": {
+                              "icon": [
+                               {
+                                "canvas": {
+                                 "modifiers": [
+                                  {
+                                   "size": [
+                                    24,
+                                    24
+                                   ]
+                                  }
+                                 ],
+                                 "commands": [
+                                  {
+                                   "paint": {
+                                    "ops": [
+                                     {
+                                      "color": "@colors.onSurface"
+                                     },
+                                     {
+                                      "style": "stroke"
+                                     },
+                                     {
+                                      "strokeWidth": 2.2
+                                     },
+                                     {
+                                      "strokeCap": "round"
+                                     },
+                                     {
+                                      "strokeJoin": "round"
+                                     },
+                                     {
+                                      "alpha": "(1 - @run) + 0 * @drive"
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 8,
+                                    "y1": 6,
+                                    "x2": 18,
+                                    "y2": 12
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 18,
+                                    "y1": 12,
+                                    "x2": 8,
+                                    "y2": 18
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 8,
+                                    "y1": 18,
+                                    "x2": 8,
+                                    "y2": 6
+                                   }
+                                  },
+                                  {
+                                   "paint": {
+                                    "ops": [
+                                     {
+                                      "strokeWidth": 3
+                                     },
+                                     {
+                                      "alpha": "@run"
+                                     }
+                                    ]
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 9,
+                                    "y1": 6.5,
+                                    "x2": 9,
+                                    "y2": 17.5
+                                   }
+                                  },
+                                  {
+                                   "drawLine": {
+                                    "x1": 15,
+                                    "y1": 6.5,
+                                    "x2": 15,
+                                    "y2": 17.5
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              ]
+                             }
+                            }
+                           }
+                          ]
+                         }
+                        }
+                       }
+                      },
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "box": {
+                           "modifiers": [
+                            {
+                             "visibility": "@more"
+                            }
+                           ],
+                           "children": [
+                            {
+                             "IconButton": {
+                              "label": "Next",
+                              "style": "filled",
+                              "color": "@color",
+                              "onClick": [
+                               {
+                                "type": "valueFloatExpressionChange",
+                                "target": "@step",
+                                "value": {
+                                 "$if": "loop",
+                                 "then": "(@cur + 1) % @n",
+                                 "else": "min(@last, @cur + 1)"
+                                }
+                               },
+                               {
+                                "$if": "controls == 'play'",
+                                "then": {
+                                 "$if": "!theme.mono",
+                                 "then": {
+                                  "type": "valueFloatChange",
+                                  "target": "@playing",
+                                  "value": 0
+                                 }
+                                }
+                               }
+                              ],
+                              "slots": {
+                               "icon": [
+                                {
+                                 "canvas": {
+                                  "modifiers": [
+                                   {
+                                    "size": [
+                                     24,
+                                     24
+                                    ]
+                                   }
+                                  ],
+                                  "commands": [
+                                   {
+                                    "paint": {
+                                     "ops": [
+                                      {
+                                       "color": "@colors.onPrimary"
+                                      },
+                                      {
+                                       "style": "stroke"
+                                      },
+                                      {
+                                       "strokeWidth": 2.5
+                                      },
+                                      {
+                                       "strokeCap": "round"
+                                      }
+                                     ]
+                                    }
+                                   },
+                                   {
+                                    "drawLine": {
+                                     "x1": 9,
+                                     "y1": 6,
+                                     "x2": 15,
+                                     "y2": 12
+                                    }
+                                   },
+                                   {
+                                    "drawLine": {
+                                     "x1": 15,
+                                     "y1": 12,
+                                     "x2": 9,
+                                     "y2": 18
+                                    }
+                                   }
+                                  ]
+                                 }
+                                }
+                               ]
+                              }
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "$if": "!loop",
+                          "then": {
+                           "box": {
+                            "modifiers": [
+                             {
+                              "visibility": "1 - @more"
+                             }
+                            ],
+                            "children": [
+                             {
+                              "$if": "atEnd == 'stop'",
+                              "then": {
+                               "IconButton": {
+                                "label": "Next",
+                                "style": "outlined",
+                                "surface": "@background",
+                                "enabled": false,
+                                "slots": {
+                                 "icon": [
+                                  {
+                                   "canvas": {
+                                    "modifiers": [
+                                     {
+                                      "size": [
+                                       24,
+                                       24
+                                      ]
+                                     }
+                                    ],
+                                    "commands": [
+                                     {
+                                      "paint": {
+                                       "ops": [
+                                        {
+                                         "color": "@colors.onSurface"
+                                        },
+                                        {
+                                         "style": "stroke"
+                                        },
+                                        {
+                                         "strokeWidth": 2.5
+                                        },
+                                        {
+                                         "strokeCap": "round"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 9,
+                                       "y1": 6,
+                                       "x2": 15,
+                                       "y2": 12
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 15,
+                                       "y1": 12,
+                                       "x2": 9,
+                                       "y2": 18
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              },
+                              "else": {
+                               "IconButton": {
+                                "label": {
+                                 "$if": "doneLabel",
+                                 "then": "@doneLabel",
+                                 "else": {
+                                  "$if": "onDone",
+                                  "then": "Done",
+                                  "else": "Start over"
+                                 }
+                                },
+                                "style": "outlined",
+                                "surface": "@background",
+                                "onClick": [
+                                 {
+                                  "$if": "controls == 'play'",
+                                  "then": {
+                                   "$if": "!theme.mono",
+                                   "then": {
+                                    "type": "valueFloatChange",
+                                    "target": "@playing",
+                                    "value": 0
+                                   }
+                                  }
+                                 },
+                                 {
+                                  "$if": "onDone",
+                                  "then": "@onDone",
+                                  "else": {
+                                   "type": "valueFloatChange",
+                                   "target": "@step",
+                                   "value": 0
+                                  }
+                                 }
+                                ],
+                                "slots": {
+                                 "icon": [
+                                  {
+                                   "canvas": {
+                                    "modifiers": [
+                                     {
+                                      "size": [
+                                       24,
+                                       24
+                                      ]
+                                     }
+                                    ],
+                                    "commands": [
+                                     {
+                                      "paint": {
+                                       "ops": [
+                                        {
+                                         "color": "@colors.onSurface"
+                                        },
+                                        {
+                                         "style": "stroke"
+                                        },
+                                        {
+                                         "strokeWidth": 2.2
+                                        },
+                                        {
+                                         "strokeCap": "round"
+                                        }
+                                       ]
+                                      }
+                                     },
+                                     {
+                                      "drawArc": {
+                                       "left": 5,
+                                       "top": 5,
+                                       "right": 19,
+                                       "bottom": 19,
+                                       "startAngle": -40,
+                                       "sweepAngle": 290
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 19,
+                                       "y1": 3,
+                                       "x2": 19,
+                                       "y2": 9
+                                      }
+                                     },
+                                     {
+                                      "drawLine": {
+                                       "x1": 19,
+                                       "y1": 9,
+                                       "x2": 13,
+                                       "y2": 9
+                                      }
+                                     }
+                                    ]
+                                   }
+                                  }
+                                 ]
+                                }
+                               }
+                              }
+                             }
+                            ]
+                           }
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   ]
+                  }
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "$if": "progress == 'scrub'",
+        "else": {
+         "variable": {
+          "name": {
+           "$name": "eased"
+          },
+          "value": "@pos + 0"
+         }
+        }
+       },
+       {
+        "variable": {
+         "name": {
+          "$name": "shown"
+         },
+         "value": "@cur + 0"
+        }
+       },
+       {
+        "box": {
+         "horizontalAlignment": "center",
+         "verticalAlignment": "center",
+         "modifiers": [
+          {
+           "width": "@vw"
+          },
+          {
+           "height": "@vh"
+          },
+          {
+           "$if": "frame == 'panel'",
+           "then": [
+            {
+             "clip": "@theme.radius_md"
+            },
+            {
+             "$if": "theme.mono",
+             "then": [
+              {
+               "background": "@colors.outline"
+              },
+              {
+               "padding": 1
+              },
+              {
+               "clip": "@theme.radius_md - 1"
+              },
+              {
+               "background": "@background"
+              }
+             ],
+             "else": {
+              "background": "@colors.surfaceHigh"
+             }
+            },
+            {
+             "padding": 8
+            }
+           ]
+          },
+          {
+           "$if": "visualLabel",
+           "then": {
+            "semantics": {
+             "contentDescription": "@visualLabel"
+            }
+           }
+          }
+         ],
+         "children": [
+          {
+           "$slot": "visual"
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Do not name your variable step: a document variable called step hides the step() function in every expression, and this component uses it. Bind \"@at\" or \"@stage\"",
+  "Three ways to read the current step. Non-autoplay: bind a resources variable to `step` and read it anywhere, in resources.variables too; that is what computed explainers need. Autoplay: `step` stays where play started, so read `shown` / `eased`, tree variables, inside the visual slot only",
+  "A tree variable (`shown`, `eased`) must not go through a param that a component turns into a local: TextChoice's index reads item 0 silently and a resources expression does not convert. Read it directly in canvas or modifier expressions, or as an arg of CellRow",
+  "Computed steps: `count` is a runtime expression (\"@total + 2\") and `captionIndex` picks an entry of `steps`, so `steps` lists caption STATES, each of whose title and text may be a textMerge over live values. Back, Next and the progress follow the count; it needs bar or dots (not tappable, timeline or scrub, which are one node per listed step)",
+  "loop: `eased` runs back through the middle steps when the cycle wraps. A drawing for a cycle should read `shown` and fade each stage with its own {\"value\": \"1 - min(1, abs(@now - k))\", \"anim\": 0.5} (CMP-28)",
+  "scrub: a touch variable cannot switch layout, so while the finger is down the title and thumb follow it (drawn on the canvas) and the wrapped caption is hidden; on release the step snaps to the nearest stop and the caption returns. `eased` follows the finger with 0.2 s of lag",
+  "controls none with scrub leaves a screen reader unable to change the step: the format has no adjust action. Keep the buttons unless the host offers another way. timeline rows and tappable stops are labelled clicks and are fine",
+  "Sizes: usable from about 160 x 120 dp (icons) and 200 wide with labels. Stacked, the caption's full text needs captionLines lines plus 90 dp left for the visual, else the short form, else the title only; the visual takes what remains and can be about 40 dp at 160 x 160, so a visual must scale itself from componentWidth() / componentHeight(). Set captionLines to the longest text's line count at the narrowest width: a longer text is cut",
+  "width and height default to the window. Inside your own padding or beside other content, pass them, or the sizes come out too large",
+  "input with inputWhen start shows on the first step only and replaces the short text when room is short; with no room it hides and the current value is used. Put anything that changes the computation there: nothing can then change under a running explanation",
+  "Mono: no play button, no motion; the drawing snaps, and the visual is the caller's: use theme colours and $if theme.mono in an inline component",
+  "The whole frame is expanded, never a pattern (texts, U7). About 6.9 KB for dots and icon buttons with four steps, plus about 90 B per text. Against that: play +830 B, numbers +310, bar +60, tappable +230, panel +210, title +180, scrub +360, input +310, timeline +1800, controls none -850; mono is about 700 B less"
+ ]
+}

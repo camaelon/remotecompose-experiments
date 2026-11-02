@@ -1,0 +1,1233 @@
+{
+ "component": "ScaledAmount",
+ "version": 1,
+ "summary": "A base amount times a factor, shown as one readable value with its unit and spoken as one item: 1½ cups, ¾ L, 2.5 kg, 250 g, 3 rolls. Fractions snap to eighths and thirds; numbers round to a step or up to what you can buy. With `name` it is a whole row: the name on the left, the amount on the right.",
+ "params": {
+  "amount": {
+   "type": "float",
+   "required": true,
+   "doc": "The base amount, in the unit shown: a number, a \"@variable\" or an expression"
+  },
+  "factor": {
+   "type": "float",
+   "default": 1,
+   "doc": "What scales it: \"@guests / 4\", \"@area / 20\". The value shown is amount x factor"
+  },
+  "unit": {
+   "type": "string",
+   "doc": "The unit, printed after a space: \"cups\", \"L\", \"g\". Literal text"
+  },
+  "unitOne": {
+   "type": "string",
+   "doc": "The unit when the value is 1 or less (\"cup\" beside unit \"cups\"), so it reads 1 cup, ½ cup, 1½ cups. Omitted, unit is used for every value"
+  },
+  "format": {
+   "type": "enum",
+   "values": [
+    "fraction",
+    "number"
+   ],
+   "default": "number",
+   "static": true,
+   "doc": "number: digits, see decimals, step and roundUp. fraction: a whole number and a fraction glyph, nearest of the fractions param; about 3x the bytes of number"
+  },
+  "decimals": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "number format: digits after the point, 0, 1 or 2. Trailing zeros are dropped: 2.5, 2"
+  },
+  "step": {
+   "type": "float",
+   "default": 0,
+   "static": true,
+   "doc": "number format: round to a multiple of this (5: 250 g, not 247 g). 0 is no step. Any value above 0 shows at least one step"
+  },
+  "roundUp": {
+   "type": "bool",
+   "default": false,
+   "static": true,
+   "doc": "number format: round up, not to nearest: for what is bought whole (3 rolls when 2.1 are needed)"
+  },
+  "fractions": {
+   "type": "enum",
+   "values": [
+    "all",
+    "eighths",
+    "quarters"
+   ],
+   "default": "all",
+   "static": true,
+   "doc": "fraction format: which glyphs. all: eighths and thirds. eighths: no thirds, 0.33 reads ⅜, about 300 B less a call. quarters: only ¼ ½ ¾, about 600 B less a call"
+  },
+  "name": {
+   "type": "string",
+   "doc": "What is measured. Given, the call is a whole row, name left and amount right, spoken as two items: the name, then the amount. Omitted, just the amount, sized to its text"
+  },
+  "spoken": {
+   "type": "string",
+   "doc": "The unit as spoken, when the shown one reads badly: \"litres\" for \"L\". Omitted, the shown unit"
+  },
+  "spokenOne": {
+   "type": "string",
+   "doc": "The same for a value of 1 or less: \"litre\""
+  },
+  "fontSize": {
+   "type": "float",
+   "default": "@theme.text_md",
+   "doc": "The amount's size in sp"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.onSurface",
+   "doc": "The amount's colour"
+  },
+  "fontWeight": {
+   "type": "float",
+   "doc": "The amount's weight, 100 to 900"
+  },
+  "rowHeight": {
+   "type": "float",
+   "default": 36,
+   "static": true,
+   "doc": "With name: the row's height in dp"
+  }
+ },
+ "locals": {
+  "a": "max(0, @amount * @factor)",
+  "d": {
+   "$if": "fractions == 'quarters'",
+   "then": 4,
+   "else": 8
+  },
+  "n8": {
+   "$if": "format == 'fraction'",
+   "then": "round(@a * @d) / @d",
+   "else": 0
+  },
+  "n3": {
+   "$if": "format == 'fraction'",
+   "then": {
+    "$if": "fractions == 'all'",
+    "then": "round(@a * 3) / 3",
+    "else": 0
+   },
+   "else": 0
+  },
+  "th": {
+   "$if": "format == 'fraction'",
+   "then": {
+    "$if": "fractions == 'all'",
+    "then": "step(abs(@a - @n8) - abs(@a - @n3), 0.001)",
+    "else": 0
+   },
+   "else": 0
+  },
+  "st": {
+   "$if": "step",
+   "then": {
+    "$if": "roundUp",
+    "then": "max(ceil(@a / @step - 0.0005) * @step, 0)",
+    "else": "max(round(@a / @step) * @step, step(@a, 0.0001) * @step)"
+   },
+   "else": {
+    "$if": "roundUp",
+    "then": "ceil(@a - 0.0005)",
+    "else": "@a"
+   }
+  },
+  "q": {
+   "$if": "decimals == '1'",
+   "then": 10,
+   "else": {
+    "$if": "decimals == '2'",
+    "then": 100,
+    "else": 1
+   }
+  },
+  "m": {
+   "$if": "format == 'number'",
+   "then": "max(round(@st * @q), step(@a, 0.0001))",
+   "else": 0
+  },
+  "v": {
+   "$if": "format == 'fraction'",
+   "then": {
+    "$if": "fractions == 'all'",
+    "then": "max(ifElse(@n8, @n3, @th), step(@a, 0.0001) / @d)",
+    "else": "max(@n8, step(@a, 0.0001) / @d)"
+   },
+   "else": "@m / @q"
+  },
+  "w": {
+   "$if": "format == 'fraction'",
+   "then": "floor(@v + 0.001)",
+   "else": 0
+  },
+  "f": {
+   "$if": "format == 'fraction'",
+   "then": "@v - @w",
+   "else": 0
+  },
+  "fi": {
+   "$if": "format == 'fraction'",
+   "then": {
+    "$if": "fractions == 'all'",
+    "then": "ifElse(round(@f * 8), 7 + round(@f * 3), @th * step(@f, 0.01))",
+    "else": "round(@f * @d)"
+   },
+   "else": 0
+  },
+  "hf": {
+   "$if": "format == 'fraction'",
+   "then": "step(@fi, 0.5)",
+   "else": 0
+  },
+  "pl": {
+   "$if": "unitOne || spokenOne",
+   "then": "max(step(@v, 1.001), 1 - step(@v, 0.0001))",
+   "else": 0
+  },
+  "dd": {
+   "$if": "decimals == '1'",
+   "then": "step(@m % 10, 0.5)",
+   "else": {
+    "$if": "decimals == '2'",
+    "then": "step(@m % 100, 0.5) * (1 + step(@m % 10, 0.5))",
+    "else": 0
+   }
+  }
+ },
+ "capabilities": [
+  "text.dynamic",
+  "data.expression",
+  "a11y.labels"
+ ],
+ "call": {
+  "ScaledAmount": {
+   "amount": 1.5,
+   "factor": "@scale",
+   "unit": "cups",
+   "unitOne": "cup",
+   "format": "fraction"
+  }
+ },
+ "body": {
+  "$if": "name",
+  "then": {
+   "row": {
+    "verticalAlignment": "center",
+    "modifiers": [
+     "fillMaxWidth",
+     {
+      "height": "@rowHeight"
+     }
+    ],
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": [
+          0,
+          0
+         ]
+        }
+       ],
+       "commands": [
+        {
+         "global": {
+          "commands": [
+           {
+            "$if": "format == 'fraction'",
+            "then": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@w",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "0 - max(step(@w, 0.5), 1 - @hf)",
+               "varName": "nm"
+              }
+             },
+             {
+              "$if": "fractions == 'quarters'",
+              "then": [
+               {
+                "textSubtext": {
+                 "text": "¼",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 1)) - 1",
+                 "varName": "g1"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "½",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 2)) - 1",
+                 "varName": "g2"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¾",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 3)) - 1",
+                 "varName": "g3"
+                }
+               }
+              ],
+              "else": [
+               {
+                "textSubtext": {
+                 "text": "⅛",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 1)) - 1",
+                 "varName": "g1"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¼",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 2)) - 1",
+                 "varName": "g2"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅜",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 3)) - 1",
+                 "varName": "g3"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "½",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 4)) - 1",
+                 "varName": "g4"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅝",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 5)) - 1",
+                 "varName": "g5"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¾",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 6)) - 1",
+                 "varName": "g6"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅞",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 7)) - 1",
+                 "varName": "g7"
+                }
+               }
+              ]
+             },
+             {
+              "$if": "fractions == 'all'",
+              "then": [
+               {
+                "textSubtext": {
+                 "text": "⅓",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 8)) - 1",
+                 "varName": "g8"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅔",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 9)) - 1",
+                 "varName": "g9"
+                }
+               }
+              ]
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "$if": "fractions == 'all'",
+                "then": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths  and a third    and 2 thirds  ",
+                "else": {
+                 "$if": "fractions == 'quarters'",
+                 "then": "                and a quarter  and a half     and 3 quarters",
+                 "else": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths "
+                }
+               },
+               "start": "@fi * 15",
+               "len": 15,
+               "varName": "wd"
+              }
+             },
+             {
+              "textTransform": {
+               "text": {
+                "type": "textMerge",
+                "id1": "@nm",
+                "id2": "@wd"
+               },
+               "start": "(1 - step(@w, 0.5)) * @hf * 5",
+               "len": -1,
+               "operation": 3,
+               "varName": "sp"
+              }
+             }
+            ],
+            "else": {
+             "textSubtext": {
+              "text": {
+               "type": "textFromFloat",
+               "value": "@v + 0.4 / @q",
+               "whole": 7,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "decimals == '0'",
+                "then": 5,
+                "else": 7
+               }
+              },
+              "start": 0,
+              "len": "floor(log(max(@v, 1) * 1.0001)) + 1 + @dd + step(@dd, 0.5)",
+              "varName": "nm"
+             }
+            }
+           },
+           {
+            "$if": "unitOne",
+            "then": [
+             {
+              "textSubtext": {
+               "text": " @unitOne",
+               "start": 0,
+               "len": "@pl - 1",
+               "varName": "u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " @unit",
+               "start": 0,
+               "len": "0 - @pl",
+               "varName": "u2"
+              }
+             }
+            ]
+           },
+           {
+            "$if": "spokenOne",
+            "then": [
+             {
+              "textSubtext": {
+               "text": " @spokenOne",
+               "start": 0,
+               "len": "@pl - 1",
+               "varName": "s1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " @spoken",
+               "start": 0,
+               "len": "0 - @pl",
+               "varName": "s2"
+              }
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "box": {
+       "modifiers": [
+        {
+         "weight": 1
+        },
+        {
+         "padding": {
+          "end": "@theme.space_3"
+         }
+        }
+       ],
+       "children": [
+        {
+         "text": {
+          "value": "@name",
+          "maxLines": 1,
+          "overflow": "ellipsis",
+          "fontSize": "@theme.text_md",
+          "color": "@colors.onSurface"
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "$if": "unit",
+        "then": {
+         "type": "textMerge",
+         "id1": {
+          "$if": "format == 'fraction'",
+          "then": {
+           "$if": "fractions == 'all'",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@nm",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "@g1",
+                    "id2": "@g2"
+                   },
+                   "id2": "@g3"
+                  },
+                  "id2": "@g4"
+                 },
+                 "id2": "@g5"
+                },
+                "id2": "@g6"
+               },
+               "id2": "@g7"
+              }
+             },
+             "id2": "@g8"
+            },
+            "id2": "@g9"
+           },
+           "else": {
+            "$if": "fractions == 'quarters'",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@nm",
+               "id2": "@g1"
+              },
+              "id2": "@g2"
+             },
+             "id2": "@g3"
+            },
+            "else": {
+             "type": "textMerge",
+             "id1": "@nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@g1",
+                   "id2": "@g2"
+                  },
+                  "id2": "@g3"
+                 },
+                 "id2": "@g4"
+                },
+                "id2": "@g5"
+               },
+               "id2": "@g6"
+              },
+              "id2": "@g7"
+             }
+            }
+           }
+          },
+          "else": "@nm"
+         },
+         "id2": {
+          "$if": "unitOne",
+          "then": {
+           "type": "textMerge",
+           "id1": "@u1",
+           "id2": "@u2"
+          },
+          "else": " @unit"
+         }
+        },
+        "else": {
+         "$if": "format == 'fraction'",
+         "then": {
+          "$if": "fractions == 'all'",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@g1",
+                   "id2": "@g2"
+                  },
+                  "id2": "@g3"
+                 },
+                 "id2": "@g4"
+                },
+                "id2": "@g5"
+               },
+               "id2": "@g6"
+              },
+              "id2": "@g7"
+             }
+            },
+            "id2": "@g8"
+           },
+           "id2": "@g9"
+          },
+          "else": {
+           "$if": "fractions == 'quarters'",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@nm",
+              "id2": "@g1"
+             },
+             "id2": "@g2"
+            },
+            "id2": "@g3"
+           },
+           "else": {
+            "type": "textMerge",
+            "id1": "@nm",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@g1",
+                  "id2": "@g2"
+                 },
+                 "id2": "@g3"
+                },
+                "id2": "@g4"
+               },
+               "id2": "@g5"
+              },
+              "id2": "@g6"
+             },
+             "id2": "@g7"
+            }
+           }
+          }
+         },
+         "else": "@nm"
+        }
+       },
+       "fontSize": "@fontSize",
+       "color": "@color",
+       "fontWeight": "@fontWeight",
+       "maxLines": 1,
+       "modifiers": [
+        {
+         "semantics": {
+          "contentDescription": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "$if": "format == 'fraction'",
+             "then": "@sp",
+             "else": "@nm"
+            },
+            "id2": {
+             "$if": "spokenOne",
+             "then": {
+              "type": "textMerge",
+              "id1": "@s1",
+              "id2": "@s2"
+             },
+             "else": {
+              "$if": "spoken",
+              "then": " @spoken",
+              "else": {
+               "$if": "unitOne",
+               "then": {
+                "type": "textMerge",
+                "id1": "@u1",
+                "id2": "@u2"
+               },
+               "else": " @unit"
+              }
+             }
+            }
+           },
+           "else": {
+            "$if": "format == 'fraction'",
+            "then": "@sp",
+            "else": "@nm"
+           }
+          }
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  },
+  "else": {
+   "box": {
+    "children": [
+     {
+      "canvas": {
+       "modifiers": [
+        {
+         "size": [
+          0,
+          0
+         ]
+        }
+       ],
+       "commands": [
+        {
+         "global": {
+          "commands": [
+           {
+            "$if": "format == 'fraction'",
+            "then": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@w",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "0 - max(step(@w, 0.5), 1 - @hf)",
+               "varName": "nm"
+              }
+             },
+             {
+              "$if": "fractions == 'quarters'",
+              "then": [
+               {
+                "textSubtext": {
+                 "text": "¼",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 1)) - 1",
+                 "varName": "g1"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "½",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 2)) - 1",
+                 "varName": "g2"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¾",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 3)) - 1",
+                 "varName": "g3"
+                }
+               }
+              ],
+              "else": [
+               {
+                "textSubtext": {
+                 "text": "⅛",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 1)) - 1",
+                 "varName": "g1"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¼",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 2)) - 1",
+                 "varName": "g2"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅜",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 3)) - 1",
+                 "varName": "g3"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "½",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 4)) - 1",
+                 "varName": "g4"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅝",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 5)) - 1",
+                 "varName": "g5"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "¾",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 6)) - 1",
+                 "varName": "g6"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅞",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 7)) - 1",
+                 "varName": "g7"
+                }
+               }
+              ]
+             },
+             {
+              "$if": "fractions == 'all'",
+              "then": [
+               {
+                "textSubtext": {
+                 "text": "⅓",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 8)) - 1",
+                 "varName": "g8"
+                }
+               },
+               {
+                "textSubtext": {
+                 "text": "⅔",
+                 "start": 0,
+                 "len": "min(1, abs(@fi - 9)) - 1",
+                 "varName": "g9"
+                }
+               }
+              ]
+             },
+             {
+              "textSubtext": {
+               "text": {
+                "$if": "fractions == 'all'",
+                "then": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths  and a third    and 2 thirds  ",
+                "else": {
+                 "$if": "fractions == 'quarters'",
+                 "then": "                and a quarter  and a half     and 3 quarters",
+                 "else": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths "
+                }
+               },
+               "start": "@fi * 15",
+               "len": 15,
+               "varName": "wd"
+              }
+             },
+             {
+              "textTransform": {
+               "text": {
+                "type": "textMerge",
+                "id1": "@nm",
+                "id2": "@wd"
+               },
+               "start": "(1 - step(@w, 0.5)) * @hf * 5",
+               "len": -1,
+               "operation": 3,
+               "varName": "sp"
+              }
+             }
+            ],
+            "else": {
+             "textSubtext": {
+              "text": {
+               "type": "textFromFloat",
+               "value": "@v + 0.4 / @q",
+               "whole": 7,
+               "decimal": "@decimals",
+               "flags": {
+                "$if": "decimals == '0'",
+                "then": 5,
+                "else": 7
+               }
+              },
+              "start": 0,
+              "len": "floor(log(max(@v, 1) * 1.0001)) + 1 + @dd + step(@dd, 0.5)",
+              "varName": "nm"
+             }
+            }
+           },
+           {
+            "$if": "unitOne",
+            "then": [
+             {
+              "textSubtext": {
+               "text": " @unitOne",
+               "start": 0,
+               "len": "@pl - 1",
+               "varName": "u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " @unit",
+               "start": 0,
+               "len": "0 - @pl",
+               "varName": "u2"
+              }
+             }
+            ]
+           },
+           {
+            "$if": "spokenOne",
+            "then": [
+             {
+              "textSubtext": {
+               "text": " @spokenOne",
+               "start": 0,
+               "len": "@pl - 1",
+               "varName": "s1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " @spoken",
+               "start": 0,
+               "len": "0 - @pl",
+               "varName": "s2"
+              }
+             }
+            ]
+           }
+          ]
+         }
+        }
+       ]
+      }
+     },
+     {
+      "text": {
+       "value": {
+        "$if": "unit",
+        "then": {
+         "type": "textMerge",
+         "id1": {
+          "$if": "format == 'fraction'",
+          "then": {
+           "$if": "fractions == 'all'",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@nm",
+              "id2": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": "@g1",
+                    "id2": "@g2"
+                   },
+                   "id2": "@g3"
+                  },
+                  "id2": "@g4"
+                 },
+                 "id2": "@g5"
+                },
+                "id2": "@g6"
+               },
+               "id2": "@g7"
+              }
+             },
+             "id2": "@g8"
+            },
+            "id2": "@g9"
+           },
+           "else": {
+            "$if": "fractions == 'quarters'",
+            "then": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": "@nm",
+               "id2": "@g1"
+              },
+              "id2": "@g2"
+             },
+             "id2": "@g3"
+            },
+            "else": {
+             "type": "textMerge",
+             "id1": "@nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@g1",
+                   "id2": "@g2"
+                  },
+                  "id2": "@g3"
+                 },
+                 "id2": "@g4"
+                },
+                "id2": "@g5"
+               },
+               "id2": "@g6"
+              },
+              "id2": "@g7"
+             }
+            }
+           }
+          },
+          "else": "@nm"
+         },
+         "id2": {
+          "$if": "unitOne",
+          "then": {
+           "type": "textMerge",
+           "id1": "@u1",
+           "id2": "@u2"
+          },
+          "else": " @unit"
+         }
+        },
+        "else": {
+         "$if": "format == 'fraction'",
+         "then": {
+          "$if": "fractions == 'all'",
+          "then": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@g1",
+                   "id2": "@g2"
+                  },
+                  "id2": "@g3"
+                 },
+                 "id2": "@g4"
+                },
+                "id2": "@g5"
+               },
+               "id2": "@g6"
+              },
+              "id2": "@g7"
+             }
+            },
+            "id2": "@g8"
+           },
+           "id2": "@g9"
+          },
+          "else": {
+           "$if": "fractions == 'quarters'",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": "@nm",
+              "id2": "@g1"
+             },
+             "id2": "@g2"
+            },
+            "id2": "@g3"
+           },
+           "else": {
+            "type": "textMerge",
+            "id1": "@nm",
+            "id2": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": "@g1",
+                  "id2": "@g2"
+                 },
+                 "id2": "@g3"
+                },
+                "id2": "@g4"
+               },
+               "id2": "@g5"
+              },
+              "id2": "@g6"
+             },
+             "id2": "@g7"
+            }
+           }
+          }
+         },
+         "else": "@nm"
+        }
+       },
+       "fontSize": "@fontSize",
+       "color": "@color",
+       "fontWeight": "@fontWeight",
+       "maxLines": 1,
+       "modifiers": [
+        {
+         "semantics": {
+          "contentDescription": {
+           "$if": "unit",
+           "then": {
+            "type": "textMerge",
+            "id1": {
+             "$if": "format == 'fraction'",
+             "then": "@sp",
+             "else": "@nm"
+            },
+            "id2": {
+             "$if": "spokenOne",
+             "then": {
+              "type": "textMerge",
+              "id1": "@s1",
+              "id2": "@s2"
+             },
+             "else": {
+              "$if": "spoken",
+              "then": " @spoken",
+              "else": {
+               "$if": "unitOne",
+               "then": {
+                "type": "textMerge",
+                "id1": "@u1",
+                "id2": "@u2"
+               },
+               "else": " @unit"
+              }
+             }
+            }
+           },
+           "else": {
+            "$if": "format == 'fraction'",
+            "then": "@sp",
+            "else": "@nm"
+           }
+          }
+         }
+        }
+       ]
+      }
+     }
+    ]
+   }
+  }
+ },
+ "pitfalls": [
+  "The amount is one spoken item. A row with name is two, the name then the amount: the format has no way to merge a row that cannot be tapped (only a click merges, and semantics here adds a node, it does not replace the texts inside)",
+  "One text node, so nothing is measured apart: the value, its fraction and its unit move together when the value changes. In a row, neighbours move as it widens; give it the end of the row (name does this)",
+  "amount and factor are live, unit and name are literal text: a unit the host sends as a text variable is not supported",
+  "Fractions never snap to nothing: any value above 0 shows at least the smallest fraction. A value of exactly 0 reads 0. The same in number format: 0.04 at 1 decimal reads 0.1, so nothing needed ever reads as none",
+  "⅓ and ⅔ win only when closer than the nearest eighth: 0.3 reads ⅓, 0.28 reads ¼",
+  "Fraction glyphs come from the device's font. ⅛ ⅜ ⅝ ⅞ ⅓ ⅔ are outside Latin-1, so a device font without them shows a fallback. Use format number with decimals where that matters",
+  "Fixed amounts that never scale (a pinch) are not this: use a plain text or KeyValueRow",
+  "Do not use for currency or large figures: see CompactNumber. Whole part up to 999,999",
+  "Each call is always expanded, never a template. A number call costs about 500 B, a fraction call 1 to 1.5 KB. In a long list use number, or fractions quarters"
+ ]
+}

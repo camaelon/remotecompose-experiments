@@ -1033,3 +1033,22 @@ Mean 16.1K to 13.6K. Music and calorie give all of it, and their examples were s
 Checks added after that baseline, not yet measured: squashed_content (a chart with room reduced to a sliver), cut_by_window (text past the window with no scroll), odd_number (float noise, E notation, money with one decimal), text_barely_shown also for short texts ("AAPL" as ".."). A failed check now removes the old final sheets. Across all 155 examples at 360x640, 640x360, 320x160 and 160x160: squashed_content and odd_number fire on none, cut_by_window on 25, nearly all galleries at widget sizes they were not designed for, and at the phone sizes only CMP-11 and LAY-13 at 640x360, both unjudged. Not caught still: requested content dropped on purpose (RowList icons at 160), text touching a drawing, wrong logic that renders tidily (a reversed ifElse). Also: Stepper keeps trailing zeros when decimals is set; "next", "previous", "skip" no longer reach TransportControls, "steps" no longer GoalBar, "power" no longer expr.math.
 
 Images: json2rc gained drawBitmap, drawBitmapInt and drawScaledBitmap, byte-identical to the Java parser with a numeric image id. The Java parser has no resources.bitmaps (its images come from the host), so a document embedding a PNG cannot be byte-checked. C++ DrawBitmapScaled ignored src and scaleType and stretched; it now follows ImageScaling.java. Seen drawing in C++ and in the TypeScript player in Chrome, all eight scale types, and inside CoverArt's image slot. Not run on a device. PNG only. DRW-16 shows it. build.mjs now refuses a partial --catalog that would drop examples.
+
+Held-out test of the step, form and panel sets (StepExplainer, CellRow, ChoiceChips, InputsResult, ScaledAmount, NumberedList, TwoColumns, CMP-25 to 29; RC_HIDE_BATCH). Prompts written before building and kept from the builders; original brief; output tokens, new then without, two runs each:
+
+| prompt | with | without | change |
+| :-- | --: | --: | --: |
+| merge sort | 32.1, 24.5 | 23.0, 33.6 | 0% |
+| TCP handshake | 25.1, 20.0 | 25.0, 21.4 | -3% |
+| bill to law | 22.8, 15.2 | 26.6, 26.7 | -29% |
+| binary search (baseline) | 23.6, 32.1 | 26.1, 37.5 | -12% |
+| mortgage | 11.3, 8.8 | 16.5, 19.3 | -44% |
+| unit converter | 20.6, 17.6 | 16.3, 21.1 | +2% |
+| RSVP | 19.3, 14.4 | 17.0, 17.4 | -2% |
+| tip (baseline) | 11.3, 21.5 | 18.4, 12.2 | +7% |
+| cocktail | 8.4, 9.8 | 15.4, 14.4 | -39% |
+| itinerary | 13.9, 12.5 | 23.6, 24.4 | -45% |
+| medication | 17.6, 17.8 | 18.9, 16.1 | +1% |
+| recipe (baseline) | 9.2, 7.0 | 18.8, 18.2 | -56% |
+
+Means 17.3K against 21.2K (-18%); 8 of 12 prompts cheaper; sign-flip p about 0.02 on prompt means. Step -11%, form -10%, panel -36%. Biased slightly for the new sets: in the without condition the Walkthrough pitfall names the hidden StepExplainer (a failed get in at least 5 runs). Card's optional title stays in both. Found by runs: textFromFloat misprints small values (0.000621 as 0.21) and 10.97 as 10.96, CMP-16's small-size icon stays on the first stage, a sample on a non-exported variable fails with an opaque HEADER error, design rule says Walkthrough while StepExplainer exists, kit omits Stepper and Slider for forms, ScaledAmount from a Slider factor does not follow a drag.

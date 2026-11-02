@@ -1,0 +1,1415 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 320,
+  "height": 340,
+  "profiles": 513,
+  "contentDescription": "Amounts that scale with a factor: fractions, decimals, rounded and bought whole"
+ },
+ "resources": {
+  "variables": {
+   "scale": {
+    "value": 1,
+    "export": true
+   },
+   "scaledamount1_a": "max(0, 1.5 * @scale)",
+   "scaledamount1_n8": "round(@scaledamount1_a * 8) / 8",
+   "scaledamount1_n3": "round(@scaledamount1_a * 3) / 3",
+   "scaledamount1_th": "step(abs(@scaledamount1_a - @scaledamount1_n8) - abs(@scaledamount1_a - @scaledamount1_n3), 0.001)",
+   "scaledamount1_v": "max(ifElse(@scaledamount1_n8, @scaledamount1_n3, @scaledamount1_th), step(@scaledamount1_a, 0.0001) / 8)",
+   "scaledamount1_w": "floor(@scaledamount1_v + 0.001)",
+   "scaledamount1_f": "@scaledamount1_v - @scaledamount1_w",
+   "scaledamount1_fi": "ifElse(round(@scaledamount1_f * 8), 7 + round(@scaledamount1_f * 3), @scaledamount1_th * step(@scaledamount1_f, 0.01))",
+   "scaledamount1_hf": "step(@scaledamount1_fi, 0.5)",
+   "scaledamount1_pl": "max(step(@scaledamount1_v, 1.001), 1 - step(@scaledamount1_v, 0.0001))",
+   "scaledamount2_a": "max(0, 0.5 * @scale)",
+   "scaledamount2_n8": "round(@scaledamount2_a * 4) / 4",
+   "scaledamount2_v": "max(@scaledamount2_n8, step(@scaledamount2_a, 0.0001) / 4)",
+   "scaledamount2_w": "floor(@scaledamount2_v + 0.001)",
+   "scaledamount2_f": "@scaledamount2_v - @scaledamount2_w",
+   "scaledamount2_fi": "round(@scaledamount2_f * 4)",
+   "scaledamount2_hf": "step(@scaledamount2_fi, 0.5)",
+   "scaledamount2_pl": "max(step(@scaledamount2_v, 1.001), 1 - step(@scaledamount2_v, 0.0001))",
+   "scaledamount3_a": "max(0, 0.3333 * @scale)",
+   "scaledamount3_n8": "round(@scaledamount3_a * 8) / 8",
+   "scaledamount3_n3": "round(@scaledamount3_a * 3) / 3",
+   "scaledamount3_th": "step(abs(@scaledamount3_a - @scaledamount3_n8) - abs(@scaledamount3_a - @scaledamount3_n3), 0.001)",
+   "scaledamount3_v": "max(ifElse(@scaledamount3_n8, @scaledamount3_n3, @scaledamount3_th), step(@scaledamount3_a, 0.0001) / 8)",
+   "scaledamount3_w": "floor(@scaledamount3_v + 0.001)",
+   "scaledamount3_f": "@scaledamount3_v - @scaledamount3_w",
+   "scaledamount3_fi": "ifElse(round(@scaledamount3_f * 8), 7 + round(@scaledamount3_f * 3), @scaledamount3_th * step(@scaledamount3_f, 0.01))",
+   "scaledamount3_hf": "step(@scaledamount3_fi, 0.5)",
+   "scaledamount3_pl": "max(step(@scaledamount3_v, 1.001), 1 - step(@scaledamount3_v, 0.0001))",
+   "scaledamount4_a": "max(0, 2.5 * @scale)",
+   "scaledamount4_m": "max(round(@scaledamount4_a * 10), step(@scaledamount4_a, 0.0001))",
+   "scaledamount4_v": "@scaledamount4_m / 10",
+   "scaledamount4_pl": "max(step(@scaledamount4_v, 1.001), 1 - step(@scaledamount4_v, 0.0001))",
+   "scaledamount4_dd": "step(@scaledamount4_m % 10, 0.5)",
+   "scaledamount5_a": "max(0, 0.25 * @scale)",
+   "scaledamount5_m": "max(round(@scaledamount5_a * 100), step(@scaledamount5_a, 0.0001))",
+   "scaledamount5_v": "@scaledamount5_m / 100",
+   "scaledamount5_dd": "step(@scaledamount5_m % 100, 0.5) * (1 + step(@scaledamount5_m % 10, 0.5))",
+   "scaledamount6_a": "max(0, 247 * @scale)",
+   "scaledamount6_st": "max(round(@scaledamount6_a / 5) * 5, step(@scaledamount6_a, 0.0001) * 5)",
+   "scaledamount6_m": "max(round(@scaledamount6_st * 1), step(@scaledamount6_a, 0.0001))",
+   "scaledamount6_v": "@scaledamount6_m / 1",
+   "scaledamount7_a": "max(0, 2.1 * @scale)",
+   "scaledamount7_st": "ceil(@scaledamount7_a - 0.0005)",
+   "scaledamount7_m": "max(round(@scaledamount7_st * 1), step(@scaledamount7_a, 0.0001))",
+   "scaledamount7_v": "@scaledamount7_m / 1",
+   "scaledamount7_pl": "max(step(@scaledamount7_v, 1.001), 1 - step(@scaledamount7_v, 0.0001))",
+   "scaledamount8_a": "max(0, 1.75 * @scale)",
+   "scaledamount8_n8": "round(@scaledamount8_a * 8) / 8",
+   "scaledamount8_n3": "round(@scaledamount8_a * 3) / 3",
+   "scaledamount8_th": "step(abs(@scaledamount8_a - @scaledamount8_n8) - abs(@scaledamount8_a - @scaledamount8_n3), 0.001)",
+   "scaledamount8_v": "max(ifElse(@scaledamount8_n8, @scaledamount8_n3, @scaledamount8_th), step(@scaledamount8_a, 0.0001) / 8)",
+   "scaledamount8_w": "floor(@scaledamount8_v + 0.001)",
+   "scaledamount8_f": "@scaledamount8_v - @scaledamount8_w",
+   "scaledamount8_fi": "ifElse(round(@scaledamount8_f * 8), 7 + round(@scaledamount8_f * 3), @scaledamount8_th * step(@scaledamount8_f, 0.01))",
+   "scaledamount8_hf": "step(@scaledamount8_fi, 0.5)"
+  },
+  "colors": {
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   }
+  }
+ },
+ "root": {
+  "column": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.surface"
+    },
+    {
+     "padding": 16
+    },
+    {
+     "spacedBy": 2
+    }
+   ],
+   "children": [
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount1_w",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "0 - max(step(@scaledamount1_w, 0.5), 1 - @scaledamount1_hf)",
+               "varName": "scaledamount1_nm"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅛",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 1)) - 1",
+               "varName": "scaledamount1_g1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¼",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 2)) - 1",
+               "varName": "scaledamount1_g2"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅜",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 3)) - 1",
+               "varName": "scaledamount1_g3"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "½",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 4)) - 1",
+               "varName": "scaledamount1_g4"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅝",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 5)) - 1",
+               "varName": "scaledamount1_g5"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¾",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 6)) - 1",
+               "varName": "scaledamount1_g6"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅞",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 7)) - 1",
+               "varName": "scaledamount1_g7"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅓",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 8)) - 1",
+               "varName": "scaledamount1_g8"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅔",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount1_fi - 9)) - 1",
+               "varName": "scaledamount1_g9"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths  and a third    and 2 thirds  ",
+               "start": "@scaledamount1_fi * 15",
+               "len": 15,
+               "varName": "scaledamount1_wd"
+              }
+             },
+             {
+              "textTransform": {
+               "text": {
+                "type": "textMerge",
+                "id1": "@scaledamount1_nm",
+                "id2": "@scaledamount1_wd"
+               },
+               "start": "(1 - step(@scaledamount1_w, 0.5)) * @scaledamount1_hf * 5",
+               "len": -1,
+               "operation": 3,
+               "varName": "scaledamount1_sp"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cup",
+               "start": 0,
+               "len": "@scaledamount1_pl - 1",
+               "varName": "scaledamount1_u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cups",
+               "start": 0,
+               "len": "0 - @scaledamount1_pl",
+               "varName": "scaledamount1_u2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Fraction",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@scaledamount1_nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@scaledamount1_g1",
+                   "id2": "@scaledamount1_g2"
+                  },
+                  "id2": "@scaledamount1_g3"
+                 },
+                 "id2": "@scaledamount1_g4"
+                },
+                "id2": "@scaledamount1_g5"
+               },
+               "id2": "@scaledamount1_g6"
+              },
+              "id2": "@scaledamount1_g7"
+             }
+            },
+            "id2": "@scaledamount1_g8"
+           },
+           "id2": "@scaledamount1_g9"
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": "@scaledamount1_u1",
+           "id2": "@scaledamount1_u2"
+          }
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount1_sp",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@scaledamount1_u1",
+              "id2": "@scaledamount1_u2"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount2_w",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "0 - max(step(@scaledamount2_w, 0.5), 1 - @scaledamount2_hf)",
+               "varName": "scaledamount2_nm"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¼",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount2_fi - 1)) - 1",
+               "varName": "scaledamount2_g1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "½",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount2_fi - 2)) - 1",
+               "varName": "scaledamount2_g2"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¾",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount2_fi - 3)) - 1",
+               "varName": "scaledamount2_g3"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "                and a quarter  and a half     and 3 quarters",
+               "start": "@scaledamount2_fi * 15",
+               "len": 15,
+               "varName": "scaledamount2_wd"
+              }
+             },
+             {
+              "textTransform": {
+               "text": {
+                "type": "textMerge",
+                "id1": "@scaledamount2_nm",
+                "id2": "@scaledamount2_wd"
+               },
+               "start": "(1 - step(@scaledamount2_w, 0.5)) * @scaledamount2_hf * 5",
+               "len": -1,
+               "operation": 3,
+               "varName": "scaledamount2_sp"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cup",
+               "start": 0,
+               "len": "@scaledamount2_pl - 1",
+               "varName": "scaledamount2_u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cups",
+               "start": 0,
+               "len": "0 - @scaledamount2_pl",
+               "varName": "scaledamount2_u2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Quarters only",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@scaledamount2_nm",
+             "id2": "@scaledamount2_g1"
+            },
+            "id2": "@scaledamount2_g2"
+           },
+           "id2": "@scaledamount2_g3"
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": "@scaledamount2_u1",
+           "id2": "@scaledamount2_u2"
+          }
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount2_sp",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@scaledamount2_u1",
+              "id2": "@scaledamount2_u2"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount3_w",
+                "whole": 6,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "0 - max(step(@scaledamount3_w, 0.5), 1 - @scaledamount3_hf)",
+               "varName": "scaledamount3_nm"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅛",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 1)) - 1",
+               "varName": "scaledamount3_g1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¼",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 2)) - 1",
+               "varName": "scaledamount3_g2"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅜",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 3)) - 1",
+               "varName": "scaledamount3_g3"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "½",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 4)) - 1",
+               "varName": "scaledamount3_g4"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅝",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 5)) - 1",
+               "varName": "scaledamount3_g5"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "¾",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 6)) - 1",
+               "varName": "scaledamount3_g6"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅞",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 7)) - 1",
+               "varName": "scaledamount3_g7"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅓",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 8)) - 1",
+               "varName": "scaledamount3_g8"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "⅔",
+               "start": 0,
+               "len": "min(1, abs(@scaledamount3_fi - 9)) - 1",
+               "varName": "scaledamount3_g9"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths  and a third    and 2 thirds  ",
+               "start": "@scaledamount3_fi * 15",
+               "len": 15,
+               "varName": "scaledamount3_wd"
+              }
+             },
+             {
+              "textTransform": {
+               "text": {
+                "type": "textMerge",
+                "id1": "@scaledamount3_nm",
+                "id2": "@scaledamount3_wd"
+               },
+               "start": "(1 - step(@scaledamount3_w, 0.5)) * @scaledamount3_hf * 5",
+               "len": -1,
+               "operation": 3,
+               "varName": "scaledamount3_sp"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cup",
+               "start": 0,
+               "len": "@scaledamount3_pl - 1",
+               "varName": "scaledamount3_u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " cups",
+               "start": 0,
+               "len": "0 - @scaledamount3_pl",
+               "varName": "scaledamount3_u2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Thirds",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": {
+           "type": "textMerge",
+           "id1": {
+            "type": "textMerge",
+            "id1": {
+             "type": "textMerge",
+             "id1": "@scaledamount3_nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": "@scaledamount3_g1",
+                   "id2": "@scaledamount3_g2"
+                  },
+                  "id2": "@scaledamount3_g3"
+                 },
+                 "id2": "@scaledamount3_g4"
+                },
+                "id2": "@scaledamount3_g5"
+               },
+               "id2": "@scaledamount3_g6"
+              },
+              "id2": "@scaledamount3_g7"
+             }
+            },
+            "id2": "@scaledamount3_g8"
+           },
+           "id2": "@scaledamount3_g9"
+          },
+          "id2": {
+           "type": "textMerge",
+           "id1": "@scaledamount3_u1",
+           "id2": "@scaledamount3_u2"
+          }
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount3_sp",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@scaledamount3_u1",
+              "id2": "@scaledamount3_u2"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount4_v + 0.4 / 10",
+                "whole": 7,
+                "decimal": 1,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@scaledamount4_v, 1) * 1.0001)) + 1 + @scaledamount4_dd + step(@scaledamount4_dd, 0.5)",
+               "varName": "scaledamount4_nm"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " litre",
+               "start": 0,
+               "len": "@scaledamount4_pl - 1",
+               "varName": "scaledamount4_s1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " litres",
+               "start": 0,
+               "len": "0 - @scaledamount4_pl",
+               "varName": "scaledamount4_s2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Decimal",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "@scaledamount4_nm",
+          "id2": " L"
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount4_nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@scaledamount4_s1",
+              "id2": "@scaledamount4_s2"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount5_v + 0.4 / 100",
+                "whole": 7,
+                "decimal": 2,
+                "flags": 7
+               },
+               "start": 0,
+               "len": "floor(log(max(@scaledamount5_v, 1) * 1.0001)) + 1 + @scaledamount5_dd + step(@scaledamount5_dd, 0.5)",
+               "varName": "scaledamount5_nm"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Two decimals",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "@scaledamount5_nm",
+          "id2": " kg"
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount5_nm",
+             "id2": " kg"
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount6_v + 0.4 / 1",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "floor(log(max(@scaledamount6_v, 1) * 1.0001)) + 1 + 0 + step(0, 0.5)",
+               "varName": "scaledamount6_nm"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Rounded to 5",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "@scaledamount6_nm",
+          "id2": " g"
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount6_nm",
+             "id2": " g"
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       "fillMaxWidth",
+       {
+        "height": 36
+       }
+      ],
+      "children": [
+       {
+        "canvas": {
+         "modifiers": [
+          {
+           "size": [
+            0,
+            0
+           ]
+          }
+         ],
+         "commands": [
+          {
+           "global": {
+            "commands": [
+             {
+              "textSubtext": {
+               "text": {
+                "type": "textFromFloat",
+                "value": "@scaledamount7_v + 0.4 / 1",
+                "whole": 7,
+                "decimal": 0,
+                "flags": 5
+               },
+               "start": 0,
+               "len": "floor(log(max(@scaledamount7_v, 1) * 1.0001)) + 1 + 0 + step(0, 0.5)",
+               "varName": "scaledamount7_nm"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " roll",
+               "start": 0,
+               "len": "@scaledamount7_pl - 1",
+               "varName": "scaledamount7_u1"
+              }
+             },
+             {
+              "textSubtext": {
+               "text": " rolls",
+               "start": 0,
+               "len": "0 - @scaledamount7_pl",
+               "varName": "scaledamount7_u2"
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "weight": 1
+          },
+          {
+           "padding": {
+            "end": 12
+           }
+          }
+         ],
+         "children": [
+          {
+           "text": {
+            "value": "Bought whole",
+            "maxLines": 1,
+            "overflow": "ellipsis",
+            "fontSize": 15,
+            "color": "@colors.onSurface"
+           }
+          }
+         ]
+        }
+       },
+       {
+        "text": {
+         "value": {
+          "type": "textMerge",
+          "id1": "@scaledamount7_nm",
+          "id2": {
+           "type": "textMerge",
+           "id1": "@scaledamount7_u1",
+           "id2": "@scaledamount7_u2"
+          }
+         },
+         "fontSize": 15,
+         "color": "@colors.onSurface",
+         "maxLines": 1,
+         "modifiers": [
+          {
+           "semantics": {
+            "contentDescription": {
+             "type": "textMerge",
+             "id1": "@scaledamount7_nm",
+             "id2": {
+              "type": "textMerge",
+              "id1": "@scaledamount7_u1",
+              "id2": "@scaledamount7_u2"
+             }
+            }
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    },
+    {
+     "row": {
+      "verticalAlignment": "center",
+      "modifiers": [
+       {
+        "spacedBy": 8
+       }
+      ],
+      "children": [
+       {
+        "text": {
+         "value": "Alone:",
+         "color": "@colors.muted",
+         "fontSize": 15
+        }
+       },
+       {
+        "box": {
+         "children": [
+          {
+           "canvas": {
+            "modifiers": [
+             {
+              "size": [
+               0,
+               0
+              ]
+             }
+            ],
+            "commands": [
+             {
+              "global": {
+               "commands": [
+                {
+                 "textSubtext": {
+                  "text": {
+                   "type": "textFromFloat",
+                   "value": "@scaledamount8_w",
+                   "whole": 6,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "start": 0,
+                  "len": "0 - max(step(@scaledamount8_w, 0.5), 1 - @scaledamount8_hf)",
+                  "varName": "scaledamount8_nm"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅛",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 1)) - 1",
+                  "varName": "scaledamount8_g1"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "¼",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 2)) - 1",
+                  "varName": "scaledamount8_g2"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅜",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 3)) - 1",
+                  "varName": "scaledamount8_g3"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "½",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 4)) - 1",
+                  "varName": "scaledamount8_g4"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅝",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 5)) - 1",
+                  "varName": "scaledamount8_g5"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "¾",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 6)) - 1",
+                  "varName": "scaledamount8_g6"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅞",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 7)) - 1",
+                  "varName": "scaledamount8_g7"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅓",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 8)) - 1",
+                  "varName": "scaledamount8_g8"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "⅔",
+                  "start": 0,
+                  "len": "min(1, abs(@scaledamount8_fi - 9)) - 1",
+                  "varName": "scaledamount8_g9"
+                 }
+                },
+                {
+                 "textSubtext": {
+                  "text": "                and an eighth  and a quarter  and 3 eighths  and a half     and 5 eighths  and 3 quarters and 7 eighths  and a third    and 2 thirds  ",
+                  "start": "@scaledamount8_fi * 15",
+                  "len": 15,
+                  "varName": "scaledamount8_wd"
+                 }
+                },
+                {
+                 "textTransform": {
+                  "text": {
+                   "type": "textMerge",
+                   "id1": "@scaledamount8_nm",
+                   "id2": "@scaledamount8_wd"
+                  },
+                  "start": "(1 - step(@scaledamount8_w, 0.5)) * @scaledamount8_hf * 5",
+                  "len": -1,
+                  "operation": 3,
+                  "varName": "scaledamount8_sp"
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          },
+          {
+           "text": {
+            "value": {
+             "type": "textMerge",
+             "id1": {
+              "type": "textMerge",
+              "id1": {
+               "type": "textMerge",
+               "id1": {
+                "type": "textMerge",
+                "id1": "@scaledamount8_nm",
+                "id2": {
+                 "type": "textMerge",
+                 "id1": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textMerge",
+                   "id1": {
+                    "type": "textMerge",
+                    "id1": {
+                     "type": "textMerge",
+                     "id1": {
+                      "type": "textMerge",
+                      "id1": "@scaledamount8_g1",
+                      "id2": "@scaledamount8_g2"
+                     },
+                     "id2": "@scaledamount8_g3"
+                    },
+                    "id2": "@scaledamount8_g4"
+                   },
+                   "id2": "@scaledamount8_g5"
+                  },
+                  "id2": "@scaledamount8_g6"
+                 },
+                 "id2": "@scaledamount8_g7"
+                }
+               },
+               "id2": "@scaledamount8_g8"
+              },
+              "id2": "@scaledamount8_g9"
+             },
+             "id2": " tsp"
+            },
+            "fontSize": 22,
+            "color": "@colors.primary",
+            "maxLines": 1,
+            "modifiers": [
+             {
+              "semantics": {
+               "contentDescription": {
+                "type": "textMerge",
+                "id1": "@scaledamount8_sp",
+                "id2": " tsp"
+               }
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

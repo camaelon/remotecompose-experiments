@@ -1,0 +1,1069 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "A BMI calculator: height and weight steppers, a metric or imperial choice, and the result with its band"
+ },
+ "resources": {
+  "variables": {
+   "unit": 0,
+   "was": 0,
+   "h": 170,
+   "w": 70,
+   "hMin": "ifElse(100, 39, @unit)",
+   "hMax": "ifElse(220, 87, @unit)",
+   "wMin": "ifElse(30, 66, @unit)",
+   "wMax": "ifElse(200, 441, @unit)",
+   "bmi": "round(10 * ifElse(10000 * @w / (@h * @h), 703 * @w / (@h * @h), @unit)) / 10",
+   "band": "step(@bmi, 18.45) + step(@bmi, 24.95) + step(@bmi, 29.95)",
+   "inputsresult1_scroll": 0,
+   "inputsresult1_h": "windowHeight() - 2 * 16",
+   "inputsresult1_side": "step(windowWidth(), 480 - 0.5)",
+   "adaptivesplit1_s": "@inputsresult1_side * (1 - 0) * (1 - 0)",
+   "adaptivesplit1_sw": "floor((windowWidth() - 2 * 16) * 0.42 - 12 / 2)",
+   "textchoice1_k": "clamp(0, 3, round(@band))",
+   "textchoice2_k": "clamp(0, 3, round(@band))",
+   "textchoice3_k": "clamp(0, 1, round(@unit))",
+   "textchoice4_k": "clamp(0, 1, round(@unit))",
+   "vis_1": 1
+  },
+  "colors": {
+   "background": {
+    "light": "#FFF5F7FA",
+    "dark": "#FF101828"
+   },
+   "muted": {
+    "light": "#FF5A6475",
+    "dark": "#FF8A94A6"
+   },
+   "onPrimary": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF0B1A2E"
+   },
+   "onSurface": {
+    "light": "#FF111827",
+    "dark": "#FFE6EAF2"
+   },
+   "primary": {
+    "light": "#FF1565D8",
+    "dark": "#FF4DA3FF"
+   },
+   "surface": {
+    "light": "#FFFFFFFF",
+    "dark": "#FF1C2433"
+   },
+   "surfaceHigh": {
+    "light": "#FFE8ECF2",
+    "dark": "#FF263042"
+   }
+  }
+ },
+ "root": {
+  "box": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "background": "@colors.background"
+    },
+    {
+     "padding": 16
+    }
+   ],
+   "children": [
+    {
+     "flow": {
+      "horizontalArrangement": "spaceBetween",
+      "modifiers": [
+       "fillMaxWidth"
+      ],
+      "children": [
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_1"
+          },
+          {
+           "width": "ifElse((windowWidth() - 2 * 16), @adaptivesplit1_sw, @adaptivesplit1_s)"
+          },
+          {
+           "height": "ifElse(ifElse(100, @inputsresult1_h, 0), @inputsresult1_h, @adaptivesplit1_s)"
+          }
+         ],
+         "children": [
+          {
+           "box": {
+            "modifiers": [
+             "fillMaxWidth",
+             {
+              "height": "ifElse(88, @inputsresult1_h, @inputsresult1_side)"
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                "fillMaxWidth",
+                {
+                 "clip": {
+                  "roundedRect": 20
+                 }
+                },
+                {
+                 "background": "@colors.surface"
+                },
+                {
+                 "padding": 16
+                },
+                {
+                 "spacedBy": 8
+                }
+               ],
+               "children": [
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "modifiers": [
+                   "fillMaxWidth"
+                  ],
+                  "children": [
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "weight": 1
+                      }
+                     ],
+                     "children": [
+                      {
+                       "column": {
+                        "children": [
+                         {
+                          "text": {
+                           "value": "BMI",
+                           "fontSize": 12,
+                           "color": "@colors.muted"
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": {
+                            "type": "textFromFloat",
+                            "value": "@bmi",
+                            "whole": 3,
+                            "decimal": 1,
+                            "flags": 5
+                           },
+                           "fontSize": 30,
+                           "fontWeight": 600,
+                           "color": "@colors.onSurface"
+                          }
+                         }
+                        ],
+                        "modifiers": [
+                         {
+                          "spacedBy": 2
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "column": {
+                     "horizontalAlignment": "end",
+                     "children": [
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "text": {
+                           "value": "Underweight",
+                           "fontSize": 15,
+                           "color": "@colors.onSurface",
+                           "fontWeight": 600,
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice1_k - 0))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "Healthy",
+                           "fontSize": 15,
+                           "color": "@colors.onSurface",
+                           "fontWeight": 600,
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice1_k - 1))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "Overweight",
+                           "fontSize": 15,
+                           "color": "@colors.onSurface",
+                           "fontWeight": 600,
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice1_k - 2))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "Obesity",
+                           "fontSize": 15,
+                           "color": "@colors.onSurface",
+                           "fontWeight": 600,
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice1_k - 3))"
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      },
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "text": {
+                           "value": "Under 18.5",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice2_k - 0))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "18.5 to 24.9",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice2_k - 1))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "25 to 29.9",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice2_k - 2))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "30 or more",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice2_k - 3))"
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ],
+                     "modifiers": [
+                      {
+                       "spacedBy": 2
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       },
+       {
+        "box": {
+         "modifiers": [
+          {
+           "visibility": "@vis_1"
+          },
+          {
+           "width": "ifElse((windowWidth() - 2 * 16), (windowWidth() - 2 * 16) - @adaptivesplit1_sw - 12, @adaptivesplit1_s)"
+          },
+          {
+           "height": "ifElse(@inputsresult1_h - 100 * (1 - 0), @inputsresult1_h, @adaptivesplit1_s)"
+          }
+         ],
+         "children": [
+          {
+           "column": {
+            "modifiers": [
+             "fillMaxSize",
+             {
+              "verticalScroll": "@inputsresult1_scroll"
+             },
+             {
+              "spacedBy": 12
+             }
+            ],
+            "children": [
+             {
+              "column": {
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "text": {
+                  "value": "Units",
+                  "fontSize": 15,
+                  "color": "@colors.muted",
+                  "modifiers": []
+                 }
+                },
+                {
+                 "flow": {
+                  "modifiers": [
+                   "fillMaxWidth"
+                  ],
+                  "children": [
+                   {
+                    "canvas": {
+                     "modifiers": [
+                      {
+                       "size": [
+                        0,
+                        0
+                       ]
+                      }
+                     ],
+                     "commands": [
+                      {
+                       "global": {
+                        "commands": [
+                         {
+                          "textSubtext": {
+                           "text": "Not selectedSelected    ",
+                           "start": "(1 - min(1, abs(@unit - 0))) * 12",
+                           "len": 12,
+                           "varName": "choicechips1_ccState12_0"
+                          }
+                         },
+                         {
+                          "textTransform": {
+                           "text": "@choicechips1_ccState12_0",
+                           "start": 0,
+                           "len": -1,
+                           "operation": 3,
+                           "varName": "choicechips1_ccState_0"
+                          }
+                         },
+                         {
+                          "textSubtext": {
+                           "text": "Not selectedSelected    ",
+                           "start": "(1 - min(1, abs(@unit - 1))) * 12",
+                           "len": 12,
+                           "varName": "choicechips1_ccState12_1"
+                          }
+                         },
+                         {
+                          "textTransform": {
+                           "text": "@choicechips1_ccState12_1",
+                           "start": 0,
+                           "len": -1,
+                           "operation": 3,
+                           "varName": "choicechips1_ccState_1"
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "padding": {
+                        "end": 8
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "box": {
+                        "modifiers": [
+                         {
+                          "padding": [
+                           0,
+                           8
+                          ]
+                         },
+                         {
+                          "clip": 16
+                         },
+                         {
+                          "semantics": {
+                           "contentDescription": "Units: Metric",
+                           "stateDescription": "@choicechips1_ccState_0",
+                           "clickable": true
+                          }
+                         },
+                         {
+                          "onClick": [
+                           {
+                            "type": "valueFloatChange",
+                            "target": "@unit",
+                            "value": 0
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@h",
+                            "value": "clamp(ifElse(100, 39, @unit), ifElse(220, 87, @unit), round(@h * ifElse(1, ifElse(2.54, 1 / 2.54, @unit), abs(@unit - @was))))"
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@w",
+                            "value": "clamp(ifElse(30, 66, @unit), ifElse(200, 441, @unit), round(@w * ifElse(1, ifElse(1 / 2.20462, 2.20462, @unit), abs(@unit - @was))))"
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@was",
+                            "value": "@unit"
+                           }
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "box": {
+                           "horizontalAlignment": "center",
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            {
+                             "height": 32
+                            },
+                            {
+                             "background": "@colors.surfaceHigh"
+                            },
+                            {
+                             "padding": [
+                              14,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Metric",
+                              "maxLines": 1,
+                              "overflow": "ellipsis",
+                              "fontSize": 14,
+                              "color": "@colors.onSurface"
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "horizontalAlignment": "center",
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            {
+                             "graphicsLayer": {
+                              "alpha": {
+                               "value": "1 - min(1, abs(@unit - 0))",
+                               "anim": 0.2
+                              }
+                             }
+                            },
+                            {
+                             "height": 32
+                            },
+                            {
+                             "background": "@colors.primary"
+                            },
+                            {
+                             "padding": [
+                              14,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Metric",
+                              "maxLines": 1,
+                              "overflow": "ellipsis",
+                              "fontSize": 14,
+                              "color": "@colors.onPrimary"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "modifiers": [
+                      {
+                       "padding": {
+                        "end": 8
+                       }
+                      }
+                     ],
+                     "children": [
+                      {
+                       "box": {
+                        "modifiers": [
+                         {
+                          "padding": [
+                           0,
+                           8
+                          ]
+                         },
+                         {
+                          "clip": 16
+                         },
+                         {
+                          "semantics": {
+                           "contentDescription": "Units: Imperial",
+                           "stateDescription": "@choicechips1_ccState_1",
+                           "clickable": true
+                          }
+                         },
+                         {
+                          "onClick": [
+                           {
+                            "type": "valueFloatChange",
+                            "target": "@unit",
+                            "value": 1
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@h",
+                            "value": "clamp(ifElse(100, 39, @unit), ifElse(220, 87, @unit), round(@h * ifElse(1, ifElse(2.54, 1 / 2.54, @unit), abs(@unit - @was))))"
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@w",
+                            "value": "clamp(ifElse(30, 66, @unit), ifElse(200, 441, @unit), round(@w * ifElse(1, ifElse(1 / 2.20462, 2.20462, @unit), abs(@unit - @was))))"
+                           },
+                           {
+                            "type": "valueFloatExpressionChange",
+                            "target": "@was",
+                            "value": "@unit"
+                           }
+                          ]
+                         }
+                        ],
+                        "children": [
+                         {
+                          "box": {
+                           "horizontalAlignment": "center",
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            {
+                             "height": 32
+                            },
+                            {
+                             "background": "@colors.surfaceHigh"
+                            },
+                            {
+                             "padding": [
+                              14,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Imperial",
+                              "maxLines": 1,
+                              "overflow": "ellipsis",
+                              "fontSize": 14,
+                              "color": "@colors.onSurface"
+                             }
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "box": {
+                           "horizontalAlignment": "center",
+                           "verticalAlignment": "center",
+                           "modifiers": [
+                            {
+                             "graphicsLayer": {
+                              "alpha": {
+                               "value": "1 - min(1, abs(@unit - 1))",
+                               "anim": 0.2
+                              }
+                             }
+                            },
+                            {
+                             "height": 32
+                            },
+                            {
+                             "background": "@colors.primary"
+                            },
+                            {
+                             "padding": [
+                              14,
+                              0
+                             ]
+                            }
+                           ],
+                           "children": [
+                            {
+                             "text": {
+                              "value": "Imperial",
+                              "maxLines": 1,
+                              "overflow": "ellipsis",
+                              "fontSize": 14,
+                              "color": "@colors.onPrimary"
+                             }
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ],
+                  "children": [
+                   {
+                    "column": {
+                     "children": [
+                      {
+                       "text": {
+                        "value": "Height",
+                        "fontSize": 15,
+                        "color": "@colors.muted"
+                       }
+                      },
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "text": {
+                           "value": "cm",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice3_k - 0))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "in",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice3_k - 1))"
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ],
+                     "modifiers": [
+                      {
+                       "spacedBy": 2
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "children": [
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "padding": 6
+                      },
+                      {
+                       "size": 36
+                      },
+                      {
+                       "clip": 18
+                      },
+                      {
+                       "background": "@colors.surfaceHigh"
+                      },
+                      {
+                       "semantics": {
+                        "contentDescription": "Decrease height",
+                        "clickable": true
+                       }
+                      },
+                      {
+                       "onClick": [
+                        {
+                         "type": "valueFloatExpressionChange",
+                         "target": "@h",
+                         "value": "max(@hMin, @h - 1)"
+                        }
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "−",
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "width": 52
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": {
+                         "type": "textFromFloat",
+                         "value": "@h",
+                         "whole": 3,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "padding": 6
+                      },
+                      {
+                       "size": 36
+                      },
+                      {
+                       "clip": 18
+                      },
+                      {
+                       "background": "@colors.surfaceHigh"
+                      },
+                      {
+                       "semantics": {
+                        "contentDescription": "Increase height",
+                        "clickable": true
+                       }
+                      },
+                      {
+                       "onClick": [
+                        {
+                         "type": "valueFloatExpressionChange",
+                         "target": "@h",
+                         "value": "min(@hMax, @h + 1)"
+                        }
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "+",
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             },
+             {
+              "row": {
+               "verticalAlignment": "center",
+               "modifiers": [
+                "fillMaxWidth"
+               ],
+               "children": [
+                {
+                 "box": {
+                  "modifiers": [
+                   {
+                    "weight": 1
+                   }
+                  ],
+                  "children": [
+                   {
+                    "column": {
+                     "children": [
+                      {
+                       "text": {
+                        "value": "Weight",
+                        "fontSize": 15,
+                        "color": "@colors.muted"
+                       }
+                      },
+                      {
+                       "box": {
+                        "children": [
+                         {
+                          "text": {
+                           "value": "kg",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice4_k - 0))"
+                            }
+                           ]
+                          }
+                         },
+                         {
+                          "text": {
+                           "value": "lb",
+                           "fontSize": 12,
+                           "color": "@colors.muted",
+                           "modifiers": [
+                            {
+                             "visibility": "1 - min(1, abs(@textchoice4_k - 1))"
+                            }
+                           ]
+                          }
+                         }
+                        ]
+                       }
+                      }
+                     ],
+                     "modifiers": [
+                      {
+                       "spacedBy": 2
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                },
+                {
+                 "row": {
+                  "verticalAlignment": "center",
+                  "children": [
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "padding": 6
+                      },
+                      {
+                       "size": 36
+                      },
+                      {
+                       "clip": 18
+                      },
+                      {
+                       "background": "@colors.surfaceHigh"
+                      },
+                      {
+                       "semantics": {
+                        "contentDescription": "Decrease weight",
+                        "clickable": true
+                       }
+                      },
+                      {
+                       "onClick": [
+                        {
+                         "type": "valueFloatExpressionChange",
+                         "target": "@w",
+                         "value": "max(@wMin, @w - 1)"
+                        }
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "−",
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "width": 52
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": {
+                         "type": "textFromFloat",
+                         "value": "@w",
+                         "whole": 3,
+                         "decimal": 0,
+                         "flags": 5
+                        },
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   },
+                   {
+                    "box": {
+                     "horizontalAlignment": "center",
+                     "verticalAlignment": "center",
+                     "modifiers": [
+                      {
+                       "padding": 6
+                      },
+                      {
+                       "size": 36
+                      },
+                      {
+                       "clip": 18
+                      },
+                      {
+                       "background": "@colors.surfaceHigh"
+                      },
+                      {
+                       "semantics": {
+                        "contentDescription": "Increase weight",
+                        "clickable": true
+                       }
+                      },
+                      {
+                       "onClick": [
+                        {
+                         "type": "valueFloatExpressionChange",
+                         "target": "@w",
+                         "value": "min(@wMax, @w + 1)"
+                        }
+                       ]
+                      }
+                     ],
+                     "children": [
+                      {
+                       "text": {
+                        "value": "+",
+                        "fontSize": 20,
+                        "color": "@colors.onSurface"
+                       }
+                      }
+                     ]
+                    }
+                   }
+                  ]
+                 }
+                }
+               ]
+              }
+             }
+            ]
+           }
+          }
+         ]
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ }
+}

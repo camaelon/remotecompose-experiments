@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES } from "./components.mjs";
+import { loadLibrary, loadIconCatalog, VERTICAL_EXAMPLES, BATCH_EXAMPLES } from "./components.mjs";
 import { designAudit } from "./design-audit.mjs";
 import { loadMaps } from "./maps.mjs";
 import { STRUCTURES, classifyStructure, structureMenu, HIDE_TEMPLATES } from "./structures.mjs";
@@ -74,6 +74,7 @@ export function loadCatalog() {
     const vocab = JSON.parse(readFileSync(VOCAB_PATH, "utf8"));
     const catalog = existsSync(catPath) ? JSON.parse(readFileSync(catPath, "utf8")) : { examples: [] };
     if (process.env.RC_HIDE_VERTICALS) catalog.examples = catalog.examples.filter((e) => !VERTICAL_EXAMPLES.includes(e.id));
+    if (process.env.RC_HIDE_BATCH) catalog.examples = catalog.examples.filter((e) => !BATCH_EXAMPLES.includes(e.id));
     const library = loadLibrary();
     // phrase (normalised words joined by a space) -> [{kind, id}]
     const phrases = new Map();
@@ -400,7 +401,7 @@ function buildKitCore({ goal = "", capabilities = [], max_examples = 4, structur
     // A structure with a template: the template first, whatever the words matched.
     const template = !HIDE_TEMPLATES ? shapeOf()?.structure.template : null;
     const alsoTemplates = HIDE_TEMPLATES ? [] : pickedAll.slice(1).map((s) => s.template).filter(Boolean);
-    const comps = [...new Set([...(template ? [template] : []), ...alsoTemplates, ...pickedAll.flatMap((s) => s.components ?? []), ...r.components])].filter((n) => !(HIDE_TEMPLATES && ["RowList", "AdaptiveSplit"].includes(n))).map((n) => componentSummary(n)).filter(Boolean);
+    const comps = [...new Set([...(template ? [template] : []), ...alsoTemplates, ...pickedAll.flatMap((s) => [...(s.core ?? []), ...(s.components ?? [])]), ...(shapeOf()?.structure.core ?? []), ...r.components])].filter((n) => !(HIDE_TEMPLATES && ["RowList", "AdaptiveSplit"].includes(n))).map((n) => componentSummary(n)).filter(Boolean);
     for (const c of comps) for (const cap of c.capabilities ?? []) needed.delete(cap);
     // A word that names a component ("curve" -> LineChart) is covered by it: the capabilities
     // the same word also resolves to (draw.path) need no example of their own, unless another
@@ -786,7 +787,7 @@ function designRules(goal, r, needed) {
     // Scaled quantities (a recipe, a converter): amounts read as cooks write them.
     if (/\b(recipe|ingredients?|servings?|portions?|scal(e|es|ing))\b/.test(g)) rules.push({
         rule: "Amounts read like a cook writes them",
-        how: "A scaled amount = base × servings / baseServings, formatted by kind (a host number per ingredient: 0 count, 1 volume, 2 weight, 3 \"a pinch\"): volumes snap to eighths — whole = floor(a + 1/16), the fraction index round((a - whole) × 8) picks \"\" ⅛ ¼ ⅜ ½ ⅝ ¾ ⅞ with a TextChoice (⅓/⅔ from thirds when closer); grams round to 5 above 20; \"a pinch\" never scales; the unit is a host string per ingredient (singular/plural by step(a, 1)). Steps that can be checked off are Checkbox rows (the label wraps); a struck-through done step is two texts switched by visibility.",
+        how: (process.env.RC_HIDE_BATCH ? "" : "Use ScaledAmount: {\"amount\": 240, \"factor\": \"@servings / 4\", \"unit\": \"g\", \"step\": 5}, or format \"fraction\" for cups and spoons (about 1.5 KB a call, so quarters or plain numbers in a long list). Otherwise: ") + "A scaled amount = base × servings / baseServings, formatted by kind (a host number per ingredient: 0 count, 1 volume, 2 weight, 3 \"a pinch\"): volumes snap to eighths — whole = floor(a + 1/16), the fraction index round((a - whole) × 8) picks \"\" ⅛ ¼ ⅜ ½ ⅝ ¾ ⅞ with a TextChoice (⅓/⅔ from thirds when closer); grams round to 5 above 20; \"a pinch\" never scales; the unit is a host string per ingredient (singular/plural by step(a, 1)). Steps that can be checked off are Checkbox rows (the label wraps); a struck-through done step is two texts switched by visibility.",
     });
     // Time zones: the format knows UTC, not a city's offset.
     if (/\b(world ?clock|time ?zones?|timezones?|utc|gmt|local time in|time difference)\b/.test(g)) rules.push({

@@ -1,0 +1,423 @@
+{
+ "component": "CellRow",
+ "version": 1,
+ "summary": "A row of numbered cells or bars for explaining an algorithm over a short list: it shows each value, highlights a pair (a, b) with a bracket, marks a swap, and fills the settled cells. Every value and index is an expression, so it follows a step.",
+ "params": {
+  "values": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "One expression per cell, e.g. [\"@a0\", \"@a1\"] or [\"arrayGet(@list, 0)\", ...]; the number of cells is fixed when the document is built"
+  },
+  "style": {
+   "type": "enum",
+   "values": [
+    "cells",
+    "bars"
+   ],
+   "default": "cells",
+   "static": true,
+   "doc": "cells: equal boxes with the number inside. bars: heights follow the value (and glide), the number below; give `max`"
+  },
+  "max": {
+   "type": "float",
+   "default": 10,
+   "doc": "bars: the value of a full bar"
+  },
+  "a": {
+   "type": "float",
+   "default": -1,
+   "doc": "Index of the first highlighted cell; -1: no highlight"
+  },
+  "b": {
+   "type": "float",
+   "default": -1,
+   "doc": "Index of the second highlighted cell, -1 for one cell"
+  },
+  "swap": {
+   "type": "float",
+   "default": 0,
+   "doc": "0/1: marks a swap on the pair (dots on the bracket)"
+  },
+  "doneFrom": {
+   "type": "float",
+   "default": 99,
+   "doc": "Cells from this index on are settled and filled: 0 fills all, 99 none"
+  },
+  "color": {
+   "type": "color",
+   "default": "@colors.primary",
+   "doc": "The highlight"
+  },
+  "label": {
+   "type": "string",
+   "doc": "Accessibility label of the drawing"
+  }
+ },
+ "locals": {
+  "n": {
+   "$count": "values"
+  }
+ },
+ "capabilities": [
+  "draw.shapes",
+  "data.expression",
+  "text.dynamic"
+ ],
+ "call": {
+  "CellRow": {
+   "values": [
+    5,
+    2,
+    8
+   ],
+   "a": 0,
+   "b": 1
+  }
+ },
+ "body": {
+  "canvas": {
+   "modifiers": [
+    "fillMaxSize",
+    {
+     "$if": "label",
+     "then": {
+      "semantics": {
+       "contentDescription": "@label"
+      }
+     }
+    }
+   ],
+   "commands": [
+    {
+     "variable": {
+      "name": "cw",
+      "value": "componentWidth() / @n"
+     }
+    },
+    {
+     "variable": {
+      "name": "chH",
+      "value": "componentHeight()"
+     }
+    },
+    {
+     "variable": {
+      "name": "cBot",
+      "value": {
+       "$if": "style == 'bars'",
+       "then": "@chH - 22",
+       "else": "@chH / 2 + 22"
+      }
+     }
+    },
+    {
+     "variable": {
+      "name": "cTop",
+      "value": {
+       "$if": "style == 'bars'",
+       "then": "20",
+       "else": "@chH / 2 - 22"
+      }
+     }
+    },
+    {
+     "$each": "values",
+     "as": "v",
+     "index": "i",
+     "do": [
+      {
+       "variable": {
+        "name": "cv@i",
+        "value": "@v"
+       }
+      },
+      {
+       "$if": "style == 'bars'",
+       "then": {
+        "variable": {
+         "name": "cf@i",
+         "value": {
+          "value": "clamp(0, 1, @cv@i / @max)",
+          "anim": 0.35
+         }
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "ct@i",
+        "value": {
+         "$if": "style == 'bars'",
+         "then": "@cBot - (@cBot - @cTop) * @cf@i",
+         "else": "@cTop"
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "cs@i",
+        "value": "max(0, min(1, @i - (@doneFrom) + 1))"
+       }
+      },
+      {
+       "variable": {
+        "name": "ch@i",
+        "value": "(1 - min(1, abs(@i - (@a)))) + (1 - min(1, abs(@i - (@b))))"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": {
+           "$if": "style == 'bars'",
+           "then": "@colors.muted",
+           "else": "@colors.outline"
+          }
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "strokeWidth": 1.5
+          }
+         },
+         {
+          "alpha": "1"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@i * @cw + 2",
+        "top": "@ct@i",
+        "right": "(@i + 1) * @cw - 2",
+        "bottom": "@cBot",
+        "rx": "@theme.radius_sm",
+        "ry": "@theme.radius_sm"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.success"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@cs@i"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@i * @cw + 2",
+        "top": "@ct@i",
+        "right": "(@i + 1) * @cw - 2",
+        "bottom": "@cBot",
+        "rx": "@theme.radius_sm",
+        "ry": "@theme.radius_sm"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@color"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "$if": "theme.mono",
+          "then": {
+           "strokeWidth": 3
+          }
+         },
+         {
+          "alpha": "@ch@i"
+         }
+        ]
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@i * @cw + 2",
+        "top": "@ct@i",
+        "right": "(@i + 1) * @cw - 2",
+        "bottom": "@cBot",
+        "rx": "@theme.radius_sm",
+        "ry": "@theme.radius_sm"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.onSurface"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "textSize": "min(@theme.text_lg, @cw * 0.5)"
+         },
+         {
+          "alpha": {
+           "$if": "style == 'bars'",
+           "then": "1",
+           "else": "1 - max(@cs@i, @ch@i) * (1 - @theme.mono)"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawTextAnchored": {
+        "text": {
+         "type": "textFromFloat",
+         "value": "@cv@i",
+         "whole": 3,
+         "decimal": 0,
+         "flags": 5
+        },
+        "x": "(@i + 0.5) * @cw",
+        "y": {
+         "$if": "style == 'bars'",
+         "then": "@cBot + 12",
+         "else": "@chH / 2"
+        },
+        "panX": 0,
+        "panY": 0
+       }
+      },
+      {
+       "$if": "style == 'bars'",
+       "else": [
+        {
+         "paint": {
+          "ops": [
+           {
+            "color": "@colors.onPrimary"
+           },
+           {
+            "alpha": "max(@cs@i, @ch@i) * (1 - @theme.mono)"
+           }
+          ]
+         }
+        },
+        {
+         "drawTextAnchored": {
+          "text": {
+           "type": "textFromFloat",
+           "value": "@cv@i",
+           "whole": 3,
+           "decimal": 0,
+           "flags": 5
+          },
+          "x": "(@i + 0.5) * @cw",
+          "y": "@chH / 2",
+          "panX": 0,
+          "panY": 0
+         }
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "color": "@color"
+       },
+       {
+        "style": "stroke"
+       },
+       {
+        "strokeWidth": 2.5
+       },
+       {
+        "strokeCap": "round"
+       },
+       {
+        "alpha": "min(1, max(0, (@a) + 1))"
+       }
+      ]
+     }
+    },
+    {
+     "drawLine": {
+      "x1": "((@a) + 0.5) * @cw",
+      "y1": "@cTop - 6",
+      "x2": "((@b) + 0.5) * @cw",
+      "y2": "@cTop - 6"
+     }
+    },
+    {
+     "drawLine": {
+      "x1": "((@a) + 0.5) * @cw",
+      "y1": "@cTop - 6",
+      "x2": "((@a) + 0.5) * @cw",
+      "y2": "@cTop - 1"
+     }
+    },
+    {
+     "drawLine": {
+      "x1": "((@b) + 0.5) * @cw",
+      "y1": "@cTop - 6",
+      "x2": "((@b) + 0.5) * @cw",
+      "y2": "@cTop - 1"
+     }
+    },
+    {
+     "paint": {
+      "ops": [
+       {
+        "style": "fill"
+       },
+       {
+        "alpha": "min(1, max(0, (@a) + 1)) * (@swap)"
+       }
+      ]
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "((@a) + 0.5) * @cw",
+      "cy": "@cTop - 6",
+      "radius": 4
+     }
+    },
+    {
+     "drawCircle": {
+      "cx": "((@b) + 0.5) * @cw",
+      "cy": "@cTop - 6",
+      "radius": 4
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "No locals read its params, so a, b, swap and doneFrom may read a tree variable (the step a StepExplainer publishes), unlike TextChoice",
+  "Expanded per call, about 720 B per cell with numbers inside and 610 B per bar (6 cells 5.7 KB, 6 bars 4.9 KB)",
+  "bars ease only the fraction value / max, never a coordinate: an animated value starts from its first evaluation, and componentHeight() is 0 then, so an eased coordinate starts wrong and a first frame shows it",
+  "Fills the box it is given: 56 dp wide per cell or so reads well; the number shrinks with the cell"
+ ]
+}

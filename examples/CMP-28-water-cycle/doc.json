@@ -1,0 +1,563 @@
+{
+ "header": {
+  "apiLevel": 7,
+  "width": 360,
+  "height": 640,
+  "profiles": 513,
+  "contentDescription": "The water cycle in four stages that play by themselves: evaporation, condensation, precipitation, collection, then round again"
+ },
+ "resources": {
+  "variables": {
+   "stage": {
+    "value": 0,
+    "export": true
+   },
+   "play": {
+    "value": 1,
+    "export": true
+   }
+  },
+  "paths": {
+   "wcLand": [
+    {
+     "type": "moveTo",
+     "x": 90,
+     "y": 128
+    },
+    {
+     "type": "lineTo",
+     "x": 120,
+     "y": 112
+    },
+    {
+     "type": "lineTo",
+     "x": 150,
+     "y": 100
+    },
+    {
+     "type": "lineTo",
+     "x": 172,
+     "y": 84
+    },
+    {
+     "type": "lineTo",
+     "x": 196,
+     "y": 60
+    },
+    {
+     "type": "lineTo",
+     "x": 214,
+     "y": 74
+    },
+    {
+     "type": "lineTo",
+     "x": 228,
+     "y": 66
+    },
+    {
+     "type": "lineTo",
+     "x": 240,
+     "y": 78
+    },
+    {
+     "type": "lineTo",
+     "x": 240,
+     "y": 128
+    },
+    {
+     "type": "close"
+    }
+   ]
+  }
+ },
+ "components": {
+  "WaterCycle": {
+   "summary": "The scene of the water cycle: sea, land and sun always there, one process lit per stage",
+   "params": {
+    "now": {
+     "type": "float",
+     "required": true,
+     "doc": "The stage, 0 to 3"
+    }
+   },
+   "call": {
+    "WaterCycle": {
+     "now": 1
+    }
+   },
+   "body": {
+    "canvas": {
+     "modifiers": [
+      "fillMaxSize"
+     ],
+     "commands": [
+      {
+       "variable": {
+        "name": "s",
+        "value": "min(componentWidth() / 240, componentHeight() / 160)"
+       }
+      },
+      {
+       "translate": {
+        "dx": "(componentWidth() - 240 * @s) / 2",
+        "dy": "(componentHeight() - 160 * @s) / 2"
+       }
+      },
+      {
+       "scale": {
+        "sx": "@s",
+        "sy": "@s"
+       }
+      },
+      {
+       "variable": {
+        "name": "f0",
+        "value": {
+         "value": "1 - min(1, abs(@now - 0))",
+         "anim": 0.5
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "f1",
+        "value": {
+         "value": "1 - min(1, abs(@now - 1))",
+         "anim": 0.5
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "f2",
+        "value": {
+         "value": "1 - min(1, abs(@now - 2))",
+         "anim": 0.5
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "f3",
+        "value": {
+         "value": "1 - min(1, abs(@now - 3))",
+         "anim": 0.5
+        }
+       }
+      },
+      {
+       "variable": {
+        "name": "t",
+        "value": "animationTime()"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": "0.45 + 0.55 * max(@f0, @f3)"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawRect": {
+        "left": 0,
+        "top": 128,
+        "right": 240,
+        "bottom": 160
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.success"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": "0.85"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawPath": {
+        "path": "wcLand"
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "stroke",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": "0.4 + 0.6 * @f0"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": 34,
+        "cy": 28,
+        "radius": 14
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.warning"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 2.5
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "alpha": {
+           "$if": "theme.mono",
+           "then": 1,
+           "else": "0.4 + 0.6 * @f0"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 8,
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "34 + 18 * cos(k * 0.7854)",
+           "y1": "28 + 18 * sin(k * 0.7854)",
+           "x2": "34 + 23 * cos(k * 0.7854)",
+           "y2": "28 + 23 * sin(k * 0.7854)"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 2.5
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "alpha": "@f0"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 4,
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "30 + k * 26",
+           "y1": "122 - 60 * ((@t * 0.5 + k * 0.27) % 1)",
+           "x2": "33 + k * 26",
+           "y2": "112 - 60 * ((@t * 0.5 + k * 0.27) % 1)"
+          }
+         },
+         {
+          "drawLine": {
+           "x1": "33 + k * 26",
+           "y1": "112 - 60 * ((@t * 0.5 + k * 0.27) % 1)",
+           "x2": "30 + k * 26",
+           "y2": "102 - 60 * ((@t * 0.5 + k * 0.27) % 1)"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.muted"
+         },
+         {
+          "style": {
+           "$if": "theme.mono",
+           "then": "fill",
+           "else": "fill"
+          }
+         },
+         {
+          "strokeWidth": 1.5
+         },
+         {
+          "alpha": "max(@f1, @f2)"
+         }
+        ]
+       }
+      },
+      {
+       "variable": {
+        "name": "cx0",
+        "value": "84 + 50 * @f2"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx0 - 14",
+        "cy": 34,
+        "radius": "10 * max(@f1, @f2)"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx0",
+        "cy": 28,
+        "radius": "14 * max(@f1, @f2)"
+       }
+      },
+      {
+       "drawCircle": {
+        "cx": "@cx0 + 15",
+        "cy": 34,
+        "radius": "10 * max(@f1, @f2)"
+       }
+      },
+      {
+       "drawRoundRect": {
+        "left": "@cx0 - 24 * max(@f1, @f2)",
+        "top": 32,
+        "right": "@cx0 + 25 * max(@f1, @f2)",
+        "bottom": 44,
+        "rx": 6,
+        "ry": 6
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 2
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "alpha": "@f2"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 6,
+        "commands": [
+         {
+          "drawLine": {
+           "x1": "@cx0 - 20 + k * 8",
+           "y1": "48 + 34 * ((@t * 1.2 + k * 0.37) % 1)",
+           "x2": "@cx0 - 21 + k * 8",
+           "y2": "55 + 34 * ((@t * 1.2 + k * 0.37) % 1)"
+          }
+         }
+        ]
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "stroke"
+         },
+         {
+          "strokeWidth": 3.5
+         },
+         {
+          "strokeCap": "round"
+         },
+         {
+          "alpha": "@f3"
+         }
+        ]
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 180,
+        "y1": 92,
+        "x2": 160,
+        "y2": 108
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 160,
+        "y1": 108,
+        "x2": 132,
+        "y2": 114
+       }
+      },
+      {
+       "drawLine": {
+        "x1": 132,
+        "y1": 114,
+        "x2": 112,
+        "y2": 128
+       }
+      },
+      {
+       "paint": {
+        "ops": [
+         {
+          "color": "@colors.primary"
+         },
+         {
+          "style": "fill"
+         },
+         {
+          "alpha": "@f3"
+         }
+        ]
+       }
+      },
+      {
+       "loop": {
+        "index": "k",
+        "from": 0,
+        "until": 3,
+        "commands": [
+         {
+          "drawCircle": {
+           "cx": "176 - 64 * ((@t * 0.35 + k / 3) % 1)",
+           "cy": "95 + 33 * ((@t * 0.35 + k / 3) % 1)",
+           "radius": 3
+          }
+         }
+        ]
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "root": {
+  "StepExplainer": {
+   "title": "The water cycle",
+   "step": "@stage",
+   "shown": "@stageNow",
+   "controls": "play",
+   "progress": "dots",
+   "loop": true,
+   "playing": "@play",
+   "interval": 4,
+   "captionLines": 3,
+   "visualLabel": "A coast with sea, land and sun; the current stage of the water cycle is drawn over it",
+   "steps": [
+    {
+     "title": "Evaporation",
+     "text": "The sun warms the sea, and water rises into the air as invisible vapour.",
+     "short": "Sun lifts vapour from the sea."
+    },
+    {
+     "title": "Condensation",
+     "text": "High up the air is cold, so the vapour turns into tiny droplets: a cloud.",
+     "short": "Cold air makes vapour a cloud."
+    },
+    {
+     "title": "Precipitation",
+     "text": "The wind pushes the cloud over the hills, where the droplets fall as rain or snow.",
+     "short": "Droplets fall as rain or snow."
+    },
+    {
+     "title": "Collection",
+     "text": "Rivers carry the water back to the sea, and the cycle starts again.",
+     "short": "Rivers carry it back to the sea."
+    }
+   ],
+   "slots": {
+    "visual": [
+     {
+      "WaterCycle": {
+       "now": "@stageNow"
+      }
+     }
+    ]
+   }
+  }
+ }
+}

@@ -1,0 +1,252 @@
+{
+ "component": "NumberedList",
+ "version": 1,
+ "summary": "A list of instructions in order, a method: each item a number and text that wraps, spoken as one item (\"3. Cut in the edges\"). marker bullet makes it a plain list of things. For progress through stages (Ordered, Shipped, Delivered) use Steps.",
+ "params": {
+  "items": {
+   "type": "list",
+   "required": true,
+   "static": true,
+   "doc": "The texts in order; fixed when the document is built. Each is a string, or [text, note] with a muted note under it"
+  },
+  "marker": {
+   "type": "enum",
+   "values": [
+    "number",
+    "bullet"
+   ],
+   "default": "number",
+   "static": true,
+   "doc": "number: 1, 2, 3 in a tinted disc. bullet: a small dot, for a list with no order"
+  },
+  "start": {
+   "type": "float",
+   "default": 1,
+   "static": true,
+   "doc": "The first number"
+  },
+  "fontSize": {
+   "type": "float",
+   "default": "@theme.text_md",
+   "static": true,
+   "doc": "Text size in sp"
+  },
+  "gap": {
+   "type": "float",
+   "default": 10,
+   "static": true,
+   "doc": "Space between items in dp"
+  }
+ },
+ "capabilities": [
+  "layout.stack",
+  "layout.weight",
+  "text.basic",
+  "a11y.labels"
+ ],
+ "call": {
+  "NumberedList": {
+   "items": [
+    "Fill the holes",
+    "Tape the edges",
+    "Paint two coats"
+   ]
+  }
+ },
+ "body": {
+  "column": {
+   "modifiers": [
+    "fillMaxWidth",
+    {
+     "spacedBy": "@gap"
+    }
+   ],
+   "children": [
+    {
+     "$each": "items",
+     "as": "it",
+     "index": "i",
+     "fields": [
+      "text",
+      "note"
+     ],
+     "do": {
+      "row": {
+       "modifiers": [
+        "fillMaxWidth"
+       ],
+       "children": [
+        {
+         "$if": "marker == 'number'",
+         "then": {
+          "canvas": {
+           "modifiers": [
+            {
+             "size": 24
+            }
+           ],
+           "commands": [
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.primary"
+               },
+               {
+                "style": "fill"
+               }
+              ]
+             }
+            },
+            {
+             "drawCircle": {
+              "cx": 12,
+              "cy": 12,
+              "radius": 12
+             }
+            },
+            {
+             "paint": {
+              "ops": [
+               {
+                "color": "@colors.onPrimary"
+               },
+               {
+                "textSize": 13
+               }
+              ]
+             }
+            },
+            {
+             "drawTextAnchored": {
+              "text": {
+               "type": "textFromFloat",
+               "value": "@i + @start",
+               "whole": 3,
+               "decimal": 0,
+               "flags": 5
+              },
+              "x": 12,
+              "y": 12,
+              "panX": 0,
+              "panY": 0
+             }
+            }
+           ]
+          }
+         },
+         "else": {
+          "box": {
+           "horizontalAlignment": "center",
+           "verticalAlignment": "center",
+           "modifiers": [
+            {
+             "width": 12
+            },
+            {
+             "height": 20
+            }
+           ],
+           "children": [
+            {
+             "box": {
+              "modifiers": [
+               {
+                "size": 5
+               },
+               {
+                "clip": 2.5
+               },
+               {
+                "background": "@colors.muted"
+               }
+              ]
+             }
+            }
+           ]
+          }
+         }
+        },
+        {
+         "box": {
+          "modifiers": [
+           {
+            "width": {
+             "$if": "marker == 'number'",
+             "then": 10,
+             "else": 4
+            }
+           }
+          ]
+         }
+        },
+        {
+         "column": {
+          "modifiers": [
+           {
+            "weight": 1
+           },
+           {
+            "$if": "marker == 'number'",
+            "then": {
+             "padding": {
+              "top": 2
+             }
+            }
+           }
+          ],
+          "children": [
+           {
+            "text": {
+             "value": "@it_text",
+             "fontSize": "@fontSize",
+             "color": "@colors.onSurface",
+             "modifiers": [
+              {
+               "$if": "marker == 'number'",
+               "then": {
+                "semantics": {
+                 "contentDescription": {
+                  "type": "textMerge",
+                  "id1": {
+                   "type": "textFromFloat",
+                   "value": "@i + @start",
+                   "whole": 3,
+                   "decimal": 0,
+                   "flags": 5
+                  },
+                  "id2": ". @it_text"
+                 }
+                }
+               }
+              }
+             ]
+            }
+           },
+           {
+            "$if": "it_note",
+            "then": {
+             "text": {
+              "value": "@it_note",
+              "fontSize": "@theme.text_sm",
+              "color": "@colors.muted"
+             }
+            }
+           }
+          ]
+         }
+        }
+       ]
+      }
+     }
+    }
+   ]
+  }
+ },
+ "pitfalls": [
+  "Not Steps: Steps shows where a process has got to (done, current, to do). This shows what to do, in order, with text that wraps",
+  "The items are static text, chosen when the document is built. Nothing can be ticked off: for that, a Checkbox per row",
+  "The number is drawn, not a text, so a numbered item is one spoken item: \"3. Tape the edges\". A note under it is a second item",
+  "Give it the width of a Card or a column. In a row, weight its parent or the text has no width to wrap in"
+ ]
+}

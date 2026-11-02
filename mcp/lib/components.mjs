@@ -240,7 +240,10 @@ let cached = null;
 // For measuring what the vertical sets cost or save: RC_HIDE_VERTICALS=1 leaves them out.
 export const VERTICAL_COMPONENTS = ["SeekBar", "CoverArt", "TransportControls", "Equalizer", "CompactNumber", "Delta", "PriceChart", "TrendSparkline", "AllocationBar", "QuoteRow", "ActivityRings", "MeterBreakdown", "GoalBar", "SleepStages"];
 export const VERTICAL_EXAMPLES = ["CMP-19", "CMP-20", "CMP-21", "CMP-22", "CMP-23", "CMP-24"];
-const HIDDEN_VERTICALS = new Set(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []);
+// RC_HIDE_BATCH=1 does the same for the step explainer, form and panel sets.
+export const BATCH_COMPONENTS = ["StepExplainer", "CellRow", "ChoiceChips", "InputsResult", "ScaledAmount", "NumberedList", "TwoColumns"];
+export const BATCH_EXAMPLES = ["CMP-25", "CMP-26", "CMP-27", "CMP-28", "CMP-29"];
+const HIDDEN_VERTICALS = new Set([...(process.env.RC_HIDE_VERTICALS ? VERTICAL_COMPONENTS : []), ...(process.env.RC_HIDE_BATCH ? BATCH_COMPONENTS : [])]);
 export function loadLibrary(dir = LIBRARY_DIR) {
     if (cached && cached.dir === dir) return cached;
     const components = new Map();

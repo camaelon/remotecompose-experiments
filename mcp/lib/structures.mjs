@@ -3,12 +3,13 @@
 // evidence, so the kit also lists every structure and lets the caller overrule the guess.
 
 /** Most specific first: on a tie the earlier one wins. Examples: the best start first. */
+// components: offered when the caller chooses the structure. core: also when it is only guessed from the words.
 export const STRUCTURES = [
     { id: "map-overlay", is: "a map filling the screen, with points, routes or coloured regions and a small panel over it",
       adapts: "the panel moves or drops when short", examples: ["MAP-05", "MAP-03", "MAP-04", "MAP-01", "MAP-02"],
       signals: [[/\b(maps?|world map|globe|on the map)\b/, 5], [/\b(countries|continent|map of)\b/, 3]] },
     { id: "step-explainer", is: "a title, a big visual that changes with the step, step dots, a caption and back/play/next",
-      adapts: "the visual sits beside the caption when wide, the caption shortens when short", examples: ["CMP-16", "INT-06"],
+      adapts: "the visual sits beside the caption when wide, the caption shortens when short", examples: ["CMP-27", "CMP-28", "CMP-29", "CMP-16", "INT-06"], core: ["StepExplainer"],
       signals: [[/\b(explain|explains|explainer|walkthrough|tutorial|onboarding|visual guide|teach|lesson)\b/, 5], [/\bhow (a|an|the)\b.*\b(works?|pumps?|moves?|flows?)\b/, 4], [/\bsteps? (you can|through)|step through|through (the|each) steps?\b/, 4], [/\bstep[- ]by[- ]step\b/, 4]] },
     { id: "param-explorer", is: "a big preview or chart driven by a few sliders, with the result as a readout",
       adapts: "controls move beside the preview when wide", examples: ["CMP-03"],
@@ -17,7 +18,7 @@ export const STRUCTURES = [
       adapts: "secondary facts drop when short, the line stays", examples: [], components: ["Steps", "LabelValue"],
       signals: [[/\b(flight|boarding|itinerary|journey|trip|shipment)\b/, 3], [/\b(package|parcel|delivery|order) (delivery )?(tracker|status)\b/, 4], [/\bprogress line\b/, 3], [/\bthe steps\b.*\bcurrent\b/, 4]] },
     { id: "form-result", is: "labelled inputs, choices and a main action, with a result where there is one",
-      adapts: "scrolls when short; the result stays visible", examples: ["CMP-12", "EXP-15"],
+      adapts: "scrolls when short; the result stays visible", examples: ["CMP-25", "CMP-12", "EXP-15"], core: ["InputsResult", "ChoiceChips"],
       signals: [[/\b(login|log in|sign[- ]?in|sign[- ]?up|register|form|fields?|checkout)\b/, 4], [/\b(calculator|converter|quiz)\b/, 4], [/\bbutton\b/, 1]] },
     { id: "control-rows", template: "RowList", is: "uniform rows, each with its own control: a checkbox, a switch or a slider",
       adapts: "rows drop their subtitles, a count stays", examples: ["CMP-18", "CMP-14", "CMP-05"],
@@ -35,7 +36,7 @@ export const STRUCTURES = [
       adapts: "rows while tall, subtitles and header drop when short, tiles when wide", examples: ["CMP-18", "CMP-15", "CMP-07", "CMP-05"],
       signals: [[/\b(list|rows?|table|leaderboard|schedule|timetable|agenda|departures?|arrivals|inbox|ticker|summary widget|status dashboard)\b/, 3], [/\b(each with|per (category|item|person|team|account|project|service)|for each)\b/, 5], [/\b(\d+|two|three|four|five|six|seven|eight|nine|ten) [a-z]+s\b.*:/, 5], [/\bfor (\d+|two|three|four|five|six|seven|eight|nine|ten) [a-z]+s\b/, 5], [/\b(unread counts?|progress bars|as bars)\b/, 3], [/\b(london|tokyo|sydney)\b.*\band\b/, 2]] },
     { id: "panel-stack", is: "a scrolling or stacked set of different sections, each its own small panel",
-      adapts: "panels drop by priority when short, columns when wide", examples: ["CMP-14", "CMP-12"],
+      adapts: "panels drop by priority when short, columns when wide", examples: ["CMP-26", "CMP-14", "CMP-12"], components: ["NumberedList"],
       signals: [[/\b(dashboard|overview|daily|recipe|profile|article|details? (screen|page)|home screen)\b/, 2], [/\b(sections?|panels?)\b/, 3]] },
     { id: "glance-card", is: "one main value or drawing and one to three supporting lines",
       adapts: "lines drop by priority, stacked when narrow or square", examples: ["TIM-08", "HST-07", "LAY-09"],

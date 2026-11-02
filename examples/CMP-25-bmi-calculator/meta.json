@@ -1,0 +1,552 @@
+{
+ "id": "CMP-25",
+ "name": "bmi-calculator",
+ "version": 1,
+ "kind": "gallery",
+ "title": "BMI calculator",
+ "summary": "Inputs, a choice and a live result from the library: height and weight Steppers, a metric or imperial ChoiceChips that converts both values, and a title-less Card holding the BMI and its band, kept on screen by InputsResult.",
+ "prompt": "Build a BMI calculator with height and weight steppers, a metric or imperial choice, and the result with its band (underweight, healthy, overweight, obesity). The result stays visible at every window size.",
+ "level": 2,
+ "family": "CMP",
+ "components": [
+  "InputsResult",
+  "AdaptiveSplit",
+  "Card",
+  "ChoiceChips",
+  "Stepper",
+  "TextChoice"
+ ],
+ "capabilities": {
+  "primary": [
+   "input.tap",
+   "data.expression",
+   "layout.flow"
+  ],
+  "secondary": [
+   "layout.scroll",
+   "text.dynamic",
+   "a11y.labels"
+  ]
+ },
+ "use_cases": [
+  "control",
+  "fitness"
+ ],
+ "form_factor": "phone",
+ "keywords": [
+  "bmi",
+  "body mass index",
+  "calculator",
+  "form with result",
+  "inputs and result",
+  "live result",
+  "unit choice",
+  "metric imperial",
+  "health calculator",
+  "single choice",
+  "stepper"
+ ],
+ "teaches": [
+  "A calculator screen in three library calls: InputsResult around a Card, ChoiceChips and Steppers",
+  "Compute the result once in resources.variables, rounded to what is shown, and derive the band from the rounded number so the word and the number never disagree",
+  "A repeat tap on a choice still runs its onClick: compare with a copy of the old index (@was) so a conversion happens once"
+ ],
+ "snippets": [
+  {
+   "pointer": "/root/InputsResult/slots/inputs/0",
+   "shows": "input.tap",
+   "note": "ChoiceChips whose onClick converts both values once per change"
+  },
+  {
+   "pointer": "/resources/variables/bmi",
+   "shows": "data.expression",
+   "note": "the formula for either unit, rounded to the digit shown"
+  },
+  {
+   "pointer": "/root/InputsResult",
+   "shows": "layout.flow",
+   "note": "the result stays on screen, the inputs scroll"
+  }
+ ],
+ "inputs": {
+  "variables": {
+   "unit": 0,
+   "h": 170,
+   "w": 70
+  },
+  "clock": null,
+  "touch": true
+ },
+ "check": {
+  "describe": "170 cm and 70 kg read BMI 24.2, Healthy. Tapping Imperial shows 67 in and 154 lb and BMI 24.1 (the rounded numbers are what is computed); tapping Imperial again changes nothing. Metric gives 170 cm and 70 kg again. At 280x420 the result stays on top of the inputs; at 640x360 it sits to their left.",
+  "render": {},
+  "renders": [
+   {
+    "name": "light",
+    "theme": "light"
+   },
+   {
+    "name": "dark",
+    "theme": "dark"
+   },
+   {
+    "name": "mono-dark",
+    "componentTheme": "mono-dark"
+   },
+   {
+    "name": "mono-light",
+    "componentTheme": "mono-light"
+   },
+   {
+    "name": "landscape",
+    "width": 640,
+    "height": 360
+   },
+   {
+    "name": "small",
+    "width": 280,
+    "height": 420
+   },
+   {
+    "name": "tiny",
+    "width": 240,
+    "height": 240
+   }
+  ]
+ },
+ "related": [
+  "CMP-12",
+  "InputsResult",
+  "ChoiceChips"
+ ],
+ "pitfalls": [
+  "Going to imperial and back can move a value by a unit: the steppers show whole numbers and the result uses what they show, so 171 cm becomes 67 in and then 170 cm",
+  "The bands are the WHO adult cut-offs; the number is no diagnosis, and it does not apply to children",
+  "step(x, edge) is 1 only above the edge, so at exactly 25.0 it says 0: the bands test the rounded BMI against 24.95 and so on, halfway between two values that can show",
+  "The unit actions spell out their expressions (abs(@unit - @was), the limits): resources expressions like @hMin hold last frame's value during the tap"
+ ],
+ "derived": {
+  "components": [
+   "AdaptiveSplit",
+   "Card",
+   "ChoiceChips",
+   "InputsResult",
+   "Stepper",
+   "TextChoice"
+  ],
+  "component_instances": 10,
+  "component_modes": {
+   "AdaptiveSplit": "expand",
+   "Card": "expand",
+   "InputsResult": "expand",
+   "TextChoice": "expand",
+   "ChoiceChips": "expand",
+   "Stepper": "expand"
+  },
+  "component_patterns": [],
+  "converter": "json2rc",
+  "bytes": 7204,
+  "header": {
+   "width": 360,
+   "height": 640
+  },
+  "op_count": 400,
+  "operations": {
+   "ACCESSIBILITY_SEMANTICS": 6,
+   "ANIMATED_FLOAT": 31,
+   "COLOR_CONSTANT": 14,
+   "COLOR_EXPRESSIONS": 14,
+   "CanvasContent": 1,
+   "ClipRectModifierOperation": 1,
+   "CoreText": 27,
+   "DATA_FLOAT": 6,
+   "DATA_TEXT": 27,
+   "GraphicsLayerModifier": 2,
+   "HEADER": 1,
+   "IntegerExpression": 12,
+   "LAYOUT_BOX": 25,
+   "LAYOUT_CANVAS": 1,
+   "LAYOUT_COLUMN": 7,
+   "LAYOUT_FLOW": 2,
+   "LAYOUT_ROOT": 1,
+   "LAYOUT_ROW": 5,
+   "LayoutComponentContent": 67,
+   "LoopOperation": 14,
+   "MODIFIER_BACKGROUND": 10,
+   "MODIFIER_CLICK": 6,
+   "MODIFIER_HEIGHT": 14,
+   "MODIFIER_PADDING": 14,
+   "MODIFIER_VISIBILITY": 14,
+   "MODIFIER_WIDTH": 22,
+   "NAMED_VARIABLE": 7,
+   "RoundedClipRectModifierOperation": 7,
+   "ScrollModifierOperation": 1,
+   "THEME": 21,
+   "TextFromFloat": 3,
+   "TextSubtext": 2,
+   "TextTransform": 2,
+   "TouchExpression": 1,
+   "ValueFloatExpressionChangeActionOperation": 12
+  },
+  "host_variables": [
+   {
+    "name": "background",
+    "type": "color",
+    "value": "#FF101828"
+   },
+   {
+    "name": "muted",
+    "type": "color",
+    "value": "#FF8A94A6"
+   },
+   {
+    "name": "onPrimary",
+    "type": "color",
+    "value": "#FF0B1A2E"
+   },
+   {
+    "name": "onSurface",
+    "type": "color",
+    "value": "#FFE6EAF2"
+   },
+   {
+    "name": "primary",
+    "type": "color",
+    "value": "#FF4DA3FF"
+   },
+   {
+    "name": "surface",
+    "type": "color",
+    "value": "#FF1C2433"
+   },
+   {
+    "name": "surfaceHigh",
+    "type": "color",
+    "value": "#FF263042"
+   }
+  ],
+  "render_findings": [
+   "info: unused_space"
+  ],
+  "audit": {
+   "error": 0,
+   "warning": 0,
+   "info": 2
+  },
+  "audit_findings": [
+   "info: layout_deep_nesting",
+   "info: expression_entries"
+  ],
+  "repaint": "idle",
+  "interaction_targets": {
+   "total": 7,
+   "click": 6,
+   "area": 0,
+   "touch": 1
+  },
+  "java_identical": true,
+  "renders": {
+   "light": {
+    "theme": "light",
+    "render": "render-light.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "dark": {
+    "theme": "dark",
+    "render": "render-dark.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "mono-dark": {
+    "componentTheme": "mono-dark",
+    "bytes": 7008,
+    "component_modes": {
+     "AdaptiveSplit": "expand",
+     "Card": "expand",
+     "InputsResult": "expand",
+     "TextChoice": "expand",
+     "ChoiceChips": "expand",
+     "Stepper": "expand"
+    },
+    "motion_removed": 2,
+    "op_count": 367,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF9E9E9E"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FF000000"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-dark.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "mono-light": {
+    "componentTheme": "mono-light",
+    "bytes": 7008,
+    "component_modes": {
+     "AdaptiveSplit": "expand",
+     "Card": "expand",
+     "InputsResult": "expand",
+     "TextChoice": "expand",
+     "ChoiceChips": "expand",
+     "Stepper": "expand"
+    },
+    "motion_removed": 2,
+    "op_count": 367,
+    "host_variables": [
+     {
+      "name": "background",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "muted",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "onPrimary",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "onSurface",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "outline",
+      "type": "color",
+      "value": "#FF616161"
+     },
+     {
+      "name": "primary",
+      "type": "color",
+      "value": "#FF000000"
+     },
+     {
+      "name": "surface",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     },
+     {
+      "name": "surfaceHigh",
+      "type": "color",
+      "value": "#FFFFFFFF"
+     }
+    ],
+    "java_identical": true,
+    "repaint": "idle",
+    "render": "render-mono-light.png",
+    "render_findings": [
+     "info: unused_space"
+    ]
+   },
+   "landscape": {
+    "render": "render-landscape.png",
+    "render_findings": [],
+    "size": [
+     640,
+     360
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: expression_entries"
+    ]
+   },
+   "small": {
+    "render": "render-small.png",
+    "render_findings": [
+     "info: unused_space"
+    ],
+    "size": [
+     280,
+     420
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: expression_entries"
+    ]
+   },
+   "tiny": {
+    "render": "render-tiny.png",
+    "render_findings": [],
+    "size": [
+     240,
+     240
+    ],
+    "audit_findings": [
+     "info: layout_deep_nesting",
+     "info: expression_entries"
+    ]
+   }
+  },
+  "json_keys": [
+   "Card",
+   "ChoiceChips",
+   "InputsResult",
+   "Stepper",
+   "TextChoice",
+   "adaptivesplit1_s",
+   "adaptivesplit1_sw",
+   "alpha",
+   "anim",
+   "apiLevel",
+   "background",
+   "band",
+   "bmi",
+   "box",
+   "canvas",
+   "children",
+   "clickable",
+   "clip",
+   "color",
+   "colors",
+   "column",
+   "commands",
+   "contentDescription",
+   "dark",
+   "decimal",
+   "end",
+   "flags",
+   "flow",
+   "fontSize",
+   "fontWeight",
+   "global",
+   "graphicsLayer",
+   "h",
+   "hMax",
+   "hMin",
+   "header",
+   "height",
+   "horizontalAlignment",
+   "horizontalArrangement",
+   "index",
+   "inputs",
+   "inputsresult1_h",
+   "inputsresult1_scroll",
+   "inputsresult1_side",
+   "items",
+   "label",
+   "len",
+   "light",
+   "max",
+   "maxLines",
+   "min",
+   "modifiers",
+   "muted",
+   "onClick",
+   "onPrimary",
+   "onSurface",
+   "operation",
+   "overflow",
+   "padding",
+   "primary",
+   "profiles",
+   "resources",
+   "result",
+   "resultHeight",
+   "root",
+   "roundedRect",
+   "row",
+   "selected",
+   "semantics",
+   "size",
+   "slots",
+   "spacedBy",
+   "start",
+   "stateDescription",
+   "surface",
+   "surfaceHigh",
+   "target",
+   "text",
+   "textSubtext",
+   "textTransform",
+   "textchoice1_k",
+   "textchoice2_k",
+   "textchoice3_k",
+   "textchoice4_k",
+   "type",
+   "unit",
+   "value",
+   "varName",
+   "variables",
+   "verticalAlignment",
+   "verticalScroll",
+   "vis_1",
+   "visibility",
+   "w",
+   "wMax",
+   "wMin",
+   "was",
+   "weight",
+   "whole",
+   "width"
+  ],
+  "evidence": {
+   "input.tap": [
+    "onClick",
+    "valueFloatChange"
+   ],
+   "data.expression": [
+    "expression",
+    "<arithmetic>"
+   ],
+   "layout.flow": [
+    "flow"
+   ],
+   "layout.scroll": [
+    "verticalScroll"
+   ],
+   "text.dynamic": [
+    "textFromFloat"
+   ],
+   "a11y.labels": [
+    "semantics"
+   ]
+  },
+  "built_at": "2026-11-02T06:18:57.176Z"
+ }
+}
